@@ -33,6 +33,8 @@ impl GridHandler {
             return;
         }
 
+        self.text_effects.clear();
+
         log::debug!("New num_cols is {num_cols} and num_lines is {num_rows}");
 
         if old_cols != num_cols {

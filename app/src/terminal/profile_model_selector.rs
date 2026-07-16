@@ -683,7 +683,7 @@ impl ProfileModelSelector {
     /// pane runs a local CLI harness, so the picker always shows the harness
     /// menu rather than Warp's cloud model list.
     fn is_third_party_harness(&self, app: &AppContext) -> bool {
-        self.ambient_agent_view_model.as_ref().map_or(true, |m| {
+        self.ambient_agent_view_model.as_ref().is_none_or(|m| {
             let model = m.as_ref(app);
             !matches!(model.selected_harness(), Harness::Oz | Harness::Unknown)
         })
@@ -949,7 +949,13 @@ impl ProfileModelSelector {
                     .available_harnesses()
                     .iter()
                     .filter(|h| h.enabled)
-                    .map(|h| (h.harness, h.display_name.clone(), h.available_models.clone()))
+                    .map(|h| {
+                        (
+                            h.harness,
+                            h.display_name.clone(),
+                            h.available_models.clone(),
+                        )
+                    })
                     .collect()
             } else {
                 vec![(

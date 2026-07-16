@@ -209,6 +209,12 @@ impl ansi::Handler for GridHandler {
                 col = col.saturating_sub(1);
             }
 
+            #[cfg(feature = "text_effects")]
+            {
+                let point = AbsolutePoint::from_original_point(Point::new(row, col), self);
+                self.text_effects.record_write(point);
+            }
+
             self.grid[row][col].push_zerowidth(c, /* log_long_grapheme_warnings */ true);
             let cell_content_width = match self.grid[row][col].raw_content() {
                 CharOrStr::Str(s) => s.width(),
@@ -740,6 +746,7 @@ impl ansi::Handler for GridHandler {
 
     fn clear_line(&mut self, mode: ansi::LineClearMode) {
         log::trace!("Clearing line: {mode:?}");
+        self.text_effects.clear();
 
         let cursor = &self.grid.cursor();
         let bg = cursor.template.bg;
@@ -798,6 +805,7 @@ impl ansi::Handler for GridHandler {
 
     fn clear_screen(&mut self, mode: ansi::ClearMode) {
         log::trace!("Clearing screen: {mode:?}");
+        self.text_effects.clear();
         let bg = self.grid.cursor().template.bg;
 
         let num_lines = self.visible_rows();
@@ -895,6 +903,7 @@ impl ansi::Handler for GridHandler {
     /// Reset all important fields in the term struct.
     #[inline]
     fn reset_state(&mut self) {
+        self.text_effects.clear();
         self.grid.reset();
         self.flat_storage.clear();
 
@@ -1229,6 +1238,9 @@ impl ansi::Handler for GridHandler {
 
         self.maybe_scan_dirty_cells_for_secrets();
 
+        #[cfg(feature = "text_effects")]
+        self.finish_text_effects_batch();
+
         if self.finished && self.num_lines_truncated() > 0 {
             // Occasionally upon finishing the grid there are truncated rows that we have
             // not yet accounted for.
@@ -1251,6 +1263,12 @@ impl ansi::Handler for GridHandler {
                 "the alt screen grid should never put any rows in flat storage"
             );
         }
+    }
+
+    fn text_effects_command(&mut self, command: crate::terminal::text_effects::TextEffectsCommand) {
+        let point = AbsolutePoint::from_original_point(self.cursor_point(), self);
+        self.text_effects
+            .apply_command(command, point, instant::Instant::now());
     }
 
     fn on_reset_grid(&mut self) {
@@ -1539,6 +1557,12 @@ impl GridHandler {
     /// Write `c` to the cell at the cursor position.
     #[inline(always)]
     fn write_at_cursor(&mut self, c: char) -> &mut Cell {
+        #[cfg(feature = "text_effects")]
+        if c != cell::DEFAULT_CHAR {
+            let point = AbsolutePoint::from_original_point(self.cursor_point(), self);
+            self.text_effects.record_write(point);
+        }
+
         self.images.evict_images_at_point_with_type(
             AbsolutePoint::from_point(self.cursor_point(), self),
             &[ImageType::ITerm],

@@ -806,6 +806,7 @@ impl AgentDriver {
     /// Creates a driver bound to an existing, visible terminal view so its
     /// agent blocks render inline in the user's terminal rather than a hidden
     /// one. Used to route terminal agent prompts to a local harness.
+    #[allow(dead_code)]
     pub fn new_from_view(
         options: AgentDriverOptions,
         terminal_view: ViewHandle<crate::terminal::view::TerminalView>,

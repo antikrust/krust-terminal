@@ -71,6 +71,8 @@ lazy_static! {
 }
 
 const WARP_COMPLETIONS_OSC_MARKER: &[u8] = b"9280";
+/// Marks a private 0term Text FX control sequence.
+const OTERM_TEXT_EFFECTS_OSC_MARKER: &[u8] = b"9281";
 const WARP_COMPLETIONS_START_BYTE: &[u8] = b"A";
 const WARP_COMPLETIONS_END_BYTE: &[u8] = b"B";
 const WARP_COMPLETIONS_MATCH_RESULT_BYTE: &[u8] = b"C";
@@ -1146,6 +1148,18 @@ where
             WARP_RESET_GRID_OSC_MARKER => {
                 log::debug!("Received Warp OSC string for reset grid");
                 self.handler.on_reset_grid();
+            }
+
+            OTERM_TEXT_EFFECTS_OSC_MARKER => {
+                if let Some(command) =
+                    crate::terminal::text_effects::TextEffectsCommand::parse_osc_params(
+                        &params[1..],
+                    )
+                {
+                    self.handler.text_effects_command(command);
+                } else {
+                    unhandled(params);
+                }
             }
 
             // Received a Warp OSC used for completions.

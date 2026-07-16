@@ -3248,6 +3248,10 @@ impl ansi::Handler for TerminalModel {
         delegate!(self.on_finish_byte_processing(input))
     }
 
+    fn text_effects_command(&mut self, command: crate::terminal::text_effects::TextEffectsCommand) {
+        delegate!(self.text_effects_command(command));
+    }
+
     fn on_reset_grid(&mut self) {
         #[cfg(windows)]
         if self.ignore_reset_grid_after_in_band_generator {

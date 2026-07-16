@@ -44,6 +44,7 @@ use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::shared_session::presence_manager::{
     text_selection_color, PresenceManager, MUTED_PARTICIPANT_COLOR,
 };
+use crate::terminal::text_effects::{TextEffectSurface, TextEffectsConfig};
 use crate::terminal::view::{
     ActiveSessionState, TerminalAction, TerminalEditor, TerminalViewRenderContext,
 };
@@ -762,6 +763,7 @@ impl Element for AltScreenElement {
             &model.image_id_to_metadata,
             Some(&mut sampler),
             self.grid_render_params.hide_cursor_cell,
+            TextEffectsConfig::for_surface(app, TextEffectSurface::AlternateScreen),
             ctx,
             app,
         );

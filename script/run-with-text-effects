@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+# Keep this feature build separate from ordinary Warp builds. Otherwise a later build from a
+# different worktree can silently replace the executable while the source branch remains correct.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo_root/target/txtfx}"
+
+exec cargo run --features text_effects --bin warp-oss -- "$@"

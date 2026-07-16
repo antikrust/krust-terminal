@@ -69,7 +69,9 @@ fn persist(bindings: &HashMap<String, ThreadBinding>) {
 /// The harness and CLI session bound to `conversation_id`, if one was ever
 /// recorded (possibly by a previous app run).
 pub(crate) fn lookup(conversation_id: AIConversationId) -> Option<(LocalHarnessKind, Uuid)> {
-    let mut registry = REGISTRY.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut registry = REGISTRY
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let bindings = registry.get_or_insert_with(load);
     bindings
         .get(&conversation_id.to_string())
@@ -83,7 +85,9 @@ pub(crate) fn record(
     harness: LocalHarnessKind,
     session_id: Uuid,
 ) {
-    let mut registry = REGISTRY.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut registry = REGISTRY
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let bindings = registry.get_or_insert_with(load);
     let entry = bindings.insert(
         conversation_id.to_string(),

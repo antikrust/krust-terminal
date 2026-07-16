@@ -16,6 +16,7 @@ use crate::terminal::model::iterm_image::{ITermImage, ITermImageMetadata};
 use crate::terminal::model::kitty::{KittyAction, KittyChunk, KittyResponse};
 use crate::terminal::model::selection::ScrollDelta;
 use crate::terminal::model::session::SessionId;
+use crate::terminal::text_effects::TextEffectsCommand;
 
 /// Trait to be implemented by model objects that handle pty output. The
 /// ansi::Performer (our pty output parser) delegates handling of specific
@@ -324,6 +325,9 @@ pub trait Handler {
     ///
     /// Marks the end of the in-band command output payload.
     fn end_in_band_command_output(&mut self, _from_osc_sequence: bool) {}
+
+    /// Applies a native 0term text-effect command received over the private OSC protocol.
+    fn text_effects_command(&mut self, _command: TextEffectsCommand) {}
 
     /// Hook that gets called upon processing a chunk of input from the PTY.
     /// Implementors can use this to perform any extra, one-off, logic with the

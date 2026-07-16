@@ -21,6 +21,7 @@ use std::ops::{Range, RangeInclusive};
 
 use bounded_vec_deque::BoundedVecDeque;
 use filtering::FilterState;
+use instant::Instant;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use string_offset::ByteOffset;
@@ -52,6 +53,7 @@ use crate::terminal::model::index::{Direction, IndexRange, Point, VisibleRow};
 use crate::terminal::model::secrets::{ObfuscateSecrets, RespectObfuscatedSecrets, SecretMap};
 use crate::terminal::model::terminal_model::RangeInModel;
 use crate::terminal::model::{Secret, SecretHandle};
+use crate::terminal::text_effects::{TextEffectSample, TextEffectsConfig, TextEffectsTimeline};
 use crate::terminal::SizeInfo;
 use crate::util::extensions::TrimStringExt;
 
@@ -294,27 +296,35 @@ impl AbsolutePoint {
             point
         };
 
+        Self::from_original_point(original_point, grid)
+    }
+
+    pub fn from_original_point(point: Point, grid: &GridHandler) -> AbsolutePoint {
         AbsolutePoint {
-            row: original_point.row as u64 + grid.num_lines_truncated(),
-            col: original_point.col,
+            row: point.row as u64 + grid.num_lines_truncated(),
+            col: point.col,
         }
     }
 
     pub fn to_point(&self, grid: &GridHandler) -> Option<Point> {
-        let point = Point {
-            row: self
-                .row
-                .checked_sub(grid.num_lines_truncated())?
-                .try_into()
-                .ok()?,
-            col: self.col,
-        };
+        let point = self.to_original_point(grid)?;
 
         if grid.has_displayed_output() {
             Some(grid.maybe_translate_point_from_original_to_displayed(point))
         } else {
             Some(point)
         }
+    }
+
+    pub fn to_original_point(&self, grid: &GridHandler) -> Option<Point> {
+        Some(Point {
+            row: self
+                .row
+                .checked_sub(grid.num_lines_truncated())?
+                .try_into()
+                .ok()?,
+            col: self.col,
+        })
     }
 
     pub fn is_truncated(&self, num_lines_truncated: u64) -> bool {
@@ -459,6 +469,8 @@ pub struct GridHandler {
     /// This allows find to be updated less frequently than byte processing while still
     /// knowing exactly which rows have changed.
     find_dirty_rows_range: Option<RangeInclusive<usize>>,
+
+    text_effects: TextEffectsTimeline,
 }
 
 impl GridHandler {
@@ -509,6 +521,7 @@ impl GridHandler {
             track_content_length: false,
             full_grid_clear_behavior: FullGridClearBehavior::Scroll,
             find_dirty_rows_range: None,
+            text_effects: TextEffectsTimeline::default(),
         }
     }
 
@@ -641,6 +654,7 @@ impl GridHandler {
             track_content_length: false,
             full_grid_clear_behavior: FullGridClearBehavior::Scroll,
             find_dirty_rows_range: None,
+            text_effects: TextEffectsTimeline::default(),
         };
 
         // Scan the full grid for secrets.  This is less performant than
@@ -665,6 +679,34 @@ impl GridHandler {
 
     pub fn is_mode_set(&self, mode: TermMode) -> bool {
         self.ansi_handler_state.mode.intersects(mode)
+    }
+
+    pub fn sample_text_effect(
+        &self,
+        point: Point,
+        cell: &Cell,
+        config: TextEffectsConfig,
+        now: Instant,
+    ) -> Option<TextEffectSample> {
+        let point = AbsolutePoint::from_original_point(point, self);
+        self.text_effects
+            .sample(point, cell.content_for_display(), config, now)
+    }
+
+    #[cfg(feature = "text_effects")]
+    fn finish_text_effects_batch(&mut self) {
+        let pending_writes = self.text_effects.take_pending_writes();
+        let written_cells: Vec<_> = pending_writes
+            .into_iter()
+            .filter_map(|absolute_point| {
+                let point = absolute_point.to_original_point(self)?;
+                let row = self.row(point.row)?;
+                let cell = row.get(point.col)?;
+                Some((absolute_point, cell.content_for_display().to_string()))
+            })
+            .collect();
+        self.text_effects
+            .finish_batch(written_cells, Instant::now());
     }
 
     fn color_to_bg_escape_sequence(color: Color) -> String {

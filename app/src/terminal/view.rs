@@ -218,6 +218,13 @@ use crate::ai::agent::{
 #[cfg(feature = "local_fs")]
 use crate::ai::agent::{CurrentHead, DiffBase};
 use crate::ai::agent_conversations_model::{AgentConversationsModel, AgentConversationsModelEvent};
+use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
+use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
+    run_claude_stream, stream_json_args,
+};
+use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
+use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
 };
@@ -243,6 +250,7 @@ use crate::ai::blocklist::codebase_index_speedbump_banner::{
 use crate::ai::blocklist::diff_storage::DiffStorageHelper;
 use crate::ai::blocklist::diff_types::FileDiff;
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
+use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
 use crate::ai::blocklist::model::{
     AIBlockModel, AIBlockModelHelper, AIBlockModelImpl, AIBlockOutputStatus,
 };
@@ -257,11 +265,11 @@ use crate::ai::blocklist::usage::conversation_usage_view::{
 use crate::ai::blocklist::{
     ai_brand_color, block_context_from_terminal_model,
     get_ai_block_overflow_menu_element_position_id, get_attached_blocks_chip_element_position_id,
-    is_lrc_auto_queue_active, AIBlock, AIBlockEvent, AutofireAction, BlocklistAIActionEvent,
-    BlocklistAIActionModel, BlocklistAIContextEvent, BlocklistAIContextModel,
-    BlocklistAIController, BlocklistAIControllerEvent, BlocklistAIHistoryEvent,
-    BlocklistAIHistoryModel, BlocklistAIInputEvent, BlocklistAIInputModel, ClientIdentifiers,
-    ConversationSelection, ConversationStatusUpdate, InputConfig, InputType,
+    is_lrc_auto_queue_active, local_harness_threads, AIBlock, AIBlockEvent, AutofireAction,
+    BlocklistAIActionEvent, BlocklistAIActionModel, BlocklistAIContextEvent,
+    BlocklistAIContextModel, BlocklistAIController, BlocklistAIControllerEvent,
+    BlocklistAIHistoryEvent, BlocklistAIHistoryModel, BlocklistAIInputEvent, BlocklistAIInputModel,
+    ClientIdentifiers, ConversationSelection, ConversationStatusUpdate, InputConfig, InputType,
     InputTypeAutoDetectionSource, LegacyPassiveSuggestionsEvent, LegacyPassiveSuggestionsModel,
     MaaPassiveSuggestionsEvent, MaaPassiveSuggestionsModel, PassiveSuggestionsModels,
     PendingAttachment, PendingQueryState, QueuedQuery, QueuedQueryId, QueuedQueryModel,
@@ -274,13 +282,6 @@ use crate::ai::conversation_utils;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
 use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientProfileId};
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
-use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
-use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{run_claude_stream, stream_json_args};
-use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
-use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
-use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
-use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
-use crate::ai::blocklist::local_harness_threads;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
 use crate::ai::loading::shimmering_warp_loading_text;
 #[cfg(feature = "local_fs")]
@@ -470,6 +471,7 @@ use crate::terminal::shared_session::{
     SharedSessionActionSource, SharedSessionScrollbackType, SharedSessionSource,
     SharedSessionStatus,
 };
+use crate::terminal::text_effects::TextEffectsSettings;
 use crate::terminal::view::block_onboarding::onboarding_prompt_block::OnboardingPromptBlock;
 use crate::terminal::view::init_environment::mode_selector::{
     EnvironmentSetupMode, EnvironmentSetupModeSelector, EnvironmentSetupModeSelectorEvent,
@@ -2720,7 +2722,7 @@ pub struct TerminalView {
     /// The last prompt routed to the local Claude harness and when it was
     /// submitted, used to drop the duplicate submission the banner →
     /// agent-view handoff replays on the first prompt after launch.
-    last_local_claude_submission: Option<(String, std::time::Instant)>,
+    last_local_claude_submission: Option<(String, Instant)>,
 
     /// The live local-claude thread for this terminal: the CLI session to
     /// `--resume` and the conversation follow-up prompts append to. Kept in
@@ -4056,6 +4058,8 @@ impl TerminalView {
 
         let ligature_handle = LigatureSettings::handle(ctx);
         ctx.subscribe_to_model(&ligature_handle, |_, _, _, ctx| ctx.notify());
+        let text_effects_handle = TextEffectsSettings::handle(ctx);
+        ctx.subscribe_to_model(&text_effects_handle, |_, _, _, ctx| ctx.notify());
 
         let privacy_settings_handle = PrivacySettings::handle(ctx);
         ctx.subscribe_to_model(
@@ -23267,7 +23271,7 @@ impl TerminalView {
         // spawning two identical runs (observed as doubled `starting` log
         // lines and a duplicate hidden conversation). Drop an identical
         // prompt arriving within a short window.
-        let now = std::time::Instant::now();
+        let now = Instant::now();
         if let Some((last_prompt, submitted_at)) = &self.last_local_claude_submission {
             if *last_prompt == prompt
                 && now.duration_since(*submitted_at) < std::time::Duration::from_secs(3)
@@ -23412,16 +23416,15 @@ impl TerminalView {
                                     // Follow-ups append to the thread's existing
                                     // conversation; anything else (including a
                                     // vanished conversation) starts fresh.
-                                    let follow_up = follow_up_conversation.and_then(
-                                        |conversation_id| {
+                                    let follow_up =
+                                        follow_up_conversation.and_then(|conversation_id| {
                                             LocalHarnessStream::begin_follow_up(
                                                 terminal_surface_id,
                                                 conversation_id,
                                                 &begin_prompt,
                                                 ctx,
                                             )
-                                        },
-                                    );
+                                        });
                                     let stream = match follow_up {
                                         Some(stream) => stream,
                                         None => {
@@ -23467,9 +23470,7 @@ impl TerminalView {
                                 if let Ok(reported) = uuid::Uuid::parse_str(reported) {
                                     if let Some(thread) = view.local_claude_thread.as_mut() {
                                         thread.1 = reported;
-                                        local_harness_threads::record(
-                                            thread.2, thread.0, reported,
-                                        );
+                                        local_harness_threads::record(thread.2, thread.0, reported);
                                     }
                                 }
                             }

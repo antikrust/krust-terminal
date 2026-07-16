@@ -21,6 +21,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use ai::agent::TurnEvent;
 use anyhow::Result;
 use async_trait::async_trait;
 use command::r#async::Command;
@@ -33,8 +34,6 @@ use warp_core::command::ExitCode;
 use warp_managed_secrets::ManagedSecretValue;
 use warpui::{AppContext, ModelContext, ModelHandle, ModelSpawner};
 
-use ai::agent::TurnEvent;
-
 use super::super::terminal::{CommandHandle, TerminalDriver};
 use super::super::{AgentDriver, AgentDriverError};
 use super::claude_code::prepare_claude_environment_config;
@@ -44,9 +43,9 @@ use super::{
     HarnessCleanupDisposition, HarnessRunner, JSONMCPServer, ResumePayload, SavePoint,
     ThirdPartyHarness,
 };
+use crate::ai::agent_sdk::setup_observability::SetupClientEventReporter;
 use crate::ai::ambient_agents::task::HarnessModelConfig;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
-use crate::ai::agent_sdk::setup_observability::SetupClientEventReporter;
 use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
 use crate::server::server_api::ServerApi;
 use crate::terminal::model::block::BlockId;
