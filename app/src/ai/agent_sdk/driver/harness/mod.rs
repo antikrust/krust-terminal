@@ -61,7 +61,8 @@ pub(crate) use telemetry::ThirdPartyHarnessTelemetryEvent;
 /// Interim selection until the model picker drives it: fresh conversations
 /// read `WARP_LOCAL_HARNESS` (`claude` | `codex`, defaulting to claude);
 /// follow-ups stick with the harness their thread started on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub(crate) enum LocalHarnessKind {
     Claude,
     Codex,

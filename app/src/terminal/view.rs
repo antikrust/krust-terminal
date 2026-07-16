@@ -280,6 +280,7 @@ use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, 
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
+use crate::ai::blocklist::local_harness_threads;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
 use crate::ai::loading::shimmering_warp_loading_text;
 #[cfg(feature = "local_fs")]
@@ -23289,7 +23290,27 @@ impl TerminalView {
             // Stale/unknown selections fall back to the env override.
             _ => LocalHarnessKind::default_from_env(),
         };
-        let thread = self.local_claude_thread;
+        // The thread to continue: the pane's live thread when it belongs to
+        // the conversation on screen (or nothing is on screen yet), else the
+        // durable registry binding for the viewed conversation — so restored
+        // conversations (after an app restart, or from another pane) resume
+        // their original CLI session and append on screen instead of
+        // spawning a brand-new conversation.
+        let viewed_conversation = self
+            .ai_context_model()
+            .as_ref(ctx)
+            .selected_conversation_id(ctx);
+        let thread = self
+            .local_claude_thread
+            .filter(|(_, _, conversation_id)| {
+                viewed_conversation.is_none() || viewed_conversation == Some(*conversation_id)
+            })
+            .or_else(|| {
+                viewed_conversation.and_then(|conversation_id| {
+                    local_harness_threads::lookup(conversation_id)
+                        .map(|(kind, session_id)| (kind, session_id, conversation_id))
+                })
+            });
         let resuming = thread.is_some();
         let follow_up_conversation = thread.map(|(_, _, conversation_id)| conversation_id);
         let harness = thread
@@ -23427,6 +23448,11 @@ impl TerminalView {
                                     };
                                     view.local_claude_thread =
                                         Some((harness, session_id, stream.conversation_id()));
+                                    local_harness_threads::record(
+                                        stream.conversation_id(),
+                                        harness,
+                                        session_id,
+                                    );
                                     stream
                                 }
                             };
@@ -23441,6 +23467,9 @@ impl TerminalView {
                                 if let Ok(reported) = uuid::Uuid::parse_str(reported) {
                                     if let Some(thread) = view.local_claude_thread.as_mut() {
                                         thread.1 = reported;
+                                        local_harness_threads::record(
+                                            thread.2, thread.0, reported,
+                                        );
                                     }
                                 }
                             }
