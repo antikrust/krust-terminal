@@ -127,7 +127,7 @@ The master toggle must also have Enable/Disable Text FX entries in the Command P
 
 Implementation status: the native sampler, both renderer paths, adaptive Settings controls, independent native colour layer, and deterministic tests are present in this checkout. A richer inline preview remains to be added.
 
-Run this development build with `./script/run-with-text-effects`; the feature remains outside Warp's default Cargo feature set while it is under development.
+txtFX is included in the standard 0term build and runs with the normal `./script/run` workflow.
 
 ### Increment 2: Full rendering coverage
 

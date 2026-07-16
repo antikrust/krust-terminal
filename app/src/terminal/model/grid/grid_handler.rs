@@ -693,7 +693,6 @@ impl GridHandler {
             .sample(point, cell.content_for_display(), config, now)
     }
 
-    #[cfg(feature = "text_effects")]
     fn finish_text_effects_batch(&mut self) {
         let pending_writes = self.text_effects.take_pending_writes();
         let written_cells: Vec<_> = pending_writes

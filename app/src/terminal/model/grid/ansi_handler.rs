@@ -209,11 +209,8 @@ impl ansi::Handler for GridHandler {
                 col = col.saturating_sub(1);
             }
 
-            #[cfg(feature = "text_effects")]
-            {
-                let point = AbsolutePoint::from_original_point(Point::new(row, col), self);
-                self.text_effects.record_write(point);
-            }
+            let point = AbsolutePoint::from_original_point(Point::new(row, col), self);
+            self.text_effects.record_write(point);
 
             self.grid[row][col].push_zerowidth(c, /* log_long_grapheme_warnings */ true);
             let cell_content_width = match self.grid[row][col].raw_content() {
@@ -1238,7 +1235,6 @@ impl ansi::Handler for GridHandler {
 
         self.maybe_scan_dirty_cells_for_secrets();
 
-        #[cfg(feature = "text_effects")]
         self.finish_text_effects_batch();
 
         if self.finished && self.num_lines_truncated() > 0 {
@@ -1557,7 +1553,6 @@ impl GridHandler {
     /// Write `c` to the cell at the cursor position.
     #[inline(always)]
     fn write_at_cursor(&mut self, c: char) -> &mut Cell {
-        #[cfg(feature = "text_effects")]
         if c != cell::DEFAULT_CHAR {
             let point = AbsolutePoint::from_original_point(self.cursor_point(), self);
             self.text_effects.record_write(point);

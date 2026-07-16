@@ -2,11 +2,7 @@ use instant::Instant;
 use warp_terminal::model::char_or_str::CharOrStr;
 
 use super::*;
-#[cfg(feature = "text_effects")]
-use crate::terminal::model::ansi::Processor;
-#[cfg(feature = "text_effects")]
-use crate::terminal::model::ansi::{Handler as _, ProcessorInput};
-#[cfg(feature = "text_effects")]
+use crate::terminal::model::ansi::{Handler as _, Processor, ProcessorInput};
 use crate::terminal::model::grid::grid_handler::GridHandler;
 
 fn point(col: usize) -> AbsolutePoint {
@@ -395,7 +391,6 @@ fn spinner_has_an_explicit_start_update_stop_lifecycle() {
     );
 }
 
-#[cfg(feature = "text_effects")]
 #[test]
 fn grid_writes_create_a_renderable_batch() {
     let mut grid = GridHandler::new_for_test(2, 8);
@@ -420,7 +415,6 @@ fn grid_writes_create_a_renderable_batch() {
     ));
 }
 
-#[cfg(feature = "text_effects")]
 #[test]
 fn osc_spinner_command_reaches_the_grid_timeline() {
     let mut grid = GridHandler::new_for_test(2, 8);
