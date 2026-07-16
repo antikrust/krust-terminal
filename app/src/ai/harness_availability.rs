@@ -3,13 +3,15 @@ use std::time::Duration;
 
 use instant::Instant;
 use serde::{Deserialize, Serialize};
+use settings::Setting as _;
 use warp_cli::agent::Harness;
 use warp_core::features::FeatureFlag;
 use warp_errors::report_error;
 use warp_managed_secrets::client::SecretOwner;
 use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use warpui::{Entity, ModelContext, RequestState, SingletonEntity};
+use warpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
 
+use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
 use crate::auth::AuthStateProvider;
@@ -72,6 +74,40 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
             available_models: vec![],
         },
     ]
+}
+
+/// The local-harness selection for panes without an ambient (cloud composer)
+/// view model: the persisted last-selected harness when it's an enabled local
+/// harness, else the first enabled one; plus that harness's persisted model
+/// and reasoning selection. This is what the plain-terminal model picker
+/// shows and what prompt submission runs.
+pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Option<String>) {
+    let availability = HarnessAvailabilityModel::as_ref(ctx);
+    let settings = CloudAgentSettings::as_ref(ctx);
+    let harness = settings
+        .last_selected_harness
+        .value()
+        .as_deref()
+        .and_then(Harness::from_config_name)
+        .filter(|harness| availability.is_harness_enabled(*harness))
+        .or_else(|| {
+            availability
+                .available_harnesses()
+                .iter()
+                .find(|h| h.enabled)
+                .map(|h| h.harness)
+        })
+        .unwrap_or(Harness::Claude);
+    let selection = settings
+        .last_selected_harness_model
+        .value()
+        .get(harness.config_name())
+        .cloned();
+    (
+        harness,
+        selection.as_ref().map(|s| s.model_id.clone()),
+        selection.and_then(|s| s.reasoning_level),
+    )
 }
 
 /// Resolves a local agent CLI against the user's shell PATH plus the standard

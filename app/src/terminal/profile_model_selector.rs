@@ -24,6 +24,7 @@ use warpui::{
 const SIDECAR_HORIZONTAL_GAP: f32 = 8.;
 const SIDECAR_POSITION_ID: &str = "model_sidecar_panel";
 
+use settings::Setting as _;
 use warp_cli::agent::Harness;
 use warp_core::features::FeatureFlag;
 use warp_core::ui::color::{coloru_with_opacity, Opacity};
@@ -43,7 +44,7 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
+    selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -198,6 +199,7 @@ pub enum ProfileModelSelectorAction {
     SelectAutoModel,
     SelectReasoningModel(String),
     SelectHarnessModel {
+        harness: Harness,
         model_id: String,
         reasoning_level: Option<String>,
     },
@@ -676,9 +678,12 @@ impl ProfileModelSelector {
         self.is_locked_for_cloud_followup(app) || self.is_locked_for_non_oz_run(app)
     }
 
-    /// True when a non-Oz harness is selected.
+    /// True when a non-Oz harness is selected. Panes without an ambient
+    /// (cloud composer) model count too: in this fork every plain terminal
+    /// pane runs a local CLI harness, so the picker always shows the harness
+    /// menu rather than Warp's cloud model list.
     fn is_third_party_harness(&self, app: &AppContext) -> bool {
-        self.ambient_agent_view_model.as_ref().is_some_and(|m| {
+        self.ambient_agent_view_model.as_ref().map_or(true, |m| {
             let model = m.as_ref(app);
             !matches!(model.selected_harness(), Harness::Oz | Harness::Unknown)
         })
@@ -897,54 +902,105 @@ impl ProfileModelSelector {
     }
 
     fn harness_model_display_name(&self, app: &AppContext) -> String {
-        self.active_harness_model_info(app)
-            .map(|info| info.display_name.clone())
-            .unwrap_or_else(|| HARNESS_DEFAULT_MODEL_LABEL.to_string())
+        if let Some(info) = self.active_harness_model_info(app) {
+            return info.display_name.clone();
+        }
+        match self.ambient_agent_view_model.as_ref() {
+            Some(_) => HARNESS_DEFAULT_MODEL_LABEL.to_string(),
+            // No ambient model (plain terminal pane): label with the
+            // persisted local selection — the model's display name when one
+            // is chosen, else the harness's own name.
+            None => {
+                let (harness, model_id, reasoning) = selected_local_harness(app);
+                let availability = HarnessAvailabilityModel::as_ref(app);
+                model_id
+                    .and_then(|id| {
+                        availability.models_for(harness)?.iter().find(|m| {
+                            m.id == id && m.reasoning_level.as_deref() == reasoning.as_deref()
+                        })
+                    })
+                    .map(|info| info.display_name.clone())
+                    .unwrap_or_else(|| availability.display_name_for(harness).to_string())
+            }
+        }
     }
 
     fn refresh_harness_model_menu(&mut self, ctx: &mut ViewContext<Self>) {
-        let ambient_model = match self.ambient_agent_view_model.as_ref() {
-            Some(m) => m,
-            None => return,
-        };
-        let harness = ambient_model.as_ref(ctx).selected_harness();
-        let selected_model_id = ambient_model
-            .as_ref(ctx)
-            .selected_harness_model_id()
-            .map(str::to_owned);
-        let selected_reasoning = ambient_model
-            .as_ref(ctx)
-            .selected_harness_reasoning_level()
-            .map(str::to_owned);
+        // Cloud composer panes carry an ambient model that owns the
+        // selection and pick their harness elsewhere; plain terminal panes
+        // use the persisted local-harness selection and get a grouped menu
+        // that switches the harness and the model together.
+        let ambient_selection = self.ambient_agent_view_model.as_ref().map(|m| {
+            let model = m.as_ref(ctx);
+            (
+                model.selected_harness(),
+                model.selected_harness_model_id().map(str::to_owned),
+                model.selected_harness_reasoning_level().map(str::to_owned),
+            )
+        });
+        let group_harnesses = ambient_selection.is_none();
+        let (selected_harness, selected_model_id, selected_reasoning) =
+            ambient_selection.unwrap_or_else(|| selected_local_harness(ctx));
 
-        let models = HarnessAvailabilityModel::as_ref(ctx).models_for(harness);
+        let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>)> = {
+            let availability = HarnessAvailabilityModel::as_ref(ctx);
+            if group_harnesses {
+                availability
+                    .available_harnesses()
+                    .iter()
+                    .filter(|h| h.enabled)
+                    .map(|h| (h.harness, h.display_name.clone(), h.available_models.clone()))
+                    .collect()
+            } else {
+                vec![(
+                    selected_harness,
+                    availability.display_name_for(selected_harness).to_string(),
+                    availability
+                        .models_for(selected_harness)
+                        .map(<[HarnessModelInfo]>::to_vec)
+                        .unwrap_or_default(),
+                )]
+            }
+        };
 
         let mut items: Vec<MenuItem<ProfileModelSelectorAction>> = Vec::new();
+        let mut selected_index = 0;
+        for (harness, display_name, models) in harness_groups {
+            if group_harnesses {
+                items.push(
+                    MenuItemFields::new(display_name)
+                        .with_disabled(true)
+                        .into_item(),
+                );
+            }
 
-        let default_selected = selected_model_id.is_none();
-        let default_action = ProfileModelSelectorAction::SelectHarnessModel {
-            model_id: String::new(),
-            reasoning_level: None,
-        };
-        let mut default_fields =
-            MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL).with_on_select_action(default_action);
-        if default_selected {
-            default_fields = default_fields.with_icon(Icon::Check);
-        } else {
-            default_fields = default_fields.with_indent();
-        }
-        items.push(MenuItem::Item(default_fields));
+            let default_selected = harness == selected_harness && selected_model_id.is_none();
+            let mut default_fields = MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL)
+                .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
+                    harness,
+                    model_id: String::new(),
+                    reasoning_level: None,
+                });
+            if default_selected {
+                selected_index = items.len();
+                default_fields = default_fields.with_icon(Icon::Check);
+            } else {
+                default_fields = default_fields.with_indent();
+            }
+            items.push(MenuItem::Item(default_fields));
 
-        if let Some(models) = models {
             for model in models {
-                let is_selected = selected_model_id.as_deref() == Some(&model.id)
+                let is_selected = harness == selected_harness
+                    && selected_model_id.as_deref() == Some(&model.id)
                     && selected_reasoning.as_deref() == model.reasoning_level.as_deref();
                 let mut fields = MenuItemFields::new(model.display_name.clone())
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
+                        harness,
                         model_id: model.id.clone(),
                         reasoning_level: model.reasoning_level.clone(),
                     });
                 if is_selected {
+                    selected_index = items.len();
                     fields = fields.with_icon(Icon::Check);
                 } else {
                     fields = fields.with_indent();
@@ -952,19 +1008,6 @@ impl ProfileModelSelector {
                 items.push(MenuItem::Item(fields));
             }
         }
-
-        let selected_index = items
-            .iter()
-            .position(|item| {
-                matches!(
-                    item.item_on_select_action(),
-                    Some(ProfileModelSelectorAction::SelectHarnessModel { model_id, reasoning_level })
-                        if (model_id.is_empty() && default_selected)
-                            || (selected_model_id.as_deref() == Some(model_id.as_str())
-                                && selected_reasoning.as_deref() == reasoning_level.as_deref())
-                )
-            })
-            .unwrap_or(0);
 
         self.model_dropdown.update(ctx, |menu, ctx| {
             menu.set_width(MENU_WIDTH);
@@ -2161,12 +2204,18 @@ impl TypedActionView for ProfileModelSelector {
                 self.handle_sidecar_selection(ctx);
             }
             ProfileModelSelectorAction::SelectHarnessModel {
+                harness,
                 model_id,
                 reasoning_level,
             } => {
+                let harness = *harness;
                 let is_default = model_id.is_empty();
                 if let Some(ambient_agent_model) = self.ambient_agent_view_model.clone() {
                     ambient_agent_model.update(ctx, |model, ctx| {
+                        // The grouped fallback menu can switch the harness
+                        // together with the model; `set_harness` clears any
+                        // previous model selection, so it must come first.
+                        model.set_harness(harness, ctx);
                         model.set_harness_model_selection(
                             (!is_default).then(|| model_id.clone()),
                             if is_default {
@@ -2177,17 +2226,20 @@ impl TypedActionView for ProfileModelSelector {
                             ctx,
                         );
                     });
-                    let harness = ambient_agent_model.as_ref(ctx).selected_harness();
-                    CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
-                        settings.persist_harness_model_selection(
-                            harness,
-                            model_id,
-                            reasoning_level.clone(),
-                            ctx,
-                        );
-                    });
                 }
+                CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let _ = settings
+                        .last_selected_harness
+                        .set_value(Some(harness.config_name().to_string()), ctx);
+                    settings.persist_harness_model_selection(
+                        harness,
+                        model_id,
+                        reasoning_level.clone(),
+                        ctx,
+                    );
+                });
                 self.set_model_menu_visibility(false, ctx);
+                self.refresh_state(ctx);
             }
             ProfileModelSelectorAction::ManageProfiles => {
                 self.set_profile_menu_visibility(false, ctx);

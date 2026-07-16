@@ -14310,7 +14310,7 @@ impl Input {
                     model.selected_harness_reasoning_level().map(str::to_owned),
                 )
             })
-            .unwrap_or((Harness::Claude, None, None));
+            .unwrap_or_else(|| crate::ai::harness_availability::selected_local_harness(ctx));
         log::info!("fork: routing agent prompt to local harness {harness:?}");
         ctx.emit(Event::RunLocalClaudeQuery {
             prompt: ai_query,

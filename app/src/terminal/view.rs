@@ -4473,13 +4473,6 @@ impl TerminalView {
         // the real work only on the lazy viewer path, where the input was built without a model.
         if let Some(ambient_agent_view_model) = ambient_agent_view_model {
             terminal_view.wire_ambient_agent_view_model(ambient_agent_view_model, ctx);
-        } else {
-            // Fork: every pane gets an ambient view model so the harness/model
-            // picker drives local CLI selection — without one the model chip
-            // falls back to Warp's dead cloud model list (blank label, cloud
-            // options). Rides the same lazy attach path shared-session
-            // viewers use, so the footer selectors wire up identically.
-            terminal_view.ensure_ambient_agent_view_model(ctx);
         }
         terminal_view.register_subscriptions_for_use_agent_footer(ctx);
 

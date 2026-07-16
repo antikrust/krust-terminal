@@ -312,7 +312,11 @@ impl TerminalView {
                             model.selected_harness_model_id().map(str::to_owned),
                         )
                     })
-                    .unwrap_or((warp_cli::agent::Harness::Claude, None));
+                    .unwrap_or_else(|| {
+                        let (harness, model_id, _reasoning) =
+                            crate::ai::harness_availability::selected_local_harness(ctx);
+                        (harness, model_id)
+                    });
                 self.run_local_claude_query(initial_prompt, harness, model_id, None, ctx);
                 did_auto_trigger_request = true;
             } else {
