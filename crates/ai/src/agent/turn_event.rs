@@ -61,10 +61,23 @@ pub enum ToolCallOutcome {
 }
 
 /// Usage/cost/timing info reported at the end of a run.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+///
+/// Token counts describe the run's *final* API call, so
+/// `input_tokens + cache_read_input_tokens + cache_creation_input_tokens +
+/// output_tokens` approximates how full the model's context window is
+/// after the run.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TurnUsage {
     pub input_tokens: u64,
     pub output_tokens: u64,
+    /// Prompt tokens served from the provider's cache on the final call.
+    pub cache_read_input_tokens: u64,
+    /// Prompt tokens newly written to the provider's cache on the final call.
+    pub cache_creation_input_tokens: u64,
+    /// The run's primary model, when the CLI reports per-model usage.
+    pub model_id: Option<String>,
+    /// The primary model's context-window size in tokens, when reported.
+    pub context_window: Option<u64>,
     pub cost_usd: Option<f64>,
     pub duration_ms: Option<u64>,
 }

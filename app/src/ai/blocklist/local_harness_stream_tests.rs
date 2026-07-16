@@ -9,7 +9,7 @@
 //! effect), and every subsequent injection and the final completion report
 //! `TaskNotFound`.
 
-use ai::agent::TurnEvent;
+use ai::agent::{TurnEvent, TurnUsage};
 use warpui::{App, EntityId};
 
 use super::LocalHarnessStream;
@@ -50,6 +50,58 @@ fn back_to_back_runs_each_land_their_own_completed_conversation() {
                 );
             });
         }
+    });
+}
+
+#[test]
+fn turn_usage_populates_context_meter_and_accumulates_token_totals() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+        // Folding usage metadata into the conversation resolves custom
+        // endpoint display labels through the LLM preferences singleton.
+        app.add_singleton_model(crate::ai::llms::LLMPreferences::new);
+
+        let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "prompt", ctx));
+        let usage = TurnUsage {
+            input_tokens: 10,
+            output_tokens: 90,
+            cache_read_input_tokens: 30_000,
+            cache_creation_input_tokens: 9_900,
+            model_id: Some("claude-sonnet-4-5".to_string()),
+            context_window: Some(200_000),
+            cost_usd: Some(0.05),
+            duration_ms: Some(1_000),
+        };
+        app.update(|ctx| stream.apply_turn_usage(&usage, ctx));
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            // 40_000 context tokens of a 200_000-token window.
+            assert!(
+                (conversation.context_window_usage() - 0.2).abs() < 1e-6,
+                "context fraction: {}",
+                conversation.context_window_usage()
+            );
+            let rows = conversation.token_usage();
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].model_id, "claude-sonnet-4-5");
+            assert_eq!(rows[0].byok_tokens, 40_000);
+        });
+
+        // A second run's usage accumulates into the totals rather than
+        // replacing them, while the context fraction stays point-in-time.
+        app.update(|ctx| stream.apply_turn_usage(&usage, ctx));
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            assert!((conversation.context_window_usage() - 0.2).abs() < 1e-6);
+            assert_eq!(conversation.token_usage()[0].byok_tokens, 80_000);
+        });
     });
 }
 

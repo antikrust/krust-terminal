@@ -16,6 +16,7 @@ use chrono::Local;
 use warp_multi_agent_api as api;
 use warpui::{AppContext, EntityId, SingletonEntity as _};
 
+use ai::agent::TurnUsage;
 use ai::skills::SkillPathOrigin;
 
 use super::controller::response_stream::ResponseStreamId;
@@ -236,6 +237,118 @@ impl LocalHarnessStream {
             ) {
                 log::warn!("local_harness_stream: failed to inject harness messages: {error}");
             }
+        });
+    }
+
+    /// Folds a run's final token usage into the conversation so the usage
+    /// footer and its context-window meter work for local runs. On the Oz
+    /// path the server precomputes all of this and ships it in
+    /// `StreamFinished`; here we accumulate per-model totals across the
+    /// conversation's runs and derive the context fraction ourselves.
+    // `ConversationUsageMetadata` construction requires its deprecated
+    // `token_usage` field (exhaustive struct literal).
+    #[allow(deprecated)]
+    pub(crate) fn apply_turn_usage(&self, usage: &TurnUsage, ctx: &mut AppContext) {
+        use api::response_event::stream_finished;
+
+        // Claude-sized default when the CLI doesn't report a window.
+        const DEFAULT_CONTEXT_WINDOW: u64 = 200_000;
+
+        let context_tokens = usage.input_tokens
+            + usage.cache_read_input_tokens
+            + usage.cache_creation_input_tokens
+            + usage.output_tokens;
+        if context_tokens == 0 {
+            return;
+        }
+        let context_window = usage
+            .context_window
+            .filter(|window| *window > 0)
+            .unwrap_or(DEFAULT_CONTEXT_WINDOW);
+        let context_window_usage =
+            (context_tokens as f64 / context_window as f64).clamp(0.0, 1.0) as f32;
+
+        let model_id = usage
+            .model_id
+            .clone()
+            .unwrap_or_else(|| "claude".to_string());
+        let as_u32 = |tokens: u64| tokens.min(u64::from(u32::MAX)) as u32;
+        let turn_tokens = stream_finished::TokenUsage {
+            model_id: model_id.clone(),
+            total_input: as_u32(
+                usage.input_tokens
+                    + usage.cache_read_input_tokens
+                    + usage.cache_creation_input_tokens,
+            ),
+            output: as_u32(usage.output_tokens),
+            input_cache_read: as_u32(usage.cache_read_input_tokens),
+            input_cache_write: as_u32(usage.cache_creation_input_tokens),
+            cost_in_cents: usage
+                .cost_usd
+                .map(|cost| (cost * 100.0) as f32)
+                .unwrap_or(0.0),
+        };
+
+        let history = BlocklistAIHistoryModel::handle(ctx);
+        history.update(ctx, |history, ctx| {
+            // Accumulate this run into the conversation's running per-model
+            // totals...
+            history.update_conversation_cost_and_usage_for_request(
+                self.conversation_id,
+                None,
+                vec![turn_tokens],
+                None,
+                true,
+                ctx,
+            );
+
+            // ...then project those totals into the usage metadata the
+            // footer reads (per-model token rows + the context meter).
+            let byok_token_usage: HashMap<String, stream_finished::ModelTokenUsage> = history
+                .conversation(&self.conversation_id)
+                .map(|conversation| {
+                    conversation
+                        .total_token_usage()
+                        .into_iter()
+                        .map(|totals| {
+                            let total_tokens = totals.total_input.saturating_add(totals.output);
+                            (
+                                totals.model_id.clone(),
+                                stream_finished::ModelTokenUsage {
+                                    model_id: totals.model_id,
+                                    total_tokens,
+                                    token_usage_by_category: HashMap::from([(
+                                        "primary_agent".to_string(),
+                                        total_tokens,
+                                    )]),
+                                },
+                            )
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let metadata = stream_finished::ConversationUsageMetadata {
+                context_window_usage,
+                credits_spent: 0.0,
+                platform_credits_spent: 0.0,
+                summarized: false,
+                token_usage: vec![],
+                tool_usage_metadata: None,
+                total_input_tokens: as_u32(context_tokens),
+                warp_token_usage: HashMap::new(),
+                byok_token_usage,
+                context_window_segments: Vec::new(),
+                custom_endpoint_token_usage: HashMap::new(),
+            };
+            history.update_conversation_cost_and_usage_for_request(
+                self.conversation_id,
+                None,
+                Vec::new(),
+                Some(metadata),
+                true,
+                ctx,
+            );
         });
     }
 

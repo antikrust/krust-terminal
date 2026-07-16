@@ -122,6 +122,32 @@ fn parses_final_result() {
 }
 
 #[test]
+fn result_usage_reads_final_call_cache_tokens_and_model_context_window() {
+    // Shape confirmed against a real claude 2.1.x run: top-level `usage`
+    // sums every API call and carries per-call `iterations`; `modelUsage`
+    // is keyed by model id and reports the context window.
+    let line = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1988,"num_turns":2,"result":"OK","session_id":"s","total_cost_usd":0.043347,"usage":{"input_tokens":30,"cache_creation_input_tokens":30000,"cache_read_input_tokens":12000,"output_tokens":700,"iterations":[{"input_tokens":20,"output_tokens":635,"cache_read_input_tokens":0,"cache_creation_input_tokens":21506,"type":"message"},{"input_tokens":10,"output_tokens":65,"cache_read_input_tokens":12000,"cache_creation_input_tokens":8494,"type":"message"}]},"modelUsage":{"claude-haiku-4-5-20251001":{"inputTokens":30,"outputTokens":700,"cacheReadInputTokens":12000,"cacheCreationInputTokens":30000,"webSearchRequests":0,"costUSD":0.043347,"contextWindow":200000,"maxOutputTokens":32000}},"uuid":"u"}"#;
+    let events = parse_stream_json_line(line);
+    assert_eq!(events.len(), 1);
+    match &events[0] {
+        TurnEvent::TurnCompleted { usage, .. } => {
+            let usage = usage.as_ref().expect("usage present");
+            // Token counts come from the run's final call, not the sums.
+            assert_eq!(usage.input_tokens, 10);
+            assert_eq!(usage.output_tokens, 65);
+            assert_eq!(usage.cache_read_input_tokens, 12000);
+            assert_eq!(usage.cache_creation_input_tokens, 8494);
+            assert_eq!(
+                usage.model_id.as_deref(),
+                Some("claude-haiku-4-5-20251001")
+            );
+            assert_eq!(usage.context_window, Some(200_000));
+        }
+        other => panic!("expected TurnCompleted, got {other:?}"),
+    }
+}
+
+#[test]
 fn empty_and_malformed_lines_are_ignored_not_fatal() {
     assert_eq!(parse_stream_json_line(""), Vec::new());
     assert_eq!(parse_stream_json_line("   "), Vec::new());

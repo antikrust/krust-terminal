@@ -11,6 +11,8 @@
 //! notification-hook plugin and rate-limit telemetry — they carry no
 //! renderable content and are skipped.
 
+use std::collections::HashMap;
+
 use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
 use serde::Deserialize;
 
@@ -124,10 +126,30 @@ fn tool_result_text(content: &ToolResultContent) -> String {
 }
 
 fn result_event(result: ResultLine) -> TurnEvent {
+    // The primary model is the one that saw the most tokens; subagent models
+    // show up as additional (smaller) `modelUsage` entries.
+    let primary_model = result
+        .model_usage
+        .iter()
+        .max_by_key(|(_, usage)| usage.total_tokens());
+
+    // Context occupancy after the run is what the *final* API call saw: its
+    // prompt (fresh + cached) plus its output. The top-level counters sum
+    // every call in the run, which would overcount; when the CLI provides
+    // per-call `iterations`, prefer the last one.
+    let usage = result.usage.as_ref();
+    let final_call = usage.map(|u| u.iterations.last().unwrap_or(u));
+
     TurnEvent::TurnCompleted {
         usage: Some(TurnUsage {
-            input_tokens: result.usage.as_ref().map(|u| u.input_tokens).unwrap_or(0),
-            output_tokens: result.usage.as_ref().map(|u| u.output_tokens).unwrap_or(0),
+            input_tokens: final_call.map(|u| u.input_tokens).unwrap_or(0),
+            output_tokens: final_call.map(|u| u.output_tokens).unwrap_or(0),
+            cache_read_input_tokens: final_call.map(|u| u.cache_read_input_tokens).unwrap_or(0),
+            cache_creation_input_tokens: final_call
+                .map(|u| u.cache_creation_input_tokens)
+                .unwrap_or(0),
+            model_id: primary_model.map(|(model_id, _)| model_id.clone()),
+            context_window: primary_model.and_then(|(_, usage)| usage.context_window),
             cost_usd: result.total_cost_usd,
             duration_ms: result.duration_ms,
         }),
@@ -218,6 +240,9 @@ struct ResultLine {
     duration_ms: Option<u64>,
     total_cost_usd: Option<f64>,
     usage: Option<ResultUsage>,
+    /// Per-model usage keyed by model id; carries the context-window size.
+    #[serde(rename = "modelUsage", default)]
+    model_usage: HashMap<String, ModelUsage>,
 }
 
 #[derive(Deserialize)]
@@ -226,6 +251,36 @@ struct ResultUsage {
     input_tokens: u64,
     #[serde(default)]
     output_tokens: u64,
+    #[serde(default)]
+    cache_read_input_tokens: u64,
+    #[serde(default)]
+    cache_creation_input_tokens: u64,
+    /// Per-API-call usage rows; the last entry is the run's final call.
+    #[serde(default)]
+    iterations: Vec<ResultUsage>,
+}
+
+#[derive(Deserialize)]
+struct ModelUsage {
+    #[serde(rename = "inputTokens", default)]
+    input_tokens: u64,
+    #[serde(rename = "outputTokens", default)]
+    output_tokens: u64,
+    #[serde(rename = "cacheReadInputTokens", default)]
+    cache_read_input_tokens: u64,
+    #[serde(rename = "cacheCreationInputTokens", default)]
+    cache_creation_input_tokens: u64,
+    #[serde(rename = "contextWindow")]
+    context_window: Option<u64>,
+}
+
+impl ModelUsage {
+    fn total_tokens(&self) -> u64 {
+        self.input_tokens
+            + self.cache_read_input_tokens
+            + self.cache_creation_input_tokens
+            + self.output_tokens
+    }
 }
 
 #[cfg(test)]
