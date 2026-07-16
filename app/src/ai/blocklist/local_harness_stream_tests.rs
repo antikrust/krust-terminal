@@ -14,7 +14,7 @@ use warpui::{App, EntityId};
 
 use super::LocalHarnessStream;
 use crate::ai::agent::conversation::ConversationStatus;
-use crate::ai::agent::{AIAgentOutputStatus, FinishedAIAgentOutput};
+use crate::ai::agent::{AIAgentInput, AIAgentOutputStatus, FinishedAIAgentOutput};
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::test_util::settings::initialize_history_persistence_for_tests;
@@ -50,6 +50,47 @@ fn back_to_back_runs_each_land_their_own_completed_conversation() {
                 );
             });
         }
+    });
+}
+
+#[test]
+fn exchanges_carry_the_user_query_as_renderable_input() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let first =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "first prompt", ctx));
+        let second = app
+            .update(|ctx| {
+                LocalHarnessStream::begin_follow_up(
+                    terminal_view_id,
+                    first.conversation_id(),
+                    "second prompt",
+                    ctx,
+                )
+            })
+            .expect("follow-up registers on the live conversation");
+        assert_eq!(second.conversation_id(), first.conversation_id());
+
+        // The query bubble renders from each exchange's `input`
+        // (`inputs_to_render` → `display_user_query`), so both prompts must
+        // be present there — a regression here makes the user's own inputs
+        // vanish from the transcript.
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&first.conversation_id())
+                .expect("conversation exists");
+            let queries: Vec<String> = conversation
+                .root_task_exchanges()
+                .filter_map(|exchange| exchange.input.iter().find_map(AIAgentInput::user_query))
+                .collect();
+            assert_eq!(
+                queries,
+                vec!["first prompt".to_string(), "second prompt".to_string()]
+            );
+        });
     });
 }
 
