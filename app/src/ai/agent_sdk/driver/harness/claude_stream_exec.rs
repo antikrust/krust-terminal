@@ -64,8 +64,21 @@ pub fn stream_json_args(
 /// loop decoupled from Claude-specific flag construction and lets tests point
 /// it at a stand-in program that emits canned ndjson.
 pub async fn run_claude_stream(
+    command: Command,
+    prompt: &str,
+    on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    run_jsonl_stream(command, prompt, parse_stream_json_line, on_event).await
+}
+
+/// Provider-agnostic core of the headless runners: spawns `command`, delivers
+/// `prompt` over stdin, and pumps stdout line-by-line through `parse_line`.
+/// Each harness pairs this with its own parser ([`run_claude_stream`],
+/// [`super::codex_stream_exec::run_codex_stream`]).
+pub async fn run_jsonl_stream(
     mut command: Command,
     prompt: &str,
+    parse_line: impl Fn(&str) -> Vec<TurnEvent>,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     command
@@ -99,12 +112,12 @@ pub async fn run_claude_stream(
             match reader.read_line(&mut line).await {
                 Ok(0) => break, // EOF
                 Ok(_) => {
-                    for event in parse_stream_json_line(&line) {
+                    for event in parse_line(&line) {
                         on_event(event);
                     }
                 }
                 Err(error) => {
-                    log::warn!("claude_stream_exec: error reading stdout: {error}");
+                    log::warn!("agent_stream_exec: error reading stdout: {error}");
                     break;
                 }
             }
@@ -125,7 +138,7 @@ pub async fn run_claude_stream(
     let failed = status.as_ref().map(|s| !s.success()).unwrap_or(true);
     if failed {
         let exit_code = status.as_ref().ok().and_then(|s| s.code());
-        log::warn!("claude_stream_exec: claude exited unsuccessfully, exit_code={exit_code:?}");
+        log::warn!("agent_stream_exec: agent CLI exited unsuccessfully, exit_code={exit_code:?}");
         let stderr_output = stderr_output.trim();
         if !stderr_output.is_empty() {
             // Stderr can quote arbitrary prompt/config content, so the full
@@ -139,8 +152,8 @@ pub async fn run_claude_stream(
                 .rev()
                 .collect();
             safe_warn!(
-                safe: ("claude_stream_exec: claude wrote to stderr before exiting"),
-                full: ("claude_stream_exec: claude stderr tail: {tail}")
+                safe: ("agent_stream_exec: agent CLI wrote to stderr before exiting"),
+                full: ("agent_stream_exec: agent CLI stderr tail: {tail}")
             );
         }
     }

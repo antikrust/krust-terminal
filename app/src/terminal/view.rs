@@ -275,7 +275,9 @@ use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientPr
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
 use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{run_claude_stream, stream_json_args};
+use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
+use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
 use crate::ai::loading::shimmering_warp_loading_text;
@@ -2722,7 +2724,7 @@ pub struct TerminalView {
     /// `--resume` and the conversation follow-up prompts append to. Kept in
     /// sync with the session id claude reports in each run's `SessionInit`
     /// (a resumed run forks a fresh session id).
-    local_claude_thread: Option<(uuid::Uuid, AIConversationId)>,
+    local_claude_thread: Option<(LocalHarnessKind, uuid::Uuid, AIConversationId)>,
 
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
@@ -23271,7 +23273,19 @@ impl TerminalView {
         }
         self.last_local_claude_submission = Some((prompt.clone(), now));
 
-        log::info!("fork: run_local_claude_query starting");
+        // Continue the terminal's live thread when there is one: resume the
+        // same agent session (so the model keeps context) and append to the
+        // same conversation (so the whole thread stays on screen). Fresh
+        // threads pick their harness from the interim env override
+        // (`WARP_LOCAL_HARNESS`); follow-ups stay on their thread's harness.
+        let thread = self.local_claude_thread;
+        let resuming = thread.is_some();
+        let follow_up_conversation = thread.map(|(_, _, conversation_id)| conversation_id);
+        let harness = thread
+            .map(|(harness, _, _)| harness)
+            .unwrap_or_else(LocalHarnessKind::default_from_env);
+
+        log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
         let terminal_surface_id = ctx.view_id();
         let working_dir = self
@@ -23282,27 +23296,34 @@ impl TerminalView {
 
         // Prepare Claude's on-disk config (trust/onboarding flags) so the
         // headless run doesn't block on first-run prompts.
-        if let Err(error) = prepare_claude_environment_config(
-            &working_dir,
-            &HashMap::<std::ffi::OsString, std::ffi::OsString>::new(),
-        ) {
-            log::error!("fork: failed to prepare claude env config: {error}");
+        if harness == LocalHarnessKind::Claude {
+            if let Err(error) = prepare_claude_environment_config(
+                &working_dir,
+                &HashMap::<std::ffi::OsString, std::ffi::OsString>::new(),
+            ) {
+                log::error!("fork: failed to prepare claude env config: {error}");
+            }
         }
 
-        // Continue the terminal's live thread when there is one: resume the
-        // same claude session (so the model keeps context) and append to the
-        // same conversation (so the whole thread stays on screen).
-        let thread = self.local_claude_thread;
-        let resuming = thread.is_some();
-        let follow_up_conversation = thread.map(|(_, conversation_id)| conversation_id);
-
         // Build the headless streaming command with a robust PATH (the app's
-        // launchd PATH may not contain `claude`).
+        // launchd PATH may not contain the agent CLI).
         let session_id = thread
-            .map(|(session_id, _)| session_id)
+            .map(|(_, session_id, _)| session_id)
             .unwrap_or_else(uuid::Uuid::new_v4);
-        let mut command = command::r#async::Command::new("claude");
-        command.args(stream_json_args(&session_id, resuming, None, None));
+        let mut command = match harness {
+            LocalHarnessKind::Claude => {
+                let mut command = command::r#async::Command::new("claude");
+                command.args(stream_json_args(&session_id, resuming, None, None));
+                command
+            }
+            LocalHarnessKind::Codex => {
+                // A fresh codex run mints its own thread id (reported back
+                // via `thread.started` → SessionInit); only resumes pass one.
+                let mut command = command::r#async::Command::new("codex");
+                command.args(codex_exec_args(resuming.then_some(&session_id), None));
+                command
+            }
+        };
         command.current_dir(&working_dir);
         let mut path = warp_util::path::warp_shell_path()
             .or_else(|| std::env::var("PATH").ok())
@@ -23385,7 +23406,7 @@ impl TerminalView {
                                         }
                                     };
                                     view.local_claude_thread =
-                                        Some((session_id, stream.conversation_id()));
+                                        Some((harness, session_id, stream.conversation_id()));
                                     stream
                                 }
                             };
@@ -23399,7 +23420,7 @@ impl TerminalView {
                             {
                                 if let Ok(reported) = uuid::Uuid::parse_str(reported) {
                                     if let Some(thread) = view.local_claude_thread.as_mut() {
-                                        thread.0 = reported;
+                                        thread.1 = reported;
                                     }
                                 }
                             }
@@ -23433,15 +23454,23 @@ impl TerminalView {
             })
             .detach();
 
-        // Pump: run `claude` headless, forwarding each parsed event to the drain.
+        // Pump: run the agent CLI headless, forwarding each parsed event to
+        // the drain.
         background
             .spawn(async move {
-                let result = run_claude_stream(command, &pump_prompt, move |event| {
+                let on_event = move |event| {
                     let _ = event_tx.unbounded_send(event);
-                })
-                .await;
+                };
+                let result = match harness {
+                    LocalHarnessKind::Claude => {
+                        run_claude_stream(command, &pump_prompt, on_event).await
+                    }
+                    LocalHarnessKind::Codex => {
+                        run_codex_stream(command, &pump_prompt, on_event).await
+                    }
+                };
                 if let Err(error) = result {
-                    log::error!("fork: claude stream exited with error: {error}");
+                    log::error!("fork: local agent stream exited with error: {error}");
                 }
             })
             .detach();

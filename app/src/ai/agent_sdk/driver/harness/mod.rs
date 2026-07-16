@@ -41,6 +41,8 @@ pub(crate) mod claude_stream;
 pub(crate) mod claude_stream_exec;
 pub(crate) mod claude_stream_runner;
 pub(crate) mod claude_transcript;
+pub(crate) mod codex_stream;
+pub(crate) mod codex_stream_exec;
 pub(crate) mod turn_events_to_conversation;
 mod codex;
 pub(crate) mod codex_transcript;
@@ -53,6 +55,26 @@ use codex::CodexHarness;
 use codex_transcript::CodexResumeInfo;
 use gemini::GeminiHarness;
 pub(crate) use telemetry::ThirdPartyHarnessTelemetryEvent;
+
+/// Which local CLI backs a local-harness run in this fork.
+///
+/// Interim selection until the model picker drives it: fresh conversations
+/// read `WARP_LOCAL_HARNESS` (`claude` | `codex`, defaulting to claude);
+/// follow-ups stick with the harness their thread started on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LocalHarnessKind {
+    Claude,
+    Codex,
+}
+
+impl LocalHarnessKind {
+    pub(crate) fn default_from_env() -> Self {
+        match std::env::var("WARP_LOCAL_HARNESS").ok().as_deref() {
+            Some("codex") => Self::Codex,
+            _ => Self::Claude,
+        }
+    }
+}
 
 /// Harness-agnostic payload describing how to resume an existing conversation.
 ///
