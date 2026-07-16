@@ -76,10 +76,12 @@ use crate::terminal::settings::{
     AltScreenPadding, AltScreenPaddingMode, Spacing, SpacingMode, TerminalSettings,
 };
 use crate::terminal::text_effects::{
-    SelectedTextEffect, SelectedTextEffectIntensity, SelectedTextEffectLargeOutput,
+    SelectedTextEffect, SelectedTextEffectColor, SelectedTextEffectColorIntensity,
+    SelectedTextEffectColorSpeed, SelectedTextEffectIntensity, SelectedTextEffectLargeOutput,
     SelectedTextEffectScope, SelectedTextEffectSpeed, ShowTextEffectsTitleBarPicker, TextEffect,
-    TextEffectIntensity, TextEffectLargeOutput, TextEffectScope, TextEffectSpeed,
-    TextEffectsEnabled, TextEffectsSettings,
+    TextEffectColor, TextEffectColorIntensity, TextEffectColorSpeed, TextEffectIntensity,
+    TextEffectLargeOutput, TextEffectScope, TextEffectSpeed, TextEffectsEnabled,
+    TextEffectsSettings,
 };
 use crate::terminal::{
     BlockListSettings, ShowBlockDividers, ShowJumpToBottomOfBlockButton, SizeInfo,
@@ -547,6 +549,9 @@ pub enum AppearancePageAction {
     SetTextEffect(TextEffect),
     SetTextEffectSpeed(TextEffectSpeed),
     SetTextEffectIntensity(TextEffectIntensity),
+    SetTextEffectColor(TextEffectColor),
+    SetTextEffectColorSpeed(TextEffectColorSpeed),
+    SetTextEffectColorIntensity(TextEffectColorIntensity),
     SetTextEffectScope(TextEffectScope),
     SetTextEffectLargeOutput(TextEffectLargeOutput),
     ToggleBlurTexture,
@@ -595,6 +600,9 @@ pub struct AppearanceSettingsPageView {
     text_effect_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_speed_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_intensity_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_color_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_color_speed_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_color_intensity_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_scope_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_large_output_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     input_mode_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
@@ -749,6 +757,21 @@ impl TypedActionView for AppearanceSettingsPageView {
             SetTextEffectIntensity(intensity) => {
                 TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.intensity.set_value(*intensity, ctx));
+                });
+            }
+            SetTextEffectColor(color) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.color.set_value(*color, ctx));
+                });
+            }
+            SetTextEffectColorSpeed(speed) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.color_speed.set_value(*speed, ctx));
+                });
+            }
+            SetTextEffectColorIntensity(intensity) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.color_intensity.set_value(*intensity, ctx));
                 });
             }
             SetTextEffectScope(scope) => {
@@ -1017,6 +1040,9 @@ impl AppearanceSettingsPageView {
             let effect = *settings.effect.value();
             let speed = *settings.speed.value();
             let intensity = *settings.intensity.value();
+            let color = *settings.color.value();
+            let color_speed = *settings.color_speed.value();
+            let color_intensity = *settings.color_intensity.value();
             let scope = *settings.scope.value();
             let large_output = *settings.large_output.value();
             me.text_effect_dropdown.update(ctx, |dropdown, ctx| {
@@ -1030,6 +1056,24 @@ impl AppearanceSettingsPageView {
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_selected_by_action(
                         AppearancePageAction::SetTextEffectIntensity(intensity),
+                        ctx,
+                    );
+                });
+            me.text_effect_color_dropdown.update(ctx, |dropdown, ctx| {
+                dropdown
+                    .set_selected_by_action(AppearancePageAction::SetTextEffectColor(color), ctx);
+            });
+            me.text_effect_color_speed_dropdown
+                .update(ctx, |dropdown, ctx| {
+                    dropdown.set_selected_by_action(
+                        AppearancePageAction::SetTextEffectColorSpeed(color_speed),
+                        ctx,
+                    );
+                });
+            me.text_effect_color_intensity_dropdown
+                .update(ctx, |dropdown, ctx| {
+                    dropdown.set_selected_by_action(
+                        AppearancePageAction::SetTextEffectColorIntensity(color_intensity),
                         ctx,
                     );
                 });
@@ -1430,6 +1474,11 @@ impl AppearanceSettingsPageView {
             text_effect_dropdown: Self::build_text_effect_dropdown(ctx),
             text_effect_speed_dropdown: Self::build_text_effect_speed_dropdown(ctx),
             text_effect_intensity_dropdown: Self::build_text_effect_intensity_dropdown(ctx),
+            text_effect_color_dropdown: Self::build_text_effect_color_dropdown(ctx),
+            text_effect_color_speed_dropdown: Self::build_text_effect_color_speed_dropdown(ctx),
+            text_effect_color_intensity_dropdown: Self::build_text_effect_color_intensity_dropdown(
+                ctx,
+            ),
             text_effect_scope_dropdown: Self::build_text_effect_scope_dropdown(ctx),
             text_effect_large_output_dropdown: Self::build_text_effect_large_output_dropdown(ctx),
             workspace_decorations_dropdown: Self::build_workspace_decoration_visibility_dropdown(
@@ -1594,18 +1643,24 @@ impl AppearanceSettingsPageView {
         categories.push(Category::new("Text", text_settings_widgets));
 
         if FeatureFlag::TextEffects.is_enabled() {
-            categories.push(Category::new(
-                "txtFX",
-                vec![
-                    Box::new(TextEffectsToggleWidget::default()),
-                    Box::new(TextEffectWidget),
-                    Box::new(TextEffectSpeedWidget),
-                    Box::new(TextEffectIntensityWidget),
-                    Box::new(TextEffectScopeWidget),
-                    Box::new(TextEffectLargeOutputWidget),
-                    Box::new(TextEffectsTitleBarPickerWidget::default()),
-                ],
-            ));
+            categories.push(
+                Category::new(
+                    "txtFX",
+                    vec![
+                        Box::new(TextEffectsToggleWidget::default()),
+                        Box::new(TextEffectWidget),
+                        Box::new(TextEffectSpeedWidget),
+                        Box::new(TextEffectIntensityWidget),
+                        Box::new(TextEffectColorWidget),
+                        Box::new(TextEffectColorSpeedWidget),
+                        Box::new(TextEffectColorIntensityWidget),
+                        Box::new(TextEffectScopeWidget),
+                        Box::new(TextEffectLargeOutputWidget),
+                        Box::new(TextEffectsTitleBarPickerWidget::default()),
+                    ],
+                )
+                .with_subtitle("Animation and colour are independent; choose either or both."),
+            );
         }
 
         categories.push(Category::new(
@@ -2753,6 +2808,87 @@ impl AppearanceSettingsPageView {
             dropdown.set_selected_by_action(
                 AppearancePageAction::SetTextEffectIntensity(
                     *TextEffectsSettings::as_ref(ctx).intensity.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_color_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectColor::VALUES
+                    .into_iter()
+                    .map(|color| {
+                        DropdownItem::new(
+                            color.label(),
+                            AppearancePageAction::SetTextEffectColor(color),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectColor(
+                    *TextEffectsSettings::as_ref(ctx).color.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_color_speed_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectColorSpeed::VALUES
+                    .into_iter()
+                    .map(|speed| {
+                        DropdownItem::new(
+                            speed.label(),
+                            AppearancePageAction::SetTextEffectColorSpeed(speed),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectColorSpeed(
+                    *TextEffectsSettings::as_ref(ctx).color_speed.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_color_intensity_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectColorIntensity::VALUES
+                    .into_iter()
+                    .map(|intensity| {
+                        DropdownItem::new(
+                            intensity.label(),
+                            AppearancePageAction::SetTextEffectColorIntensity(intensity),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectColorIntensity(
+                    *TextEffectsSettings::as_ref(ctx).color_intensity.value(),
                 ),
                 ctx,
             );
@@ -4952,8 +5088,8 @@ impl SettingsWidget for TextEffectWidget {
     ) -> Box<dyn Element> {
         render_dropdown_item(
             appearance,
-            "Text effect",
-            None,
+            "Animation effect",
+            Some("Controls how each new batch of terminal text appears"),
             None,
             LocalOnlyIconState::for_setting(
                 SelectedTextEffect::storage_key(),
@@ -4977,6 +5113,10 @@ impl SettingsWidget for TextEffectSpeedWidget {
         "terminal text animation speed slow normal fast fps txtfx"
     }
 
+    fn should_render(&self, app: &AppContext) -> bool {
+        TextEffectsSettings::as_ref(app).effect.value().uses_speed()
+    }
+
     fn render(
         &self,
         view: &Self::View,
@@ -4985,7 +5125,7 @@ impl SettingsWidget for TextEffectSpeedWidget {
     ) -> Box<dyn Element> {
         render_dropdown_item(
             appearance,
-            "Effect speed",
+            "Animation speed",
             None,
             None,
             LocalOnlyIconState::for_setting(
@@ -5007,7 +5147,14 @@ impl SettingsWidget for TextEffectIntensityWidget {
     type View = AppearanceSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "terminal text animation intensity subtle balanced strong trail txtfx"
+        "terminal text animation intensity subtle balanced strong trail scramble density txtfx"
+    }
+
+    fn should_render(&self, app: &AppContext) -> bool {
+        TextEffectsSettings::as_ref(app)
+            .effect
+            .value()
+            .uses_intensity()
     }
 
     fn render(
@@ -5018,8 +5165,8 @@ impl SettingsWidget for TextEffectIntensityWidget {
     ) -> Box<dyn Element> {
         render_dropdown_item(
             appearance,
-            "Effect intensity",
-            None,
+            "Trail length",
+            Some("Controls the number of temporary matrix or decode glyphs"),
             None,
             LocalOnlyIconState::for_setting(
                 SelectedTextEffectIntensity::storage_key(),
@@ -5029,6 +5176,113 @@ impl SettingsWidget for TextEffectIntensityWidget {
             ),
             None,
             &view.text_effect_intensity_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectColorWidget;
+
+impl SettingsWidget for TextEffectColorWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text colour color palette green red yellow blue magenta cyan white rainbow classic txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Colour effect",
+            Some("Layered separately over the selected animation"),
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectColor::storage_key(),
+                SelectedTextEffectColor::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_color_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectColorSpeedWidget;
+
+impl SettingsWidget for TextEffectColorSpeedWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text colour color cycle rainbow speed slow normal fast txtfx"
+    }
+
+    fn should_render(&self, app: &AppContext) -> bool {
+        TextEffectsSettings::as_ref(app).color.value().is_dynamic()
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Colour speed",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectColorSpeed::storage_key(),
+                SelectedTextEffectColorSpeed::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_color_speed_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectColorIntensityWidget;
+
+impl SettingsWidget for TextEffectColorIntensityWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text colour color brightness subtle balanced vivid txtfx"
+    }
+
+    fn should_render(&self, app: &AppContext) -> bool {
+        TextEffectsSettings::as_ref(app).color.value().is_enabled()
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Colour brightness",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectColorIntensity::storage_key(),
+                SelectedTextEffectColorIntensity::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_color_intensity_dropdown,
         )
     }
 }

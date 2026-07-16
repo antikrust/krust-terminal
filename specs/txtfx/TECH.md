@@ -109,7 +109,7 @@ Conceptual API:
 ```rust
 pub struct VisualCell<'a> {
     pub content: CharOrStr<'a>,
-    pub foreground_override: Option<ColorU>,
+    pub foreground_override: Option<Color>,
     pub opacity: f32,
 }
 
@@ -128,6 +128,8 @@ The sampler is a pure function of:
 - original grapheme and display width.
 
 Random-looking effects must hash `(instance_seed, absolute_point, frame_number)` rather than mutate an RNG during paint. The same frame is therefore stable across extra repaints, tests are deterministic, and no lock is required.
+
+Animation and colour are sampled as independent layers. Named colours produce `Color::Named` so they follow the active terminal theme; rainbow produces deterministic `Color::Spec` values. The renderer applies the temporary foreground to a cloned visual cell in both ligature and non-ligature paths. Canonical cell colour is never mutated, and all colour treatments end by returning to the application's original foreground.
 
 ## State model
 
@@ -248,8 +250,9 @@ Suggested modules:
 Use the existing ligature setting as the settings pattern:
 
 - settings group and TOML values under `appearance.txtfx.*`;
+- independent `effect`/`speed`/`intensity` and `color`/`color_speed`/`color_intensity` values;
 - subscribe in `TerminalView` so changes repaint active terminals;
-- add Appearance page controls and preview;
+- add an adaptive Appearance → txtFX category which only renders settings relevant to the selected animation and colour;
 - add Command Palette enable/disable entries and context flags;
 - gate the whole feature with one product-level feature flag while it is under development.
 

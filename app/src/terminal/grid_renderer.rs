@@ -1554,20 +1554,26 @@ fn text_effect_cell<'a>(
     }
 
     let replacement = match sample.content {
-        VisualContent::Original => return Cow::Borrowed(cell),
-        VisualContent::Hidden => ' ',
+        VisualContent::Original if sample.foreground.is_none() => return Cow::Borrowed(cell),
+        VisualContent::Original => None,
+        VisualContent::Hidden => Some(' '),
         VisualContent::Substitute(replacement)
             if cell.flags.contains(Flags::WIDE_CHAR)
                 || matches!(cell.raw_content(), CharOrStr::Str(_)) =>
         {
-            ' '
+            Some(' ')
         }
-        VisualContent::Substitute(replacement) => replacement,
+        VisualContent::Substitute(replacement) => Some(replacement),
     };
 
     let mut visual_cell = cell.clone();
-    visual_cell.drop_extra();
-    visual_cell.c = replacement;
+    if let Some(replacement) = replacement {
+        visual_cell.drop_extra();
+        visual_cell.c = replacement;
+    }
+    if let Some(foreground) = sample.foreground {
+        visual_cell.fg = foreground;
+    }
     Cow::Owned(visual_cell)
 }
 

@@ -44,7 +44,7 @@ txtfx spinner stop --id build --final "Build complete"
 
 The first local implementation includes `script/txtfx-demo`, which exercises the native spinner protocol without any Python process or animation thread.
 
-The app deliberately does not parse the original inline command markup. Effect selection, speed, intensity, scope, and large-output policy live in the native picker and Settings UI, so normal program output can never be mistaken for an effect command.
+The app deliberately does not parse the original inline command markup. Animation, colour, speed, intensity, scope, and large-output policy live in the native picker and Settings UI, so normal program output can never be mistaken for an effect command.
 
 ## Effect catalogue
 
@@ -58,13 +58,14 @@ The app deliberately does not parse the original inline command markup. Effect s
 | `typefx5` | Case pulse | Reveal text, then send a temporary case/highlight pulse outward from the centre. This completes the apparent intent of the broken original mode. |
 | `typefx6` | Word decode | Decode each word independently in shuffled character order. |
 
-Additional modifiers:
+Colour is a separate layer from animation. Immediate text can still receive a colour treatment, and any animation can be paired with any colour treatment:
 
 - **Random case** — seeded random case during the transition; final text is always exact.
-- **Rainbow** — a static foreground spectrum across the affected span.
-- **Text cycle** — animate foreground colors through the original blue/cyan family.
-- **Spinner cycle** — animate spinner foreground colors through grey/blue/cyan/white/cyan/blue.
-- **Subtle accent** — blend the foreground toward the current theme accent. It never changes the background.
+- **Named colours** — grey, red, green, yellow, blue, magenta, cyan, and white, matching the original control set while respecting the active terminal palette.
+- **Classic txtFX cycle** — animate foreground colours through the original grey/blue/cyan/white/cyan/blue sequence.
+- **Rainbow** — animate a deterministic full-spectrum foreground across the affected span.
+
+Colour brightness and colour speed are independent from animation intensity and animation speed. Every colour treatment is foreground-only; it never changes or mixes into the terminal background.
 
 ### Spinner styles
 
@@ -91,13 +92,16 @@ Implemented controls:
 
 - Enable Text FX
 - Effect: Immediate / Word reveal / Typewriter / Matrix trail / Decode / Case pulse / Word decode
-- Speed: Slow / Normal / Fast
-- Intensity: Subtle / Balanced / Strong
+- Animation speed: Slow / Normal / Fast (shown for animated effects)
+- Trail length: Subtle / Balanced / Strong (shown for matrix/decode effects)
+- Colour effect: Terminal colours / eight original named colours / Classic txtFX cycle / Rainbow
+- Colour speed: Slow / Normal / Fast (shown for moving colour effects)
+- Colour brightness: Subtle / Balanced / Vivid (shown when a colour effect is active)
 - Scope: Command output / Output and commands / All terminal screens
 - Large output: Keep large output instant / Animate all output
 - Show the compact picker in the title bar
 
-Color treatment, spinner defaults, and an inline preview remain follow-up controls.
+The page adapts to the selected animation and colour so only relevant controls appear. Per-effect direction/shape controls, spinner defaults, and an inline preview remain follow-up controls.
 
 The master toggle must also have Enable/Disable Text FX entries in the Command Palette and a matching context flag, following the repository's settings conventions.
 
@@ -121,7 +125,7 @@ The master toggle must also have Enable/Disable Text FX entries in the Command P
 - Settings, Command Palette toggle, and preview.
 - Primary-screen block output only.
 
-Implementation status: the native sampler, primary-screen renderer integration, Settings controls, and deterministic tests are present in this checkout. A richer inline preview remains to be added.
+Implementation status: the native sampler, both renderer paths, adaptive Settings controls, independent native colour layer, and deterministic tests are present in this checkout. A richer inline preview remains to be added.
 
 Run this development build with `./script/run-with-text-effects`; the feature remains outside Warp's default Cargo feature set while it is under development.
 

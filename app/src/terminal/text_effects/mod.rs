@@ -8,7 +8,9 @@ pub use picker::{TextEffectPicker, TextEffectPickerEvent};
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{Setting as _, SupportedPlatforms, SyncToCloud};
+use warp_terminal::model::ansi::{Color, NamedColor};
 use warp_terminal::model::char_or_str::CharOrStr;
+use warpui::color::ColorU;
 use warpui::{AppContext, SingletonEntity};
 
 use crate::features::FeatureFlag;
@@ -20,6 +22,7 @@ const MATRIX_GLYPHS: &[u8] = b"!@#$%^&*+-=<>?/\\|:;";
 const MAX_ACTIVE_SPINNERS: usize = 64;
 const MIN_SPINNER_FPS: u8 = 1;
 const MAX_SPINNER_FPS: u8 = 60;
+const COLOR_ONLY_DURATION: Duration = Duration::from_millis(650);
 
 #[derive(
     Debug,
@@ -66,6 +69,235 @@ impl TextEffect {
             Self::Decode => "Decode",
             Self::CasePulse => "Case pulse",
             Self::WordDecode => "Word decode",
+        }
+    }
+
+    pub fn uses_speed(self) -> bool {
+        self != Self::Immediate
+    }
+
+    pub fn uses_intensity(self) -> bool {
+        matches!(self, Self::MatrixTrail | Self::Decode | Self::WordDecode)
+    }
+}
+
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[serde(rename_all = "snake_case")]
+#[schemars(description = "The colour treatment layered over terminal text animations.")]
+pub enum TextEffectColor {
+    #[default]
+    Terminal,
+    Grey,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+    ClassicCycle,
+    Rainbow,
+}
+
+impl TextEffectColor {
+    pub const VALUES: [Self; 11] = [
+        Self::Terminal,
+        Self::Grey,
+        Self::Red,
+        Self::Green,
+        Self::Yellow,
+        Self::Blue,
+        Self::Magenta,
+        Self::Cyan,
+        Self::White,
+        Self::ClassicCycle,
+        Self::Rainbow,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Terminal => "Terminal colours",
+            Self::Grey => "Grey",
+            Self::Red => "Red",
+            Self::Green => "Green",
+            Self::Yellow => "Yellow",
+            Self::Blue => "Blue",
+            Self::Magenta => "Magenta",
+            Self::Cyan => "Cyan",
+            Self::White => "White",
+            Self::ClassicCycle => "Classic txtFX cycle",
+            Self::Rainbow => "Rainbow",
+        }
+    }
+
+    pub fn is_dynamic(self) -> bool {
+        matches!(self, Self::ClassicCycle | Self::Rainbow)
+    }
+
+    pub fn is_enabled(self) -> bool {
+        self != Self::Terminal
+    }
+
+    fn solid_color(self) -> Option<TextFxNamedColor> {
+        match self {
+            Self::Terminal | Self::ClassicCycle | Self::Rainbow => None,
+            Self::Grey => Some(TextFxNamedColor::Grey),
+            Self::Red => Some(TextFxNamedColor::Red),
+            Self::Green => Some(TextFxNamedColor::Green),
+            Self::Yellow => Some(TextFxNamedColor::Yellow),
+            Self::Blue => Some(TextFxNamedColor::Blue),
+            Self::Magenta => Some(TextFxNamedColor::Magenta),
+            Self::Cyan => Some(TextFxNamedColor::Cyan),
+            Self::White => Some(TextFxNamedColor::White),
+        }
+    }
+}
+
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[serde(rename_all = "snake_case")]
+#[schemars(description = "The speed of animated txtFX colour treatments.")]
+pub enum TextEffectColorSpeed {
+    Slow,
+    #[default]
+    Normal,
+    Fast,
+}
+
+impl TextEffectColorSpeed {
+    pub const VALUES: [Self; 3] = [Self::Slow, Self::Normal, Self::Fast];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Slow => "Slow",
+            Self::Normal => "Normal",
+            Self::Fast => "Fast",
+        }
+    }
+
+    fn step_duration(self) -> Duration {
+        match self {
+            Self::Slow => Duration::from_millis(140),
+            Self::Normal => Duration::from_millis(70),
+            Self::Fast => Duration::from_millis(35),
+        }
+    }
+
+    fn frame_interval(self) -> Duration {
+        match self {
+            Self::Slow => Duration::from_millis(33),
+            Self::Normal | Self::Fast => Duration::from_millis(16),
+        }
+    }
+}
+
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[serde(rename_all = "snake_case")]
+#[schemars(description = "The brightness of txtFX colour treatments.")]
+pub enum TextEffectColorIntensity {
+    Subtle,
+    #[default]
+    Balanced,
+    Vivid,
+}
+
+impl TextEffectColorIntensity {
+    pub const VALUES: [Self; 3] = [Self::Subtle, Self::Balanced, Self::Vivid];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Subtle => "Subtle",
+            Self::Balanced => "Balanced",
+            Self::Vivid => "Vivid",
+        }
+    }
+
+    fn rainbow_levels(self) -> (u16, u16) {
+        match self {
+            Self::Subtle => (150, 175),
+            Self::Balanced => (205, 225),
+            Self::Vivid => (255, 255),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum TextFxNamedColor {
+    Grey,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+}
+
+impl TextFxNamedColor {
+    fn ansi_color(self, intensity: TextEffectColorIntensity) -> NamedColor {
+        match intensity {
+            TextEffectColorIntensity::Subtle => match self {
+                Self::Grey => NamedColor::DimWhite,
+                Self::Red => NamedColor::DimRed,
+                Self::Green => NamedColor::DimGreen,
+                Self::Yellow => NamedColor::DimYellow,
+                Self::Blue => NamedColor::DimBlue,
+                Self::Magenta => NamedColor::DimMagenta,
+                Self::Cyan => NamedColor::DimCyan,
+                Self::White => NamedColor::DimWhite,
+            },
+            TextEffectColorIntensity::Balanced => match self {
+                Self::Grey => NamedColor::BrightBlack,
+                Self::Red => NamedColor::Red,
+                Self::Green => NamedColor::Green,
+                Self::Yellow => NamedColor::Yellow,
+                Self::Blue => NamedColor::Blue,
+                Self::Magenta => NamedColor::Magenta,
+                Self::Cyan => NamedColor::Cyan,
+                Self::White => NamedColor::White,
+            },
+            TextEffectColorIntensity::Vivid => match self {
+                Self::Grey => NamedColor::White,
+                Self::Red => NamedColor::BrightRed,
+                Self::Green => NamedColor::BrightGreen,
+                Self::Yellow => NamedColor::BrightYellow,
+                Self::Blue => NamedColor::BrightBlue,
+                Self::Magenta => NamedColor::BrightMagenta,
+                Self::Cyan => NamedColor::BrightCyan,
+                Self::White => NamedColor::BrightWhite,
+            },
         }
     }
 }
@@ -401,6 +633,36 @@ define_settings_group!(TextEffectsSettings, settings: [
         toml_path: "appearance.txtfx.intensity",
         description: "The visual intensity of terminal text effects.",
     },
+    color: SelectedTextEffectColor {
+        type: TextEffectColor,
+        default: TextEffectColor::Terminal,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "appearance.txtfx.color",
+        description: "The colour treatment layered independently over terminal text effects.",
+    },
+    color_speed: SelectedTextEffectColorSpeed {
+        type: TextEffectColorSpeed,
+        default: TextEffectColorSpeed::Normal,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "appearance.txtfx.color_speed",
+        description: "The speed of animated terminal text colour treatments.",
+    },
+    color_intensity: SelectedTextEffectColorIntensity {
+        type: TextEffectColorIntensity,
+        default: TextEffectColorIntensity::Balanced,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "appearance.txtfx.color_intensity",
+        description: "The brightness of terminal text colour treatments.",
+    },
     scope: SelectedTextEffectScope {
         type: TextEffectScope,
         default: TextEffectScope::OutputOnly,
@@ -438,6 +700,9 @@ pub struct TextEffectsConfig {
     pub effect: TextEffect,
     pub speed: TextEffectSpeed,
     pub intensity: TextEffectIntensity,
+    pub color: TextEffectColor,
+    pub color_speed: TextEffectColorSpeed,
+    pub color_intensity: TextEffectColorIntensity,
     pub scope: TextEffectScope,
     pub large_output: TextEffectLargeOutput,
 }
@@ -457,6 +722,9 @@ impl TextEffectsConfig {
             effect: *settings.effect.value(),
             speed: *settings.speed.value(),
             intensity: *settings.intensity.value(),
+            color: *settings.color.value(),
+            color_speed: *settings.color_speed.value(),
+            color_intensity: *settings.color_intensity.value(),
             scope: *settings.scope.value(),
             large_output: *settings.large_output.value(),
         })
@@ -467,7 +735,13 @@ impl TextEffectsConfig {
     }
 
     pub fn frame_interval(self) -> Duration {
-        self.speed.frame_interval()
+        if self.color.is_dynamic() {
+            self.speed
+                .frame_interval()
+                .min(self.color_speed.frame_interval())
+        } else {
+            self.speed.frame_interval()
+        }
     }
 }
 
@@ -485,12 +759,14 @@ pub enum VisualContent {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TextEffectSample {
     pub content: VisualContent,
+    pub foreground: Option<Color>,
     pub needs_repaint: bool,
 }
 
 impl TextEffectSample {
     const COMPLETE: Self = Self {
         content: VisualContent::Original,
+        foreground: None,
         needs_repaint: false,
     };
 }
@@ -673,11 +949,12 @@ impl TextEffectsTimeline {
                         .nth(frame)
                         .expect("spinner styles must contain at least one frame"),
                 ),
+                foreground: sample_foreground(config, point.col, elapsed),
                 needs_repaint: true,
             });
         }
 
-        if config.effect == TextEffect::Immediate {
+        if config.effect == TextEffect::Immediate && !config.color.is_enabled() {
             return None;
         }
 
@@ -753,7 +1030,7 @@ fn sample_cell(
     let frame = usize::try_from(frame).unwrap_or(usize::MAX);
     let cell_count = batch.cells.len();
 
-    match config.effect {
+    let mut sample = match config.effect {
         TextEffect::Immediate => TextEffectSample::COMPLETE,
         TextEffect::Typewriter => reveal_sample(frame, cell.ordinal, cell_count),
         TextEffect::WordReveal => reveal_sample(frame, cell.word_ordinal, batch.word_count),
@@ -774,16 +1051,19 @@ fn sample_cell(
             } else if cell.ordinal < frame {
                 TextEffectSample {
                     content: VisualContent::Original,
+                    foreground: None,
                     needs_repaint: true,
                 }
             } else if cell.ordinal < frame + trail_cells {
                 TextEffectSample {
                     content: VisualContent::Substitute(matrix_glyph(batch.seed, cell.point, frame)),
+                    foreground: None,
                     needs_repaint: true,
                 }
             } else {
                 TextEffectSample {
                     content: VisualContent::Hidden,
+                    foreground: None,
                     needs_repaint: true,
                 }
             }
@@ -815,16 +1095,30 @@ fn sample_cell(
                     content: substitute
                         .map(VisualContent::Substitute)
                         .unwrap_or(VisualContent::Original),
+                    foreground: None,
                     needs_repaint: true,
                 }
             } else {
                 TextEffectSample {
                     content: VisualContent::Original,
+                    foreground: None,
                     needs_repaint: true,
                 }
             }
         }
+    };
+
+    let color_is_active = if config.effect == TextEffect::Immediate {
+        elapsed < COLOR_ONLY_DURATION
+    } else {
+        sample.needs_repaint
+    };
+    if color_is_active {
+        sample.foreground = sample_foreground(config, cell.ordinal, elapsed);
+        sample.needs_repaint |= sample.foreground.is_some();
     }
+
+    sample
 }
 
 fn reveal_sample(frame: usize, ordinal: usize, total: usize) -> TextEffectSample {
@@ -837,6 +1131,7 @@ fn reveal_sample(frame: usize, ordinal: usize, total: usize) -> TextEffectSample
             } else {
                 VisualContent::Hidden
             },
+            foreground: None,
             needs_repaint: true,
         }
     }
@@ -854,19 +1149,86 @@ fn scramble_reveal_sample(
     } else if ordinal < frame {
         TextEffectSample {
             content: VisualContent::Original,
+            foreground: None,
             needs_repaint: true,
         }
     } else if ordinal < frame + trail_cells {
         TextEffectSample {
             content: VisualContent::Substitute(substitute),
+            foreground: None,
             needs_repaint: true,
         }
     } else {
         TextEffectSample {
             content: VisualContent::Hidden,
+            foreground: None,
             needs_repaint: true,
         }
     }
+}
+
+fn sample_foreground(
+    config: TextEffectsConfig,
+    ordinal: usize,
+    elapsed: Duration,
+) -> Option<Color> {
+    if let Some(color) = config.color.solid_color() {
+        return Some(Color::Named(color.ansi_color(config.color_intensity)));
+    }
+
+    let step = config.color_speed.step_duration();
+    let frame = elapsed.as_nanos() / step.as_nanos().max(1);
+    let frame = usize::try_from(frame).unwrap_or(usize::MAX);
+
+    match config.color {
+        TextEffectColor::Terminal => None,
+        TextEffectColor::Grey
+        | TextEffectColor::Red
+        | TextEffectColor::Green
+        | TextEffectColor::Yellow
+        | TextEffectColor::Blue
+        | TextEffectColor::Magenta
+        | TextEffectColor::Cyan
+        | TextEffectColor::White => {
+            unreachable!("solid txtFX colours are returned before the animated colour match")
+        }
+        TextEffectColor::ClassicCycle => {
+            const CLASSIC_COLORS: [TextFxNamedColor; 6] = [
+                TextFxNamedColor::Grey,
+                TextFxNamedColor::Blue,
+                TextFxNamedColor::Cyan,
+                TextFxNamedColor::White,
+                TextFxNamedColor::Cyan,
+                TextFxNamedColor::Blue,
+            ];
+            let color = CLASSIC_COLORS[(ordinal + frame) % CLASSIC_COLORS.len()];
+            Some(Color::Named(color.ansi_color(config.color_intensity)))
+        }
+        TextEffectColor::Rainbow => {
+            let hue = (ordinal.saturating_mul(29) + frame.saturating_mul(7)) % 360;
+            Some(Color::Spec(rainbow_color(hue, config.color_intensity)))
+        }
+    }
+}
+
+fn rainbow_color(hue: usize, intensity: TextEffectColorIntensity) -> ColorU {
+    let (saturation, value) = intensity.rainbow_levels();
+    let sector = (hue % 360) / 60;
+    let remainder = (hue % 60) as u16;
+    let minimum = value * (255 - saturation) / 255;
+    let rising = minimum + (value - minimum) * remainder / 60;
+    let falling = value - (value - minimum) * remainder / 60;
+
+    let (red, green, blue) = match sector {
+        0 => (value, rising, minimum),
+        1 => (falling, value, minimum),
+        2 => (minimum, value, rising),
+        3 => (minimum, falling, value),
+        4 => (rising, minimum, value),
+        5 => (value, minimum, falling),
+        _ => unreachable!("rainbow hue is normalized to six sectors"),
+    };
+    ColorU::new(red as u8, green as u8, blue as u8, 255)
 }
 
 fn shuffled_rank(seed: u64, point: AbsolutePoint, len: usize) -> usize {

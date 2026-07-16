@@ -18,6 +18,9 @@ fn config(effect: TextEffect) -> TextEffectsConfig {
         effect,
         speed: TextEffectSpeed::Normal,
         intensity: TextEffectIntensity::Balanced,
+        color: TextEffectColor::Terminal,
+        color_speed: TextEffectColorSpeed::Normal,
+        color_intensity: TextEffectColorIntensity::Balanced,
         scope: TextEffectScope::OutputOnly,
         large_output: TextEffectLargeOutput::Animate,
     }
@@ -49,6 +52,7 @@ fn typewriter_reveals_cells_in_order() {
         ),
         Some(TextEffectSample {
             content: VisualContent::Hidden,
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -61,6 +65,7 @@ fn typewriter_reveals_cells_in_order() {
         ),
         Some(TextEffectSample {
             content: VisualContent::Original,
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -114,6 +119,7 @@ fn matrix_frames_are_deterministic() {
         first,
         Some(TextEffectSample {
             content: VisualContent::Substitute(_),
+            foreground: None,
             needs_repaint: true,
         })
     ));
@@ -132,6 +138,7 @@ fn intensity_changes_matrix_trail_length() {
         timeline.sample(point(5), CharOrStr::Char('f'), subtle, started_at),
         Some(TextEffectSample {
             content: VisualContent::Hidden,
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -139,9 +146,93 @@ fn intensity_changes_matrix_trail_length() {
         timeline.sample(point(5), CharOrStr::Char('f'), strong, started_at),
         Some(TextEffectSample {
             content: VisualContent::Substitute(_),
+            foreground: None,
             needs_repaint: true,
         })
     ));
+}
+
+#[test]
+fn animation_and_colour_layers_are_independent() {
+    let started_at = Instant::now();
+    let timeline = timeline("a", started_at);
+    let mut color_only = config(TextEffect::Immediate);
+    color_only.color = TextEffectColor::Green;
+    color_only.color_intensity = TextEffectColorIntensity::Vivid;
+
+    assert_eq!(
+        timeline.sample(point(0), CharOrStr::Char('a'), color_only, started_at),
+        Some(TextEffectSample {
+            content: VisualContent::Original,
+            foreground: Some(Color::Named(NamedColor::BrightGreen)),
+            needs_repaint: true,
+        })
+    );
+    assert_eq!(
+        timeline.sample(
+            point(0),
+            CharOrStr::Char('a'),
+            color_only,
+            started_at + COLOR_ONLY_DURATION,
+        ),
+        Some(TextEffectSample::COMPLETE)
+    );
+}
+
+#[test]
+fn classic_colour_cycle_uses_the_original_txtfx_palette_order() {
+    let started_at = Instant::now();
+    let timeline = timeline("ab", started_at);
+    let mut classic = config(TextEffect::Immediate);
+    classic.color = TextEffectColor::ClassicCycle;
+
+    let sample =
+        |col, now| timeline.sample(point(col), CharOrStr::Char(['a', 'b'][col]), classic, now);
+    assert_eq!(
+        sample(0, started_at).and_then(|sample| sample.foreground),
+        Some(Color::Named(NamedColor::BrightBlack))
+    );
+    assert_eq!(
+        sample(1, started_at).and_then(|sample| sample.foreground),
+        Some(Color::Named(NamedColor::Blue))
+    );
+    assert_eq!(
+        sample(0, started_at + TextEffectColorSpeed::Normal.step_duration())
+            .and_then(|sample| sample.foreground),
+        Some(Color::Named(NamedColor::Blue))
+    );
+}
+
+#[test]
+fn rainbow_colour_is_deterministic_for_a_frame() {
+    let started_at = Instant::now();
+    let timeline = timeline("rainbow", started_at);
+    let mut rainbow = config(TextEffect::Typewriter);
+    rainbow.color = TextEffectColor::Rainbow;
+    rainbow.color_intensity = TextEffectColorIntensity::Vivid;
+    let now = started_at + TextEffectSpeed::Normal.step_duration();
+
+    let first = timeline.sample(point(0), CharOrStr::Char('r'), rainbow, now);
+    let second = timeline.sample(point(0), CharOrStr::Char('r'), rainbow, now);
+    assert_eq!(first, second);
+    assert!(matches!(
+        first,
+        Some(TextEffectSample {
+            foreground: Some(Color::Spec(_)),
+            needs_repaint: true,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn effect_specific_controls_report_when_they_apply() {
+    assert!(!TextEffect::Immediate.uses_speed());
+    assert!(TextEffect::Typewriter.uses_speed());
+    assert!(!TextEffect::Typewriter.uses_intensity());
+    assert!(TextEffect::MatrixTrail.uses_intensity());
+    assert!(TextEffectColor::Rainbow.is_dynamic());
+    assert!(!TextEffectColor::Green.is_dynamic());
 }
 
 #[test]
@@ -202,6 +293,7 @@ fn case_pulse_finishes_on_original_content() {
         pulse,
         Some(TextEffectSample {
             content: VisualContent::Substitute('B'),
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -257,6 +349,7 @@ fn spinner_has_an_explicit_start_update_stop_lifecycle() {
         ),
         Some(TextEffectSample {
             content: VisualContent::Substitute('|'),
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -279,6 +372,7 @@ fn spinner_has_an_explicit_start_update_stop_lifecycle() {
         ),
         Some(TextEffectSample {
             content: VisualContent::Substitute('◓'),
+            foreground: None,
             needs_repaint: true,
         })
     );
@@ -320,6 +414,7 @@ fn grid_writes_create_a_renderable_batch() {
         sample,
         Some(TextEffectSample {
             content: VisualContent::Hidden | VisualContent::Original | VisualContent::Substitute(_),
+            foreground: None,
             needs_repaint: true,
         })
     ));
@@ -348,6 +443,7 @@ fn osc_spinner_command_reaches_the_grid_timeline() {
         sample,
         Some(TextEffectSample {
             content: VisualContent::Substitute('|'),
+            foreground: None,
             needs_repaint: true,
         })
     ));
