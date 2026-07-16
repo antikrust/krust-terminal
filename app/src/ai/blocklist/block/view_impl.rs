@@ -1060,7 +1060,6 @@ impl View for AIBlock {
         let has_accepted_edits = self.has_accepted_file_edits_since_last_query(app);
         let terminal_model = self.terminal_model.lock();
         let shared_session_status = terminal_model.shared_session_status().clone();
-        let is_conversation_transcript_viewer = terminal_model.is_conversation_transcript_viewer();
 
         let is_cloud_agent_pre_first_exchange = is_cloud_agent_pre_first_exchange(
             self.ambient_agent_view_model.as_ref(),
@@ -1069,13 +1068,6 @@ impl View for AIBlock {
             app,
         );
         drop(terminal_model);
-
-        #[cfg(not(target_family = "wasm"))]
-        let is_cloud_agent_context = FeatureFlag::CloudMode.is_enabled()
-            && self
-                .ambient_agent_view_model
-                .as_ref()
-                .is_some_and(|model| model.as_ref(app).is_ambient_agent());
 
         contents.add_child(output::render(
             output::Props {
@@ -1116,7 +1108,6 @@ impl View for AIBlock {
                 suggested_agent_mode_workflow: &self.suggested_agent_mode_workflow,
                 manage_rules_button: &self.manage_rules_button,
                 keyboard_navigable_buttons: self.keyboard_navigable_buttons.as_ref(),
-                response_rating: &self.response_rating,
                 request_refunded_count: self.request_refunded_count,
                 search_codebase_view: &self.search_codebase_view,
                 web_search_views: &self.web_search_views,
@@ -1131,9 +1122,6 @@ impl View for AIBlock {
                 is_usage_footer_expanded: self.is_usage_footer_expanded,
                 shared_session_status: &shared_session_status,
                 terminal_view_id: self.terminal_view_id,
-                is_conversation_transcript_viewer,
-                #[cfg(not(target_family = "wasm"))]
-                is_cloud_agent_context,
                 aws_bedrock_credentials_error_view: self
                     .aws_bedrock_credentials_error_view
                     .as_ref(),

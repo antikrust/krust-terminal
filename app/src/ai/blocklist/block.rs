@@ -466,10 +466,6 @@ pub(super) struct AIBlockStateHandles {
 
     ask_user_question_speedbump_settings_link_handle: MouseStateHandle,
 
-    /// Mouse state handles for rating the AI block.
-    thumbs_up_handle: MouseStateHandle,
-    thumbs_down_handle: MouseStateHandle,
-
     /// Mouse state handle for the overflow menu button
     overflow_menu_handle: MouseStateHandle,
 

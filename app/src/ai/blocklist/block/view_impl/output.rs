@@ -1,7 +1,6 @@
 //! Renders the AI output portion of the AI block.
 //!
 //! This includes text, code snippets, suggested commands, and interactive inline action UX.
-use std::cell::OnceCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 #[allow(unused_imports)]
@@ -101,7 +100,7 @@ use crate::ai::blocklist::keyboard_navigable_buttons::KeyboardNavigableButtons;
 use crate::ai::blocklist::secret_redaction::SecretRedactionState;
 use crate::ai::blocklist::usage::rollup::compute_orchestration_rollup;
 use crate::ai::blocklist::view_util::format_credits;
-use crate::ai::blocklist::{AIBlockResponseRating, BlocklistAIActionModel, SuggestionChipView};
+use crate::ai::blocklist::{BlocklistAIActionModel, SuggestionChipView};
 use crate::ai::paths::shell_native_absolute_path;
 use crate::ai::skills::{
     icon_override_for_skill_name, render_skill_button, skill_path_from_location, SkillManager,
@@ -112,7 +111,6 @@ use crate::code::diff_viewer::DisplayMode;
 use crate::code::editor_management::CodeSource;
 use crate::settings_view::SettingsSection;
 #[cfg(not(target_family = "wasm"))]
-use crate::terminal::input::slash_commands::fork_button_action;
 use crate::terminal::model::session::active_session::ActiveSession;
 use crate::terminal::shared_session::SharedSessionStatus;
 use crate::terminal::ShellLaunchData;
@@ -165,7 +163,6 @@ pub(crate) struct Props<'a> {
     pub(super) suggested_agent_mode_workflow: &'a Option<ViewHandle<SuggestionChipView>>,
     pub(super) manage_rules_button: &'a ViewHandle<ActionButton>,
     pub(super) keyboard_navigable_buttons: Option<&'a ViewHandle<KeyboardNavigableButtons>>,
-    pub(super) response_rating: &'a OnceCell<AIBlockResponseRating>,
     pub(super) request_refunded_count: Option<i32>,
     pub(super) search_codebase_view: &'a HashMap<AIAgentActionId, ViewHandle<SearchCodebaseView>>,
     pub(super) web_search_views: &'a HashMap<MessageId, ViewHandle<WebSearchView>>,
@@ -180,9 +177,6 @@ pub(crate) struct Props<'a> {
     pub(super) is_usage_footer_expanded: bool,
     pub(super) shared_session_status: &'a SharedSessionStatus,
     pub(super) terminal_view_id: EntityId,
-    pub(super) is_conversation_transcript_viewer: bool,
-    #[cfg(not(target_family = "wasm"))]
-    pub(super) is_cloud_agent_context: bool,
     pub(super) aws_bedrock_credentials_error_view:
         Option<&'a ViewHandle<AwsBedrockCredentialsErrorView>>,
     pub(super) imported_comments: &'a HashMap<AIAgentActionId, ImportedCommentGroup>,
@@ -3421,7 +3415,6 @@ fn render_response_footer(props: Props, app: &AppContext) -> Option<Box<dyn Elem
 
     let appearance = Appearance::as_ref(app);
     let mut flex = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
-    let is_passive_code_diff = props.model.request_type(app).is_passive_code_diff();
 
     // Show footer for any terminal state (complete, cancelled, or failed)
     let style_override = UiComponentStyles {
@@ -3439,105 +3432,6 @@ fn render_response_footer(props: Props, app: &AppContext) -> Option<Box<dyn Elem
         background: Some(blended_colors::neutral_4(appearance.theme()).into()),
         ..style_override
     };
-
-    let ui_builder = appearance.ui_builder().clone();
-
-    // Thumbs up/down buttons.
-    // (we hide these when you're in view-only mode).
-    if !is_passive_code_diff && !props.is_conversation_transcript_viewer {
-        let thumbs_up_button = icon_button(
-            appearance,
-            Icon::ThumbsUp,
-            matches!(
-                props.response_rating.get(),
-                Some(AIBlockResponseRating::Positive)
-            ),
-            props.state_handles.thumbs_up_handle.clone(),
-        )
-        .with_tooltip(move || {
-            ui_builder
-                .tool_tip("Good response".to_string())
-                .build()
-                .finish()
-        })
-        .with_style(style_override)
-        .with_hovered_styles(style_override_with_background)
-        .with_active_styles(style_override_with_background);
-
-        let ui_builder = appearance.ui_builder().clone();
-        let thumbs_down_button = icon_button(
-            appearance,
-            Icon::ThumbsDown,
-            matches!(
-                props.response_rating.get(),
-                Some(AIBlockResponseRating::Negative)
-            ),
-            props.state_handles.thumbs_down_handle.clone(),
-        )
-        .with_tooltip(move || {
-            ui_builder
-                .clone()
-                .tool_tip("Bad response".to_string())
-                .build()
-                .finish()
-        })
-        .with_style(style_override)
-        .with_hovered_styles(style_override_with_background)
-        .with_active_styles(style_override_with_background);
-
-        let (thumbs_up_button_element, thumbs_down_button_element) =
-            match props.response_rating.get() {
-                Some(rating) => {
-                    // Mark the button that wasn't selected as disabled.
-                    // (The button that _was_ selected will not be clickable since it's marked active).
-                    match rating {
-                        AIBlockResponseRating::Positive => (
-                            thumbs_up_button.build().with_cursor(Cursor::Arrow).finish(),
-                            thumbs_down_button
-                                .disabled()
-                                .with_disabled_styles(Default::default())
-                                .build()
-                                .finish(),
-                        ),
-                        AIBlockResponseRating::Negative => (
-                            thumbs_up_button
-                                .disabled()
-                                .with_disabled_styles(Default::default())
-                                .build()
-                                .finish(),
-                            thumbs_down_button
-                                .build()
-                                .with_cursor(Cursor::Arrow)
-                                .finish(),
-                        ),
-                    }
-                }
-                None => (
-                    thumbs_up_button
-                        .build()
-                        .on_click(|ctx, _, _| {
-                            ctx.dispatch_typed_action(AIBlockAction::Rated { is_positive: true })
-                        })
-                        .finish(),
-                    thumbs_down_button
-                        .build()
-                        .on_click(|ctx, _, _| {
-                            ctx.dispatch_typed_action(AIBlockAction::Rated { is_positive: false })
-                        })
-                        .finish(),
-                ),
-            };
-        flex.add_child(
-            Container::new(thumbs_up_button_element)
-                .with_margin_right(2.)
-                .finish(),
-        );
-        flex.add_child(
-            Container::new(thumbs_down_button_element)
-                .with_margin_right(2.)
-                .finish(),
-        );
-    }
 
     if !props.shared_session_status.is_finished_viewer() && !FeatureFlag::AgentView.is_enabled() {
         let ui_builder = appearance.ui_builder().clone();
@@ -3561,40 +3455,6 @@ fn render_response_footer(props: Props, app: &AppContext) -> Option<Box<dyn Elem
         .finish();
 
         flex.add_child(continue_button);
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    if !props.is_conversation_transcript_viewer {
-        let fork_button_tooltip = fork_button_action(
-            props.model.conversation_id(app),
-            props.is_cloud_agent_context,
-            app,
-        )
-        .tooltip;
-
-        let ui_builder = appearance.ui_builder().clone();
-        let fork_button = icon_button(
-            appearance,
-            Icon::ArrowSplit,
-            false,
-            props.state_handles.fork_conversation_handle.clone(),
-        )
-        .with_tooltip(move || {
-            ui_builder
-                .tool_tip(fork_button_tooltip.to_string())
-                .build()
-                .finish()
-        })
-        .with_style(style_override)
-        .with_hovered_styles(style_override_with_background)
-        .with_active_styles(style_override_with_background)
-        .build()
-        .on_click(|ctx, _, _| {
-            ctx.dispatch_typed_action(AIBlockAction::ForkConversation);
-        })
-        .finish();
-
-        flex.add_child(fork_button);
     }
 
     flex.add_child(render_usage_button(props, app));
