@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+style="${1:-bar}"
+seconds="${2:-5}"
+id="txtfx-demo-$$"
+
+if ! [[ "$seconds" =~ ^[0-9]+$ ]]; then
+    echo "usage: $0 [line|orbit|arrows|quarters|fill|clock|bar|bounce] [seconds]" >&2
+    exit 2
+fi
+
+cleanup() {
+    printf '\033]9281;spinner;stop;%s\033\\' "$id"
+    printf '\b \b'
+}
+trap cleanup EXIT INT TERM
+
+# The OSC command anchors the native spinner to the next ordinary terminal cell.
+printf '\033]9281;spinner;start;%s;%s;20\033\\ ' "$id" "$style"
+sleep "$seconds"
+
+trap - EXIT INT TERM
+cleanup
+printf 'Text FX spinner complete\n'

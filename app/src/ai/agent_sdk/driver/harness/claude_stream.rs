@@ -90,19 +90,18 @@ fn tool_result_events(
                 content,
                 is_error,
             } => {
-                let outcome = if is_error.unwrap_or(false) {
-                    ToolCallOutcome::Error(tool_result_text(&content))
-                } else {
-                    // Prefer the richer, tool-specific `tool_use_result`
-                    // sibling field (e.g. `structuredPatch`/`filePath` for
-                    // Write/Edit, `stdout`/`stderr` for Bash) when present;
-                    // fall back to the plain content string otherwise.
-                    ToolCallOutcome::Success(
-                        tool_use_result
-                            .clone()
-                            .unwrap_or_else(|| serde_json::Value::String(tool_result_text(&content))),
-                    )
-                };
+                let outcome =
+                    if is_error.unwrap_or(false) {
+                        ToolCallOutcome::Error(tool_result_text(&content))
+                    } else {
+                        // Prefer the richer, tool-specific `tool_use_result`
+                        // sibling field (e.g. `structuredPatch`/`filePath` for
+                        // Write/Edit, `stdout`/`stderr` for Bash) when present;
+                        // fall back to the plain content string otherwise.
+                        ToolCallOutcome::Success(tool_use_result.clone().unwrap_or_else(|| {
+                            serde_json::Value::String(tool_result_text(&content))
+                        }))
+                    };
                 Some(TurnEvent::ToolCallResult {
                     call_id: tool_use_id,
                     outcome,

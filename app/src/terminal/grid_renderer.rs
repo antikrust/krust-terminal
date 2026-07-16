@@ -3,10 +3,12 @@ mod cell_glyph_cache;
 mod cell_type;
 
 use core::mem;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::{Range, RangeInclusive};
 
+use instant::Instant;
 use lazy_static::lazy_static;
 use num_traits::Float as _;
 use unicode_width::UnicodeWidthChar;
@@ -41,6 +43,7 @@ use crate::terminal::model::grid::Dimensions;
 use crate::terminal::model::index::Point;
 use crate::terminal::model::selection::SelectionPoint;
 use crate::terminal::model::{ObfuscateSecrets, SecretHandle};
+use crate::terminal::text_effects::{TextEffectsConfig, VisualContent};
 use crate::terminal::{color, SizeInfo};
 use crate::themes::theme::WarpTheme;
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
@@ -314,6 +317,7 @@ pub fn render_grid<'a>(
     image_metadata: &HashMap<u32, StoredImageMetadata>,
     bg_color_sampler: Option<&mut ColorSampler>,
     hide_cursor_cell: bool,
+    text_effects: Option<TextEffectsConfig>,
     ctx: &mut PaintContext,
     app: &AppContext,
 ) {
@@ -321,6 +325,10 @@ pub fn render_grid<'a>(
     // codepath (which is known to be less performant) if the font does not
     // even support ligatures.
     let respect_displayed_output = matches!(respect_displayed_output, RespectDisplayedOutput::Yes);
+    let text_effects = text_effects.map(|config| TextEffectsRenderState {
+        config,
+        now: Instant::now(),
+    });
     match (use_ligature_rendering, grid.displayed_output_rows()) {
         (true, Some(rows)) if respect_displayed_output => {
             let visible_rows = rows.skip(start_row).take(end_row.saturating_sub(start_row));
@@ -351,6 +359,7 @@ pub fn render_grid<'a>(
                 image_metadata,
                 bg_color_sampler,
                 hide_cursor_cell,
+                text_effects,
                 ctx,
                 app,
             );
@@ -383,6 +392,7 @@ pub fn render_grid<'a>(
                 image_metadata,
                 bg_color_sampler,
                 hide_cursor_cell,
+                text_effects,
                 ctx,
                 app,
             );
@@ -417,6 +427,7 @@ pub fn render_grid<'a>(
                 image_metadata,
                 bg_color_sampler,
                 hide_cursor_cell,
+                text_effects,
                 ctx,
                 app,
             );
@@ -450,6 +461,7 @@ pub fn render_grid<'a>(
                 image_metadata,
                 bg_color_sampler,
                 hide_cursor_cell,
+                text_effects,
                 ctx,
                 app,
             );
@@ -487,6 +499,7 @@ fn render_grid_without_ligatures<'a>(
     image_metadata: &HashMap<u32, StoredImageMetadata>,
     mut bg_color_sampler: Option<&mut ColorSampler>,
     hide_cursor_cell: bool,
+    text_effects: Option<TextEffectsRenderState>,
     ctx: &mut PaintContext,
     app: &AppContext,
 ) {
@@ -794,6 +807,16 @@ fn render_grid_without_ligatures<'a>(
                 }
             }
 
+            let visual_cell = text_effect_cell(
+                grid,
+                current_point,
+                cell,
+                text_effects,
+                cell_type.secret.is_some(),
+                ctx,
+            );
+            let cell = visual_cell.as_ref();
+
             // Don't apply cursor contrast colouring when hide_cursor_cell
             // is active — the cursor itself won't be drawn, so the cell
             // should render with its normal colours.
@@ -990,6 +1013,7 @@ fn render_grid_with_ligatures<'a>(
     image_metadata: &HashMap<u32, StoredImageMetadata>,
     mut bg_color_sampler: Option<&mut ColorSampler>,
     hide_cursor_cell: bool,
+    text_effects: Option<TextEffectsRenderState>,
     ctx: &mut PaintContext,
     app: &AppContext,
 ) {
@@ -1331,6 +1355,16 @@ fn render_grid_with_ligatures<'a>(
                 }
             }
 
+            let visual_cell = text_effect_cell(
+                grid,
+                current_point,
+                cell,
+                text_effects,
+                cell_type.secret.is_some(),
+                ctx,
+            );
+            let cell = visual_cell.as_ref();
+
             // Don't apply cursor contrast colouring when hide_cursor_cell
             // is active — the cursor itself won't be drawn, so the cell
             // should render with its normal colours.
@@ -1492,6 +1526,49 @@ fn render_grid_with_ligatures<'a>(
             .draw_rect_without_hit_recording(RectF::new(data.origin, data.size))
             .with_background(Fill::Solid(data.color));
     }
+}
+
+#[derive(Clone, Copy)]
+struct TextEffectsRenderState {
+    config: TextEffectsConfig,
+    now: Instant,
+}
+
+fn text_effect_cell<'a>(
+    grid: &GridHandler,
+    point: Point,
+    cell: &'a Cell,
+    state: Option<TextEffectsRenderState>,
+    is_secret: bool,
+    ctx: &mut PaintContext,
+) -> Cow<'a, Cell> {
+    let Some(state) = state.filter(|_| !is_secret) else {
+        return Cow::Borrowed(cell);
+    };
+    let Some(sample) = grid.sample_text_effect(point, cell, state.config, state.now) else {
+        return Cow::Borrowed(cell);
+    };
+
+    if sample.needs_repaint {
+        ctx.repaint_after(state.config.frame_interval());
+    }
+
+    let replacement = match sample.content {
+        VisualContent::Original => return Cow::Borrowed(cell),
+        VisualContent::Hidden => ' ',
+        VisualContent::Substitute(replacement)
+            if cell.flags.contains(Flags::WIDE_CHAR)
+                || matches!(cell.raw_content(), CharOrStr::Str(_)) =>
+        {
+            ' '
+        }
+        VisualContent::Substitute(replacement) => replacement,
+    };
+
+    let mut visual_cell = cell.clone();
+    visual_cell.drop_extra();
+    visual_cell.c = replacement;
+    Cow::Owned(visual_cell)
 }
 
 fn paint_line(

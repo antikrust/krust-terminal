@@ -17,6 +17,7 @@ use crate::terminal::model::blockgrid::{BlockGrid, CursorDisplayPoint};
 use crate::terminal::model::grid::grid_handler::Link;
 use crate::terminal::model::index::Point;
 use crate::terminal::model::ObfuscateSecrets;
+use crate::terminal::text_effects::{TextEffectSurface, TextEffectsConfig};
 use crate::terminal::{color, SizeInfo};
 use crate::themes::theme::WarpTheme;
 
@@ -61,6 +62,7 @@ impl BlockGrid {
         properties: Properties,
         block_grid_params: &BlockGridParams,
         visible_cursor_shape: Option<CursorShape>,
+        text_effect_surface: Option<TextEffectSurface>,
         image_metadata: &HashMap<u32, StoredImageMetadata>,
         ctx: &mut PaintContext,
         app: &AppContext,
@@ -119,6 +121,7 @@ impl BlockGrid {
             image_metadata,
             None,
             block_grid_params.grid_render_params.hide_cursor_cell,
+            text_effect_surface.and_then(|surface| TextEffectsConfig::for_surface(app, surface)),
             ctx,
             app,
         );
@@ -145,6 +148,7 @@ impl BlockGrid {
             None,
             Properties::default(),
             block_grid_params,
+            None,
             None,
             &HashMap::new(),
             ctx,

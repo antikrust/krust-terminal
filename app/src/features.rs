@@ -45,6 +45,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::RunGeneratorsWithCmdExe,
         #[cfg(feature = "ligatures")]
         FeatureFlag::Ligatures,
+        #[cfg(feature = "text_effects")]
+        FeatureFlag::TextEffects,
         #[cfg(feature = "selectable_prompt")]
         FeatureFlag::SelectablePrompt,
         #[cfg(feature = "viewing_shared_sessions")]

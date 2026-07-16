@@ -126,7 +126,12 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
 
         let second = app
             .update(|ctx| {
-                LocalHarnessStream::begin_follow_up(terminal_view_id, conversation_id, "second", ctx)
+                LocalHarnessStream::begin_follow_up(
+                    terminal_view_id,
+                    conversation_id,
+                    "second",
+                    ctx,
+                )
             })
             .expect("conversation still live");
         assert_eq!(

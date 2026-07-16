@@ -63,6 +63,9 @@ pub enum FeatureFlag {
     /// Ligature Support in the Editor and Grid
     Ligatures,
 
+    /// Native visual effects for newly rendered terminal text.
+    TextEffects,
+
     /// When enabled, the `History` rule from the command_corrections crate
     /// will be enabled. When the `History` rule is enabled, the command_corrections
     /// lib will use the user's history as a last-ditch effort to find a reasonable correction.

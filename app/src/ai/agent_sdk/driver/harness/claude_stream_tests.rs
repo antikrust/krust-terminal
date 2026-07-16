@@ -51,7 +51,11 @@ fn parses_assistant_tool_use() {
     let events = parse_stream_json_line(line);
     assert_eq!(events.len(), 1);
     match &events[0] {
-        TurnEvent::ToolCallStarted { call_id, name, input } => {
+        TurnEvent::ToolCallStarted {
+            call_id,
+            name,
+            input,
+        } => {
             assert_eq!(call_id, "toolu_01Vcfe1BoGMXsmRQ7eLtTCrm");
             assert_eq!(name, "Bash");
             assert_eq!(input["command"], "ls -la /tmp/probe");
@@ -72,7 +76,10 @@ fn parses_bash_tool_result_with_plain_string_content() {
                 // Should prefer the richer tool_use_result sibling field
                 // over the plain content string.
                 ToolCallOutcome::Success(value) => {
-                    assert_eq!(value["stdout"], "total 16\ndrwxr-xr-x@  4 blah  wheel   128 file1");
+                    assert_eq!(
+                        value["stdout"],
+                        "total 16\ndrwxr-xr-x@  4 blah  wheel   128 file1"
+                    );
                 }
                 other => panic!("expected Success, got {other:?}"),
             }
@@ -137,10 +144,7 @@ fn result_usage_reads_final_call_cache_tokens_and_model_context_window() {
             assert_eq!(usage.output_tokens, 65);
             assert_eq!(usage.cache_read_input_tokens, 12000);
             assert_eq!(usage.cache_creation_input_tokens, 8494);
-            assert_eq!(
-                usage.model_id.as_deref(),
-                Some("claude-haiku-4-5-20251001")
-            );
+            assert_eq!(usage.model_id.as_deref(), Some("claude-haiku-4-5-20251001"));
             assert_eq!(usage.context_window, Some(200_000));
         }
         other => panic!("expected TurnCompleted, got {other:?}"),

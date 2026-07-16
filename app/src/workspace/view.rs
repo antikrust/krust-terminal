@@ -405,6 +405,9 @@ use crate::terminal::session_settings::{
 use crate::terminal::settings::{SpacingMode, TerminalSettings};
 use crate::terminal::shared_session::SharedSessionActionSource;
 use crate::terminal::shell::ShellType;
+use crate::terminal::text_effects::{
+    should_use_text_effects, TextEffectPicker, TextEffectPickerEvent, TextEffectsSettings,
+};
 use crate::terminal::view::ambient_agent::{AuthSecretFtuxView, AuthSecretFtuxViewEvent};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 use crate::terminal::view::ambient_agent::{
@@ -444,9 +447,7 @@ use crate::user_config::{
     tab_configs_dir,
 };
 use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
-use crate::util::bindings::{
-    keybinding_name_to_display_string, keybinding_name_to_keystroke,
-};
+use crate::util::bindings::{keybinding_name_to_display_string, keybinding_name_to_keystroke};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::settings::OpenConversationPreference;
 #[cfg(feature = "local_fs")]
@@ -1018,6 +1019,7 @@ pub struct Workspace {
     auth_state: Arc<AuthState>,
     server_time: Option<Arc<ServerTime>>,
     tab_bar_overflow_menu: ViewHandle<Menu<WorkspaceAction>>,
+    text_effect_picker: ViewHandle<TextEffectPicker>,
     show_tab_bar_overflow_menu: bool,
     tab_right_click_menu: ViewHandle<Menu<WorkspaceAction>>,
     show_tab_right_click_menu: Option<(usize, TabContextMenuAnchor)>,
@@ -2813,6 +2815,10 @@ impl Workspace {
             new_session_sidecar_menu,
             move_to_group_sidecar_menu,
         ) = Self::build_menus(ctx);
+        let text_effect_picker = ctx.add_typed_action_view(TextEffectPicker::new);
+        ctx.subscribe_to_view(&text_effect_picker, |me, _, event, ctx| match event {
+            TextEffectPickerEvent::Close => me.focus_active_tab(ctx),
+        });
 
         // Subscribe to network changes
         ctx.subscribe_to_model(
@@ -3318,6 +3324,7 @@ impl Workspace {
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
             server_time,
             tab_bar_overflow_menu,
+            text_effect_picker,
             show_tab_bar_overflow_menu: false,
             tab_right_click_menu,
             show_tab_right_click_menu: None,
@@ -20912,6 +20919,18 @@ impl Workspace {
             }
         }
 
+        if FeatureFlag::TextEffects.is_enabled()
+            && *TextEffectsSettings::as_ref(ctx)
+                .show_title_bar_picker
+                .value()
+        {
+            target.add_child(
+                Container::new(ChildView::new(&self.text_effect_picker).finish())
+                    .with_margin_left(TAB_BAR_PADDING_LEFT)
+                    .finish(),
+            );
+        }
+
         // Legacy AI assistant button (non-agent-mode only)
         if is_online
             && !FeatureFlag::AgentMode.is_enabled()
@@ -23169,6 +23188,9 @@ impl Workspace {
 
         if should_use_ligature_rendering(app) {
             context.set.insert(flags::LIGATURE_RENDERING_CONTEXT_FLAG);
+        }
+        if should_use_text_effects(app) {
+            context.set.insert(flags::TEXT_EFFECTS_CONTEXT_FLAG);
         }
     }
 

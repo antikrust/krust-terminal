@@ -523,4 +523,3 @@ pub fn test_restore_snapshot_with_code_file() -> Builder {
                 .add_assertion(assert_pane_title(0, 1, "./docs/test.rs")),
         )
 }
-

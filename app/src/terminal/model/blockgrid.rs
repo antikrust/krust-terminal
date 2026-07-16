@@ -964,6 +964,10 @@ impl ansi::Handler for BlockGrid {
         self.ansi_handler().on_finish_byte_processing(input);
     }
 
+    fn text_effects_command(&mut self, command: crate::terminal::text_effects::TextEffectsCommand) {
+        self.ansi_handler().text_effects_command(command);
+    }
+
     fn on_reset_grid(&mut self) {
         self.ansi_handler().on_reset_grid();
     }

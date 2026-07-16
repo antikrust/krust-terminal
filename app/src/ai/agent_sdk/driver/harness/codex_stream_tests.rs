@@ -23,7 +23,10 @@ fn thread_started_becomes_session_init() {
 #[test]
 fn turn_started_and_unknown_events_are_skipped() {
     assert!(parse_codex_jsonl_line(r#"{"type":"turn.started"}"#).is_empty());
-    assert!(parse_codex_jsonl_line(r#"{"type":"item.started","item":{"id":"i","type":"command_execution","command":"ls"}}"#).is_empty());
+    assert!(parse_codex_jsonl_line(
+        r#"{"type":"item.started","item":{"id":"i","type":"command_execution","command":"ls"}}"#
+    )
+    .is_empty());
     assert!(parse_codex_jsonl_line(r#"{"type":"something.new","payload":1}"#).is_empty());
     assert!(parse_codex_jsonl_line("").is_empty());
     assert!(parse_codex_jsonl_line("not json").is_empty());

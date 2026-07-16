@@ -3965,6 +3965,10 @@ impl ansi::Handler for BlockList {
         self.update_background_block_height();
     }
 
+    fn text_effects_command(&mut self, command: crate::terminal::text_effects::TextEffectsCommand) {
+        delegate!(self.text_effects_command(command));
+    }
+
     fn on_reset_grid(&mut self) {
         if self.is_bootstrapping_precmd_done() {
             delegate_to_block!(self.on_reset_grid());

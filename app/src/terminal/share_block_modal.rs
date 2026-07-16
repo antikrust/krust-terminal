@@ -1388,6 +1388,7 @@ impl SingleBlock {
                 &model.image_id_to_metadata,
                 None,
                 false, // hide_cursor_cell
+                None,  // text_effects
                 ctx,
                 app,
             );
@@ -1445,6 +1446,7 @@ impl SingleBlock {
                 &model.image_id_to_metadata,
                 None,
                 false, // hide_cursor_cell
+                None,  // text_effects
                 ctx,
                 app,
             );

@@ -597,4 +597,3 @@ pub(super) fn adeberry() -> WarpTheme {
         Some("Adeberry".to_string()),
     )
 }
-

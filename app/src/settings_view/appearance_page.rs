@@ -75,6 +75,12 @@ use crate::terminal::session_settings::SessionSettings;
 use crate::terminal::settings::{
     AltScreenPadding, AltScreenPaddingMode, Spacing, SpacingMode, TerminalSettings,
 };
+use crate::terminal::text_effects::{
+    SelectedTextEffect, SelectedTextEffectIntensity, SelectedTextEffectLargeOutput,
+    SelectedTextEffectScope, SelectedTextEffectSpeed, ShowTextEffectsTitleBarPicker, TextEffect,
+    TextEffectIntensity, TextEffectLargeOutput, TextEffectScope, TextEffectSpeed,
+    TextEffectsEnabled, TextEffectsSettings,
+};
 use crate::terminal::{
     BlockListSettings, ShowBlockDividers, ShowJumpToBottomOfBlockButton, SizeInfo,
 };
@@ -444,6 +450,17 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         ));
     }
 
+    if FeatureFlag::TextEffects.is_enabled() {
+        toggle_binding_pairs.push(ToggleSettingActionPair::new(
+            "terminal text effects",
+            builder(SettingsAction::AppearancePageToggle(
+                AppearancePageAction::ToggleTextEffects,
+            )),
+            context,
+            flags::TEXT_EFFECTS_CONTEXT_FLAG,
+        ));
+    }
+
     toggle_binding_pairs.push(ToggleSettingActionPair::new(
         "preserve active tab color for new tabs",
         builder(SettingsAction::AppearancePageToggle(
@@ -525,6 +542,13 @@ pub enum AppearancePageAction {
     ToggleHideTitleBarSearchBarInVerticalTabs,
     ToggleUseLatestUserPromptAsConversationTitleInTabNames,
     ToggleLigatureRendering,
+    ToggleTextEffects,
+    ToggleTextEffectsTitleBarPicker,
+    SetTextEffect(TextEffect),
+    SetTextEffectSpeed(TextEffectSpeed),
+    SetTextEffectIntensity(TextEffectIntensity),
+    SetTextEffectScope(TextEffectScope),
+    SetTextEffectLargeOutput(TextEffectLargeOutput),
     ToggleBlurTexture,
     ToggleLeftPanelVisibility,
     ToggleToolsPanelProjectExplorer,
@@ -568,6 +592,11 @@ pub struct AppearanceSettingsPageView {
     #[allow(dead_code)]
     thin_strokes_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     enforce_min_contrast_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_speed_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_intensity_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_scope_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_large_output_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     input_mode_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     input_type_radio_state: RadioButtonStateHandle,
     app_icon_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
@@ -705,6 +734,33 @@ impl TypedActionView for AppearanceSettingsPageView {
                 self.toggle_use_latest_user_prompt_as_conversation_title_in_tab_names(ctx)
             }
             ToggleLigatureRendering => self.toggle_ligature_rendering(ctx),
+            ToggleTextEffects => self.toggle_text_effects(ctx),
+            ToggleTextEffectsTitleBarPicker => self.toggle_text_effects_title_bar_picker(ctx),
+            SetTextEffect(effect) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.effect.set_value(*effect, ctx));
+                });
+            }
+            SetTextEffectSpeed(speed) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.speed.set_value(*speed, ctx));
+                });
+            }
+            SetTextEffectIntensity(intensity) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.intensity.set_value(*intensity, ctx));
+                });
+            }
+            SetTextEffectScope(scope) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.scope.set_value(*scope, ctx));
+                });
+            }
+            SetTextEffectLargeOutput(large_output) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.large_output.set_value(*large_output, ctx));
+                });
+            }
             ToggleFocusPaneOnHover => {
                 PaneSettings::handle(ctx).update(ctx, |pane_settings, ctx| {
                     match pane_settings
@@ -954,6 +1010,42 @@ impl AppearanceSettingsPageView {
 
         let ligature_settings_handle = LigatureSettings::handle(ctx);
         ctx.subscribe_to_model(&ligature_settings_handle, |_, _, _, ctx| ctx.notify());
+
+        let text_effects_settings_handle = TextEffectsSettings::handle(ctx);
+        ctx.subscribe_to_model(&text_effects_settings_handle, |me, _, _, ctx| {
+            let settings = TextEffectsSettings::as_ref(ctx);
+            let effect = *settings.effect.value();
+            let speed = *settings.speed.value();
+            let intensity = *settings.intensity.value();
+            let scope = *settings.scope.value();
+            let large_output = *settings.large_output.value();
+            me.text_effect_dropdown.update(ctx, |dropdown, ctx| {
+                dropdown.set_selected_by_action(AppearancePageAction::SetTextEffect(effect), ctx);
+            });
+            me.text_effect_speed_dropdown.update(ctx, |dropdown, ctx| {
+                dropdown
+                    .set_selected_by_action(AppearancePageAction::SetTextEffectSpeed(speed), ctx);
+            });
+            me.text_effect_intensity_dropdown
+                .update(ctx, |dropdown, ctx| {
+                    dropdown.set_selected_by_action(
+                        AppearancePageAction::SetTextEffectIntensity(intensity),
+                        ctx,
+                    );
+                });
+            me.text_effect_scope_dropdown.update(ctx, |dropdown, ctx| {
+                dropdown
+                    .set_selected_by_action(AppearancePageAction::SetTextEffectScope(scope), ctx);
+            });
+            me.text_effect_large_output_dropdown
+                .update(ctx, |dropdown, ctx| {
+                    dropdown.set_selected_by_action(
+                        AppearancePageAction::SetTextEffectLargeOutput(large_output),
+                        ctx,
+                    );
+                });
+            ctx.notify();
+        });
 
         ctx.subscribe_to_model(&InputModeSettings::handle(ctx), |me, _, _, ctx| {
             me.input_mode_dropdown.update(ctx, |dropdown, ctx| {
@@ -1335,6 +1427,11 @@ impl AppearanceSettingsPageView {
             input_type_radio_state,
             app_icon_dropdown,
             enforce_min_contrast_dropdown,
+            text_effect_dropdown: Self::build_text_effect_dropdown(ctx),
+            text_effect_speed_dropdown: Self::build_text_effect_speed_dropdown(ctx),
+            text_effect_intensity_dropdown: Self::build_text_effect_intensity_dropdown(ctx),
+            text_effect_scope_dropdown: Self::build_text_effect_scope_dropdown(ctx),
+            text_effect_large_output_dropdown: Self::build_text_effect_large_output_dropdown(ctx),
             workspace_decorations_dropdown: Self::build_workspace_decoration_visibility_dropdown(
                 ctx,
             ),
@@ -1494,8 +1591,22 @@ impl AppearanceSettingsPageView {
         {
             text_settings_widgets.push(Box::new(LigaturesWidget::default()));
         }
-
         categories.push(Category::new("Text", text_settings_widgets));
+
+        if FeatureFlag::TextEffects.is_enabled() {
+            categories.push(Category::new(
+                "txtFX",
+                vec![
+                    Box::new(TextEffectsToggleWidget::default()),
+                    Box::new(TextEffectWidget),
+                    Box::new(TextEffectSpeedWidget),
+                    Box::new(TextEffectIntensityWidget),
+                    Box::new(TextEffectScopeWidget),
+                    Box::new(TextEffectLargeOutputWidget),
+                    Box::new(TextEffectsTitleBarPickerWidget::default()),
+                ],
+            ));
+        }
 
         categories.push(Category::new(
             "Cursor",
@@ -2568,6 +2679,141 @@ impl AppearanceSettingsPageView {
         })
     }
 
+    fn build_text_effect_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffect::VALUES
+                    .into_iter()
+                    .map(|effect| {
+                        DropdownItem::new(
+                            effect.label(),
+                            AppearancePageAction::SetTextEffect(effect),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffect(
+                    *TextEffectsSettings::as_ref(ctx).effect.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_speed_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectSpeed::VALUES
+                    .into_iter()
+                    .map(|speed| {
+                        DropdownItem::new(
+                            speed.label(),
+                            AppearancePageAction::SetTextEffectSpeed(speed),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectSpeed(
+                    *TextEffectsSettings::as_ref(ctx).speed.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_intensity_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectIntensity::VALUES
+                    .into_iter()
+                    .map(|intensity| {
+                        DropdownItem::new(
+                            intensity.label(),
+                            AppearancePageAction::SetTextEffectIntensity(intensity),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectIntensity(
+                    *TextEffectsSettings::as_ref(ctx).intensity.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_scope_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectScope::VALUES
+                    .into_iter()
+                    .map(|scope| {
+                        DropdownItem::new(
+                            scope.label(),
+                            AppearancePageAction::SetTextEffectScope(scope),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectScope(
+                    *TextEffectsSettings::as_ref(ctx).scope.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_large_output_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                TextEffectLargeOutput::VALUES
+                    .into_iter()
+                    .map(|large_output| {
+                        DropdownItem::new(
+                            large_output.label(),
+                            AppearancePageAction::SetTextEffectLargeOutput(large_output),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectLargeOutput(
+                    *TextEffectsSettings::as_ref(ctx).large_output.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
     fn build_tab_close_button_position_dropdown(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<Dropdown<AppearancePageAction>> {
@@ -2678,6 +2924,22 @@ impl AppearanceSettingsPageView {
                 TelemetryEvent::ToggleLigatureRendering { enabled: new_value },
                 ctx
             );
+        }
+    }
+
+    fn toggle_text_effects(&mut self, ctx: &mut ViewContext<Self>) {
+        if FeatureFlag::TextEffects.is_enabled() {
+            TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                report_if_error!(settings.enabled.toggle_and_save_value(ctx));
+            });
+        }
+    }
+
+    fn toggle_text_effects_title_bar_picker(&mut self, ctx: &mut ViewContext<Self>) {
+        if FeatureFlag::TextEffects.is_enabled() {
+            TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                report_if_error!(settings.show_title_bar_picker.toggle_and_save_value(ctx));
+            });
         }
     }
 
@@ -4612,6 +4874,272 @@ impl SettingsWidget for LigaturesWidget {
                 .build()
                 .on_click(move |ctx, _, _| {
                     ctx.dispatch_typed_action(AppearancePageAction::ToggleLigatureRendering);
+                })
+                .finish(),
+            None,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectsToggleWidget {
+    switch_state: SwitchStateHandle,
+    info_mouse_state: MouseStateHandle,
+}
+
+impl SettingsWidget for TextEffectsToggleWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text effects animation txtfx typewriter matrix decode"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let enabled = *TextEffectsSettings::as_ref(app).enabled.value();
+        render_body_item::<AppearancePageAction>(
+            "Animate new terminal output".into(),
+            Some(AdditionalInfo {
+                mouse_state: self.info_mouse_state.clone(),
+                on_click_action: None,
+                secondary_text: None,
+                tooltip_override_text: Some(
+                    "Changes only how new output is painted; copied and searched text stays exact."
+                        .to_string(),
+                ),
+            }),
+            LocalOnlyIconState::for_setting(
+                TextEffectsEnabled::storage_key(),
+                TextEffectsEnabled::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            appearance
+                .ui_builder()
+                .switch(self.switch_state.clone())
+                .check(enabled)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(AppearancePageAction::ToggleTextEffects);
+                })
+                .finish(),
+            None,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectWidget;
+
+impl SettingsWidget for TextEffectWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation effect typewriter matrix decode word case txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Text effect",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffect::storage_key(),
+                SelectedTextEffect::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectSpeedWidget;
+
+impl SettingsWidget for TextEffectSpeedWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation speed slow normal fast fps txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Effect speed",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectSpeed::storage_key(),
+                SelectedTextEffectSpeed::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_speed_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectIntensityWidget;
+
+impl SettingsWidget for TextEffectIntensityWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation intensity subtle balanced strong trail txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Effect intensity",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectIntensity::storage_key(),
+                SelectedTextEffectIntensity::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_intensity_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectScopeWidget;
+
+impl SettingsWidget for TextEffectScopeWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation scope output commands fullscreen alternate screen txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Animate",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectScope::storage_key(),
+                SelectedTextEffectScope::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_scope_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectLargeOutputWidget;
+
+impl SettingsWidget for TextEffectLargeOutputWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation large long output performance instant animate txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Large output",
+            None,
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectLargeOutput::storage_key(),
+                SelectedTextEffectLargeOutput::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_large_output_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectsTitleBarPickerWidget {
+    switch_state: SwitchStateHandle,
+}
+
+impl SettingsWidget for TextEffectsTitleBarPickerWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text effects txtfx picker title top bar toolbar menu"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let enabled = *TextEffectsSettings::as_ref(app)
+            .show_title_bar_picker
+            .value();
+        render_body_item::<AppearancePageAction>(
+            "Show picker in title bar".into(),
+            None,
+            LocalOnlyIconState::for_setting(
+                ShowTextEffectsTitleBarPicker::storage_key(),
+                ShowTextEffectsTitleBarPicker::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            appearance
+                .ui_builder()
+                .switch(self.switch_state.clone())
+                .check(enabled)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(
+                        AppearancePageAction::ToggleTextEffectsTitleBarPicker,
+                    );
                 })
                 .finish(),
             None,

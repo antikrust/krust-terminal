@@ -84,6 +84,7 @@ use crate::terminal::model::index::Point as IndexPoint;
 use crate::terminal::model::selection::{SelectAction, SelectionPoint};
 use crate::terminal::model::terminal_model::BlockIndex;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
+use crate::terminal::text_effects::TextEffectSurface;
 use crate::terminal::view::TerminalAction;
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::{grid_renderer, SizeInfo};
@@ -2532,6 +2533,7 @@ impl BlockListElement {
                         Properties::default(),
                         block_grid_params,
                         None,
+                        Some(TextEffectSurface::Command),
                         image_metadata,
                         ctx,
                         app,
@@ -2586,6 +2588,7 @@ impl BlockListElement {
                 command_grid_properties,
                 block_grid_params,
                 cursor_visible.then(|| block.prompt_and_command_grid().cursor_style().shape),
+                Some(TextEffectSurface::Command),
                 image_metadata,
                 ctx,
                 app,
@@ -2689,6 +2692,7 @@ impl BlockListElement {
                 output_grid_properties,
                 block_grid_params,
                 cursor_visible.then(|| block.output_grid().cursor_style().shape),
+                Some(TextEffectSurface::Output),
                 image_metadata,
                 ctx,
                 app,

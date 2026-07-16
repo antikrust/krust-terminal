@@ -41,7 +41,7 @@ pub fn parse_codex_jsonl_line(line: &str) -> Vec<TurnEvent> {
             model: None,
             cwd: None,
         }],
-        RawEvent::ItemCompleted { item } => item_events(item),
+        RawEvent::ItemCompleted { item } => item_events(*item),
         RawEvent::TurnCompleted { usage } => vec![TurnEvent::TurnCompleted {
             usage: usage.map(turn_usage),
             is_error: false,
@@ -185,7 +185,7 @@ enum RawEvent {
     #[serde(rename = "thread.started")]
     ThreadStarted { thread_id: String },
     #[serde(rename = "item.completed")]
-    ItemCompleted { item: RawItem },
+    ItemCompleted { item: Box<RawItem> },
     #[serde(rename = "turn.completed")]
     TurnCompleted { usage: Option<RawUsage> },
     #[serde(rename = "turn.failed")]
