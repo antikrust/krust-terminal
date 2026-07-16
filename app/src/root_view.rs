@@ -270,7 +270,6 @@ pub fn init(app: &mut AppContext) {
         open_new_tab_insert_subshell_command_and_bootstrap_if_supported,
     );
     app.add_global_action("root_view:open_launch_config", open_launch_config);
-    app.add_global_action("root_view:send_feedback", send_feedback);
     app.add_global_action(
         "root_view:toggle_quake_mode_window",
         toggle_quake_mode_window,
@@ -570,16 +569,6 @@ fn open_launch_config(arg: &OpenLaunchConfigArg, ctx: &mut AppContext) {
         },
         ctx
     );
-}
-
-fn send_feedback(_: &(), ctx: &mut AppContext) {
-    if let Some(workspace) = active_workspace(ctx) {
-        workspace.update(ctx, |workspace, ctx| {
-            workspace.handle_action(&WorkspaceAction::SendFeedback, ctx);
-        });
-    } else {
-        ctx.open_url(&crate::util::links::feedback_form_url());
-    }
 }
 
 /// Creates a new window with the transferred pane group.

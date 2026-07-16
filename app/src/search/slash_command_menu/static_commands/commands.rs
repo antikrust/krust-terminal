@@ -247,27 +247,6 @@ pub const OPEN_SETTINGS_FILE: StaticCommand = StaticCommand {
     argument: None,
 };
 
-pub const CHANGELOG: StaticCommand = StaticCommand {
-    name: "/changelog",
-    description: "Open the latest changelog",
-    icon_path: "bundled/svg/book-open.svg",
-    availability: Availability::ALWAYS,
-    auto_enter_ai_mode: false,
-    argument: None,
-};
-
-// Accepts an optional argument so that buffers like `/feedback some text` still parse to
-// this command (the trailing text is ignored on execution). Without this, typing any
-// argument after `/feedback` would fall through and be treated as plain input.
-pub static FEEDBACK: LazyLock<StaticCommand> = LazyLock::new(|| StaticCommand {
-    name: "/feedback",
-    description: "Send feedback",
-    icon_path: "bundled/svg/feedback.svg",
-    availability: Availability::ALWAYS,
-    auto_enter_ai_mode: false,
-    argument: Some(Argument::optional().with_execute_on_selection()),
-});
-
 pub const OPEN_REPO: StaticCommand = StaticCommand {
     name: "/open-repo",
     description: "Switch to another indexed repository",
@@ -619,7 +598,6 @@ fn all_commands() -> Vec<StaticCommand> {
         ADD_PROMPT.clone(),
         ADD_RULE,
         COST,
-        FEEDBACK.clone(),
         INDEX,
         INIT,
         OPEN_PROJECT_RULES,
@@ -645,10 +623,6 @@ fn all_commands() -> Vec<StaticCommand> {
         && FeatureFlag::HOARemoteControl.is_enabled()
     {
         commands.push(REMOTE_CONTROL);
-    }
-
-    if FeatureFlag::Changelog.is_enabled() {
-        commands.push(CHANGELOG);
     }
 
     if FeatureFlag::AgentView.is_enabled() {

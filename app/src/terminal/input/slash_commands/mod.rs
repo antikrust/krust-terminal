@@ -843,15 +843,6 @@ impl Input {
             init if command.name == commands::INIT.name => {
                 ctx.dispatch_typed_action(&TerminalAction::InitProject);
             }
-            changelog if command.name == commands::CHANGELOG.name => {
-                if !FeatureFlag::Changelog.is_enabled() {
-                    return false;
-                }
-                ctx.dispatch_typed_action(&WorkspaceAction::ViewLatestChangelog);
-            }
-            feedback if command.name == commands::FEEDBACK.name => {
-                ctx.dispatch_typed_action(&WorkspaceAction::SendFeedback);
-            }
             open_code_review if command.name == commands::OPEN_CODE_REVIEW.name => {
                 ctx.dispatch_typed_action(&TerminalAction::ToggleCodeReviewPane {
                     entrypoint: CodeReviewPaneEntrypoint::SlashCommand,
@@ -1583,11 +1574,10 @@ pub(crate) fn conversation_is_cloud_oz_for_slash_command(
     }
 }
 
-/// Tooltip and slash command name for the fork button, returned as a unit so
-/// callers rendering the button and callers inserting the command always agree.
+/// Slash command name for the fork action, returned as a unit so callers
+/// inserting the command always agree on which command backs it.
 #[cfg(not(target_family = "wasm"))]
 pub(crate) struct ForkButtonAction {
-    pub tooltip: &'static str,
     pub command_name: &'static str,
 }
 
@@ -1604,12 +1594,10 @@ pub(crate) fn fork_button_action(
         && conversation_id.is_some_and(|id| conversation_is_cloud_oz_for_slash_command(id, ctx))
     {
         ForkButtonAction {
-            tooltip: "Continue locally",
             command_name: commands::CONTINUE_LOCALLY.name,
         }
     } else {
         ForkButtonAction {
-            tooltip: "Fork conversation",
             command_name: commands::FORK.name,
         }
     }
