@@ -466,7 +466,6 @@ use crate::terminal::shared_session::{
     SharedSessionActionSource, SharedSessionScrollbackType, SharedSessionSource,
     SharedSessionStatus,
 };
-use crate::terminal::text_effects::TextEffectsSettings;
 use crate::terminal::view::block_onboarding::onboarding_prompt_block::OnboardingPromptBlock;
 use crate::terminal::view::init_environment::mode_selector::{
     EnvironmentSetupMode, EnvironmentSetupModeSelector, EnvironmentSetupModeSelectorEvent,
@@ -4053,8 +4052,6 @@ impl TerminalView {
 
         let ligature_handle = LigatureSettings::handle(ctx);
         ctx.subscribe_to_model(&ligature_handle, |_, _, _, ctx| ctx.notify());
-        let text_effects_handle = TextEffectsSettings::handle(ctx);
-        ctx.subscribe_to_model(&text_effects_handle, |_, _, _, ctx| ctx.notify());
 
         let privacy_settings_handle = PrivacySettings::handle(ctx);
         ctx.subscribe_to_model(

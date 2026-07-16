@@ -405,7 +405,6 @@ use crate::terminal::session_settings::{
 use crate::terminal::settings::{SpacingMode, TerminalSettings};
 use crate::terminal::shared_session::SharedSessionActionSource;
 use crate::terminal::shell::ShellType;
-use crate::terminal::text_effects::should_use_text_effects;
 use crate::terminal::view::ambient_agent::{AuthSecretFtuxView, AuthSecretFtuxViewEvent};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 use crate::terminal::view::ambient_agent::{
@@ -23170,9 +23169,6 @@ impl Workspace {
 
         if should_use_ligature_rendering(app) {
             context.set.insert(flags::LIGATURE_RENDERING_CONTEXT_FLAG);
-        }
-        if should_use_text_effects(app) {
-            context.set.insert(flags::TEXT_EFFECTS_CONTEXT_FLAG);
         }
     }
 
