@@ -23,7 +23,6 @@ const MAX_RESULT_CHARS: usize = 4000;
 /// Builds a single-task conversation from the prompt and the events emitted
 /// while the harness ran. IDs are client-minted (`Uuid`); they only need to be
 /// unique within this rendered conversation.
-#[allow(dead_code)]
 pub fn turn_events_to_conversation(prompt: &str, events: &[TurnEvent]) -> api::ConversationData {
     let task_id = Uuid::new_v4().to_string();
     let request_id = Uuid::new_v4().to_string();
@@ -96,8 +95,11 @@ pub(crate) fn turn_event_to_messages(
     }
 }
 
-#[allow(dead_code)]
-fn user_query_message(task_id: &str, request_id: &str, prompt: &str) -> api::Message {
+/// The user's prompt as a task message — the local analogue of the cloud
+/// server echoing the query into the task. Restoration rebuilds exchange
+/// inputs from these (`user_inputs_from_messages`), so without one in the
+/// task, a restored conversation shows responses with no query bubbles.
+pub(crate) fn user_query_message(task_id: &str, request_id: &str, prompt: &str) -> api::Message {
     api::Message {
         id: Uuid::new_v4().to_string(),
         task_id: task_id.to_string(),

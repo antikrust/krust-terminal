@@ -10,6 +10,7 @@
 //! `TaskNotFound`.
 
 use ai::agent::{TurnEvent, TurnUsage};
+use warp_multi_agent_api as api;
 use warpui::{App, EntityId};
 
 use super::LocalHarnessStream;
@@ -88,6 +89,27 @@ fn exchanges_carry_the_user_query_as_renderable_input() {
                 .collect();
             assert_eq!(
                 queries,
+                vec!["first prompt".to_string(), "second prompt".to_string()]
+            );
+
+            // The prompts must also live in the task's message list: tasks
+            // are what persist, and restoring a conversation rebuilds its
+            // query bubbles from the UserQuery messages found there. Without
+            // these, history shows responses with no inputs after a restart.
+            let task = conversation
+                .get_task(conversation.get_root_task_id())
+                .expect("root task exists");
+            let persisted_queries: Vec<String> = task
+                .messages()
+                .filter_map(|message| match &message.message {
+                    Some(api::message::Message::UserQuery(user_query)) => {
+                        Some(user_query.query.clone())
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                persisted_queries,
                 vec!["first prompt".to_string(), "second prompt".to_string()]
             );
         });
@@ -174,12 +196,7 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
 
         let second = app
             .update(|ctx| {
-                LocalHarnessStream::begin_follow_up(
-                    terminal_view_id,
-                    conversation_id,
-                    "second",
-                    ctx,
-                )
+                LocalHarnessStream::begin_follow_up(terminal_view_id, conversation_id, "second", ctx)
             })
             .expect("conversation still live");
         assert_eq!(
