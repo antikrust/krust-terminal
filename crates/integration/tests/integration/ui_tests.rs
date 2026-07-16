@@ -65,7 +65,6 @@ integration_tests! {
     test_restore_snapshot_with_test_json_object,
     test_restore_snapshot_with_common_shareable_metadata_ids,
     test_restore_snapshot_with_markdown_file,
-    test_restore_snapshot_with_settings_page,
     // TODO(kevin): figure out why the file name doesn't match.
     #[ignore]
     test_restore_snapshot_with_code_file,

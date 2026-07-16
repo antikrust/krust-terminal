@@ -1371,7 +1371,6 @@ pub enum TelemetryEvent {
     },
     BootstrappingSucceeded(BootstrappingInfo),
     EditorUnhandledModifierKey(String),
-    CopyInviteLink,
     OpenThemeChooser,
     ThemeSelection {
         theme: String,
@@ -4112,7 +4111,6 @@ impl TelemetryEvent {
             | TelemetryEvent::ContextMenuInsertSelectedText
             | TelemetryEvent::ContextMenuCopySelectedText
             | TelemetryEvent::JumpToPreviousCommand
-            | TelemetryEvent::CopyInviteLink
             | TelemetryEvent::OpenThemeChooser
             | TelemetryEvent::OpenThemeCreatorModal
             | TelemetryEvent::CreateCustomTheme
@@ -4853,7 +4851,6 @@ impl TelemetryEvent {
             | TelemetryEvent::SessionAbandonedBeforeBootstrap { .. }
             | TelemetryEvent::BootstrappingSucceeded(_)
             | TelemetryEvent::EditorUnhandledModifierKey(_)
-            | TelemetryEvent::CopyInviteLink
             | TelemetryEvent::OpenThemeChooser
             | TelemetryEvent::ThemeSelection { .. }
             | TelemetryEvent::AppIconSelection { .. }
@@ -5407,7 +5404,6 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SessionAbandonedBeforeBootstrap => EnablementState::Always,
             Self::BootstrappingSucceeded => EnablementState::Always,
             Self::EditorUnhandledModifierKey => EnablementState::Always,
-            Self::CopyInviteLink => EnablementState::Always,
             Self::OpenThemeChooser => EnablementState::Always,
             Self::ThemeSelection => EnablementState::Always,
             Self::AppIconSelection => EnablementState::Always,
@@ -5902,7 +5898,6 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Context Menu Toggle Git Prompt Dirty Indicator"
             }
             Self::EditorUnhandledModifierKey => "Unhandled Editor Modifier Key",
-            Self::CopyInviteLink => "Copy Invite Link",
             Self::OpenThemeChooser => "Open Theme Chooser",
             Self::ThemeSelection => "Select Theme",
             Self::AppIconSelection => "Select App Icon",
@@ -6465,7 +6460,6 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::EditorUnhandledModifierKey => {
                 "Used modifier keybinding keystroke which is not currently supported"
             }
-            Self::CopyInviteLink => "Clicked \"Copy Link\" on Referral Modal",
             Self::OpenThemeChooser => {
                 "Opened theme chooser (list of different themes and visualizations of those themes)"
             }

@@ -298,14 +298,11 @@ impl TerminalView {
                     }
                 });
 
-                self.ai_controller.update(ctx, |controller, ctx| {
-                    controller.send_user_query_in_conversation(
-                        initial_prompt,
-                        conversation_id,
-                        None,
-                        ctx,
-                    );
-                });
+                // This fork routes the auto-submitted initial prompt to the local
+                // Claude Code harness instead of the cloud controller (which
+                // bypasses `submit_ai_query_local`, hence the direct call here).
+                let _ = conversation_id;
+                self.run_local_claude_query(initial_prompt, None, None, ctx);
                 did_auto_trigger_request = true;
             } else {
                 let appearance = Appearance::handle(ctx).as_ref(ctx);

@@ -41,16 +41,37 @@ pub struct HarnessAvailability {
     pub available_models: Vec<HarnessModelInfo>,
 }
 
-/// Default fallback used before the server responds.
-/// Oz is enabled by default so the UI is usable pre-fetch; the server
-/// list (which respects admin overrides) replaces this once available.
+/// Default harness list. Oz (Warp's own cloud agent) requires a signed-in
+/// account to become available, since its harness list is normally fetched
+/// from Warp's server; the local CLI harnesses don't need any of that, so
+/// they're enabled unconditionally here rather than waiting on `refresh()`.
 fn default_harnesses() -> Vec<HarnessAvailability> {
-    vec![HarnessAvailability {
-        harness: Harness::Oz,
-        display_name: "Warp".to_string(),
-        enabled: true,
-        available_models: vec![],
-    }]
+    vec![
+        HarnessAvailability {
+            harness: Harness::Oz,
+            display_name: "Warp".to_string(),
+            enabled: true,
+            available_models: vec![],
+        },
+        HarnessAvailability {
+            harness: Harness::Claude,
+            display_name: harness_display::display_name(Harness::Claude).to_string(),
+            enabled: true,
+            available_models: vec![],
+        },
+        HarnessAvailability {
+            harness: Harness::Codex,
+            display_name: harness_display::display_name(Harness::Codex).to_string(),
+            enabled: true,
+            available_models: vec![],
+        },
+        HarnessAvailability {
+            harness: Harness::Gemini,
+            display_name: harness_display::display_name(Harness::Gemini).to_string(),
+            enabled: true,
+            available_models: vec![],
+        },
+    ]
 }
 
 #[derive(Debug, Clone)]

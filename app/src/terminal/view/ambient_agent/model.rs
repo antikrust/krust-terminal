@@ -317,7 +317,9 @@ impl AmbientAgentViewModel {
 
         let ui_state = AmbientAgentProgressUIState::new(ctx);
 
-        let harness = Harness::default();
+        // This fork defaults the terminal agent to the local Claude Code harness
+        // (Oz, the upstream default, requires a Warp account and 401s here).
+        let harness = Harness::Claude;
         let availability = HarnessAvailabilityModel::as_ref(ctx);
         // If the default harness is not available, find the first available one.
         let harness = if !availability.is_harness_enabled(harness) {

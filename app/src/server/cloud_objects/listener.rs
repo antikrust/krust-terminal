@@ -37,6 +37,11 @@ const RECONNECTION_REFRESH_THRESHOLD: Duration = Duration::from_secs(60);
 /// reconnect simultaneously (e.g. after a server release).
 const MAX_RECONNECTION_REFRESH_DELAY: Duration = Duration::from_secs(30);
 
+/// Fork: master switch for the cloud-object update websocket. This fork runs
+/// with faked credentials, so the subscription always fails with
+/// "Unauthorized: User not in context" and retries forever; keep it off.
+const CLOUD_OBJECTS_LISTENER_ENABLED: bool = false;
+
 /// Describes the type of websocket connection that was just established.
 enum ConnectionEvent {
     /// The very first websocket connection after application startup.
@@ -233,6 +238,14 @@ impl Listener {
     }
 
     fn start_listener(&mut self, ctx: &mut ModelContext<Self>) {
+        // Fork: cloud-object sync can never authenticate under this fork's
+        // faked credentials — every websocket attempt ends in "Unauthorized:
+        // User not in context" and an endless retry loop that spams the log.
+        // Keep the listener permanently idle.
+        if !CLOUD_OBJECTS_LISTENER_ENABLED {
+            log::debug!("CloudObjects::Listener disabled in this fork (no cloud auth)");
+            return;
+        }
         if !self.should_subscribe_to_updates {
             self.should_subscribe_to_updates = true;
             self.get_warp_drive_updates(ctx);

@@ -689,6 +689,20 @@ pub(crate) struct CommandHandle {
 }
 
 impl CommandHandle {
+    /// Builds a handle around an externally-driven command.
+    ///
+    /// The terminal `execute_command` path constructs [`CommandHandle`]
+    /// inline, but harnesses that run their own subprocess (rather than a
+    /// terminal block) need to supply their own exit-status channel and a
+    /// `block_id` for the driver's bookkeeping (error scanner, snapshot). For
+    /// those, mint a standalone `block_id` with [`BlockId::new`].
+    pub(crate) fn new(exit_status_rx: oneshot::Receiver<ExitCode>, block_id: BlockId) -> Self {
+        Self {
+            exit_status_rx,
+            block_id,
+        }
+    }
+
     /// The block ID of the command that was executed.
     pub fn block_id(&self) -> &BlockId {
         &self.block_id

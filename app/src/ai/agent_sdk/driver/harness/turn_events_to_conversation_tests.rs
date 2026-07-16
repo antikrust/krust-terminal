@@ -1,0 +1,153 @@
+//! Tests that a stream of `TurnEvent`s maps to the expected sequence of
+//! renderable conversation messages.
+
+use ai::agent::{ToolCallOutcome, TurnEvent};
+use serde_json::json;
+use warp_multi_agent_api as api;
+
+use super::turn_events_to_conversation;
+
+/// Extracts the concrete message oneof from an envelope for assertions.
+fn body(message: &api::Message) -> &api::message::Message {
+    message.message.as_ref().expect("message body present")
+}
+
+#[test]
+fn builds_single_task_with_leading_user_query() {
+    let convo = turn_events_to_conversation("do the thing", &[]);
+    assert_eq!(convo.tasks.len(), 1);
+    let messages = &convo.tasks[0].messages;
+    assert_eq!(messages.len(), 1, "only the user query for an empty run");
+    match body(&messages[0]) {
+        api::message::Message::UserQuery(q) => assert_eq!(q.query, "do the thing"),
+        other => panic!("expected UserQuery, got {other:?}"),
+    }
+}
+
+#[test]
+fn maps_text_and_reasoning_to_native_message_types() {
+    let events = vec![
+        TurnEvent::Thinking {
+            text: "let me think".to_string(),
+        },
+        TurnEvent::Text {
+            text: "the answer".to_string(),
+        },
+    ];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+    // user query + reasoning + text
+    assert_eq!(messages.len(), 3);
+    match body(&messages[1]) {
+        api::message::Message::AgentReasoning(r) => assert_eq!(r.reasoning, "let me think"),
+        other => panic!("expected AgentReasoning, got {other:?}"),
+    }
+    match body(&messages[2]) {
+        api::message::Message::AgentOutput(o) => assert_eq!(o.text, "the answer"),
+        other => panic!("expected AgentOutput, got {other:?}"),
+    }
+}
+
+#[test]
+fn renders_tool_call_and_result_as_markdown_output() {
+    let events = vec![
+        TurnEvent::ToolCallStarted {
+            call_id: "t1".to_string(),
+            name: "Bash".to_string(),
+            input: json!({ "command": "ls -la", "description": "list" }),
+        },
+        TurnEvent::ToolCallResult {
+            call_id: "t1".to_string(),
+            outcome: ToolCallOutcome::Success(json!({ "stdout": "file1\nfile2" })),
+        },
+    ];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+    assert_eq!(messages.len(), 3); // user query + call + result
+
+    match body(&messages[1]) {
+        api::message::Message::AgentOutput(o) => {
+            assert!(o.text.contains("Bash"), "header names the tool: {}", o.text);
+            assert!(o.text.contains("ls -la"), "shows the command: {}", o.text);
+        }
+        other => panic!("expected AgentOutput for the call, got {other:?}"),
+    }
+    match body(&messages[2]) {
+        api::message::Message::AgentOutput(o) => {
+            assert!(o.text.contains("file1"), "shows stdout: {}", o.text);
+        }
+        other => panic!("expected AgentOutput for the result, got {other:?}"),
+    }
+}
+
+#[test]
+fn tool_error_result_is_flagged() {
+    let events = vec![TurnEvent::ToolCallResult {
+        call_id: "t1".to_string(),
+        outcome: ToolCallOutcome::Error("boom".to_string()),
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    match body(&convo.tasks[0].messages[1]) {
+        api::message::Message::AgentOutput(o) => {
+            assert!(o.text.contains("error"), "flags error: {}", o.text);
+            assert!(o.text.contains("boom"));
+        }
+        other => panic!("expected AgentOutput, got {other:?}"),
+    }
+}
+
+#[test]
+fn failed_turn_renders_its_error_message() {
+    let events = vec![TurnEvent::TurnCompleted {
+        usage: None,
+        is_error: true,
+        error_message: Some("credit balance too low".to_string()),
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+    assert_eq!(messages.len(), 2); // user query + error block
+    match body(&messages[1]) {
+        api::message::Message::AgentOutput(o) => {
+            assert!(o.text.contains("error"), "flags error: {}", o.text);
+            assert!(o.text.contains("credit balance too low"));
+        }
+        other => panic!("expected AgentOutput, got {other:?}"),
+    }
+}
+
+#[test]
+fn failed_turn_without_detail_still_renders_an_error() {
+    let events = vec![TurnEvent::TurnCompleted {
+        usage: None,
+        is_error: true,
+        error_message: None,
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+    assert_eq!(messages.len(), 2);
+    match body(&messages[1]) {
+        api::message::Message::AgentOutput(o) => {
+            assert!(o.text.contains("error"), "flags error: {}", o.text);
+        }
+        other => panic!("expected AgentOutput, got {other:?}"),
+    }
+}
+
+#[test]
+fn session_init_and_turn_completed_produce_no_messages() {
+    let events = vec![
+        TurnEvent::SessionInit {
+            session_id: "s".to_string(),
+            model: None,
+            cwd: None,
+        },
+        TurnEvent::TurnCompleted {
+            usage: None,
+            is_error: false,
+            error_message: None,
+        },
+    ];
+    let convo = turn_events_to_conversation("q", &events);
+    // Only the user query — bookkeeping events render nothing.
+    assert_eq!(convo.tasks[0].messages.len(), 1);
+}

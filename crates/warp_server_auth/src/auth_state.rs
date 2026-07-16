@@ -5,7 +5,6 @@ use anyhow::anyhow;
 use chrono::{DateTime, Duration, Utc};
 use parking_lot::RwLock;
 use uuid::Uuid;
-use warp_core::channel::{Channel, ChannelState};
 use warp_errors::report_error;
 use warp_graphql::object_permissions::OwnerType;
 use warpui_core::{AppContext, Entity, SingletonEntity};
@@ -58,21 +57,12 @@ impl AuthState {
             credentials: RwLock::new(None),
         }
     }
-    #[cfg(any(
-        test,
-        feature = "integration_tests",
-        feature = "skip_login",
-        feature = "test-util"
-    ))]
     fn test_credentials() -> Credentials {
         #[cfg(any(test, feature = "integration_tests", feature = "skip_login"))]
         {
             Credentials::Test
         }
-        #[cfg(all(
-            feature = "test-util",
-            not(any(test, feature = "integration_tests", feature = "skip_login"))
-        ))]
+        #[cfg(not(any(test, feature = "integration_tests", feature = "skip_login")))]
         {
             Credentials::SessionCookie
         }
@@ -122,12 +112,6 @@ impl AuthState {
 
         if Self::should_use_test_user() {
             state.set_user(Some(User::test()));
-            #[cfg(any(
-                test,
-                feature = "integration_tests",
-                feature = "skip_login",
-                feature = "test-util"
-            ))]
             state.set_credentials(Some(Self::test_credentials()));
             return state;
         }
@@ -176,9 +160,10 @@ impl AuthState {
         state
     }
 
+    /// Always true in this fork: there's no account system to authenticate
+    /// against, so every launch logs in as a permanent local fake user.
     fn should_use_test_user() -> bool {
-        cfg!(any(test, feature = "skip_login", feature = "test-util"))
-            || ChannelState::channel() == Channel::Integration
+        true
     }
 
     /// Determines the appropriate persistence action based on the current auth state.

@@ -1910,10 +1910,13 @@ impl BlocklistAIHistoryModel {
         }
 
         // If this conversation doesn't have server metadata yet, and it has a server conversation token,
-        // fetch the metadata from the server.
+        // fetch the metadata from the server. Local-harness conversations carry
+        // a placeholder (empty) token — there is nothing to fetch for them.
         let should_fetch_metadata = FeatureFlag::CloudConversations.is_enabled()
             && conversation.server_metadata().is_none()
-            && conversation.server_conversation_token().is_some();
+            && conversation
+                .server_conversation_token()
+                .is_some_and(|token| !token.as_str().is_empty());
 
         if should_fetch_metadata {
             let server_token = conversation

@@ -33,7 +33,9 @@ use warp_graphql::ai::AgentTaskState;
 use warp_managed_secrets::ManagedSecretValue;
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 use warpui::r#async::{FutureExt, TimeoutError};
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, ModelSpawner, SingletonEntity};
+use warpui::{
+    AppContext, Entity, ModelContext, ModelHandle, ModelSpawner, SingletonEntity, ViewHandle,
+};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -621,8 +623,9 @@ impl AgentDriver {
         parent_run_id = ?options.parent_run_id,
         is_sandbox = tracing::field::Empty,
     ))]
-    pub fn new(
+    fn new_inner(
         options: AgentDriverOptions,
+        existing_terminal_driver: Option<ModelHandle<terminal::TerminalDriver>>,
         ctx: &mut ModelContext<Self>,
     ) -> Result<Self, AgentDriverError> {
         let AgentDriverOptions {
@@ -706,16 +709,26 @@ impl AgentDriver {
 
         let resolved_env_vars = Arc::new(env_vars);
 
-        let terminal_driver = terminal::TerminalDriver::create(
-            terminal::TerminalDriverOptions {
-                working_dir: working_dir.clone(),
-                env_vars: HashMap::clone(&resolved_env_vars),
-                should_share,
-                task_id,
-                conversation_restoration,
-            },
-            ctx,
-        )?;
+        // A view-bound run (terminal → local harness) supplies its own
+        // `TerminalDriver` bound to the user's visible terminal via
+        // `create_from_existing_view`; a headless run (the `warp agent run`
+        // CLI path) creates a fresh terminal here. Env vars still reach the
+        // harness subprocess through `resolved_env_vars`/`build_runner`, not
+        // the terminal shell, so a view-bound run doesn't need them applied
+        // to the existing terminal.
+        let terminal_driver = match existing_terminal_driver {
+            Some(terminal_driver) => terminal_driver,
+            None => terminal::TerminalDriver::create(
+                terminal::TerminalDriverOptions {
+                    working_dir: working_dir.clone(),
+                    env_vars: HashMap::clone(&resolved_env_vars),
+                    should_share,
+                    task_id,
+                    conversation_restoration,
+                },
+                ctx,
+            )?,
+        };
 
         // Subscribe to TerminalDriver events for task-specific handling.
         ctx.subscribe_to_model(&terminal_driver, |me, _, event, ctx| {
@@ -774,6 +787,33 @@ impl AgentDriver {
             strict_mcp_startup,
             mcp_startup_timeout: mcp_startup_timeout.unwrap_or(MCP_SERVER_STARTUP_TIMEOUT),
         })
+    }
+
+    /// Creates a driver that runs in its own fresh headless terminal (the
+    /// `warp agent run` CLI path).
+    #[tracing::instrument(name = "AgentDriver::new", skip_all, err, fields(
+        tags.cloud_agent = true,
+        task_id = ?options.task_id,
+        parent_run_id = ?options.parent_run_id,
+    ))]
+    pub fn new(
+        options: AgentDriverOptions,
+        ctx: &mut ModelContext<Self>,
+    ) -> Result<Self, AgentDriverError> {
+        Self::new_inner(options, None, ctx)
+    }
+
+    /// Creates a driver bound to an existing, visible terminal view so its
+    /// agent blocks render inline in the user's terminal rather than a hidden
+    /// one. Used to route terminal agent prompts to a local harness.
+    pub fn new_from_view(
+        options: AgentDriverOptions,
+        terminal_view: ViewHandle<crate::terminal::view::TerminalView>,
+        ctx: &mut ModelContext<Self>,
+    ) -> Result<Self, AgentDriverError> {
+        let terminal_driver =
+            terminal::TerminalDriver::create_from_existing_view(terminal_view, ctx);
+        Self::new_inner(options, Some(terminal_driver), ctx)
     }
 
     /// Minimal constructor for unit tests that need a live `AgentDriver` model to call

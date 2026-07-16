@@ -273,6 +273,10 @@ use crate::ai::conversation_utils;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
 use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientProfileId};
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
+use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
+use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{run_claude_stream, stream_json_args};
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
+use crate::ai::blocklist::local_harness_stream::LocalHarnessStream;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
 use crate::ai::loading::shimmering_warp_loading_text;
 #[cfg(feature = "local_fs")]
@@ -2709,6 +2713,11 @@ pub struct TerminalView {
     /// Cached view ids for usage footers keyed by the AI block view id that owns them.
     usage_footer_view_ids: HashMap<EntityId, EntityId>,
 
+    /// The last prompt routed to the local Claude harness and when it was
+    /// submitted, used to drop the duplicate submission the banner →
+    /// agent-view handoff replays on the first prompt after launch.
+    last_local_claude_submission: Option<(String, std::time::Instant)>,
+
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
 
@@ -4365,6 +4374,7 @@ impl TerminalView {
             last_observed_conversation_status: Default::default(),
             last_observed_active_subagent: Default::default(),
             usage_footer_view_ids: Default::default(),
+            last_local_claude_submission: None,
             block_onboarding_active: false,
             onboarding_prompt_block: None,
             settings_import_onboarding_block: None,
@@ -21413,6 +21423,18 @@ impl TerminalView {
                     );
                 }
             }
+            InputEvent::RunLocalClaudeQuery {
+                prompt,
+                model_id,
+                reasoning_level,
+            } => {
+                self.run_local_claude_query(
+                    prompt.clone(),
+                    model_id.clone(),
+                    reasoning_level.clone(),
+                    ctx,
+                );
+            }
             InputEvent::EnterAgentView {
                 initial_prompt,
                 conversation_id,
@@ -23209,6 +23231,160 @@ impl TerminalView {
             .as_ref()
             .and_then(BlockMetadata::current_working_directory)
             .map(|pwd| pwd.to_string())
+    }
+
+    /// Routes a terminal agent prompt to the local Claude Code streaming harness,
+    /// rendering the response inline in this terminal. Runs `claude` headless and
+    /// injects each parsed event into this terminal's conversation via
+    /// [`LocalHarnessStream`] (keyed by this view's surface id) — no cloud call,
+    /// no `AgentDriver`. See `docs/agent-flow-map.md`.
+    fn run_local_claude_query(
+        &mut self,
+        prompt: String,
+        _model_id: Option<String>,
+        _reasoning_level: Option<String>,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        // Scoped here (not module-level) to avoid clashing with the
+        // `futures_lite::StreamExt` used elsewhere in this file.
+        use futures::StreamExt as _;
+
+        // The banner → agent-view handoff replays the first submission,
+        // spawning two identical runs (observed as doubled `starting` log
+        // lines and a duplicate hidden conversation). Drop an identical
+        // prompt arriving within a short window.
+        let now = std::time::Instant::now();
+        if let Some((last_prompt, submitted_at)) = &self.last_local_claude_submission {
+            if *last_prompt == prompt
+                && now.duration_since(*submitted_at) < std::time::Duration::from_secs(3)
+            {
+                log::info!("fork: dropping duplicate local claude submission");
+                return;
+            }
+        }
+        self.last_local_claude_submission = Some((prompt.clone(), now));
+
+        log::info!("fork: run_local_claude_query starting");
+
+        let terminal_surface_id = ctx.view_id();
+        let working_dir = self
+            .pwd()
+            .map(std::path::PathBuf::from)
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_default();
+
+        // Prepare Claude's on-disk config (trust/onboarding flags) so the
+        // headless run doesn't block on first-run prompts.
+        if let Err(error) = prepare_claude_environment_config(
+            &working_dir,
+            &HashMap::<std::ffi::OsString, std::ffi::OsString>::new(),
+        ) {
+            log::error!("fork: failed to prepare claude env config: {error}");
+        }
+
+        // Build the headless streaming command with a robust PATH (the app's
+        // launchd PATH may not contain `claude`).
+        let session_id = uuid::Uuid::new_v4();
+        let mut command = command::r#async::Command::new("claude");
+        command.args(stream_json_args(&session_id, false, None, None));
+        command.current_dir(&working_dir);
+        let mut path = warp_util::path::warp_shell_path()
+            .or_else(|| std::env::var("PATH").ok())
+            .unwrap_or_default();
+        let mut extra_dirs = vec![
+            "/opt/homebrew/bin".to_string(),
+            "/usr/local/bin".to_string(),
+        ];
+        if let Some(home) = std::env::var_os("HOME") {
+            let home = home.to_string_lossy();
+            extra_dirs.push(format!("{home}/.local/bin"));
+            extra_dirs.push(format!("{home}/.npm-global/bin"));
+        }
+        for dir in extra_dirs {
+            if !path.split(':').any(|segment| segment == dir) {
+                path = if path.is_empty() {
+                    dir
+                } else {
+                    format!("{dir}:{path}")
+                };
+            }
+        }
+        command.env("PATH", path);
+
+        let spawner = ctx.spawner();
+        let background = ctx.background_executor().clone();
+        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<ai::agent::TurnEvent>();
+        let begin_prompt = prompt.clone();
+        let pump_prompt = prompt;
+
+        // Drain: begin the exchange on the first event, inject each event's
+        // messages, complete at EOF — all on the main thread via the view
+        // spawner so the blocks render in this terminal in place.
+        background
+            .spawn(async move {
+                let mut stream: Option<LocalHarnessStream> = None;
+                while let Some(event) = event_rx.next().await {
+                    let taken = stream.take();
+                    let begin_prompt = begin_prompt.clone();
+                    let result = spawner
+                        .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
+                            let stream = match taken {
+                                Some(stream) => stream,
+                                None => {
+                                    let stream = LocalHarnessStream::begin(
+                                        terminal_surface_id,
+                                        &begin_prompt,
+                                        ctx,
+                                    );
+                                    // Bind the agent view to the fresh
+                                    // conversation, the same way the cloud
+                                    // send path surfaces its conversation —
+                                    // without this the run streams into a
+                                    // conversation nothing displays.
+                                    view.enter_agent_view_for_conversation(
+                                        None,
+                                        AgentViewEntryOrigin::Input {
+                                            was_prompt_autodetected: false,
+                                        },
+                                        stream.conversation_id(),
+                                        ctx,
+                                    );
+                                    stream
+                                }
+                            };
+                            let messages = turn_event_to_messages(
+                                stream.root_task_id(),
+                                stream.request_id(),
+                                &event,
+                            );
+                            stream.apply_messages(messages, ctx);
+                            stream
+                        })
+                        .await;
+                    stream = result.ok();
+                }
+                if let Some(stream) = stream {
+                    let _ = spawner
+                        .spawn(move |_view: &mut Self, ctx: &mut ViewContext<Self>| {
+                            stream.complete(ctx)
+                        })
+                        .await;
+                }
+            })
+            .detach();
+
+        // Pump: run `claude` headless, forwarding each parsed event to the drain.
+        background
+            .spawn(async move {
+                let result = run_claude_stream(command, &pump_prompt, move |event| {
+                    let _ = event_tx.unbounded_send(event);
+                })
+                .await;
+                if let Err(error) = result {
+                    log::error!("fork: claude stream exited with error: {error}");
+                }
+            })
+            .detach();
     }
 
     pub fn pwd_if_local(&self, ctx: &AppContext) -> Option<String> {

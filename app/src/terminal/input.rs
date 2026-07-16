@@ -1019,6 +1019,14 @@ pub enum Event {
     Enter,
     ExecuteCommand(Box<ExecuteCommandEvent>),
     ExecuteAIQuery,
+    /// The user submitted an agent prompt while the local Claude Code harness is
+    /// selected. Routed to the local streaming harness (see
+    /// `TerminalView::run_local_claude_query`) instead of the cloud controller.
+    RunLocalClaudeQuery {
+        prompt: String,
+        model_id: Option<String>,
+        reasoning_level: Option<String>,
+    },
     EmacsBindingUsed,
     /// The input editor was locally edited and
     /// peers should be notified, if applicable.
@@ -14286,25 +14294,30 @@ impl Input {
             model.handle_input_buffer_submitted(ctx);
         });
 
-        if let Some(conversation_id) = self
-            .ai_context_model
-            .as_ref(ctx)
-            .selected_conversation_id(ctx)
-        {
-            self.ai_controller.update(ctx, move |controller, ctx| {
-                controller.send_user_query_in_conversation(ai_query, conversation_id, None, ctx)
-            });
-        } else {
-            self.ai_controller.update(ctx, move |controller, ctx| {
-                controller.send_user_query_in_new_conversation(
-                    ai_query,
-                    None,
-                    EntrypointType::UserInitiated,
-                    None,
-                    ctx,
-                );
-            });
-        }
+        // This fork routes every local agent prompt to the local Claude Code
+        // harness (rendered inline by TerminalView); the upstream cloud "Oz"
+        // path requires a Warp account and 401s here. Model/reasoning come from
+        // the ambient view model when present (cloud-mode composer), else the
+        // CLI's defaults.
+        let (model_id, reasoning_level) = self
+            .ambient_agent_view_model()
+            .map(|vm| {
+                let model = vm.as_ref(ctx);
+                (
+                    model.selected_harness_model_id().map(str::to_owned),
+                    model.selected_harness_reasoning_level().map(str::to_owned),
+                )
+            })
+            .unwrap_or((None, None));
+        log::info!("fork: routing agent prompt to local Claude harness");
+        ctx.emit(Event::RunLocalClaudeQuery {
+            prompt: ai_query,
+            model_id,
+            reasoning_level,
+        });
+        // The cloud controller used to clear the input on submit; since we
+        // bypass it, reset the buffer here so the prompt doesn't linger.
+        self.clear_buffer_and_reset_undo_stack(ctx);
 
         ctx.emit(Event::ExecuteAIQuery);
 

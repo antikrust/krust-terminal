@@ -37,7 +37,11 @@ use crate::terminal::CLIAgent;
 use crate::util::path::resolve_executable;
 
 pub(crate) mod claude_code;
+pub(crate) mod claude_stream;
+pub(crate) mod claude_stream_exec;
+pub(crate) mod claude_stream_runner;
 pub(crate) mod claude_transcript;
+pub(crate) mod turn_events_to_conversation;
 mod codex;
 pub(crate) mod codex_transcript;
 mod gemini;
@@ -250,7 +254,12 @@ impl fmt::Debug for HarnessKind {
 pub(crate) fn harness_kind(harness: Harness) -> Result<HarnessKind, AgentDriverError> {
     match harness {
         Harness::Oz => Ok(HarnessKind::Oz),
-        Harness::Claude => Ok(HarnessKind::ThirdParty(Box::new(ClaudeHarness))),
+        // Claude runs headless with streaming output rendered as inline AI
+        // blocks (see `claude_stream_runner`), rather than the interactive TUI
+        // handed to the terminal by `claude_code::ClaudeHarness`.
+        Harness::Claude => Ok(HarnessKind::ThirdParty(Box::new(
+            claude_stream_runner::ClaudeStreamHarness,
+        ))),
         Harness::Codex => Ok(HarnessKind::ThirdParty(Box::new(CodexHarness))),
         Harness::OpenCode => Ok(HarnessKind::Unsupported(Harness::OpenCode)),
         Harness::Gemini => Ok(HarnessKind::ThirdParty(Box::new(GeminiHarness))),

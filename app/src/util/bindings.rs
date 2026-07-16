@@ -32,7 +32,6 @@ pub enum CustomAction {
     ConfigureKeybindings,
     ShowAccount,
     ShowAppearance,
-    ReferAFriend,
     ViewChangelog,
     FocusInput,
     ClearBlocks,
@@ -439,7 +438,6 @@ pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
         | CustomAction::CloseTab
         | CustomAction::CloseOtherTabs
         | CustomAction::CloseTabsRight
-        | CustomAction::ReferAFriend
         | CustomAction::ViewSharedBlocks
         | CustomAction::ShowAccount
         | CustomAction::ShowAppearance
