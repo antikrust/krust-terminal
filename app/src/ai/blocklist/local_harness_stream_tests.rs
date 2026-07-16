@@ -54,6 +54,62 @@ fn back_to_back_runs_each_land_their_own_completed_conversation() {
 }
 
 #[test]
+fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let first = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "first", ctx));
+        let conversation_id = first.conversation_id();
+        let messages = turn_event_to_messages(
+            first.root_task_id(),
+            first.request_id(),
+            &TurnEvent::Text {
+                text: "first reply".to_string(),
+            },
+        );
+        app.update(|ctx| first.apply_messages(messages, ctx));
+        app.update(|ctx| first.complete(ctx));
+
+        let second = app
+            .update(|ctx| {
+                LocalHarnessStream::begin_follow_up(terminal_view_id, conversation_id, "second", ctx)
+            })
+            .expect("conversation still live");
+        assert_eq!(
+            second.conversation_id(),
+            conversation_id,
+            "follow-up reuses the conversation"
+        );
+        let messages = turn_event_to_messages(
+            second.root_task_id(),
+            second.request_id(),
+            &TurnEvent::Text {
+                text: "second reply".to_string(),
+            },
+        );
+        app.update(|ctx| second.apply_messages(messages, ctx));
+        app.update(|ctx| second.complete(ctx));
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&conversation_id)
+                .expect("conversation exists");
+            let exchanges: Vec<_> = conversation.root_task_exchanges().collect();
+            assert_eq!(exchanges.len(), 2, "one exchange per prompt");
+            for exchange in &exchanges {
+                assert!(
+                    matches!(exchange.output_status, AIAgentOutputStatus::Finished { .. }),
+                    "every exchange completes"
+                );
+            }
+            assert!(matches!(conversation.status(), ConversationStatus::Success));
+        });
+    });
+}
+
+#[test]
 fn stream_round_trip_lands_a_completed_exchange_with_output() {
     App::test((), |mut app| async move {
         initialize_history_persistence_for_tests(&mut app);

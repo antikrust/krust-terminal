@@ -2718,6 +2718,12 @@ pub struct TerminalView {
     /// agent-view handoff replays on the first prompt after launch.
     last_local_claude_submission: Option<(String, std::time::Instant)>,
 
+    /// The live local-claude thread for this terminal: the CLI session to
+    /// `--resume` and the conversation follow-up prompts append to. Kept in
+    /// sync with the session id claude reports in each run's `SessionInit`
+    /// (a resumed run forks a fresh session id).
+    local_claude_thread: Option<(uuid::Uuid, AIConversationId)>,
+
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
 
@@ -4375,6 +4381,7 @@ impl TerminalView {
             last_observed_active_subagent: Default::default(),
             usage_footer_view_ids: Default::default(),
             last_local_claude_submission: None,
+            local_claude_thread: None,
             block_onboarding_active: false,
             onboarding_prompt_block: None,
             settings_import_onboarding_block: None,
@@ -23282,11 +23289,20 @@ impl TerminalView {
             log::error!("fork: failed to prepare claude env config: {error}");
         }
 
+        // Continue the terminal's live thread when there is one: resume the
+        // same claude session (so the model keeps context) and append to the
+        // same conversation (so the whole thread stays on screen).
+        let thread = self.local_claude_thread;
+        let resuming = thread.is_some();
+        let follow_up_conversation = thread.map(|(_, conversation_id)| conversation_id);
+
         // Build the headless streaming command with a robust PATH (the app's
         // launchd PATH may not contain `claude`).
-        let session_id = uuid::Uuid::new_v4();
+        let session_id = thread
+            .map(|(session_id, _)| session_id)
+            .unwrap_or_else(uuid::Uuid::new_v4);
         let mut command = command::r#async::Command::new("claude");
-        command.args(stream_json_args(&session_id, false, None, None));
+        command.args(stream_json_args(&session_id, resuming, None, None));
         command.current_dir(&working_dir);
         let mut path = warp_util::path::warp_shell_path()
             .or_else(|| std::env::var("PATH").ok())
@@ -23331,27 +23347,62 @@ impl TerminalView {
                             let stream = match taken {
                                 Some(stream) => stream,
                                 None => {
-                                    let stream = LocalHarnessStream::begin(
-                                        terminal_surface_id,
-                                        &begin_prompt,
-                                        ctx,
-                                    );
-                                    // Bind the agent view to the fresh
-                                    // conversation, the same way the cloud
-                                    // send path surfaces its conversation —
-                                    // without this the run streams into a
-                                    // conversation nothing displays.
-                                    view.enter_agent_view_for_conversation(
-                                        None,
-                                        AgentViewEntryOrigin::Input {
-                                            was_prompt_autodetected: false,
+                                    // Follow-ups append to the thread's existing
+                                    // conversation; anything else (including a
+                                    // vanished conversation) starts fresh.
+                                    let follow_up = follow_up_conversation.and_then(
+                                        |conversation_id| {
+                                            LocalHarnessStream::begin_follow_up(
+                                                terminal_surface_id,
+                                                conversation_id,
+                                                &begin_prompt,
+                                                ctx,
+                                            )
                                         },
-                                        stream.conversation_id(),
-                                        ctx,
                                     );
+                                    let stream = match follow_up {
+                                        Some(stream) => stream,
+                                        None => {
+                                            let stream = LocalHarnessStream::begin(
+                                                terminal_surface_id,
+                                                &begin_prompt,
+                                                ctx,
+                                            );
+                                            // Bind the agent view to the fresh
+                                            // conversation, the same way the cloud
+                                            // send path surfaces its conversation —
+                                            // without this the run streams into a
+                                            // conversation nothing displays.
+                                            view.enter_agent_view_for_conversation(
+                                                None,
+                                                AgentViewEntryOrigin::Input {
+                                                    was_prompt_autodetected: false,
+                                                },
+                                                stream.conversation_id(),
+                                                ctx,
+                                            );
+                                            stream
+                                        }
+                                    };
+                                    view.local_claude_thread =
+                                        Some((session_id, stream.conversation_id()));
                                     stream
                                 }
                             };
+                            // A resumed run forks a fresh session id; claude
+                            // reports the run's real id in `SessionInit`. Track
+                            // it so the next follow-up resumes the right session.
+                            if let ai::agent::TurnEvent::SessionInit {
+                                session_id: reported,
+                                ..
+                            } = &event
+                            {
+                                if let Ok(reported) = uuid::Uuid::parse_str(reported) {
+                                    if let Some(thread) = view.local_claude_thread.as_mut() {
+                                        thread.0 = reported;
+                                    }
+                                }
+                            }
                             let messages = turn_event_to_messages(
                                 stream.root_task_id(),
                                 stream.request_id(),

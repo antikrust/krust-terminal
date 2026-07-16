@@ -133,6 +133,69 @@ impl LocalHarnessStream {
         this
     }
 
+    /// Registers a follow-up exchange on an existing local-harness
+    /// conversation and returns a handle for streaming the response into it.
+    ///
+    /// Unlike [`begin`](Self::begin) this reuses the conversation (so the
+    /// whole thread stays on screen) and skips the `CreateTask` upgrade —
+    /// the root task was already upgraded by the first run, and re-upgrading
+    /// a server-backed task fails (losing the task as a side effect).
+    /// Returns `None` if the conversation no longer exists; callers should
+    /// fall back to starting a fresh one.
+    pub(crate) fn begin_follow_up(
+        terminal_surface_id: EntityId,
+        conversation_id: AIConversationId,
+        prompt: &str,
+        ctx: &mut AppContext,
+    ) -> Option<Self> {
+        let history = BlocklistAIHistoryModel::handle(ctx);
+
+        let root_task_id = BlocklistAIHistoryModel::as_ref(ctx)
+            .conversation(&conversation_id)
+            .map(|conversation| conversation.get_root_task_id().clone())?;
+
+        let request_id = uuid::Uuid::new_v4().to_string();
+        let stream_init = api::response_event::StreamInit {
+            request_id: request_id.clone(),
+            conversation_id: String::new(),
+            run_id: String::new(),
+        };
+        let stream_id = ResponseStreamId::for_shared_session(&stream_init);
+
+        let this = Self {
+            conversation_id,
+            stream_id,
+            root_task_id,
+            request_id,
+            terminal_surface_id,
+            skill_path_origin: SkillPathOrigin::Local,
+        };
+
+        let request_input = this.request_input(prompt);
+        history.update(ctx, |history, ctx| {
+            if let Err(error) = history.update_conversation_for_new_request_input(
+                request_input,
+                this.stream_id.clone(),
+                terminal_surface_id,
+                ctx,
+            ) {
+                log::warn!("local_harness_stream: failed to register follow-up exchange: {error}");
+            }
+
+            history.initialize_output_for_response_stream(
+                &this.stream_id,
+                this.conversation_id,
+                terminal_surface_id,
+                stream_init,
+                ctx,
+            );
+
+            history.mark_active_conversation_id(this.conversation_id, terminal_surface_id, ctx);
+        });
+
+        Some(this)
+    }
+
     /// The conversation this stream renders into.
     pub(crate) fn conversation_id(&self) -> AIConversationId {
         self.conversation_id

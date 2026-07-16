@@ -316,6 +316,19 @@ call, which the local path never makes.)
   `CLOUD_OBJECTS_LISTENER_ENABLED = false` (listener.rs) — it can never
   authenticate under faked credentials and retried forever.
 
+- **Multi-turn threads (2026-07-16, part 4)** — follow-up prompts previously
+  started a fresh conversation (and a fresh claude session) per submit, so the
+  previous exchange vanished from view and claude had no memory. Each
+  `TerminalView` now keeps `local_claude_thread: (claude session id,
+  conversation id)`: follow-ups run `claude --resume <session>` and register
+  their exchange on the existing conversation via
+  `LocalHarnessStream::begin_follow_up` (same handshake minus the `CreateTask`
+  upgrade, which must not run twice — re-upgrading a server-backed root task
+  fails and loses the task). A resumed run forks a fresh session id, which
+  claude reports in `SessionInit`; the drain tracks it so the next follow-up
+  resumes the right session. Fresh conversations still enter the agent view;
+  follow-ups leave the binding alone.
+
 ### Remaining (each needs an app-rebuild to validate)
 1. **Model picker** — populate the Claude entry's `available_models` in
    `default_harnesses()` (harness_availability.rs:57) with Claude models ×
