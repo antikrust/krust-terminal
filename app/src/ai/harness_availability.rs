@@ -5,7 +5,6 @@ use instant::Instant;
 use serde::{Deserialize, Serialize};
 use warp_cli::agent::Harness;
 use warp_core::features::FeatureFlag;
-use warp_core::user_preferences::GetUserPreferences;
 use warp_errors::report_error;
 use warp_managed_secrets::client::SecretOwner;
 use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
@@ -21,7 +20,6 @@ use crate::server::retry_strategies::{
 use crate::server::server_api::ServerApiProvider;
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
 
-const CACHE_KEY: &str = "AvailableHarnesses";
 const AUTH_SECRET_FETCH_FAILURE_COOLDOWN: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -41,37 +39,67 @@ pub struct HarnessAvailability {
     pub available_models: Vec<HarnessModelInfo>,
 }
 
-/// Default harness list. Oz (Warp's own cloud agent) requires a signed-in
-/// account to become available, since its harness list is normally fetched
-/// from Warp's server; the local CLI harnesses don't need any of that, so
-/// they're enabled unconditionally here rather than waiting on `refresh()`.
+/// The harness list for this fork: local CLIs only, enabled by whether the
+/// binary is actually installed. Oz (Warp's cloud agent) is gone — it needs a
+/// Warp account and a live server; Gemini/OpenCode return if/when a local
+/// runner exists for them. Model lists are curated, version-stable aliases
+/// the CLIs resolve themselves; nothing here is overwritten by a server
+/// (see [`HarnessAvailabilityModel::refresh`]).
 fn default_harnesses() -> Vec<HarnessAvailability> {
+    let claude_model = |id: &str, display_name: &str| HarnessModelInfo {
+        id: id.to_string(),
+        display_name: display_name.to_string(),
+        reasoning_level: None,
+    };
     vec![
-        HarnessAvailability {
-            harness: Harness::Oz,
-            display_name: "Warp".to_string(),
-            enabled: true,
-            available_models: vec![],
-        },
         HarnessAvailability {
             harness: Harness::Claude,
             display_name: harness_display::display_name(Harness::Claude).to_string(),
-            enabled: true,
-            available_models: vec![],
+            enabled: local_cli_on_path("claude"),
+            available_models: vec![
+                claude_model("sonnet", "Claude Sonnet (latest)"),
+                claude_model("opus", "Claude Opus (latest)"),
+                claude_model("haiku", "Claude Haiku (latest)"),
+            ],
         },
         HarnessAvailability {
             harness: Harness::Codex,
             display_name: harness_display::display_name(Harness::Codex).to_string(),
-            enabled: true,
-            available_models: vec![],
-        },
-        HarnessAvailability {
-            harness: Harness::Gemini,
-            display_name: harness_display::display_name(Harness::Gemini).to_string(),
-            enabled: true,
+            enabled: local_cli_on_path("codex"),
+            // Codex model ids vary per account/version and unknown ids fall
+            // back with a warning, so only the CLI-configured default is
+            // offered until we can enumerate them reliably.
             available_models: vec![],
         },
     ]
+}
+
+/// Resolves a local agent CLI against the user's shell PATH plus the standard
+/// install locations the GUI's launchd PATH tends to miss (mirrors the spawn
+/// path augmentation in `TerminalView::run_local_claude_query`).
+fn local_cli_on_path(binary: &str) -> bool {
+    let mut path = warp_util::path::warp_shell_path()
+        .or_else(|| std::env::var("PATH").ok())
+        .unwrap_or_default();
+    let mut extra_dirs = vec![
+        "/opt/homebrew/bin".to_string(),
+        "/usr/local/bin".to_string(),
+    ];
+    if let Some(home) = std::env::var_os("HOME") {
+        let home = home.to_string_lossy();
+        extra_dirs.push(format!("{home}/.local/bin"));
+        extra_dirs.push(format!("{home}/.npm-global/bin"));
+    }
+    for dir in extra_dirs {
+        if !path.split(':').any(|segment| segment == dir) {
+            path = if path.is_empty() {
+                dir
+            } else {
+                format!("{dir}:{path}")
+            };
+        }
+    }
+    crate::util::path::resolve_executable_in_path(binary, std::ffi::OsStr::new(&path)).is_some()
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +117,9 @@ pub struct AuthSecretEntry {
 }
 
 pub enum HarnessAvailabilityEvent {
+    /// Kept for future dynamic availability changes (e.g. rescanning PATH);
+    /// nothing emits it now that availability is derived once at launch.
+    #[allow(dead_code)]
     Changed,
     AuthSecretsLoaded,
     /// Emitted when a lazy auth-secrets fetch fails. Subscribers should
@@ -124,7 +155,9 @@ pub struct HarnessAvailabilityModel {
 
 impl HarnessAvailabilityModel {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
-        let harnesses = get_cached(ctx).unwrap_or_else(default_harnesses);
+        // Availability is derived locally from PATH detection on every
+        // launch; the old server-list cache could only serve stale data.
+        let harnesses = default_harnesses();
 
         ctx.subscribe_to_model(&NetworkStatus::handle(ctx), |me, _, event, ctx| {
             if let NetworkStatusEvent::NetworkStatusChanged {
@@ -359,53 +392,11 @@ impl HarnessAvailabilityModel {
         });
     }
 
-    pub fn refresh(&self, ctx: &mut ModelContext<Self>) {
-        // The endpoint queries `user`, which requires auth.
-        if !AuthStateProvider::as_ref(ctx).get().is_logged_in() {
-            return;
-        }
-
-        let ai_client = ServerApiProvider::as_ref(ctx).get_ai_client();
-        ctx.spawn(
-            async move { ai_client.get_available_harnesses().await },
-            |me, result, ctx| match result {
-                Ok(new_harnesses) => {
-                    if new_harnesses != me.harnesses {
-                        me.harnesses = new_harnesses;
-                        me.cache(ctx);
-                        // Invalidate cached auth secrets so the next menu open refetches.
-                        let stale: Vec<Harness> = me.auth_secrets.keys().copied().collect();
-                        for harness in stale {
-                            me.invalidate_auth_secrets(harness);
-                        }
-                        ctx.emit(HarnessAvailabilityEvent::Changed);
-                    }
-                }
-                Err(e) => {
-                    report_error!(e.context("Failed to fetch available harnesses"));
-                }
-            },
-        );
+    pub fn refresh(&self, _ctx: &mut ModelContext<Self>) {
+        // Fork: harness availability is derived locally (PATH detection in
+        // `default_harnesses`). There is no server list to fetch, and letting
+        // the login-gated endpoint overwrite the local list would clear it.
     }
-
-    fn cache(&self, ctx: &ModelContext<Self>) {
-        if let Ok(serialized) = serde_json::to_string(&self.harnesses) {
-            if let Err(e) = ctx
-                .private_user_preferences()
-                .write_value(CACHE_KEY, serialized)
-            {
-                report_error!(anyhow::anyhow!(e).context("Failed to cache available harnesses"));
-            }
-        }
-    }
-}
-
-fn get_cached(ctx: &ModelContext<HarnessAvailabilityModel>) -> Option<Vec<HarnessAvailability>> {
-    let raw = ctx
-        .private_user_preferences()
-        .read_value(CACHE_KEY)
-        .ok()??;
-    serde_json::from_str::<Vec<HarnessAvailability>>(&raw).ok()
 }
 
 fn secret_owner_from_space(space: &warp_graphql::object::Space) -> SecretOwner {

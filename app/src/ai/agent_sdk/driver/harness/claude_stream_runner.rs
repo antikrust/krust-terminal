@@ -167,7 +167,7 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
         // Build the headless streaming invocation. The prompt is delivered on
         // stdin by `run_claude_stream`, not as an argument.
         let mut command = Command::new(&self.cli_name);
-        command.args(stream_json_args(&self.session_id, false, None, None));
+        command.args(stream_json_args(&self.session_id, false, None, None, None));
         command.current_dir(&self.working_dir);
         for (key, value) in &self.env_vars {
             command.env(key, value);

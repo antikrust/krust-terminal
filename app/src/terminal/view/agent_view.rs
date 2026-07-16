@@ -299,10 +299,21 @@ impl TerminalView {
                 });
 
                 // This fork routes the auto-submitted initial prompt to the local
-                // Claude Code harness instead of the cloud controller (which
-                // bypasses `submit_ai_query_local`, hence the direct call here).
+                // harness instead of the cloud controller (which bypasses
+                // `submit_ai_query_local`, hence the direct call here). Harness
+                // and model come from the picker's ambient selection when set.
                 let _ = conversation_id;
-                self.run_local_claude_query(initial_prompt, None, None, ctx);
+                let (harness, model_id) = self
+                    .ambient_agent_view_model()
+                    .map(|vm| {
+                        let model = vm.as_ref(ctx);
+                        (
+                            model.selected_harness(),
+                            model.selected_harness_model_id().map(str::to_owned),
+                        )
+                    })
+                    .unwrap_or((warp_cli::agent::Harness::Claude, None));
+                self.run_local_claude_query(initial_prompt, harness, model_id, None, ctx);
                 did_auto_trigger_request = true;
             } else {
                 let appearance = Appearance::handle(ctx).as_ref(ctx);

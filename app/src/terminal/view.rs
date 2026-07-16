@@ -131,6 +131,7 @@ use sum_tree::SeekBias;
 use use_agent_footer::UseAgentToolbar;
 use uuid::Uuid;
 use vec1::vec1;
+use warp_cli::agent::Harness;
 use warp_core::channel::ChannelState;
 use warp_core::command::ExitCode;
 use warp_core::context_flag::ContextFlag;
@@ -21434,11 +21435,13 @@ impl TerminalView {
             }
             InputEvent::RunLocalClaudeQuery {
                 prompt,
+                harness,
                 model_id,
                 reasoning_level,
             } => {
                 self.run_local_claude_query(
                     prompt.clone(),
+                    *harness,
                     model_id.clone(),
                     reasoning_level.clone(),
                     ctx,
@@ -23250,7 +23253,8 @@ impl TerminalView {
     fn run_local_claude_query(
         &mut self,
         prompt: String,
-        _model_id: Option<String>,
+        requested_harness: Harness,
+        model_id: Option<String>,
         _reasoning_level: Option<String>,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -23276,14 +23280,21 @@ impl TerminalView {
         // Continue the terminal's live thread when there is one: resume the
         // same agent session (so the model keeps context) and append to the
         // same conversation (so the whole thread stays on screen). Fresh
-        // threads pick their harness from the interim env override
-        // (`WARP_LOCAL_HARNESS`); follow-ups stay on their thread's harness.
+        // threads run the harness selected in the picker; follow-ups stay on
+        // the harness their thread started with — the session belongs to
+        // that engine — even if the picker changed since.
+        let requested_kind = match requested_harness {
+            Harness::Codex => LocalHarnessKind::Codex,
+            Harness::Claude => LocalHarnessKind::Claude,
+            // Stale/unknown selections fall back to the env override.
+            _ => LocalHarnessKind::default_from_env(),
+        };
         let thread = self.local_claude_thread;
         let resuming = thread.is_some();
         let follow_up_conversation = thread.map(|(_, _, conversation_id)| conversation_id);
         let harness = thread
             .map(|(harness, _, _)| harness)
-            .unwrap_or_else(LocalHarnessKind::default_from_env);
+            .unwrap_or(requested_kind);
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
@@ -23313,14 +23324,23 @@ impl TerminalView {
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
-                command.args(stream_json_args(&session_id, resuming, None, None));
+                command.args(stream_json_args(
+                    &session_id,
+                    resuming,
+                    model_id.as_deref(),
+                    None,
+                    None,
+                ));
                 command
             }
             LocalHarnessKind::Codex => {
                 // A fresh codex run mints its own thread id (reported back
                 // via `thread.started` → SessionInit); only resumes pass one.
                 let mut command = command::r#async::Command::new("codex");
-                command.args(codex_exec_args(resuming.then_some(&session_id), None));
+                command.args(codex_exec_args(
+                    resuming.then_some(&session_id),
+                    model_id.as_deref(),
+                ));
                 command
             }
         };

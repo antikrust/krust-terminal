@@ -29,6 +29,7 @@ use super::claude_stream::parse_stream_json_line;
 pub fn stream_json_args(
     session_id: &Uuid,
     resuming: bool,
+    model: Option<&str>,
     system_prompt_path: Option<&str>,
     mcp_config_path: Option<&str>,
 ) -> Vec<String> {
@@ -43,6 +44,10 @@ pub fn stream_json_args(
         session_id.to_string(),
         "--dangerously-skip-permissions".to_string(),
     ];
+    if let Some(model) = model {
+        args.push("--model".to_string());
+        args.push(model.to_string());
+    }
     if let Some(path) = system_prompt_path {
         args.push("--append-system-prompt-file".to_string());
         args.push(path.to_string());

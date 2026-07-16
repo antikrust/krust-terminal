@@ -17,7 +17,7 @@ use super::{run_claude_stream, stream_json_args};
 #[test]
 fn fresh_run_args() {
     let id = Uuid::nil();
-    let args = stream_json_args(&id, false, None, None);
+    let args = stream_json_args(&id, false, None, None, None);
     assert_eq!(
         args,
         vec![
@@ -33,9 +33,18 @@ fn fresh_run_args() {
 }
 
 #[test]
+fn model_selection_appends_model_flag() {
+    let id = Uuid::nil();
+    let args = stream_json_args(&id, false, Some("opus"), None, None);
+    assert!(args
+        .windows(2)
+        .any(|w| w == ["--model".to_string(), "opus".to_string()]));
+}
+
+#[test]
 fn resume_run_swaps_session_flag_and_appends_optional_paths() {
     let id = Uuid::nil();
-    let args = stream_json_args(&id, true, Some("/tmp/sys.txt"), Some("/tmp/mcp.json"));
+    let args = stream_json_args(&id, true, None, Some("/tmp/sys.txt"), Some("/tmp/mcp.json"));
     assert_eq!(args[4], "--resume");
     assert!(args.windows(2).any(|w| w
         == [
