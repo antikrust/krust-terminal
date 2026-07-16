@@ -95,7 +95,11 @@ pub(crate) fn turn_event_to_messages(
     }
 }
 
-fn user_query_message(task_id: &str, request_id: &str, prompt: &str) -> api::Message {
+/// The user's prompt as a task message — the local analogue of the cloud
+/// server echoing the query into the task. Restoration rebuilds exchange
+/// inputs from these (`user_inputs_from_messages`), so without one in the
+/// task, a restored conversation shows responses with no query bubbles.
+pub(crate) fn user_query_message(task_id: &str, request_id: &str, prompt: &str) -> api::Message {
     api::Message {
         id: Uuid::new_v4().to_string(),
         task_id: task_id.to_string(),

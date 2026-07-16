@@ -25,6 +25,7 @@ use super::history_model::BlocklistAIHistoryModel;
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{AIAgentInput, UserQueryMode};
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::user_query_message;
 use crate::ai::llms::LLMId;
 
 /// A handle to one in-progress local-harness exchange. Created with
@@ -131,6 +132,19 @@ impl LocalHarnessStream {
             history.mark_active_conversation_id(this.conversation_id, terminal_surface_id, ctx);
         });
 
+        // Echo the prompt into the task the way the cloud server does. The
+        // live exchange already carries it as input, but tasks are what
+        // persist — without this message a restored conversation renders
+        // responses with no query bubbles.
+        this.apply_messages(
+            vec![user_query_message(
+                this.root_task_id(),
+                this.request_id(),
+                prompt,
+            )],
+            ctx,
+        );
+
         this
     }
 
@@ -193,6 +207,16 @@ impl LocalHarnessStream {
 
             history.mark_active_conversation_id(this.conversation_id, terminal_surface_id, ctx);
         });
+
+        // Persist the follow-up prompt into the task, matching `begin`.
+        this.apply_messages(
+            vec![user_query_message(
+                this.root_task_id(),
+                this.request_id(),
+                prompt,
+            )],
+            ctx,
+        );
 
         Some(this)
     }
