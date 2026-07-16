@@ -60,7 +60,14 @@ fn turn_usage_populates_context_meter_and_accumulates_token_totals() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
         // Folding usage metadata into the conversation resolves custom
-        // endpoint display labels through the LLM preferences singleton.
+        // endpoint display labels through the LLM preferences singleton,
+        // which watches network/auth/workspace state at construction
+        // (mirrors conversation_tests' custom-endpoint app setup).
+        app.add_singleton_model(|_| crate::server::server_api::ServerApiProvider::new_for_test());
+        app.add_singleton_model(|_| crate::network::NetworkStatus::new());
+        app.add_singleton_model(crate::workspaces::user_workspaces::UserWorkspaces::default_mock);
+        app.add_singleton_model(|_| crate::auth::AuthStateProvider::new_for_test());
+        app.add_singleton_model(crate::auth::auth_manager::AuthManager::new_for_test);
         app.add_singleton_model(crate::ai::llms::LLMPreferences::new);
 
         let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "prompt", ctx));
