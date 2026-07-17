@@ -22,7 +22,6 @@ const MATRIX_GLYPHS: &[u8] = b"!@#$%^&*+-=<>?/\\|:;";
 const MAX_ACTIVE_SPINNERS: usize = 64;
 const MIN_SPINNER_FPS: u8 = 1;
 const MAX_SPINNER_FPS: u8 = 60;
-const COLOR_ONLY_DURATION: Duration = Duration::from_millis(650);
 
 #[derive(
     Debug,
@@ -1108,14 +1107,9 @@ fn sample_cell(
         }
     };
 
-    let color_is_active = if config.effect == TextEffect::Immediate {
-        elapsed < COLOR_ONLY_DURATION
-    } else {
-        sample.needs_repaint
-    };
-    if color_is_active {
+    if config.color.is_enabled() {
         sample.foreground = sample_foreground(config, cell.ordinal, elapsed);
-        sample.needs_repaint |= sample.foreground.is_some();
+        sample.needs_repaint |= config.color.is_dynamic();
     }
 
     sample

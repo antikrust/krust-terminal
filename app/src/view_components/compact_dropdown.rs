@@ -38,6 +38,10 @@ pub struct CompactDropdown<A: DropdownItemAction = ()> {
     dropdown: ViewHandle<Menu<DropdownAction>>,
     /// The size that icons are scaled to. Defaults to the UI font size if not set.
     icon_size: Option<f32>,
+    /// Optional icon shown in the trigger instead of the selected item's icon.
+    trigger_icon: Option<Icon>,
+    /// Whether the trigger includes the dropdown chevron.
+    show_trigger_chevron: bool,
     _action_type: PhantomData<A>,
 }
 
@@ -73,6 +77,8 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
             dropdown,
             top_bar_mouse_state: Default::default(),
             icon_size: None,
+            trigger_icon: None,
+            show_trigger_chevron: true,
             _action_type: PhantomData,
         }
     }
@@ -81,6 +87,16 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
     /// to the UI font size.
     pub fn set_icon_size(&mut self, icon_size: f32) {
         self.icon_size = Some(icon_size);
+    }
+
+    /// Always show this icon in the dropdown trigger instead of the selected item's icon.
+    pub fn set_trigger_icon(&mut self, icon: Icon) {
+        self.trigger_icon = Some(icon);
+    }
+
+    /// Controls whether the dropdown trigger includes its trailing chevron.
+    pub fn set_show_trigger_chevron(&mut self, show_trigger_chevron: bool) {
+        self.show_trigger_chevron = show_trigger_chevron;
     }
 
     /// Replaces the items in the dropdown.
@@ -125,7 +141,12 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
             .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
             .with_cross_axis_alignment(CrossAxisAlignment::Center);
 
-        if let Some(MenuItem::Item(fields)) = self.dropdown.as_ref(app).selected_item() {
+        if let Some(icon) = self.trigger_icon {
+            button_label.add_child(self.render_sized_icon(
+                appearance,
+                icon.to_warpui_icon(appearance.theme().active_ui_text_color()),
+            ));
+        } else if let Some(MenuItem::Item(fields)) = self.dropdown.as_ref(app).selected_item() {
             if let Some(icon) = fields.icon() {
                 let icon_color = fields
                     .override_icon_color()
@@ -135,13 +156,15 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
             }
         }
 
-        button_label.add_child(self.render_sized_icon(
-            appearance,
-            WarpUiIcon::new(
-                "bundled/svg/chevron-down.svg",
-                appearance.theme().active_ui_text_color(),
-            ),
-        ));
+        if self.show_trigger_chevron {
+            button_label.add_child(self.render_sized_icon(
+                appearance,
+                WarpUiIcon::new(
+                    "bundled/svg/chevron-down.svg",
+                    appearance.theme().active_ui_text_color(),
+                ),
+            ));
+        }
 
         let mut top_bar = appearance
             .ui_builder()

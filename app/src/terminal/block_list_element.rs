@@ -4122,8 +4122,7 @@ impl Element for BlockListElement {
                     // We add in increments of 30 as each icon is 26px wide + 4px gap between icons
                     let ask_ai_assistant_button_origin = block_menu_items_start_origin;
                     let bookmark_button_origin = block_menu_items_start_origin + vec2f(30., 0.);
-                    let delete_block_button_origin =
-                        block_menu_items_start_origin + vec2f(90., 0.);
+                    let delete_block_button_origin = block_menu_items_start_origin + vec2f(90., 0.);
                     let overflow_menu_button_origin =
                         block_menu_items_start_origin + vec2f(120., 0.);
                     let filter_button_origin = block_menu_items_start_origin + vec2f(60., 0.);

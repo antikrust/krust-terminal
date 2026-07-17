@@ -42,6 +42,8 @@ impl TextEffectPicker {
             dropdown.set_items(items, ctx);
             dropdown.set_selected_by_name(selected_effect_label(ctx), ctx);
             dropdown.set_icon_size(16.);
+            dropdown.set_trigger_icon(Icon::CaseSensitivity);
+            dropdown.set_show_trigger_chevron(false);
             dropdown
         });
 

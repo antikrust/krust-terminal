@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use command::blocking::Command;
 use instant::Instant;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
@@ -108,11 +109,7 @@ fn parse_codex_catalog(raw: &[u8]) -> Vec<HarnessModelInfo> {
         ));
     }
     models.sort_by_key(|(priority, _)| *priority);
-    models
-        .into_iter()
-        .map(|(_, model)| model)
-        .take(8)
-        .collect()
+    models.into_iter().map(|(_, model)| model).take(8).collect()
 }
 
 /// Instant startup stand-in until the async catalog lands: the
@@ -379,9 +376,7 @@ impl HarnessAvailabilityModel {
         ctx.spawn(
             async move {
                 tokio::task::spawn_blocking(move || {
-                    std::process::Command::new(codex)
-                        .args(["debug", "models"])
-                        .output()
+                    Command::new(codex).args(["debug", "models"]).output()
                 })
                 .await
             },

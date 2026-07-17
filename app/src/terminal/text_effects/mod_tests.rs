@@ -161,7 +161,7 @@ fn animation_and_colour_layers_are_independent() {
         Some(TextEffectSample {
             content: VisualContent::Original,
             foreground: Some(Color::Named(NamedColor::BrightGreen)),
-            needs_repaint: true,
+            needs_repaint: false,
         })
     );
     assert_eq!(
@@ -169,9 +169,13 @@ fn animation_and_colour_layers_are_independent() {
             point(0),
             CharOrStr::Char('a'),
             color_only,
-            started_at + COLOR_ONLY_DURATION,
+            started_at + Duration::from_secs(10),
         ),
-        Some(TextEffectSample::COMPLETE)
+        Some(TextEffectSample {
+            content: VisualContent::Original,
+            foreground: Some(Color::Named(NamedColor::BrightGreen)),
+            needs_repaint: false,
+        })
     );
 }
 
@@ -217,6 +221,24 @@ fn rainbow_colour_is_deterministic_for_a_frame() {
             foreground: Some(Color::Spec(_)),
             needs_repaint: true,
             ..
+        })
+    ));
+}
+
+#[test]
+fn rainbow_colour_continues_after_character_animation_finishes() {
+    let started_at = Instant::now();
+    let timeline = timeline("r", started_at);
+    let mut rainbow = config(TextEffect::Typewriter);
+    rainbow.color = TextEffectColor::Rainbow;
+    let now = started_at + Duration::from_secs(10);
+
+    assert!(matches!(
+        timeline.sample(point(0), CharOrStr::Char('r'), rainbow, now),
+        Some(TextEffectSample {
+            content: VisualContent::Original,
+            foreground: Some(Color::Spec(_)),
+            needs_repaint: true,
         })
     ));
 }
