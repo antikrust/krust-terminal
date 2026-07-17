@@ -68,12 +68,99 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
             harness: Harness::Codex,
             display_name: harness_display::display_name(Harness::Codex).to_string(),
             enabled: local_cli_on_path("codex"),
-            // Codex model ids vary per account/version and unknown ids fall
-            // back with a warning, so only the CLI-configured default is
-            // offered until we can enumerate them reliably.
-            available_models: vec![],
+            available_models: codex_models_from_local_state(),
         },
     ]
+}
+
+/// Codex model ids known-good for this machine: the `~/.codex/config.toml`
+/// default plus models recent codex sessions actually ran. Codex has no
+/// list command and unknown ids 400 on ChatGPT accounts, so only locally
+/// evidenced ids are offered; the `gpt-` filter drops junk recorded from
+/// failed runs (e.g. a claude id leaking into a resume).
+fn codex_models_from_local_state() -> Vec<HarnessModelInfo> {
+    let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) else {
+        return Vec::new();
+    };
+
+    let mut ids: Vec<String> = Vec::new();
+
+    if let Ok(config) = std::fs::read_to_string(home.join(".codex/config.toml")) {
+        for line in config.lines() {
+            // Exactly the top-level `model = "..."` key; `model_provider`,
+            // `model_reasoning_effort` etc. fail the `=` check after strip.
+            if let Some(value) = line
+                .trim()
+                .strip_prefix("model")
+                .map(str::trim_start)
+                .and_then(|rest| rest.strip_prefix('='))
+            {
+                let value = value.trim().trim_matches('"');
+                if !value.is_empty() {
+                    ids.push(value.to_string());
+                }
+                break;
+            }
+        }
+    }
+
+    // Rollout files live under sessions/YYYY/MM/DD/rollout-*.jsonl; the
+    // model appears in a `"model":"..."` field within the first lines.
+    let mut rollouts: Vec<(std::time::SystemTime, std::path::PathBuf)> = Vec::new();
+    let mut stack = vec![home.join(".codex/sessions")];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension == "jsonl")
+            {
+                let modified = entry
+                    .metadata()
+                    .and_then(|metadata| metadata.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                rollouts.push((modified, path));
+            }
+        }
+    }
+    rollouts.sort_by(|a, b| b.0.cmp(&a.0));
+
+    for (_, path) in rollouts.into_iter().take(40) {
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let head = String::from_utf8_lossy(&bytes[..bytes.len().min(16 * 1024)]).into_owned();
+        if let Some(start) = head.find("\"model\":\"") {
+            let rest = &head[start + "\"model\":\"".len()..];
+            if let Some(end) = rest.find('"') {
+                ids.push(rest[..end].to_string());
+            }
+        }
+    }
+
+    let mut models: Vec<HarnessModelInfo> = Vec::new();
+    for id in ids {
+        if !id.starts_with("gpt-") {
+            continue;
+        }
+        if models.iter().any(|model| model.id == id) {
+            continue;
+        }
+        models.push(HarnessModelInfo {
+            id: id.clone(),
+            display_name: id,
+            reasoning_level: None,
+        });
+        if models.len() >= 6 {
+            break;
+        }
+    }
+    models
 }
 
 /// The local-harness selection for panes without an ambient (cloud composer)
@@ -98,13 +185,18 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
                 .map(|h| h.harness)
         })
         .unwrap_or(Harness::Claude);
-    let selection = settings
+    let (model_id, reasoning_level) = persisted_model_for(harness, ctx);
+    (harness, model_id, reasoning_level)
+}
+
+/// The persisted model selection for one specific harness.
+pub fn persisted_model_for(harness: Harness, ctx: &AppContext) -> (Option<String>, Option<String>) {
+    let selection = CloudAgentSettings::as_ref(ctx)
         .last_selected_harness_model
         .value()
         .get(harness.config_name())
         .cloned();
     (
-        harness,
         selection.as_ref().map(|s| s.model_id.clone()),
         selection.and_then(|s| s.reasoning_level),
     )

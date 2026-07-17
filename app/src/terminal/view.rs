@@ -23320,6 +23320,19 @@ impl TerminalView {
         let harness = thread
             .map(|(harness, _, _)| harness)
             .unwrap_or(requested_kind);
+        // A continued thread keeps its own engine. If the picker currently
+        // points at a different harness, its model id must not leak into
+        // this run (codex 400s on claude ids and vice versa) — use the
+        // thread harness's own persisted model instead.
+        let model_id = if harness == requested_kind {
+            model_id
+        } else {
+            let thread_harness = match harness {
+                LocalHarnessKind::Claude => Harness::Claude,
+                LocalHarnessKind::Codex => Harness::Codex,
+            };
+            crate::ai::harness_availability::persisted_model_for(thread_harness, ctx).0
+        };
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
