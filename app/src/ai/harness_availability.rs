@@ -73,9 +73,51 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
     ]
 }
 
-/// Codex model ids known-good for this machine: the `~/.codex/config.toml`
-/// default plus models recent codex sessions actually ran. Codex has no
-/// list command and unknown ids 400 on ChatGPT accounts, so only locally
+/// Parses `codex debug models` JSON into picker entries: listed-visibility
+/// models only, ordered by the catalog's priority.
+fn parse_codex_catalog(raw: &[u8]) -> Vec<HarnessModelInfo> {
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(raw) else {
+        return Vec::new();
+    };
+    let Some(entries) = value.get("models").and_then(|models| models.as_array()) else {
+        return Vec::new();
+    };
+    let mut models: Vec<(i64, HarnessModelInfo)> = Vec::new();
+    for entry in entries {
+        let Some(slug) = entry.get("slug").and_then(|slug| slug.as_str()) else {
+            continue;
+        };
+        if entry.get("visibility").and_then(|v| v.as_str()) != Some("list") {
+            continue;
+        }
+        let display_name = entry
+            .get("display_name")
+            .and_then(|name| name.as_str())
+            .unwrap_or(slug);
+        let priority = entry
+            .get("priority")
+            .and_then(|priority| priority.as_i64())
+            .unwrap_or(i64::MAX);
+        models.push((
+            priority,
+            HarnessModelInfo {
+                id: slug.to_string(),
+                display_name: display_name.to_string(),
+                reasoning_level: None,
+            },
+        ));
+    }
+    models.sort_by_key(|(priority, _)| *priority);
+    models
+        .into_iter()
+        .map(|(_, model)| model)
+        .take(8)
+        .collect()
+}
+
+/// Instant startup stand-in until the async catalog lands: the
+/// `~/.codex/config.toml` default plus models recent codex sessions
+/// actually ran. Unknown ids 400 on ChatGPT accounts, so only locally
 /// evidenced ids are offered; the `gpt-` filter drops junk recorded from
 /// failed runs (e.g. a claude id leaking into a resume).
 fn codex_models_from_local_state() -> Vec<HarnessModelInfo> {
@@ -202,10 +244,14 @@ pub fn persisted_model_for(harness: Harness, ctx: &AppContext) -> (Option<String
     )
 }
 
+fn local_cli_on_path(binary: &str) -> bool {
+    resolve_local_cli(binary).is_some()
+}
+
 /// Resolves a local agent CLI against the user's shell PATH plus the standard
 /// install locations the GUI's launchd PATH tends to miss (mirrors the spawn
 /// path augmentation in `TerminalView::run_local_claude_query`).
-fn local_cli_on_path(binary: &str) -> bool {
+fn resolve_local_cli(binary: &str) -> Option<std::path::PathBuf> {
     let mut path = warp_util::path::warp_shell_path()
         .or_else(|| std::env::var("PATH").ok())
         .unwrap_or_default();
@@ -227,7 +273,8 @@ fn local_cli_on_path(binary: &str) -> bool {
             };
         }
     }
-    crate::util::path::resolve_executable_in_path(binary, std::ffi::OsStr::new(&path)).is_some()
+    crate::util::path::resolve_executable_in_path(binary, std::ffi::OsStr::new(&path))
+        .map(|resolved| resolved.into_owned())
 }
 
 #[derive(Debug, Clone)]
@@ -245,9 +292,8 @@ pub struct AuthSecretEntry {
 }
 
 pub enum HarnessAvailabilityEvent {
-    /// Kept for future dynamic availability changes (e.g. rescanning PATH);
-    /// nothing emits it now that availability is derived once at launch.
-    #[allow(dead_code)]
+    /// Availability or model lists changed after launch (e.g. the async
+    /// codex catalog landing); pickers re-render off this.
     Changed,
     AuthSecretsLoaded,
     /// Emitted when a lazy auth-secrets fetch fails. Subscribers should
@@ -318,7 +364,51 @@ impl HarnessAvailabilityModel {
             auth_secret_retry_after: HashMap::new(),
         };
         me.refresh(ctx);
+        me.refresh_codex_catalog(ctx);
         me
+    }
+
+    /// Replaces the codex row's session-harvested model list with the CLI's
+    /// own catalog (`codex debug models`), asynchronously — the command takes
+    /// ~0.7s, too slow to run during construction on the UI thread. The
+    /// picker re-renders off the `Changed` event when the catalog lands.
+    fn refresh_codex_catalog(&self, ctx: &mut ModelContext<Self>) {
+        let Some(codex) = resolve_local_cli("codex") else {
+            return;
+        };
+        ctx.spawn(
+            async move {
+                tokio::task::spawn_blocking(move || {
+                    std::process::Command::new(codex)
+                        .args(["debug", "models"])
+                        .output()
+                })
+                .await
+            },
+            |me, result, ctx| {
+                let output = match result {
+                    Ok(Ok(output)) if output.status.success() => output.stdout,
+                    _ => {
+                        log::warn!("harness_availability: codex debug models failed");
+                        return;
+                    }
+                };
+                let models = parse_codex_catalog(&output);
+                if models.is_empty() {
+                    return;
+                }
+                if let Some(row) = me
+                    .harnesses
+                    .iter_mut()
+                    .find(|h| h.harness == Harness::Codex)
+                {
+                    if row.available_models != models {
+                        row.available_models = models;
+                        ctx.emit(HarnessAvailabilityEvent::Changed);
+                    }
+                }
+            },
+        );
     }
 
     pub fn available_harnesses(&self) -> &[HarnessAvailability] {
