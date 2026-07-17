@@ -17,9 +17,7 @@ use uuid::Uuid;
 use warp_multi_agent_api as api;
 
 use crate::ai::agent::task::TaskId;
-use crate::ai::agent::{
-    AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult,
-};
+use crate::ai::agent::{AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult};
 
 /// Tool output longer than this is truncated in the rendered block; the CLI's
 /// own transcript remains the source of truth for full output.
@@ -70,9 +68,7 @@ pub(crate) fn turn_event_to_messages(
             name,
             input,
         } => {
-            vec![tool_call_message(
-                task_id, request_id, call_id, name, input,
-            )]
+            vec![tool_call_message(task_id, request_id, call_id, name, input)]
         }
         TurnEvent::ToolCallResult { call_id, outcome } => {
             vec![tool_call_result_message(
@@ -191,16 +187,18 @@ fn tool_call_result_message(
     call_id: &str,
     outcome: &ToolCallOutcome,
 ) -> api::Message {
-    use api::call_mcp_tool_result::{success::result::Result as ResultItem, success::Result, Success};
+    use api::call_mcp_tool_result::success::result::Result as ResultItem;
+    use api::call_mcp_tool_result::success::Result;
+    use api::call_mcp_tool_result::Success;
 
     let result = match outcome {
         ToolCallOutcome::Success(value) => {
             let text = truncate(tool_result_text(value).trim_end());
             api::call_mcp_tool_result::Result::Success(Success {
                 results: vec![Result {
-                    result: Some(ResultItem::Text(api::call_mcp_tool_result::success::result::Text {
-                        text,
-                    })),
+                    result: Some(ResultItem::Text(
+                        api::call_mcp_tool_result::success::result::Text { text },
+                    )),
                 }],
             })
         }
@@ -258,7 +256,9 @@ pub(crate) fn tool_call_action_result(
         ToolCallOutcome::Success(value) => {
             let text = truncate(tool_result_text(value).trim_end());
             CallMCPToolResult::Success {
-                result: rmcp::model::CallToolResult::success(vec![rmcp::model::Content::text(text)]),
+                result: rmcp::model::CallToolResult::success(vec![rmcp::model::Content::text(
+                    text,
+                )]),
             }
         }
         ToolCallOutcome::Error(message) => CallMCPToolResult::Error(truncate(message)),

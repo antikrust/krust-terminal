@@ -92,9 +92,9 @@ fn renders_tool_call_and_result_as_native_cards() {
                     match r.result.as_ref() {
                         Some(api::call_mcp_tool_result::Result::Success(s)) => {
                             let text = match s.results[0].result.as_ref() {
-                                Some(
-                                    api::call_mcp_tool_result::success::result::Result::Text(t),
-                                ) => &t.text,
+                                Some(api::call_mcp_tool_result::success::result::Result::Text(
+                                    t,
+                                )) => &t.text,
                                 other => panic!("expected text result, got {other:?}"),
                             };
                             assert!(text.contains("file1"), "shows stdout: {text}");
@@ -118,9 +118,14 @@ fn tool_error_result_is_flagged() {
     let convo = turn_events_to_conversation("q", &events);
     match body(&convo.tasks[0].messages[1]) {
         api::message::Message::ToolCallResult(tcr) => match tcr.result.as_ref() {
-            Some(api::message::tool_call_result::Result::CallMcpTool(r)) => match r.result.as_ref() {
+            Some(api::message::tool_call_result::Result::CallMcpTool(r)) => match r.result.as_ref()
+            {
                 Some(api::call_mcp_tool_result::Result::Error(e)) => {
-                    assert!(e.message.contains("boom"), "carries the error: {}", e.message);
+                    assert!(
+                        e.message.contains("boom"),
+                        "carries the error: {}",
+                        e.message
+                    );
                 }
                 other => panic!("expected error result, got {other:?}"),
             },

@@ -23667,7 +23667,8 @@ impl TerminalView {
                             // must be registered on the action model for the card
                             // to show read-only output live. (Restore reads it back
                             // from the persisted result message instead.)
-                            if let ai::agent::TurnEvent::ToolCallResult { call_id, outcome } = &event
+                            if let ai::agent::TurnEvent::ToolCallResult { call_id, outcome } =
+                                &event
                             {
                                 let result = tool_call_action_result(
                                     stream.root_task_id(),

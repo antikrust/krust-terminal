@@ -44,8 +44,8 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    persisted_model_for, selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel,
-    HarnessModelInfo,
+    persisted_model_for, selected_local_harness, HarnessAvailabilityEvent,
+    HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -942,7 +942,12 @@ impl ProfileModelSelector {
         let (harness, model_id, reasoning) = selected_local_harness(app);
         let availability = HarnessAvailabilityModel::as_ref(app);
         let base = model_id
-            .and_then(|id| availability.models_for(harness)?.iter().find(|m| m.id == id))
+            .and_then(|id| {
+                availability
+                    .models_for(harness)?
+                    .iter()
+                    .find(|m| m.id == id)
+            })
             .map(|info| info.display_name.clone())
             .unwrap_or_else(|| availability.display_name_for(harness).to_string());
         format!("{base}{}", Self::reasoning_suffix(reasoning.as_deref()))
@@ -1029,8 +1034,8 @@ impl ProfileModelSelector {
             items.push(MenuItem::Item(default_fields));
 
             for model in models {
-                let is_selected = harness == selected_harness
-                    && selected_model_id.as_deref() == Some(&model.id);
+                let is_selected =
+                    harness == selected_harness && selected_model_id.as_deref() == Some(&model.id);
                 let mut fields = MenuItemFields::new(model.display_name.clone())
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
@@ -1056,12 +1061,13 @@ impl ProfileModelSelector {
             for (level, label) in HARNESS_REASONING_LEVELS {
                 let is_active =
                     harness == selected_harness && selected_reasoning.as_deref() == level;
-                let mut fields = MenuItemFields::new(label)
-                    .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
+                let mut fields = MenuItemFields::new(label).with_on_select_action(
+                    ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
                         model_id: current_model_id.clone().unwrap_or_default(),
                         reasoning_level: level.map(str::to_owned),
-                    });
+                    },
+                );
                 if is_active {
                     fields = fields.with_icon(Icon::Check);
                 } else {
