@@ -1895,6 +1895,20 @@ impl BlocklistAIHistoryModel {
         }
     }
 
+    /// Marks a conversation as running again. Fork: local-harness follow-ups
+    /// re-enter progress without any server status event, and the input
+    /// area's "Sending..." shimmer keys off the conversation status.
+    pub(crate) fn mark_conversation_in_progress(
+        &mut self,
+        conversation_id: AIConversationId,
+        terminal_surface_id: EntityId,
+        ctx: &mut ModelContext<Self>,
+    ) {
+        if let Some(conversation) = self.conversations_by_id.get_mut(&conversation_id) {
+            conversation.update_status(ConversationStatus::InProgress, terminal_surface_id, ctx);
+        }
+    }
+
     pub fn mark_response_stream_completed_successfully(
         &mut self,
         stream_id: &ResponseStreamId,

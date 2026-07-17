@@ -204,6 +204,11 @@ impl LocalHarnessStream {
                 ctx,
             );
 
+            // Follow-ups re-enter progress; nothing server-side flips the
+            // status back for local runs, and the input area's "Sending..."
+            // shimmer keys off it.
+            history.mark_conversation_in_progress(this.conversation_id, terminal_surface_id, ctx);
+
             history.mark_active_conversation_id(this.conversation_id, terminal_surface_id, ctx);
         });
 
