@@ -89,8 +89,6 @@ struct StateHandles {
 
 pub struct BlocklistAIStatusBar {
     active_exchange_model: Option<Box<dyn AIBlockModel<View = BlocklistAIStatusBar>>>,
-    /// Temporary fork probe state: last logged warping-gate combination.
-    last_warping_gates: std::cell::Cell<Option<(bool, bool, bool, bool)>>,
     action_model: ModelHandle<BlocklistAIActionModel>,
     controller: ModelHandle<BlocklistAIController>,
     cli_subagent_controller: ModelHandle<CLISubagentController>,
@@ -353,7 +351,6 @@ impl BlocklistAIStatusBar {
 
         let mut me = Self {
             active_exchange_model: None,
-            last_warping_gates: std::cell::Cell::new(None),
             shimmering_text_handle: ShimmeringTextStateHandle::new(),
             action_model,
             context_model,
@@ -470,7 +467,6 @@ impl BlocklistAIStatusBar {
         conversation_id: AIConversationId,
         ctx: &mut ViewContext<Self>,
     ) {
-        log::info!("fork: status bar binding exchange {exchange_id:?} in {conversation_id:?}");
         let history_model = BlocklistAIHistoryModel::as_ref(ctx);
         let conversation = history_model.conversation(&conversation_id);
         let exchange =
@@ -790,25 +786,6 @@ impl BlocklistAIStatusBar {
             && !has_expanded_requested_command_with_no_subagent
             && (conversation.status().is_in_progress()
                 || (active_block.is_agent_in_control() && !active_block.is_agent_blocked()));
-
-        // Temporary fork probe: log the gate inputs when they change so the
-        // missing "Sending..." on follow-ups can be pinned from one run.
-        let gates = (
-            model.request_type(app).is_passive(),
-            has_expanded_requested_command_with_no_subagent,
-            conversation.status().is_in_progress(),
-            active_block.is_agent_in_control() && !active_block.is_agent_blocked(),
-        );
-        if self.last_warping_gates.get() != Some(gates) {
-            self.last_warping_gates.set(Some(gates));
-            log::info!(
-                "fork: warping gates passive={} expanded_cmd={} in_progress={} agent_control={}",
-                gates.0,
-                gates.1,
-                gates.2,
-                gates.3
-            );
-        }
 
         if !should_render_warping {
             return None;

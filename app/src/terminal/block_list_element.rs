@@ -1308,7 +1308,6 @@ impl BlockListElement {
                 &self.warp_theme,
                 &self.ui_builder,
                 move |ctx: &mut EventContext, _, _| {
-                    log::info!("fork: trash button clicked for block {block_index:?}");
                     ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
                 },
             );

@@ -21214,7 +21214,6 @@ impl TerminalView {
                 }
             }
         }
-        log::info!("fork: delete_blocks_at removed {} block(s)", removed.len());
         if removed.is_empty() {
             return;
         }
