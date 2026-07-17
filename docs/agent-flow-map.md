@@ -10,6 +10,11 @@ level, and (c) give the user a `/login` path.
 It is a point-in-time snapshot of the code, not a durable guarantee; verify
 `file:line` references before acting on them.
 
+> **Note:** the routing described here has since landed. The current
+> end-to-end pipeline, its invariants, and the editing rules live in
+> [local-harness-lifecycle.md](local-harness-lifecycle.md) — read that first;
+> this file remains as the original map and rationale.
+
 ---
 
 ## TL;DR

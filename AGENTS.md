@@ -2,6 +2,35 @@
 
 This file provides guidance when working with code in this repository.
 
+## This fork (0term): local agent harness — read before touching AI paths
+
+This fork routes all terminal agent prompts to **local CLI harnesses**
+(`claude`, `codex`) instead of Warp's cloud backend, by replaying the cloud
+protocol locally through Warp's own conversation machinery. Those pathways
+(stream handshake, message mapping, action lifecycle, conversation status)
+are intricate and full of non-obvious invariants — **do not hack around
+them; work within Warp's mechanisms**. The map, the invariants, and the
+known traps are documented in
+[docs/local-harness-lifecycle.md](docs/local-harness-lifecycle.md). Golden
+rules from it:
+
+- Use Warp's existing representation (message protos, feature flags enabled
+  per-channel in `app/src/bin/oss.rs`, `ConversationStatus`) rather than
+  patching shared components to special-case fork content.
+- Local conversations must never reach cloud request paths — gate with
+  `local_harness_threads::lookup(conversation_id)`. A `401` banner in a
+  conversation means such a path leaked through.
+- `LocalHarnessStream` owns the conversation lifecycle (InProgress on begin,
+  Success on complete); don't flip status elsewhere.
+- Provider differences stop at the parsers (`*_stream.rs` → `TurnEvent`).
+- After touching message shapes, run
+  `cargo test -p warp turn_events_to_conversation` — a malformed injected
+  message wedges its conversation permanently.
+
+Build/run for this fork: `cargo build --bin warp-oss`, binary at
+`target/debug/warp-oss`. Fake-auth mechanics are in
+[ACCOUNTS.md](ACCOUNTS.md).
+
 ## Development Commands
 
 ### Build and Run
