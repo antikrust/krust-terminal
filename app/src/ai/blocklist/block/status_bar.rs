@@ -52,8 +52,6 @@ use crate::ai::blocklist::{
 use crate::ai::llms::LLMPreferences;
 use crate::ai::AgentTip;
 use crate::server::telemetry::TelemetryEvent;
-use settings::Setting as _;
-
 use crate::settings::{AISettings, InputModeSettings, InputSettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::input::buffer_model::{InputBufferModel, InputBufferUpdateEvent};
@@ -836,7 +834,7 @@ impl BlocklistAIStatusBar {
         let has_output = output_to_render
             .as_ref()
             .is_some_and(|output| !output.get().messages.is_empty());
-        let swear_mode = *AISettings::as_ref(app).swear_mode.value();
+        let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
         let default_warping_text = fallback_warping_text
             .as_deref()
             .unwrap_or(match (has_output, swear_mode) {

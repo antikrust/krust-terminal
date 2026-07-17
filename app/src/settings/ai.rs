@@ -1775,6 +1775,13 @@ define_settings_group!(AISettings, settings: [
 ]);
 
 impl AISettings {
+    /// Whether the app-wide swear mode is on. Any surface with flavor copy
+    /// (shimmer text, onboarding, banners) picks its sweary variant off this
+    /// one switch.
+    pub fn is_swear_mode_enabled(&self) -> bool {
+        *self.swear_mode.value()
+    }
+
     pub fn register_and_subscribe_to_events(app: &mut AppContext) {
         Self::register(app);
         app.add_singleton_model(FocusedTerminalInfo::new);

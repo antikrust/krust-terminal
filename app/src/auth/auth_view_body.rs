@@ -627,7 +627,12 @@ impl AuthViewBody {
         .finish()
     }
 
-    fn render_header(&self, appearance: &Appearance, ui_builder: &UiBuilder) -> Box<dyn Element> {
+    fn render_header(
+        &self,
+        appearance: &Appearance,
+        ui_builder: &UiBuilder,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
         let header_styles = UiComponentStyles {
             font_family_id: Some(appearance.header_font_family()),
             font_color: Some(appearance.theme().active_ui_text_color().into()),
@@ -637,7 +642,13 @@ impl AuthViewBody {
         };
 
         let text = match self.variant {
-            AuthViewVariant::Initial => "Welcome to Warp!",
+            AuthViewVariant::Initial => {
+                if AISettings::as_ref(app).is_swear_mode_enabled() {
+                    "well fucking hell. look at this"
+                } else {
+                    "Welcome to Warp!"
+                }
+            }
             AuthViewVariant::RequireLoginCloseable
             | AuthViewVariant::HitDriveObjectLimitCloseable
             | AuthViewVariant::ShareRequirementCloseable => "Sign up for Warp",
@@ -689,7 +700,7 @@ impl AuthViewBody {
         let logo = Container::new(self.render_logo_row(appearance, ui_builder))
             .with_margin_bottom(AUTH_MODAL_GAP)
             .finish();
-        let header = Container::new(self.render_header(appearance, ui_builder))
+        let header = Container::new(self.render_header(appearance, ui_builder, app))
             .with_margin_bottom(AUTH_MODAL_GAP)
             .finish();
         let sign_up_button = self.render_sign_up_button(is_anonymous, appearance, ui_builder);
@@ -993,9 +1004,13 @@ impl View for AuthViewBody {
         "AuthViewBody"
     }
 
-    fn accessibility_contents(&self, _: &AppContext) -> Option<AccessibilityContent> {
+    fn accessibility_contents(&self, app: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new(
-            "Welcome to Warp!",
+            if AISettings::as_ref(app).is_swear_mode_enabled() {
+                "well fucking hell. look at this"
+            } else {
+                "Welcome to Warp!"
+            },
             "Press enter to open your browser to Sign Up or Sign In.",
             WarpA11yRole::HelpRole,
         ))
