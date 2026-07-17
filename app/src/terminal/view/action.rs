@@ -276,6 +276,9 @@ pub enum TerminalAction {
     OpenWorkflowModal,
     OpenWorkflowModalForAIWorkflow(Workflow),
     OpenWorkflowModalForBlock(BlockIndex),
+    /// Deletes the block at the given index (the block toolbar's trash
+    /// button); undoable via the toast it raises.
+    DeleteBlockAtIndex(BlockIndex),
     OpenWorkflowModalWithCloudWorkflow(SyncId),
     AskAIAssistant {
         block_index: BlockIndex,
@@ -608,6 +611,9 @@ impl fmt::Debug for TerminalAction {
             OpenWorkflowModalForAIWorkflow(_) => f.write_str("OpenWorkflowModalForAIWorkflow"),
             OpenWorkflowModalForBlock(block_index) => {
                 write!(f, "OpenWorkflowModalForBlock({block_index:?})")
+            }
+            DeleteBlockAtIndex(block_index) => {
+                write!(f, "DeleteBlockAtIndex({block_index:?})")
             }
             OpenWorkflowModalWithCloudWorkflow(_) => {
                 f.write_str("OpenWorkflowModalWithCloudWorkflow")

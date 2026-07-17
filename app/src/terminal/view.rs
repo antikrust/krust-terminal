@@ -21137,14 +21137,20 @@ impl TerminalView {
     /// Deletes the selected finished command blocks from the blocklist, with
     /// a 5-second undo toast. The active block is refused model-side.
     fn delete_selected_blocks(&mut self, ctx: &mut ViewContext<Self>) {
+        let indices: Vec<BlockIndex> = self.selected_blocks.block_indices().collect();
+        self.delete_blocks_at(indices, ctx);
+    }
+
+    /// Deletes the given finished command blocks, with a 5-second undo
+    /// toast. The active block is refused model-side.
+    fn delete_blocks_at(&mut self, indices: Vec<BlockIndex>, ctx: &mut ViewContext<Self>) {
         let mut removed: Vec<(BlockIndex, BlockHeight, Block)> = Vec::new();
         {
             let mut model = self.model.lock();
             let block_list = model.block_list_mut();
             // Resolve ids up front — indices shift as blocks are removed.
-            let ids: Vec<BlockId> = self
-                .selected_blocks
-                .block_indices()
+            let ids: Vec<BlockId> = indices
+                .into_iter()
                 .filter_map(|index| block_list.block_at(index).map(|block| block.id().clone()))
                 .collect();
             for id in ids {
@@ -26725,6 +26731,7 @@ impl TypedActionView for TerminalView {
             | OpenWorkflowModal
             | OpenWorkflowModalForAIWorkflow(_)
             | OpenWorkflowModalForBlock(_)
+            | DeleteBlockAtIndex(_)
             | OpenWorkflowModalWithCloudWorkflow(_)
             | OpenShareSessionModal { .. }
             | OpenSharedSessionViewerRoleMenu
@@ -27127,6 +27134,7 @@ impl TypedActionView for TerminalView {
             OpenWorkflowModalForBlock(block_index) => {
                 self.open_workflow_modal_from_block(*block_index, ctx)
             }
+            DeleteBlockAtIndex(block_index) => self.delete_blocks_at(vec![*block_index], ctx),
             OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
                 self.open_workflow_modal_with_existing(*workflow_id, ctx)
             }

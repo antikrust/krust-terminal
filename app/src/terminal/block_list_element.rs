@@ -173,6 +173,7 @@ enum SelectionCursorRenderLocation {
 }
 
 const OVERFLOW_BUTTON_ICON_PATH: &str = "bundled/svg/overflow.svg";
+const DELETE_BLOCK_ICON_PATH: &str = "bundled/svg/trash-02.svg";
 /// The number of lines from the top of the blocklist where we should show the snackbar toggle
 /// button on mouse hover when the snackbar is collapsed.
 const SNACKBAR_TOGGLE_BUTTON_HOVER_LINES: f32 = 4.;
@@ -640,6 +641,7 @@ pub struct BlockListElement {
     snackbar_toggle_button: Option<Box<dyn Element>>,
     ask_ai_assistant_button: Option<Box<dyn Element>>,
     save_as_workflow_button: Option<Box<dyn Element>>,
+    delete_block_button: Option<Box<dyn Element>>,
     restored_session_separator: Option<Box<dyn Element>>,
     inline_banners: HashMap<InlineBannerId, Box<dyn Element>>,
     /// Subshell separators are similar to banners, except they are smaller and only meant to show
@@ -863,6 +865,7 @@ pub struct BlockListMouseStates {
     pub overflow_menu_button_mouse_state: MouseStateHandle,
     pub ai_assistant_button_mouse_state: MouseStateHandle,
     pub save_as_workflow_button_mouse_state: MouseStateHandle,
+    pub delete_block_button_mouse_state: MouseStateHandle,
     pub filter_mouse_states: HashMap<BlockIndex, MouseStateHandle>,
     pub snackbar_toggle_button_mouse_state: MouseStateHandle,
 }
@@ -931,6 +934,7 @@ impl BlockListElement {
             overflow_menu_button: None,
             ask_ai_assistant_button: None,
             save_as_workflow_button: None,
+            delete_block_button: None,
             snackbar_toggle_button: None,
             restored_session_separator: None,
             inline_banners,
@@ -1262,6 +1266,32 @@ impl BlockListElement {
             };
 
             self.save_as_workflow_button = Some(element);
+        }
+
+        {
+            let icon = Container::new(
+                ConstrainedBox::new(Icon::new(DELETE_BLOCK_ICON_PATH, icon_color).finish())
+                    .with_height(16.)
+                    .with_width(16.)
+                    .finish(),
+            )
+            .with_uniform_padding(4.);
+            let element = render_hoverable_block_button(
+                icon,
+                Some(ToolbeltButtonTooltip {
+                    label: "Delete block".to_owned(),
+                    tool_tip_below_button: should_render_tooltip_below_button,
+                }),
+                false,
+                true,
+                self.mouse_states.delete_block_button_mouse_state.clone(),
+                &self.warp_theme,
+                &self.ui_builder,
+                move |ctx: &mut EventContext, _, _| {
+                    ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
+                },
+            );
+            self.delete_block_button = Some(element);
         }
 
         self
@@ -3149,6 +3179,17 @@ impl Element for BlockListElement {
                 app,
             );
         }
+        if let Some(delete_block_button) = &mut self.delete_block_button {
+            delete_block_button.layout(
+                // Big enough to cover the tooltip when rendered.
+                SizeConstraint::new(
+                    vec2f(BLOCK_HOVER_BUTTON_HEIGHT, BLOCK_HOVER_BUTTON_HEIGHT),
+                    vec2f(240., 64.),
+                ),
+                ctx,
+                app,
+            );
+        }
         if let Some(cursor_hint_text) = &mut self.cursor_hint_text_element {
             cursor_hint_text.layout(constraint, ctx, app);
         }
@@ -4063,7 +4104,7 @@ impl Element for BlockListElement {
 
                     ctx.scene.start_layer(ClipBounds::ActiveLayer);
                     let block_is_bookmarked = self.bookmark_elements.contains_key(block_index);
-                    let offset = 136.; // 4 icons of 26px width + 4px padding between icons x3 + 4px left padding + 4 px right padding + 4px for selected block border + 8px scrollbar
+                    let offset = 166.; // 5 icons of 26px width + 4px padding between icons x4 + 4px left padding + 4 px right padding + 4px for selected block border + 8px scrollbar
 
                     let block_menu_items_start_origin = header_grid_origin
                         + vec2f(
@@ -4074,15 +4115,17 @@ impl Element for BlockListElement {
 
                     let block_menu_rect_origin = block_menu_items_start_origin - vec2f(4., 4.);
                     let block_menu_rect_size = vec2f(
-                        124., // 4 icons of 26px width + 4px padding between icons x3 + 4px left padding + 4px right padding
+                        154., // 5 icons of 26px width + 4px padding between icons x4 + 4px left padding + 4px right padding
                         34.,  // 26px height icons + 4px top padding + 4px bottom padding
                     );
 
                     // We add in increments of 30 as each icon is 26px wide + 4px gap between icons
                     let ask_ai_assistant_button_origin = block_menu_items_start_origin;
                     let bookmark_button_origin = block_menu_items_start_origin + vec2f(30., 0.);
-                    let overflow_menu_button_origin =
+                    let delete_block_button_origin =
                         block_menu_items_start_origin + vec2f(90., 0.);
+                    let overflow_menu_button_origin =
+                        block_menu_items_start_origin + vec2f(120., 0.);
                     let filter_button_origin = block_menu_items_start_origin + vec2f(60., 0.);
 
                     if let Some(snackbar_toggle_button_origin) =
@@ -4186,6 +4229,10 @@ impl Element for BlockListElement {
                         if let Some(save_as_workflow_button) = self.save_as_workflow_button.as_mut()
                         {
                             save_as_workflow_button.paint(bookmark_button_origin, ctx, app);
+                        }
+
+                        if let Some(delete_block_button) = self.delete_block_button.as_mut() {
+                            delete_block_button.paint(delete_block_button_origin, ctx, app);
                         }
                     }
 
