@@ -478,6 +478,15 @@ impl BlocklistAIController {
                 return;
             }
 
+            // Local-harness conversations are driven entirely by the CLI: the
+            // tool cards we register are a transcript, not a live agent loop.
+            // A finished tool result must not trigger a cloud follow-up — that
+            // path 401s under the fork's local auth, and the CLI has already
+            // produced the next turn itself.
+            if crate::ai::blocklist::local_harness_threads::lookup(*conversation_id).is_some() {
+                return;
+            }
+
             let Some(finished_action_results) =
                 action_model.get_finished_action_results(*conversation_id)
             else {
