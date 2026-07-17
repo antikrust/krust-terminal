@@ -21,7 +21,7 @@ use warpui::{AppContext, EntityId, SingletonEntity as _};
 use super::controller::response_stream::ResponseStreamId;
 use super::controller::RequestInput;
 use super::history_model::BlocklistAIHistoryModel;
-use crate::ai::agent::conversation::AIConversationId;
+use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{AIAgentInput, UserQueryMode};
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::user_query_message;
@@ -388,6 +388,18 @@ impl LocalHarnessStream {
                 &self.stream_id,
                 self.conversation_id,
                 self.terminal_surface_id,
+                ctx,
+            );
+            // An output that carries tool-call actions is left InProgress by
+            // the marker above — upstream expects the action flow (execute →
+            // follow-up request) to finish the conversation. Local harness
+            // actions are a transcript the CLI already resolved, so the run
+            // ending IS the end of the turn: flip the status here or the
+            // "Thinking..." shimmer never stops.
+            history.update_conversation_status(
+                self.terminal_surface_id,
+                self.conversation_id,
+                ConversationStatus::Success,
                 ctx,
             );
         });
