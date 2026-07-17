@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use enum_iterator::Sequence;
+use instant::Instant;
 use itertools::Itertools;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
@@ -648,7 +649,7 @@ pub struct BlockListElement {
     delete_block_button: Option<Box<dyn Element>>,
     /// Blocks currently sliding off screen before deletion, keyed by id with
     /// their animation start time.
-    sliding_deletes: HashMap<BlockId, std::time::Instant>,
+    sliding_deletes: HashMap<BlockId, Instant>,
     restored_session_separator: Option<Box<dyn Element>>,
     inline_banners: HashMap<InlineBannerId, Box<dyn Element>>,
     /// Subshell separators are similar to banners, except they are smaller and only meant to show
@@ -1059,10 +1060,7 @@ impl BlockListElement {
 
     /// Blocks mid slide-off-to-delete animation; painted with an eased
     /// leftward offset derived from their start instant.
-    pub fn with_sliding_deletes(
-        mut self,
-        sliding_deletes: HashMap<BlockId, std::time::Instant>,
-    ) -> Self {
+    pub fn with_sliding_deletes(mut self, sliding_deletes: HashMap<BlockId, Instant>) -> Self {
         self.sliding_deletes = sliding_deletes;
         self
     }
@@ -3880,17 +3878,21 @@ impl Element for BlockListElement {
                     };
 
                     // Deleting blocks slide off to the left; ease-in so the
-                    // motion accelerates away.
-                    let mut grid_origin = match self.sliding_deletes.get(block.id()) {
+                    // motion accelerates away. The offset must be reverted at
+                    // the end of this arm: draw_block advances the shared
+                    // grid_origin, and shadowing it here would leave every
+                    // following item painting on top of this block.
+                    let slide_offset = match self.sliding_deletes.get(block.id()) {
                         Some(started_at) => {
                             let t = (started_at.elapsed().as_secs_f32()
                                 / SLIDE_DELETE_DURATION.as_secs_f32())
                             .clamp(0., 1.);
                             let distance = self.size_info.pane_width_px().as_f32() + 60.;
-                            grid_origin - vec2f(t * t * distance, 0.)
+                            vec2f(t * t * distance, 0.)
                         }
-                        None => grid_origin,
+                        None => Vector2F::zero(),
                     };
+                    grid_origin -= slide_offset;
 
                     let header_origin = snackbar_header
                         .and_then(|header| header.header_rect())
@@ -4306,6 +4308,7 @@ impl Element for BlockListElement {
                     ctx.scene.stop_layer();
 
                     model.block_list().record_block_painted(*block_index);
+                    grid_origin += slide_offset;
                 }
                 VisibleItem::Gap {
                     height_px: height, ..
@@ -4690,9 +4693,10 @@ impl Element for BlockListElement {
                 position,
                 delta,
                 precise,
-                modifiers: ModifiersState {
-                    ctrl: false, cmd, ..
-                },
+                modifiers:
+                    ModifiersState {
+                        ctrl: false, cmd, ..
+                    },
             } if !handled => {
                 let _ = cmd;
                 self.scroll_internal(*position, *delta, *precise, ctx, app)
@@ -4729,12 +4733,8 @@ impl Element for BlockListElement {
                 // A ⌘+drag released far enough to the left, mostly
                 // horizontally, swipes the pressed block away (undoable via
                 // the delete toast).
-                if let Some((block_index, start)) = self
-                    .mouse_states
-                    .swipe_delete_state
-                    .lock()
-                    .unwrap()
-                    .take()
+                if let Some((block_index, start)) =
+                    self.mouse_states.swipe_delete_state.lock().unwrap().take()
                 {
                     let dx = position.x() - start.x();
                     let dy = position.y() - start.y();
@@ -4742,9 +4742,7 @@ impl Element for BlockListElement {
                         log::info!(
                             "fork: swipe-delete drag triggered on {block_index:?} (dx {dx})"
                         );
-                        ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(
-                            block_index,
-                        ));
+                        ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
                         return true;
                     }
                 }
