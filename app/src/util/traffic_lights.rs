@@ -7,8 +7,8 @@
 #[cfg(windows)]
 pub mod windows;
 
-#[cfg(any(target_os = "linux", target_os = "freebsd"))]
-mod linux_only {
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "freebsd"))]
+mod custom_unix_chrome {
     pub(super) use std::sync::Arc;
 
     pub(super) use pathfinder_color::ColorU;
@@ -21,8 +21,8 @@ mod linux_only {
     pub(super) use crate::workspace::TOTAL_TAB_BAR_HEIGHT;
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd"))]
-use linux_only::*;
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "freebsd"))]
+use custom_unix_chrome::*;
 
 #[cfg(target_os = "windows")]
 mod windows_only {
@@ -56,8 +56,35 @@ use windows_only::*;
 
 use crate::themes::theme::WarpTheme;
 
-#[cfg(any(target_os = "windows", any(target_os = "linux", target_os = "freebsd")))]
+#[cfg(any(
+    target_os = "windows",
+    target_os = "linux",
+    target_os = "freebsd"
+))]
 const BUTTON_ICON_SIZE: f32 = 22.;
+
+const BOB_CONTROL_SIZE: f32 = 28.;
+#[cfg(target_os = "macos")]
+const BOB_GREEN: ColorU = ColorU {
+    r: 95,
+    g: 224,
+    b: 106,
+    a: 224,
+};
+#[cfg(target_os = "macos")]
+const BOB_AMBER: ColorU = ColorU {
+    r: 255,
+    g: 178,
+    b: 74,
+    a: 224,
+};
+#[cfg(target_os = "macos")]
+const BOB_RED: ColorU = ColorU {
+    r: 255,
+    g: 107,
+    b: 102,
+    a: 224,
+};
 
 pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<TrafficLightData> {
     // If native window frame is on, the traffic lights are already in the frame.
@@ -71,9 +98,9 @@ pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<Traff
 
     if cfg!(target_os = "macos") {
         Some(TrafficLightData {
-            width: 64.,
-            side: TrafficLightSide::Left,
-            scales_with_zoom: false,
+            width: BOB_CONTROL_SIZE * 3.,
+            side: TrafficLightSide::Right,
+            scales_with_zoom: true,
         })
     } else if cfg!(any(target_os = "linux", target_os = "freebsd"))
         && !ctx.windows().is_tiling_window_manager()
@@ -103,7 +130,7 @@ pub enum TrafficLightSide {
 
 /// Mouse state handles that the containing View must manage.
 #[derive(Default)]
-#[cfg_attr(any(target_family = "wasm", target_os = "macos"), allow(dead_code))]
+#[cfg_attr(target_family = "wasm", allow(dead_code))]
 pub struct TrafficLightMouseStates {
     pub minimize_window_button: MouseStateHandle,
     pub maximize_window_button: MouseStateHandle,
@@ -147,6 +174,91 @@ impl TrafficLightData {
         } else {
             self.width / zoom_factor
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn render(
+        &self,
+        _fullscreen_state: FullscreenState,
+        mouse_states: &TrafficLightMouseStates,
+        _theme: &WarpTheme,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let fullscreen = Self::render_bob_button(
+            Arc::clone(&mouse_states.maximize_window_button),
+            ConstrainedBox::new(
+                Rect::new()
+                    .with_border(Border::all(1.6).with_border_color(BOB_GREEN))
+                    .finish(),
+            )
+            .with_width(8.)
+            .with_height(8.)
+            .finish(),
+        )
+        .on_click(|evt, _, _| {
+            evt.dispatch_action("root_view:toggle_fullscreen", ());
+        })
+        .finish();
+
+        let minimize = Self::render_bob_button(
+            Arc::clone(&mouse_states.minimize_window_button),
+            ConstrainedBox::new(Rect::new().with_background_color(BOB_AMBER).finish())
+                .with_width(9.)
+                .with_height(1.7)
+                .finish(),
+        )
+        .on_click(|evt, _, _| {
+            evt.dispatch_action("root_view:minimize_window", ());
+        })
+        .finish();
+
+        let close = Self::render_bob_button(
+            Arc::clone(&mouse_states.close_window_button),
+            ConstrainedBox::new(
+                Icon::new("bundled/svg/linux/decorations/close.svg", BOB_RED).finish(),
+            )
+            .with_width(9.)
+            .with_height(9.)
+            .finish(),
+        )
+        .on_click(|evt, _, _| {
+            evt.dispatch_action("root_view:close_window", ());
+        })
+        .finish();
+
+        ConstrainedBox::new(
+            Align::new(
+                Flex::row()
+                    .with_children([fullscreen, minimize, close])
+                    .finish(),
+            )
+            .finish(),
+        )
+        .with_max_height(TOTAL_TAB_BAR_HEIGHT)
+        .with_width(self.width)
+        .finish()
+    }
+
+    #[cfg(target_os = "macos")]
+    fn render_bob_button(
+        mouse_state: MouseStateHandle,
+        child: Box<dyn Element>,
+    ) -> Hoverable {
+        Hoverable::new(mouse_state, |state| {
+            let background_color = if state.is_hovered() {
+                ColorU::new(255, 255, 255, 18)
+            } else {
+                ColorU::transparent_black()
+            };
+            Container::new(
+                ConstrainedBox::new(Align::new(child).finish())
+                    .with_width(BOB_CONTROL_SIZE)
+                    .with_height(BOB_CONTROL_SIZE)
+                    .finish(),
+            )
+            .with_background_color(background_color)
+            .finish()
+        })
     }
 
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
@@ -447,7 +559,7 @@ impl TrafficLightData {
     }
 
     #[cfg(all(
-        not(any(target_os = "linux", target_os = "freebsd")),
+        not(any(target_os = "macos", target_os = "linux", target_os = "freebsd")),
         not(target_os = "windows")
     ))]
     pub fn render(

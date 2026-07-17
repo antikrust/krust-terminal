@@ -545,10 +545,11 @@ const MAX_FONT_SIZE: f32 = 25.0;
 /// The increment for increasing/decreasing the font size.
 const FONT_SIZE_INCREMENT: f32 = 1.0;
 
-pub const TAB_BAR_HEIGHT: f32 = 34.;
-/// Height for all panel headers (tab bar, warp drive, resource center, theme chooser, etc.).
-/// This ensures consistent header heights across all UI panels.
-pub const PANEL_HEADER_HEIGHT: f32 = TAB_BAR_HEIGHT;
+/// Compact application chrome, matching Bob3's single-row title bar.
+pub const TAB_BAR_HEIGHT: f32 = 28.;
+/// Height for panel headers (warp drive, resource center, theme chooser, etc.).
+/// Keep content panels at their existing height; only the application chrome is compact.
+pub const PANEL_HEADER_HEIGHT: f32 = 34.;
 /// The hover area height for states where the tab bar is revealed on hover.
 const TAB_BAR_HOVER_HEIGHT: f32 = 12.;
 const TAB_BAR_PADDING_LEFT: f32 = 4.;
@@ -13920,20 +13921,9 @@ impl Workspace {
     #[cfg(target_os = "macos")]
     pub fn sync_window_button_visibility(&self, ctx: &mut ViewContext<Self>) {
         use warpui::platform::mac::WindowExt;
-        let show = if FeatureFlag::FullScreenZenMode.is_enabled()
-            && TabSettings::as_ref(ctx)
-                .workspace_decoration_visibility
-                .value()
-                == &WorkspaceDecorationVisibility::OnHover
-        {
-            self.tab_bar_mode(ctx).has_tab_bar()
-        } else {
-            TabSettings::as_ref(ctx)
-                .workspace_decoration_visibility
-                .show_window_decorations()
-        };
+        // Bob-style controls are rendered by Warp with the rest of the title bar.
         if let Some(platform_window) = ctx.windows().platform_window(ctx.window_id()) {
-            platform_window.as_ref().set_window_buttons(show);
+            platform_window.as_ref().set_window_buttons(false);
         }
     }
 
@@ -21046,10 +21036,10 @@ impl Workspace {
         .with_height(TAB_BAR_HEIGHT)
         .finish();
 
-        let tab_bar_border =
-            Border::bottom(TAB_BAR_BORDER_HEIGHT).with_border_fill(appearance.theme().outline());
+        let tab_bar_border = Border::bottom(TAB_BAR_BORDER_HEIGHT)
+            .with_border_fill(ColorU::new(18, 18, 18, u8::MAX));
 
-        let mut tab_bar_container = Container::new(
+        let tab_bar_container = Container::new(
             EventHandler::new(Clipped::new(self.render_tab_bar_hoverable(bar_contents)).finish())
                 .on_back_mouse_down(move |ctx, _app, _position| {
                     ctx.dispatch_typed_action(WorkspaceAction::ActivatePrevTab);
@@ -21061,11 +21051,8 @@ impl Workspace {
                 })
                 .finish(),
         )
-        .with_border(tab_bar_border);
-        if FeatureFlag::NewTabStyling.is_enabled() {
-            tab_bar_container = tab_bar_container
-                .with_background(internal_colors::fg_overlay_1(appearance.theme()));
-        }
+        .with_border(tab_bar_border)
+        .with_background_color(ColorU::black());
         let tab_bar_element = tab_bar_container.finish();
 
         let dimming_color = appearance.theme().background().into();
