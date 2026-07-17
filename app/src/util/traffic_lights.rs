@@ -234,7 +234,7 @@ impl TrafficLightData {
             Align::new(
                 Container::new(
                     Flex::row()
-                        .with_children([fullscreen, minimize, close])
+                        .with_children([close, minimize, fullscreen])
                         .finish(),
                 )
                 .with_margin_left(BOB_CONTROLS_LEFT_INSET)
