@@ -446,9 +446,6 @@ pub(super) struct AIBlockStateHandles {
     /// Mouse state handle for the fork conversation button
     fork_conversation_handle: MouseStateHandle,
 
-    /// Mouse state handle for the usage button
-    usage_button_handle: MouseStateHandle,
-
     /// Mouse state handles per citation.
     /// A given citation should only appear once per block.
     footer_citation_chip_handles: HashMap<AIAgentCitation, MouseStateHandle>,

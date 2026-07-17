@@ -21036,8 +21036,12 @@ impl Workspace {
         .with_height(TAB_BAR_HEIGHT)
         .finish();
 
-        let tab_bar_border = Border::bottom(TAB_BAR_BORDER_HEIGHT)
-            .with_border_fill(ColorU::new(18, 18, 18, u8::MAX));
+        let tab_bar_border = Border::bottom(TAB_BAR_BORDER_HEIGHT).with_border_fill(ColorU::new(
+            18,
+            18,
+            18,
+            u8::MAX,
+        ));
 
         let tab_bar_container = Container::new(
             EventHandler::new(Clipped::new(self.render_tab_bar_hoverable(bar_contents)).finish())

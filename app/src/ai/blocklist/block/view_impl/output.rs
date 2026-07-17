@@ -170,7 +170,6 @@ pub(crate) struct Props<'a> {
     pub(super) current_todo_list: Option<&'a AIAgentTodoList>,
     pub(super) has_accepted_edits: bool,
     pub(super) finish_reason: Option<&'a FinishReason>,
-    pub(super) is_usage_footer_expanded: bool,
     pub(super) shared_session_status: &'a SharedSessionStatus,
     pub(super) terminal_view_id: EntityId,
     pub(super) aws_bedrock_credentials_error_view:

@@ -2737,7 +2737,7 @@ pub struct TerminalView {
     pending_block_undo: Option<Vec<(BlockIndex, BlockHeight, Block)>>,
     /// Blocks mid slide-off animation; removal happens when their slide
     /// completes.
-    sliding_deletes: HashMap<BlockId, std::time::Instant>,
+    sliding_deletes: HashMap<BlockId, Instant>,
 
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
@@ -21165,7 +21165,7 @@ impl TerminalView {
         if ids.is_empty() {
             return;
         }
-        let started_at = std::time::Instant::now();
+        let started_at = Instant::now();
         let was_idle = self.sliding_deletes.is_empty();
         for id in ids {
             self.sliding_deletes.insert(id, started_at);

@@ -1119,7 +1119,6 @@ impl View for AIBlock {
                 has_accepted_edits,
                 current_todo_list: self.current_todo_list(app),
                 finish_reason: self.finish_reason.as_ref(),
-                is_usage_footer_expanded: self.is_usage_footer_expanded,
                 shared_session_status: &shared_session_status,
                 terminal_view_id: self.terminal_view_id,
                 aws_bedrock_credentials_error_view: self

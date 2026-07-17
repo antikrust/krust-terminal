@@ -12,10 +12,15 @@ mod custom_unix_chrome {
     pub(super) use std::sync::Arc;
 
     pub(super) use pathfinder_color::ColorU;
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     pub(super) use pathfinder_geometry::vector::vec2f;
     pub(super) use warpui::elements::{
-        Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Flex, Hoverable, Icon,
-        OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect, Stack,
+        Align, Border, ConstrainedBox, Container, Flex, Hoverable, Icon, ParentElement, Rect,
+    };
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    pub(super) use warpui::elements::{
+        ChildAnchor, CornerRadius, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Radius,
+        Stack,
     };
 
     pub(super) use crate::workspace::TOTAL_TAB_BAR_HEIGHT;
@@ -46,8 +51,6 @@ mod windows_only {
     pub(super) const WINDOWS_BUTTON_PADDING_HORIZONTAL: f32 = 12.;
 }
 
-#[cfg(not(target_os = "windows"))]
-use warpui::elements::Empty;
 use warpui::elements::MouseStateHandle;
 use warpui::platform::FullscreenState;
 use warpui::{AppContext, Element, WindowId};
@@ -56,14 +59,15 @@ use windows_only::*;
 
 use crate::themes::theme::WarpTheme;
 
-#[cfg(any(
-    target_os = "windows",
-    target_os = "linux",
-    target_os = "freebsd"
-))]
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
 const BUTTON_ICON_SIZE: f32 = 22.;
 
-const BOB_CONTROL_SIZE: f32 = 28.;
+// Compact hit targets keep the three Bob-style controls visually grouped.
+const BOB_CONTROL_SIZE: f32 = 22.;
+// With an 8px maximize glyph, this inset places its left edge at x=11, aligned with the
+// left edge of the vertical toolbar buttons below it.
+const BOB_CONTROLS_LEFT_INSET: f32 = 4.;
+const BOB_CONTROLS_WIDTH: f32 = BOB_CONTROLS_LEFT_INSET + BOB_CONTROL_SIZE * 3.;
 #[cfg(target_os = "macos")]
 const BOB_GREEN: ColorU = ColorU {
     r: 95,
@@ -98,7 +102,7 @@ pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<Traff
 
     if cfg!(target_os = "macos") {
         Some(TrafficLightData {
-            width: BOB_CONTROL_SIZE * 3.,
+            width: BOB_CONTROLS_WIDTH,
             side: TrafficLightSide::Left,
             scales_with_zoom: true,
         })
@@ -228,9 +232,13 @@ impl TrafficLightData {
 
         ConstrainedBox::new(
             Align::new(
-                Flex::row()
-                    .with_children([fullscreen, minimize, close])
-                    .finish(),
+                Container::new(
+                    Flex::row()
+                        .with_children([fullscreen, minimize, close])
+                        .finish(),
+                )
+                .with_margin_left(BOB_CONTROLS_LEFT_INSET)
+                .finish(),
             )
             .finish(),
         )
@@ -240,10 +248,7 @@ impl TrafficLightData {
     }
 
     #[cfg(target_os = "macos")]
-    fn render_bob_button(
-        mouse_state: MouseStateHandle,
-        child: Box<dyn Element>,
-    ) -> Hoverable {
+    fn render_bob_button(mouse_state: MouseStateHandle, child: Box<dyn Element>) -> Hoverable {
         Hoverable::new(mouse_state, |state| {
             let background_color = if state.is_hovered() {
                 ColorU::new(255, 255, 255, 18)
@@ -270,7 +275,7 @@ impl TrafficLightData {
         _app: &AppContext,
     ) -> Box<dyn Element> {
         if !cfg!(any(target_os = "linux", target_os = "freebsd")) {
-            return Empty::new().finish();
+            return warpui::elements::Empty::new().finish();
         }
 
         let fg_color = theme.foreground().into_solid();
@@ -569,6 +574,6 @@ impl TrafficLightData {
         _theme: &WarpTheme,
         _app: &AppContext,
     ) -> Box<dyn Element> {
-        Empty::new().finish()
+        warpui::elements::Empty::new().finish()
     }
 }
