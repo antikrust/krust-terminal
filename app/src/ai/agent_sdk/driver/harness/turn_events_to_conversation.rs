@@ -16,6 +16,11 @@ use ai::agent::{ToolCallOutcome, TurnEvent};
 use uuid::Uuid;
 use warp_multi_agent_api as api;
 
+use crate::ai::agent::task::TaskId;
+use crate::ai::agent::{
+    AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult,
+};
+
 /// Tool output longer than this is truncated in the rendered block; the CLI's
 /// own transcript remains the source of truth for full output.
 const MAX_RESULT_CHARS: usize = 4000;
@@ -60,18 +65,18 @@ pub(crate) fn turn_event_to_messages(
         TurnEvent::Thinking { text } => {
             vec![agent_reasoning_message(task_id, request_id, text.clone())]
         }
-        TurnEvent::ToolCallStarted { name, input, .. } => {
-            vec![agent_output_message(
-                task_id,
-                request_id,
-                format_tool_call(name, input),
+        TurnEvent::ToolCallStarted {
+            call_id,
+            name,
+            input,
+        } => {
+            vec![tool_call_message(
+                task_id, request_id, call_id, name, input,
             )]
         }
-        TurnEvent::ToolCallResult { outcome, .. } => {
-            vec![agent_output_message(
-                task_id,
-                request_id,
-                format_tool_result(outcome),
+        TurnEvent::ToolCallResult { call_id, outcome } => {
+            vec![tool_call_result_message(
+                task_id, request_id, call_id, outcome,
             )]
         }
         // A failed turn renders its error so the run doesn't end invisibly
@@ -140,43 +145,169 @@ fn agent_reasoning_message(task_id: &str, request_id: &str, reasoning: String) -
     }
 }
 
-/// Renders a tool invocation as a Markdown block: a bold header with the tool
-/// name and, when recognizable, the single most salient argument (command,
-/// path, or pattern); otherwise the full pretty-printed input.
-fn format_tool_call(name: &str, input: &serde_json::Value) -> String {
-    let salient = ["command", "file_path", "path", "pattern", "query", "url"]
-        .iter()
-        .find_map(|key| input.get(*key).and_then(|v| v.as_str()));
-
-    match salient {
-        Some(detail) => format!("**› {name}**\n```\n{detail}\n```"),
-        None => {
-            let pretty = serde_json::to_string_pretty(input).unwrap_or_else(|_| input.to_string());
-            format!("**› {name}**\n```json\n{pretty}\n```")
-        }
+/// A tool invocation as a native `ToolCall` message (`CallMcpTool` variant),
+/// so the client renders it with its own collapsible, read-only tool card —
+/// collapsed by default — instead of raw Markdown. The `call_id` becomes the
+/// action id, correlating this call with its later `ToolCallResult`.
+fn tool_call_message(
+    task_id: &str,
+    request_id: &str,
+    call_id: &str,
+    name: &str,
+    input: &serde_json::Value,
+) -> api::Message {
+    let args = match serde_json_to_prost(input.clone()) {
+        prost_types::Value {
+            kind: Some(prost_types::value::Kind::StructValue(s)),
+        } => Some(s),
+        // Tool inputs are JSON objects; anything else (rare) carries no args.
+        _ => None,
+    };
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_string(),
+        request_id: request_id.to_string(),
+        message: Some(api::message::Message::ToolCall(api::message::ToolCall {
+            tool_call_id: call_id.to_string(),
+            tool: Some(api::message::tool_call::Tool::CallMcpTool(
+                api::message::tool_call::CallMcpTool {
+                    name: name.to_string(),
+                    args,
+                    server_id: String::new(),
+                },
+            )),
+        })),
+        ..Default::default()
     }
 }
 
-/// Renders a tool result as a Markdown block, preferring the plain `stdout`
-/// field when present (Bash and friends) and truncating very long output.
-fn format_tool_result(outcome: &ToolCallOutcome) -> String {
-    match outcome {
+/// The matching `ToolCallResult` message. On restore this is what
+/// reconstructs the card's result (via `restore_action_results_from_exchanges`);
+/// live runs additionally register [`tool_call_action_result`] so the result
+/// shows immediately.
+fn tool_call_result_message(
+    task_id: &str,
+    request_id: &str,
+    call_id: &str,
+    outcome: &ToolCallOutcome,
+) -> api::Message {
+    use api::call_mcp_tool_result::{success::result::Result as ResultItem, success::Result, Success};
+
+    let result = match outcome {
         ToolCallOutcome::Success(value) => {
-            let text = value
-                .get("stdout")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| match value {
-                    serde_json::Value::String(s) => s.clone(),
-                    other => {
-                        serde_json::to_string_pretty(other).unwrap_or_else(|_| other.to_string())
-                    }
-                });
-            format!("```\n{}\n```", truncate(text.trim_end()))
+            let text = truncate(tool_result_text(value).trim_end());
+            api::call_mcp_tool_result::Result::Success(Success {
+                results: vec![Result {
+                    result: Some(ResultItem::Text(api::call_mcp_tool_result::success::result::Text {
+                        text,
+                    })),
+                }],
+            })
         }
-        ToolCallOutcome::Error(message) => format!("**⚠ error**\n```\n{}\n```", truncate(message)),
-        ToolCallOutcome::Cancelled => "_tool call cancelled_".to_string(),
+        ToolCallOutcome::Error(message) => {
+            api::call_mcp_tool_result::Result::Error(api::call_mcp_tool_result::Error {
+                message: truncate(message),
+            })
+        }
+        // A cancelled call carries no result; leave it unset.
+        ToolCallOutcome::Cancelled => {
+            return api::Message {
+                id: Uuid::new_v4().to_string(),
+                task_id: task_id.to_string(),
+                request_id: request_id.to_string(),
+                message: Some(api::message::Message::ToolCallResult(
+                    api::message::ToolCallResult {
+                        tool_call_id: call_id.to_string(),
+                        result: None,
+                        ..Default::default()
+                    },
+                )),
+                ..Default::default()
+            };
+        }
+    };
+
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_string(),
+        request_id: request_id.to_string(),
+        message: Some(api::message::Message::ToolCallResult(
+            api::message::ToolCallResult {
+                tool_call_id: call_id.to_string(),
+                result: Some(api::message::tool_call_result::Result::CallMcpTool(
+                    api::CallMcpToolResult {
+                        result: Some(result),
+                    },
+                )),
+                ..Default::default()
+            },
+        )),
+        ..Default::default()
     }
+}
+
+/// The client-side action result for a finished tool call, used to register
+/// the result live (the message path above only feeds restore). Mirrors the
+/// `CallMcpTool` result conversion in `convert_conversation.rs`.
+pub(crate) fn tool_call_action_result(
+    task_id: &str,
+    call_id: &str,
+    outcome: &ToolCallOutcome,
+) -> AIAgentActionResult {
+    let result = match outcome {
+        ToolCallOutcome::Success(value) => {
+            let text = truncate(tool_result_text(value).trim_end());
+            CallMCPToolResult::Success {
+                result: rmcp::model::CallToolResult::success(vec![rmcp::model::Content::text(text)]),
+            }
+        }
+        ToolCallOutcome::Error(message) => CallMCPToolResult::Error(truncate(message)),
+        ToolCallOutcome::Cancelled => CallMCPToolResult::Cancelled,
+    };
+    AIAgentActionResult {
+        id: call_id.to_string().into(),
+        task_id: TaskId::new(task_id.to_string()),
+        result: AIAgentActionResultType::CallMCPTool(result),
+    }
+}
+
+/// Extracts the human-readable text from a tool's success value, preferring the
+/// plain `stdout` field (Bash and friends) over pretty-printed JSON.
+fn tool_result_text(value: &serde_json::Value) -> String {
+    value
+        .get("stdout")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| match value {
+            serde_json::Value::String(s) => s.clone(),
+            other => serde_json::to_string_pretty(other).unwrap_or_else(|_| other.to_string()),
+        })
+}
+
+/// Converts a `serde_json::Value` into a `prost_types::Value` for MCP tool
+/// args. Mirrors the private helper in `convert_to.rs`; integer/float
+/// distinctions are erased (all JSON numbers become `f64`), which the client
+/// re-coerces from the tool's input schema when one exists.
+fn serde_json_to_prost(value: serde_json::Value) -> prost_types::Value {
+    use prost_types::value::Kind;
+    use serde_json::Value;
+
+    let kind = match value {
+        Value::Null => Kind::NullValue(0),
+        Value::Bool(b) => Kind::BoolValue(b),
+        Value::Number(n) => Kind::NumberValue(n.as_f64().unwrap_or(0.0)),
+        Value::String(s) => Kind::StringValue(s),
+        Value::Array(a) => Kind::ListValue(prost_types::ListValue {
+            values: a.into_iter().map(serde_json_to_prost).collect(),
+        }),
+        Value::Object(o) => Kind::StructValue(prost_types::Struct {
+            fields: o
+                .into_iter()
+                .map(|(k, v)| (k, serde_json_to_prost(v)))
+                .collect(),
+        }),
+    };
+    prost_types::Value { kind: Some(kind) }
 }
 
 fn truncate(text: &str) -> String {

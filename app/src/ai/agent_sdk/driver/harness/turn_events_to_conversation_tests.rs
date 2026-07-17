@@ -49,7 +49,7 @@ fn maps_text_and_reasoning_to_native_message_types() {
 }
 
 #[test]
-fn renders_tool_call_and_result_as_markdown_output() {
+fn renders_tool_call_and_result_as_native_cards() {
     let events = vec![
         TurnEvent::ToolCallStarted {
             call_id: "t1".to_string(),
@@ -65,18 +65,47 @@ fn renders_tool_call_and_result_as_markdown_output() {
     let messages = &convo.tasks[0].messages;
     assert_eq!(messages.len(), 3); // user query + call + result
 
+    // The call renders as a native collapsible tool card, correlated to its
+    // result by tool_call_id, carrying the tool name and args.
     match body(&messages[1]) {
-        api::message::Message::AgentOutput(o) => {
-            assert!(o.text.contains("Bash"), "header names the tool: {}", o.text);
-            assert!(o.text.contains("ls -la"), "shows the command: {}", o.text);
+        api::message::Message::ToolCall(tc) => {
+            assert_eq!(tc.tool_call_id, "t1");
+            match tc.tool.as_ref() {
+                Some(api::message::tool_call::Tool::CallMcpTool(mcp)) => {
+                    assert_eq!(mcp.name, "Bash");
+                    let args = mcp.args.as_ref().expect("args present");
+                    match args.fields.get("command").and_then(|v| v.kind.as_ref()) {
+                        Some(prost_types::value::Kind::StringValue(s)) => assert_eq!(s, "ls -la"),
+                        other => panic!("expected command string, got {other:?}"),
+                    }
+                }
+                other => panic!("expected CallMcpTool, got {other:?}"),
+            }
         }
-        other => panic!("expected AgentOutput for the call, got {other:?}"),
+        other => panic!("expected ToolCall for the call, got {other:?}"),
     }
     match body(&messages[2]) {
-        api::message::Message::AgentOutput(o) => {
-            assert!(o.text.contains("file1"), "shows stdout: {}", o.text);
+        api::message::Message::ToolCallResult(tcr) => {
+            assert_eq!(tcr.tool_call_id, "t1");
+            match tcr.result.as_ref() {
+                Some(api::message::tool_call_result::Result::CallMcpTool(r)) => {
+                    match r.result.as_ref() {
+                        Some(api::call_mcp_tool_result::Result::Success(s)) => {
+                            let text = match s.results[0].result.as_ref() {
+                                Some(
+                                    api::call_mcp_tool_result::success::result::Result::Text(t),
+                                ) => &t.text,
+                                other => panic!("expected text result, got {other:?}"),
+                            };
+                            assert!(text.contains("file1"), "shows stdout: {text}");
+                        }
+                        other => panic!("expected success, got {other:?}"),
+                    }
+                }
+                other => panic!("expected CallMcpTool result, got {other:?}"),
+            }
         }
-        other => panic!("expected AgentOutput for the result, got {other:?}"),
+        other => panic!("expected ToolCallResult for the result, got {other:?}"),
     }
 }
 
@@ -88,11 +117,16 @@ fn tool_error_result_is_flagged() {
     }];
     let convo = turn_events_to_conversation("q", &events);
     match body(&convo.tasks[0].messages[1]) {
-        api::message::Message::AgentOutput(o) => {
-            assert!(o.text.contains("error"), "flags error: {}", o.text);
-            assert!(o.text.contains("boom"));
-        }
-        other => panic!("expected AgentOutput, got {other:?}"),
+        api::message::Message::ToolCallResult(tcr) => match tcr.result.as_ref() {
+            Some(api::message::tool_call_result::Result::CallMcpTool(r)) => match r.result.as_ref() {
+                Some(api::call_mcp_tool_result::Result::Error(e)) => {
+                    assert!(e.message.contains("boom"), "carries the error: {}", e.message);
+                }
+                other => panic!("expected error result, got {other:?}"),
+            },
+            other => panic!("expected CallMcpTool result, got {other:?}"),
+        },
+        other => panic!("expected ToolCallResult, got {other:?}"),
     }
 }
 

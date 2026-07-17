@@ -223,7 +223,9 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
-use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
+    tool_call_action_result, turn_event_to_messages,
+};
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
@@ -23467,6 +23469,14 @@ impl TerminalView {
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
+        // Local harness conversations are read-only transcripts: the CLI
+        // executes every tool itself, and this client only renders the result.
+        // View-only mode makes the native tool cards render read-only (no
+        // accept/reject affordance), matching the shared-session viewer path.
+        self.ai_action_model.update(ctx, |action_model, _ctx| {
+            action_model.set_view_only(true);
+        });
+
         let terminal_surface_id = ctx.view_id();
         let working_dir = self
             .pwd()
@@ -23653,6 +23663,28 @@ impl TerminalView {
                                 &event,
                             );
                             stream.apply_messages(messages, ctx);
+                            // The tool-call message renders the card; its result
+                            // must be registered on the action model for the card
+                            // to show read-only output live. (Restore reads it back
+                            // from the persisted result message instead.)
+                            if let ai::agent::TurnEvent::ToolCallResult { call_id, outcome } = &event
+                            {
+                                let result = tool_call_action_result(
+                                    stream.root_task_id(),
+                                    call_id,
+                                    outcome,
+                                );
+                                let conversation_id = stream.conversation_id();
+                                view.ai_action_model.update(ctx, |action_model, ctx| {
+                                    if action_model.get_action_result(&result.id).is_none() {
+                                        action_model.apply_finished_action_result(
+                                            conversation_id,
+                                            result,
+                                            ctx,
+                                        );
+                                    }
+                                });
+                            }
                             if turn_completed {
                                 stream.complete(ctx);
                             }
