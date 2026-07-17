@@ -97,7 +97,7 @@ use crate::settings::{
     NaturalLanguageAutosuggestionsEnabled, OrchestrationMessageDisplayMode, PromptSubmissionMode,
     RuleSuggestionsEnabled, SharedBlockTitleGenerationEnabled, ShouldRenderCLIAgentToolbar,
     ShouldRenderUseAgentToolbarForUserCommands, ShouldShowOzUpdatesInZeroState, ShowAgentTips,
-    ShowConversationHistory, ShowHintText, ThinkingDisplayMode, VoiceInputEnabled,
+    ShowConversationHistory, ShowHintText, SwearMode, ThinkingDisplayMode, VoiceInputEnabled,
     WarpDriveContextEnabled,
 };
 use crate::terminal::session_settings::{SessionSettings, SessionSettingsChangedEvent};
@@ -510,6 +510,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 )),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::INCLUDE_AGENT_COMMANDS_IN_HISTORY_FLAG,
+            )
+            .with_group(bindings::BindingGroup::WarpAi),
+            ToggleSettingActionPair::new(
+                "swear mode",
+                builder(SettingsAction::AI(AISettingsPageAction::ToggleSwearMode)),
+                &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
+                flags::SWEAR_MODE_FLAG,
             )
             .with_group(bindings::BindingGroup::WarpAi),
             ToggleSettingActionPair::new(
@@ -3626,6 +3633,7 @@ pub enum AISettingsPageAction {
     ToggleCloudAgentComputerUse,
     ToggleFileBasedMcp,
     ToggleIncludeAgentCommandsInHistory,
+    ToggleSwearMode,
     ToggleAgentAttribution,
 
     // Custom model routers
@@ -4386,6 +4394,12 @@ impl TypedActionView for AISettingsPageView {
                     report_if_error!(settings
                         .include_agent_commands_in_history
                         .toggle_and_save_value(ctx));
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleSwearMode => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.swear_mode.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
             }
@@ -6427,13 +6441,14 @@ struct AIInputWidget {
     show_input_hint_toggle: SwitchStateHandle,
     show_agent_tips_toggle: SwitchStateHandle,
     include_agent_commands_in_history_toggle: SwitchStateHandle,
+    swear_mode_toggle: SwitchStateHandle,
 }
 
 impl SettingsWidget for AIInputWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "oz agent ai input natural language detection autodetection prompt terminal command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc"
+        "oz agent ai input natural language detection autodetection prompt terminal command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc swear swear mode sweary profanity"
     }
 
     fn render(
@@ -6499,6 +6514,16 @@ impl SettingsWidget for AIInputWidget {
             *ai_settings.include_agent_commands_in_history,
             is_any_ai_enabled,
             self.include_agent_commands_in_history_toggle.clone(),
+            &view.local_only_icon_tooltip_states,
+            app,
+        ));
+
+        widget_children.push(render_ai_setting_toggle::<SwearMode>(
+            "Swear mode",
+            AISettingsPageAction::ToggleSwearMode,
+            *ai_settings.swear_mode,
+            is_any_ai_enabled,
+            self.swear_mode_toggle.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         ));

@@ -26,7 +26,8 @@ use super::model::{AIBlockModel, AIBlockModelImpl, AIBlockOutputStatus};
 use super::view_impl::common::{
     render_switch_control_to_user_button, render_warping_indicator, render_warping_indicator_base,
     AutoExecuteButtonProps, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
-    WarpingIndicatorProps, WarpingProps, LOAD_OUTPUT_MESSAGE, THINKING_MESSAGE,
+    WarpingIndicatorProps, WarpingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
+    SWEAR_THINKING_MESSAGE, THINKING_MESSAGE,
     WAITING_FOR_USER_INPUT_MESSAGE,
 };
 use crate::ai::agent::conversation::AIConversationId;
@@ -51,7 +52,9 @@ use crate::ai::blocklist::{
 use crate::ai::llms::LLMPreferences;
 use crate::ai::AgentTip;
 use crate::server::telemetry::TelemetryEvent;
-use crate::settings::{InputModeSettings, InputSettings};
+use settings::Setting as _;
+
+use crate::settings::{AISettings, InputModeSettings, InputSettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::input::buffer_model::{InputBufferModel, InputBufferUpdateEvent};
 use crate::terminal::input::message_bar::common::render_wrapping_standard_message_bar;
@@ -833,12 +836,14 @@ impl BlocklistAIStatusBar {
         let has_output = output_to_render
             .as_ref()
             .is_some_and(|output| !output.get().messages.is_empty());
+        let swear_mode = *AISettings::as_ref(app).swear_mode.value();
         let default_warping_text = fallback_warping_text
             .as_deref()
-            .unwrap_or(if has_output {
-                THINKING_MESSAGE
-            } else {
-                LOAD_OUTPUT_MESSAGE
+            .unwrap_or(match (has_output, swear_mode) {
+                (true, false) => THINKING_MESSAGE,
+                (true, true) => SWEAR_THINKING_MESSAGE,
+                (false, false) => LOAD_OUTPUT_MESSAGE,
+                (false, true) => SWEAR_LOAD_OUTPUT_MESSAGE,
             })
             .to_owned();
         let secondary_element = if fallback_warping_text.is_some() {

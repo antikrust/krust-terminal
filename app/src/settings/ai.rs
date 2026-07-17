@@ -1732,6 +1732,19 @@ define_settings_group!(AISettings, settings: [
     }
 
     // This is not a user-visible setting - it's merely a one-time flag to track if the
+    // Fork: swaps agent status copy (the Sending/Thinking shimmer) for
+    // fouler-mouthed variants.
+    swear_mode: SwearMode {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.swear_mode",
+        description: "Controls whether agent status text uses sweary variants.",
+    },
+
     // auto-handoff sleep modal has been shown to the user.
     //
     // We model it as a setting so it's only shown once to a given user regardless of the number of

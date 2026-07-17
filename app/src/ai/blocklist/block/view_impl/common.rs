@@ -115,6 +115,11 @@ const ERROR_APOLOGY_TEXT: &str = "I'm sorry, I couldn't complete that request.";
 const INTERNAL_WARP_ERROR: &str = "Internal Warp error.";
 
 pub const LOAD_OUTPUT_MESSAGE: &str = "Sending...";
+/// Swear-mode variant of [`LOAD_OUTPUT_MESSAGE`].
+pub const SWEAR_LOAD_OUTPUT_MESSAGE: &str = "hold on yer cunt, it's sending...";
+/// Swear-mode variant of [`THINKING_MESSAGE`].
+pub const SWEAR_THINKING_MESSAGE: &str =
+    "just wait, i'm gathering words into a word salad that's vaguely plausible to your feeble intellect...";
 /// Shown once the run has produced output but hasn't finished: the request
 /// is long past "sending", the model is working.
 pub const THINKING_MESSAGE: &str = "Thinking...";
@@ -1215,11 +1220,15 @@ pub fn render_text_sections<V: View, A: Action>(
                 match &text.formatted_lines {
                     Some(formatted_text) => {
                         let formatted_text = formatted_text.formatted_text_arc();
+                        let formatted_text_for_effect = formatted_text.raw_text();
+                        let formatted_text_for_effect = formatted_text_for_effect
+                            .strip_suffix('\n')
+                            .unwrap_or(&formatted_text_for_effect);
                         let text_effect_frame = agent_text_effect_frame(
                             props.model,
                             props.agent_text_effects,
                             section_index,
-                            &formatted_text.raw_text(),
+                            formatted_text_for_effect,
                             props.is_selecting_text,
                             app,
                         );
