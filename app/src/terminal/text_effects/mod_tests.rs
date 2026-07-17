@@ -100,7 +100,7 @@ fn overwritten_content_is_not_animated() {
 fn matrix_frames_are_deterministic() {
     let started_at = Instant::now();
     let timeline = timeline("matrix", started_at);
-    let now = started_at + TextEffectSpeed::Normal.step_duration() * 2;
+    let now = started_at + TextEffectSpeed::Normal.matrix_line_duration();
     let first = timeline.sample(
         point(3),
         CharOrStr::Char('r'),
@@ -258,24 +258,25 @@ fn streamed_agent_matrix_chunks_share_a_sequence() {
 }
 
 #[test]
-fn intensity_changes_matrix_trail_length() {
+fn intensity_changes_matrix_trail_duration() {
     let started_at = Instant::now();
-    let timeline = timeline("abcdef", started_at);
+    let mut timeline = TextEffectsTimeline::default();
+    timeline.finish_batch(
+        (0..6).map(|line| (point_on_row(4 + line, 0), "x".to_string())),
+        started_at,
+    );
     let mut subtle = config(TextEffect::MatrixTrail);
     subtle.intensity = TextEffectIntensity::Subtle;
     let mut strong = subtle;
     strong.intensity = TextEffectIntensity::Strong;
+    let now = started_at + TextEffectSpeed::Normal.matrix_line_duration() * 3;
 
     assert_eq!(
-        timeline.sample(point(5), CharOrStr::Char('f'), subtle, started_at),
-        Some(TextEffectSample {
-            content: VisualContent::Hidden,
-            foreground: None,
-            needs_repaint: true,
-        })
+        timeline.sample(point_on_row(4, 0), CharOrStr::Char('x'), subtle, now),
+        Some(TextEffectSample::COMPLETE)
     );
     assert!(matches!(
-        timeline.sample(point(5), CharOrStr::Char('f'), strong, started_at),
+        timeline.sample(point_on_row(4, 0), CharOrStr::Char('x'), strong, now),
         Some(TextEffectSample {
             content: VisualContent::Substitute(_),
             foreground: None,
