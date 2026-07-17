@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use about_page::AboutPageView;
 use ai_page::{AISettingsPageAction, AISettingsPageEvent, AISettingsPageView, AISubpage};
-use appearance_page::{AppearancePageAction, AppearanceSettingsPageView};
+use appearance_page::{AppearancePageAction, AppearanceSettingsPageView, AppearanceSubpage};
 use billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use billing_and_usage_page::BillingAndUsagePageEvent;
 use code_page::{CodeSettingsPageAction, CodeSettingsPageEvent, CodeSubpage};
@@ -275,6 +275,9 @@ pub enum SettingsSection {
     // ── Code umbrella subpages ──
     CodeIndexing,
     EditorAndCodeReview,
+    // ── Appearance umbrella subpages ──
+    AppearanceGeneral,
+    AppearanceTxtFx,
     // ── Cloud platform umbrella subpages ──
     CloudEnvironments,
     OzCloudAPIKeys,
@@ -300,6 +303,8 @@ impl Display for SettingsSection {
             SettingsSection::ThirdPartyCLIAgents => write!(f, "Third party CLI agents"),
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
+            SettingsSection::AppearanceGeneral => write!(f, "General"),
+            SettingsSection::AppearanceTxtFx => write!(f, "txtFX"),
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
             SettingsSection::OzCloudAPIKeys => write!(f, "Oz Cloud API Keys"),
             _ => write!(f, "{self:?}"),
@@ -310,7 +315,15 @@ impl Display for SettingsSection {
 impl SettingsSection {
     /// Returns true if this section is a subpage under any umbrella.
     pub fn is_subpage(&self) -> bool {
-        self.is_ai_subpage() || self.is_code_subpage() || self.is_cloud_platform_subpage()
+        self.is_ai_subpage()
+            || self.is_code_subpage()
+            || self.is_cloud_platform_subpage()
+            || self.is_appearance_subpage()
+    }
+
+    /// Returns true if this section is a subpage under the "Appearance" umbrella.
+    pub fn is_appearance_subpage(&self) -> bool {
+        matches!(self, Self::AppearanceGeneral | Self::AppearanceTxtFx)
     }
 
     /// Returns true if this section is a subpage under the "Agents" umbrella.
@@ -345,6 +358,8 @@ impl SettingsSection {
             s if s.is_ai_subpage() => Self::AI,
             // Code subpages render within the Code page.
             s if s.is_code_subpage() => Self::Code,
+            // Appearance subpages render within the Appearance page.
+            s if s.is_appearance_subpage() => Self::Appearance,
             // CloudEnvironments and OzCloudAPIKeys ARE their own backing pages
             // (1:1 mapping), so they return themselves.
             other => *other,
@@ -370,6 +385,12 @@ impl SettingsSection {
     /// The ordered list of Cloud platform subpage sections.
     pub fn cloud_platform_subpages() -> &'static [Self] {
         &[Self::CloudEnvironments, Self::OzCloudAPIKeys]
+    }
+
+    /// The ordered list of Appearance subpage sections shown under the
+    /// Appearance umbrella.
+    pub fn appearance_subpages() -> &'static [Self] {
+        &[Self::AppearanceGeneral, Self::AppearanceTxtFx]
     }
 }
 
@@ -401,6 +422,8 @@ impl FromStr for SettingsSection {
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
+            "AppearanceGeneral" => Ok(Self::AppearanceGeneral),
+            "txtFX" | "AppearanceTxtFx" => Ok(Self::AppearanceTxtFx),
             "CloudEnvironments" => Ok(Self::CloudEnvironments),
             "Oz Cloud API Keys" | "OzCloudAPIKeys" => Ok(Self::OzCloudAPIKeys),
             _ => Err(()),
@@ -1126,6 +1149,7 @@ pub struct SettingsView {
     ai_page_handle: ViewHandle<AISettingsPageView>,
     /// Handle to the Code settings page, used to switch subpage modes.
     code_page_handle: ViewHandle<CodeSettingsPageView>,
+    appearance_page_handle: ViewHandle<AppearanceSettingsPageView>,
     /// Per-subpage search match results. Populated during search so that
     /// subpages sharing the same backing page can be filtered independently.
     subpage_filter: HashMap<SettingsSection, MatchData>,
@@ -1155,6 +1179,7 @@ impl SettingsView {
 
         // Appearance & themes page
         let appearance_page_handle = ctx.add_typed_action_view(AppearanceSettingsPageView::new);
+        let appearance_page_handle_for_nav = appearance_page_handle.clone();
         ctx.subscribe_to_view(&appearance_page_handle, |me, _, event, ctx| {
             me.handle_appearance_page_event(event, ctx);
         });
@@ -1342,7 +1367,14 @@ impl SettingsView {
                 ],
             )),
             SettingsNavItem::Page(SettingsSection::Teams),
-            SettingsNavItem::Page(SettingsSection::Appearance),
+            if FeatureFlag::TextEffects.is_enabled() {
+                SettingsNavItem::Umbrella(SettingsUmbrella::new(
+                    "Appearance",
+                    SettingsSection::appearance_subpages().to_vec(),
+                ))
+            } else {
+                SettingsNavItem::Page(SettingsSection::Appearance)
+            },
             SettingsNavItem::Page(SettingsSection::Features),
             SettingsNavItem::Page(SettingsSection::Keybindings),
             SettingsNavItem::Page(SettingsSection::Warpify),
@@ -1369,6 +1401,9 @@ impl SettingsView {
         let initial_page = match page {
             Some(SettingsSection::AI) => SettingsSection::WarpAgent,
             Some(SettingsSection::Code) => SettingsSection::CodeIndexing,
+            Some(SettingsSection::Appearance) if FeatureFlag::TextEffects.is_enabled() => {
+                SettingsSection::AppearanceGeneral
+            }
             Some(SettingsSection::Scripting) if !FeatureFlag::WarpControlCli.is_enabled() => {
                 SettingsSection::Account
             }
@@ -1404,6 +1439,7 @@ impl SettingsView {
             nav_items,
             ai_page_handle: ai_page_handle_for_nav,
             code_page_handle: code_page_handle_for_nav,
+            appearance_page_handle: appearance_page_handle_for_nav,
             subpage_filter: HashMap::new(),
             settings_file_error: None,
             settings_error_banner_dismissed: false,
@@ -1505,6 +1541,18 @@ impl SettingsView {
                             self.subpage_filter.insert(subpage_section, match_data);
                         }
                     }
+                    // And for Appearance subpages.
+                    for &subpage_section in SettingsSection::appearance_subpages() {
+                        if let Some(subpage) = AppearanceSubpage::from_section(subpage_section) {
+                            self.appearance_page_handle.update(ctx, |view, ctx| {
+                                view.set_active_subpage(Some(subpage), ctx);
+                            });
+                            let match_data = self
+                                .appearance_page_handle
+                                .update(ctx, |view, ctx| view.update_filter(&search_query, ctx));
+                            self.subpage_filter.insert(subpage_section, match_data);
+                        }
+                    }
                 } else {
                     // Search cleared: restore umbrella expanded state.
                     for item in &mut self.nav_items {
@@ -1526,6 +1574,9 @@ impl SettingsView {
                         view.set_active_subpage(None, ctx);
                     });
                     self.code_page_handle.update(ctx, |view, ctx| {
+                        view.set_active_subpage(None, ctx);
+                    });
+                    self.appearance_page_handle.update(ctx, |view, ctx| {
                         view.set_active_subpage(None, ctx);
                     });
                 }
@@ -1555,6 +1606,13 @@ impl SettingsView {
                     if current.is_code_subpage() {
                         if let Some(subpage) = CodeSubpage::from_section(current) {
                             self.code_page_handle.update(ctx, |view, ctx| {
+                                view.set_active_subpage(Some(subpage), ctx);
+                            });
+                        }
+                    }
+                    if current.is_appearance_subpage() {
+                        if let Some(subpage) = AppearanceSubpage::from_section(current) {
+                            self.appearance_page_handle.update(ctx, |view, ctx| {
                                 view.set_active_subpage(Some(subpage), ctx);
                             });
                         }
@@ -2042,6 +2100,13 @@ impl SettingsView {
             if section.is_code_subpage() {
                 let subpage = CodeSubpage::from_section(section);
                 self.code_page_handle.update(ctx, |view, ctx| {
+                    view.set_active_subpage(subpage, ctx);
+                });
+            }
+            // Appearance subpages: update the Appearance page's subpage mode.
+            if section.is_appearance_subpage() {
+                let subpage = AppearanceSubpage::from_section(section);
+                self.appearance_page_handle.update(ctx, |view, ctx| {
                     view.set_active_subpage(subpage, ctx);
                 });
             }

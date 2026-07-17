@@ -1837,6 +1837,10 @@ impl<V: warpui::View> Category<V> {
         self.subtitle = Some(subtitle);
         self
     }
+
+    pub(super) fn title(&self) -> &'static str {
+        self.title
+    }
 }
 
 /// A [`Category`] with only the results which match a search query.

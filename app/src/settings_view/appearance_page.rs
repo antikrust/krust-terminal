@@ -578,8 +578,28 @@ pub enum AppearancePageAction {
     },
 }
 
+/// Identifies which subpage of the Appearance settings the user is viewing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AppearanceSubpage {
+    /// Everything except txtFX: themes, windows, text, cursor, and so on.
+    General,
+    /// The txtFX text-effect controls.
+    TxtFx,
+}
+
+impl AppearanceSubpage {
+    pub fn from_section(section: SettingsSection) -> Option<Self> {
+        match section {
+            SettingsSection::AppearanceGeneral => Some(Self::General),
+            SettingsSection::AppearanceTxtFx => Some(Self::TxtFx),
+            _ => None,
+        }
+    }
+}
+
 pub struct AppearanceSettingsPageView {
     page: PageType<Self>,
+    active_subpage: Option<AppearanceSubpage>,
     window_id: WindowId,
     local_only_icon_tooltip_states: RefCell<HashMap<String, MouseStateHandle>>,
     font_size_editor: ViewHandle<EditorView>,
@@ -1451,7 +1471,8 @@ impl AppearanceSettingsPageView {
             ctx.add_typed_action_view(HeaderToolbarInlineEditor::new);
 
         AppearanceSettingsPageView {
-            page: Self::build_page(ctx),
+            page: Self::build_page(None, ctx),
+            active_subpage: None,
             window_id: ctx.window_id(),
             local_only_icon_tooltip_states: Default::default(),
             ai_font_family_dropdown,
@@ -1504,7 +1525,24 @@ impl AppearanceSettingsPageView {
         }
     }
 
-    fn build_page(ctx: &mut ViewContext<Self>) -> PageType<Self> {
+    /// Set the active subpage and rebuild the page to show only the relevant
+    /// categories (mirrors the Code settings umbrella).
+    pub fn set_active_subpage(
+        &mut self,
+        subpage: Option<AppearanceSubpage>,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        if self.active_subpage != subpage {
+            self.active_subpage = subpage;
+            self.page = Self::build_page(subpage, ctx);
+            ctx.notify();
+        }
+    }
+
+    fn build_page(
+        subpage: Option<AppearanceSubpage>,
+        ctx: &mut ViewContext<Self>,
+    ) -> PageType<Self> {
         let mut categories = vec![Category::new(
             "Themes",
             vec![
@@ -1720,6 +1758,17 @@ impl AppearanceSettingsPageView {
             vec![Box::new(AltScreenPaddingWidget::default())],
         ));
 
+        // Subpage views show only their slice of the categories; the full
+        // list stays for the no-subpage (search) mode.
+        match subpage {
+            Some(AppearanceSubpage::General) => {
+                categories.retain(|category| category.title() != "txtFX")
+            }
+            Some(AppearanceSubpage::TxtFx) => {
+                categories.retain(|category| category.title() == "txtFX")
+            }
+            None => {}
+        }
         PageType::new_categorized(categories, None)
     }
 
