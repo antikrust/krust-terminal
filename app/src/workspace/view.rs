@@ -24051,6 +24051,12 @@ impl TypedActionView for Workspace {
             }
             ViewUserDocs => self.view_user_docs(ctx),
             ViewPrivacyPolicy => self.view_privacy_policy(ctx),
+            UndoDeleteBlock { terminal_view_id } => {
+                let window_id = ctx.window_id();
+                if let Some(view) = ctx.view_with_id::<TerminalView>(window_id, *terminal_view_id) {
+                    view.update(ctx, |view, ctx| view.undo_delete_block(ctx));
+                }
+            }
             #[cfg(not(target_family = "wasm"))]
             ViewLogs => self.view_logs(ctx),
             ChangeCursor(cursor) => self.change_cursor(*cursor, ctx),

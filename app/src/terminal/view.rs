@@ -539,7 +539,7 @@ use crate::util::repo_detection::{detect_possible_git_repo, RepoDetectionSession
 use crate::util::truncation::truncate_from_end;
 use crate::view_components::action_button::{ActionButton, ButtonSize, KeystrokeSource};
 use crate::view_components::find::{Event as FindEvent, Find, FindDirection, FindWithinBlockState};
-use crate::view_components::{DismissibleToast, ToastFlavor};
+use crate::view_components::{DismissibleToast, ToastFlavor, ToastLink};
 use crate::workflows::workflow::Workflow;
 use crate::workflows::WorkflowSelectionSource;
 use crate::workspace::sync_inputs::SyncedInputState;
@@ -1360,6 +1360,7 @@ pub enum ContextMenuAction {
     },
     FindWithinBlock,
     ToggleBookmark,
+    DeleteBlocks,
     ScrollToBottomOfBlock,
     ScrollToTopOfBlock,
     CopyPrompt {
@@ -1494,6 +1495,7 @@ impl fmt::Debug for ContextMenuAction {
             ScrollToBottomOfBlock => f.write_str("ScrollToBottomOfBlock"),
             ScrollToTopOfBlock => f.write_str("ScrollToTopOfBlock"),
             ToggleBookmark => f.write_str("BookmarkBlock"),
+            DeleteBlocks => f.write_str("DeleteBlocks"),
             CopyPrompt { position, part } => {
                 write!(f, "CopyPrompt {{ position: {position:?}, part: {part:?} }}")
             }
@@ -2729,6 +2731,9 @@ pub struct TerminalView {
     /// sync with the session id claude reports in each run's `SessionInit`
     /// (a resumed run forks a fresh session id).
     local_claude_thread: Option<(LocalHarnessKind, uuid::Uuid, AIConversationId)>,
+    /// The most recently deleted block(s), restorable while the undo toast
+    /// is on screen (replaced by the next delete).
+    pending_block_undo: Option<Vec<(BlockIndex, BlockHeight, Block)>>,
 
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
@@ -4390,6 +4395,7 @@ impl TerminalView {
             usage_footer_view_ids: Default::default(),
             last_local_claude_submission: None,
             local_claude_thread: None,
+            pending_block_undo: None,
             block_onboarding_active: false,
             onboarding_prompt_block: None,
             settings_import_onboarding_block: None,
@@ -16937,6 +16943,11 @@ impl TerminalView {
                         ctx,
                     ))
                     .into_item()]);
+                items.append(&mut vec![MenuItemFields::new("Delete block")
+                    .with_on_select_action(TerminalAction::ContextMenu(
+                        ContextMenuAction::DeleteBlocks,
+                    ))
+                    .into_item()]);
 
                 items.append(&mut vec![
                     MenuItem::Separator,
@@ -21123,6 +21134,65 @@ impl TerminalView {
         }
     }
 
+    /// Deletes the selected finished command blocks from the blocklist, with
+    /// a 5-second undo toast. The active block is refused model-side.
+    fn delete_selected_blocks(&mut self, ctx: &mut ViewContext<Self>) {
+        let mut removed: Vec<(BlockIndex, BlockHeight, Block)> = Vec::new();
+        {
+            let mut model = self.model.lock();
+            let block_list = model.block_list_mut();
+            // Resolve ids up front — indices shift as blocks are removed.
+            let ids: Vec<BlockId> = self
+                .selected_blocks
+                .block_indices()
+                .filter_map(|index| block_list.block_at(index).map(|block| block.id().clone()))
+                .collect();
+            for id in ids {
+                if let Some(entry) = block_list.remove_finished_block(&id) {
+                    removed.push(entry);
+                }
+            }
+        }
+        if removed.is_empty() {
+            return;
+        }
+        removed.sort_by_key(|(index, _, _)| index.0);
+        let label = if removed.len() == 1 {
+            "Block deleted".to_string()
+        } else {
+            format!("{} blocks deleted", removed.len())
+        };
+        self.pending_block_undo = Some(removed);
+
+        let link = ToastLink::new("Undo".to_string()).with_onclick_action(
+            WorkspaceAction::UndoDeleteBlock {
+                terminal_view_id: self.view_id,
+            },
+        );
+        let window_id = ctx.window_id();
+        ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+            let toast = DismissibleToast::default(label).with_link(link);
+            toast_stack.add_ephemeral_toast(toast, window_id, ctx);
+        });
+        ctx.notify();
+    }
+
+    /// Restores the most recently deleted block(s) while their undo toast is
+    /// still actionable.
+    pub fn undo_delete_block(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(removed) = self.pending_block_undo.take() else {
+            return;
+        };
+        {
+            let mut model = self.model.lock();
+            let block_list = model.block_list_mut();
+            for (index, height, block) in removed {
+                block_list.reinsert_block(index, height, block);
+            }
+        }
+        ctx.notify();
+    }
+
     fn bookmark_selected_block(&mut self, ctx: &mut ViewContext<Self>) {
         self.tips_completed.update(ctx, |tips, ctx| {
             mark_feature_used_and_write_to_user_defaults(
@@ -24960,6 +25030,7 @@ impl TerminalView {
             ScrollToBottomOfBlock => self.scroll_to_bottom_of_bottommost_selected_block(ctx),
             ScrollToTopOfBlock => self.scroll_to_top_of_topmost_selected_block(ctx),
             ToggleBookmark => self.bookmark_selected_block(ctx),
+            DeleteBlocks => self.delete_selected_blocks(ctx),
             CopyPrompt { position, part } => self.copy_prompt(position, part, ctx),
             CopyRprompt => self.copy_rprompt(ctx),
             EditPrompt => self.edit_prompt(ctx),

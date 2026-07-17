@@ -1495,6 +1495,59 @@ impl BlockList {
         Some(block)
     }
 
+    /// Removes one finished command block (the fork's per-block delete).
+    /// Returns the removed block, its index, and its rendered height so an
+    /// undo can put it back exactly; refuses the active block and unknown
+    /// ids.
+    pub fn remove_finished_block(
+        &mut self,
+        block_id: &BlockId,
+    ) -> Option<(BlockIndex, BlockHeight, Block)> {
+        let index = *self.block_id_to_block_index.get(block_id)?;
+        if index == self.active_block_index() {
+            return None;
+        }
+
+        let height = {
+            let mut cursor = self.block_heights.cursor::<BlockIndex, TotalIndex>();
+            cursor.slice(&index, SeekBias::Left);
+            match cursor.item() {
+                Some(BlockHeightItem::Block(height)) => *height,
+                _ => BlockHeight::default(),
+            }
+        };
+
+        self.clear_selection();
+        self.clear_smart_select_override();
+        self.clear_scroll_position_before_filter();
+        let block = self.remove_block_at_index(index)?;
+        self.event_proxy.send_wakeup_event();
+        Some((index, height, block))
+    }
+
+    /// Re-inserts a block removed by [`Self::remove_finished_block`] (undo).
+    /// The index is clamped so the block always lands before the active
+    /// block, even if other blocks were removed meanwhile.
+    pub fn reinsert_block(&mut self, index: BlockIndex, height: BlockHeight, block: Block) {
+        let index = BlockIndex(index.0.min(self.active_block_index().0));
+        self.blocks.insert(index.0, block);
+        for i in BlockIndex::range_as_iter(index..BlockIndex(self.blocks.len())) {
+            self.reset_internal_block_index(i);
+        }
+
+        let (new_heights, inserted_index) = {
+            let mut cursor = self.block_heights.cursor::<BlockIndex, TotalIndex>();
+            let mut tree_before = cursor.slice(&index, SeekBias::Left);
+            let inserted_index = TotalIndex(tree_before.summary().total_count);
+            tree_before.push(BlockHeightItem::Block(height));
+            tree_before.push_tree(cursor.suffix());
+            (tree_before, inserted_index)
+        };
+        self.block_heights = new_heights;
+        self.update_block_height_indices(BlockHeightUpdate::Insertion(inserted_index), true);
+        self.event_proxy.send_wakeup_event();
+    }
+
     pub fn clear_user_executed_command_blocks_for_conversation(
         &mut self,
         conversation_id: AIConversationId,

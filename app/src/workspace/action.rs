@@ -315,6 +315,11 @@ pub enum WorkspaceAction {
     ShowUpgrade,
     ViewUserDocs,
     ViewPrivacyPolicy,
+    /// Restores the block(s) most recently deleted in the given terminal
+    /// (dispatched by the delete toast's Undo link).
+    UndoDeleteBlock {
+        terminal_view_id: EntityId,
+    },
     /// Open the log directory in the system file explorer with the current log file selected.
     #[cfg(not(target_family = "wasm"))]
     ViewLogs,
@@ -914,6 +919,7 @@ impl WorkspaceAction {
             ContinueConversationLocally { .. } => true,
             #[cfg(not(target_family = "wasm"))]
             ContinueThirdPartyConversationLocally { .. } => true,
+            UndoDeleteBlock { .. } => true,
             ActivateTab(_)
             | ActivateTabByNumber(_)
             | ActivatePrevTab
