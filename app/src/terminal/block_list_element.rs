@@ -1295,6 +1295,7 @@ impl BlockListElement {
                 &self.warp_theme,
                 &self.ui_builder,
                 move |ctx: &mut EventContext, _, _| {
+                    log::info!("fork: trash button clicked for block {block_index:?}");
                     ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
                 },
             );
@@ -1472,24 +1473,27 @@ impl BlockListElement {
         }
 
         let mut state = self.mouse_states.swipe_delete_state.lock().unwrap();
-        if delta.x() >= 0. {
-            *state = None;
-            return false;
-        }
+        // Trackpad "natural scrolling" flips the reported sign of a left
+        // swipe, so accept a consistent horizontal swipe in either direction;
+        // flipping direction mid-gesture restarts the progress.
+        let step = delta.x();
         let progress = match state.as_mut() {
-            Some((index, progress)) if *index == block_index => {
-                *progress += -delta.x();
+            Some((index, progress))
+                if *index == block_index && progress.signum() == step.signum() =>
+            {
+                *progress += step;
                 *progress
             }
             _ => {
-                let progress = -delta.x();
-                *state = Some((block_index, progress));
-                progress
+                *state = Some((block_index, step));
+                step
             }
         };
-        if progress >= SWIPE_DELETE_THRESHOLD {
+        log::info!("fork: swipe-delete progress on {block_index:?}: {progress}");
+        if progress.abs() >= SWIPE_DELETE_THRESHOLD {
             *state = None;
             drop(state);
+            log::info!("fork: swipe-delete triggered on {block_index:?}");
             ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
         }
         true
