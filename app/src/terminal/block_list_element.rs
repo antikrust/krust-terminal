@@ -174,9 +174,10 @@ enum SelectionCursorRenderLocation {
 
 const OVERFLOW_BUTTON_ICON_PATH: &str = "bundled/svg/overflow.svg";
 const DELETE_BLOCK_ICON_PATH: &str = "bundled/svg/trash-02.svg";
-/// Accumulated leftward scroll (in px) required for ⌘+left-swipe to delete
-/// a block.
-const SWIPE_DELETE_THRESHOLD: f32 = 180.;
+/// Minimum leftward ⌘+drag distance (px) for a block swipe-delete.
+const SWIPE_DELETE_DRAG_DISTANCE: f32 = 120.;
+/// How long a deleting block takes to slide off screen.
+pub const SLIDE_DELETE_DURATION: std::time::Duration = std::time::Duration::from_millis(200);
 /// The number of lines from the top of the blocklist where we should show the snackbar toggle
 /// button on mouse hover when the snackbar is collapsed.
 const SNACKBAR_TOGGLE_BUTTON_HOVER_LINES: f32 = 4.;
@@ -645,6 +646,9 @@ pub struct BlockListElement {
     ask_ai_assistant_button: Option<Box<dyn Element>>,
     save_as_workflow_button: Option<Box<dyn Element>>,
     delete_block_button: Option<Box<dyn Element>>,
+    /// Blocks currently sliding off screen before deletion, keyed by id with
+    /// their animation start time.
+    sliding_deletes: HashMap<BlockId, std::time::Instant>,
     restored_session_separator: Option<Box<dyn Element>>,
     inline_banners: HashMap<InlineBannerId, Box<dyn Element>>,
     /// Subshell separators are similar to banners, except they are smaller and only meant to show
@@ -869,10 +873,10 @@ pub struct BlockListMouseStates {
     pub ai_assistant_button_mouse_state: MouseStateHandle,
     pub save_as_workflow_button_mouse_state: MouseStateHandle,
     pub delete_block_button_mouse_state: MouseStateHandle,
-    /// ⌘+left-swipe-to-delete progress: the block being swiped and the
-    /// accumulated leftward distance. Shared across the per-frame element
-    /// clones the same way the mouse-state handles are.
-    pub swipe_delete_state: Arc<Mutex<Option<(BlockIndex, f32)>>>,
+    /// ⌘+drag-to-delete gesture origin: the block under the pointer and the
+    /// press position when a ⌘+left-click began. Shared across the per-frame
+    /// element clones the same way the mouse-state handles are.
+    pub swipe_delete_state: Arc<Mutex<Option<(BlockIndex, Vector2F)>>>,
     pub filter_mouse_states: HashMap<BlockIndex, MouseStateHandle>,
     pub snackbar_toggle_button_mouse_state: MouseStateHandle,
 }
@@ -942,6 +946,7 @@ impl BlockListElement {
             ask_ai_assistant_button: None,
             save_as_workflow_button: None,
             delete_block_button: None,
+            sliding_deletes: HashMap::new(),
             snackbar_toggle_button: None,
             restored_session_separator: None,
             inline_banners,
@@ -1050,6 +1055,16 @@ impl BlockListElement {
             .state_handle
             .lock()
             .expect("locking snackbar header state")
+    }
+
+    /// Blocks mid slide-off-to-delete animation; painted with an eased
+    /// leftward offset derived from their start instant.
+    pub fn with_sliding_deletes(
+        mut self,
+        sliding_deletes: HashMap<BlockId, std::time::Instant>,
+    ) -> Self {
+        self.sliding_deletes = sliding_deletes;
+        self
     }
 
     pub fn with_filtered_blocks(mut self, filtered_blocks: HashSet<BlockIndex>) -> Self {
@@ -1446,57 +1461,6 @@ impl BlockListElement {
             snackbar_point,
             clamping_mode,
         )
-    }
-
-    /// ⌘ + left-swipe over a finished block deletes it (undoable via the
-    /// toast the delete raises). Leftward scroll accumulates while ⌘ is
-    /// held; rightward movement or switching blocks resets the progress.
-    /// Returns true when the event was consumed as swipe progress so block
-    /// content doesn't pan beneath the gesture.
-    fn maybe_swipe_delete(&self, delta: Vector2F, ctx: &mut EventContext) -> bool {
-        let Some(block_index) = self.hovered_block_index else {
-            return false;
-        };
-        // Vertical-dominant movement isn't a swipe.
-        if delta.x().abs() <= delta.y().abs() {
-            return false;
-        }
-        // Never swipe away the live block.
-        let is_finished = self
-            .model
-            .lock()
-            .block_list()
-            .block_at(block_index)
-            .is_some_and(|block| block.finished());
-        if !is_finished {
-            return false;
-        }
-
-        let mut state = self.mouse_states.swipe_delete_state.lock().unwrap();
-        // Trackpad "natural scrolling" flips the reported sign of a left
-        // swipe, so accept a consistent horizontal swipe in either direction;
-        // flipping direction mid-gesture restarts the progress.
-        let step = delta.x();
-        let progress = match state.as_mut() {
-            Some((index, progress))
-                if *index == block_index && progress.signum() == step.signum() =>
-            {
-                *progress += step;
-                *progress
-            }
-            _ => {
-                *state = Some((block_index, step));
-                step
-            }
-        };
-        log::info!("fork: swipe-delete progress on {block_index:?}: {progress}");
-        if progress.abs() >= SWIPE_DELETE_THRESHOLD {
-            *state = None;
-            drop(state);
-            log::info!("fork: swipe-delete triggered on {block_index:?}");
-            ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
-        }
-        true
     }
 
     fn right_mouse_down(&self, position: Vector2F, ctx: &mut EventContext) -> bool {
@@ -3915,6 +3879,19 @@ impl Element for BlockListElement {
                         continue;
                     };
 
+                    // Deleting blocks slide off to the left; ease-in so the
+                    // motion accelerates away.
+                    let mut grid_origin = match self.sliding_deletes.get(block.id()) {
+                        Some(started_at) => {
+                            let t = (started_at.elapsed().as_secs_f32()
+                                / SLIDE_DELETE_DURATION.as_secs_f32())
+                            .clamp(0., 1.);
+                            let distance = self.size_info.pane_width_px().as_f32() + 60.;
+                            grid_origin - vec2f(t * t * distance, 0.)
+                        }
+                        None => grid_origin,
+                    };
+
                     let header_origin = snackbar_header
                         .and_then(|header| header.header_rect())
                         .map_or(grid_origin, |r| r.origin());
@@ -4613,6 +4590,10 @@ impl Element for BlockListElement {
                     save_as_workflow_button.dispatch_event(event, ctx, app);
             }
 
+            if let Some(delete_block_button) = &mut self.delete_block_button {
+                handled_by_floating_button |= delete_block_button.dispatch_event(event, ctx, app);
+            }
+
             for bookmark_element in self.bookmark_elements.values_mut() {
                 handled_by_floating_button |= bookmark_element.dispatch_event(event, ctx, app);
             }
@@ -4713,11 +4694,8 @@ impl Element for BlockListElement {
                     ctrl: false, cmd, ..
                 },
             } if !handled => {
-                if *cmd && self.maybe_swipe_delete(*delta, ctx) {
-                    true
-                } else {
-                    self.scroll_internal(*position, *delta, *precise, ctx, app)
-                }
+                let _ = cmd;
+                self.scroll_internal(*position, *delta, *precise, ctx, app)
             }
             Event::LeftMouseDown {
                 position,
@@ -4725,21 +4703,53 @@ impl Element for BlockListElement {
                 is_first_mouse,
                 modifiers,
                 ..
-            } if !handled => self.mouse_down(
-                *position,
-                *click_count,
-                *is_first_mouse,
-                modifiers,
-                ctx,
-                app,
-            ),
+            } if !handled => {
+                // Arm the ⌘+drag-to-delete gesture from the press position.
+                *self.mouse_states.swipe_delete_state.lock().unwrap() = if modifiers.cmd {
+                    self.hovered_block_index.map(|index| (index, *position))
+                } else {
+                    None
+                };
+                self.mouse_down(
+                    *position,
+                    *click_count,
+                    *is_first_mouse,
+                    modifiers,
+                    ctx,
+                    app,
+                )
+            }
             Event::RightMouseDown { position, .. } if !handled => {
                 self.right_mouse_down(*position, ctx)
             }
             Event::LeftMouseUp {
                 position,
                 modifiers,
-            } => self.mouse_up(*position, modifiers, ctx, app),
+            } => {
+                // A ⌘+drag released far enough to the left, mostly
+                // horizontally, swipes the pressed block away (undoable via
+                // the delete toast).
+                if let Some((block_index, start)) = self
+                    .mouse_states
+                    .swipe_delete_state
+                    .lock()
+                    .unwrap()
+                    .take()
+                {
+                    let dx = position.x() - start.x();
+                    let dy = position.y() - start.y();
+                    if dx <= -SWIPE_DELETE_DRAG_DISTANCE && dx.abs() > dy.abs() {
+                        log::info!(
+                            "fork: swipe-delete drag triggered on {block_index:?} (dx {dx})"
+                        );
+                        ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(
+                            block_index,
+                        ));
+                        return true;
+                    }
+                }
+                self.mouse_up(*position, modifiers, ctx, app)
+            }
             Event::LeftMouseDragged {
                 position,
                 modifiers,

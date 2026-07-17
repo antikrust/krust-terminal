@@ -279,6 +279,11 @@ pub enum TerminalAction {
     /// Deletes the block at the given index (the block toolbar's trash
     /// button); undoable via the toast it raises.
     DeleteBlockAtIndex(BlockIndex),
+    /// Toggles the usage-details footer (tokens/context/credits) for the
+    /// given AI block; lives in the block's overflow menu.
+    ToggleAIBlockUsageDetails {
+        ai_block_view_id: EntityId,
+    },
     OpenWorkflowModalWithCloudWorkflow(SyncId),
     AskAIAssistant {
         block_index: BlockIndex,
@@ -615,6 +620,7 @@ impl fmt::Debug for TerminalAction {
             DeleteBlockAtIndex(block_index) => {
                 write!(f, "DeleteBlockAtIndex({block_index:?})")
             }
+            ToggleAIBlockUsageDetails { .. } => write!(f, "ToggleAIBlockUsageDetails"),
             OpenWorkflowModalWithCloudWorkflow(_) => {
                 f.write_str("OpenWorkflowModalWithCloudWorkflow")
             }

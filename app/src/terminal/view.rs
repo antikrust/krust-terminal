@@ -389,6 +389,7 @@ use crate::terminal::block_filter::{
 use crate::terminal::block_list_element::{
     render_hoverable_block_button, BlockListElement, BlockListMenuSource, BlockListMouseStates,
     BlockSelectAction, BlockTextSelectAction, SnackbarHeaderState, ToolbeltButtonTooltip,
+    SLIDE_DELETE_DURATION,
 };
 use crate::terminal::block_list_viewport::{
     AutoscrollBehavior, InputMode, OverhangingBlock, ScrollPosition, ScrollPositionUpdate,
@@ -2734,6 +2735,9 @@ pub struct TerminalView {
     /// The most recently deleted block(s), restorable while the undo toast
     /// is on screen (replaced by the next delete).
     pending_block_undo: Option<Vec<(BlockIndex, BlockHeight, Block)>>,
+    /// Blocks mid slide-off animation; removal happens when their slide
+    /// completes.
+    sliding_deletes: HashMap<BlockId, std::time::Instant>,
 
     // Whether the block onboarding view is active or not.
     block_onboarding_active: bool,
@@ -4396,6 +4400,7 @@ impl TerminalView {
             last_local_claude_submission: None,
             local_claude_thread: None,
             pending_block_undo: None,
+            sliding_deletes: HashMap::new(),
             block_onboarding_active: false,
             onboarding_prompt_block: None,
             settings_import_onboarding_block: None,
@@ -21141,18 +21146,68 @@ impl TerminalView {
         self.delete_blocks_at(indices, ctx);
     }
 
-    /// Deletes the given finished command blocks, with a 5-second undo
-    /// toast. The active block is refused model-side.
+    /// Starts deleting the given finished command blocks: each slides off
+    /// screen, then is removed with a 5-second undo toast.
     fn delete_blocks_at(&mut self, indices: Vec<BlockIndex>, ctx: &mut ViewContext<Self>) {
+        let ids: Vec<BlockId> = {
+            let model = self.model.lock();
+            let block_list = model.block_list();
+            // Resolve ids up front — indices shift as blocks are removed —
+            // and skip the live block (the model would refuse it anyway;
+            // filtering here keeps it from sliding and snapping back).
+            indices
+                .into_iter()
+                .filter_map(|index| block_list.block_at(index))
+                .filter(|block| block.finished())
+                .map(|block| block.id().clone())
+                .collect()
+        };
+        if ids.is_empty() {
+            return;
+        }
+        let started_at = std::time::Instant::now();
+        let was_idle = self.sliding_deletes.is_empty();
+        for id in ids {
+            self.sliding_deletes.insert(id, started_at);
+        }
+        if was_idle {
+            self.tick_slide_deletes(ctx);
+        }
+        ctx.notify();
+    }
+
+    /// Frame ticker for the slide-off animation: repaints ~60fps while any
+    /// block is sliding and finalizes each once its slide completes.
+    fn tick_slide_deletes(&mut self, ctx: &mut ViewContext<Self>) {
+        ctx.spawn(
+            async { Timer::after(Duration::from_millis(16)).await },
+            |me, _, ctx| {
+                let expired: Vec<BlockId> = me
+                    .sliding_deletes
+                    .iter()
+                    .filter(|(_, started_at)| started_at.elapsed() >= SLIDE_DELETE_DURATION)
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                for id in &expired {
+                    me.sliding_deletes.remove(id);
+                }
+                if !expired.is_empty() {
+                    me.finalize_delete_blocks(expired, ctx);
+                }
+                ctx.notify();
+                if !me.sliding_deletes.is_empty() {
+                    me.tick_slide_deletes(ctx);
+                }
+            },
+        );
+    }
+
+    /// Removes blocks whose slide-off finished and raises the undo toast.
+    fn finalize_delete_blocks(&mut self, ids: Vec<BlockId>, ctx: &mut ViewContext<Self>) {
         let mut removed: Vec<(BlockIndex, BlockHeight, Block)> = Vec::new();
         {
             let mut model = self.model.lock();
             let block_list = model.block_list_mut();
-            // Resolve ids up front — indices shift as blocks are removed.
-            let ids: Vec<BlockId> = indices
-                .into_iter()
-                .filter_map(|index| block_list.block_at(index).map(|block| block.id().clone()))
-                .collect();
             for id in ids {
                 if let Some(entry) = block_list.remove_finished_block(&id) {
                     removed.push(entry);
@@ -24555,6 +24610,9 @@ impl TerminalView {
         }
 
         element = element.with_filtered_blocks(filtered_blocks);
+        if !self.sliding_deletes.is_empty() {
+            element = element.with_sliding_deletes(self.sliding_deletes.clone());
+        }
 
         if let Some(active_filter_editor_block_index) = self.active_filter_editor_block_index {
             element = element.with_active_block_filter_editor(active_filter_editor_block_index);
@@ -26889,6 +26947,13 @@ impl TypedActionView for TerminalView {
                 *is_restored,
                 ctx,
             ),
+            ToggleAIBlockUsageDetails { ai_block_view_id } => {
+                if let Some(handle) = self.ai_block_handle_by_view_id(*ai_block_view_id) {
+                    handle.update(ctx, |block, ctx| {
+                        block.handle_action(&AIBlockAction::ToggleIsUsageFooterExpanded, ctx);
+                    });
+                }
+            }
             RewindAIConversation {
                 ai_block_view_id,
                 exchange_id,

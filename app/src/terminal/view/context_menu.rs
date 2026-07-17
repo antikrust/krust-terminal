@@ -465,6 +465,16 @@ impl TerminalView {
             );
         }
 
+        // Usage details moved here from the response-footer credits pill:
+        // same expandable panel (tokens, context window, tool calls).
+        menu_items.push(
+            MenuItemFields::new("Usage details")
+                .with_on_select_action(TerminalAction::ToggleAIBlockUsageDetails {
+                    ai_block_view_id,
+                })
+                .into_item(),
+        );
+
         let debugging_items =
             self.create_copy_debugging_menu_item(ai_exchange_id, ai_conversation_id, ctx);
         if !debugging_items.is_empty() {
