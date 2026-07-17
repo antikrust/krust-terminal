@@ -26,8 +26,7 @@ fn main() -> Result<()> {
     }
     // This fork renders local-harness tool calls as MCP tool cards; the JSON
     // tree view is their intended presentation (dogfood-only upstream).
-    state = state
-        .with_additional_features(&[warp_core::features::FeatureFlag::McpJsonTreeView]);
+    state = state.with_additional_features(&[warp_core::features::FeatureFlag::McpJsonTreeView]);
     ChannelState::set(state);
 
     warp::run()
