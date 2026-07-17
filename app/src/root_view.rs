@@ -3351,6 +3351,14 @@ impl View for RootView {
         }
 
         if let Some(traffic_light_data) = self.traffic_light_data(app) {
+            let (parent_anchor, child_anchor) = match traffic_light_data.side {
+                crate::util::traffic_lights::TrafficLightSide::Left => {
+                    (ParentAnchor::TopLeft, ChildAnchor::TopLeft)
+                }
+                crate::util::traffic_lights::TrafficLightSide::Right => {
+                    (ParentAnchor::TopRight, ChildAnchor::TopRight)
+                }
+            };
             let theme = Appearance::as_ref(app).theme();
             let fullscreen_state = app
                 .windows()
@@ -3362,8 +3370,8 @@ impl View for RootView {
                 OffsetPositioning::offset_from_parent(
                     vec2f(0., 0.),
                     ParentOffsetBounds::WindowByPosition,
-                    ParentAnchor::TopRight,
-                    ChildAnchor::TopRight,
+                    parent_anchor,
+                    child_anchor,
                 ),
             );
         }

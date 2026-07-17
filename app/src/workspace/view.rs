@@ -21075,6 +21075,10 @@ impl Workspace {
         let Some(traffic_light_data) = traffic_light_data(app, self.window_id) else {
             return;
         };
+        let (parent_anchor, child_anchor) = match traffic_light_data.side {
+            TrafficLightSide::Left => (ParentAnchor::TopLeft, ChildAnchor::TopLeft),
+            TrafficLightSide::Right => (ParentAnchor::TopRight, ChildAnchor::TopRight),
+        };
 
         let appearance = Appearance::as_ref(app);
         let fullscreen_state = app
@@ -21092,8 +21096,8 @@ impl Workspace {
             OffsetPositioning::offset_from_parent(
                 Vector2F::zero(),
                 ParentOffsetBounds::WindowByPosition,
-                ParentAnchor::TopRight,
-                ChildAnchor::TopRight,
+                parent_anchor,
+                child_anchor,
             ),
         );
     }

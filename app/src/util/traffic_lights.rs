@@ -99,7 +99,7 @@ pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<Traff
     if cfg!(target_os = "macos") {
         Some(TrafficLightData {
             width: BOB_CONTROL_SIZE * 3.,
-            side: TrafficLightSide::Right,
+            side: TrafficLightSide::Left,
             scales_with_zoom: true,
         })
     } else if cfg!(any(target_os = "linux", target_os = "freebsd"))
