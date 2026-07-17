@@ -857,7 +857,8 @@ impl BlocklistAIStatusBar {
         let secondary_element = if fallback_warping_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
-            self.render_tip(app)
+            // Fork: no rotating tips under the "Sending..." shimmer.
+            None
         };
 
         Some(render_warping_indicator(

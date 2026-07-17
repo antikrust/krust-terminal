@@ -23550,6 +23550,7 @@ impl TerminalView {
         background
             .spawn(async move {
                 let mut stream: Option<LocalHarnessStream> = None;
+                let mut completed = false;
                 while let Some(event) = event_rx.next().await {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
@@ -23622,11 +23623,18 @@ impl TerminalView {
                             // The final `result` event carries the run's token
                             // usage; fold it into the conversation so the
                             // usage footer and context meter track local runs.
-                            if let ai::agent::TurnEvent::TurnCompleted {
-                                usage: Some(usage), ..
-                            } = &event
-                            {
-                                stream.apply_turn_usage(usage, ctx);
+                            // Complete the exchange right here too: the
+                            // "Sending..." shimmer keys off the conversation
+                            // status, and the CLI process can linger for
+                            // seconds after its result (plugin/MCP shutdown),
+                            // so waiting for EOF leaves the shimmer running
+                            // past the answer.
+                            let mut turn_completed = false;
+                            if let ai::agent::TurnEvent::TurnCompleted { usage, .. } = &event {
+                                if let Some(usage) = usage {
+                                    stream.apply_turn_usage(usage, ctx);
+                                }
+                                turn_completed = true;
                             }
                             let messages = turn_event_to_messages(
                                 stream.root_task_id(),
@@ -23634,17 +23642,28 @@ impl TerminalView {
                                 &event,
                             );
                             stream.apply_messages(messages, ctx);
-                            stream
+                            if turn_completed {
+                                stream.complete(ctx);
+                            }
+                            (stream, turn_completed)
                         })
                         .await;
-                    stream = result.ok();
+                    match result {
+                        Ok((returned_stream, turn_completed)) => {
+                            completed |= turn_completed;
+                            stream = Some(returned_stream);
+                        }
+                        Err(_) => stream = None,
+                    }
                 }
                 if let Some(stream) = stream {
-                    let _ = spawner
-                        .spawn(move |_view: &mut Self, ctx: &mut ViewContext<Self>| {
-                            stream.complete(ctx)
-                        })
-                        .await;
+                    if !completed {
+                        let _ = spawner
+                            .spawn(move |_view: &mut Self, ctx: &mut ViewContext<Self>| {
+                                stream.complete(ctx)
+                            })
+                            .await;
+                    }
                 }
             })
             .detach();
