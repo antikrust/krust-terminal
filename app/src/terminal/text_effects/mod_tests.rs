@@ -141,24 +141,14 @@ fn matrix_advances_by_line_instead_of_terminal_read_batch() {
     let config = config(TextEffect::MatrixTrail);
 
     assert!(matches!(
-        timeline.sample(
-            point_on_row(4, 1),
-            CharOrStr::Char('b'),
-            config,
-            started_at,
-        ),
+        timeline.sample(point_on_row(4, 1), CharOrStr::Char('b'), config, started_at,),
         Some(TextEffectSample {
             content: VisualContent::Substitute(_),
             ..
         })
     ));
     assert_eq!(
-        timeline.sample(
-            point_on_row(5, 0),
-            CharOrStr::Char('c'),
-            config,
-            started_at,
-        ),
+        timeline.sample(point_on_row(5, 0), CharOrStr::Char('c'), config, started_at,),
         Some(TextEffectSample {
             content: VisualContent::Hidden,
             foreground: None,
@@ -168,12 +158,7 @@ fn matrix_advances_by_line_instead_of_terminal_read_batch() {
 
     let next_line = started_at + TextEffectSpeed::Normal.matrix_line_duration();
     assert!(matches!(
-        timeline.sample(
-            point_on_row(5, 1),
-            CharOrStr::Char('d'),
-            config,
-            next_line,
-        ),
+        timeline.sample(point_on_row(5, 1), CharOrStr::Char('d'), config, next_line,),
         Some(TextEffectSample {
             content: VisualContent::Substitute(_),
             ..
@@ -187,10 +172,7 @@ fn adjacent_terminal_reads_continue_one_matrix_line_sequence() {
     let second_read_at = started_at + Duration::from_millis(1);
     let mut timeline = TextEffectsTimeline::default();
     timeline.finish_batch([(point_on_row(4, 0), "a".to_string())], started_at);
-    timeline.finish_batch(
-        [(point_on_row(5, 0), "b".to_string())],
-        second_read_at,
-    );
+    timeline.finish_batch([(point_on_row(5, 0), "b".to_string())], second_read_at);
 
     assert_eq!(
         timeline.sample(

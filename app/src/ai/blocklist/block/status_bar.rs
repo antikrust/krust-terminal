@@ -27,8 +27,7 @@ use super::view_impl::common::{
     render_switch_control_to_user_button, render_warping_indicator, render_warping_indicator_base,
     AutoExecuteButtonProps, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
     WarpingIndicatorProps, WarpingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
-    SWEAR_THINKING_MESSAGE, THINKING_MESSAGE,
-    WAITING_FOR_USER_INPUT_MESSAGE,
+    SWEAR_THINKING_MESSAGE, THINKING_MESSAGE, WAITING_FOR_USER_INPUT_MESSAGE,
 };
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{

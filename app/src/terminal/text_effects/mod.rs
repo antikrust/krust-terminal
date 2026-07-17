@@ -761,8 +761,7 @@ impl TextEffectsConfig {
     }
 
     pub fn for_agent_mode(app: &AppContext) -> Option<Self> {
-        Self::from_app(app)
-            .filter(|_| *TextEffectsSettings::as_ref(app).agent_mode.value())
+        Self::from_app(app).filter(|_| *TextEffectsSettings::as_ref(app).agent_mode.value())
     }
 
     pub fn frame_interval(self) -> Duration {
@@ -910,9 +909,7 @@ impl TextEffectsTimeline {
 
         for (point, content) in &written_cells {
             let next_line_ordinal = line_ordinals.len();
-            let line_ordinal = *line_ordinals
-                .entry(point.row)
-                .or_insert(next_line_ordinal);
+            let line_ordinal = *line_ordinals.entry(point.row).or_insert(next_line_ordinal);
             line_positions.push(line_ordinal);
 
             let is_whitespace = content.chars().all(char::is_whitespace);
@@ -974,8 +971,7 @@ impl TextEffectsTimeline {
                     .is_some_and(|(previous, current)| previous.point.row == current.point.row);
                 (
                     batch.matrix_started_at,
-                    batch.matrix_line_offset + batch.line_count
-                        - usize::from(continues_last_line),
+                    batch.matrix_line_offset + batch.line_count - usize::from(continues_last_line),
                 )
             })
             .unwrap_or((started_at, 0));
@@ -1156,19 +1152,13 @@ impl AgentTextEffectsTimeline {
             .zip(&section.points)
             .map(|(character, point)| {
                 point.and_then(|point| {
-                    section.timeline.sample(
-                        point,
-                        CharOrStr::Char(character),
-                        config,
-                        now,
-                    )
+                    section
+                        .timeline
+                        .sample(point, CharOrStr::Char(character), config, now)
                 })
             })
             .collect::<Vec<_>>();
-        let needs_repaint = samples
-            .iter()
-            .flatten()
-            .any(|sample| sample.needs_repaint);
+        let needs_repaint = samples.iter().flatten().any(|sample| sample.needs_repaint);
         AgentTextEffectFrame {
             samples,
             needs_repaint,

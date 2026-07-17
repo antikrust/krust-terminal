@@ -1260,15 +1260,15 @@ pub fn render_text_sections<V: View, A: Action>(
                         );
                         column.add_child(render_text_section(
                             TextSectionProps {
-                            text: text.text(),
-                            text_color: props.text_color,
-                            is_ai_input_enabled: props.is_ai_input_enabled,
-                            section_index,
-                            line_index: 0,
-                            secret_redaction_state: props.secret_redaction_state,
-                            detected_links: props.detected_links,
-                            find_context: props.find_context,
-                            is_selecting_text: props.is_selecting_text,
+                                text: text.text(),
+                                text_color: props.text_color,
+                                is_ai_input_enabled: props.is_ai_input_enabled,
+                                section_index,
+                                line_index: 0,
+                                secret_redaction_state: props.secret_redaction_state,
+                                detected_links: props.detected_links,
+                                find_context: props.find_context,
+                                is_selecting_text: props.is_selecting_text,
                                 text_effect_frame,
                             },
                             app,
@@ -1759,7 +1759,12 @@ pub(super) fn render_rich_text_output_text_section(
     let formatted_text = props
         .text_effect_frame
         .as_ref()
-        .map(|frame| Arc::new(transformed_agent_formatted_text(&props.formatted_text, frame)))
+        .map(|frame| {
+            Arc::new(transformed_agent_formatted_text(
+                &props.formatted_text,
+                frame,
+            ))
+        })
         .unwrap_or_else(|| Arc::clone(&props.formatted_text));
 
     let inline_code_bg_color = if props.is_restored {
@@ -1875,9 +1880,10 @@ fn render_text_section_with_options(
     let theme = appearance.theme();
     let terminal_colors = terminal::color::Colors::from(theme.clone());
     let terminal_colors = terminal::color::List::from(&terminal_colors);
-    let text_effect_highlights = props.text_effect_frame.as_ref().map(|frame| {
-        agent_text_effect_highlights(&frame.samples, &terminal_colors)
-    });
+    let text_effect_highlights = props
+        .text_effect_frame
+        .as_ref()
+        .map(|frame| agent_text_effect_highlights(&frame.samples, &terminal_colors));
     let text = props
         .text_effect_frame
         .as_ref()
