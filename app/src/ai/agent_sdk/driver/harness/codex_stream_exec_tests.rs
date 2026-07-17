@@ -16,7 +16,7 @@ use super::{codex_exec_args, run_codex_stream};
 
 #[test]
 fn fresh_run_args_let_codex_mint_the_thread() {
-    let args = codex_exec_args(None, None);
+    let args = codex_exec_args(None, None, None);
     assert_eq!(
         args,
         vec![
@@ -32,7 +32,7 @@ fn fresh_run_args_let_codex_mint_the_thread() {
 #[test]
 fn resume_run_inserts_resume_subcommand_and_model_flag() {
     let id = Uuid::nil();
-    let args = codex_exec_args(Some(&id), Some("gpt-5.2-codex"));
+    let args = codex_exec_args(Some(&id), Some("gpt-5.2-codex"), Some("high"));
     assert_eq!(
         args,
         vec![
@@ -44,6 +44,8 @@ fn resume_run_inserts_resume_subcommand_and_model_flag() {
             "--dangerously-bypass-approvals-and-sandbox",
             "--model",
             "gpt-5.2-codex",
+            "-c",
+            "model_reasoning_effort=high",
             "-",
         ]
     );

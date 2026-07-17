@@ -44,7 +44,8 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
+    persisted_model_for, selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel,
+    HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -88,6 +89,16 @@ const MODEL_PICKER_TOOLTIP: &str = "Choose an agent model";
 const MODEL_LOCKED_FOR_FOLLOWUP_TOOLTIP: &str = "Follow-ups use the original run's model";
 const MODEL_REQUIRES_EDIT_ACCESS_TOOLTIP: &str = "Request edit access to change model";
 const HARNESS_DEFAULT_MODEL_LABEL: &str = "default";
+
+/// Reasoning levels offered for local harnesses; `None` means the CLI's own
+/// default. Claude maps these to an extended-thinking budget, codex to
+/// `model_reasoning_effort`.
+const HARNESS_REASONING_LEVELS: [(Option<&str>, &str); 4] = [
+    (None, "Default"),
+    (Some("low"), "Low"),
+    (Some("medium"), "Medium"),
+    (Some("high"), "High"),
+];
 
 pub fn calculate_scaled_font_size(appearance: &warp_core::ui::appearance::Appearance) -> f32 {
     if FeatureFlag::AgentView.is_enabled() {
@@ -894,35 +905,47 @@ impl ProfileModelSelector {
         let ambient_model = self.ambient_agent_view_model.as_ref()?.as_ref(app);
         let harness = ambient_model.selected_harness();
         let model_id = ambient_model.selected_harness_model_id()?;
-        let reasoning_level = ambient_model.selected_harness_reasoning_level();
         HarnessAvailabilityModel::as_ref(app)
             .models_for(harness)?
             .iter()
-            .find(|m| m.id == model_id && m.reasoning_level.as_deref() == reasoning_level)
+            .find(|m| m.id == model_id)
+    }
+
+    /// "· High" style suffix for the picker chip when a reasoning level is
+    /// selected alongside the model.
+    fn reasoning_suffix(reasoning_level: Option<&str>) -> String {
+        reasoning_level
+            .map(|level| {
+                let mut chars = level.chars();
+                let capitalized: String = chars
+                    .next()
+                    .map(|first| first.to_uppercase().chain(chars).collect())
+                    .unwrap_or_default();
+                format!(" · {capitalized}")
+            })
+            .unwrap_or_default()
     }
 
     fn harness_model_display_name(&self, app: &AppContext) -> String {
-        if let Some(info) = self.active_harness_model_info(app) {
-            return info.display_name.clone();
+        if let Some(ambient_model) = self.ambient_agent_view_model.as_ref() {
+            let suffix = Self::reasoning_suffix(
+                ambient_model.as_ref(app).selected_harness_reasoning_level(),
+            );
+            return match self.active_harness_model_info(app) {
+                Some(info) => format!("{}{suffix}", info.display_name),
+                None => format!("{HARNESS_DEFAULT_MODEL_LABEL}{suffix}"),
+            };
         }
-        match self.ambient_agent_view_model.as_ref() {
-            Some(_) => HARNESS_DEFAULT_MODEL_LABEL.to_string(),
-            // No ambient model (plain terminal pane): label with the
-            // persisted local selection — the model's display name when one
-            // is chosen, else the harness's own name.
-            None => {
-                let (harness, model_id, reasoning) = selected_local_harness(app);
-                let availability = HarnessAvailabilityModel::as_ref(app);
-                model_id
-                    .and_then(|id| {
-                        availability.models_for(harness)?.iter().find(|m| {
-                            m.id == id && m.reasoning_level.as_deref() == reasoning.as_deref()
-                        })
-                    })
-                    .map(|info| info.display_name.clone())
-                    .unwrap_or_else(|| availability.display_name_for(harness).to_string())
-            }
-        }
+        // No ambient model (plain terminal pane): label with the
+        // persisted local selection — the model's display name when one
+        // is chosen, else the harness's own name.
+        let (harness, model_id, reasoning) = selected_local_harness(app);
+        let availability = HarnessAvailabilityModel::as_ref(app);
+        let base = model_id
+            .and_then(|id| availability.models_for(harness)?.iter().find(|m| m.id == id))
+            .map(|info| info.display_name.clone())
+            .unwrap_or_else(|| availability.display_name_for(harness).to_string());
+        format!("{base}{}", Self::reasoning_suffix(reasoning.as_deref()))
     }
 
     fn refresh_harness_model_menu(&mut self, ctx: &mut ViewContext<Self>) {
@@ -980,12 +1003,22 @@ impl ProfileModelSelector {
                 );
             }
 
+            // The harness's active (model, reasoning) pair: live selection
+            // for the harness the picker points at, persisted selection
+            // otherwise — so switching model or harness never silently
+            // drops the reasoning level.
+            let (current_model_id, current_reasoning) = if harness == selected_harness {
+                (selected_model_id.clone(), selected_reasoning.clone())
+            } else {
+                persisted_model_for(harness, ctx)
+            };
+
             let default_selected = harness == selected_harness && selected_model_id.is_none();
             let mut default_fields = MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL)
                 .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                     harness,
                     model_id: String::new(),
-                    reasoning_level: None,
+                    reasoning_level: current_reasoning.clone(),
                 });
             if default_selected {
                 selected_index = items.len();
@@ -997,16 +1030,39 @@ impl ProfileModelSelector {
 
             for model in models {
                 let is_selected = harness == selected_harness
-                    && selected_model_id.as_deref() == Some(&model.id)
-                    && selected_reasoning.as_deref() == model.reasoning_level.as_deref();
+                    && selected_model_id.as_deref() == Some(&model.id);
                 let mut fields = MenuItemFields::new(model.display_name.clone())
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
                         model_id: model.id.clone(),
-                        reasoning_level: model.reasoning_level.clone(),
+                        reasoning_level: current_reasoning.clone(),
                     });
                 if is_selected {
                     selected_index = items.len();
+                    fields = fields.with_icon(Icon::Check);
+                } else {
+                    fields = fields.with_indent();
+                }
+                items.push(MenuItem::Item(fields));
+            }
+
+            // Reasoning rows compose with whichever model is active for the
+            // harness rather than selecting a model themselves.
+            items.push(
+                MenuItemFields::new("Reasoning")
+                    .with_disabled(true)
+                    .into_item(),
+            );
+            for (level, label) in HARNESS_REASONING_LEVELS {
+                let is_active =
+                    harness == selected_harness && selected_reasoning.as_deref() == level;
+                let mut fields = MenuItemFields::new(label)
+                    .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
+                        harness,
+                        model_id: current_model_id.clone().unwrap_or_default(),
+                        reasoning_level: level.map(str::to_owned),
+                    });
+                if is_active {
                     fields = fields.with_icon(Icon::Check);
                 } else {
                     fields = fields.with_indent();
@@ -2224,11 +2280,7 @@ impl TypedActionView for ProfileModelSelector {
                         model.set_harness(harness, ctx);
                         model.set_harness_model_selection(
                             (!is_default).then(|| model_id.clone()),
-                            if is_default {
-                                None
-                            } else {
-                                reasoning_level.clone()
-                            },
+                            reasoning_level.clone(),
                             ctx,
                         );
                     });

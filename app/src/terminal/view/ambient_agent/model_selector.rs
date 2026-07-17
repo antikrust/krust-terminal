@@ -405,22 +405,31 @@ impl ModelSelector {
         });
 
         let active_label = match self.active_harness(ctx) {
-            Some(harness) if !matches!(harness, Harness::Oz | Harness::Unknown) => self
-                .resolved_harness_selection(harness, ctx)
-                .and_then(|selection| {
-                    HarnessAvailabilityModel::as_ref(ctx)
-                        .models_for(harness)
-                        .and_then(|models| {
-                            models
-                                .iter()
-                                .find(|m| {
-                                    m.id == selection.model_id
-                                        && m.reasoning_level == selection.reasoning_level
-                                })
-                                .map(|info| info.display_name.clone())
-                        })
-                })
-                .unwrap_or_else(|| "default".to_string()),
+            Some(harness) if !matches!(harness, Harness::Oz | Harness::Unknown) => {
+                let base = self
+                    .resolved_harness_selection(harness, ctx)
+                    .and_then(|selection| {
+                        HarnessAvailabilityModel::as_ref(ctx)
+                            .models_for(harness)
+                            .and_then(|models| {
+                                models
+                                    .iter()
+                                    .find(|m| m.id == selection.model_id)
+                                    .map(|info| info.display_name.clone())
+                            })
+                    })
+                    .unwrap_or_else(|| "default".to_string());
+                let reasoning = self.ambient_agent_model.as_ref().and_then(|model| {
+                    model
+                        .as_ref(ctx)
+                        .selected_harness_reasoning_level()
+                        .map(str::to_owned)
+                });
+                match reasoning.as_deref() {
+                    Some(level) => format!("{base} · {level}"),
+                    None => base,
+                }
+            }
             _ => LLMPreferences::as_ref(ctx)
                 .get_active_base_model(ctx, Some(self.terminal_view_id))
                 .display_name
@@ -541,28 +550,37 @@ impl ModelSelector {
         hover_background: Fill,
         ctx: &AppContext,
     ) -> (Vec<MenuItem<ModelSelectorAction>>, ModelSelectorAction) {
-        let active_action = match self.resolved_harness_selection(harness, ctx) {
-            Some(HarnessSelection {
-                model_id,
-                reasoning_level,
-                ..
-            }) => ModelSelectorAction::SelectHarnessModel {
-                harness,
-                model_id,
-                reasoning_level,
-            },
-            None => ModelSelectorAction::SelectHarnessModel {
-                harness,
-                model_id: String::new(),
-                reasoning_level: None,
-            },
+        let (current_model_id, current_reasoning) =
+            match self.resolved_harness_selection(harness, ctx) {
+                Some(HarnessSelection {
+                    model_id,
+                    reasoning_level,
+                    ..
+                }) => (model_id, reasoning_level),
+                // Default model; a reasoning level can still be selected.
+                None => (
+                    String::new(),
+                    self.ambient_agent_model.as_ref().and_then(|model| {
+                        model
+                            .as_ref(ctx)
+                            .selected_harness_reasoning_level()
+                            .map(str::to_owned)
+                    }),
+                ),
+            };
+        let active_action = ModelSelectorAction::SelectHarnessModel {
+            harness,
+            model_id: current_model_id.clone(),
+            reasoning_level: current_reasoning.clone(),
         };
         let icon = harness_icon_for(harness);
 
+        // Model rows carry the current reasoning level and reasoning rows
+        // carry the current model, so picking either never resets the other.
         let default_action = ModelSelectorAction::SelectHarnessModel {
             harness,
             model_id: String::new(),
-            reasoning_level: None,
+            reasoning_level: current_reasoning.clone(),
         };
         let mut items: Vec<MenuItem<ModelSelectorAction>> = Vec::new();
         if query.is_empty() || "default".contains(query) {
@@ -597,11 +615,35 @@ impl ModelSelector {
                             .with_on_select_action(ModelSelectorAction::SelectHarnessModel {
                                 harness,
                                 model_id: model.id.clone(),
-                                reasoning_level: model.reasoning_level.clone(),
+                                reasoning_level: current_reasoning.clone(),
                             }),
                     ))
                 }),
         );
+
+        for (level, label) in [
+            (None, "default reasoning"),
+            (Some("low"), "low reasoning"),
+            (Some("medium"), "medium reasoning"),
+            (Some("high"), "high reasoning"),
+        ] {
+            if !query.is_empty() && !label.contains(query) {
+                continue;
+            }
+            items.push(MenuItem::Item(
+                MenuItemFields::new(label)
+                    .with_icon(icon)
+                    .with_icon_size_override(ITEM_ICON_SIZE)
+                    .with_font_size_override(ITEM_FONT_SIZE)
+                    .with_padding_override(ITEM_VERTICAL_PADDING, MENU_HORIZONTAL_PADDING)
+                    .with_override_hover_background_color(hover_background)
+                    .with_on_select_action(ModelSelectorAction::SelectHarnessModel {
+                        harness,
+                        model_id: current_model_id.clone(),
+                        reasoning_level: level.map(str::to_owned),
+                    }),
+            ));
+        }
 
         (items, active_action)
     }
@@ -676,11 +718,7 @@ impl TypedActionView for ModelSelector {
                         ambient_agent_model.update(ctx, |model, ctx| {
                             model.set_harness_model_selection(
                                 (!is_default).then(|| model_id.clone()),
-                                if is_default {
-                                    None
-                                } else {
-                                    reasoning_level.clone()
-                                },
+                                reasoning_level.clone(),
                                 ctx,
                             );
                         });

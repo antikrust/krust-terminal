@@ -23391,7 +23391,7 @@ impl TerminalView {
         prompt: String,
         requested_harness: Harness,
         model_id: Option<String>,
-        _reasoning_level: Option<String>,
+        reasoning_level: Option<String>,
         ctx: &mut ViewContext<Self>,
     ) {
         // Scoped here (not module-level) to avoid clashing with the
@@ -23452,17 +23452,17 @@ impl TerminalView {
             .map(|(harness, _, _)| harness)
             .unwrap_or(requested_kind);
         // A continued thread keeps its own engine. If the picker currently
-        // points at a different harness, its model id must not leak into
-        // this run (codex 400s on claude ids and vice versa) — use the
-        // thread harness's own persisted model instead.
-        let model_id = if harness == requested_kind {
-            model_id
+        // points at a different harness, its model id and reasoning must not
+        // leak into this run (codex 400s on claude ids and vice versa) — use
+        // the thread harness's own persisted selection instead.
+        let (model_id, reasoning_level) = if harness == requested_kind {
+            (model_id, reasoning_level)
         } else {
             let thread_harness = match harness {
                 LocalHarnessKind::Claude => Harness::Claude,
                 LocalHarnessKind::Codex => Harness::Codex,
             };
-            crate::ai::harness_availability::persisted_model_for(thread_harness, ctx).0
+            crate::ai::harness_availability::persisted_model_for(thread_harness, ctx)
         };
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
@@ -23500,6 +23500,17 @@ impl TerminalView {
                     None,
                     None,
                 ));
+                // The claude CLI has no reasoning-effort flag; it reads the
+                // extended-thinking budget from the environment. Tiers mirror
+                // its think / megathink / ultrathink prompt keywords.
+                if let Some(budget) = match reasoning_level.as_deref() {
+                    Some("low") => Some("4000"),
+                    Some("medium") => Some("10000"),
+                    Some("high") => Some("31999"),
+                    _ => None,
+                } {
+                    command.env("MAX_THINKING_TOKENS", budget);
+                }
                 command
             }
             LocalHarnessKind::Codex => {
@@ -23509,6 +23520,7 @@ impl TerminalView {
                 command.args(codex_exec_args(
                     resuming.then_some(&session_id),
                     model_id.as_deref(),
+                    reasoning_level.as_deref(),
                 ));
                 command
             }

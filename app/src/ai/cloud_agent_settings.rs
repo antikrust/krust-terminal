@@ -119,7 +119,7 @@ impl CloudAgentSettings {
         ctx: &mut warpui::ModelContext<Self>,
     ) {
         let mut map = self.last_selected_harness_model.value().clone();
-        if model_id.is_empty() {
+        if model_id.is_empty() && reasoning_level.is_none() {
             map.remove(harness.config_name());
         } else {
             map.insert(

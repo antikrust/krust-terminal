@@ -23,7 +23,11 @@ use super::codex_stream::parse_codex_jsonl_line;
 /// `--dangerously-bypass-approvals-and-sandbox` is deliberate parity with the
 /// claude runner's `--dangerously-skip-permissions`: this fork treats the
 /// local agent CLI as fully trusted in the user's own terminal.
-pub fn codex_exec_args(resume_thread_id: Option<&Uuid>, model: Option<&str>) -> Vec<String> {
+pub fn codex_exec_args(
+    resume_thread_id: Option<&Uuid>,
+    model: Option<&str>,
+    reasoning_effort: Option<&str>,
+) -> Vec<String> {
     let mut args = vec!["exec".to_string()];
     if let Some(thread_id) = resume_thread_id {
         args.push("resume".to_string());
@@ -37,6 +41,10 @@ pub fn codex_exec_args(resume_thread_id: Option<&Uuid>, model: Option<&str>) -> 
     if let Some(model) = model {
         args.push("--model".to_string());
         args.push(model.to_string());
+    }
+    if let Some(effort) = reasoning_effort {
+        args.push("-c".to_string());
+        args.push(format!("model_reasoning_effort={effort}"));
     }
     args.push("-".to_string());
     args

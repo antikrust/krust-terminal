@@ -60,9 +60,10 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
             display_name: harness_display::display_name(Harness::Claude).to_string(),
             enabled: local_cli_on_path("claude"),
             available_models: vec![
-                claude_model("sonnet", "Claude Sonnet (latest)"),
-                claude_model("opus", "Claude Opus (latest)"),
-                claude_model("haiku", "Claude Haiku (latest)"),
+                claude_model("claude-fable-5", "Fable 5"),
+                claude_model("claude-sonnet-5", "Sonnet 5"),
+                claude_model("claude-opus-4-8", "Opus 4.8"),
+                claude_model("claude-haiku-4-5-20251001", "Haiku 4.5"),
             ],
         },
         HarnessAvailability {
@@ -236,7 +237,12 @@ pub fn persisted_model_for(harness: Harness, ctx: &AppContext) -> (Option<String
         .get(harness.config_name())
         .cloned();
     (
-        selection.as_ref().map(|s| s.model_id.clone()),
+        // Reasoning-only selections store an empty model id ("default
+        // model, explicit reasoning"); surface that as no model override.
+        selection
+            .as_ref()
+            .map(|s| s.model_id.clone())
+            .filter(|id| !id.is_empty()),
         selection.and_then(|s| s.reasoning_level),
     )
 }
