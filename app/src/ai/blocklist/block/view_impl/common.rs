@@ -4,6 +4,7 @@
 // based on the request type and status.
 
 use std::borrow::Cow;
+use std::cell::RefCell;
 #[cfg(feature = "local_fs")]
 use std::collections::HashMap;
 use std::iter;
@@ -13,7 +14,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use itertools::Itertools;
-use markdown_parser::{FormattedText, FormattedTextInline, TableAlignment};
+use markdown_parser::{FormattedText, FormattedTextInline, FormattedTextLine, TableAlignment};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use warp_core::channel::ChannelState;
@@ -88,7 +89,11 @@ use crate::settings::{FontSettings, InputSettings};
 use crate::settings_view::SettingsSection;
 use crate::terminal::find::TerminalFindModel;
 use crate::terminal::grid_renderer::{FOCUSED_MATCH_COLOR, MATCH_COLOR};
+use crate::terminal::model::ansi::Color;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
+use crate::terminal::text_effects::{
+    AgentTextEffectFrame, AgentTextEffectsTimeline, TextEffectsConfig, VisualContent,
+};
 use crate::terminal::view::TerminalAction;
 use crate::terminal::{self, ShellLaunchData, TerminalModel};
 use crate::ui_components::avatar::{Avatar, AvatarContent};
@@ -744,6 +749,7 @@ fn render_image_source_link(props: ImageSourceLinkProps<'_>, app: &AppContext) -
             detected_links: props.detected_links,
             find_context: None,
             is_selecting_text: props.is_selecting_text,
+            text_effect_frame: None,
         },
         props.soft_wrap,
         (!props.soft_wrap).then_some(ClipConfig::end()),
@@ -1119,6 +1125,7 @@ pub struct TextSectionsProps<'a, V, A: 'static> {
     pub secret_redaction_state: &'a SecretRedactionState,
     pub is_selecting_text: bool,
     pub item_spacing: f32,
+    pub agent_text_effects: Option<&'a RefCell<AgentTextEffectsTimeline>>,
     #[cfg(feature = "local_fs")]
     pub resolved_code_block_paths: Option<&'a HashMap<PathBuf, Option<PathBuf>>>,
     #[cfg(feature = "local_fs")]
@@ -1207,10 +1214,19 @@ pub fn render_text_sections<V: View, A: Action>(
 
                 match &text.formatted_lines {
                     Some(formatted_text) => {
+                        let formatted_text = formatted_text.formatted_text_arc();
+                        let text_effect_frame = agent_text_effect_frame(
+                            props.model,
+                            props.agent_text_effects,
+                            section_index,
+                            &formatted_text.raw_text(),
+                            props.is_selecting_text,
+                            app,
+                        );
                         column.add_child(render_rich_text_output_text_section(
                             RichTextSectionProps {
                                 is_restored: props.model.is_restored(),
-                                formatted_text: formatted_text.formatted_text_arc(),
+                                formatted_text,
                                 text_color: props.text_color,
                                 is_ai_input_enabled: props.is_ai_input_enabled,
                                 section_index,
@@ -1219,12 +1235,22 @@ pub fn render_text_sections<V: View, A: Action>(
                                 detected_links: props.detected_links,
                                 is_selecting_text: props.is_selecting_text,
                                 selectable: props.selectable,
+                                text_effect_frame,
                             },
                             app,
                         ));
                     }
-                    _ => column.add_child(render_text_section(
-                        TextSectionProps {
+                    _ => {
+                        let text_effect_frame = agent_text_effect_frame(
+                            props.model,
+                            props.agent_text_effects,
+                            section_index,
+                            text.text(),
+                            props.is_selecting_text,
+                            app,
+                        );
+                        column.add_child(render_text_section(
+                            TextSectionProps {
                             text: text.text(),
                             text_color: props.text_color,
                             is_ai_input_enabled: props.is_ai_input_enabled,
@@ -1234,9 +1260,11 @@ pub fn render_text_sections<V: View, A: Action>(
                             detected_links: props.detected_links,
                             find_context: props.find_context,
                             is_selecting_text: props.is_selecting_text,
-                        },
-                        app,
-                    )),
+                                text_effect_frame,
+                            },
+                            app,
+                        ));
+                    }
                 }
             }
             AIAgentTextSection::Code {
@@ -1328,6 +1356,26 @@ pub fn render_text_sections<V: View, A: Action>(
         indexed_section_offset += 1;
     }
     column.finish()
+}
+
+fn agent_text_effect_frame<V: View>(
+    model: &dyn AIBlockModel<View = V>,
+    timeline: Option<&RefCell<AgentTextEffectsTimeline>>,
+    section_index: usize,
+    text: &str,
+    is_selecting_text: bool,
+    app: &AppContext,
+) -> Option<AgentTextEffectFrame> {
+    if model.is_restored() || is_selecting_text {
+        return None;
+    }
+    let config = TextEffectsConfig::for_agent_mode(app)?;
+    let timeline = timeline?;
+    let mut timeline = timeline.borrow_mut();
+    if !model.status(app).is_streaming() && !timeline.contains_section(section_index) {
+        return None;
+    }
+    Some(timeline.frame(section_index, text, config, instant::Instant::now()))
 }
 
 fn text_sections_with_indices(
@@ -1534,6 +1582,146 @@ fn lightbox_trigger_for_section(
     })
 }
 
+fn transformed_agent_text(text: &str, frame: &AgentTextEffectFrame) -> String {
+    text.chars()
+        .enumerate()
+        .map(|(index, original)| {
+            frame
+                .samples
+                .get(index)
+                .and_then(Option::as_ref)
+                .and_then(|sample| match sample.content {
+                    VisualContent::Substitute(character) => Some(character),
+                    VisualContent::Original | VisualContent::Hidden => None,
+                })
+                .unwrap_or(original)
+        })
+        .collect()
+}
+
+fn transform_formatted_inline(
+    inline: &mut FormattedTextInline,
+    samples: &[Option<crate::terminal::text_effects::TextEffectSample>],
+) {
+    let mut sample_offset = 0;
+    for fragment in inline {
+        let character_count = fragment.text.chars().count();
+        let sample_end = (sample_offset + character_count).min(samples.len());
+        let frame = AgentTextEffectFrame {
+            samples: samples[sample_offset..sample_end].to_vec(),
+            needs_repaint: false,
+        };
+        fragment.text = transformed_agent_text(&fragment.text, &frame);
+        sample_offset = sample_end;
+    }
+}
+
+fn transformed_agent_formatted_text(
+    formatted_text: &FormattedText,
+    frame: &AgentTextEffectFrame,
+) -> FormattedText {
+    let mut transformed = formatted_text.clone();
+    let mut sample_offset = 0;
+    for line in &mut transformed.lines {
+        let line_character_count = line.raw_text().chars().count();
+        let visible_character_count = line_character_count.saturating_sub(1);
+        let sample_end = (sample_offset + visible_character_count).min(frame.samples.len());
+        let line_samples = &frame.samples[sample_offset..sample_end];
+        match line {
+            FormattedTextLine::Heading(header) => {
+                transform_formatted_inline(&mut header.text, line_samples)
+            }
+            FormattedTextLine::Line(inline) => transform_formatted_inline(inline, line_samples),
+            FormattedTextLine::OrderedList(list) => {
+                transform_formatted_inline(&mut list.indented_text.text, line_samples)
+            }
+            FormattedTextLine::UnorderedList(list) => {
+                transform_formatted_inline(&mut list.text, line_samples)
+            }
+            FormattedTextLine::TaskList(list) => {
+                transform_formatted_inline(&mut list.text, line_samples)
+            }
+            FormattedTextLine::CodeBlock(_)
+            | FormattedTextLine::LineBreak
+            | FormattedTextLine::HorizontalRule
+            | FormattedTextLine::Embedded(_)
+            | FormattedTextLine::Image(_)
+            | FormattedTextLine::Table(_) => {}
+        }
+        sample_offset = (sample_offset + line_character_count).min(frame.samples.len());
+    }
+    transformed
+}
+
+fn agent_text_effect_color(color: Color, colors: &terminal::color::List) -> ColorU {
+    match color {
+        Color::Spec(color) => color,
+        Color::Named(color) => colors[color.into_color_index()],
+        Color::Indexed(index) => colors[index],
+    }
+}
+
+fn agent_text_effect_highlights(
+    samples: &[Option<crate::terminal::text_effects::TextEffectSample>],
+    colors: &terminal::color::List,
+) -> Vec<HighlightedRange> {
+    let mut highlights = Vec::new();
+    let mut current_color = None;
+    let mut current_indices = Vec::new();
+
+    let flush = |highlights: &mut Vec<HighlightedRange>,
+                 color: Option<ColorU>,
+                 indices: &mut Vec<usize>| {
+        if let Some(color) = color {
+            if !indices.is_empty() {
+                highlights.push(HighlightedRange {
+                    highlight: Highlight::new().with_foreground_color(color),
+                    highlight_indices: std::mem::take(indices),
+                });
+            }
+        }
+    };
+
+    for (index, sample) in samples.iter().enumerate() {
+        let color = sample.as_ref().and_then(|sample| match sample.content {
+            VisualContent::Hidden => Some(ColorU::transparent_black()),
+            VisualContent::Original | VisualContent::Substitute(_) => sample
+                .foreground
+                .map(|color| agent_text_effect_color(color, colors)),
+        });
+        if color != current_color {
+            flush(&mut highlights, current_color, &mut current_indices);
+            current_color = color;
+        }
+        if color.is_some() {
+            current_indices.push(index);
+        }
+    }
+    flush(&mut highlights, current_color, &mut current_indices);
+    highlights
+}
+
+fn agent_formatted_text_effect_highlights(
+    formatted_text: &FormattedText,
+    frame: &AgentTextEffectFrame,
+    colors: &terminal::color::List,
+) -> Vec<Vec<HighlightedRange>> {
+    let mut sample_offset = 0;
+    formatted_text
+        .lines
+        .iter()
+        .map(|line| {
+            let line_character_count = line.raw_text().chars().count();
+            let visible_character_count = line_character_count.saturating_sub(1);
+            let sample_end = (sample_offset + visible_character_count).min(frame.samples.len());
+            let highlights =
+                agent_text_effect_highlights(&frame.samples[sample_offset..sample_end], colors);
+            sample_offset = (sample_offset + line_character_count).min(frame.samples.len());
+            highlights
+        })
+        .collect()
+}
+
 pub(super) struct RichTextSectionProps<'a> {
     is_restored: bool,
     formatted_text: Arc<FormattedText>,
@@ -1545,6 +1733,7 @@ pub(super) struct RichTextSectionProps<'a> {
     detected_links: Option<&'a DetectedLinksState>,
     is_selecting_text: bool,
     selectable: bool,
+    text_effect_frame: Option<AgentTextEffectFrame>,
 }
 
 pub(super) fn render_rich_text_output_text_section(
@@ -1553,6 +1742,16 @@ pub(super) fn render_rich_text_output_text_section(
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
+    let terminal_colors = terminal::color::Colors::from(theme.clone());
+    let terminal_colors = terminal::color::List::from(&terminal_colors);
+    let text_effect_highlights = props.text_effect_frame.as_ref().map(|frame| {
+        agent_formatted_text_effect_highlights(&props.formatted_text, frame, &terminal_colors)
+    });
+    let formatted_text = props
+        .text_effect_frame
+        .as_ref()
+        .map(|frame| Arc::new(transformed_agent_formatted_text(&props.formatted_text, frame)))
+        .unwrap_or_else(|| Arc::clone(&props.formatted_text));
 
     let inline_code_bg_color = if props.is_restored {
         appearance
@@ -1567,7 +1766,7 @@ pub(super) fn render_rich_text_output_text_section(
 
     let line_count = props.formatted_text.lines.len();
     let mut rich_text_element = FormattedTextElement::new_arc(
-        props.formatted_text,
+        formatted_text,
         appearance.monospace_font_size(),
         appearance.ai_font_family(),
         appearance.monospace_font_family(),
@@ -1631,6 +1830,12 @@ pub(super) fn render_rich_text_output_text_section(
         app,
     );
 
+    if let Some(text_effect_highlights) = text_effect_highlights {
+        for (line_index, highlights) in text_effect_highlights.into_iter().enumerate() {
+            rich_text_element.add_styles(line_index, highlights);
+        }
+    }
+
     rich_text_element.finish()
 }
 
@@ -1644,6 +1849,7 @@ struct TextSectionProps<'a> {
     detected_links: Option<&'a DetectedLinksState>,
     find_context: Option<FindContext<'a>>,
     is_selecting_text: bool,
+    text_effect_frame: Option<AgentTextEffectFrame>,
 }
 
 fn render_text_section(props: TextSectionProps, app: &AppContext) -> Box<dyn Element> {
@@ -1658,8 +1864,18 @@ fn render_text_section_with_options(
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
+    let terminal_colors = terminal::color::Colors::from(theme.clone());
+    let terminal_colors = terminal::color::List::from(&terminal_colors);
+    let text_effect_highlights = props.text_effect_frame.as_ref().map(|frame| {
+        agent_text_effect_highlights(&frame.samples, &terminal_colors)
+    });
+    let text = props
+        .text_effect_frame
+        .as_ref()
+        .map(|frame| transformed_agent_text(props.text, frame))
+        .unwrap_or_else(|| props.text.to_owned());
     let mut text_element = Text::new(
-        props.text.to_owned(),
+        text,
         appearance.ai_font_family(),
         appearance.monospace_font_size(),
     )
@@ -1718,6 +1934,14 @@ fn render_text_section_with_options(
             None,
             app,
         );
+    }
+    if let Some(text_effect_highlights) = text_effect_highlights {
+        for highlighted_range in text_effect_highlights {
+            text_element = text_element.with_single_highlight(
+                highlighted_range.highlight,
+                highlighted_range.highlight_indices,
+            );
+        }
     }
     text_element.finish()
 }

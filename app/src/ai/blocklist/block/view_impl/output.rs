@@ -354,6 +354,9 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                         .selection_handle
                                         .is_selecting(),
                                     item_spacing: CONTENT_ITEM_VERTICAL_MARGIN,
+                                    agent_text_effects: Some(
+                                        &props.state_handles.agent_text_effects,
+                                    ),
                                     #[cfg(feature = "local_fs")]
                                     resolved_code_block_paths: Some(
                                         props.resolved_code_block_paths,
@@ -3711,6 +3714,7 @@ fn render_collapsible_text_block_section(
             secret_redaction_state: props.secret_redaction_state,
             is_selecting_text: props.state_handles.selection_handle.is_selecting(),
             item_spacing: CONTENT_ITEM_VERTICAL_MARGIN,
+            agent_text_effects: None,
             #[cfg(feature = "local_fs")]
             resolved_code_block_paths: Some(props.resolved_code_block_paths),
             #[cfg(feature = "local_fs")]

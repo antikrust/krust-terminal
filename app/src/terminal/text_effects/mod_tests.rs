@@ -9,6 +9,10 @@ fn point(col: usize) -> AbsolutePoint {
     AbsolutePoint { row: 4, col }
 }
 
+fn point_on_row(row: u64, col: usize) -> AbsolutePoint {
+    AbsolutePoint { row, col }
+}
+
 fn config(effect: TextEffect) -> TextEffectsConfig {
     TextEffectsConfig {
         effect,
@@ -119,6 +123,138 @@ fn matrix_frames_are_deterministic() {
             needs_repaint: true,
         })
     ));
+}
+
+#[test]
+fn matrix_advances_by_line_instead_of_terminal_read_batch() {
+    let started_at = Instant::now();
+    let mut timeline = TextEffectsTimeline::default();
+    timeline.finish_batch(
+        [
+            (point_on_row(4, 0), "a".to_string()),
+            (point_on_row(4, 1), "b".to_string()),
+            (point_on_row(5, 0), "c".to_string()),
+            (point_on_row(5, 1), "d".to_string()),
+        ],
+        started_at,
+    );
+    let config = config(TextEffect::MatrixTrail);
+
+    assert!(matches!(
+        timeline.sample(
+            point_on_row(4, 1),
+            CharOrStr::Char('b'),
+            config,
+            started_at,
+        ),
+        Some(TextEffectSample {
+            content: VisualContent::Substitute(_),
+            ..
+        })
+    ));
+    assert_eq!(
+        timeline.sample(
+            point_on_row(5, 0),
+            CharOrStr::Char('c'),
+            config,
+            started_at,
+        ),
+        Some(TextEffectSample {
+            content: VisualContent::Hidden,
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
+
+    let next_line = started_at + TextEffectSpeed::Normal.matrix_line_duration();
+    assert!(matches!(
+        timeline.sample(
+            point_on_row(5, 1),
+            CharOrStr::Char('d'),
+            config,
+            next_line,
+        ),
+        Some(TextEffectSample {
+            content: VisualContent::Substitute(_),
+            ..
+        })
+    ));
+}
+
+#[test]
+fn adjacent_terminal_reads_continue_one_matrix_line_sequence() {
+    let started_at = Instant::now();
+    let second_read_at = started_at + Duration::from_millis(1);
+    let mut timeline = TextEffectsTimeline::default();
+    timeline.finish_batch([(point_on_row(4, 0), "a".to_string())], started_at);
+    timeline.finish_batch(
+        [(point_on_row(5, 0), "b".to_string())],
+        second_read_at,
+    );
+
+    assert_eq!(
+        timeline.sample(
+            point_on_row(5, 0),
+            CharOrStr::Char('b'),
+            config(TextEffect::MatrixTrail),
+            second_read_at,
+        ),
+        Some(TextEffectSample {
+            content: VisualContent::Hidden,
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
+}
+
+#[test]
+fn agent_text_effects_animate_only_the_newly_streamed_suffix() {
+    let started_at = Instant::now();
+    let step = TextEffectSpeed::Normal.step_duration();
+    let mut timeline = AgentTextEffectsTimeline::default();
+    let config = config(TextEffect::Typewriter);
+
+    let initial = timeline.frame(0, "a", config, started_at);
+    assert_eq!(
+        initial.samples,
+        vec![Some(TextEffectSample {
+            content: VisualContent::Hidden,
+            foreground: None,
+            needs_repaint: true,
+        })]
+    );
+
+    let appended_at = started_at + step * 2;
+    let appended = timeline.frame(0, "ab", config, appended_at);
+    assert_eq!(appended.samples[0], Some(TextEffectSample::COMPLETE));
+    assert_eq!(
+        appended.samples[1],
+        Some(TextEffectSample {
+            content: VisualContent::Hidden,
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
+}
+
+#[test]
+fn streamed_agent_matrix_chunks_share_a_sequence() {
+    let started_at = Instant::now();
+    let second_chunk_at = started_at + Duration::from_millis(1);
+    let mut timeline = AgentTextEffectsTimeline::default();
+    let config = config(TextEffect::MatrixTrail);
+
+    timeline.frame(0, "a", config, started_at);
+    let frame = timeline.frame(0, "ab", config, second_chunk_at);
+
+    assert_eq!(
+        frame.samples[1],
+        Some(TextEffectSample {
+            content: VisualContent::Hidden,
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
 }
 
 #[test]

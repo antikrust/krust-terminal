@@ -13,7 +13,7 @@ pub mod status_bar;
 pub mod toggleable_items;
 pub mod view_impl;
 
-use std::cell::OnceCell;
+use std::cell::{OnceCell, RefCell};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::ops::Range;
@@ -183,6 +183,9 @@ use crate::terminal::model::BlockId;
 use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
 use crate::terminal::safe_mode_settings::{
     get_secret_obfuscation_mode, SafeModeSettings, SafeModeSettingsChangedEvent,
+};
+use crate::terminal::text_effects::{
+    AgentTextEffectsTimeline, TextEffectsConfig, TextEffectsSettings,
 };
 use crate::terminal::view::ambient_agent::{AmbientAgentViewModel, AmbientAgentViewModelEvent};
 use crate::terminal::view::{
@@ -423,6 +426,7 @@ pub(super) struct TableSectionHandles {
 pub(super) struct AIBlockStateHandles {
     normal_response_code_snippet_buttons: Vec<CodeSnippetButtonHandles>,
     table_section_handles: Vec<TableSectionHandles>,
+    agent_text_effects: RefCell<AgentTextEffectsTimeline>,
 
     /// Per-image `MouseStateHandle` for hover tooltips on rendered markdown
     /// images. These must persist across frames — `tool_tip_on_element`
@@ -968,6 +972,9 @@ pub struct AIBlock {
     /// non-[`View`] inline actions.
     auto_expand_requested_command_timer_handle: Option<SpawnedFutureHandle>,
 
+    /// Rebuilds streamed Agent Mode response text while its txtFX frame advances.
+    agent_text_effects_timer_handle: Option<SpawnedFutureHandle>,
+
     time_to_first_token: OnceCell<Duration>,
     time_to_last_token: Option<Duration>,
 
@@ -1137,6 +1144,19 @@ impl AIBlock {
 
         let font_settings_handle = FontSettings::handle(ctx);
         ctx.subscribe_to_model(&font_settings_handle, |_, _, _, ctx| {
+            ctx.notify();
+        });
+
+        let text_effects_settings_handle = TextEffectsSettings::handle(ctx);
+        ctx.subscribe_to_model(&text_effects_settings_handle, |me, _, _, ctx| {
+            if TextEffectsConfig::for_agent_mode(ctx).is_none() {
+                me.state_handles.agent_text_effects.borrow_mut().clear();
+                if let Some(handle) = me.agent_text_effects_timer_handle.take() {
+                    handle.abort();
+                }
+            } else {
+                me.schedule_agent_text_effects_repaint(ctx);
+            }
             ctx.notify();
         });
 
@@ -1472,6 +1492,7 @@ impl AIBlock {
             shell_launch_data,
             requested_action_ids: Default::default(),
             auto_expand_requested_command_timer_handle: None,
+            agent_text_effects_timer_handle: None,
             selected_text: Arc::new(RwLock::new(None)),
             window_id: ctx.window_id(),
             state_handles: Default::default(),
@@ -1942,7 +1963,37 @@ impl AIBlock {
             }
         }
         ctx.emit(AIBlockEvent::AIOutputUpdated);
+        self.schedule_agent_text_effects_repaint(ctx);
         ctx.notify();
+    }
+
+    fn schedule_agent_text_effects_repaint(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.agent_text_effects_timer_handle.is_some() {
+            return;
+        }
+        let Some(config) = TextEffectsConfig::for_agent_mode(ctx) else {
+            return;
+        };
+        let is_streaming = self.model.status(ctx).is_streaming();
+        let needs_repaint = self
+            .state_handles
+            .agent_text_effects
+            .borrow()
+            .needs_repaint(config, instant::Instant::now());
+        if !is_streaming && !needs_repaint {
+            return;
+        }
+
+        self.agent_text_effects_timer_handle = Some(ctx.spawn(
+            async move {
+                Timer::after(config.frame_interval()).await;
+            },
+            |me, (), ctx| {
+                me.agent_text_effects_timer_handle = None;
+                ctx.notify();
+                me.schedule_agent_text_effects_repaint(ctx);
+            },
+        ));
     }
 
     fn handle_updated_output(&mut self, output: &AIAgentOutput, ctx: &mut ViewContext<Self>) {

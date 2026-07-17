@@ -76,12 +76,12 @@ use crate::terminal::settings::{
     AltScreenPadding, AltScreenPaddingMode, Spacing, SpacingMode, TerminalSettings,
 };
 use crate::terminal::text_effects::{
-    SelectedTextEffect, SelectedTextEffectColor, SelectedTextEffectColorIntensity,
-    SelectedTextEffectColorSpeed, SelectedTextEffectIntensity, SelectedTextEffectLargeOutput,
-    SelectedTextEffectScope, SelectedTextEffectSpeed, ShowTextEffectsTitleBarPicker, TextEffect,
-    TextEffectColor, TextEffectColorIntensity, TextEffectColorSpeed, TextEffectIntensity,
-    TextEffectLargeOutput, TextEffectScope, TextEffectSpeed, TextEffectsEnabled,
-    TextEffectsSettings,
+    ApplyTextEffectsToAgentMode, SelectedTextEffect, SelectedTextEffectColor,
+    SelectedTextEffectColorIntensity, SelectedTextEffectColorSpeed, SelectedTextEffectIntensity,
+    SelectedTextEffectLargeOutput, SelectedTextEffectScope, SelectedTextEffectSpeed,
+    ShowTextEffectsTitleBarPicker, TextEffect, TextEffectColor, TextEffectColorIntensity,
+    TextEffectColorSpeed, TextEffectIntensity, TextEffectLargeOutput, TextEffectScope,
+    TextEffectSpeed, TextEffectsEnabled, TextEffectsSettings,
 };
 use crate::terminal::{
     BlockListSettings, ShowBlockDividers, ShowJumpToBottomOfBlockButton, SizeInfo,
@@ -443,6 +443,14 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             context,
             flags::TEXT_EFFECTS_CONTEXT_FLAG,
         ));
+        toggle_binding_pairs.push(ToggleSettingActionPair::new(
+            "txtFX in Agent Mode responses",
+            builder(SettingsAction::AppearancePageToggle(
+                AppearancePageAction::ToggleTextEffectsAgentMode,
+            )),
+            context,
+            flags::TEXT_EFFECTS_AGENT_MODE_CONTEXT_FLAG,
+        ));
     }
 
     toggle_binding_pairs.push(ToggleSettingActionPair::new(
@@ -524,6 +532,7 @@ pub enum AppearancePageAction {
     ToggleUseLatestUserPromptAsConversationTitleInTabNames,
     ToggleLigatureRendering,
     ToggleTextEffects,
+    ToggleTextEffectsAgentMode,
     ToggleTextEffectsTitleBarPicker,
     SetTextEffect(TextEffect),
     SetTextEffectSpeed(TextEffectSpeed),
@@ -735,6 +744,7 @@ impl TypedActionView for AppearanceSettingsPageView {
             }
             ToggleLigatureRendering => self.toggle_ligature_rendering(ctx),
             ToggleTextEffects => self.toggle_text_effects(ctx),
+            ToggleTextEffectsAgentMode => self.toggle_text_effects_agent_mode(ctx),
             ToggleTextEffectsTitleBarPicker => self.toggle_text_effects_title_bar_picker(ctx),
             SetTextEffect(effect) => {
                 TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -1666,6 +1676,7 @@ impl AppearanceSettingsPageView {
                         Box::new(TextEffectColorIntensityWidget),
                         Box::new(TextEffectScopeWidget),
                         Box::new(TextEffectLargeOutputWidget),
+                        Box::new(TextEffectsAgentModeWidget::default()),
                         Box::new(TextEffectsTitleBarPickerWidget::default()),
                     ],
                 )
@@ -3056,6 +3067,14 @@ impl AppearanceSettingsPageView {
         if FeatureFlag::TextEffects.is_enabled() {
             TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
                 report_if_error!(settings.enabled.toggle_and_save_value(ctx));
+            });
+        }
+    }
+
+    fn toggle_text_effects_agent_mode(&mut self, ctx: &mut ViewContext<Self>) {
+        if FeatureFlag::TextEffects.is_enabled() {
+            TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                report_if_error!(settings.agent_mode.toggle_and_save_value(ctx));
             });
         }
     }
@@ -5338,6 +5357,59 @@ impl SettingsWidget for TextEffectLargeOutputWidget {
             ),
             None,
             &view.text_effect_large_output_dropdown,
+        )
+    }
+}
+
+#[derive(Default)]
+struct TextEffectsAgentModeWidget {
+    switch_state: SwitchStateHandle,
+    info_mouse_state: MouseStateHandle,
+}
+
+impl SettingsWidget for TextEffectsAgentModeWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "agent mode response output text animation effects txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let enabled = *TextEffectsSettings::as_ref(app).agent_mode.value();
+        render_body_item::<AppearancePageAction>(
+            "Animate Agent Mode responses".into(),
+            Some(AdditionalInfo {
+                mouse_state: self.info_mouse_state.clone(),
+                on_click_action: None,
+                secondary_text: None,
+                tooltip_override_text: Some(
+                    "Applies the selected animation and colour to newly streamed agent response text."
+                        .to_string(),
+                ),
+            }),
+            LocalOnlyIconState::for_setting(
+                ApplyTextEffectsToAgentMode::storage_key(),
+                ApplyTextEffectsToAgentMode::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            appearance
+                .ui_builder()
+                .switch(self.switch_state.clone())
+                .check(enabled)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(AppearancePageAction::ToggleTextEffectsAgentMode);
+                })
+                .finish(),
+            None,
         )
     }
 }

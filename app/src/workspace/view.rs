@@ -23233,6 +23233,11 @@ impl Workspace {
         if should_use_text_effects(app) {
             context.set.insert(flags::TEXT_EFFECTS_CONTEXT_FLAG);
         }
+        if *TextEffectsSettings::as_ref(app).agent_mode.value() {
+            context
+                .set
+                .insert(flags::TEXT_EFFECTS_AGENT_MODE_CONTEXT_FLAG);
+        }
     }
 
     /// Send SyncEvent to all synced pane groups.

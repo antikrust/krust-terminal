@@ -18,6 +18,7 @@ use crate::terminal::model::grid::grid_handler::AbsolutePoint;
 
 const MAX_PENDING_WRITES: usize = 4_096;
 const MAX_ACTIVE_BATCHES: usize = 8;
+const MATRIX_STREAM_CONTINUATION_WINDOW: Duration = Duration::from_millis(250);
 const MATRIX_GLYPHS: &[u8] = b"!@#$%^&*+-=<>?/\\|:;";
 const MAX_ACTIVE_SPINNERS: usize = 64;
 const MIN_SPINNER_FPS: u8 = 1;
@@ -347,6 +348,14 @@ impl TextEffectSpeed {
             Self::Normal | Self::Fast => Duration::from_millis(16),
         }
     }
+
+    fn matrix_line_duration(self) -> Duration {
+        match self {
+            Self::Slow => Duration::from_millis(33),
+            Self::Normal => Duration::from_millis(16),
+            Self::Fast => Duration::from_millis(8),
+        }
+    }
 }
 
 #[derive(
@@ -386,6 +395,14 @@ impl TextEffectIntensity {
             Self::Subtle => 3,
             Self::Balanced => 6,
             Self::Strong => 12,
+        }
+    }
+
+    fn matrix_trail_lines(self) -> usize {
+        match self {
+            Self::Subtle => 1,
+            Self::Balanced => 2,
+            Self::Strong => 4,
         }
     }
 }
@@ -682,6 +699,16 @@ define_settings_group!(TextEffectsSettings, settings: [
         toml_path: "appearance.txtfx.large_output",
         description: "Whether unusually large output batches should be animated.",
     },
+    agent_mode: ApplyTextEffectsToAgentMode {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "appearance.txtfx.agent_mode",
+        description: "Whether newly streamed Agent Mode response text uses txtFX.",
+    },
     show_title_bar_picker: ShowTextEffectsTitleBarPicker {
         type: bool,
         default: true,
@@ -733,6 +760,11 @@ impl TextEffectsConfig {
         Self::from_app(app).filter(|config| config.scope.includes(surface))
     }
 
+    pub fn for_agent_mode(app: &AppContext) -> Option<Self> {
+        Self::from_app(app)
+            .filter(|_| *TextEffectsSettings::as_ref(app).agent_mode.value())
+    }
+
     pub fn frame_interval(self) -> Duration {
         if self.color.is_dynamic() {
             self.speed
@@ -775,6 +807,7 @@ struct AnimatedCell {
     point: AbsolutePoint,
     fingerprint: String,
     ordinal: usize,
+    line_ordinal: usize,
     word_ordinal: usize,
     ordinal_in_word: usize,
     word_len: usize,
@@ -783,8 +816,11 @@ struct AnimatedCell {
 #[derive(Clone, Debug)]
 struct TextEffectBatch {
     started_at: Instant,
+    matrix_started_at: Instant,
+    matrix_line_offset: usize,
     seed: u64,
     cells: Vec<AnimatedCell>,
+    line_count: usize,
     word_count: usize,
 }
 
@@ -869,8 +905,16 @@ impl TextEffectsTimeline {
         let mut in_word = false;
         let mut word_positions = Vec::with_capacity(written_cells.len());
         let mut word_lengths = Vec::new();
+        let mut line_ordinals = HashMap::new();
+        let mut line_positions = Vec::with_capacity(written_cells.len());
 
-        for (_, content) in &written_cells {
+        for (point, content) in &written_cells {
+            let next_line_ordinal = line_ordinals.len();
+            let line_ordinal = *line_ordinals
+                .entry(point.row)
+                .or_insert(next_line_ordinal);
+            line_positions.push(line_ordinal);
+
             let is_whitespace = content.chars().all(char::is_whitespace);
             if is_whitespace {
                 in_word = false;
@@ -894,27 +938,56 @@ impl TextEffectsTimeline {
         let cells = written_cells
             .into_iter()
             .zip(word_positions)
+            .zip(line_positions)
             .enumerate()
             .map(
-                |(ordinal, ((point, fingerprint), (word_ordinal, ordinal_in_word)))| {
+                |(
+                    ordinal,
+                    (((point, fingerprint), (word_ordinal, ordinal_in_word)), line_ordinal),
+                )| {
                     let word_len = word_lengths.get(word_ordinal).copied().unwrap_or_default();
                     AnimatedCell {
                         point,
                         fingerprint,
                         ordinal,
+                        line_ordinal,
                         word_ordinal,
                         ordinal_in_word,
                         word_len,
                     }
                 },
             )
-            .collect();
+            .collect::<Vec<_>>();
+
+        let (matrix_started_at, matrix_line_offset) = self
+            .batches
+            .back()
+            .filter(|batch| {
+                started_at.saturating_duration_since(batch.started_at)
+                    <= MATRIX_STREAM_CONTINUATION_WINDOW
+            })
+            .map(|batch| {
+                let continues_last_line = batch
+                    .cells
+                    .last()
+                    .zip(cells.first())
+                    .is_some_and(|(previous, current)| previous.point.row == current.point.row);
+                (
+                    batch.matrix_started_at,
+                    batch.matrix_line_offset + batch.line_count
+                        - usize::from(continues_last_line),
+                )
+            })
+            .unwrap_or((started_at, 0));
 
         self.next_seed = self.next_seed.wrapping_add(1);
         self.batches.push_back(TextEffectBatch {
             started_at,
+            matrix_started_at,
+            matrix_line_offset,
             seed: self.next_seed,
             cells,
+            line_count: line_ordinals.len(),
             word_count: word_lengths.len(),
         });
 
@@ -1007,6 +1080,119 @@ impl TextEffectsTimeline {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+struct AgentTextSectionTimeline {
+    observed_text: String,
+    points: Vec<Option<AbsolutePoint>>,
+    next_row: u64,
+    timeline: TextEffectsTimeline,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct AgentTextEffectsTimeline {
+    sections: HashMap<usize, AgentTextSectionTimeline>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AgentTextEffectFrame {
+    pub samples: Vec<Option<TextEffectSample>>,
+    pub needs_repaint: bool,
+}
+
+impl AgentTextEffectsTimeline {
+    pub fn clear(&mut self) {
+        self.sections.clear();
+    }
+
+    pub fn contains_section(&self, section_index: usize) -> bool {
+        self.sections.contains_key(&section_index)
+    }
+
+    pub fn frame(
+        &mut self,
+        section_index: usize,
+        text: &str,
+        config: TextEffectsConfig,
+        now: Instant,
+    ) -> AgentTextEffectFrame {
+        let section = self.sections.entry(section_index).or_default();
+        if section.observed_text != text {
+            let is_append = text.starts_with(&section.observed_text);
+            if !is_append {
+                section.timeline.clear();
+                section.points.clear();
+                section.next_row = 0;
+                section.observed_text.clear();
+            }
+
+            let appended_text = if is_append {
+                &text[section.observed_text.len()..]
+            } else {
+                text
+            };
+            let mut row = section.next_row;
+            let mut col = 0;
+            let mut written_cells = Vec::new();
+            for character in appended_text.chars() {
+                if matches!(character, '\n' | '\r') {
+                    section.points.push(None);
+                    row = row.saturating_add(1);
+                    col = 0;
+                    continue;
+                }
+
+                let point = AbsolutePoint { row, col };
+                section.points.push(Some(point));
+                written_cells.push((point, character.to_string()));
+                col += 1;
+            }
+            section.next_row = row.saturating_add(1);
+            section.timeline.finish_batch(written_cells, now);
+            section.observed_text = text.to_owned();
+        }
+
+        let samples = text
+            .chars()
+            .zip(&section.points)
+            .map(|(character, point)| {
+                point.and_then(|point| {
+                    section.timeline.sample(
+                        point,
+                        CharOrStr::Char(character),
+                        config,
+                        now,
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        let needs_repaint = samples
+            .iter()
+            .flatten()
+            .any(|sample| sample.needs_repaint);
+        AgentTextEffectFrame {
+            samples,
+            needs_repaint,
+        }
+    }
+
+    pub fn needs_repaint(&self, config: TextEffectsConfig, now: Instant) -> bool {
+        self.sections.values().any(|section| {
+            section
+                .observed_text
+                .chars()
+                .zip(&section.points)
+                .any(|(character, point)| {
+                    point.is_some_and(|point| {
+                        section
+                            .timeline
+                            .sample(point, CharOrStr::Char(character), config, now)
+                            .is_some_and(|sample| sample.needs_repaint)
+                    })
+                })
+        })
+    }
+}
+
 fn content_matches(fingerprint: &str, content: CharOrStr<'_>) -> bool {
     match content {
         CharOrStr::Char(character) => {
@@ -1044,18 +1230,21 @@ fn sample_cell(
             )
         }
         TextEffect::MatrixTrail => {
-            let trail_cells = config.intensity.trail_cells();
-            if frame >= cell_count + trail_cells {
+            let matrix_elapsed = now.saturating_duration_since(batch.matrix_started_at);
+            let matrix_step = config.speed.matrix_line_duration();
+            let matrix_frame = matrix_elapsed.as_nanos() / matrix_step.as_nanos().max(1);
+            let matrix_frame = usize::try_from(matrix_frame).unwrap_or(usize::MAX);
+            let line_ordinal = batch.matrix_line_offset + cell.line_ordinal;
+            let trail_lines = config.intensity.matrix_trail_lines();
+            if matrix_frame >= line_ordinal + trail_lines {
                 TextEffectSample::COMPLETE
-            } else if cell.ordinal < frame {
+            } else if line_ordinal <= matrix_frame {
                 TextEffectSample {
-                    content: VisualContent::Original,
-                    foreground: None,
-                    needs_repaint: true,
-                }
-            } else if cell.ordinal < frame + trail_cells {
-                TextEffectSample {
-                    content: VisualContent::Substitute(matrix_glyph(batch.seed, cell.point, frame)),
+                    content: VisualContent::Substitute(matrix_glyph(
+                        batch.seed,
+                        cell.point,
+                        matrix_frame,
+                    )),
                     foreground: None,
                     needs_repaint: true,
                 }
