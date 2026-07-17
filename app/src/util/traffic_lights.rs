@@ -64,9 +64,8 @@ const BUTTON_ICON_SIZE: f32 = 22.;
 
 // Compact hit targets keep the three Bob-style controls visually grouped.
 const BOB_CONTROL_SIZE: f32 = 22.;
-// With an 8px maximize glyph, this inset places its left edge at x=11, aligned with the
-// left edge of the vertical toolbar buttons below it.
-const BOB_CONTROLS_LEFT_INSET: f32 = 4.;
+// Position the grouped controls relative to the vertical toolbar below them.
+const BOB_CONTROLS_LEFT_INSET: f32 = 7.;
 const BOB_CONTROLS_WIDTH: f32 = BOB_CONTROLS_LEFT_INSET + BOB_CONTROL_SIZE * 3.;
 #[cfg(target_os = "macos")]
 const BOB_GREEN: ColorU = ColorU {
@@ -195,8 +194,8 @@ impl TrafficLightData {
                     .with_border(Border::all(1.6).with_border_color(BOB_GREEN))
                     .finish(),
             )
-            .with_width(8.)
-            .with_height(8.)
+            .with_width(10.)
+            .with_height(10.)
             .finish(),
         )
         .on_click(|evt, _, _| {
