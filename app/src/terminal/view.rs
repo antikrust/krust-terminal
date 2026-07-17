@@ -26791,6 +26791,7 @@ impl TypedActionView for TerminalView {
             | OpenWorkflowModalForAIWorkflow(_)
             | OpenWorkflowModalForBlock(_)
             | DeleteBlockAtIndex(_)
+            | ToggleAIBlockUsageDetails { .. }
             | OpenWorkflowModalWithCloudWorkflow(_)
             | OpenShareSessionModal { .. }
             | OpenSharedSessionViewerRoleMenu
