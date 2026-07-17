@@ -46,6 +46,7 @@ pub fn initialize_settings_for_tests_with_mode(
     use crate::terminal::session_settings::SessionSettings;
     use crate::terminal::settings::TerminalSettings;
     use crate::terminal::shared_session::settings::SharedSessionSettings;
+    use crate::terminal::text_effects::TextEffectsSettings;
     use crate::terminal::warpify::settings::WarpifySettings;
     use crate::terminal::BlockListSettings;
     use crate::undo_close::UndoCloseSettings;
@@ -110,6 +111,7 @@ pub fn initialize_settings_for_tests_with_mode(
     SshSettings::register(app);
     TabSettings::register(app);
     TerminalSettings::register(app);
+    TextEffectsSettings::register(app);
     PaneSettings::register(app);
     ThemeSettings::register(app);
     UndoCloseSettings::register(app);

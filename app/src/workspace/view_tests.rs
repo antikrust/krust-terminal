@@ -4375,3 +4375,31 @@ fn test_tools_panel_warp_drive_toggle_updates_available_views() {
         });
     });
 }
+
+#[test]
+fn test_tabs_browser_is_selectable_from_tools_panel() {
+    let _vertical_tabs_guard = FeatureFlag::VerticalTabs.override_enabled(true);
+
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+
+        workspace.update(&mut app, |workspace, ctx| {
+            assert!(workspace.left_panel_views.contains(&ToolPanelView::Tabs));
+
+            workspace.open_left_panel_view(&LeftPanelAction::Tabs, ctx);
+
+            assert_eq!(
+                workspace.left_panel_view.as_ref(ctx).active_view(),
+                ToolPanelView::Tabs
+            );
+            assert!(
+                workspace
+                    .active_tab_pane_group()
+                    .as_ref(ctx)
+                    .left_panel_open
+            );
+            assert!(workspace.is_tabs_tool_panel_open(ctx));
+        });
+    });
+}

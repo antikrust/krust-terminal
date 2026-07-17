@@ -71,6 +71,7 @@ struct MouseStateHandles {
     conversation_list_view_button: MouseStateHandle,
     global_search_button: MouseStateHandle,
     warp_drive_button: MouseStateHandle,
+    tabs_button: MouseStateHandle,
 }
 
 #[derive(Clone, Debug)]
@@ -79,10 +80,12 @@ pub enum LeftPanelAction {
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     WarpDrive,
     ConversationListView,
+    Tabs,
 }
 
 #[allow(clippy::large_enum_variant)]
 pub enum LeftPanelEvent {
+    ActiveViewChanged(ToolPanelView),
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     FileTree(pane_group::Event),
     WarpDrive(DrivePanelEvent),
@@ -106,6 +109,7 @@ pub enum ToolPanelView {
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     WarpDrive,
     ConversationListView,
+    Tabs,
 }
 
 /// Encapsulates the active view state to enforce that all mutations go through
@@ -135,6 +139,7 @@ mod active_view_state {
         let previous = left_panel.active_view.0;
         left_panel.active_view.0 = new_view;
         left_panel.update_button_active_states();
+        ctx.emit(super::LeftPanelEvent::ActiveViewChanged(new_view));
         ctx.notify();
 
         let was_conversation_list_open = previous == ToolPanelView::ConversationListView;
@@ -464,6 +469,15 @@ impl LeftPanelView {
                     tooltip_keybinding_names,
                 }
             }
+            ToolPanelView::Tabs => ToolbeltButtonConfig {
+                icon: Icon::Menu,
+                active_icon: None,
+                tooltip_text: "Tabs".to_string(),
+                action: LeftPanelAction::Tabs,
+                render_with_active_state: false,
+                tooltip_keybinding_names: Vec::new(),
+                tooltip_keybinding: None,
+            },
         }
     }
 
@@ -547,6 +561,10 @@ impl LeftPanelView {
 
     pub fn active_view(&self) -> ToolPanelView {
         self.active_view.get()
+    }
+
+    pub fn is_tabs_active(&self) -> bool {
+        self.active_view.get() == ToolPanelView::Tabs
     }
 
     pub fn is_warp_drive_active(&self) -> bool {
@@ -724,6 +742,7 @@ impl LeftPanelView {
                     view.on_left_panel_focused(ctx);
                 });
             }
+            ToolPanelView::Tabs => {}
         }
     }
 
@@ -890,6 +909,7 @@ impl LeftPanelView {
                 LeftPanelAction::ConversationListView => {
                     self.active_view.get() == ToolPanelView::ConversationListView
                 }
+                LeftPanelAction::Tabs => self.active_view.get() == ToolPanelView::Tabs,
             };
         }
     }
@@ -899,7 +919,13 @@ impl LeftPanelView {
         mouse_state: MouseStateHandle,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
-        let action = button_config.action.clone();
+        let action = match &button_config.action {
+            LeftPanelAction::ProjectExplorer => WorkspaceAction::OpenProjectExplorer,
+            LeftPanelAction::GlobalSearch { .. } => WorkspaceAction::OpenGlobalSearch,
+            LeftPanelAction::WarpDrive => WorkspaceAction::OpenWarpDrive,
+            LeftPanelAction::ConversationListView => WorkspaceAction::OpenConversationListView,
+            LeftPanelAction::Tabs => WorkspaceAction::OpenVerticalTabsPanel,
+        };
         let ui_builder = appearance.ui_builder().clone();
         let tooltip_keybinding = button_config.tooltip_keybinding.clone();
 
@@ -1031,6 +1057,9 @@ impl LeftPanelView {
                 active_view_state::set(self, ToolPanelView::ConversationListView, ctx);
                 send_telemetry_from_ctx!(TelemetryEvent::ConversationListViewOpened, ctx);
             }
+            LeftPanelAction::Tabs => {
+                active_view_state::set(self, ToolPanelView::Tabs, ctx);
+            }
         }
     }
 
@@ -1130,42 +1159,36 @@ impl View for LeftPanelView {
                 }
                 ToolPanelView::WarpDrive => ctx.focus(&self.warp_drive_view),
                 ToolPanelView::ConversationListView => ctx.focus(&self.conversation_list_view),
+                ToolPanelView::Tabs => {}
             }
         }
     }
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
-        let appearance = Appearance::as_ref(app);
+        self.render_panel(None, app)
+    }
+}
 
-        let mouse_state_handles = vec![
-            self.mouse_state_handles.project_explorer_button.clone(),
-            self.mouse_state_handles
+impl LeftPanelView {
+    fn mouse_state_for_action(&self, action: &LeftPanelAction) -> MouseStateHandle {
+        match action {
+            LeftPanelAction::ProjectExplorer => {
+                self.mouse_state_handles.project_explorer_button.clone()
+            }
+            LeftPanelAction::GlobalSearch { .. } => {
+                self.mouse_state_handles.global_search_button.clone()
+            }
+            LeftPanelAction::WarpDrive => self.mouse_state_handles.warp_drive_button.clone(),
+            LeftPanelAction::ConversationListView => self
+                .mouse_state_handles
                 .conversation_list_view_button
                 .clone(),
-            self.mouse_state_handles.global_search_button.clone(),
-            self.mouse_state_handles.warp_drive_button.clone(),
-        ];
+            LeftPanelAction::Tabs => self.mouse_state_handles.tabs_button.clone(),
+        }
+    }
 
-        // If there is only one button in the toolbelt row,
-        // there is no need to show it as it's a bit redundant.
-        let toolbelt_button_row = if self.toolbelt_buttons.len() > 1 {
-            Some(
-                Flex::row()
-                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                    .with_spacing(4.0)
-                    .with_children(self.toolbelt_buttons.iter().zip(&mouse_state_handles).map(
-                        |(button_config, mouse_state)| {
-                            Self::render_button(button_config, mouse_state.clone(), appearance)
-                        },
-                    ))
-                    .with_main_axis_size(MainAxisSize::Min)
-                    .finish(),
-            )
-        } else {
-            None
-        };
-
-        let content_area: Box<dyn Element> = match self.active_view.get() {
+    fn render_active_content(&self, app: &AppContext) -> Box<dyn Element> {
+        match self.active_view.get() {
             ToolPanelView::ProjectExplorer => {
                 if let Some(file_tree_view) = self.active_file_tree_view(app) {
                     Shrinkable::new(
@@ -1202,7 +1225,47 @@ impl View for LeftPanelView {
             ToolPanelView::ConversationListView => {
                 Shrinkable::new(1.0, ChildView::new(&self.conversation_list_view).finish()).finish()
             }
+            ToolPanelView::Tabs => Empty::new().finish(),
+        }
+    }
+
+    pub(super) fn render_with_content(
+        &self,
+        content: Box<dyn Element>,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        self.render_panel(Some(content), app)
+    }
+
+    fn render_panel(
+        &self,
+        content_override: Option<Box<dyn Element>>,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let appearance = Appearance::as_ref(app);
+
+        // If there is only one button in the toolbelt row,
+        // there is no need to show it as it's a bit redundant.
+        let toolbelt_button_row = if self.toolbelt_buttons.len() > 1 {
+            Some(
+                Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_spacing(4.0)
+                    .with_children(self.toolbelt_buttons.iter().map(|button_config| {
+                        Self::render_button(
+                            button_config,
+                            self.mouse_state_for_action(&button_config.action),
+                            appearance,
+                        )
+                    }))
+                    .with_main_axis_size(MainAxisSize::Min)
+                    .finish(),
+            )
+        } else {
+            None
         };
+
+        let content_area = content_override.unwrap_or_else(|| self.render_active_content(app));
 
         let panel_content = Container::new({
             let column = Flex::column();

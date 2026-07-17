@@ -59,6 +59,8 @@ impl HeaderToolbarItemKind {
     /// Does not check user show/hide preferences — use `is_available` for that.
     pub fn is_supported(&self, app: &AppContext) -> bool {
         match self {
+            // Kept only for deserializing legacy vertical-layout toolbar configurations. New
+            // configurations expose the tabs browser inside the tools panel instead.
             Self::TabsPanel => {
                 FeatureFlag::VerticalTabs.is_enabled()
                     && *TabSettings::as_ref(app).use_vertical_tabs
@@ -98,7 +100,7 @@ impl HeaderToolbarItemKind {
     }
 
     pub fn default_left() -> Vec<Self> {
-        vec![Self::TabsPanel, Self::ToolsPanel, Self::AgentManagement]
+        vec![Self::ToolsPanel, Self::AgentManagement]
     }
 
     pub fn default_right() -> Vec<Self> {
@@ -108,7 +110,6 @@ impl HeaderToolbarItemKind {
     /// All toolbar item variants (availability filtering is done at the call site).
     pub fn all_items() -> Vec<Self> {
         vec![
-            Self::TabsPanel,
             Self::ToolsPanel,
             Self::AgentManagement,
             Self::CodeReview,

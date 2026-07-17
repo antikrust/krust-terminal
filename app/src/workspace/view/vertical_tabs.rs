@@ -1648,10 +1648,9 @@ fn render_new_tab_button(
     .finish()
 }
 
-fn render_vertical_tabs_panel(
+fn render_vertical_tabs_panel_content(
     state: &VerticalTabsPanelState,
     workspace: &Workspace,
-    side: super::PanelPosition,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
@@ -1704,13 +1703,9 @@ fn render_vertical_tabs_panel(
     // with None and silently dropping all clicks on the popup items.
     let panel_with_popup: Box<dyn Element> = panel_content;
 
-    let drag_side = match side {
-        super::PanelPosition::Left => DragBarSide::Right,
-        super::PanelPosition::Right => DragBarSide::Left,
-    };
     // Wrap the panel in a `Hoverable` so right-clicking the empty area of the
     // vertical tabs panel opens the tab configs dropdown.
-    let inner = Hoverable::new(state.panel_right_click_mouse_state.clone(), |_| {
+    Hoverable::new(state.panel_right_click_mouse_state.clone(), |_| {
         Container::new(panel_with_popup)
             .with_background(internal_colors::fg_overlay_1(theme))
             .finish()
@@ -1729,18 +1724,33 @@ fn render_vertical_tabs_panel(
         ctx.dispatch_typed_action(WorkspaceAction::AddDefaultTab);
     })
     .with_defer_events_to_children()
-    .finish();
+    .finish()
+}
 
-    Resizable::new(state.resizable_state.clone(), inner)
-        .with_dragbar_side(drag_side)
-        .on_resize(|ctx, _| {
-            ctx.notify();
-        })
-        .with_bounds_callback(Box::new(|window_size| {
-            let max_width = window_size.x() * MAX_PANEL_WIDTH_RATIO;
-            (MIN_PANEL_WIDTH, max_width.max(MIN_PANEL_WIDTH))
-        }))
-        .finish()
+fn render_vertical_tabs_panel(
+    state: &VerticalTabsPanelState,
+    workspace: &Workspace,
+    side: super::PanelPosition,
+    app: &AppContext,
+) -> Box<dyn Element> {
+    let drag_side = match side {
+        super::PanelPosition::Left => DragBarSide::Right,
+        super::PanelPosition::Right => DragBarSide::Left,
+    };
+
+    Resizable::new(
+        state.resizable_state.clone(),
+        render_vertical_tabs_panel_content(state, workspace, app),
+    )
+    .with_dragbar_side(drag_side)
+    .on_resize(|ctx, _| {
+        ctx.notify();
+    })
+    .with_bounds_callback(Box::new(|window_size| {
+        let max_width = window_size.x() * MAX_PANEL_WIDTH_RATIO;
+        (MIN_PANEL_WIDTH, max_width.max(MIN_PANEL_WIDTH))
+    }))
+    .finish()
 }
 
 fn render_groups(
@@ -7328,6 +7338,10 @@ fn render_compact_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn El
 }
 
 impl Workspace {
+    pub(super) fn render_vertical_tabs_panel_content(&self, app: &AppContext) -> Box<dyn Element> {
+        render_vertical_tabs_panel_content(&self.vertical_tabs_panel, self, app)
+    }
+
     pub(super) fn render_vertical_tabs_panel(
         &self,
         side: super::PanelPosition,

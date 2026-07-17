@@ -93,6 +93,13 @@ fn header_toolbar_chip_selection_default_contains_code_review() {
 }
 
 #[test]
+fn tabs_panel_is_not_a_title_bar_item_for_new_configurations() {
+    assert!(!HeaderToolbarItemKind::default_left().contains(&HeaderToolbarItemKind::TabsPanel));
+    assert!(HeaderToolbarItemKind::default_left().contains(&HeaderToolbarItemKind::ToolsPanel));
+    assert!(!HeaderToolbarItemKind::all_items().contains(&HeaderToolbarItemKind::TabsPanel));
+}
+
+#[test]
 fn header_toolbar_chip_selection_custom_without_code_review_reports_absent() {
     let config = HeaderToolbarChipSelection::Custom {
         left: vec![

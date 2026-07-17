@@ -2315,13 +2315,11 @@ impl Workspace {
     ) {
     }
 
-    /// Opens the vertical tabs panel if the setting was enabled.
+    /// Opens the tabs browser in the tools panel.
     /// Called from the onboarding flow before the session config modal is shown.
     pub(crate) fn open_vertical_tabs_panel_if_enabled(&mut self, ctx: &mut ViewContext<Self>) {
-        if FeatureFlag::VerticalTabs.is_enabled() && *TabSettings::as_ref(ctx).use_vertical_tabs {
-            self.vertical_tabs_panel_open = true;
-            self.sync_window_button_visibility(ctx);
-            ctx.notify();
+        if FeatureFlag::VerticalTabs.is_enabled() {
+            self.open_left_panel_view(&LeftPanelAction::Tabs, ctx);
         }
     }
 
@@ -2330,12 +2328,8 @@ impl Workspace {
         // even if the user quits mid-flow.
         mark_hoa_onboarding_completed(ctx);
 
-        // Enable vertical tabs and open the panel so Step 2 has something to anchor to.
-        TabSettings::handle(ctx).update(ctx, |settings, ctx| {
-            let _ = settings.use_vertical_tabs.set_value(true, ctx);
-        });
-        self.vertical_tabs_panel_open = true;
-        self.sync_window_button_visibility(ctx);
+        // Open the tabs browser so Step 2 has something to anchor to.
+        self.open_left_panel_view(&LeftPanelAction::Tabs, ctx);
 
         // The pinned position is captured lazily on the first step change
         // (when the user advances past the welcome banner). At that point the
@@ -2345,7 +2339,7 @@ impl Workspace {
 
         let flow = ctx.add_typed_action_view(HoaOnboardingFlow::new);
         ctx.subscribe_to_view(&flow, |me, _, event, ctx| match event {
-            HoaOnboardingFlowEvent::StepChanged | HoaOnboardingFlowEvent::TabLayoutToggled => {
+            HoaOnboardingFlowEvent::StepChanged => {
                 if me.hoa_vtabs_callout_pinned_position.is_none() {
                     me.hoa_vtabs_callout_pinned_position = ctx
                         .element_position_by_id(VERTICAL_TABS_PANEL_POSITION_ID)
@@ -2380,7 +2374,7 @@ impl Workspace {
             HoaOnboardingFlowEvent::Completed(None) | HoaOnboardingFlowEvent::Dismissed => {
                 self.hoa_onboarding_flow = None;
             }
-            HoaOnboardingFlowEvent::StepChanged | HoaOnboardingFlowEvent::TabLayoutToggled => {
+            HoaOnboardingFlowEvent::StepChanged => {
                 return;
             }
         }
@@ -2784,6 +2778,29 @@ impl Workspace {
             user_default_shell_unsupported_banner_model_handle,
             settings_file_error,
         } = global_resource_handles.clone();
+
+        // Vertical tabs are now a searchable view inside the tools panel rather than a
+        // replacement layout. Migrate the retired layout preference off before the workspace
+        // decides which tab bar and panels to render.
+        #[cfg(not(test))]
+        if *TabSettings::as_ref(ctx).use_vertical_tabs {
+            TabSettings::handle(ctx).update(ctx, |settings, ctx| {
+                report_if_error!(settings.use_vertical_tabs.set_value(false, ctx));
+
+                let toolbar_config = settings.header_toolbar_chip_selection.value().clone();
+                if !toolbar_config.contains_item(&HeaderToolbarItemKind::ToolsPanel) {
+                    let mut left = toolbar_config.left_items();
+                    left.insert(0, HeaderToolbarItemKind::ToolsPanel);
+                    report_if_error!(settings.header_toolbar_chip_selection.set_value(
+                        HeaderToolbarChipSelection::Custom {
+                            left,
+                            right: toolbar_config.right_items(),
+                        },
+                        ctx,
+                    ));
+                }
+            });
+        }
 
         let server_api_provider = ServerApiProvider::as_ref(ctx);
         let server_api = server_api_provider.get();
@@ -4129,6 +4146,7 @@ impl Workspace {
                 },
                 LeftPanelDisplayedTab::WarpDrive => ToolPanelView::WarpDrive,
                 LeftPanelDisplayedTab::ConversationListView => ToolPanelView::ConversationListView,
+                LeftPanelDisplayedTab::Tabs => ToolPanelView::Tabs,
             };
             lp.restore_active_view_from_snapshot(active_view, ctx);
             lp.set_active_pane_group(pane_group.clone(), &self.working_directories_model, ctx);
@@ -5335,10 +5353,7 @@ impl Workspace {
             self.tab_mru_order.retain(|id| *id != pane_group_id);
             self.tab_mru_order.insert(0, pane_group_id);
         }
-        if self.vertical_tabs_panel_open
-            && FeatureFlag::VerticalTabs.is_enabled()
-            && *TabSettings::as_ref(ctx).use_vertical_tabs
-        {
+        if self.is_tabs_tool_panel_open(ctx) {
             self.vertical_tabs_panel.scroll_to_tab(index);
         }
 
@@ -6262,6 +6277,16 @@ impl Workspace {
 
     fn handle_left_panel_event(&mut self, event: &LeftPanelEvent, ctx: &mut ViewContext<Self>) {
         match event {
+            LeftPanelEvent::ActiveViewChanged(view) => {
+                self.vertical_tabs_panel_open = *view == ToolPanelView::Tabs
+                    && self.active_tab_pane_group().as_ref(ctx).left_panel_open;
+                if !self.vertical_tabs_panel_open {
+                    self.close_vertical_tabs_settings_popup();
+                    self.vertical_tabs_panel.clear_detail_sidecar();
+                }
+                self.sync_window_button_visibility(ctx);
+                ctx.notify();
+            }
             LeftPanelEvent::FileTree(pane_group_event) => {
                 let pane_group = self.active_tab_pane_group().clone();
                 self.handle_file_tree_event(pane_group, pane_group_event, ctx);
@@ -9024,17 +9049,24 @@ impl Workspace {
             pane_group.set_left_panel_open(false, ctx);
         });
 
-        ctx.notify();
-    }
-
-    fn toggle_vertical_tabs_panel(&mut self, ctx: &mut ViewContext<Self>) {
-        self.vertical_tabs_panel_open = !self.vertical_tabs_panel_open;
-        if !self.vertical_tabs_panel_open {
+        if self.left_panel_view.as_ref(ctx).is_tabs_active() {
+            self.vertical_tabs_panel_open = false;
             self.close_vertical_tabs_settings_popup();
             self.vertical_tabs_panel.clear_detail_sidecar();
         }
-        self.sync_window_button_visibility(ctx);
+
         ctx.notify();
+    }
+
+    fn is_tabs_tool_panel_open(&self, app: &AppContext) -> bool {
+        FeatureFlag::VerticalTabs.is_enabled()
+            && self.active_tab_pane_group().as_ref(app).left_panel_open
+            && self.left_panel_view.as_ref(app).is_tabs_active()
+    }
+
+    fn toggle_vertical_tabs_panel(&mut self, ctx: &mut ViewContext<Self>) {
+        let is_showing = self.is_tabs_tool_panel_open(ctx);
+        self.toggle_left_panel_view(&LeftPanelAction::Tabs, is_showing, ctx);
     }
 
     fn close_vertical_tabs_settings_popup(&mut self) {
@@ -13882,9 +13914,7 @@ impl Workspace {
             || self.traffic_light_mouse_states.are_traffic_lights_hovered();
 
         // Check if any of the menus/popups rendered relative to the tab bar are open.
-        let is_vertical_tabs_active = FeatureFlag::VerticalTabs.is_enabled()
-            && *TabSettings::as_ref(app).use_vertical_tabs
-            && self.vertical_tabs_panel_open;
+        let is_vertical_tabs_active = self.is_tabs_tool_panel_open(app);
         let is_tab_menu_open = self.show_tab_bar_overflow_menu
             || (self.show_tab_right_click_menu.is_some() && !is_vertical_tabs_active)
             || (self.show_new_session_dropdown_menu.is_some() && !is_vertical_tabs_active)
@@ -20082,6 +20112,7 @@ impl Workspace {
                         ToolPanelView::GlobalSearch { .. } => "Global search",
                         ToolPanelView::WarpDrive => "Warp Drive",
                         ToolPanelView::ConversationListView => "Agent conversations",
+                        ToolPanelView::Tabs => "Tabs",
                     }
                 } else {
                     "Tools panel"
@@ -20136,6 +20167,7 @@ impl Workspace {
                 ToolPanelView::GlobalSearch { .. } => "Global search",
                 ToolPanelView::WarpDrive => "Warp Drive",
                 ToolPanelView::ConversationListView => "Agent conversations",
+                ToolPanelView::Tabs => "Tabs",
             }
         } else {
             "Tools panel"
@@ -22479,7 +22511,7 @@ impl Workspace {
     fn tabs_panel_side(config: &HeaderToolbarChipSelection) -> PanelPosition {
         if config
             .left_items()
-            .contains(&HeaderToolbarItemKind::TabsPanel)
+            .contains(&HeaderToolbarItemKind::ToolsPanel)
         {
             PanelPosition::Left
         } else {
@@ -22517,7 +22549,21 @@ impl Workspace {
                 if !pane_group.left_panel_open || warpui::platform::is_mobile_device() {
                     return None;
                 }
-                Some(ChildView::new(&self.left_panel_view).finish())
+                let left_panel = self.left_panel_view.as_ref(app);
+                if left_panel.is_tabs_active() && FeatureFlag::VerticalTabs.is_enabled() {
+                    Some(
+                        SavePosition::new(
+                            left_panel.render_with_content(
+                                self.render_vertical_tabs_panel_content(app),
+                                app,
+                            ),
+                            VERTICAL_TABS_PANEL_POSITION_ID,
+                        )
+                        .finish(),
+                    )
+                } else {
+                    Some(ChildView::new(&self.left_panel_view).finish())
+                }
             }
             HeaderToolbarItemKind::CodeReview => {
                 if !pane_group.right_panel_open {
@@ -23404,6 +23450,11 @@ impl Workspace {
                 left_panel.handle_action_with_force_open(action, false, ctx);
                 left_panel.focus_active_view_on_entry(ctx);
             });
+            self.vertical_tabs_panel_open = matches!(action, LeftPanelAction::Tabs);
+            if !self.vertical_tabs_panel_open {
+                self.close_vertical_tabs_settings_popup();
+                self.vertical_tabs_panel.clear_detail_sidecar();
+            }
         }
     }
 
@@ -23446,6 +23497,9 @@ impl Workspace {
         }
         if WarpDriveSettings::is_warp_drive_enabled(ctx) {
             views.push(ToolPanelView::WarpDrive);
+        }
+        if FeatureFlag::VerticalTabs.is_enabled() {
+            views.push(ToolPanelView::Tabs);
         }
         views
     }
@@ -24362,8 +24416,8 @@ impl TypedActionView for Workspace {
                 self.toggle_vertical_tabs_panel(ctx);
             }
             OpenVerticalTabsPanel => {
-                if !self.vertical_tabs_panel_open {
-                    self.toggle_vertical_tabs_panel(ctx);
+                if !self.is_tabs_tool_panel_open(ctx) {
+                    self.open_left_panel_view(&LeftPanelAction::Tabs, ctx);
                 }
             }
             ToggleNotificationMailbox { select_first } => {
@@ -24394,10 +24448,7 @@ impl TypedActionView for Workspace {
                 }
             }
             ToggleVerticalTabsSettingsPopup => {
-                if FeatureFlag::VerticalTabs.is_enabled()
-                    && *TabSettings::as_ref(ctx).use_vertical_tabs
-                    && self.vertical_tabs_panel_open
-                {
+                if self.is_tabs_tool_panel_open(ctx) {
                     self.vertical_tabs_panel.show_settings_popup =
                         !self.vertical_tabs_panel.show_settings_popup;
                     ctx.notify();
@@ -26260,9 +26311,7 @@ impl View for Workspace {
         );
 
         if !use_simplified_wasm_tab_bar
-            && FeatureFlag::VerticalTabs.is_enabled()
-            && *TabSettings::as_ref(app).use_vertical_tabs
-            && self.vertical_tabs_panel_open
+            && self.is_tabs_tool_panel_open(app)
             && self.vertical_tabs_panel.show_settings_popup
         {
             stack.add_positioned_overlay_child(
@@ -26282,10 +26331,7 @@ impl View for Workspace {
             );
         }
 
-        if FeatureFlag::VerticalTabs.is_enabled()
-            && *TabSettings::as_ref(app).use_vertical_tabs
-            && self.vertical_tabs_panel_open
-        {
+        if self.is_tabs_tool_panel_open(app) {
             if let Some(vertical_tabs::DetailSidecarOverlay {
                 anchor_position_id,
                 offset,
@@ -26413,9 +26459,7 @@ impl View for Workspace {
         }
 
         if let Some((tab_idx, right_click_menu_anchor)) = self.show_tab_right_click_menu {
-            let is_vertical = FeatureFlag::VerticalTabs.is_enabled()
-                && *TabSettings::as_ref(app).use_vertical_tabs
-                && self.vertical_tabs_panel_open;
+            let is_vertical = self.is_tabs_tool_panel_open(app);
             if tab_bar_mode.has_tab_bar() || is_vertical {
                 let positioning = if is_vertical {
                     match right_click_menu_anchor {
@@ -26475,9 +26519,7 @@ impl View for Workspace {
         // Rendered for both the horizontal tab bar and the vertical tabs panel
         // — the right-click handlers on both surfaces dispatch the same action.
         if let Some((_tab_idx, anchor)) = self.show_tab_selection_right_click_menu {
-            let is_vertical = FeatureFlag::VerticalTabs.is_enabled()
-                && *TabSettings::as_ref(app).use_vertical_tabs
-                && self.vertical_tabs_panel_open;
+            let is_vertical = self.is_tabs_tool_panel_open(app);
             if tab_bar_mode.has_tab_bar() || is_vertical {
                 let position = match anchor {
                     TabContextMenuAnchor::Pointer(position) => position,
@@ -26507,9 +26549,7 @@ impl View for Workspace {
 
         // Tab group more-options menu (reuses the `tab_right_click_menu` view).
         if let Some((group_id, anchor)) = self.show_tab_group_right_click_menu {
-            let is_vertical = FeatureFlag::VerticalTabs.is_enabled()
-                && *TabSettings::as_ref(app).use_vertical_tabs
-                && self.vertical_tabs_panel_open;
+            let is_vertical = self.is_tabs_tool_panel_open(app);
             let positioning = match (is_vertical, anchor) {
                 (true, TabContextMenuAnchor::VerticalTabsKebab) => {
                     let tabs_side = Self::tabs_panel_side(
@@ -26562,9 +26602,7 @@ impl View for Workspace {
         // Render the new session dropdown menu. This is outside the tab bar visibility
         // gate because it can also be opened from the vertical tabs panel.
         if let Some(menu_anchor) = self.show_new_session_dropdown_menu {
-            let is_vertical = FeatureFlag::VerticalTabs.is_enabled()
-                && *TabSettings::as_ref(app).use_vertical_tabs
-                && self.vertical_tabs_panel_open;
+            let is_vertical = self.is_tabs_tool_panel_open(app);
 
             match (is_vertical, menu_anchor) {
                 (true, NewSessionMenuAnchor::AddTabButton(_)) => {
@@ -26832,9 +26870,7 @@ impl View for Workspace {
         }
 
         if self.should_show_session_config_tab_config_chip() {
-            let use_vertical = FeatureFlag::VerticalTabs.is_enabled()
-                && *TabSettings::as_ref(app).use_vertical_tabs
-                && self.vertical_tabs_panel_open;
+            let use_vertical = self.is_tabs_tool_panel_open(app);
             let chip =
                 self.render_session_config_tab_config_chip(use_vertical, Appearance::as_ref(app));
             if use_vertical {
@@ -26947,7 +26983,7 @@ impl View for Workspace {
                 }
                 HoaOnboardingStep::VerticalTabsCallout => {
                     if let Some(pinned) = self.hoa_vtabs_callout_pinned_position {
-                        let use_vertical = *TabSettings::as_ref(app).use_vertical_tabs;
+                        let use_vertical = self.is_tabs_tool_panel_open(app);
                         // The pinned position is the bubble body's top-left when
                         // using a Left arrow. With Left arrow, the element origin
                         // is at (0, 0) and the body starts at (~21, 0) due to the
@@ -27002,7 +27038,7 @@ impl View for Workspace {
                     );
                 }
                 HoaOnboardingStep::TabConfig => {
-                    let use_vertical = *TabSettings::as_ref(app).use_vertical_tabs;
+                    let use_vertical = self.is_tabs_tool_panel_open(app);
                     if use_vertical {
                         // Left arrow: anchor to the vertical tabs panel.
                         if let Some(pinned) = self.hoa_vtabs_callout_pinned_position {
@@ -27372,9 +27408,7 @@ impl View for Workspace {
         }
 
         // Add workspace-wide UI event handling.
-        let stack = if FeatureFlag::VerticalTabs.is_enabled()
-            && *TabSettings::as_ref(app).use_vertical_tabs
-            && self.vertical_tabs_panel_open
+        let stack = if self.is_tabs_tool_panel_open(app)
             // The vertical-tabs detail sidecar can become stale if the pointer moves through a
             // covered region (for example, its scrollbar gutter) and the row/sidecar hoverables
             // do not observe the expected hover-out transition. Install a workspace-root

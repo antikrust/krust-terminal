@@ -4,7 +4,6 @@ use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextLine, FormattedTextStyles, Hyperlink,
 };
 use pathfinder_color::ColorU;
-use settings::Setting;
 use warp_core::ui::theme::phenomenon::PhenomenonStyle;
 use warp_core::ui::theme::Fill;
 use warpui::elements::{
@@ -16,8 +15,6 @@ use warpui::fonts::{Properties, Weight};
 use warpui::geometry::vector::Vector2F;
 use warpui::keymap::{FixedBinding, Keystroke};
 use warpui::platform::file_picker::{FilePickerConfiguration, FilePickerError};
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
 use warpui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
@@ -33,10 +30,9 @@ use crate::view_components::action_button::{
     ActionButton, ActionButtonTheme, ButtonSize, KeystrokeSource,
 };
 use crate::view_components::callout_bubble::{
-    callout_body_color, callout_checkbox, callout_label_color, callout_title_color,
-    render_callout_bubble, CalloutArrowDirection, CalloutArrowPosition, CalloutBubbleConfig,
+    callout_body_color, callout_title_color, render_callout_bubble, CalloutArrowDirection,
+    CalloutArrowPosition, CalloutBubbleConfig,
 };
-use crate::workspace::tab_settings::TabSettings;
 
 const CALLOUT_WIDTH: f32 = 480.;
 
@@ -133,7 +129,6 @@ pub enum HoaOnboardingAction {
     AdvanceFromWelcome,
     AdvanceFromVerticalTabs,
     AdvanceFromInbox,
-    ToggleHorizontalTabs,
     SelectSessionType(usize),
     OpenDirectoryPicker,
     DirectorySelected(Result<String, FilePickerError>),
@@ -147,9 +142,6 @@ pub enum HoaOnboardingFlowEvent {
     Completed(Option<SessionConfigSelection>),
     Dismissed,
     StepChanged,
-    /// Emitted just before toggling vertical/horizontal tabs so the workspace
-    /// can pin the callout position before the layout shifts.
-    TabLayoutToggled,
 }
 
 pub struct HoaOnboardingFlow {
@@ -164,7 +156,6 @@ pub struct HoaOnboardingFlow {
     cta_button: ViewHandle<ActionButton>,
 
     // Step 2 state
-    horizontal_tabs_checkbox_mouse_state: MouseStateHandle,
     next_vtabs_button: ViewHandle<ActionButton>,
     dismiss_vtabs_button: ViewHandle<ActionButton>,
 
@@ -245,7 +236,6 @@ impl HoaOnboardingFlow {
             truncated_flow: false,
             close_button,
             cta_button,
-            horizontal_tabs_checkbox_mouse_state: MouseStateHandle::default(),
             next_vtabs_button,
             dismiss_vtabs_button,
             next_inbox_button,
@@ -410,34 +400,8 @@ impl HoaOnboardingFlow {
     fn render_vertical_tabs_callout(
         &self,
         appearance: &Appearance,
-        app: &AppContext,
+        _app: &AppContext,
     ) -> Box<dyn Element> {
-        let use_vertical = *TabSettings::as_ref(app).use_vertical_tabs;
-        let checkbox_mouse = self.horizontal_tabs_checkbox_mouse_state.clone();
-        let checkbox_el = callout_checkbox(checkbox_mouse, Some(10.5), appearance)
-            .check(!use_vertical)
-            .build()
-            .with_cursor(Cursor::PointingHand)
-            .on_click(|ctx, _, _| {
-                ctx.dispatch_typed_action(HoaOnboardingAction::ToggleHorizontalTabs);
-            })
-            .finish();
-
-        let checkbox_label = Text::new_inline(
-            "Switch back to horizontal tabs".to_string(),
-            appearance.ui_font_family(),
-            12.,
-        )
-        .with_color(callout_label_color(appearance))
-        .finish();
-
-        let checkbox_row = Flex::row()
-            .with_cross_axis_alignment(CrossAxisAlignment::Center)
-            .with_spacing(8.)
-            .with_child(checkbox_el)
-            .with_child(checkbox_label)
-            .finish();
-
         let button = if self.truncated_flow {
             &self.dismiss_vtabs_button
         } else {
@@ -445,9 +409,9 @@ impl HoaOnboardingFlow {
         };
 
         self.render_callout_content(
-            "Introducing vertical tabs - the new default",
-            "Vertical tabs show all open agent and terminal panes, grouped by tab. Customize what information you want to see to support your workflow.",
-            Some(checkbox_row),
+            "Your searchable tabs browser",
+            "Browse every open agent and terminal pane in the sidebar while keeping your tabs across the top. Customize the details shown to support your workflow.",
+            None,
             button,
             appearance,
         )
@@ -589,21 +553,12 @@ impl View for HoaOnboardingFlow {
             }
             HoaOnboardingStep::VerticalTabsCallout => {
                 let content = self.render_vertical_tabs_callout(appearance, app);
-                let use_vertical = *TabSettings::as_ref(app).use_vertical_tabs;
-                let (arrow_direction, arrow_position) = if use_vertical {
-                    (
-                        CalloutArrowDirection::Left,
-                        CalloutArrowPosition::Start(16.),
-                    )
-                } else {
-                    (CalloutArrowDirection::Up, CalloutArrowPosition::Start(24.))
-                };
                 render_callout_bubble(
                     content,
                     &CalloutBubbleConfig {
                         width: CALLOUT_WIDTH,
-                        arrow_direction,
-                        arrow_position,
+                        arrow_direction: CalloutArrowDirection::Left,
+                        arrow_position: CalloutArrowPosition::Start(16.),
                     },
                     appearance,
                 )
@@ -622,21 +577,12 @@ impl View for HoaOnboardingFlow {
             }
             HoaOnboardingStep::TabConfig => {
                 let tab_content = self.render_tab_config_step(appearance);
-                let use_vertical = *TabSettings::as_ref(app).use_vertical_tabs;
-                let (arrow_direction, arrow_position) = if use_vertical {
-                    (
-                        CalloutArrowDirection::Left,
-                        CalloutArrowPosition::Start(16.),
-                    )
-                } else {
-                    (CalloutArrowDirection::Up, CalloutArrowPosition::Center)
-                };
                 render_callout_bubble(
                     tab_content,
                     &CalloutBubbleConfig {
                         width: CALLOUT_WIDTH,
-                        arrow_direction,
-                        arrow_position,
+                        arrow_direction: CalloutArrowDirection::Left,
+                        arrow_position: CalloutArrowPosition::Start(16.),
                     },
                     appearance,
                 )
@@ -657,15 +603,6 @@ impl TypedActionView for HoaOnboardingFlow {
             | HoaOnboardingAction::AdvanceFromVerticalTabs
             | HoaOnboardingAction::AdvanceFromInbox => {
                 self.advance(ctx);
-            }
-            HoaOnboardingAction::ToggleHorizontalTabs => {
-                // Emit before toggling so workspace can pin the callout position.
-                ctx.emit(HoaOnboardingFlowEvent::TabLayoutToggled);
-                let current = *TabSettings::as_ref(ctx).use_vertical_tabs;
-                TabSettings::handle(ctx).update(ctx, |settings, ctx| {
-                    let _ = settings.use_vertical_tabs.set_value(!current, ctx);
-                });
-                ctx.notify();
             }
             HoaOnboardingAction::SelectSessionType(index) => {
                 self.selected_session_type_index = *index;
