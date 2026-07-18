@@ -79,9 +79,10 @@ use crate::terminal::text_effects::{
     ApplyTextEffectsToAgentMode, SelectedTextEffect, SelectedTextEffectColor,
     SelectedTextEffectColorIntensity, SelectedTextEffectColorSpeed, SelectedTextEffectIntensity,
     SelectedTextEffectLargeOutput, SelectedTextEffectScope, SelectedTextEffectSpeed,
-    ShowTextEffectsTitleBarPicker, TextEffect, TextEffectColor, TextEffectColorIntensity,
-    TextEffectColorSpeed, TextEffectIntensity, TextEffectLargeOutput, TextEffectScope,
-    TextEffectSpeed, TextEffectsEnabled, TextEffectsSettings,
+    SelectedTextEffectSpinner, ShowTextEffectsTitleBarPicker, SpinnerStyle, TextEffect,
+    TextEffectColor, TextEffectColorIntensity, TextEffectColorSpeed, TextEffectIntensity,
+    TextEffectLargeOutput, TextEffectScope, TextEffectSpeed, TextEffectsEnabled,
+    TextEffectsSettings,
 };
 use crate::terminal::{
     BlockListSettings, ShowBlockDividers, ShowJumpToBottomOfBlockButton, SizeInfo,
@@ -536,6 +537,7 @@ pub enum AppearancePageAction {
     ToggleTextEffectsTitleBarPicker,
     SetTextEffect(TextEffect),
     SetTextEffectSpeed(TextEffectSpeed),
+    SetTextEffectSpinner(SpinnerStyle),
     SetTextEffectIntensity(TextEffectIntensity),
     SetTextEffectColor(TextEffectColor),
     SetTextEffectColorSpeed(TextEffectColorSpeed),
@@ -607,6 +609,7 @@ pub struct AppearanceSettingsPageView {
     enforce_min_contrast_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_speed_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
+    text_effect_spinner_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_intensity_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_color_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
     text_effect_color_speed_dropdown: ViewHandle<Dropdown<AppearancePageAction>>,
@@ -754,6 +757,11 @@ impl TypedActionView for AppearanceSettingsPageView {
             SetTextEffectSpeed(speed) => {
                 TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.speed.set_value(*speed, ctx));
+                });
+            }
+            SetTextEffectSpinner(spinner) => {
+                TextEffectsSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.spinner.set_value(*spinner, ctx));
                 });
             }
             SetTextEffectIntensity(intensity) => {
@@ -1041,6 +1049,7 @@ impl AppearanceSettingsPageView {
             let settings = TextEffectsSettings::as_ref(ctx);
             let effect = *settings.effect.value();
             let speed = *settings.speed.value();
+            let spinner = *settings.spinner.value();
             let intensity = *settings.intensity.value();
             let color = *settings.color.value();
             let color_speed = *settings.color_speed.value();
@@ -1054,6 +1063,13 @@ impl AppearanceSettingsPageView {
                 dropdown
                     .set_selected_by_action(AppearancePageAction::SetTextEffectSpeed(speed), ctx);
             });
+            me.text_effect_spinner_dropdown
+                .update(ctx, |dropdown, ctx| {
+                    dropdown.set_selected_by_action(
+                        AppearancePageAction::SetTextEffectSpinner(spinner),
+                        ctx,
+                    );
+                });
             me.text_effect_intensity_dropdown
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_selected_by_action(
@@ -1476,6 +1492,7 @@ impl AppearanceSettingsPageView {
             enforce_min_contrast_dropdown,
             text_effect_dropdown: Self::build_text_effect_dropdown(ctx),
             text_effect_speed_dropdown: Self::build_text_effect_speed_dropdown(ctx),
+            text_effect_spinner_dropdown: Self::build_text_effect_spinner_dropdown(ctx),
             text_effect_intensity_dropdown: Self::build_text_effect_intensity_dropdown(ctx),
             text_effect_color_dropdown: Self::build_text_effect_color_dropdown(ctx),
             text_effect_color_speed_dropdown: Self::build_text_effect_color_speed_dropdown(ctx),
@@ -1669,6 +1686,7 @@ impl AppearanceSettingsPageView {
                     vec![
                         Box::new(TextEffectsToggleWidget::default()),
                         Box::new(TextEffectWidget),
+                        Box::new(TextEffectSpinnerWidget),
                         Box::new(TextEffectSpeedWidget),
                         Box::new(TextEffectIntensityWidget),
                         Box::new(TextEffectColorWidget),
@@ -2781,6 +2799,33 @@ impl AppearanceSettingsPageView {
             dropdown.set_selected_by_action(
                 AppearancePageAction::SetTextEffectSpeed(
                     *TextEffectsSettings::as_ref(ctx).speed.value(),
+                ),
+                ctx,
+            );
+            dropdown
+        })
+    }
+
+    fn build_text_effect_spinner_dropdown(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<Dropdown<AppearancePageAction>> {
+        ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_items(
+                SpinnerStyle::VALUES
+                    .into_iter()
+                    .map(|spinner| {
+                        DropdownItem::new(
+                            spinner.label(),
+                            AppearancePageAction::SetTextEffectSpinner(spinner),
+                        )
+                    })
+                    .collect(),
+                ctx,
+            );
+            dropdown.set_selected_by_action(
+                AppearancePageAction::SetTextEffectSpinner(
+                    *TextEffectsSettings::as_ref(ctx).spinner.value(),
                 ),
                 ctx,
             );
@@ -5114,6 +5159,39 @@ impl SettingsWidget for TextEffectWidget {
 #[derive(Default)]
 struct TextEffectSpeedWidget;
 
+#[derive(Default)]
+struct TextEffectSpinnerWidget;
+
+impl SettingsWidget for TextEffectSpinnerWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "terminal text animation spinner line orbit arrows quarters fill clock bar bounce txtfx"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        render_dropdown_item(
+            appearance,
+            "Spinner",
+            Some("Shown immediately before text while new output is printing"),
+            None,
+            LocalOnlyIconState::for_setting(
+                SelectedTextEffectSpinner::storage_key(),
+                SelectedTextEffectSpinner::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            None,
+            &view.text_effect_spinner_dropdown,
+        )
+    }
+}
+
 impl SettingsWidget for TextEffectSpeedWidget {
     type View = AppearanceSettingsPageView;
 
@@ -5122,7 +5200,8 @@ impl SettingsWidget for TextEffectSpeedWidget {
     }
 
     fn should_render(&self, app: &AppContext) -> bool {
-        TextEffectsSettings::as_ref(app).effect.value().uses_speed()
+        let settings = TextEffectsSettings::as_ref(app);
+        settings.effect.value().uses_speed() || settings.spinner.value().is_enabled()
     }
 
     fn render(

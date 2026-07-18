@@ -92,7 +92,8 @@ use crate::terminal::grid_renderer::{FOCUSED_MATCH_COLOR, MATCH_COLOR};
 use crate::terminal::model::ansi::Color;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::text_effects::{
-    AgentTextEffectFrame, AgentTextEffectsTimeline, TextEffectsConfig, VisualContent,
+    AgentTextEffectFrame, AgentTextEffectsTimeline, TextEffectSpinnerSample, TextEffectsConfig,
+    VisualContent,
 };
 use crate::terminal::view::TerminalAction;
 use crate::terminal::{self, ShellLaunchData, TerminalModel};
@@ -1618,6 +1619,7 @@ fn transform_formatted_inline(
         let sample_end = (sample_offset + character_count).min(samples.len());
         let frame = AgentTextEffectFrame {
             samples: samples[sample_offset..sample_end].to_vec(),
+            spinner: None,
             needs_repaint: false,
         };
         fragment.text = transformed_agent_text(&fragment.text, &frame);
@@ -1660,6 +1662,41 @@ fn transformed_agent_formatted_text(
         sample_offset = (sample_offset + line_character_count).min(frame.samples.len());
     }
     transformed
+}
+
+fn render_agent_text_spinner(
+    content: Box<dyn Element>,
+    spinner: Option<TextEffectSpinnerSample>,
+    fallback_color: ColorU,
+    app: &AppContext,
+) -> Box<dyn Element> {
+    let Some(spinner) = spinner else {
+        return content;
+    };
+
+    let appearance = Appearance::as_ref(app);
+    let terminal_colors = terminal::color::Colors::from(appearance.theme().clone());
+    let terminal_colors = terminal::color::List::from(&terminal_colors);
+    let color = spinner
+        .foreground
+        .map(|color| agent_text_effect_color(color, &terminal_colors))
+        .unwrap_or(fallback_color);
+    let prefix = Text::new_inline(
+        format!("{} ", spinner.character),
+        appearance.ai_font_family(),
+        appearance.monospace_font_size(),
+    )
+    .with_style(Properties::default().weight(appearance.monospace_font_weight()))
+    .with_color(color)
+    .with_selectable(false)
+    .soft_wrap(false)
+    .finish();
+
+    Flex::row()
+        .with_cross_axis_alignment(CrossAxisAlignment::Start)
+        .with_child(prefix)
+        .with_child(Expanded::new(1., content).finish())
+        .finish()
 }
 
 fn agent_text_effect_color(color: Color, colors: &terminal::color::List) -> ColorU {
@@ -1749,6 +1786,10 @@ pub(super) fn render_rich_text_output_text_section(
     props: RichTextSectionProps<'_>,
     app: &AppContext,
 ) -> Box<dyn Element> {
+    let text_effect_spinner = props
+        .text_effect_frame
+        .as_ref()
+        .and_then(|frame| frame.spinner);
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let terminal_colors = terminal::color::Colors::from(theme.clone());
@@ -1850,7 +1891,12 @@ pub(super) fn render_rich_text_output_text_section(
         }
     }
 
-    rich_text_element.finish()
+    render_agent_text_spinner(
+        rich_text_element.finish(),
+        text_effect_spinner,
+        props.text_color,
+        app,
+    )
 }
 
 struct TextSectionProps<'a> {
@@ -1876,6 +1922,10 @@ fn render_text_section_with_options(
     clip_config: Option<ClipConfig>,
     app: &AppContext,
 ) -> Box<dyn Element> {
+    let text_effect_spinner = props
+        .text_effect_frame
+        .as_ref()
+        .and_then(|frame| frame.spinner);
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let terminal_colors = terminal::color::Colors::from(theme.clone());
@@ -1958,7 +2008,12 @@ fn render_text_section_with_options(
             );
         }
     }
-    text_element.finish()
+    render_agent_text_spinner(
+        text_element.finish(),
+        text_effect_spinner,
+        props.text_color,
+        app,
+    )
 }
 
 struct ImageSectionProps<'a, A: Action> {

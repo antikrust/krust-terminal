@@ -53,7 +53,9 @@ use crate::terminal::model::index::{Direction, IndexRange, Point, VisibleRow};
 use crate::terminal::model::secrets::{ObfuscateSecrets, RespectObfuscatedSecrets, SecretMap};
 use crate::terminal::model::terminal_model::RangeInModel;
 use crate::terminal::model::{Secret, SecretHandle};
-use crate::terminal::text_effects::{TextEffectSample, TextEffectsConfig, TextEffectsTimeline};
+use crate::terminal::text_effects::{
+    TextEffectSample, TextEffectSpinnerSample, TextEffectsConfig, TextEffectsTimeline,
+};
 use crate::terminal::SizeInfo;
 use crate::util::extensions::TrimStringExt;
 
@@ -691,6 +693,18 @@ impl GridHandler {
         let point = AbsolutePoint::from_original_point(point, self);
         self.text_effects
             .sample(point, cell.content_for_display(), config, now)
+    }
+
+    pub fn sample_text_effect_spinner(
+        &self,
+        point: Point,
+        cell: &Cell,
+        config: TextEffectsConfig,
+        now: Instant,
+    ) -> Option<TextEffectSpinnerSample> {
+        let point = AbsolutePoint::from_original_point(point, self);
+        self.text_effects
+            .sample_spinner(point, cell.content_for_display(), config, now)
     }
 
     fn finish_text_effects_batch(&mut self) {

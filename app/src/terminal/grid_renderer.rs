@@ -816,6 +816,28 @@ fn render_grid_without_ligatures<'a>(
                 ctx,
             );
             let cell = visual_cell.as_ref();
+            render_text_effect_spinner(
+                grid,
+                current_point,
+                &row[col],
+                text_effects,
+                cell_type.secret.is_some(),
+                offset_row,
+                col,
+                colors,
+                override_colors,
+                font_family,
+                font_size,
+                line_height_ratio,
+                cell_size,
+                grid_origin,
+                alpha,
+                enforce_minimal_contrast,
+                &mut minimal_contrast_cache,
+                baseline_position,
+                obfuscate_secrets,
+                ctx,
+            );
 
             // Don't apply cursor contrast colouring when hide_cursor_cell
             // is active — the cursor itself won't be drawn, so the cell
@@ -1364,6 +1386,28 @@ fn render_grid_with_ligatures<'a>(
                 ctx,
             );
             let cell = visual_cell.as_ref();
+            render_text_effect_spinner(
+                grid,
+                current_point,
+                &row[col],
+                text_effects,
+                cell_type.secret.is_some(),
+                offset_row,
+                col,
+                colors,
+                override_colors,
+                font_family,
+                font_size,
+                line_height_ratio,
+                cell_size,
+                grid_origin,
+                alpha,
+                enforce_minimal_contrast,
+                &mut minimal_contrast_cache,
+                baseline_position,
+                obfuscate_secrets,
+                ctx,
+            );
 
             // Don't apply cursor contrast colouring when hide_cursor_cell
             // is active — the cursor itself won't be drawn, so the cell
@@ -1575,6 +1619,92 @@ fn text_effect_cell<'a>(
         visual_cell.fg = foreground;
     }
     Cow::Owned(visual_cell)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_text_effect_spinner(
+    grid: &GridHandler,
+    point: Point,
+    cell: &Cell,
+    state: Option<TextEffectsRenderState>,
+    is_secret: bool,
+    offset_row: usize,
+    col: usize,
+    colors: &color::List,
+    override_colors: &color::OverrideList,
+    font_family: FamilyId,
+    font_size: f32,
+    line_height_ratio: f32,
+    cell_size: Vector2F,
+    grid_origin: Vector2F,
+    alpha: u8,
+    enforce_minimal_contrast: EnforceMinimumContrast,
+    minimal_contrast_cache: &mut MinimalContrastCache,
+    baseline_position: Vector2F,
+    obfuscate_secrets: ObfuscateSecrets,
+    ctx: &mut PaintContext,
+) {
+    let Some(state) = state.filter(|_| !is_secret) else {
+        return;
+    };
+    let Some(sample) = grid.sample_text_effect_spinner(point, cell, state.config, state.now) else {
+        return;
+    };
+
+    if sample.needs_repaint {
+        ctx.repaint_after(state.config.frame_interval());
+    }
+
+    let mut spinner_cell = cell.clone();
+    spinner_cell.drop_extra();
+    spinner_cell.c = sample.character;
+    spinner_cell.flags &= Flags::BOLD_ITALIC;
+    if let Some(foreground) = sample.foreground {
+        spinner_cell.fg = foreground;
+    }
+    let spinner_colors = cell_colors(
+        &spinner_cell,
+        colors,
+        override_colors,
+        &CellType::default(),
+        alpha,
+        enforce_minimal_contrast,
+        minimal_contrast_cache,
+        None,
+        obfuscate_secrets,
+    );
+
+    let mut string_builder = AttributedStringBuilder::new(font_family, font_family, 1);
+    string_builder.update_style(spinner_cell.flags.into(), spinner_colors.foreground_color);
+    string_builder.append_character(sample.character, 0);
+    let string_data = string_builder.build();
+    let laid_out = ctx.text_layout_cache.layout_line(
+        &string_data.line,
+        LineStyle {
+            font_size,
+            line_height_ratio,
+            baseline_ratio: DEFAULT_TOP_BOTTOM_RATIO,
+            fixed_width_tab_size: None,
+        },
+        &string_data.style_runs,
+        cell_size.x(),
+        Default::default(),
+        &ctx.font_cache.text_layout_system(),
+    );
+    let prefix_col = if col == 0 { -0.65 } else { col as f32 - 1. };
+    let line_origin = grid_origin
+        + vec2f(
+            cell_size.x() * prefix_col,
+            cell_size.y() * offset_row as f32,
+        )
+        + baseline_position;
+    paint_line(
+        laid_out.as_ref(),
+        line_origin,
+        cell_size.x(),
+        &string_data.character_index_to_cell_map,
+        ctx.scene,
+    );
 }
 
 fn paint_line(

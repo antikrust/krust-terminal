@@ -17,6 +17,7 @@ fn config(effect: TextEffect) -> TextEffectsConfig {
     TextEffectsConfig {
         effect,
         speed: TextEffectSpeed::Normal,
+        spinner: SpinnerStyle::Off,
         intensity: TextEffectIntensity::Balanced,
         color: TextEffectColor::Terminal,
         color_speed: TextEffectColorSpeed::Normal,
@@ -444,6 +445,99 @@ fn case_pulse_finishes_on_original_content() {
         ),
         Some(TextEffectSample::COMPLETE)
     );
+}
+
+#[test]
+fn spinner_styles_match_the_original_txtfx_sets() {
+    assert_eq!(
+        SpinnerStyle::VALUES.map(SpinnerStyle::frames),
+        [
+            " ",
+            "|/-\\",
+            ".o0O0o. ",
+            "⇐⇖⇑⇗⇒⇘⇓⇙",
+            "◓◑◒◐",
+            "○◔◑◕●",
+            "◴◷◶◵",
+            "▏▎▍▌▋▊▉█▉▊▌▍▎",
+            "▁▂▃▄▅▆▇█▇▆▅▄▃▂",
+        ]
+    );
+}
+
+#[test]
+fn automatic_spinner_follows_the_latest_printing_line_and_expires() {
+    let started_at = Instant::now();
+    let next_line_at = started_at + Duration::from_millis(1);
+    let mut timeline = TextEffectsTimeline::default();
+    let mut config = config(TextEffect::Immediate);
+    config.spinner = SpinnerStyle::Line;
+    timeline.finish_batch([(point_on_row(4, 0), "a".to_string())], started_at);
+
+    assert_eq!(
+        timeline.sample_spinner(point_on_row(4, 0), CharOrStr::Char('a'), config, started_at,),
+        Some(TextEffectSpinnerSample {
+            character: '|',
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
+
+    timeline.finish_batch([(point_on_row(5, 0), "b".to_string())], next_line_at);
+    assert_eq!(
+        timeline.sample_spinner(
+            point_on_row(4, 0),
+            CharOrStr::Char('a'),
+            config,
+            next_line_at,
+        ),
+        None
+    );
+    assert_eq!(
+        timeline
+            .sample_spinner(
+                point_on_row(5, 0),
+                CharOrStr::Char('b'),
+                config,
+                next_line_at,
+            )
+            .map(|sample| sample.character),
+        Some('|')
+    );
+    assert_eq!(
+        timeline.sample_spinner(
+            point_on_row(5, 0),
+            CharOrStr::Char('b'),
+            config,
+            next_line_at + AUTOMATIC_SPINNER_LINGER + Duration::from_millis(1),
+        ),
+        None
+    );
+}
+
+#[test]
+fn agent_text_frame_includes_the_configured_spinner() {
+    let started_at = Instant::now();
+    let mut timeline = AgentTextEffectsTimeline::default();
+    let mut config = config(TextEffect::Immediate);
+    config.spinner = SpinnerStyle::Quarters;
+
+    let frame = timeline.frame(0, "hello", config, started_at);
+    assert_eq!(
+        frame.spinner,
+        Some(TextEffectSpinnerSample {
+            character: '◓',
+            foreground: None,
+            needs_repaint: true,
+        })
+    );
+    let finished = timeline.frame(
+        0,
+        "hello",
+        config,
+        started_at + AUTOMATIC_SPINNER_LINGER + Duration::from_millis(1),
+    );
+    assert_eq!(finished.spinner, None);
 }
 
 #[test]

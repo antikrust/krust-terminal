@@ -20,6 +20,8 @@ const MAX_PENDING_WRITES: usize = 4_096;
 const MAX_ACTIVE_BATCHES: usize = 8;
 const MATRIX_STREAM_CONTINUATION_WINDOW: Duration = Duration::from_millis(250);
 const MATRIX_GLYPHS: &[u8] = b"!@#$%^&*+-=<>?/\\|:;";
+const AUTOMATIC_SPINNER_LINGER: Duration = Duration::from_millis(350);
+const MAX_AUTOMATIC_SPINNER_DURATION: Duration = Duration::from_secs(4);
 const MAX_ACTIVE_SPINNERS: usize = 64;
 const MIN_SPINNER_FPS: u8 = 1;
 const MAX_SPINNER_FPS: u8 = 60;
@@ -499,10 +501,23 @@ pub enum TextEffectSurface {
     AlternateScreen,
 }
 
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
 #[serde(rename_all = "snake_case")]
+#[schemars(description = "The optional spinner shown beside newly printed txtFX text.")]
 pub enum SpinnerStyle {
     #[default]
+    Off,
     Line,
     Orbit,
     Arrows,
@@ -514,7 +529,8 @@ pub enum SpinnerStyle {
 }
 
 impl SpinnerStyle {
-    pub const VALUES: [Self; 8] = [
+    pub const VALUES: [Self; 9] = [
+        Self::Off,
         Self::Line,
         Self::Orbit,
         Self::Arrows,
@@ -525,8 +541,27 @@ impl SpinnerStyle {
         Self::Bounce,
     ];
 
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Off => "Off",
+            Self::Line => "Line  | / - \\",
+            Self::Orbit => "Orbit  . o 0 O",
+            Self::Arrows => "Arrows  ⇐ ⇖ ⇑ ⇗",
+            Self::Quarters => "Quarters  ◓ ◑ ◒ ◐",
+            Self::Fill => "Fill  ○ ◔ ◑ ◕ ●",
+            Self::Clock => "Clock  ◴ ◷ ◶ ◵",
+            Self::Bar => "Bar  ▏▎▍▌▋▊▉█",
+            Self::Bounce => "Bounce  ▁▂▃▄▅▆▇█",
+        }
+    }
+
+    pub fn is_enabled(self) -> bool {
+        self != Self::Off
+    }
+
     pub fn frames(self) -> &'static str {
         match self {
+            Self::Off => " ",
             Self::Line => "|/-\\",
             Self::Orbit => ".o0O0o. ",
             Self::Arrows => "⇐⇖⇑⇗⇒⇘⇓⇙",
@@ -639,6 +674,16 @@ define_settings_group!(TextEffectsSettings, settings: [
         toml_path: "appearance.txtfx.speed",
         description: "The speed of terminal text effects.",
     },
+    spinner: SelectedTextEffectSpinner {
+        type: SpinnerStyle,
+        default: SpinnerStyle::Off,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "appearance.txtfx.spinner",
+        description: "The spinner shown beside text while new output is being printed.",
+    },
     intensity: SelectedTextEffectIntensity {
         type: TextEffectIntensity,
         default: TextEffectIntensity::Balanced,
@@ -725,6 +770,7 @@ define_settings_group!(TextEffectsSettings, settings: [
 pub struct TextEffectsConfig {
     pub effect: TextEffect,
     pub speed: TextEffectSpeed,
+    pub spinner: SpinnerStyle,
     pub intensity: TextEffectIntensity,
     pub color: TextEffectColor,
     pub color_speed: TextEffectColorSpeed,
@@ -747,6 +793,7 @@ impl TextEffectsConfig {
         Some(Self {
             effect: *settings.effect.value(),
             speed: *settings.speed.value(),
+            spinner: *settings.spinner.value(),
             intensity: *settings.intensity.value(),
             color: *settings.color.value(),
             color_speed: *settings.color_speed.value(),
@@ -801,6 +848,13 @@ impl TextEffectSample {
     };
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct TextEffectSpinnerSample {
+    pub character: char,
+    pub foreground: Option<Color>,
+    pub needs_repaint: bool,
+}
+
 #[derive(Clone, Debug)]
 struct AnimatedCell {
     point: AbsolutePoint,
@@ -832,6 +886,14 @@ struct SpinnerInstance {
     fps: u8,
 }
 
+#[derive(Clone, Debug)]
+struct AutomaticSpinner {
+    point: AbsolutePoint,
+    fingerprint: String,
+    started_at: Instant,
+    updated_at: Instant,
+}
+
 impl TextEffectBatch {
     fn cell(&self, point: AbsolutePoint) -> Option<&AnimatedCell> {
         self.cells.iter().find(|cell| cell.point == point)
@@ -844,6 +906,7 @@ pub struct TextEffectsTimeline {
     batches: VecDeque<TextEffectBatch>,
     next_seed: u64,
     spinners: HashMap<String, SpinnerInstance>,
+    automatic_spinner: Option<AutomaticSpinner>,
 }
 
 impl TextEffectsTimeline {
@@ -851,6 +914,7 @@ impl TextEffectsTimeline {
         self.pending_writes.clear();
         self.batches.clear();
         self.spinners.clear();
+        self.automatic_spinner = None;
     }
 
     pub fn record_write(&mut self, point: AbsolutePoint) {
@@ -879,6 +943,40 @@ impl TextEffectsTimeline {
         let written_cells: Vec<_> = written_cells.into_iter().collect();
         if written_cells.is_empty() {
             return;
+        }
+
+        let latest_row = written_cells
+            .last()
+            .expect("non-empty text effect batches have a final cell")
+            .0
+            .row;
+        let (spinner_point, spinner_fingerprint) = written_cells
+            .iter()
+            .find(|(point, _)| point.row == latest_row)
+            .expect("the final row contains at least one written cell");
+        let existing_spinner_was_overwritten =
+            self.automatic_spinner.as_ref().is_some_and(|spinner| {
+                written_cells.iter().any(|(point, fingerprint)| {
+                    *point == spinner.point && *fingerprint != spinner.fingerprint
+                })
+            });
+        let continues_current_line = self.automatic_spinner.as_ref().is_some_and(|spinner| {
+            !existing_spinner_was_overwritten
+                && spinner.point.row == latest_row
+                && started_at.saturating_duration_since(spinner.updated_at)
+                    <= MATRIX_STREAM_CONTINUATION_WINDOW
+        });
+        if continues_current_line {
+            if let Some(spinner) = &mut self.automatic_spinner {
+                spinner.updated_at = started_at;
+            }
+        } else {
+            self.automatic_spinner = Some(AutomaticSpinner {
+                point: *spinner_point,
+                fingerprint: spinner_fingerprint.clone(),
+                started_at,
+                updated_at: started_at,
+            });
         }
 
         let mut spinners_to_remove = Vec::new();
@@ -1040,6 +1138,56 @@ impl TextEffectsTimeline {
         Some(sample_cell(batch, cell, config, now))
     }
 
+    pub fn sample_spinner(
+        &self,
+        point: AbsolutePoint,
+        original_content: CharOrStr<'_>,
+        config: TextEffectsConfig,
+        now: Instant,
+    ) -> Option<TextEffectSpinnerSample> {
+        let spinner = self.automatic_spinner.as_ref()?;
+        if spinner.point != point || !content_matches(&spinner.fingerprint, original_content) {
+            return None;
+        }
+        self.automatic_spinner_sample(config, now)
+    }
+
+    fn automatic_spinner_sample(
+        &self,
+        config: TextEffectsConfig,
+        now: Instant,
+    ) -> Option<TextEffectSpinnerSample> {
+        if !config.spinner.is_enabled() {
+            return None;
+        }
+
+        let spinner = self.automatic_spinner.as_ref()?;
+        let recently_updated =
+            now.saturating_duration_since(spinner.updated_at) <= AUTOMATIC_SPINNER_LINGER;
+        let text_animation_active = self.batches.back().is_some_and(|batch| {
+            now.saturating_duration_since(batch.started_at)
+                <= text_effect_animation_duration(batch, config).min(MAX_AUTOMATIC_SPINNER_DURATION)
+        });
+        if !recently_updated && !text_animation_active {
+            return None;
+        }
+
+        let elapsed = now.saturating_duration_since(spinner.started_at);
+        let frame_duration = config.speed.step_duration() * 2;
+        let frame = elapsed.as_nanos() / frame_duration.as_nanos().max(1);
+        let frame = usize::try_from(frame).unwrap_or(usize::MAX);
+        let frames = config.spinner.frames();
+        let character = frames
+            .chars()
+            .nth(frame % frames.chars().count())
+            .expect("enabled spinner styles contain at least one frame");
+        Some(TextEffectSpinnerSample {
+            character,
+            foreground: sample_foreground(config, 0, elapsed),
+            needs_repaint: true,
+        })
+    }
+
     pub fn apply_command(
         &mut self,
         command: TextEffectsCommand,
@@ -1092,6 +1240,7 @@ pub struct AgentTextEffectsTimeline {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AgentTextEffectFrame {
     pub samples: Vec<Option<TextEffectSample>>,
+    pub spinner: Option<TextEffectSpinnerSample>,
     pub needs_repaint: bool,
 }
 
@@ -1158,9 +1307,12 @@ impl AgentTextEffectsTimeline {
                 })
             })
             .collect::<Vec<_>>();
-        let needs_repaint = samples.iter().flatten().any(|sample| sample.needs_repaint);
+        let spinner = section.timeline.automatic_spinner_sample(config, now);
+        let needs_repaint = samples.iter().flatten().any(|sample| sample.needs_repaint)
+            || spinner.is_some_and(|spinner| spinner.needs_repaint);
         AgentTextEffectFrame {
             samples,
+            spinner,
             needs_repaint,
         }
     }
@@ -1168,17 +1320,21 @@ impl AgentTextEffectsTimeline {
     pub fn needs_repaint(&self, config: TextEffectsConfig, now: Instant) -> bool {
         self.sections.values().any(|section| {
             section
-                .observed_text
-                .chars()
-                .zip(&section.points)
-                .any(|(character, point)| {
-                    point.is_some_and(|point| {
-                        section
-                            .timeline
-                            .sample(point, CharOrStr::Char(character), config, now)
-                            .is_some_and(|sample| sample.needs_repaint)
+                .timeline
+                .automatic_spinner_sample(config, now)
+                .is_some()
+                || section
+                    .observed_text
+                    .chars()
+                    .zip(&section.points)
+                    .any(|(character, point)| {
+                        point.is_some_and(|point| {
+                            section
+                                .timeline
+                                .sample(point, CharOrStr::Char(character), config, now)
+                                .is_some_and(|sample| sample.needs_repaint)
+                        })
                     })
-                })
         })
     }
 }
@@ -1191,6 +1347,23 @@ fn content_matches(fingerprint: &str, content: CharOrStr<'_>) -> bool {
         }
         CharOrStr::Str(content) => fingerprint == content,
     }
+}
+
+fn text_effect_animation_duration(batch: &TextEffectBatch, config: TextEffectsConfig) -> Duration {
+    let steps = match config.effect {
+        TextEffect::Immediate => 0,
+        TextEffect::WordReveal => batch.word_count,
+        TextEffect::Typewriter | TextEffect::Decode => batch.cells.len(),
+        TextEffect::MatrixTrail => batch.line_count + config.intensity.matrix_trail_lines(),
+        TextEffect::CasePulse => batch.cells.len() + batch.cells.len() / 2 + 3,
+        TextEffect::WordDecode => batch.cells.len() + batch.word_count,
+    };
+    let step = if config.effect == TextEffect::MatrixTrail {
+        config.speed.matrix_line_duration()
+    } else {
+        config.speed.step_duration()
+    };
+    step.saturating_mul(u32::try_from(steps).unwrap_or(u32::MAX))
 }
 
 fn sample_cell(
