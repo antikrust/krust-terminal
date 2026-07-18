@@ -4,20 +4,25 @@
 //!
 //! This is the bridge between a local CLI harness's structured output and
 //! Warp's own conversation UI — the thing that replaces the CLI's full-screen
-//! TUI with inline blocks. For this first version, assistant prose and
-//! reasoning map to their native `AgentOutput`/`AgentReasoning` message types,
-//! while tool calls and their results are rendered as lightweight Markdown
-//! `AgentOutput` blocks. Mapping tool calls to Warp's native, interactive
-//! command/diff cards (`Message::ToolCall`/`ToolCallResult`) is a deliberate
-//! follow-up; representing them as Markdown keeps the whole conversation
-//! readable inline without the per-tool proto plumbing.
+//! TUI with inline blocks. Assistant prose and reasoning map to their native
+//! `AgentOutput`/`AgentReasoning` message types. Tool calls map to native
+//! `ToolCall`/`ToolCallResult` messages: **shell** tools (the harness running
+//! commands) use Warp's `RunShellCommand` representation — which also lets
+//! restore rebuild them as real terminal blocks via
+//! `extract_command_blocks_from_messages` — while every other tool uses the
+//! generic `CallMcpTool` card. See docs/local-harness-lifecycle.md.
+
+use std::collections::HashMap;
 
 use ai::agent::{ToolCallOutcome, TurnEvent};
 use uuid::Uuid;
+use warp_core::command::ExitCode;
 use warp_multi_agent_api as api;
 
 use crate::ai::agent::task::TaskId;
-use crate::ai::agent::{AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult};
+use crate::ai::agent::{
+    AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult, RequestCommandOutputResult,
+};
 
 /// Tool output longer than this is truncated in the rendered block; the CLI's
 /// own transcript remains the source of truth for full output.
@@ -33,8 +38,14 @@ pub fn turn_events_to_conversation(prompt: &str, events: &[TurnEvent]) -> api::C
 
     let mut messages = vec![user_query_message(&task_id, &request_id, prompt)];
 
+    let mut shell_commands = HashMap::new();
     for event in events {
-        messages.extend(turn_event_to_messages(&task_id, &request_id, event));
+        messages.extend(turn_event_to_messages(
+            &task_id,
+            &request_id,
+            event,
+            &mut shell_commands,
+        ));
     }
 
     api::ConversationData {
@@ -47,14 +58,26 @@ pub fn turn_events_to_conversation(prompt: &str, events: &[TurnEvent]) -> api::C
     }
 }
 
+/// Tool names the harnesses use for plain shell execution (claude's `Bash`,
+/// codex's `Shell`). These render as Warp's native shell-command
+/// representation — the user is driving a harness, not MCP.
+pub(crate) fn is_shell_tool(name: &str) -> bool {
+    matches!(name, "Bash" | "Shell")
+}
+
 /// Renderable messages for a single event, in order. Empty for events that
 /// carry no user-visible content (session metadata, the completion marker).
 /// Shared by the whole-conversation builder above and the live-streaming
 /// harness runner, so both render events identically.
+///
+/// `shell_commands` correlates a shell tool call's command text with its
+/// later result (keyed by `call_id`): the result message must repeat the
+/// command for `RunShellCommandResult` and the restored-block extractor.
 pub(crate) fn turn_event_to_messages(
     task_id: &str,
     request_id: &str,
     event: &TurnEvent,
+    shell_commands: &mut HashMap<String, String>,
 ) -> Vec<api::Message> {
     match event {
         TurnEvent::Text { text } => {
@@ -68,9 +91,19 @@ pub(crate) fn turn_event_to_messages(
             name,
             input,
         } => {
+            if is_shell_tool(name) {
+                let command = shell_command_from_input(input);
+                shell_commands.insert(call_id.clone(), command.clone());
+                return vec![shell_call_message(task_id, request_id, call_id, command)];
+            }
             vec![tool_call_message(task_id, request_id, call_id, name, input)]
         }
         TurnEvent::ToolCallResult { call_id, outcome } => {
+            if let Some(command) = shell_commands.remove(call_id) {
+                return vec![shell_result_message(
+                    task_id, request_id, call_id, &command, outcome,
+                )];
+            }
             vec![tool_call_result_message(
                 task_id, request_id, call_id, outcome,
             )]
@@ -177,6 +210,111 @@ fn tool_call_message(
     }
 }
 
+/// The shell command string from a shell tool's input (both harnesses use a
+/// `command` key).
+fn shell_command_from_input(input: &serde_json::Value) -> String {
+    input
+        .get("command")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// `(output, exit_code)` for a finished shell call. Codex bakes failures into
+/// an `exit N\n<output>` error string; claude reports success output via
+/// `stdout`/`stderr` fields handled by [`tool_result_text`].
+pub(crate) fn shell_outcome_parts(outcome: &ToolCallOutcome) -> (String, i32) {
+    match outcome {
+        ToolCallOutcome::Success(value) => (truncate(tool_result_text(value).trim_end()), 0),
+        ToolCallOutcome::Error(message) => {
+            if let Some(rest) = message.strip_prefix("exit ") {
+                if let Some((code, output)) = rest.split_once('\n') {
+                    if let Ok(code) = code.trim().parse::<i32>() {
+                        return (truncate(output.trim_end()), code);
+                    }
+                } else if let Ok(code) = rest.trim().parse::<i32>() {
+                    return (String::new(), code);
+                }
+            }
+            (truncate(message.trim_end()), 1)
+        }
+        ToolCallOutcome::Cancelled => ("tool call cancelled".to_string(), 130),
+    }
+}
+
+/// A shell invocation as a native `RunShellCommand` tool call, so the client
+/// renders Warp's command card instead of the generic MCP card.
+fn shell_call_message(
+    task_id: &str,
+    request_id: &str,
+    call_id: &str,
+    command: String,
+) -> api::Message {
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_string(),
+        request_id: request_id.to_string(),
+        message: Some(api::message::Message::ToolCall(api::message::ToolCall {
+            tool_call_id: call_id.to_string(),
+            tool: Some(api::message::tool_call::Tool::RunShellCommand(
+                api::message::tool_call::RunShellCommand {
+                    command,
+                    ..Default::default()
+                },
+            )),
+        })),
+        ..Default::default()
+    }
+}
+
+/// The matching `RunShellCommandResult`. Besides resolving the card, this is
+/// what `extract_command_blocks_from_messages` reads on restore to rebuild
+/// the command as a real terminal block (command + output + exit code).
+fn shell_result_message(
+    task_id: &str,
+    request_id: &str,
+    call_id: &str,
+    command: &str,
+    outcome: &ToolCallOutcome,
+) -> api::Message {
+    let result = match outcome {
+        // A cancelled call carries no result, which the extractor and the
+        // result conversion both treat as cancelled.
+        ToolCallOutcome::Cancelled => None,
+        _ => {
+            let (output, exit_code) = shell_outcome_parts(outcome);
+            Some(api::run_shell_command_result::Result::CommandFinished(
+                api::ShellCommandFinished {
+                    output,
+                    exit_code,
+                    command_id: call_id.to_string(),
+                    start_ts: None,
+                    finish_ts: None,
+                },
+            ))
+        }
+    };
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_string(),
+        request_id: request_id.to_string(),
+        message: Some(api::message::Message::ToolCallResult(
+            api::message::ToolCallResult {
+                tool_call_id: call_id.to_string(),
+                result: Some(api::message::tool_call_result::Result::RunShellCommand(
+                    api::RunShellCommandResult {
+                        command: command.to_string(),
+                        result,
+                        ..Default::default()
+                    },
+                )),
+                ..Default::default()
+            },
+        )),
+        ..Default::default()
+    }
+}
+
 /// The matching `ToolCallResult` message. On restore this is what
 /// reconstructs the card's result (via `restore_action_results_from_exchanges`);
 /// live runs additionally register [`tool_call_action_result`] so the result
@@ -245,13 +383,38 @@ fn tool_call_result_message(
 }
 
 /// The client-side action result for a finished tool call, used to register
-/// the result live (the message path above only feeds restore). Mirrors the
-/// `CallMcpTool` result conversion in `convert_conversation.rs`.
+/// the result live (the message path above only feeds restore). Pass the
+/// shell command for shell calls so the result takes the
+/// `RequestCommandOutput` shape matching [`shell_result_message`]; mirrors
+/// the conversions in `convert_conversation.rs`.
 pub(crate) fn tool_call_action_result(
     task_id: &str,
     call_id: &str,
     outcome: &ToolCallOutcome,
+    shell_command: Option<&str>,
 ) -> AIAgentActionResult {
+    if let Some(command) = shell_command {
+        let result = match outcome {
+            ToolCallOutcome::Cancelled => RequestCommandOutputResult::CancelledBeforeExecution,
+            _ => {
+                let (output, exit_code) = shell_outcome_parts(outcome);
+                RequestCommandOutputResult::Completed {
+                    block_id: call_id.to_string().into(),
+                    command: command.to_string(),
+                    output,
+                    exit_code: ExitCode::from(exit_code),
+                    start_ts: None,
+                    completed_ts: None,
+                }
+            }
+        };
+        return AIAgentActionResult {
+            id: call_id.to_string().into(),
+            task_id: TaskId::new(task_id.to_string()),
+            result: AIAgentActionResultType::RequestCommandOutput(result),
+        };
+    }
+
     let result = match outcome {
         ToolCallOutcome::Success(value) => {
             let text = truncate(tool_result_text(value).trim_end());
@@ -271,11 +434,27 @@ pub(crate) fn tool_call_action_result(
     }
 }
 
-/// Extracts the human-readable text from a tool's success value, preferring the
-/// plain `stdout` field (Bash and friends) over pretty-printed JSON.
+/// Extracts the human-readable text from a tool's success value: claude's
+/// `stdout` (+ `stderr`) fields, codex's `output` field, plain strings, and
+/// pretty-printed JSON as the last resort.
 fn tool_result_text(value: &serde_json::Value) -> String {
+    let stdout = value.get("stdout").and_then(|v| v.as_str());
+    let stderr = value
+        .get("stderr")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+    if stdout.is_some() || stderr.is_some() {
+        let mut text = stdout.unwrap_or_default().to_string();
+        if let Some(err) = stderr {
+            if !text.is_empty() && !text.ends_with('\n') {
+                text.push('\n');
+            }
+            text.push_str(err);
+        }
+        return text;
+    }
     value
-        .get("stdout")
+        .get("output")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .unwrap_or_else(|| match value {

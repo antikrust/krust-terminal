@@ -52,10 +52,17 @@ new harness by writing a parser + exec module, not by touching the drain.
 |----------------------|---------------------------------------------|-----------------------------|
 | `Text`               | `AgentOutput`                               | markdown prose              |
 | `Thinking`           | `AgentReasoning`                            | collapsible "Thinking" block|
-| `ToolCallStarted`    | `ToolCall` → `CallMcpTool`                  | native tool card, collapsed |
-| `ToolCallResult`     | `ToolCallResult` → `CallMcpToolResult`      | card's result detail        |
+| `ToolCallStarted` (shell: `Bash`/`Shell`) | `ToolCall` → `RunShellCommand` | command card + real terminal block |
+| `ToolCallStarted` (other) | `ToolCall` → `CallMcpTool`             | MCP tool card, collapsed    |
+| `ToolCallResult` (shell) | `ToolCallResult` → `RunShellCommandResult` | resolves card; block carries output |
+| `ToolCallResult` (other) | `ToolCallResult` → `CallMcpToolResult`  | card's result detail (JSON tree) |
 | `TurnCompleted` (err)| `AgentOutput` error block                   | error text                  |
 | `SessionInit`/`TurnCompleted` (ok) | nothing — bookkeeping only    | —                           |
+
+Shell correlation: `turn_event_to_messages` takes a `shell_commands`
+registry (`call_id` → command) because the result message must repeat the
+command; the TerminalView drain owns it (`local_harness_shell_commands`)
+and also uses it to build the live block snapshot.
 
 Why `CallMcpTool`: it is Warp's **generic "named tool + JSON args"
 representation** — exactly what a harness tool call is. The card
@@ -64,39 +71,37 @@ working chevron, and its detail renders as the interactive JSON tree behind
 `FeatureFlag::McpJsonTreeView` — enabled for this build in
 `app/src/bin/oss.rs`.
 
-### Decided direction: shell tools are shell, not MCP (2026-07-18)
+### Shell tools are shell, not MCP (implemented 2026-07-18)
 
 The generic MCP card is wrong for **shell** tools (claude `Bash`, codex
 `Shell`): the user is not "using MCP", they're using a harness that runs
-commands, and a JSON tree is a poor way to read command output. The agreed
-design — respect Warp's vocabulary, keep the MCP machinery intact for real
-MCP servers, and put the fork-specific choice in **our mapping layer**:
+commands, and a JSON tree is a poor way to read command output. The design
+— respect Warp's vocabulary, keep the MCP machinery intact for real MCP
+servers, and put the fork-specific choice in **our mapping layer**
+(`is_shell_tool` in turn_events_to_conversation.rs):
 
-- Shell-like tool calls map to Warp's native shell representation:
-  `ToolCall` → `RunShellCommand { command }` and `ToolCallResult` →
-  `RunShellCommandResult { command, command_finished: ShellCommandFinished
-  { output, exit_code, command_id, … } }` (internal:
-  `AIAgentActionType::RequestCommandOutput` /
-  `RequestCommandOutputResult::Completed`). Every other tool keeps
+- Shell calls map to `RunShellCommand` / `RunShellCommandResult`
+  (`ShellCommandFinished { output, exit_code, command_id, … }`); internal
+  result shape `AIAgentActionType::RequestCommandOutput` /
+  `RequestCommandOutputResult::Completed`. Every other tool keeps
   `CallMcpTool`.
-- Facts to know before touching this (learned by reading, not guessing):
-  - The command card (`RequestedActionViewType::Command`) shows the
-    **command only**. In the cloud flow the *output* lives in the terminal
-    block that executed it — not in the card. For view-only transcripts,
-    `sync_command_from_result_for_viewer` (requested_command.rs) syncs just
-    the command text from a finished result.
-  - Warp's own path for showing conversation command blocks without having
-    executed them locally: `conversation.to_serialized_blocklist_items()` →
-    `prepare_conversation_block_restoration` (conversation_restoration.rs)
-    → `BlockList::insert_restored_block` — this is how restored/CLI-agent
-    conversations rebuild real terminal blocks (real block rendering, txtFX
-    included) from persisted exchange data. Investigate feeding harness
-    command results through that shape before inventing any custom output
-    view; a "slightly custom" fork addition is acceptable only if that path
-    can't carry live-streamed results.
-  - `ShellCommandFinished.command_id` is a `BlockId`; for harness runs
-    there is no local block unless we create one — a fresh id is fine for
-    display-only, but nothing may assume the block exists.
+- **Output display**: the command card (`RequestedActionViewType::Command`)
+  shows the command only — in the cloud flow output lives in the terminal
+  block that executed it. So the live drain inserts each finished shell
+  call as a **real terminal block** (`TerminalView::insert_harness_shell_block`
+  → `BlockList::insert_restored_block`), the same snapshot shape restore
+  produces: on restore, `extract_command_blocks_from_messages` finds the
+  `RunShellCommand` call/result pairs in the task messages and
+  `to_serialized_blocklist_items` → `prepare_conversation_block_restoration`
+  rebuilds the identical blocks. Live and restored conversations therefore
+  look the same, and blocks get real terminal rendering (colors, txtFX,
+  per-block delete).
+- `ShellCommandFinished.command_id` is set to the `call_id`; the restore
+  extractor mints its own fresh `BlockId` per block, so nothing assumes a
+  block with that id exists.
+- Exit codes: success → 0; codex bakes failures into an `exit N\n<output>`
+  error string which `shell_outcome_parts` parses; other errors → 1;
+  cancelled → 130.
 
 **Traps:**
 - Do **not** patch shared renderers (`requested_command.rs`, markdown, etc.)

@@ -37,6 +37,7 @@ fn back_to_back_runs_each_land_their_own_completed_conversation() {
                 &TurnEvent::Text {
                     text: format!("reply {turn}"),
                 },
+                &mut std::collections::HashMap::new(),
             );
             app.update(|ctx| stream.apply_messages(messages, ctx));
             app.update(|ctx| stream.complete(ctx));
@@ -190,6 +191,7 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
             &TurnEvent::Text {
                 text: "first reply".to_string(),
             },
+            &mut std::collections::HashMap::new(),
         );
         app.update(|ctx| first.apply_messages(messages, ctx));
         app.update(|ctx| first.complete(ctx));
@@ -215,6 +217,7 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
             &TurnEvent::Text {
                 text: "second reply".to_string(),
             },
+            &mut std::collections::HashMap::new(),
         );
         app.update(|ctx| second.apply_messages(messages, ctx));
         app.update(|ctx| second.complete(ctx));
@@ -251,6 +254,7 @@ fn stream_round_trip_lands_a_completed_exchange_with_output() {
             &TurnEvent::Text {
                 text: "hello from the harness".to_string(),
             },
+            &mut std::collections::HashMap::new(),
         );
         assert!(!messages.is_empty(), "a text event must be renderable");
         app.update(|ctx| stream.apply_messages(messages, ctx));

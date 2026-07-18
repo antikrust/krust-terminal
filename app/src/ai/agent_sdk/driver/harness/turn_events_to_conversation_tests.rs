@@ -49,7 +49,7 @@ fn maps_text_and_reasoning_to_native_message_types() {
 }
 
 #[test]
-fn renders_tool_call_and_result_as_native_cards() {
+fn renders_shell_tools_as_native_shell_commands() {
     let events = vec![
         TurnEvent::ToolCallStarted {
             call_id: "t1".to_string(),
@@ -65,46 +65,123 @@ fn renders_tool_call_and_result_as_native_cards() {
     let messages = &convo.tasks[0].messages;
     assert_eq!(messages.len(), 3); // user query + call + result
 
-    // The call renders as a native collapsible tool card, correlated to its
-    // result by tool_call_id, carrying the tool name and args.
+    // Shell tools use Warp's native shell representation (not the MCP card):
+    // the user is driving a harness that runs commands.
     match body(&messages[1]) {
         api::message::Message::ToolCall(tc) => {
             assert_eq!(tc.tool_call_id, "t1");
             match tc.tool.as_ref() {
-                Some(api::message::tool_call::Tool::CallMcpTool(mcp)) => {
-                    assert_eq!(mcp.name, "Bash");
-                    let args = mcp.args.as_ref().expect("args present");
-                    match args.fields.get("command").and_then(|v| v.kind.as_ref()) {
-                        Some(prost_types::value::Kind::StringValue(s)) => assert_eq!(s, "ls -la"),
-                        other => panic!("expected command string, got {other:?}"),
-                    }
+                Some(api::message::tool_call::Tool::RunShellCommand(cmd)) => {
+                    assert_eq!(cmd.command, "ls -la");
                 }
-                other => panic!("expected CallMcpTool, got {other:?}"),
+                other => panic!("expected RunShellCommand, got {other:?}"),
             }
         }
         other => panic!("expected ToolCall for the call, got {other:?}"),
     }
+    // The result repeats the command and carries output + exit code — the
+    // shape `extract_command_blocks_from_messages` rebuilds real terminal
+    // blocks from on restore.
     match body(&messages[2]) {
         api::message::Message::ToolCallResult(tcr) => {
             assert_eq!(tcr.tool_call_id, "t1");
             match tcr.result.as_ref() {
-                Some(api::message::tool_call_result::Result::CallMcpTool(r)) => {
+                Some(api::message::tool_call_result::Result::RunShellCommand(r)) => {
+                    assert_eq!(r.command, "ls -la");
                     match r.result.as_ref() {
-                        Some(api::call_mcp_tool_result::Result::Success(s)) => {
-                            let text = match s.results[0].result.as_ref() {
-                                Some(api::call_mcp_tool_result::success::result::Result::Text(
-                                    t,
-                                )) => &t.text,
-                                other => panic!("expected text result, got {other:?}"),
-                            };
-                            assert!(text.contains("file1"), "shows stdout: {text}");
+                        Some(api::run_shell_command_result::Result::CommandFinished(finished)) => {
+                            assert!(finished.output.contains("file1"), "{}", finished.output);
+                            assert_eq!(finished.exit_code, 0);
+                            assert_eq!(finished.command_id, "t1");
                         }
-                        other => panic!("expected success, got {other:?}"),
+                        other => panic!("expected CommandFinished, got {other:?}"),
                     }
                 }
-                other => panic!("expected CallMcpTool result, got {other:?}"),
+                other => panic!("expected RunShellCommand result, got {other:?}"),
             }
         }
+        other => panic!("expected ToolCallResult for the result, got {other:?}"),
+    }
+}
+
+#[test]
+fn codex_error_outcome_carries_exit_code_and_output() {
+    let events = vec![
+        TurnEvent::ToolCallStarted {
+            call_id: "t1".to_string(),
+            name: "Shell".to_string(),
+            input: json!({ "command": "false" }),
+        },
+        TurnEvent::ToolCallResult {
+            call_id: "t1".to_string(),
+            outcome: ToolCallOutcome::Error("exit 2\nno such thing".to_string()),
+        },
+    ];
+    let convo = turn_events_to_conversation("q", &events);
+    match body(&convo.tasks[0].messages[2]) {
+        api::message::Message::ToolCallResult(tcr) => match tcr.result.as_ref() {
+            Some(api::message::tool_call_result::Result::RunShellCommand(r)) => {
+                match r.result.as_ref() {
+                    Some(api::run_shell_command_result::Result::CommandFinished(finished)) => {
+                        assert_eq!(finished.exit_code, 2);
+                        assert_eq!(finished.output, "no such thing");
+                    }
+                    other => panic!("expected CommandFinished, got {other:?}"),
+                }
+            }
+            other => panic!("expected RunShellCommand result, got {other:?}"),
+        },
+        other => panic!("expected ToolCallResult, got {other:?}"),
+    }
+}
+
+#[test]
+fn renders_non_shell_tools_as_mcp_cards() {
+    let events = vec![
+        TurnEvent::ToolCallStarted {
+            call_id: "t1".to_string(),
+            name: "Read".to_string(),
+            input: json!({ "file_path": "/tmp/x" }),
+        },
+        TurnEvent::ToolCallResult {
+            call_id: "t1".to_string(),
+            outcome: ToolCallOutcome::Success(json!({ "output": "contents" })),
+        },
+    ];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+
+    match body(&messages[1]) {
+        api::message::Message::ToolCall(tc) => match tc.tool.as_ref() {
+            Some(api::message::tool_call::Tool::CallMcpTool(mcp)) => {
+                assert_eq!(mcp.name, "Read");
+                let args = mcp.args.as_ref().expect("args present");
+                match args.fields.get("file_path").and_then(|v| v.kind.as_ref()) {
+                    Some(prost_types::value::Kind::StringValue(s)) => assert_eq!(s, "/tmp/x"),
+                    other => panic!("expected file_path string, got {other:?}"),
+                }
+            }
+            other => panic!("expected CallMcpTool, got {other:?}"),
+        },
+        other => panic!("expected ToolCall for the call, got {other:?}"),
+    }
+    match body(&messages[2]) {
+        api::message::Message::ToolCallResult(tcr) => match tcr.result.as_ref() {
+            Some(api::message::tool_call_result::Result::CallMcpTool(r)) => match r.result.as_ref()
+            {
+                Some(api::call_mcp_tool_result::Result::Success(s)) => {
+                    let text = match s.results[0].result.as_ref() {
+                        Some(api::call_mcp_tool_result::success::result::Result::Text(t)) => {
+                            &t.text
+                        }
+                        other => panic!("expected text result, got {other:?}"),
+                    };
+                    assert!(text.contains("contents"), "shows output: {text}");
+                }
+                other => panic!("expected success, got {other:?}"),
+            },
+            other => panic!("expected CallMcpTool result, got {other:?}"),
+        },
         other => panic!("expected ToolCallResult for the result, got {other:?}"),
     }
 }

@@ -233,8 +233,12 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                 background
                     .spawn(async move {
                         let mut stream: Option<LocalHarnessStream> = None;
+                        // Correlates shell tool calls with their results across
+                        // events; threaded through each closure like `stream`.
+                        let mut shell_commands = std::collections::HashMap::new();
                         while let Some(event) = event_rx.next().await {
                             let taken = stream.take();
+                            let taken_shell_commands = std::mem::take(&mut shell_commands);
                             let begin_prompt = begin_prompt.clone();
                             let result = drain_spawner
                                 .spawn(move |_, ctx: &mut ModelContext<AgentDriver>| {
@@ -246,16 +250,21 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                                             app,
                                         )
                                     });
+                                    let mut shell_commands = taken_shell_commands;
                                     let messages = turn_event_to_messages(
                                         stream.root_task_id(),
                                         stream.request_id(),
                                         &event,
+                                        &mut shell_commands,
                                     );
                                     stream.apply_messages(messages, app);
-                                    stream
+                                    (stream, shell_commands)
                                 })
                                 .await;
-                            stream = result.ok();
+                            if let Ok((returned_stream, returned_shell_commands)) = result {
+                                stream = Some(returned_stream);
+                                shell_commands = returned_shell_commands;
+                            }
                         }
                         if let Some(stream) = stream {
                             let _ = drain_spawner
