@@ -405,24 +405,108 @@ impl LocalHarnessStream {
         });
     }
 
+    /// Closes the current exchange and opens the next one on the same
+    /// conversation, with the finished tool calls' results as its input —
+    /// the cloud turn shape (an output ends at its tool calls; the results
+    /// come back as the next request's input). Restore derives this same
+    /// shape from the persisted messages, and it is what lets inserted
+    /// command blocks interleave with the response instead of trailing it.
+    /// Consumes the stream; stream subsequent events into the returned one.
+    pub(crate) fn continue_after_tool_results(
+        self,
+        results: Vec<crate::ai::agent::AIAgentActionResult>,
+        ctx: &mut AppContext,
+    ) -> Self {
+        let history = BlocklistAIHistoryModel::handle(ctx);
+
+        // Complete the current exchange. Its output ends with tool-call
+        // actions, so `mark_request_completed` leaves the conversation
+        // InProgress — `complete` stamps the final Success at run end.
+        history.update(ctx, |history, ctx| {
+            history.mark_response_stream_completed_successfully(
+                &self.stream_id,
+                self.conversation_id,
+                self.terminal_surface_id,
+                ctx,
+            );
+        });
+
+        let request_id = uuid::Uuid::new_v4().to_string();
+        let stream_init = api::response_event::StreamInit {
+            request_id: request_id.clone(),
+            conversation_id: String::new(),
+            run_id: String::new(),
+        };
+        let stream_id = ResponseStreamId::for_shared_session(&stream_init);
+        let next = Self {
+            conversation_id: self.conversation_id,
+            stream_id,
+            root_task_id: self.root_task_id.clone(),
+            request_id,
+            terminal_surface_id: self.terminal_surface_id,
+            skill_path_origin: SkillPathOrigin::Local,
+        };
+
+        let request_input = next.request_input_with(
+            results
+                .into_iter()
+                .map(|result| AIAgentInput::ActionResult {
+                    result,
+                    context: Default::default(),
+                })
+                .collect(),
+        );
+        history.update(ctx, |history, ctx| {
+            if let Err(error) = history.update_conversation_for_new_request_input(
+                request_input,
+                next.stream_id.clone(),
+                next.terminal_surface_id,
+                ctx,
+            ) {
+                log::warn!(
+                    "local_harness_stream: failed to register continuation exchange: {error}"
+                );
+            }
+
+            history.initialize_output_for_response_stream(
+                &next.stream_id,
+                next.conversation_id,
+                next.terminal_surface_id,
+                stream_init,
+                ctx,
+            );
+
+            // The continuation is still the same run; keep the status
+            // authoritative for the shimmer.
+            history.mark_conversation_in_progress(
+                next.conversation_id,
+                next.terminal_surface_id,
+                ctx,
+            );
+        });
+
+        next
+    }
+
     fn request_input(&self, prompt: &str) -> RequestInput {
+        self.request_input_with(vec![AIAgentInput::UserQuery {
+            query: prompt.to_string(),
+            context: Default::default(),
+            static_query_type: None,
+            referenced_attachments: Default::default(),
+            user_query_mode: UserQueryMode::default(),
+            running_command: None,
+            intended_agent: None,
+        }])
+    }
+
+    fn request_input_with(&self, inputs: Vec<AIAgentInput>) -> RequestInput {
         // Model ids are just metadata stamped on the exchange; the actual model
         // is whatever the `claude` CLI is configured to use.
         let model_id = LLMId::from("claude");
         RequestInput {
             conversation_id: self.conversation_id,
-            input_messages: HashMap::from([(
-                self.root_task_id.clone(),
-                vec![AIAgentInput::UserQuery {
-                    query: prompt.to_string(),
-                    context: Default::default(),
-                    static_query_type: None,
-                    referenced_attachments: Default::default(),
-                    user_query_mode: UserQueryMode::default(),
-                    running_command: None,
-                    intended_agent: None,
-                }],
-            )]),
+            input_messages: HashMap::from([(self.root_task_id.clone(), inputs)]),
             working_directory: None,
             model_id: model_id.clone(),
             coding_model_id: model_id.clone(),

@@ -96,6 +96,22 @@ servers, and put the fork-specific choice in **our mapping layer**
   rebuilds the identical blocks. Live and restored conversations therefore
   look the same, and blocks get real terminal rendering (colors, txtFX,
   per-block delete).
+- **Interleaving — the exchange splits at tool results.** Blocklist items
+  can't render *inside* an exchange's rich content, so with one exchange
+  per prompt the inserted blocks trail the whole response. The cloud turn
+  shape is the fix (and what restore already derives from the persisted
+  messages): an output ends at its tool calls; the results come back as
+  the next request's input. The drain tracks the phase
+  (`local_harness_pending_tool_calls`) and when its last call resolves,
+  `LocalHarnessStream::continue_after_tool_results` completes the exchange
+  and opens the continuation with the phase's `ActionResult`s as input —
+  so the order in the blocklist is [response so far][command blocks]
+  [rest of response]. Continuation inputs are not `UserQuery`s, so no
+  spurious query bubbles appear.
+- The command-permission autonomy speedbump ("always ask…") is gated off
+  for view-only action models (block.rs) — transcripts never execute, so
+  execution-permission banners are noise; this also fixes shared-session
+  viewers.
 - `ShellCommandFinished.command_id` is set to the `call_id`; the restore
   extractor mints its own fresh `BlockId` per block, so nothing assumes a
   block with that id exists.

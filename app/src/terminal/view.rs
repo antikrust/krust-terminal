@@ -2738,6 +2738,13 @@ pub struct TerminalView {
     /// each shell `ToolCallResult` with its command for the result message,
     /// the registered action result, and the inserted block snapshot.
     local_harness_shell_commands: HashMap<String, String>,
+    /// Tool calls awaiting results in the current phase; when the last one
+    /// resolves, the exchange splits (`continue_after_tool_results`) so the
+    /// rest of the response renders below the tool blocks, not above them.
+    local_harness_pending_tool_calls: HashSet<String>,
+    /// Results of the current phase, carried into the continuation exchange
+    /// as its input — the same shape restore derives from the messages.
+    local_harness_phase_results: Vec<crate::ai::agent::AIAgentActionResult>,
     /// The most recently deleted block(s), restorable while the undo toast
     /// is on screen (replaced by the next delete).
     pending_block_undo: Option<Vec<(BlockIndex, BlockHeight, Block)>>,
@@ -4406,6 +4413,8 @@ impl TerminalView {
             last_local_claude_submission: None,
             local_claude_thread: None,
             local_harness_shell_commands: HashMap::new(),
+            local_harness_pending_tool_calls: HashSet::new(),
+            local_harness_phase_results: Vec::new(),
             pending_block_undo: None,
             sliding_deletes: HashMap::new(),
             block_onboarding_active: false,
@@ -23481,6 +23490,11 @@ impl TerminalView {
         self.ai_action_model.update(ctx, |action_model, _ctx| {
             action_model.set_view_only(true);
         });
+        // Per-run tool bookkeeping; stale entries from an aborted run must
+        // not leak into this one.
+        self.local_harness_shell_commands.clear();
+        self.local_harness_pending_tool_calls.clear();
+        self.local_harness_phase_results.clear();
 
         let terminal_surface_id = ctx.view_id();
         let working_dir = self
@@ -23679,41 +23693,63 @@ impl TerminalView {
                                 &mut view.local_harness_shell_commands,
                             );
                             stream.apply_messages(messages, ctx);
-                            // The tool-call message renders the card; its result
-                            // must be registered on the action model for the card
-                            // to show read-only output live. (Restore reads it back
-                            // from the persisted result message instead.)
-                            if let ai::agent::TurnEvent::ToolCallResult { call_id, outcome } =
-                                &event
-                            {
-                                let result = tool_call_action_result(
-                                    stream.root_task_id(),
-                                    call_id,
-                                    outcome,
-                                    shell_command.as_deref(),
-                                );
-                                let conversation_id = stream.conversation_id();
-                                view.ai_action_model.update(ctx, |action_model, ctx| {
-                                    if action_model.get_action_result(&result.id).is_none() {
-                                        action_model.apply_finished_action_result(
+                            let mut stream = stream;
+                            match &event {
+                                ai::agent::TurnEvent::ToolCallStarted { call_id, .. } => {
+                                    view.local_harness_pending_tool_calls
+                                        .insert(call_id.clone());
+                                }
+                                // The tool-call message renders the card; its
+                                // result must be registered on the action model
+                                // for the card to show read-only output live.
+                                // (Restore reads it back from the persisted
+                                // result message instead.)
+                                ai::agent::TurnEvent::ToolCallResult { call_id, outcome } => {
+                                    let result = tool_call_action_result(
+                                        stream.root_task_id(),
+                                        call_id,
+                                        outcome,
+                                        shell_command.as_deref(),
+                                    );
+                                    let conversation_id = stream.conversation_id();
+                                    view.local_harness_phase_results.push(result.clone());
+                                    view.ai_action_model.update(ctx, |action_model, ctx| {
+                                        if action_model.get_action_result(&result.id).is_none() {
+                                            action_model.apply_finished_action_result(
+                                                conversation_id,
+                                                result,
+                                                ctx,
+                                            );
+                                        }
+                                    });
+                                    // Shell output renders as a real terminal
+                                    // block — the same snapshot shape restore
+                                    // rebuilds from the RunShellCommandResult
+                                    // message — so live and restored
+                                    // conversations look identical.
+                                    if let Some(command) = shell_command {
+                                        view.insert_harness_shell_block(
+                                            &command,
+                                            outcome,
                                             conversation_id,
-                                            result,
                                             ctx,
                                         );
                                     }
-                                });
-                                // Shell output renders as a real terminal block —
-                                // the same snapshot shape restore rebuilds from
-                                // the RunShellCommandResult message — so live
-                                // and restored conversations look identical.
-                                if let Some(command) = shell_command {
-                                    view.insert_harness_shell_block(
-                                        &command,
-                                        outcome,
-                                        conversation_id,
-                                        ctx,
-                                    );
+                                    // When the phase's last call resolves, end
+                                    // this exchange and continue in a fresh one
+                                    // (the cloud turn shape, and what restore
+                                    // derives from the messages) so subsequent
+                                    // response text renders below the tool
+                                    // blocks instead of above them.
+                                    view.local_harness_pending_tool_calls.remove(call_id);
+                                    if view.local_harness_pending_tool_calls.is_empty() {
+                                        let results = std::mem::take(
+                                            &mut view.local_harness_phase_results,
+                                        );
+                                        stream = stream.continue_after_tool_results(results, ctx);
+                                    }
                                 }
+                                _ => {}
                             }
                             if turn_completed {
                                 stream.complete(ctx);

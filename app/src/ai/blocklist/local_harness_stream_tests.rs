@@ -16,7 +16,9 @@ use warpui::{App, EntityId};
 use super::LocalHarnessStream;
 use crate::ai::agent::conversation::ConversationStatus;
 use crate::ai::agent::{AIAgentInput, AIAgentOutputStatus, FinishedAIAgentOutput};
-use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::turn_event_to_messages;
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
+    tool_call_action_result, turn_event_to_messages,
+};
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::test_util::settings::initialize_history_persistence_for_tests;
 
@@ -287,6 +289,96 @@ fn stream_round_trip_lands_a_completed_exchange_with_output() {
                     .any(|message| format!("{message:?}").contains("hello from the harness")),
                 "the agent's text must land in the exchange output, got: {:?}",
                 output.messages,
+            );
+            assert!(matches!(conversation.status(), ConversationStatus::Success));
+        });
+    });
+}
+
+#[test]
+fn tool_result_split_lands_a_continuation_exchange_in_the_same_conversation() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "list it", ctx));
+        let conversation_id = stream.conversation_id();
+
+        // The exchange output ends with a shell tool call...
+        let mut shell_commands = std::collections::HashMap::new();
+        for event in [
+            TurnEvent::Text {
+                text: "let me look".to_string(),
+            },
+            TurnEvent::ToolCallStarted {
+                call_id: "t1".to_string(),
+                name: "Bash".to_string(),
+                input: serde_json::json!({ "command": "ls" }),
+            },
+            TurnEvent::ToolCallResult {
+                call_id: "t1".to_string(),
+                outcome: ai::agent::ToolCallOutcome::Success(
+                    serde_json::json!({ "stdout": "file1" }),
+                ),
+            },
+        ] {
+            let messages = turn_event_to_messages(
+                stream.root_task_id(),
+                stream.request_id(),
+                &event,
+                &mut shell_commands,
+            );
+            app.update(|ctx| stream.apply_messages(messages, ctx));
+        }
+
+        // ...then the run continues in a fresh exchange whose input is the
+        // tool's result (the cloud turn shape).
+        let result = tool_call_action_result(
+            stream.root_task_id(),
+            "t1",
+            &ai::agent::ToolCallOutcome::Success(serde_json::json!({ "stdout": "file1" })),
+            Some("ls"),
+        );
+        let stream = app.update(|ctx| stream.continue_after_tool_results(vec![result], ctx));
+        assert_eq!(
+            stream.conversation_id(),
+            conversation_id,
+            "continuation stays in the conversation"
+        );
+
+        let messages = turn_event_to_messages(
+            stream.root_task_id(),
+            stream.request_id(),
+            &TurnEvent::Text {
+                text: "file1 is all there is".to_string(),
+            },
+            &mut shell_commands,
+        );
+        app.update(|ctx| stream.apply_messages(messages, ctx));
+        app.update(|ctx| stream.complete(ctx));
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&conversation_id)
+                .expect("conversation exists");
+            let exchanges: Vec<_> = conversation.root_task_exchanges().collect();
+            assert_eq!(exchanges.len(), 2, "the tool result splits the exchange");
+            for exchange in &exchanges {
+                assert!(
+                    matches!(exchange.output_status, AIAgentOutputStatus::Finished { .. }),
+                    "both exchanges complete"
+                );
+            }
+            // The continuation's input is the action result, not a user query
+            // (no spurious query bubble).
+            assert!(
+                exchanges[1]
+                    .input
+                    .iter()
+                    .all(|input| matches!(input, AIAgentInput::ActionResult { .. })),
+                "continuation input is the tool result, got: {:?}",
+                exchanges[1].input,
             );
             assert!(matches!(conversation.status(), ConversationStatus::Success));
         });

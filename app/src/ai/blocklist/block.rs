@@ -2779,7 +2779,11 @@ impl AIBlock {
                 }
             })
         {
-            if is_agent_mode_autonomy_allowed(ctx) {
+            // View-only transcripts (shared-session viewers, local-harness
+            // conversations) never execute commands, so autonomy speedbumps
+            // about execution permission are irrelevant noise on their cards.
+            if is_agent_mode_autonomy_allowed(ctx) && !self.action_model.as_ref(ctx).is_view_only()
+            {
                 let autoexecute_decision = escape_char.map(|escape_char| {
                     BlocklistAIPermissions::as_ref(ctx).can_autoexecute_command(
                         &self.client_ids.conversation_id,
