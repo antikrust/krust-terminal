@@ -224,7 +224,7 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
-    shell_outcome_parts, tool_call_action_result, turn_event_to_messages,
+    tool_call_action_result, turn_event_to_messages,
 };
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::ambient_agents::{
@@ -23722,25 +23722,10 @@ impl TerminalView {
                                             );
                                         }
                                     });
-                                    // Shell output renders as a real terminal
-                                    // block — the same snapshot shape restore
-                                    // rebuilds from the RunShellCommandResult
-                                    // message — so live and restored
-                                    // conversations look identical.
-                                    if let Some(command) = shell_command {
-                                        view.insert_harness_shell_block(
-                                            &command,
-                                            outcome,
-                                            conversation_id,
-                                            ctx,
-                                        );
-                                    }
                                     // When the phase's last call resolves, end
                                     // this exchange and continue in a fresh one
-                                    // (the cloud turn shape, and what restore
-                                    // derives from the messages) so subsequent
-                                    // response text renders below the tool
-                                    // blocks instead of above them.
+                                    // — the cloud turn shape, and what restore
+                                    // derives from the persisted messages.
                                     view.local_harness_pending_tool_calls.remove(call_id);
                                     if view.local_harness_pending_tool_calls.is_empty() {
                                         let results = std::mem::take(
@@ -23797,58 +23782,6 @@ impl TerminalView {
                 }
             })
             .detach();
-    }
-
-    /// Inserts a harness shell command as a real terminal block — the same
-    /// snapshot shape `to_serialized_blocklist_items` produces on restore —
-    /// so the CLI's commands read as first-class blocks live and restored
-    /// alike (output, colors, txtFX included).
-    fn insert_harness_shell_block(
-        &mut self,
-        command: &str,
-        outcome: &ai::agent::ToolCallOutcome,
-        conversation_id: AIConversationId,
-        ctx: &mut ViewContext<Self>,
-    ) {
-        let (output, exit_code) = shell_outcome_parts(outcome);
-        // Same newline normalization as the restore extractor's stylized bytes.
-        let stylize = |s: &str| s.replace("\r\n", "\n").replace('\n', "\r\n").into_bytes();
-        let now = chrono::Local::now();
-        let block = crate::terminal::model::block::SerializedBlock {
-            id: BlockId::new(),
-            stylized_command: stylize(command),
-            stylized_output: stylize(&output),
-            pwd: self.pwd(),
-            git_head: None,
-            git_branch_name: None,
-            virtual_env: None,
-            conda_env: None,
-            node_version: None,
-            exit_code: ExitCode::from(exit_code),
-            did_execute: true,
-            start_ts: Some(now),
-            completed_ts: Some(now),
-            ps1: None,
-            rprompt: None,
-            honor_ps1: false,
-            session_id: None,
-            shell_host: None,
-            is_background: false,
-            prompt_snapshot: None,
-            ai_metadata: None,
-            is_local: None,
-            agent_view_visibility: Some(
-                crate::terminal::model::block::AgentViewVisibility::new_from_conversation(
-                    conversation_id,
-                )
-                .into(),
-            ),
-        };
-        self.model
-            .lock()
-            .block_list_mut()
-            .insert_restored_block(&block);
-        ctx.notify();
     }
 
     pub fn pwd_if_local(&self, ctx: &AppContext) -> Option<String> {

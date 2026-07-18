@@ -417,6 +417,10 @@ impl LocalHarnessStream {
         results: Vec<crate::ai::agent::AIAgentActionResult>,
         ctx: &mut AppContext,
     ) -> Self {
+        log::info!(
+            "fork: splitting exchange after {} tool result(s)",
+            results.len()
+        );
         let history = BlocklistAIHistoryModel::handle(ctx);
 
         // Complete the current exchange. Its output ends with tool-call

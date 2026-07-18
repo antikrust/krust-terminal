@@ -1582,6 +1582,64 @@ impl View for RequestedCommandView {
             );
         }
 
+        // View-only transcripts (local-harness runs, shared-session viewers)
+        // have no terminal block carrying the executed command's output — the
+        // command ran elsewhere. Render the output inside the expanded card
+        // instead, in the same body style as the editor/MCP sections.
+        let transcript_output = (self.is_header_expanded
+            && self.action_type.is_requested_command()
+            && self.action_model.as_ref(app).is_view_only())
+        .then(|| {
+            action_status
+                .as_ref()
+                .and_then(|status| status.finished_result().map(|result| &result.result))
+                .and_then(|result| match result {
+                    AIAgentActionResultType::RequestCommandOutput(
+                        RequestCommandOutputResult::Completed {
+                            output, exit_code, ..
+                        },
+                    ) => Some((output.clone(), *exit_code)),
+                    _ => None,
+                })
+        })
+        .flatten();
+        if let Some((output, exit_code)) = transcript_output {
+            let text = if output.trim().is_empty() {
+                format!("(no output — exit {exit_code})")
+            } else {
+                output
+            };
+            let text_element = Text::new(
+                text,
+                appearance.monospace_font_family(),
+                appearance.monospace_font_size(),
+            )
+            .with_color(blended_colors::text_main(theme, theme.background()))
+            .with_selectable(true)
+            .finish();
+            let selected_text = self.mcp_content_selected_text.clone();
+            let selectable_text = SelectableArea::new(
+                self.mcp_content_selection_handle.clone(),
+                #[allow(clippy::unwrap_used)]
+                move |selection_args, _, _| {
+                    *selected_text.write().unwrap() = selection_args.selection;
+                },
+                text_element,
+            )
+            .on_selection_updated(|ctx, _| {
+                ctx.dispatch_typed_action(RequestedCommandViewAction::SelectText);
+            })
+            .finish();
+            content.add_child(
+                Container::new(selectable_text)
+                    .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
+                    .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
+                    .with_background(theme.background())
+                    .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
+                    .finish(),
+            );
+        }
+
         if should_render_mcp_content {
             if FeatureFlag::McpJsonTreeView.is_enabled() {
                 let colors = JsonTreeColors::from_theme(theme);

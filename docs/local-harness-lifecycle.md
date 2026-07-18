@@ -85,29 +85,27 @@ servers, and put the fork-specific choice in **our mapping layer**
   result shape `AIAgentActionType::RequestCommandOutput` /
   `RequestCommandOutputResult::Completed`. Every other tool keeps
   `CallMcpTool`.
-- **Output display**: the command card (`RequestedActionViewType::Command`)
-  shows the command only — in the cloud flow output lives in the terminal
-  block that executed it. So the live drain inserts each finished shell
-  call as a **real terminal block** (`TerminalView::insert_harness_shell_block`
-  → `BlockList::insert_restored_block`), the same snapshot shape restore
-  produces: on restore, `extract_command_blocks_from_messages` finds the
-  `RunShellCommand` call/result pairs in the task messages and
-  `to_serialized_blocklist_items` → `prepare_conversation_block_restoration`
-  rebuilds the identical blocks. Live and restored conversations therefore
-  look the same, and blocks get real terminal rendering (colors, txtFX,
-  per-block delete).
-- **Interleaving — the exchange splits at tool results.** Blocklist items
-  can't render *inside* an exchange's rich content, so with one exchange
-  per prompt the inserted blocks trail the whole response. The cloud turn
-  shape is the fix (and what restore already derives from the persisted
-  messages): an output ends at its tool calls; the results come back as
-  the next request's input. The drain tracks the phase
-  (`local_harness_pending_tool_calls`) and when its last call resolves,
-  `LocalHarnessStream::continue_after_tool_results` completes the exchange
-  and opens the continuation with the phase's `ActionResult`s as input —
-  so the order in the blocklist is [response so far][command blocks]
-  [rest of response]. Continuation inputs are not `UserQuery`s, so no
-  spurious query bubbles appear.
+- **Output display — inside the card, never as a separate block.** Product
+  decision (user call, 2026-07-18): harness commands must not proliferate
+  terminal blocks in the conversation. The command card
+  (`RequestedActionViewType::Command`) upstream shows only the command (in
+  the cloud flow output lives in the terminal block that executed it); for
+  **view-only** action models the card's expanded body additionally renders
+  the finished `RequestCommandOutputResult::Completed` output text
+  (requested_command.rs) — the sanctioned fork addition, gated so cloud and
+  shared-session flows are untouched. Two suppressions keep blocks out:
+  the live drain inserts none, and `prepare_conversation_block_restoration`
+  (conversation_restoration.rs) skips `to_serialized_blocklist_items` for
+  local-harness conversations (registry lookup) so restore doesn't
+  resurrect them — the cards restore their output from the persisted
+  results instead.
+- **The exchange still splits at tool results**
+  (`LocalHarnessStream::continue_after_tool_results`, driven by the drain's
+  `local_harness_pending_tool_calls` phase tracking): that is the cloud
+  turn shape and exactly the exchange structure restore derives from the
+  persisted messages, so live and restored conversations agree. The
+  continuation's inputs are the phase's `ActionResult`s, not `UserQuery`s
+  — no spurious query bubbles.
 - The command-permission autonomy speedbump ("always ask…") is gated off
   for view-only action models (block.rs) — transcripts never execute, so
   execution-permission banners are noise; this also fixes shared-session

@@ -56,7 +56,17 @@ pub fn prepare_conversation_block_restoration(
     conversation: &AIConversation,
     terminal_model: &mut TerminalModel,
 ) -> ConversationBlockRestorationPlan {
-    let serialized_items = conversation.to_serialized_blocklist_items();
+    // Local-harness conversations show command output inside the tool card,
+    // not as separate terminal blocks (the user's call: no block
+    // proliferation for harness commands). Restoring extracted blocks here
+    // would resurrect exactly the blocks the live view deliberately doesn't
+    // create; the cards restore their output from the persisted results.
+    let serialized_items =
+        if crate::ai::blocklist::local_harness_threads::lookup(conversation.id()).is_some() {
+            Vec::new()
+        } else {
+            conversation.to_serialized_blocklist_items()
+        };
     if !serialized_items.is_empty() {
         let block_list = terminal_model.block_list_mut();
         for item in &serialized_items {
