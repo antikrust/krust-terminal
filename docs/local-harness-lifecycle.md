@@ -64,6 +64,40 @@ working chevron, and its detail renders as the interactive JSON tree behind
 `FeatureFlag::McpJsonTreeView` — enabled for this build in
 `app/src/bin/oss.rs`.
 
+### Decided direction: shell tools are shell, not MCP (2026-07-18)
+
+The generic MCP card is wrong for **shell** tools (claude `Bash`, codex
+`Shell`): the user is not "using MCP", they're using a harness that runs
+commands, and a JSON tree is a poor way to read command output. The agreed
+design — respect Warp's vocabulary, keep the MCP machinery intact for real
+MCP servers, and put the fork-specific choice in **our mapping layer**:
+
+- Shell-like tool calls map to Warp's native shell representation:
+  `ToolCall` → `RunShellCommand { command }` and `ToolCallResult` →
+  `RunShellCommandResult { command, command_finished: ShellCommandFinished
+  { output, exit_code, command_id, … } }` (internal:
+  `AIAgentActionType::RequestCommandOutput` /
+  `RequestCommandOutputResult::Completed`). Every other tool keeps
+  `CallMcpTool`.
+- Facts to know before touching this (learned by reading, not guessing):
+  - The command card (`RequestedActionViewType::Command`) shows the
+    **command only**. In the cloud flow the *output* lives in the terminal
+    block that executed it — not in the card. For view-only transcripts,
+    `sync_command_from_result_for_viewer` (requested_command.rs) syncs just
+    the command text from a finished result.
+  - Warp's own path for showing conversation command blocks without having
+    executed them locally: `conversation.to_serialized_blocklist_items()` →
+    `prepare_conversation_block_restoration` (conversation_restoration.rs)
+    → `BlockList::insert_restored_block` — this is how restored/CLI-agent
+    conversations rebuild real terminal blocks (real block rendering, txtFX
+    included) from persisted exchange data. Investigate feeding harness
+    command results through that shape before inventing any custom output
+    view; a "slightly custom" fork addition is acceptable only if that path
+    can't carry live-streamed results.
+  - `ShellCommandFinished.command_id` is a `BlockId`; for harness runs
+    there is no local block unless we create one — a fresh id is fine for
+    display-only, but nothing may assume the block exists.
+
 **Traps:**
 - Do **not** patch shared renderers (`requested_command.rs`, markdown, etc.)
   to change how fork content displays. Presentation changes go through Warp's
