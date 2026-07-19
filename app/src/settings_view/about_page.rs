@@ -13,7 +13,6 @@ use super::settings_page::{
 use super::SettingsSection;
 use crate::appearance::Appearance;
 use crate::channel::ChannelState;
-use crate::themes::theme::ColorScheme;
 use crate::workspace::WorkspaceAction;
 
 pub struct AboutPageView {
@@ -51,7 +50,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about warp version"
+        "about derp warp version"
     }
 
     fn render(
@@ -60,14 +59,12 @@ impl SettingsWidget for AboutPageWidget {
         appearance: &Appearance,
         _app: &AppContext,
     ) -> Box<dyn Element> {
-        let theme = appearance.theme();
         let ui_builder = appearance.ui_builder();
 
-        let image_path = if theme.inferred_color_scheme() == ColorScheme::LightOnDark {
-            "bundled/svg/warp-logo-with-light-title.svg"
-        } else {
-            "bundled/svg/warp-logo-with-dark-title.svg"
-        };
+        // The derp wordmark is white-filled with a heavy black outline, so a
+        // single asset reads correctly on both light and dark backgrounds —
+        // unlike the old Warp logo, which needed a per-scheme variant.
+        let image_path = "bundled/png/derp-logo.png";
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
 
@@ -115,7 +112,7 @@ impl SettingsWidget for AboutPageWidget {
                 .with_child(version_row.finish())
                 .with_child(
                     ui_builder
-                        .span("Copyright 2026 Warp")
+                        .span("Copyright 2026 Derp")
                         .build()
                         .with_margin_top(16.)
                         .finish(),
