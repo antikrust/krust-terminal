@@ -209,8 +209,46 @@ fn repetition_is_tracked_across_commands() {
     for _ in 0..4 {
         engine.note_command(&command);
     }
-    let history = engine.history(&command);
+    let history = engine.history(&command, Phase::Submit);
     assert_eq!(history.repeat_count, 3, "four runs means three repeats");
+}
+
+#[test]
+fn the_two_voices_do_not_starve_each_other() {
+    // A shared backoff window let completions suppress the next submit roll,
+    // which pushed submit lines down to a rate where the voice never
+    // registered. Each phase must pace itself independently.
+    let commands = ["ls -la", "cd ~/x", "git status", "ls", "cat f.txt"];
+    let (mut submits, mut completes, mut total) = (0, 0, 0);
+    for seed in 0..60 {
+        let mut engine = MiseryEngine::with_seed(seed);
+        for command in commands {
+            total += 1;
+            let mut submit_ctx = ctx(command);
+            submit_ctx.exit_code = None;
+            submit_ctx.succeeded = None;
+            submit_ctx.duration = None;
+            submit_ctx.output_lines = None;
+            if engine.generate(&submit_ctx, Phase::Submit).is_some() {
+                submits += 1;
+            }
+            if engine.generate(&ctx(command), Phase::Complete).is_some() {
+                completes += 1;
+            }
+        }
+    }
+
+    let submit_rate = submits as f64 / total as f64;
+    let complete_rate = completes as f64 / total as f64;
+
+    assert!(
+        submit_rate > 0.15,
+        "submit voice too rare to register: {submit_rate:.2}"
+    );
+    assert!(
+        submit_rate < complete_rate,
+        "submit should stay the rarer voice: {submit_rate:.2} vs {complete_rate:.2}"
+    );
 }
 
 #[test]

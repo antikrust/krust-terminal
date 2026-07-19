@@ -1,3 +1,4 @@
+use super::super::Phase;
 use super::*;
 
 #[test]
@@ -81,7 +82,7 @@ fn submitting_records_the_command_for_repetition() {
     }
     let parsed = super::super::classify::parse("ls -la").unwrap();
     assert!(
-        session.engine.history(&parsed).repeat_count > 0,
+        session.engine.history(&parsed, Phase::Submit).repeat_count > 0,
         "repeats should have been recorded"
     );
 }

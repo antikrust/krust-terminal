@@ -76,10 +76,13 @@ pub fn probability(
     // Back off if we've been talking a lot lately.
     score -= 0.16 * history.recent_misery_count as f32;
 
-    // The completion phase is the more interesting one, so let submit be
-    // rarer — this is what stops every command producing two lines.
+    // The completion phase is the more interesting one, so submit stays
+    // rarer — this is what stops every command producing two lines. It must
+    // not be so rare that the voice never registers as a pattern, though:
+    // at 0.55 combined with a shared backoff window, submit lines landed
+    // around 18% and read as noise rather than as a second voice.
     if phase == Phase::Submit {
-        score *= 0.55;
+        score *= 0.8;
     }
 
     score.clamp(MIN_PROBABILITY, MAX_PROBABILITY)

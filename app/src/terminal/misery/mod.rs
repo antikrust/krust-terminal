@@ -46,8 +46,13 @@ pub use view::MiseryLineView;
 const RECENT_LINES_MEMORY: usize = 40;
 /// How many recent commands to consider when detecting repetition.
 const RECENT_COMMANDS_MEMORY: usize = 6;
-/// Window over which `recent_misery_count` backs the engine off.
-const MISERY_BACKOFF_WINDOW: usize = 4;
+/// How many recent commands each voice backs off over.
+///
+/// Tracked *per phase*. A single shared window meant the two voices starved
+/// each other: a completion line would suppress the very next submit roll,
+/// and since completions are the more likely of the two, submit lines almost
+/// never surfaced. Each voice now paces itself independently.
+const MISERY_BACKOFF_WINDOW: usize = 3;
 
 /// Everything the grammar can draw on when expanding a template.
 #[derive(Debug, Clone, Default)]
@@ -76,8 +81,10 @@ pub struct MiseryEngine {
     rng: StdRng,
     recent_lines: VecDeque<String>,
     recent_commands: VecDeque<String>,
-    /// Whether each of the last few commands produced a line.
-    recent_spoke: VecDeque<bool>,
+    /// Whether each of the last few submit rolls produced a line.
+    recent_spoke_submit: VecDeque<bool>,
+    /// Whether each of the last few completion rolls produced a line.
+    recent_spoke_complete: VecDeque<bool>,
 }
 
 impl Default for MiseryEngine {
@@ -92,7 +99,8 @@ impl MiseryEngine {
             rng: StdRng::from_entropy(),
             recent_lines: VecDeque::with_capacity(RECENT_LINES_MEMORY),
             recent_commands: VecDeque::with_capacity(RECENT_COMMANDS_MEMORY),
-            recent_spoke: VecDeque::with_capacity(MISERY_BACKOFF_WINDOW),
+            recent_spoke_submit: VecDeque::with_capacity(MISERY_BACKOFF_WINDOW),
+            recent_spoke_complete: VecDeque::with_capacity(MISERY_BACKOFF_WINDOW),
         }
     }
 
@@ -118,12 +126,12 @@ impl MiseryEngine {
     /// common case) or if no template could be filled from the context.
     pub fn generate(&mut self, ctx: &MiseryContext, phase: Phase) -> Option<String> {
         let command = classify::parse(&ctx.command_name)?;
-        let history = self.history(&command);
+        let history = self.history(&command, phase);
 
         let probability =
             deserve::probability(&command, phase, history, ctx.exit_code, ctx.duration);
         let speaking = self.rng.gen::<f32>() < probability;
-        self.note_spoke(speaking);
+        self.note_spoke(speaking, phase);
         if !speaking {
             return None;
         }
@@ -173,7 +181,7 @@ impl MiseryEngine {
         None
     }
 
-    fn history(&self, command: &ParsedCommand) -> deserve::History {
+    fn history(&self, command: &ParsedCommand, phase: Phase) -> deserve::History {
         let repeat_count = self
             .recent_commands
             .iter()
@@ -183,7 +191,11 @@ impl MiseryEngine {
             // discount it to get "how many times *before* this one".
             .saturating_sub(1) as u32;
 
-        let recent_misery_count = self.recent_spoke.iter().filter(|spoke| **spoke).count() as u32;
+        let recent_misery_count = self
+            .recent_spoke_for(phase)
+            .iter()
+            .filter(|spoke| **spoke)
+            .count() as u32;
 
         deserve::History {
             repeat_count,
@@ -191,11 +203,22 @@ impl MiseryEngine {
         }
     }
 
-    fn note_spoke(&mut self, spoke: bool) {
-        if self.recent_spoke.len() == MISERY_BACKOFF_WINDOW {
-            self.recent_spoke.pop_front();
+    fn recent_spoke_for(&self, phase: Phase) -> &VecDeque<bool> {
+        match phase {
+            Phase::Submit => &self.recent_spoke_submit,
+            Phase::Complete => &self.recent_spoke_complete,
         }
-        self.recent_spoke.push_back(spoke);
+    }
+
+    fn note_spoke(&mut self, spoke: bool, phase: Phase) {
+        let window = match phase {
+            Phase::Submit => &mut self.recent_spoke_submit,
+            Phase::Complete => &mut self.recent_spoke_complete,
+        };
+        if window.len() == MISERY_BACKOFF_WINDOW {
+            window.pop_front();
+        }
+        window.push_back(spoke);
     }
 
     fn remember(&mut self, line: String) {

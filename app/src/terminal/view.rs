@@ -187,7 +187,9 @@ use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
 use super::find::FindOptions;
-use super::misery::{CompletedCommand as MiseryCompletedCommand, MiseryLineView, MiserySession};
+use super::misery::{
+    CompletedCommand as MiseryCompletedCommand, MiseryLineView, MiserySession, Phase as MiseryPhase,
+};
 use super::model::block::{
     BlockSection, BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS,
 };
@@ -5072,7 +5074,7 @@ impl TerminalView {
         // `insert_below_long_running_block: false` puts the line above the
         // block that is now running, so it reads as a reaction to the command
         // rather than a comment on output that hasn't arrived yet.
-        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, ctx));
+        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Submit, ctx));
         self.insert_rich_content(
             None,
             handle,
@@ -5126,7 +5128,7 @@ impl TerminalView {
 
     /// Inserts a generated misery line into the block list.
     fn insert_misery_line(&mut self, line: String, ctx: &mut ViewContext<Self>) {
-        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, ctx));
+        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Complete, ctx));
         self.insert_rich_content(
             None,
             handle,

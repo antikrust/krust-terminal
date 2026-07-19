@@ -142,8 +142,8 @@ Starting from the class baseline:
 | Non-zero exit | +0.30 |
 | Slow (>5s) **and** trivial | +0.25 |
 | Slow (>5s) and not trivial | −0.20 |
-| Each recent line already emitted (window 4) | −0.16 |
-| `Phase::Submit` | ×0.55 |
+| Each recent line already emitted (per-phase window 3) | −0.16 |
+| `Phase::Submit` | ×0.8 |
 
 Clamped to `0.04..=0.75`.
 
@@ -156,6 +156,15 @@ Consequences worth stating: a pipeline is treated as evidence of thought and
 gets spared; a slow trivial command is its own punchline while a slow build is
 left alone; and the backoff window means misery arrives in waves rather than a
 constant drizzle.
+
+Measured over 12,800 simulated commands: **submit 27%, complete 32%**.
+
+> **Design note — the backoff window is tracked per phase.** It was originally
+> shared, which meant the two voices starved each other: a completion line
+> suppressed the very next submit roll, and since completions are the likelier
+> of the two, submit lines landed around 18% and never registered as a second
+> voice at all. Widening the shared window fixed submit but dragged completions
+> down with it. Splitting the window per phase lets each pace itself.
 
 ---
 
@@ -301,6 +310,13 @@ is in the output; it is a sibling of the block, not part of it.
 because the terminal is muttering, not announcing — and because this is the one
 piece of text on screen that no program actually printed, so it should read as
 clearly subordinate to real output.
+
+**Vertical spacing is asymmetric, and it is load-bearing.** Both voices render
+between blocks, so without it a submit line is visually indistinguishable from
+a verdict on the block *above* it — the line appears above the command's prompt
+row, right against the previous block's output. Each line now hugs the block it
+refers to (submit: 10px above, 1px below; complete: the reverse) and lets
+proximity do the disambiguating.
 
 ### The two hooks
 
