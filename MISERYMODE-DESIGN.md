@@ -12,11 +12,8 @@ Written 2026-07-19. Describes the implementation as it currently stands in
 
 ## 1. Status
 
-**Engine: complete and tested.** 1,977 lines across 10 files (984 of them
-tests), 45 tests passing, zero warnings.
-
-**Rendering: not wired.** The engine produces strings; nothing displays them
-yet. See §9.
+**Complete and wired.** 56 tests passing plus one opt-in inspection tool, zero
+warnings. Lines render in the terminal on command submit and completion.
 
 | File | LOC | Role |
 |---|---:|---|
@@ -25,7 +22,9 @@ yet. See §9.
 | `templates.rs` | 402 | The template bank (54 templates), `Phase`, `Cond` |
 | `grammar.rs` | 194 | Slot resolution and expansion |
 | `vocab.rs` | 215 | 14 word lists, 153 entries |
-| `*_tests.rs` | 600 | 45 tests |
+| `session.rs` | 137 | Per-terminal state, context assembly, cwd listing |
+| `view.rs` | 63 | `MiseryLineView` — renders one line |
+| `*_tests.rs` | 730 | 56 tests + a manual sampler |
 
 Settings: `AISettings.misery_mode` (`agents.warp_agent.other.misery_mode`),
 default off, never synced to cloud.
@@ -241,6 +240,11 @@ sound researched rather than sampled — and it cost 26 lines of vocabulary.
 - **Filenames are drawn without replacement.** The pool is shuffled once per
   expansion and consumed by cursor, so two `{FILE}` slots in one line can never
   name the same file. Tested across 50 seeds.
+- **Doubled sentence punctuation is collapsed on the way out.** Some slot
+  values are whole sentences that already end in punctuation — `{VERDICT}.`
+  with "there. happy?" yields "there. happy?.". Rather than forbid punctuation
+  in the vocabulary (a mechanical constraint on the writing), `tidy_punctuation`
+  fixes it after expansion.
 - **Indefinite articles agree.** `{A_ADJECTIVE}` yields "an inert little
   exercise", not "a inert". Spelling is a poor proxy for pronunciation, so
   `indefinite_article` carries explicit lists for the two classes where it
@@ -280,36 +284,68 @@ engine.generate_forced(&ctx, phase) -> Option<String> // always tries; for previ
 
 ---
 
-## 9. Not yet done: rendering
+## 9. Rendering
 
-The engine produces strings. Nothing displays them.
+### Where the line goes
 
-**Hard constraint: these must never be written to the PTY.** Injecting into
-the real output stream would corrupt piped output and break anything parsing
-it — `ls | wc -l` would start counting insults. Lines must render as block
-*decorations*, visually inside the output area but outside the byte stream.
+Lines are inserted into the block list as **rich content** — the same mechanism
+agent blocks and zero-states use, via `TerminalView::insert_rich_content`. That
+gets height, scrolling and selection handled for free.
 
-The hook belongs in `app/src/terminal/block_list_element.rs` at block-completion
-time, reading:
+**It is never written to the PTY.** This is the one hard constraint. Injecting
+into the real output stream would corrupt piped output and break anything
+parsing it — `ls | wc -l` would start counting insults. The line looks like it
+is in the output; it is a sibling of the block, not part of it.
 
-| `MiseryContext` field | Source |
+`MiseryLineView` renders dim italic text at a small left inset. Dim and italic
+because the terminal is muttering, not announcing — and because this is the one
+piece of text on screen that no program actually printed, so it should read as
+clearly subordinate to real output.
+
+### The two hooks
+
+Both live in `app/src/terminal/view.rs`:
+
+| Phase | Event | Insertion |
+|---|---|---|
+| Submit | `ModelEvent::AfterBlockStarted` | `Append { insert_below_long_running_block: false }` |
+| Complete | `ModelEvent::AfterBlockCompleted` | `Append { insert_below_long_running_block: true }` |
+
+The insertion flag is what places each voice correctly. With `false`,
+`append_rich_content` always takes its `insert_non_block_item_before_block`
+branch, putting the line *above* the block that is about to run — so it reads
+as a reaction to the command, not a comment on output that hasn't arrived. With
+`true` at completion, the finished block is no longer active, so the line lands
+after it.
+
+`AfterBlockStarted` already returns early for in-band commands, so those are
+excluded for free. Agent-driven commands are skipped explicitly at completion
+(`was_part_of_agent_interaction`) — mocking those would be aimed at the wrong
+target.
+
+### Context assembly
+
+`MiserySession` (in `session.rs`) owns the engine, so anti-repetition memory
+spans the terminal session rather than resetting per block. It maps block facts
+into a `MiseryContext`:
+
+| Field | Source |
 |---|---|
-| `command_name` | `Block::command_to_string()` |
-| `exit_code` / `succeeded` | block exit code |
-| `duration` | `Block::command_start_time()` |
-| `output_lines` | block output row count |
-| `nearby_files` | session cwd listing (names only, cached) |
-| `directory_name` | cwd basename |
+| `command_name` | `UserBlockCompleted::command` |
+| `exit_code` / `succeeded` | `serialized_block.exit_code.value()` |
+| `duration` | `started_at.elapsed()` |
+| `output_lines` | `num_output_lines`, saturated to `u32` |
+| `working_directory` | `serialized_block.pwd`, or `active_block().pwd()` at submit |
+| `nearby_files` | directory listing, cached per path |
 | `swear_mode` | `AISettings::is_swear_mode_enabled()` |
 
-Engine ownership should sit alongside the terminal session so the
-anti-repetition memory spans the session rather than resetting per block.
+The directory listing is cached by path — re-listing on every command would be
+a syscall per block for a cosmetic feature, and slightly stale raw material for
+insults is fine. Dotfiles are skipped: `.DS_Store` and `.git` aren't funny, and
+naming someone's hidden files reads as prying rather than as a joke.
 
-*This was left unwired deliberately: `block_list_element.rs` was being edited
-concurrently by another session at the time, and was briefly broken. It is a
-contained next step.*
-
----
+`note_command` runs on every submit regardless of whether a line is produced —
+"not this again" on the third `ls` depends on having counted the first two.
 
 ## 10. Settings and gating
 
@@ -352,6 +388,15 @@ the real bugs surfaced:
 **Statistical** (40 seeds × 20 draws):
 - `ls` is mocked more than `cargo build`
 - failures outdraw successes
+
+**Session-level** (`session_tests.rs`):
+- directory listings are cached per path and skip dotfiles
+- a missing directory, absent cwd, or absent start time are all non-fatal
+- `u64::MAX` output lines does not overflow the `u32` context field
+
+**Manual** — `misery::density` prints a simulated session at the real adaptive
+rate. Not an assertion; run it after touching vocabulary. It is how the doubled
+punctuation bug was found.
 
 ---
 

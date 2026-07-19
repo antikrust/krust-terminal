@@ -36,7 +36,32 @@ pub fn expand<R: Rng + ?Sized>(template: &str, ctx: &MiseryContext, rng: &mut R)
     }
     out.push_str(rest);
 
-    Some(out)
+    Some(tidy_punctuation(&out))
+}
+
+/// Collapses doubled sentence punctuation.
+///
+/// Templates append their own full stop, but some slot values are whole
+/// sentences that already end in one — `{VERDICT}.` with "there. happy?"
+/// yields "there. happy?.". Rather than forbid punctuation in the vocabulary
+/// (which would constrain the writing for a purely mechanical reason), fix it
+/// on the way out.
+fn tidy_punctuation(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        out.push(c);
+        if matches!(c, '.' | '!' | '?') {
+            // Drop any run of terminal punctuation immediately following, so
+            // "?." becomes "?" and ".." becomes ".". An ellipsis is written as
+            // a single '…' in the vocabulary, so this cannot eat one.
+            while chars.peek().is_some_and(|n| matches!(n, '.' | '!' | '?')) {
+                chars.next();
+            }
+        }
+    }
+    out
 }
 
 fn resolve<R: Rng + ?Sized>(

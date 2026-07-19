@@ -115,6 +115,32 @@ fn swear_mode_selects_harsher_vocabulary() {
 }
 
 #[test]
+fn doubled_sentence_punctuation_is_collapsed() {
+    // "there. happy?" + a template's own full stop must not give "happy?.".
+    assert_eq!(tidy_punctuation("there. happy?."), "there. happy?");
+    assert_eq!(tidy_punctuation("done.."), "done.");
+    assert_eq!(tidy_punctuation("what!?"), "what!");
+    // Punctuation that isn't doubled is untouched.
+    assert_eq!(tidy_punctuation("one. two. three."), "one. two. three.");
+    assert_eq!(tidy_punctuation("no punctuation"), "no punctuation");
+}
+
+#[test]
+fn expansion_never_emits_doubled_punctuation() {
+    let mut failed = ctx();
+    failed.succeeded = Some(false);
+    for seed in 0..100 {
+        let mut r = StdRng::seed_from_u64(seed);
+        for template in ["{VERDICT}.", "{VERDICT}. {COMPLAINT}.", "{EXCLAIM}. {VERDICT}."] {
+            let out = expand(template, &failed, &mut r).unwrap();
+            for pair in ["?.", "!.", "..", ".?", ".!"] {
+                assert!(!out.contains(pair), "doubled punctuation {pair:?} in: {out}");
+            }
+        }
+    }
+}
+
+#[test]
 fn duration_formatting() {
     assert_eq!(format_duration(400), "400ms");
     assert_eq!(format_duration(1500), "1.5 seconds");

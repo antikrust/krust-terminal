@@ -209,3 +209,7 @@ impl MiseryEngine {
 #[cfg(test)]
 #[path = "mod_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "density_test.rs"]
+mod density;
