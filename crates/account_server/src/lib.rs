@@ -37,7 +37,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 mod schema;
-use schema::{accounts, settings_blobs, tokens};
+pub mod tls;
+use schema::{accounts, settings_blobs, shares, tokens};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -72,18 +73,68 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/account", get(get_account).put(put_account))
         .route("/v1/settings", get(get_settings))
         .route("/v1/settings/{scope}", put(put_settings))
+        .route("/v1/shares", get(list_shares).post(create_share))
+        .route("/v1/shares/{id}", get(get_share).delete(delete_share))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(state)
 }
 
+/// How the service accepts connections.
+pub enum Transport {
+    /// TLS using a self-signed certificate in the given directory, generated
+    /// on first boot. This is the intended production setting: the client
+    /// pins the certificate's fingerprint, so no CA or domain is involved.
+    Tls { dir: std::path::PathBuf },
+    /// Plain HTTP, for local testing or for sitting behind a TLS-terminating
+    /// proxy on the same host. Anything on the network path can read traffic,
+    /// including bearer tokens, so never expose this directly.
+    Plaintext,
+}
+
 /// Serves until ctrl-c / SIGTERM.
-pub async fn serve(state: AppState, addr: SocketAddr) -> anyhow::Result<()> {
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    log::info!("account-server listening on {addr}");
-    axum::serve(listener, router(state))
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
-    Ok(())
+pub async fn serve(state: AppState, addr: SocketAddr, transport: Transport) -> anyhow::Result<()> {
+    match transport {
+        Transport::Plaintext => {
+            let listener = tokio::net::TcpListener::bind(addr).await?;
+            log::warn!("account-server listening on http://{addr} — traffic is NOT encrypted");
+            axum::serve(listener, router(state))
+                .with_graceful_shutdown(shutdown_signal())
+                .await?;
+            Ok(())
+        }
+        Transport::Tls { dir } => {
+            let certificate = tls::ensure_certificate(&dir, vec!["localhost".to_owned()])?;
+            let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
+                &certificate.cert_path,
+                &certificate.key_path,
+            )
+            .await?;
+
+            log::info!("account-server listening on https://{addr}");
+            log::info!(
+                "certificate fingerprint (SHA-256): {}",
+                certificate.fingerprint
+            );
+            log::info!("clients pin this on first connect; compare it if one ever warns");
+
+            // axum-server drives shutdown through a handle rather than a
+            // future, so translate the same signal into a graceful stop.
+            let handle = axum_server::Handle::new();
+            tokio::spawn({
+                let handle = handle.clone();
+                async move {
+                    shutdown_signal().await;
+                    handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
+                }
+            });
+
+            axum_server::bind_rustls(addr, config)
+                .handle(handle)
+                .serve(router(state).into_make_service())
+                .await?;
+            Ok(())
+        }
+    }
 }
 
 async fn shutdown_signal() {
@@ -150,6 +201,33 @@ struct PutSettingsResponse {
     version: i32,
 }
 
+#[derive(Deserialize)]
+struct CreateShareBody {
+    kind: String,
+    name: String,
+    /// Ciphertext. The client encrypts before sending and keeps the key in the
+    /// share link's fragment, so this server never holds a means to read it.
+    data: String,
+}
+
+#[derive(Serialize)]
+struct ShareSummary {
+    id: String,
+    kind: String,
+    name: String,
+    team: Option<String>,
+    created_at: String,
+}
+
+#[derive(Serialize)]
+struct ShareBody {
+    id: String,
+    kind: String,
+    name: String,
+    data: String,
+    created_at: String,
+}
+
 #[derive(Serialize)]
 struct ErrorBody {
     error: &'static str,
@@ -186,6 +264,16 @@ fn new_token() -> String {
 
 fn normalized_email(email: &str) -> String {
     email.trim().to_ascii_lowercase()
+}
+
+/// Share ids are capability URLs: 32 unguessable random bytes. Unlike auth
+/// tokens they are stored in the clear, because the payload they address is
+/// already ciphertext this server cannot decrypt — hashing the id would
+/// protect nothing that the client-side encryption does not already protect.
+fn new_share_id() -> String {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    hex(&bytes)
 }
 
 /// Resolves the bearer token in `headers` to an account id.
@@ -441,6 +529,165 @@ async fn put_settings(
             ))
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Shares
+// ---------------------------------------------------------------------------
+
+/// Caps on the two fields the server does look at. `kind` is a short tag the
+/// importing client switches on; `name` is a label for listings. Neither is
+/// interpreted here beyond these bounds.
+const MAX_KIND_LEN: usize = 32;
+const MAX_NAME_LEN: usize = 200;
+
+async fn create_share(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<CreateShareBody>,
+) -> Result<(StatusCode, Json<ShareSummary>), ApiError> {
+    let account_id = authenticate(&state, &headers)?;
+    let kind = body.kind.trim().to_owned();
+    let name = body.name.trim().to_owned();
+    if kind.is_empty() || kind.len() > MAX_KIND_LEN {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid kind"));
+    }
+    if name.is_empty() || name.len() > MAX_NAME_LEN {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid name"));
+    }
+    if body.data.is_empty() {
+        return Err(err(StatusCode::BAD_REQUEST, "empty payload"));
+    }
+
+    let id = new_share_id();
+    let mut db = state.db.lock().map_err(internal)?;
+    // Snapshot the sharer's team now; see the migration's note on why this is
+    // denormalized rather than joined at read time.
+    let team = accounts::table
+        .filter(accounts::id.eq(account_id))
+        .select(accounts::team)
+        .first::<Option<String>>(&mut *db)
+        .map_err(internal)?;
+
+    diesel::insert_into(shares::table)
+        .values((
+            shares::id.eq(&id),
+            shares::account_id.eq(account_id),
+            shares::kind.eq(&kind),
+            shares::name.eq(&name),
+            shares::data.eq(&body.data),
+            shares::team.eq(&team),
+        ))
+        .execute(&mut *db)
+        .map_err(internal)?;
+
+    let created_at = shares::table
+        .filter(shares::id.eq(&id))
+        .select(shares::created_at)
+        .first::<chrono::NaiveDateTime>(&mut *db)
+        .map_err(internal)?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(ShareSummary {
+            id,
+            kind,
+            name,
+            team,
+            created_at: created_at.and_utc().to_rfc3339(),
+        }),
+    ))
+}
+
+/// Deliberately unauthenticated: possession of the id *is* the credential, so
+/// a link works for a recipient who has no account. The payload is ciphertext,
+/// and the key lives in the link fragment the client never sends here.
+async fn get_share(
+    State(state): State<AppState>,
+    UrlPath(id): UrlPath<String>,
+) -> Result<Json<ShareBody>, ApiError> {
+    let mut db = state.db.lock().map_err(internal)?;
+    let row = shares::table
+        .filter(shares::id.eq(&id))
+        .select((shares::kind, shares::name, shares::data, shares::created_at))
+        .first::<(String, String, String, chrono::NaiveDateTime)>(&mut *db)
+        .optional()
+        .map_err(internal)?;
+
+    let (kind, name, data, created_at) =
+        row.ok_or_else(|| err(StatusCode::NOT_FOUND, "no such share"))?;
+    Ok(Json(ShareBody {
+        id,
+        kind,
+        name,
+        data,
+        created_at: created_at.and_utc().to_rfc3339(),
+    }))
+}
+
+/// Revokes a share. Scoped to the owner, so knowing an id is enough to *read*
+/// a share but never enough to delete someone else's.
+async fn delete_share(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    UrlPath(id): UrlPath<String>,
+) -> Result<StatusCode, ApiError> {
+    let account_id = authenticate(&state, &headers)?;
+    let mut db = state.db.lock().map_err(internal)?;
+    let deleted = diesel::delete(
+        shares::table
+            .filter(shares::id.eq(&id))
+            .filter(shares::account_id.eq(account_id)),
+    )
+    .execute(&mut *db)
+    .map_err(internal)?;
+
+    if deleted == 0 {
+        // Same response whether the share is missing or belongs to someone
+        // else: no reason to confirm the existence of other people's ids.
+        return Err(err(StatusCode::NOT_FOUND, "no such share"));
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Lists the caller's own shares. Payloads are omitted — a listing is for
+/// managing and revoking, not for bulk-downloading ciphertext.
+async fn list_shares(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let account_id = authenticate(&state, &headers)?;
+    let mut db = state.db.lock().map_err(internal)?;
+    let rows = shares::table
+        .filter(shares::account_id.eq(account_id))
+        .order(shares::created_at.desc())
+        .select((
+            shares::id,
+            shares::kind,
+            shares::name,
+            shares::team,
+            shares::created_at,
+        ))
+        .load::<(
+            String,
+            String,
+            String,
+            Option<String>,
+            chrono::NaiveDateTime,
+        )>(&mut *db)
+        .map_err(internal)?;
+
+    let shares: Vec<ShareSummary> = rows
+        .into_iter()
+        .map(|(id, kind, name, team, created_at)| ShareSummary {
+            id,
+            kind,
+            name,
+            team,
+            created_at: created_at.and_utc().to_rfc3339(),
+        })
+        .collect();
+    Ok(Json(serde_json::json!({ "shares": shares })))
 }
 
 #[cfg(test)]

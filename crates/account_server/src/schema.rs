@@ -26,7 +26,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    shares (id) {
+        id -> Text,
+        account_id -> Integer,
+        kind -> Text,
+        name -> Text,
+        data -> Text,
+        team -> Nullable<Text>,
+        created_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(tokens -> accounts (account_id));
 diesel::joinable!(settings_blobs -> accounts (account_id));
+diesel::joinable!(shares -> accounts (account_id));
 
-diesel::allow_tables_to_appear_in_same_query!(accounts, tokens, settings_blobs);
+diesel::allow_tables_to_appear_in_same_query!(accounts, tokens, settings_blobs, shares);

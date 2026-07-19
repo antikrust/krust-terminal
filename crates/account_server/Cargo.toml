@@ -15,12 +15,18 @@ anyhow.workspace = true
 # never roll your own KDF.
 argon2 = "0.5"
 axum.workspace = true
+# TLS. The service generates its own long-lived self-signed certificate and
+# clients pin its fingerprint, so there is no CA, domain, or renewal in the
+# deployment story — see SERVER-DESIGN.md.
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+base64.workspace = true
 chrono.workspace = true
 diesel = { workspace = true, features = ["sqlite", "chrono"] }
 diesel_migrations = { version = "2.2.0", features = ["sqlite"] }
 libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
 log.workspace = true
 rand.workspace = true
+rcgen = "0.13"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

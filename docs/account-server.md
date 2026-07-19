@@ -10,8 +10,12 @@ backend.
 Design rules (from the 2026-07-19 discussion):
 
 - **Lean**: axum + one SQLite file. No external database, no nginx
-  involvement, no domain — plain `IP:port` on a **non-web port**
+  involvement, no domain — just `IP:port` on a **non-web port**
   (default `10101`).
+- **Encrypted without ceremony**: TLS using a self-signed certificate the
+  service mints itself on first boot; clients pin its fingerprint rather than
+  trusting a CA. No Let's Encrypt, no domain validation, no renewal. See
+  [TLS and pinning](#tls-and-pinning).
 - **Robust where it counts**: argon2id password hashes; bearer tokens stored
   as SHA-256 digests (a DB leak leaks no sessions); settings writes carry
   `base_version` and 409 with the live document on conflict, so no machine
@@ -21,6 +25,9 @@ Design rules (from the 2026-07-19 discussion):
   scope (`global` plus one per platform).
 - **Teams is one field**: a nullable `team` string on the account, matching
   the Account-page design.
+- **Shares are capabilities**: a shared Library object is addressed by an
+  unguessable id and readable without an account, because the payload is
+  ciphertext the client encrypted with a key that never reaches this server.
 
 ## API (v1)
 
@@ -36,10 +43,23 @@ All bodies are JSON. Auth is `Authorization: Bearer <token>`.
 | `PUT /v1/account` | `{team}` (auth) | updated `{email, team}` |
 | `GET /v1/settings` | — (auth) | `{scopes: {<scope>: {version, data}}}` |
 | `PUT /v1/settings/{scope}` | `{base_version, data}` (auth) | `{version}`; `409 {version, data}` on conflict — merge and retry |
+| `POST /v1/shares` | `{kind, name, data}` (auth) | `201 {id, kind, name, team, created_at}` |
+| `GET /v1/shares` | — (auth) | `{shares: [{id, kind, name, team, created_at}]}` — your own, payloads omitted |
+| `GET /v1/shares/{id}` | — (**no auth**) | `{id, kind, name, data, created_at}`; `404` if unknown or revoked |
+| `DELETE /v1/shares/{id}` | — (auth, owner only) | `204`; `404` for unknown *or* someone else's |
 
 Conventions: `base_version: 0` means "creating the first document".
 Scopes are free-form (≤64 chars); the client uses `global` plus platform
 names. Bodies are capped at 1 MiB.
+
+For shares: `kind` (≤32 chars) is the Library object type the importing
+client switches on (`workflow`, `notebook`, `env_vars`, `rule`, …); `name`
+(≤200 chars) is a plaintext label so an owner can manage their own shares —
+**keep secrets out of it**, it is the one part of a share this server can
+read. `data` is opaque; the client encrypts it and carries the key in the
+share link's fragment, which browsers and this server never see. `team` is
+snapshotted at creation, so leaving a team later does not re-scope shares
+you already made. Deleting is the revocation mechanism — there is no expiry.
 
 ## Build
 
@@ -99,28 +119,53 @@ ssh you@therob.lol 'sudo systemctl daemon-reload && sudo systemctl enable --now 
 ssh you@therob.lol 'sudo ufw allow 10101/tcp'
 ```
 
-Smoke test from anywhere:
+Smoke test from anywhere (`-k` because the certificate is self-signed by
+design — see below for checking the fingerprint instead of ignoring it):
 
 ```bash
-curl http://<server-ip>:10101/v1/health
-curl -X POST http://<server-ip>:10101/v1/signup \
+curl -k https://<server-ip>:10101/v1/health
+curl -k -X POST https://<server-ip>:10101/v1/signup \
   -H 'content-type: application/json' \
   -d '{"email":"you@example.com","password":"…"}'
 ```
 
 Backups: the entire state is one file —
 `/var/lib/account-server/account-server.sqlite3` (plus its `-wal` sidecar).
-Copy it, and you have everything.
+Copy it, and you have everything. The certificate and key sit next to it as
+`cert.pem` / `key.pem`; back those up too, because replacing them makes every
+pinned client refuse to connect until it re-pins.
 
-## The honest caveat: plain HTTP
+## TLS and pinning
 
-With no domain there is no TLS, so signup/login credentials cross the wire
-in cleartext. Acceptable for now by explicit decision ("just the IP for
-now"), but treat these accounts as low-value until that changes. When it
-should change, **no code changes**: put nginx in front as a TLS proxy on the
-existing sites' cert (`location /` → `proxy_pass http://127.0.0.1:10101;`
-on some subdomain) and flip `ACCOUNT_SERVER_BIND=127.0.0.1`. That is the
-one sanctioned nginx interaction, and it is opt-in later.
+Traffic is encrypted, but not via a certificate authority. On first boot the
+service generates a self-signed certificate into its state directory and logs
+the fingerprint clients pin:
+
+```
+[INFO] generated a self-signed certificate in /var/lib/account-server
+[INFO] account-server listening on https://0.0.0.0:10101
+[INFO] certificate fingerprint (SHA-256): 4B:C0:4B:5D:…
+```
+
+The client records that fingerprint on first connect and refuses anything
+else afterwards — SSH's host-key model. This buys full TLS 1.3 encryption
+with no domain, no Let's Encrypt, no renewal, and no proxy, and it cannot be
+forged by a rogue CA. Verify a server's fingerprint yourself with:
+
+```bash
+echo | openssl s_client -connect <server-ip>:10101 2>/dev/null \
+  | openssl x509 -fingerprint -sha256 -noout
+```
+
+Two things to know. The certificate is valid until 2120 on purpose:
+rotation breaks every pinned client, so it should be a deliberate act rather
+than an annual surprise. And pinning does not protect the *very first*
+connection — if that one is intercepted, the client pins the attacker, which
+is why the fingerprint is printed at startup for out-of-band comparison.
+
+`ACCOUNT_SERVER_TLS=0` serves plain HTTP instead. That is for local testing
+or for terminating TLS on the same host; never expose it, since bearer tokens
+ride every request.
 
 ## Client wiring (not yet built)
 
