@@ -118,9 +118,10 @@ pub fn installed_models_from_disk() -> Vec<InstalledModel> {
     list_installed_from_disk(&models_dir())
 }
 
-/// Where Ollama keeps its models. `OLLAMA_MODELS` overrides the default of
-/// `~/.ollama/models`, matching Ollama's own resolution.
-fn models_dir() -> std::path::PathBuf {
+/// Where Ollama keeps its models on disk, for display and "reveal in folder".
+/// `OLLAMA_MODELS` overrides the default of `~/.ollama/models`, matching
+/// Ollama's own resolution.
+pub fn models_dir() -> std::path::PathBuf {
     if let Some(dir) = std::env::var_os("OLLAMA_MODELS") {
         return std::path::PathBuf::from(dir);
     }

@@ -13,8 +13,8 @@ use ::settings::{Setting, ToggleableSetting};
 use warp_core::ui::theme::Fill as ThemeFill;
 use warp_errors::report_if_error;
 use warpui::elements::{
-    Border, ChildView, Container, CrossAxisAlignment, Element, Empty, Flex, MouseStateHandle,
-    ParentElement, Text,
+    Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Element, Empty, Flex,
+    MouseStateHandle, ParentElement, Text,
 };
 use warpui::fonts::Weight;
 use warpui::ui_components::components::UiComponent;
@@ -36,6 +36,11 @@ use crate::settings::ai::AISettings;
 const VERTICAL_MARGIN: f32 = 16.;
 const OLLAMA_DOWNLOAD_URL: &str = "https://ollama.com/download";
 
+/// Fixed column widths so each model's size rows line up like a table rather
+/// than drifting with their content.
+const SIZE_COL_WIDTH: f32 = 56.;
+const STATUS_COL_WIDTH: f32 = 120.;
+
 /// How many catalog entries to show before requiring a search. The live
 /// library is 230+ models; a wall of them is not a browsing experience.
 const VISIBLE_CATALOG_LIMIT: usize = 12;
@@ -45,6 +50,8 @@ pub enum OllamaPageAction {
     ToggleEnabled,
     RefreshCatalog,
     OpenOllamaDownload,
+    /// Reveal the folder Ollama stores models in.
+    RevealModelFolder,
     Install {
         tag: String,
     },
@@ -87,6 +94,7 @@ struct StateHandles {
     refresh_link: MouseStateHandle,
     install_typed_link: MouseStateHandle,
     download_link: MouseStateHandle,
+    reveal_folder_link: MouseStateHandle,
     install_buttons: HashMap<String, MouseStateHandle>,
 }
 
@@ -288,6 +296,9 @@ impl TypedActionView for OllamaPageView {
             }
             OllamaPageAction::RefreshCatalog => self.refresh(ctx),
             OllamaPageAction::OpenOllamaDownload => ctx.open_url(OLLAMA_DOWNLOAD_URL),
+            OllamaPageAction::RevealModelFolder => {
+                ctx.open_file_path_in_explorer(&service::models_dir());
+            }
             OllamaPageAction::Install { tag } => self.install(tag.clone(), ctx),
             OllamaPageAction::InstallTyped => self.install_typed(ctx),
         }
@@ -325,7 +336,11 @@ impl SettingsWidget for StatusWidget {
         ));
 
         if installed {
-            let status = if view.service_running {
+            // The switch is the top-level state: when local models are off,
+            // the engine's running state is irrelevant and would only confuse.
+            let status = if !view.is_enabled(app) {
+                "Ollama is off. Turn on Use local models to add and run models."
+            } else if view.service_running {
                 "Ollama is installed and running."
             } else {
                 "Ollama is installed but not currently running. It starts automatically \
@@ -431,11 +446,20 @@ impl SettingsWidget for InstalledWidget {
         _app: &AppContext,
     ) -> Box<dyn Element> {
         let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
-        column.add_child(render_separator(appearance));
+        column.add_child(section_break(appearance));
+        // "Installed" on the left; the model folder and a Reveal button on the
+        // right, so the location is shown and openable.
         column.add_child(
-            Container::new(render_sub_header(appearance, "Installed", None))
-                .with_margin_top(VERTICAL_MARGIN)
-                .finish(),
+            Container::new(
+                Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(render_sub_header(appearance, "Installed", None))
+                    .with_child(warpui::elements::Expanded::new(1., Empty::new().finish()).finish())
+                    .with_child(model_folder_header(view, appearance))
+                    .finish(),
+            )
+            .with_margin_top(VERTICAL_MARGIN)
+            .finish(),
         );
 
         match view.installed.as_ref() {
@@ -509,7 +533,7 @@ impl SettingsWidget for CatalogWidget {
     ) -> Box<dyn Element> {
         let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
 
-        column.add_child(render_separator(appearance));
+        column.add_child(section_break(appearance));
         column.add_child(
             Container::new(render_sub_header(appearance, "Add a model", None))
                 .with_margin_top(VERTICAL_MARGIN)
@@ -563,6 +587,11 @@ impl SettingsWidget for CatalogWidget {
             column.add_child(notice(err, ThemeFill::error(), appearance));
         }
 
+        // A line between "install by name" above and the browsable library
+        // below, so the two ways to add a model read as distinct.
+        column.add_child(section_break(appearance));
+        column.add_child(sub_text("Or choose from the library:", appearance));
+
         if let Some(note) = view.catalog_source.note() {
             column.add_child(notice(note, ThemeFill::error(), appearance));
         }
@@ -573,14 +602,18 @@ impl SettingsWidget for CatalogWidget {
         }
 
         if let Some(total) = view.total_memory_bytes {
-            column.add_child(sub_text(
-                &format!(
-                    "This machine has {}. Sizes below are estimates — they're a warning, \
-                     not a limit.",
-                    capability::format_gb(total)
-                ),
-                appearance,
-            ));
+            column.add_child(
+                Container::new(sub_text(
+                    &format!(
+                        "This machine has {}. Sizes below are estimates — they're a \
+                         warning, not a limit.",
+                        capability::format_gb(total)
+                    ),
+                    appearance,
+                ))
+                .with_margin_top(6.)
+                .finish(),
+            );
             // The key for the inline badges, so each model row can stay terse.
             column.add_child(fit_legend(appearance));
         }
@@ -648,18 +681,23 @@ fn render_catalog_entry(
         let state = view.installs.get(&tag);
 
         let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
+        // Size column.
         row.add_child(
-            Text::new(
-                size.params.to_string(),
-                appearance.ui_font_family(),
-                appearance.ui_font_size(),
+            ConstrainedBox::new(
+                Text::new(
+                    size.params.to_string(),
+                    appearance.ui_font_family(),
+                    appearance.ui_font_size(),
+                )
+                .finish(),
             )
+            .with_width(SIZE_COL_WIDTH)
             .finish(),
         );
 
         let status = match (already, state) {
             (true, _) => "Installed".to_string(),
-            (_, Some(InstallState::Running)) => "Downloading…".to_string(),
+            (_, Some(InstallState::Running)) => "Installing…".to_string(),
             (_, Some(InstallState::Done)) => "Installed".to_string(),
             (_, Some(InstallState::Failed(reason))) => format!("Failed: {reason}"),
             _ => verdict
@@ -667,9 +705,11 @@ fn render_catalog_entry(
                 .map(|v| capability::format_gb(v.required_bytes))
                 .unwrap_or_default(),
         };
+        // Status / estimated-RAM column, fixed-width so the Install links line
+        // up down the table.
         row.add_child(
-            Container::new(sub_text(&status, appearance))
-                .with_margin_left(12.)
+            ConstrainedBox::new(sub_text(&status, appearance))
+                .with_width(STATUS_COL_WIDTH)
                 .finish(),
         );
 
@@ -681,25 +721,21 @@ fn render_catalog_entry(
                 .cloned()
                 .unwrap_or_default();
             row.add_child(
-                Container::new(
-                    appearance
-                        .ui_builder()
-                        .link(
-                            "Download".into(),
-                            None,
-                            Some(Box::new(move |ctx| {
-                                ctx.dispatch_typed_action(OllamaPageAction::Install {
-                                    tag: action_tag.clone(),
-                                });
-                            })),
-                            mouse_state,
-                        )
-                        .soft_wrap(false)
-                        .build()
-                        .finish(),
-                )
-                .with_margin_left(12.)
-                .finish(),
+                appearance
+                    .ui_builder()
+                    .link(
+                        "Install".into(),
+                        None,
+                        Some(Box::new(move |ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::Install {
+                                tag: action_tag.clone(),
+                            });
+                        })),
+                        mouse_state,
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
             );
         }
 
@@ -744,6 +780,48 @@ fn sub_text(text: &str, appearance: &Appearance) -> Box<dyn Element> {
     )
     .with_color(theme.sub_text_color(theme.background()).into_solid())
     .finish()
+}
+
+/// A divider between page sections, with room above and below so the line
+/// doesn't crowd the text and buttons on either side.
+fn section_break(appearance: &Appearance) -> Box<dyn Element> {
+    Container::new(render_separator(appearance))
+        .with_margin_top(VERTICAL_MARGIN)
+        .finish()
+}
+
+/// "MODEL FOLDER: <path>  Reveal" — where Ollama keeps its models, with a
+/// button that opens the folder. Sits at the top-right of the Installed
+/// section so the location is visible and reachable at a glance.
+fn model_folder_header(view: &OllamaPageView, appearance: &Appearance) -> Box<dyn Element> {
+    let path = service::models_dir();
+    let reveal = view.state_handles.borrow().reveal_folder_link.clone();
+    Flex::row()
+        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_child(sub_text(
+            &format!("MODEL FOLDER: {}", path.display()),
+            appearance,
+        ))
+        .with_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        "Reveal".into(),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::RevealModelFolder);
+                        })),
+                        reveal,
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_left(12.)
+            .finish(),
+        )
+        .finish()
 }
 
 /// A compact fit badge — STARVED / WON'T FIT — coloured by severity, or
