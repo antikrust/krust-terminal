@@ -8600,6 +8600,16 @@ impl Workspace {
         page: Option<AIFactPage>,
         ctx: &mut ViewContext<Self>,
     ) {
+        // Fork: the Library's collection panes (Rules, MCP Servers) act as
+        // one swapped "page": opening one closes the other instead of
+        // tiling.
+        if let Some(mcp_locator) = MCPServersPaneManager::handle(ctx)
+            .as_ref(ctx)
+            .find_pane(ctx.window_id())
+        {
+            self.close_pane(mcp_locator.pane_group_id, mcp_locator.pane_id, ctx);
+        }
+
         // Ensure there is only one AI Fact Collection pane per window
         let manager = AIFactManager::handle(ctx);
 
@@ -14812,6 +14822,15 @@ impl Workspace {
     /// settings page, hosted in a split pane) instead of yanking the user
     /// into settings. At most one per window; reopening focuses it.
     pub(crate) fn open_mcp_server_collection_pane(&mut self, ctx: &mut ViewContext<Self>) {
+        // The Library's collection panes (Rules, MCP Servers) act as one
+        // swapped "page": opening one closes the other instead of tiling.
+        if let Some(rules_locator) = AIFactManager::handle(ctx)
+            .as_ref(ctx)
+            .find_pane(ctx.window_id())
+        {
+            self.close_pane(rules_locator.pane_group_id, rules_locator.pane_id, ctx);
+        }
+
         let manager = MCPServersPaneManager::handle(ctx);
 
         if let Some(locator) = manager.as_ref(ctx).find_pane(ctx.window_id()) {
