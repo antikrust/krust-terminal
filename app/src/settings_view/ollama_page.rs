@@ -10,14 +10,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ::settings::{Setting, ToggleableSetting};
+use warp_core::ui::theme::Fill as ThemeFill;
 use warp_errors::report_if_error;
 use warpui::elements::{
-    Border, Container, CrossAxisAlignment, Element, Empty, Flex, MouseStateHandle, ParentElement,
-    Text,
+    Border, ChildView, Container, CrossAxisAlignment, Element, Empty, Flex, MouseStateHandle,
+    ParentElement, Text,
 };
 use warpui::fonts::Weight;
-use crate::editor::{EditorView, SingleLineEditorOptions};
-use warpui::elements::ChildView;
 use warpui::ui_components::components::UiComponent;
 use warpui::ui_components::switch::SwitchStateHandle;
 use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
@@ -31,7 +30,7 @@ use crate::ai::ollama::capability::{self, Fit, MemoryVerdict};
 use crate::ai::ollama::catalog::{CatalogEntry, ModelSize};
 use crate::ai::ollama::service::{self, CatalogSource, InstalledModel};
 use crate::appearance::Appearance;
-use warp_core::ui::theme::Fill as ThemeFill;
+use crate::editor::{EditorView, SingleLineEditorOptions};
 use crate::settings::ai::AISettings;
 
 const VERTICAL_MARGIN: f32 = 16.;
@@ -46,7 +45,9 @@ pub enum OllamaPageAction {
     ToggleEnabled,
     RefreshCatalog,
     OpenOllamaDownload,
-    Install { tag: String },
+    Install {
+        tag: String,
+    },
     /// Install exactly what's in the free-text field.
     InstallTyped,
 }
@@ -262,9 +263,27 @@ impl TypedActionView for OllamaPageView {
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
             OllamaPageAction::ToggleEnabled => {
-                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                let now_enabled = AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.ollama_enabled.toggle_and_save_value(ctx));
+                    *settings.ollama_enabled.value()
                 });
+                // Make the switch actually drive the engine: enabling boots
+                // the server so models are ready; disabling unloads them to
+                // free memory. Turning it off then on therefore reboots the
+                // working state, which is what a user expects a power switch
+                // to do. Best-effort and off-thread; the follow-up refresh
+                // reflects the new running state.
+                let client = reqwest::Client::new();
+                ctx.spawn(
+                    async move {
+                        if now_enabled {
+                            service::ensure_running(&client).await;
+                        } else {
+                            service::stop_running_models().await;
+                        }
+                    },
+                    |me, (), ctx| me.refresh(ctx),
+                );
                 ctx.notify();
             }
             OllamaPageAction::RefreshCatalog => self.refresh(ctx),
@@ -312,7 +331,11 @@ impl SettingsWidget for StatusWidget {
                 "Ollama is installed but not currently running. It starts automatically \
                  when a model is used."
             };
-            column.add_child(Container::new(body_text(status, appearance)).with_margin_top(8.).finish());
+            column.add_child(
+                Container::new(body_text(status, appearance))
+                    .with_margin_top(8.)
+                    .finish(),
+            );
 
             let handles = view.state_handles.borrow();
             column.add_child(
@@ -426,33 +449,35 @@ impl SettingsWidget for InstalledWidget {
             )),
             Some(models) => {
                 for model in models {
-                    column.add_child(
-                        Container::new(
-                            Flex::row()
-                                .with_child(
-                                    Text::new(
-                                        model.name.clone(),
-                                        appearance.ui_font_family(),
-                                        appearance.ui_font_size(),
-                                    )
-                                    .with_style(
-                                        warpui::fonts::Properties::default().weight(Weight::Medium),
-                                    )
-                                    .finish(),
-                                )
-                                .with_child(
-                                    Container::new(sub_text(
-                                        &capability::format_gb(model.size_bytes),
-                                        appearance,
-                                    ))
-                                    .with_margin_left(12.)
-                                    .finish(),
-                                )
-                                .finish(),
+                    let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
+                    row.add_child(
+                        Text::new(
+                            model.name.clone(),
+                            appearance.ui_font_family(),
+                            appearance.ui_font_size(),
                         )
-                        .with_margin_top(6.)
+                        .with_style(warpui::fonts::Properties::default().weight(Weight::Medium))
                         .finish(),
                     );
+                    row.add_child(
+                        Container::new(sub_text(
+                            &capability::format_gb(model.size_bytes),
+                            appearance,
+                        ))
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                    // Same fit flag as the catalog, so an already-installed
+                    // model that is too big for this machine still says so.
+                    if let Some(badge) = view
+                        .total_memory_bytes
+                        .and_then(|total| capability::assess_tag(&model.name, total))
+                        .filter(|v| v.fit.is_warning())
+                        .and_then(|v| fit_badge(v.fit, appearance))
+                    {
+                        row.add_child(Container::new(badge).with_margin_left(12.).finish());
+                    }
+                    column.add_child(Container::new(row.finish()).with_margin_top(6.).finish());
                 }
             }
         }
@@ -556,6 +581,8 @@ impl SettingsWidget for CatalogWidget {
                 ),
                 appearance,
             ));
+            // The key for the inline badges, so each model row can stay terse.
+            column.add_child(fit_legend(appearance));
         }
 
         let handles = view.state_handles.borrow();
@@ -676,20 +703,18 @@ fn render_catalog_entry(
             );
         }
 
-        card.add_child(Container::new(row.finish()).with_margin_top(4.).finish());
-
-        // The whole point of the page: say plainly when something won't fit.
-        if let Some(verdict) = verdict.filter(|v| v.fit.is_warning()) {
-            let color = match verdict.fit {
-                Fit::Exceeds => ThemeFill::error(),
-                _ => ThemeFill::warn(),
-            };
-            card.add_child(
-                Container::new(notice(&verdict.message, color, appearance))
-                    .with_margin_left(12.)
-                    .finish(),
-            );
+        // The fit warning, once a terse badge to the side of the row rather
+        // than a full sentence beneath it (the legend above carries the
+        // meaning). Nothing for a comfortable fit.
+        if let Some(badge) = verdict
+            .as_ref()
+            .filter(|v| v.fit.is_warning())
+            .and_then(|v| fit_badge(v.fit, appearance))
+        {
+            row.add_child(Container::new(badge).with_margin_left(12.).finish());
         }
+
+        card.add_child(Container::new(row.finish()).with_margin_top(4.).finish());
     }
 
     Container::new(card.finish())
@@ -719,6 +744,62 @@ fn sub_text(text: &str, appearance: &Appearance) -> Box<dyn Element> {
     )
     .with_color(theme.sub_text_color(theme.background()).into_solid())
     .finish()
+}
+
+/// A compact fit badge — STARVED / WON'T FIT — coloured by severity, or
+/// nothing for a comfortable fit. Rendered inline beside a model in place of
+/// the old full-sentence warning; the legend above the list explains it.
+fn fit_badge(fit: Fit, appearance: &Appearance) -> Option<Box<dyn Element>> {
+    let label = fit.badge()?;
+    let color: ThemeFill = match fit {
+        Fit::Exceeds => ThemeFill::error(),
+        _ => ThemeFill::warn(),
+    };
+    Some(
+        Container::new(
+            Text::new(label.to_string(), appearance.ui_font_family(), 10.)
+                .with_color(color.into_solid())
+                .with_style(warpui::fonts::Properties::default().weight(Weight::Bold))
+                .finish(),
+        )
+        .with_horizontal_padding(6.)
+        .with_vertical_padding(2.)
+        .with_corner_radius(warpui::elements::CornerRadius::with_all(
+            warpui::elements::Radius::Pixels(4.),
+        ))
+        .with_border(warpui::elements::Border::all(1.).with_border_fill(color))
+        .finish(),
+    )
+}
+
+/// The two-line key for the fit badges, shown once above the model list so the
+/// inline badges can stay terse.
+fn fit_legend(appearance: &Appearance) -> Box<dyn Element> {
+    let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Start);
+    for fit in [Fit::Tight, Fit::Exceeds] {
+        let (Some(badge), Some(meaning)) = (fit_badge(fit, appearance), fit.badge_meaning()) else {
+            continue;
+        };
+        column.add_child(
+            Container::new(
+                Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(badge)
+                    .with_child(
+                        Container::new(sub_text(meaning, appearance))
+                            .with_margin_left(8.)
+                            .finish(),
+                    )
+                    .finish(),
+            )
+            .with_margin_top(4.)
+            .finish(),
+        );
+    }
+    Container::new(column.finish())
+        .with_margin_top(6.)
+        .with_margin_bottom(4.)
+        .finish()
 }
 
 fn notice(text: &str, color: ThemeFill, appearance: &Appearance) -> Box<dyn Element> {

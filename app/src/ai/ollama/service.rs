@@ -64,11 +64,30 @@ struct TagEntry {
     size: u64,
 }
 
-/// Lists installed models via the local API.
+/// Lists installed models.
 ///
-/// A connection error means the service isn't running, which is a normal
-/// state rather than a failure — Ollama starts on demand.
+/// The running server is authoritative, so try its API first. When it isn't
+/// running — a Homebrew Ollama has no login service, so a cold machine has
+/// models on disk but no API — fall back to reading Ollama's manifests
+/// directly. That keeps "what's installed" answerable without starting the
+/// engine just to look, which is the whole point of the Installed list.
 pub async fn list_installed(client: &reqwest::Client) -> Result<Vec<InstalledModel>> {
+    match list_installed_via_api(client).await {
+        Ok(models) => Ok(models),
+        Err(api_err) => {
+            let from_disk = list_installed_from_disk(&models_dir());
+            if from_disk.is_empty() {
+                // Nothing on disk either: surface the API error, since that's
+                // the more informative "why is this empty".
+                Err(api_err)
+            } else {
+                Ok(from_disk)
+            }
+        }
+    }
+}
+
+async fn list_installed_via_api(client: &reqwest::Client) -> Result<Vec<InstalledModel>> {
     let response = client
         .get(format!("{API_BASE}/api/tags"))
         .send()
@@ -92,6 +111,94 @@ pub async fn list_installed(client: &reqwest::Client) -> Result<Vec<InstalledMod
     Ok(models)
 }
 
+/// Installed models read straight from disk, without the server. Synchronous
+/// and side-effect-free, so callers that can't await — like the model menu's
+/// availability list — can still reflect what's actually pulled.
+pub fn installed_models_from_disk() -> Vec<InstalledModel> {
+    list_installed_from_disk(&models_dir())
+}
+
+/// Where Ollama keeps its models. `OLLAMA_MODELS` overrides the default of
+/// `~/.ollama/models`, matching Ollama's own resolution.
+fn models_dir() -> std::path::PathBuf {
+    if let Some(dir) = std::env::var_os("OLLAMA_MODELS") {
+        return std::path::PathBuf::from(dir);
+    }
+    dirs::home_dir()
+        .unwrap_or_default()
+        .join(".ollama")
+        .join("models")
+}
+
+/// One layer inside an on-disk manifest. Only the size matters here; a model's
+/// footprint is the sum of its layers.
+#[derive(Deserialize, Default)]
+struct DiskManifestLayer {
+    #[serde(default)]
+    size: u64,
+}
+
+#[derive(Deserialize)]
+struct DiskManifest {
+    #[serde(default)]
+    config: DiskManifestLayer,
+    #[serde(default)]
+    layers: Vec<DiskManifestLayer>,
+}
+
+/// Lists installed models by reading `<models_dir>/manifests`, without the
+/// server. Each file sits at `<registry>/<namespace>/<name>/<tag>` and is a
+/// JSON manifest whose layer sizes sum to the model's footprint. Best-effort:
+/// unreadable or malformed manifests are skipped rather than failing the lot.
+fn list_installed_from_disk(models_dir: &std::path::Path) -> Vec<InstalledModel> {
+    let manifests_root = models_dir.join("manifests");
+    let mut models: Vec<InstalledModel> = walkdir::WalkDir::new(&manifests_root)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_file())
+        .filter_map(|entry| {
+            let rel = entry.path().strip_prefix(&manifests_root).ok()?;
+            let name = model_ref_from_manifest_path(rel)?;
+            let manifest: DiskManifest =
+                serde_json::from_slice(&std::fs::read(entry.path()).ok()?).ok()?;
+            let size_bytes =
+                manifest.config.size + manifest.layers.iter().map(|l| l.size).sum::<u64>();
+            Some(InstalledModel { name, size_bytes })
+        })
+        .collect();
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models.dedup_by(|a, b| a.name == b.name);
+    models
+}
+
+/// Reconstructs the model reference Ollama would print from a manifest's path
+/// relative to the manifests root, e.g. `registry.ollama.ai/library/codellama/13b`
+/// → `codellama:13b`. The default registry and `library` namespace are
+/// implicit in Ollama's short names, so they're dropped; anything else is
+/// kept (`hf.co/user/model/latest` → `hf.co/user/model:latest`).
+fn model_ref_from_manifest_path(rel: &std::path::Path) -> Option<String> {
+    let parts: Vec<&str> = rel
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+    // Need at least a name and a tag.
+    if parts.len() < 2 {
+        return None;
+    }
+    let (tag, name_parts) = parts.split_last()?;
+    let mut name_parts = name_parts;
+    if name_parts.first() == Some(&"registry.ollama.ai") {
+        name_parts = &name_parts[1..];
+    }
+    if name_parts.first() == Some(&"library") {
+        name_parts = &name_parts[1..];
+    }
+    if name_parts.is_empty() {
+        return None;
+    }
+    Some(format!("{}:{}", name_parts.join("/"), tag))
+}
+
 /// Whether the background service is answering.
 pub async fn is_running(client: &reqwest::Client) -> bool {
     client
@@ -99,6 +206,80 @@ pub async fn is_running(client: &reqwest::Client) -> bool {
         .send()
         .await
         .is_ok_and(|r| r.status().is_success())
+}
+
+/// How long to wait for `ollama serve` to come up before giving up. A cold
+/// start is usually well under a second; this leaves generous headroom.
+const SERVER_START_POLLS: usize = 20;
+const SERVER_START_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(150);
+
+/// Ensures the Ollama server is answering, starting it if it isn't.
+///
+/// A Homebrew install runs no login service, so enabling local models on a
+/// cold machine has to boot the engine. `ollama serve` is long-lived, so it is
+/// spawned detached — it outlives this call and the settings page — and we
+/// poll the API until it answers. Returns whether it is up by the time we
+/// stop waiting. A second `serve` merely fails to bind the port, harmlessly.
+pub async fn ensure_running(client: &reqwest::Client) -> bool {
+    if is_running(client).await {
+        return true;
+    }
+    let Some(binary) = resolve_binary() else {
+        return false;
+    };
+    if command::r#async::Command::new(binary)
+        .arg("serve")
+        .spawn()
+        .is_err()
+    {
+        return false;
+    }
+    for _ in 0..SERVER_START_POLLS {
+        warpui::r#async::Timer::after(SERVER_START_POLL_INTERVAL).await;
+        if is_running(client).await {
+            return true;
+        }
+    }
+    false
+}
+
+/// Unloads every currently-running model, freeing the RAM they hold.
+///
+/// Used when the user turns local models off. The server process is left
+/// alone — it may be managed by launchd or shared with the user's own
+/// terminal, so killing it would overstep — but nothing should stay resident
+/// in memory once local models are switched off.
+pub async fn stop_running_models() {
+    let Some(binary) = resolve_binary() else {
+        return;
+    };
+    let Ok(output) = command::r#async::Command::new(&binary)
+        .arg("ps")
+        .output()
+        .await
+    else {
+        return;
+    };
+    let listing = String::from_utf8_lossy(&output.stdout);
+    for name in running_model_names(&listing) {
+        let _ = command::r#async::Command::new(&binary)
+            .arg("stop")
+            .arg(&name)
+            .output()
+            .await;
+    }
+}
+
+/// Extracts the model names from `ollama ps` output — the first column of
+/// each row after the header. Pure, so it's testable without a live Ollama.
+fn running_model_names(ps_output: &str) -> Vec<String> {
+    ps_output
+        .lines()
+        .skip(1) // the NAME / ID / SIZE / … header row
+        .filter_map(|line| line.split_whitespace().next())
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 /// Fetches and parses the library listing.

@@ -118,3 +118,33 @@ fn formats_gigabytes_readably() {
     assert_eq!(format_gb(4 * GB), "4.0 GB");
     assert_eq!(format_gb(24 * GB), "24 GB");
 }
+
+#[test]
+fn badges_flag_only_the_warnings() {
+    assert_eq!(Fit::Comfortable.badge(), None);
+    assert_eq!(Fit::Tight.badge(), Some("STARVED"));
+    assert_eq!(Fit::Exceeds.badge(), Some("WON'T FIT"));
+    // Every warning badge has a legend line, and comfortable has none.
+    assert!(Fit::Comfortable.badge_meaning().is_none());
+    assert!(Fit::Tight.badge_meaning().is_some());
+    assert!(Fit::Exceeds.badge_meaning().is_some());
+}
+
+#[test]
+fn assess_tag_reads_the_size_after_the_colon() {
+    let total = 24 * GB;
+    // A small model is comfortable; a giant one won't fit — same verdict as
+    // assessing the parsed size directly.
+    assert_eq!(
+        assess_tag("codellama:1b", total).map(|v| v.fit),
+        Some(Fit::Comfortable)
+    );
+    assert_eq!(
+        assess_tag("llama3.1:405b", total).map(|v| v.fit),
+        Some(Fit::Exceeds)
+    );
+    // No parseable size → no verdict, so callers show nothing rather than guess.
+    assert!(assess_tag("mystery-model:latest", total).is_none());
+    // A bare name with an embedded size still resolves.
+    assert_eq!(assess_tag("70b", total).map(|v| v.fit), Some(Fit::Exceeds));
+}

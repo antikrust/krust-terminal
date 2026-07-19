@@ -13,8 +13,7 @@ use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
 use warpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
 
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
-    ollama_model_name, CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID,
-    OLLAMA_HARNESS_CONFIG_NAME,
+    ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
@@ -80,25 +79,35 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
 }
 
 /// Ollama model records share the Codex-shaped storage row, but the picker
-/// presents them as their own peer provider. Their internal ids are
-/// intercepted by the direct Ollama runner because these older models do not
-/// support the tool schema required by `codex exec --oss`.
+/// presents them as their own peer provider. Any `ollama/…`-prefixed id is
+/// intercepted by the direct Ollama runner (see [`ollama_model_name`]), so
+/// every installed model routes there regardless of which one it is.
+///
+/// The list is what Ollama actually has on disk, not a fixed pair — pull a
+/// model and it shows up here (and thus in the picker); remove one and it
+/// leaves. A model too big for this machine carries its fit badge in the
+/// display name so the warning follows it into the menu.
 fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<HarnessModelInfo> {
     if !local_cli_on_path("ollama") {
         return models;
     }
-    models.extend([
-        HarnessModelInfo {
-            id: CODELLAMA_OLLAMA_MODEL_ID.to_string(),
-            display_name: "Code Llama 13B".to_string(),
+
+    let total_memory = crate::ai::ollama::capability::total_system_memory_bytes();
+    for installed in crate::ai::ollama::service::installed_models_from_disk() {
+        let badge = total_memory
+            .and_then(|total| crate::ai::ollama::capability::assess_tag(&installed.name, total))
+            .filter(|verdict| verdict.fit.is_warning())
+            .and_then(|verdict| verdict.fit.badge());
+        let display_name = match badge {
+            Some(badge) => format!("{} [{}]", installed.name, badge),
+            None => installed.name.clone(),
+        };
+        models.push(HarnessModelInfo {
+            id: format!("{OLLAMA_MODEL_ID_PREFIX}{}", installed.name),
+            display_name,
             reasoning_level: None,
-        },
-        HarnessModelInfo {
-            id: DEEPSEEK_CODER_OLLAMA_MODEL_ID.to_string(),
-            display_name: "DeepSeek Coder 6.7B".to_string(),
-            reasoning_level: None,
-        },
-    ]);
+        });
+    }
     models
 }
 

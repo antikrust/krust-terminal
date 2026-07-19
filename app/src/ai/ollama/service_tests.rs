@@ -75,7 +75,9 @@ fn catalog_source_explains_itself_only_when_degraded() {
         CatalogSource::BundledOffline,
         CatalogSource::BundledMarkupChanged,
     ] {
-        let note = degraded.note().expect("degraded sources explain themselves");
+        let note = degraded
+            .note()
+            .expect("degraded sources explain themselves");
         assert!(
             note.contains("built-in list"),
             "note should say the list is a fallback: {note}"
@@ -88,4 +90,92 @@ fn binary_resolution_does_not_panic_without_ollama() {
     // Whether it resolves depends on the machine; it must never panic.
     let _ = resolve_binary();
     let _ = is_installed();
+}
+
+#[test]
+fn reconstructs_model_refs_from_manifest_paths() {
+    use std::path::Path;
+
+    // The default registry and the "library" namespace are implicit in the
+    // short names Ollama prints, so they're dropped.
+    assert_eq!(
+        model_ref_from_manifest_path(Path::new("registry.ollama.ai/library/codellama/13b")),
+        Some("codellama:13b".to_string())
+    );
+    assert_eq!(
+        model_ref_from_manifest_path(Path::new("registry.ollama.ai/library/deepseek-coder/6.7b")),
+        Some("deepseek-coder:6.7b".to_string())
+    );
+    // A non-library / non-default source keeps its full reference.
+    assert_eq!(
+        model_ref_from_manifest_path(Path::new("hf.co/user/model/latest")),
+        Some("hf.co/user/model:latest".to_string())
+    );
+    // Too short to be a name+tag.
+    assert_eq!(model_ref_from_manifest_path(Path::new("dangling")), None);
+}
+
+#[test]
+fn lists_installed_models_from_disk_without_a_server() {
+    use std::fs;
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let manifests = dir.path().join("manifests/registry.ollama.ai/library");
+    fs::create_dir_all(manifests.join("codellama")).unwrap();
+    fs::create_dir_all(manifests.join("deepseek-coder")).unwrap();
+
+    // A model's size is the sum of its layers (plus the tiny config blob).
+    fs::write(
+        manifests.join("codellama/13b"),
+        r#"{"config":{"size":530},"layers":[{"size":7365948416},{"size":7020}]}"#,
+    )
+    .unwrap();
+    fs::write(
+        manifests.join("deepseek-coder/6.7b"),
+        r#"{"config":{"size":483},"layers":[{"size":3827834503}]}"#,
+    )
+    .unwrap();
+    // A malformed manifest is skipped, not fatal.
+    fs::write(manifests.join("codellama/broken"), "not json").unwrap();
+
+    let models = list_installed_from_disk(dir.path());
+
+    assert_eq!(models.len(), 2, "two valid manifests: {models:?}");
+    // Sorted by name.
+    assert_eq!(models[0].name, "codellama:13b");
+    assert_eq!(models[0].size_bytes, 530 + 7365948416 + 7020);
+    assert_eq!(models[1].name, "deepseek-coder:6.7b");
+    assert_eq!(models[1].size_bytes, 483 + 3827834503);
+}
+
+#[test]
+fn listing_from_a_missing_models_dir_is_empty_not_an_error() {
+    let models = list_installed_from_disk(std::path::Path::new("/nonexistent/ollama/models"));
+    assert!(models.is_empty());
+}
+
+#[test]
+fn parses_running_model_names_from_ollama_ps() {
+    // Real `ollama ps` output: a header row, then a row per running model.
+    let output = "\
+NAME                   ID              SIZE      PROCESSOR    UNTIL
+codellama:13b          9f438cb9cd58    9.0 GB    100% GPU     4 minutes from now
+deepseek-coder:6.7b    ce298d984115    5.5 GB    100% GPU     4 minutes from now
+";
+    assert_eq!(
+        running_model_names(output),
+        vec![
+            "codellama:13b".to_string(),
+            "deepseek-coder:6.7b".to_string()
+        ]
+    );
+}
+
+#[test]
+fn nothing_running_yields_no_names() {
+    // Header only — the idle state.
+    let output = "NAME    ID    SIZE    PROCESSOR    UNTIL\n";
+    assert!(running_model_names(output).is_empty());
+    // And a totally empty capture.
+    assert!(running_model_names("").is_empty());
 }

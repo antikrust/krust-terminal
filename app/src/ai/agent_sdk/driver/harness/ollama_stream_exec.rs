@@ -26,7 +26,13 @@ use super::claude_stream_exec::run_jsonl_stream;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
 pub const OLLAMA_HARNESS_CONFIG_NAME: &str = "ollama";
+// The two models the direct Ollama runner was first built and tested against.
+// The model menu no longer hardcodes them — it lists whatever Ollama has on
+// disk (see `harness_availability::append_available_ollama_models`) — so these
+// now serve as canonical example ids, used by this module's tests.
+#[allow(dead_code)]
 pub const CODELLAMA_OLLAMA_MODEL_ID: &str = "ollama/codellama:13b";
+#[allow(dead_code)]
 pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
 const MAX_TOOL_CALLS_PER_TURN: usize = 8;

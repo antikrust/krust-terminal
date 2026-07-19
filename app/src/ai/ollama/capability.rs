@@ -103,6 +103,37 @@ impl Fit {
     pub fn is_warning(self) -> bool {
         matches!(self, Fit::Tight | Fit::Exceeds)
     }
+
+    /// A terse badge for inline display beside a model, or `None` when the
+    /// model fits comfortably and needs no flag. Shown in the settings page
+    /// and the model menu; the legend explains what each means.
+    pub fn badge(self) -> Option<&'static str> {
+        match self {
+            Fit::Comfortable => None,
+            Fit::Tight => Some("STARVED"),
+            Fit::Exceeds => Some("WON'T FIT"),
+        }
+    }
+
+    /// One-line meaning of each badge, for the legend.
+    pub fn badge_meaning(self) -> Option<&'static str> {
+        match self {
+            Fit::Comfortable => None,
+            Fit::Tight => Some("runs, but crowds out everything else — expect slow replies"),
+            Fit::Exceeds => Some("bigger than this machine's memory — expect thrashing"),
+        }
+    }
+}
+
+/// Assesses a model tag (`codellama:13b`, `deepseek-coder:6.7b`) against a
+/// machine with `total_bytes` of RAM. Returns `None` when the tag carries no
+/// parseable size, in which case the caller should show no verdict rather
+/// than guess. The size is the part after `:`, or the whole tag if there is
+/// no colon (some models embed the size in the name).
+pub fn assess_tag(tag: &str, total_bytes: u64) -> Option<MemoryVerdict> {
+    let size_part = tag.rsplit(':').next().unwrap_or(tag);
+    let size = ParameterSize::parse(size_part)?;
+    Some(assess(size, total_bytes))
 }
 
 /// The verdict for one model on this machine.
@@ -110,6 +141,11 @@ impl Fit {
 pub struct MemoryVerdict {
     pub fit: Fit,
     pub required_bytes: u64,
+    /// The full-sentence explanation. The settings page and menu now show the
+    /// terse [`Fit::badge`] instead, with the legend carrying the meaning, so
+    /// this is retained as the authoritative wording (and is asserted on in
+    /// tests) rather than rendered directly.
+    #[allow(dead_code)]
     pub message: String,
 }
 
