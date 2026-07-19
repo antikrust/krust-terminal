@@ -532,7 +532,7 @@ impl LoginSlideView {
 
         let (title_text, subtitle_text) = match self.login_purpose() {
             LoginPurpose::WarpDrive => (
-                "Get started with Warp Drive",
+                "Get started with the Library",
                 "Connect your account to save and share notebooks, workflows, and more across devices.",
             ),
             LoginPurpose::WarpAgent => (
@@ -659,7 +659,7 @@ impl LoginSlideView {
 
         let cmd_enter = Keystroke::parse("cmdorctrl-enter").unwrap_or_default();
         let skip_label = match self.login_purpose() {
-            LoginPurpose::WarpDrive => "Disable Warp Drive",
+            LoginPurpose::WarpDrive => "Disable Library",
             LoginPurpose::WarpAgent => "Skip for now",
             LoginPurpose::ThirdParty => "Skip for now",
         };
@@ -956,10 +956,10 @@ impl LoginSlideView {
             &'static str,
         ) = match self.login_purpose() {
             LoginPurpose::WarpDrive => (
-                "Are you sure you want to disable Warp Drive?",
-                "Warp Drive lets you save workflows and knowledge across devices and share them with your team. By continuing, you won't have access to the following features:",
+                "Are you sure you want to disable Library?",
+                "The Library lets you save workflows and knowledge locally. By continuing, you won't have access to the following features:",
                 WARP_DRIVE_FEATURES,
-                "Enable Warp Drive",
+                "Enable Library",
             ),
             LoginPurpose::WarpAgent | LoginPurpose::ThirdParty => (
                 "Continue without signing in?",

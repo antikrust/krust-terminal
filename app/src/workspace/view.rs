@@ -15953,7 +15953,7 @@ impl Workspace {
                         ctx,
                     ),
                     _ => {
-                        log::warn!("Attempted to open an unsupported Warp Drive link")
+                        log::warn!("Attempted to open an unsupported Library link")
                     }
                 }
             }
@@ -17919,7 +17919,7 @@ impl Workspace {
                                             },
                                         ) {
                                             new_toast = DismissibleToast::success(
-                                                "Plan synced to your Warp Drive".to_string(),
+                                                "Plan synced to your Library".to_string(),
                                             )
                                             .with_object_id(object_id_clone)
                                             .with_link(
@@ -20078,7 +20078,7 @@ impl Workspace {
                     {
                         ToolPanelView::ProjectExplorer => "Project explorer",
                         ToolPanelView::GlobalSearch { .. } => "Global search",
-                        ToolPanelView::WarpDrive => "Warp Drive",
+                        ToolPanelView::WarpDrive => "Library",
                         ToolPanelView::ConversationListView => "Agent conversations",
                         ToolPanelView::Tabs => "Tabs",
                     }
@@ -20133,7 +20133,7 @@ impl Workspace {
             {
                 ToolPanelView::ProjectExplorer => "Project explorer",
                 ToolPanelView::GlobalSearch { .. } => "Global search",
-                ToolPanelView::WarpDrive => "Warp Drive",
+                ToolPanelView::WarpDrive => "Library",
                 ToolPanelView::ConversationListView => "Agent conversations",
                 ToolPanelView::Tabs => "Tabs",
             }

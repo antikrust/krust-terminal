@@ -262,7 +262,7 @@ impl AIDocumentModel {
         let content = document.editor.as_ref(ctx).markdown(ctx);
 
         let Some(owner) = Self::get_plan_owner(ctx) else {
-            log::warn!("Failed to get owner while saving AI Document to Warp Drive. Skipping");
+            log::warn!("Failed to get owner while saving AI Document to the Library. Skipping");
             return false;
         };
 
@@ -325,7 +325,7 @@ impl AIDocumentModel {
                 AIDocumentSaveStatus::NotSaved => {
                     if !self.sync_to_warp_drive(document_id, ctx) {
                         report_error!(
-                            "Failed to publish plan document to Warp Drive before child-agent launch.",
+                            "Failed to publish plan document to the Library before child-agent launch.",
                             extra: { "document_id" => %document_id }
                         );
                     } else if !self.get_document_save_status(&document_id).is_saved() {
@@ -582,12 +582,12 @@ impl AIDocumentModel {
                 )
             })
             .ok_or_else(|| {
-                format!("Plan document {ai_document_id} was not found in Warp Drive.")
+                format!("Plan document {ai_document_id} was not found in the Library.")
             })?;
         let (sync_id, title, content) = notebook;
         if sync_id.into_server().is_none() {
             return Err(format!(
-                "Plan document {ai_document_id} is not backed by a saved Warp Drive notebook."
+                "Plan document {ai_document_id} is not backed by a saved Library notebook."
             ));
         }
 

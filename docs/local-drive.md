@@ -1,4 +1,10 @@
-# Local Warp Drive: notes, workflows, and notebooks without a server
+# Local Warp Drive ("Library"): notes, workflows, and notebooks without a server
+
+> **Naming**: the user-facing name of this feature is **Library** (renamed
+> 2026-07-19; the panel, menus, keybindings, and tips all say Library).
+> Code identifiers, settings TOML paths, and this doc's internal
+> vocabulary keep the historical `warp_drive` naming — see
+> WARPDRIVE-DESIGN.md §7 for why identifiers were not churned.
 
 This fork makes **Warp Drive fully local**. Notebooks, workflows, env var
 collections, MCP server configs, AI facts, and folders live in the app's

@@ -8,6 +8,16 @@ trap-focused, kept current) is [docs/local-drive.md](docs/local-drive.md).
 
 Landed in commit `071306a` ("Make Warp Drive fully local"), 2026-07-19.
 
+**Naming update (same day):** the feature's user-facing name is now
+**Library** — chosen over "Stash" (collides with the code-review git-stash
+action) and "Notes" (undersells workflows/env vars/MCP configs/rules).
+Every user-visible string (panel title, tools-panel tooltip, View menu,
+keybinding descriptions, command palette, agent tips, toasts, dialogs) says
+Library; code identifiers, telemetry event names, and settings TOML paths
+keep the `warp_drive` vocabulary per §7. The Create-team / Join-team
+upsells described below were already removed from the panel; team creation
+lives only in the (inert, server-backed) Teams settings page.
+
 ---
 
 ## 1. Goal

@@ -260,7 +260,7 @@ impl TerminalView {
                     .await
                     .is_err()
                 {
-                    return Err("Timed out waiting for Warp Drive to sync for docker sandbox");
+                    return Err("Timed out waiting for Library to sync for docker sandbox");
                 }
 
                 // Wait for the terminal session to bootstrap.

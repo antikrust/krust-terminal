@@ -1967,7 +1967,7 @@ fn test_open_or_toggle_warp_drive() {
             );
             assert!(
                 workspace.current_workspace_state.is_warp_drive_open,
-                "Warp Drive should be open"
+                "Library should be open"
             );
             assert!(
                 !workspace
@@ -1986,7 +1986,7 @@ fn test_open_or_toggle_warp_drive() {
             );
             assert!(
                 !workspace.current_workspace_state.is_warp_drive_open,
-                "Warp Drive should be closed"
+                "Library should be closed"
             );
             assert!(
                 !workspace
@@ -2005,7 +2005,7 @@ fn test_open_or_toggle_warp_drive() {
             );
             assert!(
                 workspace.current_workspace_state.is_warp_drive_open,
-                "Warp Drive should be open"
+                "Library should be open"
             );
             assert!(
                 workspace
@@ -2249,7 +2249,7 @@ fn test_switch_focus_panels() {
         workspace.update(&mut app, |view, ctx| {
             assert!(
                 view.left_panel_view.is_self_or_child_focused(ctx),
-                "Expected Warp Drive panel to be focused"
+                "Expected Library panel to be focused"
             );
         });
 
@@ -4303,7 +4303,7 @@ fn test_tools_panel_warp_drive_always_available() {
                 workspace
                     .left_panel_views
                     .contains(&ToolPanelView::WarpDrive),
-                "Warp Drive should always be an available tools-panel tab"
+                "Library should always be an available tools-panel tab"
             );
             workspace.left_panel_view.update(ctx, |lp, ctx| {
                 lp.handle_action_with_force_open(&LeftPanelAction::WarpDrive, false, ctx);
@@ -4311,7 +4311,7 @@ fn test_tools_panel_warp_drive_always_available() {
             assert_eq!(
                 workspace.left_panel_view.as_ref(ctx).active_view(),
                 ToolPanelView::WarpDrive,
-                "Warp Drive should be selectable as the active view"
+                "Library should be selectable as the active view"
             );
         });
     });

@@ -192,7 +192,7 @@ impl EnvironmentCommandRunner {
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
                 super::report_fatal_error(
-                    anyhow::anyhow!("Timed out waiting for Warp Drive to sync"),
+                    anyhow::anyhow!("Timed out waiting for Library to sync"),
                     ctx,
                 );
                 return;
@@ -263,7 +263,7 @@ impl EnvironmentCommandRunner {
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
                 super::report_fatal_error(
-                    anyhow::anyhow!("Timed out waiting for Warp Drive to sync"),
+                    anyhow::anyhow!("Timed out waiting for Library to sync"),
                     ctx,
                 );
                 return;
@@ -475,7 +475,7 @@ impl EnvironmentCommandRunner {
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
                 super::report_fatal_error(
-                    anyhow::anyhow!("Timed out waiting for Warp Drive to sync"),
+                    anyhow::anyhow!("Timed out waiting for Library to sync"),
                     ctx,
                 );
                 return;
@@ -857,7 +857,7 @@ impl EnvironmentCommandRunner {
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
                 super::report_fatal_error(
-                    anyhow::anyhow!("Timed out waiting for Warp Drive to sync"),
+                    anyhow::anyhow!("Timed out waiting for Library to sync"),
                     ctx,
                 );
                 return;
@@ -1036,7 +1036,7 @@ impl EnvironmentCommandRunner {
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
                 super::report_fatal_error(
-                    anyhow::anyhow!("Timed out waiting for Warp Drive to sync"),
+                    anyhow::anyhow!("Timed out waiting for Library to sync"),
                     ctx,
                 );
                 return;
