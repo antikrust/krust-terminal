@@ -22,7 +22,6 @@ use settings_page::{
     MatchData, SettingsPage, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
     HEADER_PADDING,
 };
-use show_blocks_view::{ShowBlocksEvent, ShowBlocksView};
 use teams_page::TeamsPageViewEvent;
 use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
@@ -58,7 +57,6 @@ use crate::menu::{self, Menu, MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
 use crate::pane_group::{BackingView, Direction, PaneConfiguration, PaneEvent, SplitPaneState};
-use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::MCPServerCollectionPaneEntrypoint;
 use crate::settings::{AISettings, BlockVisibilitySettings, SettingsFileError};
 use crate::settings_view::mcp_servers_page::{MCPServersSettingsPage, MCPServersSettingsPageEvent};
@@ -106,7 +104,6 @@ mod scripting_page;
 mod set_default_model_modal;
 mod settings_file_footer;
 pub(crate) mod settings_page;
-mod show_blocks_view;
 mod tab_menu;
 mod teams_page;
 mod telemetry;
@@ -252,7 +249,6 @@ pub enum SettingsSection {
     Keybindings,
     Privacy,
     Scripting,
-    SharedBlocks,
     Teams,
     Warpify,
     /// Internal backing-page identifier for AISettingsPageView. Multiple subpages
@@ -292,7 +288,6 @@ impl Display for SettingsSection {
         match self {
             SettingsSection::BillingAndUsage => write!(f, "Billing and usage"),
             SettingsSection::Keybindings => write!(f, "Keyboard shortcuts"),
-            SettingsSection::SharedBlocks => write!(f, "Shared blocks"),
             SettingsSection::MCPServers => write!(f, "MCP Servers"),
             SettingsSection::Scripting => write!(f, "Scripting"),
             SettingsSection::WarpAgent => write!(f, "Warp Agent"),
@@ -413,7 +408,6 @@ impl FromStr for SettingsSection {
             "Keyboard shortcuts" => Ok(Self::Keybindings),
             "Privacy" => Ok(Self::Privacy),
             "Scripting" => Ok(Self::Scripting),
-            "Shared blocks" => Ok(Self::SharedBlocks),
             "Teams" => Ok(Self::Teams),
             "Warpify" => Ok(Self::Warpify),
             // This page was called "Oz" at one point, keep for backward compatibility.
@@ -1117,7 +1111,6 @@ macro_rules! update_page {
             SettingsPageViewHandle::Main(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Appearance(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
-            SettingsPageViewHandle::SharedBlocks(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Teams(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Warpify(handle) => $ctx.update_view(handle, $update),
@@ -1193,20 +1186,6 @@ impl SettingsView {
 
         ctx.subscribe_to_view(&features_page_handle, |me, _, event, ctx| {
             me.handle_features_page_event(event, ctx);
-        });
-
-        // Shared blocks page
-        let block_client = ServerApiProvider::as_ref(ctx).get_block_client();
-        let show_blocks_view_handle =
-            ctx.add_typed_action_view(|ctx| ShowBlocksView::new(block_client, ctx));
-
-        ctx.subscribe_to_view(&show_blocks_view_handle, |_, _, event, ctx| match event {
-            ShowBlocksEvent::ShowToast { message, flavor } => {
-                ctx.emit(SettingsViewEvent::ShowToast {
-                    message: message.clone(),
-                    flavor: *flavor,
-                })
-            }
         });
 
         // About page
@@ -1309,7 +1288,6 @@ impl SettingsView {
             SettingsPage::new(keybindings_handle),
             SettingsPage::new(platform_page_handle),
             SettingsPage::new(warpify_page_handle),
-            SettingsPage::new(show_blocks_view_handle),
         ];
 
         if let Some(scripting_page_handle) = scripting_page_handle {
@@ -1357,20 +1335,17 @@ impl SettingsView {
             SettingsNavItem::Page(SettingsSection::Features),
             SettingsNavItem::Page(SettingsSection::Keybindings),
             SettingsNavItem::Page(SettingsSection::Warpify),
-            SettingsNavItem::Page(SettingsSection::SharedBlocks),
             SettingsNavItem::Page(SettingsSection::Privacy),
             SettingsNavItem::Page(SettingsSection::About),
         ];
 
         if FeatureFlag::WarpControlCli.is_enabled() {
-            let shared_blocks_index = nav_items
+            let scripting_index = nav_items
                 .iter()
-                .position(|item| {
-                    matches!(item, SettingsNavItem::Page(SettingsSection::SharedBlocks))
-                })
+                .position(|item| matches!(item, SettingsNavItem::Page(SettingsSection::Privacy)))
                 .unwrap_or(nav_items.len());
             nav_items.insert(
-                shared_blocks_index,
+                scripting_index,
                 SettingsNavItem::Page(SettingsSection::Scripting),
             );
         }
@@ -2171,7 +2146,6 @@ impl SettingsView {
         match &settings_page.view_handle {
             SettingsPageViewHandle::Main(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Teams(v) => v.as_ref(app).should_render(app),
-            SettingsPageViewHandle::SharedBlocks(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Keybindings(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Features(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),

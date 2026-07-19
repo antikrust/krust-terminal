@@ -1304,6 +1304,13 @@ impl ServerApiProvider {
         self.auth_client.clone()
     }
 
+    /// Orphaned server plumbing for the removed block-sharing feature. The
+    /// warp.dev permalink / embed flow was removed from the UI, but its client,
+    /// GraphQL mutations, and block model form a vertical that also feeds
+    /// telemetry and block-height code; tearing all of it out is a larger,
+    /// riskier change than the removal warranted. Kept so that chain stays
+    /// reachable rather than cascading into dead-code churn.
+    #[allow(dead_code)]
     pub fn get_block_client(&self) -> Arc<dyn BlockClient> {
         self.server_api.clone()
     }

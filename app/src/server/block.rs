@@ -1,3 +1,9 @@
+//! Mostly orphaned by the block-sharing removal: `Block`, `BlockContents` and
+//! the embed-height constants were only used by the removed share modal.
+//! `DisplaySetting` stays live (telemetry + block-height code still use it).
+//! A full teardown of the block-sharing server vertical is tracked separately.
+#![allow(dead_code)]
+
 use chrono::{DateTime, FixedOffset, Utc};
 use serde::{Deserialize, Serialize};
 use warp_graphql::mutations::share_block::DisplaySetting as GqlDisplaySetting;

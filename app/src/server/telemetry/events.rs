@@ -74,7 +74,6 @@ use crate::terminal::view::{
     NotificationsDiscoveryBannerAction, NotificationsErrorBannerAction, NotificationsTrigger,
     PromptPart,
 };
-use crate::terminal::ShareBlockType;
 use crate::tips::WelcomeTipFeature;
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::settings::EditorLayout;
@@ -83,6 +82,16 @@ use crate::util::openable_file_type::FileTarget;
 use crate::workflows::{WorkflowId, WorkflowSelectionSource, WorkflowSource};
 use crate::workspace::tab_settings::{TabCloseButtonPosition, WorkspaceDecorationVisibility};
 use crate::workspace::TabMovement;
+
+/// Retained for telemetry only. Block sharing (the warp.dev permalink / embed
+/// feature) was removed in this fork; the event variants that reference this
+/// are no longer emitted, but the type is kept so the telemetry schema stays
+/// stable.
+#[derive(PartialEq, Copy, Clone, Debug, Serialize)]
+pub enum ShareBlockType {
+    HtmlEmbed,
+    Permalink,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BootstrappingInfo {

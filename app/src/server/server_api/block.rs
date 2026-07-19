@@ -1,3 +1,10 @@
+//! Orphaned by the block-sharing removal. The warp.dev permalink / embed flow
+//! was removed from the UI, leaving this client (and the block payload model
+//! and title API it drives) with no live callers. Kept rather than torn out
+//! because the vertical also feeds telemetry and block-height code; a full
+//! teardown is tracked separately.
+#![allow(dead_code)]
+
 use std::convert::TryFrom;
 
 use anyhow::anyhow;
