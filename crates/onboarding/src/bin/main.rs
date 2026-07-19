@@ -49,6 +49,12 @@ fn main() -> Result<()> {
         ..Default::default()
     })?;
 
+    // The slides check feature flags while rendering. This preview binary has
+    // no channel to initialize them from, so mark them initialized (leaving
+    // every flag at its default) — otherwise debug builds panic on the first
+    // `is_enabled()` call.
+    warp_core::features::mark_initialized();
+
     let app_builder = warpui::platform::AppBuilder::new(
         platform::AppCallbacks::default(),
         Box::new(ASSETS),
