@@ -23,7 +23,7 @@ use settings_page::{
     HEADER_PADDING,
 };
 use show_blocks_view::{ShowBlocksEvent, ShowBlocksView};
-use teams_page::{TeamsPageView, TeamsPageViewEvent};
+use teams_page::TeamsPageViewEvent;
 use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
 use warp_core::features::FeatureFlag;
@@ -1226,19 +1226,8 @@ impl SettingsView {
             me.handle_code_page_event(event, ctx);
         });
 
-        // Teams page, adding unconditionally, as `should_render` later on decides whether it
-        // should be shown to the user or not
-        let teams_page_handle = ctx.add_typed_action_view(TeamsPageView::new);
-        ctx.subscribe_to_view(&teams_page_handle, |_, _, event, ctx| match event {
-            TeamsPageViewEvent::TeamsChanged => ctx.notify(),
-            TeamsPageViewEvent::OpenWarpDrive => ctx.emit(SettingsViewEvent::OpenWarpDrive),
-            TeamsPageViewEvent::ShowToast { message, flavor } => {
-                ctx.emit(SettingsViewEvent::ShowToast {
-                    message: message.clone(),
-                    flavor: *flavor,
-                })
-            }
-        });
+        // Teams is no longer a page of its own — the Account page hosts it and
+        // re-emits its events (see `MainSettingsPageEvent::Teams`).
 
         let warpify_page_handle = ctx.add_typed_action_view(WarpifyPageView::new);
         ctx.subscribe_to_view(&warpify_page_handle, |me, _, event, ctx| {
@@ -1302,7 +1291,6 @@ impl SettingsView {
             SettingsPage::new(main_page_handle),
             SettingsPage::new(ai_page_handle),
             SettingsPage::new(code_page_handle),
-            SettingsPage::new(teams_page_handle),
             SettingsPage::new(appearance_page_handle),
             SettingsPage::new(features_page_handle),
             SettingsPage::new(keybindings_handle),
@@ -1344,7 +1332,6 @@ impl SettingsView {
                     SettingsSection::OzCloudAPIKeys,
                 ],
             )),
-            SettingsNavItem::Page(SettingsSection::Teams),
             if FeatureFlag::TextEffects.is_enabled() {
                 SettingsNavItem::Umbrella(SettingsUmbrella::new(
                     "Appearance",
@@ -1783,6 +1770,16 @@ impl SettingsView {
             MainSettingsPageEvent::Billing(event) => {
                 self.handle_billing_and_usage_page_event(event, ctx)
             }
+            MainSettingsPageEvent::Teams(event) => match event {
+                TeamsPageViewEvent::TeamsChanged => ctx.notify(),
+                TeamsPageViewEvent::OpenWarpDrive => ctx.emit(SettingsViewEvent::OpenWarpDrive),
+                TeamsPageViewEvent::ShowToast { message, flavor } => {
+                    ctx.emit(SettingsViewEvent::ShowToast {
+                        message: message.clone(),
+                        flavor: *flavor,
+                    })
+                }
+            },
             _ => (),
         }
     }
@@ -2020,14 +2017,15 @@ impl SettingsView {
     ) {
         // Map internal backing-page sections to their default subpage.
         // External callers should use subpage variants directly.
-        // Billing & usage is now a section of the Account page, not a page of
-        // its own. Callers still ask for it by name, so redirect them to the
-        // Account page and scroll down to the billing section.
+        // Billing & usage and Teams are now sections of the Account page, not
+        // pages of their own. Callers still ask for them by name, so redirect
+        // to the Account page and scroll down to the matching section.
         let scroll_to_billing = section == SettingsSection::BillingAndUsage;
+        let scroll_to_team = section == SettingsSection::Teams;
         let section = match section {
             SettingsSection::AI => SettingsSection::WarpAgent,
             SettingsSection::Code => SettingsSection::CodeIndexing,
-            SettingsSection::BillingAndUsage => SettingsSection::Account,
+            SettingsSection::BillingAndUsage | SettingsSection::Teams => SettingsSection::Account,
             other => other,
         };
 
@@ -2111,12 +2109,15 @@ impl SettingsView {
             );
         }
 
-        if scroll_to_billing {
+        if let Some(widget_id) = scroll_to_billing
+            .then_some(main_page::BILLING_AND_USAGE_WIDGET_ID)
+            .or_else(|| scroll_to_team.then_some(main_page::TEAM_WIDGET_ID))
+        {
             if let Some(page) = self.current_settings_page() {
                 update_page!(
                     &page.view_handle,
                     |view, _| {
-                        view.scroll_to_widget(main_page::BILLING_AND_USAGE_WIDGET_ID);
+                        view.scroll_to_widget(widget_id);
                     },
                     ctx
                 );

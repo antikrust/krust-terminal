@@ -30,6 +30,7 @@ use warpui::{
 
 use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use super::billing_and_usage_page::BillingAndUsagePageEvent;
+use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::settings_page::{
     render_body_item, render_customer_type_badge, render_sub_header, AdditionalInfo,
     LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle,
@@ -160,6 +161,8 @@ pub enum MainSettingsPageEvent {
     SignupAnonymousUser,
     /// Re-emitted from the embedded billing & usage section.
     Billing(BillingAndUsagePageEvent),
+    /// Re-emitted from the embedded teams section.
+    Teams(TeamsPageViewEvent),
 }
 
 pub struct MainSettingsPageView {
@@ -168,6 +171,9 @@ pub struct MainSettingsPageView {
     /// Billing & usage used to be its own settings page; it now renders as the
     /// last section of this page.
     billing_and_usage: ViewHandle<BillingAndUsageDispatchView>,
+    /// Teams likewise: the full team-management UI, hosted here rather than on
+    /// a page of its own.
+    teams: ViewHandle<TeamsPageView>,
 }
 
 impl Entity for MainSettingsPageView {
@@ -279,6 +285,7 @@ impl MainSettingsPageView {
         });
 
         let mut widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
+            Box::new(SignupBannerWidget),
             Box::new(AccountWidget::default()),
             Box::new(DividerWidget {}),
         ];
@@ -302,7 +309,14 @@ impl MainSettingsPageView {
 
         widgets.push(Box::new(LogoutWidget::default()));
 
-        // Billing & usage is merged in as the final section of the Account page.
+        // Teams and Billing & usage are merged in as the final sections of the
+        // Account page, in that order.
+        let teams = ctx.add_typed_action_view(TeamsPageView::new);
+        ctx.subscribe_to_view(&teams, |_, _, event, ctx| {
+            ctx.emit(MainSettingsPageEvent::Teams(event.clone()));
+        });
+        widgets.push(Box::new(TeamsSectionWidget));
+
         let billing_and_usage = ctx.add_view(BillingAndUsageDispatchView::new);
         ctx.subscribe_to_view(&billing_and_usage, |_, _, event, ctx| {
             ctx.emit(MainSettingsPageEvent::Billing(event.clone()));
@@ -315,6 +329,7 @@ impl MainSettingsPageView {
             page,
             auth_state,
             billing_and_usage,
+            teams,
         }
     }
 
@@ -669,6 +684,125 @@ impl SettingsWidget for AccountWidget {
                     .finish(),
             )
             .finish()
+    }
+}
+
+/// Invitation to create an account, at the top of the page.
+///
+/// The fork works fully without an account; one only buys the optional cloud
+/// services (settings sync, teams). There is no signup flow yet — the account
+/// server exists but the client is not wired to it (ACCOUNT-DESIGN.md phase
+/// 5) — so this deliberately carries no call-to-action button rather than a
+/// dead one. Give it an `on_click` when signup lands.
+#[derive(Default)]
+struct SignupBannerWidget;
+
+impl SettingsWidget for SignupBannerWidget {
+    type View = MainSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "sign up signup account settings sync teams cloud"
+    }
+
+    fn render(
+        &self,
+        _view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let body = Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Start)
+            .with_child(
+                Text::new_inline(
+                    "Sign up for settings sync and teams",
+                    appearance.ui_font_family(),
+                    14.,
+                )
+                .with_color(theme.active_ui_text_color().into())
+                .finish(),
+            )
+            .with_child(
+                Container::new(
+                    Text::new(
+                        "Everything here works without an account. An account only adds \
+                         syncing your settings across machines and sharing them with a team."
+                            .to_string(),
+                        appearance.ui_font_family(),
+                        13.,
+                    )
+                    .with_color(theme.sub_text_color(theme.surface_1()).into())
+                    .finish(),
+                )
+                .with_margin_top(4.)
+                .finish(),
+            )
+            .finish();
+
+        Container::new(
+            Container::new(body)
+                .with_horizontal_padding(12.)
+                .with_vertical_padding(12.)
+                .with_background(theme.surface_1())
+                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
+                .with_border(Border::new(1.).with_border_fill(theme.outline()))
+                .finish(),
+        )
+        .with_margin_top(VERTICAL_MARGIN)
+        .finish()
+    }
+}
+
+/// Teams, embedded as a section of this page.
+///
+/// Teams was a settings page of its own; the feature is unchanged — you can
+/// still create a team and bring people into it — it just lives here now,
+/// because team membership is part of an account. Deep links to the old
+/// `SettingsSection::Teams` redirect to this section.
+#[derive(Default)]
+struct TeamsSectionWidget;
+
+/// Stable id so callers that used to open the standalone Teams page can
+/// scroll to this section instead.
+pub const TEAM_WIDGET_ID: &str = "team";
+
+impl SettingsWidget for TeamsSectionWidget {
+    type View = MainSettingsPageView;
+
+    fn widget_id(&self) -> &'static str {
+        TEAM_WIDGET_ID
+    }
+
+    fn search_terms(&self) -> &str {
+        "team teams members invites organization organisation"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        Container::new(
+            Flex::column()
+                .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .with_child(
+                    Container::new(Empty::new().finish())
+                        .with_border(
+                            Border::bottom(1.).with_border_fill(appearance.theme().outline()),
+                        )
+                        .finish(),
+                )
+                .with_child(
+                    Container::new(render_sub_header(appearance, "Teams", None))
+                        .with_margin_top(VERTICAL_MARGIN)
+                        .finish(),
+                )
+                .with_child(ChildView::new(&view.teams).finish())
+                .finish(),
+        )
+        .with_margin_top(VERTICAL_MARGIN)
+        .finish()
     }
 }
 
