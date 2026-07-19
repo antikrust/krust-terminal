@@ -47,6 +47,7 @@ pub(crate) mod codex_stream_exec;
 pub(crate) mod codex_transcript;
 mod gemini;
 mod json_utils;
+pub(crate) mod ollama_stream_exec;
 mod telemetry;
 pub(crate) mod turn_events_to_conversation;
 pub(crate) use claude_code::ClaudeHarness;
@@ -59,19 +60,21 @@ pub(crate) use telemetry::ThirdPartyHarnessTelemetryEvent;
 /// Which local CLI backs a local-harness run in this fork.
 ///
 /// Interim selection until the model picker drives it: fresh conversations
-/// read `WARP_LOCAL_HARNESS` (`claude` | `codex`, defaulting to claude);
+/// read `WARP_LOCAL_HARNESS` (`claude` | `codex` | `ollama`, defaulting to claude);
 /// follow-ups stick with the harness their thread started on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum LocalHarnessKind {
     Claude,
     Codex,
+    Ollama,
 }
 
 impl LocalHarnessKind {
     pub(crate) fn default_from_env() -> Self {
         match std::env::var("WARP_LOCAL_HARNESS").ok().as_deref() {
             Some("codex") => Self::Codex,
+            Some("ollama") => Self::Ollama,
             _ => Self::Claude,
         }
     }

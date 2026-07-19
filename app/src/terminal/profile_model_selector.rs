@@ -31,6 +31,9 @@ use warp_core::ui::color::{coloru_with_opacity, Opacity};
 use warp_core::ui::theme::color::internal_colors;
 use warp_core::ui::theme::Fill;
 
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+    ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME,
+};
 use crate::ai::blocklist::prompt::PromptIconButtonTheme;
 use crate::ai::blocklist::{
     BlocklistAIController, BlocklistAIControllerEvent, BlocklistAIInputEvent, BlocklistAIInputModel,
@@ -44,8 +47,8 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    persisted_model_for, selected_local_harness, HarnessAvailabilityEvent,
-    HarnessAvailabilityModel, HarnessModelInfo,
+    persisted_model_for, persisted_ollama_model_for, selected_local_harness,
+    HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -941,6 +944,7 @@ impl ProfileModelSelector {
         // is chosen, else the harness's own name.
         let (harness, model_id, reasoning) = selected_local_harness(app);
         let availability = HarnessAvailabilityModel::as_ref(app);
+        let ollama_selected = model_id.as_deref().and_then(ollama_model_name).is_some();
         let base = model_id
             .and_then(|id| {
                 availability
@@ -950,7 +954,11 @@ impl ProfileModelSelector {
             })
             .map(|info| info.display_name.clone())
             .unwrap_or_else(|| availability.display_name_for(harness).to_string());
-        format!("{base}{}", Self::reasoning_suffix(reasoning.as_deref()))
+        let provider_prefix = if ollama_selected { "Ollama · " } else { "" };
+        format!(
+            "{provider_prefix}{base}{}",
+            Self::reasoning_suffix(reasoning.as_deref())
+        )
     }
 
     fn refresh_harness_model_menu(&mut self, ctx: &mut ViewContext<Self>) {
@@ -970,36 +978,77 @@ impl ProfileModelSelector {
         let (selected_harness, selected_model_id, selected_reasoning) =
             ambient_selection.unwrap_or_else(|| selected_local_harness(ctx));
 
-        let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>)> = {
+        // Ollama is a peer provider in the picker. Its model records share the
+        // Codex-shaped storage row, but selection and execution are kept
+        // separate so users get three clear choices: Claude, Codex, Ollama.
+        let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>, bool)> = {
             let availability = HarnessAvailabilityModel::as_ref(ctx);
             if group_harnesses {
-                availability
+                let mut groups = Vec::new();
+                for available in availability
                     .available_harnesses()
                     .iter()
                     .filter(|h| h.enabled)
-                    .map(|h| {
-                        (
-                            h.harness,
-                            h.display_name.clone(),
-                            h.available_models.clone(),
-                        )
-                    })
-                    .collect()
+                {
+                    if available.harness == Harness::Codex {
+                        let (ollama_models, codex_models): (Vec<_>, Vec<_>) = available
+                            .available_models
+                            .iter()
+                            .cloned()
+                            .partition(|model| ollama_model_name(&model.id).is_some());
+                        groups.push((
+                            available.harness,
+                            available.display_name.clone(),
+                            codex_models,
+                            false,
+                        ));
+                        if !ollama_models.is_empty() {
+                            groups.push((
+                                available.harness,
+                                "Ollama".to_string(),
+                                ollama_models,
+                                true,
+                            ));
+                        }
+                    } else {
+                        groups.push((
+                            available.harness,
+                            available.display_name.clone(),
+                            available.available_models.clone(),
+                            false,
+                        ));
+                    }
+                }
+                groups
             } else {
+                let mut models = availability
+                    .models_for(selected_harness)
+                    .map(<[HarnessModelInfo]>::to_vec)
+                    .unwrap_or_default();
+                let ollama_selected = selected_model_id
+                    .as_deref()
+                    .and_then(ollama_model_name)
+                    .is_some();
+                if selected_harness == Harness::Codex {
+                    models
+                        .retain(|model| ollama_model_name(&model.id).is_some() == ollama_selected);
+                }
                 vec![(
                     selected_harness,
-                    availability.display_name_for(selected_harness).to_string(),
-                    availability
-                        .models_for(selected_harness)
-                        .map(<[HarnessModelInfo]>::to_vec)
-                        .unwrap_or_default(),
+                    if ollama_selected {
+                        "Ollama".to_string()
+                    } else {
+                        availability.display_name_for(selected_harness).to_string()
+                    },
+                    models,
+                    ollama_selected,
                 )]
             }
         };
 
         let mut items: Vec<MenuItem<ProfileModelSelectorAction>> = Vec::new();
         let mut selected_index = 0;
-        for (harness, display_name, models) in harness_groups {
+        for (harness, display_name, models, ollama_group) in harness_groups {
             if group_harnesses {
                 items.push(
                     MenuItemFields::new(display_name)
@@ -1012,26 +1061,36 @@ impl ProfileModelSelector {
             // for the harness the picker points at, persisted selection
             // otherwise — so switching model or harness never silently
             // drops the reasoning level.
-            let (current_model_id, current_reasoning) = if harness == selected_harness {
+            let selected_is_ollama = selected_model_id
+                .as_deref()
+                .and_then(ollama_model_name)
+                .is_some();
+            let group_is_selected = harness == selected_harness
+                && (harness != Harness::Codex || selected_is_ollama == ollama_group);
+            let (current_model_id, current_reasoning) = if group_is_selected {
                 (selected_model_id.clone(), selected_reasoning.clone())
+            } else if ollama_group {
+                persisted_ollama_model_for(ctx)
             } else {
                 persisted_model_for(harness, ctx)
             };
 
-            let default_selected = harness == selected_harness && selected_model_id.is_none();
-            let mut default_fields = MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL)
-                .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
-                    harness,
-                    model_id: String::new(),
-                    reasoning_level: current_reasoning.clone(),
-                });
-            if default_selected {
-                selected_index = items.len();
-                default_fields = default_fields.with_icon(Icon::Check);
-            } else {
-                default_fields = default_fields.with_indent();
+            if !ollama_group {
+                let default_selected = group_is_selected && selected_model_id.is_none();
+                let mut default_fields = MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL)
+                    .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
+                        harness,
+                        model_id: String::new(),
+                        reasoning_level: current_reasoning.clone(),
+                    });
+                if default_selected {
+                    selected_index = items.len();
+                    default_fields = default_fields.with_icon(Icon::Check);
+                } else {
+                    default_fields = default_fields.with_indent();
+                }
+                items.push(MenuItem::Item(default_fields));
             }
-            items.push(MenuItem::Item(default_fields));
 
             for model in models {
                 let is_selected =
@@ -1040,7 +1099,11 @@ impl ProfileModelSelector {
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
                         model_id: model.id.clone(),
-                        reasoning_level: current_reasoning.clone(),
+                        reasoning_level: if ollama_model_name(&model.id).is_some() {
+                            None
+                        } else {
+                            current_reasoning.clone()
+                        },
                     });
                 if is_selected {
                     selected_index = items.len();
@@ -1053,27 +1116,28 @@ impl ProfileModelSelector {
 
             // Reasoning rows compose with whichever model is active for the
             // harness rather than selecting a model themselves.
-            items.push(
-                MenuItemFields::new("Reasoning")
-                    .with_disabled(true)
-                    .into_item(),
-            );
-            for (level, label) in HARNESS_REASONING_LEVELS {
-                let is_active =
-                    harness == selected_harness && selected_reasoning.as_deref() == level;
-                let mut fields = MenuItemFields::new(label).with_on_select_action(
-                    ProfileModelSelectorAction::SelectHarnessModel {
-                        harness,
-                        model_id: current_model_id.clone().unwrap_or_default(),
-                        reasoning_level: level.map(str::to_owned),
-                    },
+            if !ollama_group {
+                items.push(
+                    MenuItemFields::new("Reasoning")
+                        .with_disabled(true)
+                        .into_item(),
                 );
-                if is_active {
-                    fields = fields.with_icon(Icon::Check);
-                } else {
-                    fields = fields.with_indent();
+                for (level, label) in HARNESS_REASONING_LEVELS {
+                    let is_active = group_is_selected && selected_reasoning.as_deref() == level;
+                    let mut fields = MenuItemFields::new(label).with_on_select_action(
+                        ProfileModelSelectorAction::SelectHarnessModel {
+                            harness,
+                            model_id: current_model_id.clone().unwrap_or_default(),
+                            reasoning_level: level.map(str::to_owned),
+                        },
+                    );
+                    if is_active {
+                        fields = fields.with_icon(Icon::Check);
+                    } else {
+                        fields = fields.with_indent();
+                    }
+                    items.push(MenuItem::Item(fields));
                 }
-                items.push(MenuItem::Item(fields));
             }
         }
 
@@ -2292,11 +2356,16 @@ impl TypedActionView for ProfileModelSelector {
                     });
                 }
                 CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let provider_key = if ollama_model_name(model_id).is_some() {
+                        OLLAMA_HARNESS_CONFIG_NAME
+                    } else {
+                        harness.config_name()
+                    };
                     let _ = settings
                         .last_selected_harness
-                        .set_value(Some(harness.config_name().to_string()), ctx);
-                    settings.persist_harness_model_selection(
-                        harness,
+                        .set_value(Some(provider_key.to_string()), ctx);
+                    settings.persist_harness_model_selection_for_key(
+                        provider_key,
                         model_id,
                         reasoning_level.clone(),
                         ctx,

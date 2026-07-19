@@ -223,6 +223,9 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+    ollama_curl_args, ollama_model_name, run_ollama_stream,
+};
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
     tool_call_action_result, turn_event_to_messages,
 };
@@ -2734,9 +2737,8 @@ pub struct TerminalView {
     /// sync with the session id claude reports in each run's `SessionInit`
     /// (a resumed run forks a fresh session id).
     local_claude_thread: Option<(LocalHarnessKind, uuid::Uuid, AIConversationId)>,
-    /// In-flight harness shell calls (`call_id` → command text), correlating
-    /// each shell `ToolCallResult` with its command for the result message,
-    /// the registered action result, and the inserted block snapshot.
+    /// In-flight harness shell calls (`call_id` → command text), used by the
+    /// mapper to correlate the generic inline call and result cards.
     local_harness_shell_commands: HashMap<String, String>,
     /// Tool calls awaiting results in the current phase; when the last one
     /// resolves, the exchange splits (`continue_after_tool_results`) so the
@@ -23436,6 +23438,9 @@ impl TerminalView {
         // the harness their thread started with — the session belongs to
         // that engine — even if the picker changed since.
         let requested_kind = match requested_harness {
+            Harness::Codex if model_id.as_deref().and_then(ollama_model_name).is_some() => {
+                LocalHarnessKind::Ollama
+            }
             Harness::Codex => LocalHarnessKind::Codex,
             Harness::Claude => LocalHarnessKind::Claude,
             // Stale/unknown selections fall back to the env override.
@@ -23474,17 +23479,24 @@ impl TerminalView {
         let (model_id, reasoning_level) = if harness == requested_kind {
             (model_id, reasoning_level)
         } else {
-            let thread_harness = match harness {
-                LocalHarnessKind::Claude => Harness::Claude,
-                LocalHarnessKind::Codex => Harness::Codex,
-            };
-            crate::ai::harness_availability::persisted_model_for(thread_harness, ctx)
+            match harness {
+                LocalHarnessKind::Claude => {
+                    crate::ai::harness_availability::persisted_model_for(Harness::Claude, ctx)
+                }
+                LocalHarnessKind::Codex => {
+                    crate::ai::harness_availability::persisted_model_for(Harness::Codex, ctx)
+                }
+                LocalHarnessKind::Ollama => {
+                    crate::ai::harness_availability::persisted_ollama_model_for(ctx)
+                }
+            }
         };
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
-        // Local harness conversations are read-only transcripts: the CLI
-        // executes every tool itself, and this client only renders the result.
+        // Local harness conversations are read-only transcripts: the CLI (or
+        // the Ollama adapter) executes every tool itself, and this client only
+        // renders the result.
         // View-only mode makes the native tool cards render read-only (no
         // accept/reject affordance), matching the shared-session viewer path.
         self.ai_action_model.update(ctx, |action_model, _ctx| {
@@ -23519,6 +23531,10 @@ impl TerminalView {
         let session_id = thread
             .map(|(_, session_id, _)| session_id)
             .unwrap_or_else(uuid::Uuid::new_v4);
+        let ollama_model = model_id
+            .as_deref()
+            .and_then(ollama_model_name)
+            .map(str::to_owned);
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
@@ -23553,6 +23569,11 @@ impl TerminalView {
                 ));
                 command
             }
+            LocalHarnessKind::Ollama => {
+                let mut command = command::r#async::Command::new("curl");
+                command.args(ollama_curl_args());
+                command
+            }
         };
         command.current_dir(&working_dir);
         let mut path = warp_util::path::warp_shell_path()
@@ -23576,13 +23597,15 @@ impl TerminalView {
                 };
             }
         }
-        command.env("PATH", path);
+        command.env("PATH", &path);
 
         let spawner = ctx.spawner();
         let background = ctx.background_executor().clone();
         let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<ai::agent::TurnEvent>();
         let begin_prompt = prompt.clone();
         let pump_prompt = prompt;
+        let pump_working_dir = working_dir;
+        let pump_path = path;
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -23596,7 +23619,7 @@ impl TerminalView {
                     let begin_prompt = begin_prompt.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
-                            let stream = match taken {
+                            let mut stream = match taken {
                                 Some(stream) => stream,
                                 None => {
                                     // Follow-ups append to the thread's existing
@@ -23676,24 +23699,17 @@ impl TerminalView {
                                 }
                                 turn_completed = true;
                             }
-                            // Shell calls need their command text past the
-                            // mapper (which consumes the registry entry) for
-                            // the action result and the block snapshot below.
-                            let shell_command = match &event {
-                                ai::agent::TurnEvent::ToolCallResult { call_id, .. } => view
-                                    .local_harness_shell_commands
-                                    .get(call_id)
-                                    .cloned(),
-                                _ => None,
-                            };
-                            let messages = turn_event_to_messages(
-                                stream.root_task_id(),
-                                stream.request_id(),
-                                &event,
-                                &mut view.local_harness_shell_commands,
-                            );
-                            stream.apply_messages(messages, ctx);
-                            let mut stream = stream;
+                            if let ai::agent::TurnEvent::TextDelta { text } = &event {
+                                stream.apply_text_delta(text, ctx);
+                            } else {
+                                let messages = turn_event_to_messages(
+                                    stream.root_task_id(),
+                                    stream.request_id(),
+                                    &event,
+                                    &mut view.local_harness_shell_commands,
+                                );
+                                stream.apply_messages(messages, ctx);
+                            }
                             match &event {
                                 ai::agent::TurnEvent::ToolCallStarted { call_id, .. } => {
                                     view.local_harness_pending_tool_calls
@@ -23709,7 +23725,6 @@ impl TerminalView {
                                         stream.root_task_id(),
                                         call_id,
                                         outcome,
-                                        shell_command.as_deref(),
                                     );
                                     let conversation_id = stream.conversation_id();
                                     view.local_harness_phase_results.push(result.clone());
@@ -23728,9 +23743,8 @@ impl TerminalView {
                                     // derives from the persisted messages.
                                     view.local_harness_pending_tool_calls.remove(call_id);
                                     if view.local_harness_pending_tool_calls.is_empty() {
-                                        let results = std::mem::take(
-                                            &mut view.local_harness_phase_results,
-                                        );
+                                        let results =
+                                            std::mem::take(&mut view.local_harness_phase_results);
                                         stream = stream.continue_after_tool_results(results, ctx);
                                     }
                                 }
@@ -23775,6 +23789,19 @@ impl TerminalView {
                     }
                     LocalHarnessKind::Codex => {
                         run_codex_stream(command, &pump_prompt, on_event).await
+                    }
+                    LocalHarnessKind::Ollama => {
+                        let model = ollama_model.unwrap_or_else(|| "codellama:13b".to_string());
+                        run_ollama_stream(
+                            command,
+                            &pump_prompt,
+                            &model,
+                            &session_id,
+                            &pump_working_dir,
+                            &pump_path,
+                            on_event,
+                        )
+                        .await
                     }
                 };
                 if let Err(error) = result {

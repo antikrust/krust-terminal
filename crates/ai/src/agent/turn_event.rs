@@ -18,6 +18,11 @@ pub enum TurnEvent {
     /// treat each block as one `Text` event.
     Text { text: String },
 
+    /// An exact assistant-text delta from a token stream. Unlike `Text`,
+    /// downstream consumers append these chunks to one stable message; the
+    /// chunk boundary is not a line ending.
+    TextDelta { text: String },
+
     /// Extended-thinking / reasoning content, rendered distinctly from
     /// regular prose.
     Thinking { text: String },

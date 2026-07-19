@@ -296,6 +296,40 @@ fn stream_round_trip_lands_a_completed_exchange_with_output() {
 }
 
 #[test]
+fn text_deltas_append_to_one_message_without_inventing_line_breaks() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "stream it", ctx));
+        app.update(|ctx| {
+            stream.apply_text_delta("alpha beta", ctx);
+            stream.apply_text_delta(" gamma\nreal line", ctx);
+        });
+        app.update(|ctx| stream.complete(ctx));
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            let task = conversation
+                .get_task(conversation.get_root_task_id())
+                .expect("root task exists");
+            let outputs: Vec<&str> = task
+                .messages()
+                .filter_map(|message| match &message.message {
+                    Some(api::message::Message::AgentOutput(output)) => Some(output.text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(outputs, vec!["alpha beta gamma\nreal line"]);
+        });
+    });
+}
+
+#[test]
 fn tool_result_split_lands_a_continuation_exchange_in_the_same_conversation() {
     App::test((), |mut app| async move {
         initialize_history_persistence_for_tests(&mut app);
@@ -338,7 +372,6 @@ fn tool_result_split_lands_a_continuation_exchange_in_the_same_conversation() {
             stream.root_task_id(),
             "t1",
             &ai::agent::ToolCallOutcome::Success(serde_json::json!({ "stdout": "file1" })),
-            Some("ls"),
         );
         let stream = app.update(|ctx| stream.continue_after_tool_results(vec![result], ctx));
         assert_eq!(

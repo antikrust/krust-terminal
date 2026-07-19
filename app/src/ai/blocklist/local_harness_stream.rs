@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use ai::agent::TurnUsage;
 use ai::skills::SkillPathOrigin;
 use chrono::Local;
+use prost_types::FieldMask;
 use warp_multi_agent_api as api;
 use warpui::{AppContext, EntityId, SingletonEntity as _};
 
@@ -37,6 +38,10 @@ pub(crate) struct LocalHarnessStream {
     request_id: String,
     terminal_surface_id: EntityId,
     skill_path_origin: SkillPathOrigin,
+    /// Stable message receiving exact token deltas for this exchange. The
+    /// server protocol's append action updates this message in place, so an
+    /// Ollama token never becomes a separate line or output block.
+    streaming_text_message_id: Option<String>,
 }
 
 impl LocalHarnessStream {
@@ -72,6 +77,7 @@ impl LocalHarnessStream {
             request_id,
             terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
+            streaming_text_message_id: None,
         };
 
         let request_input = this.request_input(prompt);
@@ -183,6 +189,7 @@ impl LocalHarnessStream {
             request_id,
             terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
+            streaming_text_message_id: None,
         };
 
         let request_input = this.request_input(prompt);
@@ -264,6 +271,71 @@ impl LocalHarnessStream {
                 ctx,
             ) {
                 log::warn!("local_harness_stream: failed to inject harness messages: {error}");
+            }
+        });
+    }
+
+    /// Appends an exact model delta to one live assistant message. The first
+    /// delta creates the message; later deltas use Warp's native protobuf
+    /// append action and therefore preserve only newlines the model actually
+    /// emitted.
+    pub(crate) fn apply_text_delta(&mut self, text: &str, ctx: &mut AppContext) {
+        if text.is_empty() {
+            return;
+        }
+
+        let is_first_delta = self.streaming_text_message_id.is_none();
+        let message_id = self
+            .streaming_text_message_id
+            .get_or_insert_with(|| uuid::Uuid::new_v4().to_string())
+            .clone();
+        let message = api::Message {
+            id: message_id,
+            task_id: self.root_task_id.to_string(),
+            request_id: self.request_id.clone(),
+            message: Some(api::message::Message::AgentOutput(
+                api::message::AgentOutput {
+                    text: text.to_string(),
+                },
+            )),
+            ..Default::default()
+        };
+
+        let action = if is_first_delta {
+            api::client_action::Action::AddMessagesToTask(api::client_action::AddMessagesToTask {
+                task_id: self.root_task_id.to_string(),
+                messages: vec![message],
+            })
+        } else {
+            api::client_action::Action::AppendToMessageContent(
+                api::client_action::AppendToMessageContent {
+                    task_id: self.root_task_id.to_string(),
+                    message: Some(message),
+                    mask: Some(FieldMask {
+                        // Field-mask paths address proto FIELDS; oneof names
+                        // are not fields. `message.…` would silently no-op
+                        // (unknown segments are backwards-compat no-ops in
+                        // field_mask::apply_path), losing every delta after
+                        // the first.
+                        paths: vec!["agent_output.text".to_string()],
+                    }),
+                },
+            )
+        };
+
+        let history = BlocklistAIHistoryModel::handle(ctx);
+        history.update(ctx, |history, ctx| {
+            if let Err(error) = history.apply_client_actions(
+                &self.stream_id,
+                vec![api::ClientAction {
+                    action: Some(action),
+                }],
+                self.conversation_id,
+                self.terminal_surface_id,
+                &self.skill_path_origin,
+                ctx,
+            ) {
+                log::warn!("local_harness_stream: failed to append text delta: {error}");
             }
         });
     }
@@ -449,6 +521,7 @@ impl LocalHarnessStream {
             request_id,
             terminal_surface_id: self.terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
+            streaming_text_message_id: None,
         };
 
         let request_input = next.request_input_with(

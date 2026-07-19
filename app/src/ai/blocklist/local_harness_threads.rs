@@ -10,7 +10,8 @@
 //! Storage is one small JSON file in the app state dir, keyed by
 //! conversation id, rewritten atomically (write-then-rename) on every
 //! update. All failures are logged and non-fatal — worst case a restored
-//! conversation falls back to today's start-fresh behavior.
+//! conversation falls back to today's start-fresh behavior. Ollama uses the
+//! same binding to retain its native generate context within an app session.
 
 use std::collections::HashMap;
 use std::path::PathBuf;

@@ -118,12 +118,30 @@ impl CloudAgentSettings {
         reasoning_level: Option<String>,
         ctx: &mut warpui::ModelContext<Self>,
     ) {
+        self.persist_harness_model_selection_for_key(
+            harness.config_name(),
+            model_id,
+            reasoning_level,
+            ctx,
+        );
+    }
+
+    /// Persists a local provider that shares a Warp harness transport but
+    /// needs its own picker state (for example Ollama using the Codex-shaped
+    /// terminal conversation path).
+    pub fn persist_harness_model_selection_for_key(
+        &mut self,
+        key: &str,
+        model_id: &str,
+        reasoning_level: Option<String>,
+        ctx: &mut warpui::ModelContext<Self>,
+    ) {
         let mut map = self.last_selected_harness_model.value().clone();
         if model_id.is_empty() && reasoning_level.is_none() {
-            map.remove(harness.config_name());
+            map.remove(key);
         } else {
             map.insert(
-                harness.config_name().to_string(),
+                key.to_string(),
                 HarnessModelSelection {
                     model_id: model_id.to_string(),
                     reasoning_level,

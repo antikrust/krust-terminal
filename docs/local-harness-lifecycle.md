@@ -1,7 +1,7 @@
 # Local harness lifecycle: how a CLI agent run flows through Warp
 
 This fork routes every terminal agent prompt to a **local CLI harness**
-(`claude` or `codex`) instead of Warp's cloud "Oz" backend. This document is
+(`claude`, `codex`, or direct local `ollama`) instead of Warp's cloud "Oz" backend. This document is
 the map of that pipeline for anyone — human or AI — editing it. The flows
 below reuse Warp's own machinery deliberately; each section ends with the
 traps that machinery hides. **Read the traps before changing anything.**
@@ -17,8 +17,8 @@ this file describes the code as it works today.
 Enter in agent input
   → input.rs submit: Event::RunLocalClaudeQuery { prompt, harness, model_id, reasoning_level }
   → TerminalView::run_local_claude_query (terminal/view.rs)
-      spawns the CLI            → claude_stream_exec.rs / codex_stream_exec.rs
-      parses stdout JSONL       → claude_stream.rs / codex_stream.rs → TurnEvent
+      spawns the CLI/API client → claude_stream_exec.rs / codex_stream_exec.rs / ollama_stream_exec.rs
+      parses provider output    → provider parser → TurnEvent
       drain (main thread)       → turn_events_to_conversation.rs → api::Message
       injects into conversation → LocalHarnessStream (ai/blocklist/local_harness_stream.rs)
   → BlocklistAIHistoryModel → conversation/exchange/task → AI blocks render
@@ -32,12 +32,32 @@ new harness by writing a parser + exec module, not by touching the drain.
 ## Spawn layer (terminal/view.rs `run_local_claude_query`)
 
 - Args built by pure functions so they're unit-testable:
-  `stream_json_args` (claude), `codex_exec_args` (codex).
+  `stream_json_args` (claude), `codex_exec_args` (codex), and
+  `ollama_curl_args` plus a JSON request body (ollama).
 - Model + reasoning come from the picker via the event, else from
   `persisted_model_for(harness)` (ai/harness_availability.rs), stored
   per-harness in `CloudAgentSettings.last_selected_harness_model`.
   Reasoning maps to `MAX_THINKING_TOKENS` (claude env) or
   `-c model_reasoning_effort` (codex flag).
+- Ollama is a separate picker provider and uses the native local generate API.
+  Code Llama and the original DeepSeek Coder reject Codex's tool schema, so
+  the adapter uses a constrained structured response (`shell` or `text`)
+  instead. Shell requests execute in the terminal working directory and emit
+  the same `ToolCallStarted` / `ToolCallResult` events as the CLI harnesses, so
+  Warp renders its normal command cards and multiline output. The final
+  `context` token array is retained per local session so follow-ups remain
+  conversational.
+  Requests deliberately do not override Ollama's context, generated-token,
+  CPU-thread, or prompt-batch settings. Both installed models advertise a
+  native 16K context window, which the Ollama service is configured to use.
+  The runner still unloads after five idle seconds so its allocation is not
+  retained after a turn. Model text is decoded from the streamed structured
+  JSON and appended to one stable message in small chunks, so chunk boundaries
+  never become line endings.
+  If the local API is not running, the adapter starts `ollama serve` directly
+  as a headless background process and waits for `/api/version` before sending
+  the turn. It never opens `Ollama.app`, so Ollama has no separate window,
+  Dock activation, or visible startup step in the integrated flow.
 - Conversation ↔ CLI-session bindings persist in
   `local_harness_threads.rs` (state_dir/local_harness_threads.json) so
   follow-ups resume across app restarts. **`lookup(conversation_id)` is also
@@ -50,19 +70,19 @@ new harness by writing a parser + exec module, not by touching the drain.
 
 | TurnEvent            | api::Message                                | Renders as                  |
 |----------------------|---------------------------------------------|-----------------------------|
-| `Text`               | `AgentOutput`                               | markdown prose              |
+| `Text`               | `AgentOutput`                               | complete markdown prose     |
+| `TextDelta`          | appended to one stable `AgentOutput`        | live markdown prose         |
 | `Thinking`           | `AgentReasoning`                            | collapsible "Thinking" block|
-| `ToolCallStarted` (shell: `Bash`/`Shell`) | `ToolCall` → `RunShellCommand` | command card + real terminal block |
-| `ToolCallStarted` (other) | `ToolCall` → `CallMcpTool`             | MCP tool card, collapsed    |
-| `ToolCallResult` (shell) | `ToolCallResult` → `RunShellCommandResult` | resolves card; block carries output |
-| `ToolCallResult` (other) | `ToolCallResult` → `CallMcpToolResult`  | card's result detail (JSON tree) |
+| `ToolCallStarted`    | `ToolCall` → `CallMcpTool`                   | inline read-only tool card  |
+| `ToolCallResult`     | `ToolCallResult` → `CallMcpToolResult`       | result inside the same card |
 | `TurnCompleted` (err)| `AgentOutput` error block                   | error text                  |
 | `SessionInit`/`TurnCompleted` (ok) | nothing — bookkeeping only    | —                           |
 
 Shell correlation: `turn_event_to_messages` takes a `shell_commands`
-registry (`call_id` → command) because the result message must repeat the
-command; the TerminalView drain owns it (`local_harness_shell_commands`)
-and also uses it to build the live block snapshot.
+registry (`call_id` → command) to pair the shell call and result while keeping
+both in the generic inline-card representation. It must never translate a
+local transcript into `RunShellCommand`, because that message type means
+"create/restore a terminal block" elsewhere in Warp.
 
 Why `CallMcpTool`: it is Warp's **generic "named tool + JSON args"
 representation** — exactly what a harness tool call is. The card
@@ -71,34 +91,20 @@ working chevron, and its detail renders as the interactive JSON tree behind
 `FeatureFlag::McpJsonTreeView` — enabled for this build in
 `app/src/bin/oss.rs`.
 
-### Shell tools are shell, not MCP (implemented 2026-07-18)
+### Shell tools are inline transcripts (implemented 2026-07-18)
 
-The generic MCP card is wrong for **shell** tools (claude `Bash`, codex
-`Shell`): the user is not "using MCP", they're using a harness that runs
-commands, and a JSON tree is a poor way to read command output. The design
-— respect Warp's vocabulary, keep the MCP machinery intact for real MCP
-servers, and put the fork-specific choice in **our mapping layer**
-(`is_shell_tool` in turn_events_to_conversation.rs):
+Claude `Bash`, Codex `Shell`, and Ollama `Shell` events describe commands the
+harness already ran. They therefore use Warp's generic named-tool card
+(`CallMcpTool` / `CallMcpToolResult`) and a view-only action result. This is a
+representation choice, not an MCP transport claim. Using
+`RunShellCommand`/`RequestCommandOutput` here makes the command card expand
+into a real terminal block below the AI block—the duplicate layout this path
+must avoid. Command and multiline output stay together in the collapsible
+grey card for live and restored conversations.
 
-- Shell calls map to `RunShellCommand` / `RunShellCommandResult`
-  (`ShellCommandFinished { output, exit_code, command_id, … }`); internal
-  result shape `AIAgentActionType::RequestCommandOutput` /
-  `RequestCommandOutputResult::Completed`. Every other tool keeps
-  `CallMcpTool`.
-- **Output display — inside the card, never as a separate block.** Product
-  decision (user call, 2026-07-18): harness commands must not proliferate
-  terminal blocks in the conversation. The command card
-  (`RequestedActionViewType::Command`) upstream shows only the command (in
-  the cloud flow output lives in the terminal block that executed it); for
-  **view-only** action models the card's expanded body additionally renders
-  the finished `RequestCommandOutputResult::Completed` output text
-  (requested_command.rs) — the sanctioned fork addition, gated so cloud and
-  shared-session flows are untouched. Two suppressions keep blocks out:
-  the live drain inserts none, and `prepare_conversation_block_restoration`
-  (conversation_restoration.rs) skips `to_serialized_blocklist_items` for
-  local-harness conversations (registry lookup) so restore doesn't
-  resurrect them — the cards restore their output from the persisted
-  results instead.
+- **Output display — inside the card, never as a separate block.** The live
+  drain registers a `CallMCPToolResult`; restore reads the matching persisted
+  `CallMcpToolResult` message. Neither shape feeds the command-block extractor.
 - **The exchange still splits at tool results**
   (`LocalHarnessStream::continue_after_tool_results`, driven by the drain's
   `local_harness_pending_tool_calls` phase tracking): that is the cloud
@@ -110,12 +116,8 @@ servers, and put the fork-specific choice in **our mapping layer**
   for view-only action models (block.rs) — transcripts never execute, so
   execution-permission banners are noise; this also fixes shared-session
   viewers.
-- `ShellCommandFinished.command_id` is set to the `call_id`; the restore
-  extractor mints its own fresh `BlockId` per block, so nothing assumes a
-  block with that id exists.
-- Exit codes: success → 0; codex bakes failures into an `exit N\n<output>`
-  error string which `shell_outcome_parts` parses; other errors → 1;
-  cancelled → 130.
+- Shell failures remain errors on the same inline card; no synthetic terminal
+  exit block is created.
 
 **Traps:**
 - Do **not** patch shared renderers (`requested_command.rs`, markdown, etc.)

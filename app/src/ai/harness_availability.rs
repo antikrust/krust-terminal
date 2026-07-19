@@ -12,6 +12,10 @@ use warp_managed_secrets::client::SecretOwner;
 use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
 use warpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
 
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+    ollama_model_name, CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID,
+    OLLAMA_HARNESS_CONFIG_NAME,
+};
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
@@ -70,9 +74,32 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
             harness: Harness::Codex,
             display_name: harness_display::display_name(Harness::Codex).to_string(),
             enabled: local_cli_on_path("codex"),
-            available_models: codex_models_from_local_state(),
+            available_models: append_available_ollama_models(codex_models_from_local_state()),
         },
     ]
+}
+
+/// Ollama model records share the Codex-shaped storage row, but the picker
+/// presents them as their own peer provider. Their internal ids are
+/// intercepted by the direct Ollama runner because these older models do not
+/// support the tool schema required by `codex exec --oss`.
+fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<HarnessModelInfo> {
+    if !local_cli_on_path("ollama") {
+        return models;
+    }
+    models.extend([
+        HarnessModelInfo {
+            id: CODELLAMA_OLLAMA_MODEL_ID.to_string(),
+            display_name: "Code Llama 13B".to_string(),
+            reasoning_level: None,
+        },
+        HarnessModelInfo {
+            id: DEEPSEEK_CODER_OLLAMA_MODEL_ID.to_string(),
+            display_name: "DeepSeek Coder 6.7B".to_string(),
+            reasoning_level: None,
+        },
+    ]);
+    models
 }
 
 /// Parses `codex debug models` JSON into picker entries: listed-visibility
@@ -211,12 +238,23 @@ fn codex_models_from_local_state() -> Vec<HarnessModelInfo> {
 pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Option<String>) {
     let availability = HarnessAvailabilityModel::as_ref(ctx);
     let settings = CloudAgentSettings::as_ref(ctx);
-    let harness = settings
-        .last_selected_harness
-        .value()
-        .as_deref()
-        .and_then(Harness::from_config_name)
-        .filter(|harness| availability.is_harness_enabled(*harness))
+    let selected_name = settings.last_selected_harness.value().as_deref();
+    let ollama_selected = selected_name == Some(OLLAMA_HARNESS_CONFIG_NAME)
+        && availability.is_harness_enabled(Harness::Codex)
+        && availability
+            .models_for(Harness::Codex)
+            .is_some_and(|models| {
+                models
+                    .iter()
+                    .any(|model| ollama_model_name(&model.id).is_some())
+            });
+    let harness = ollama_selected
+        .then_some(Harness::Codex)
+        .or_else(|| {
+            selected_name
+                .and_then(Harness::from_config_name)
+                .filter(|harness| availability.is_harness_enabled(*harness))
+        })
         .or_else(|| {
             availability
                 .available_harnesses()
@@ -225,16 +263,28 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
                 .map(|h| h.harness)
         })
         .unwrap_or(Harness::Claude);
-    let (model_id, reasoning_level) = persisted_model_for(harness, ctx);
+    let (model_id, reasoning_level) = if ollama_selected {
+        persisted_ollama_model_for(ctx)
+    } else {
+        persisted_model_for(harness, ctx)
+    };
     (harness, model_id, reasoning_level)
 }
 
 /// The persisted model selection for one specific harness.
 pub fn persisted_model_for(harness: Harness, ctx: &AppContext) -> (Option<String>, Option<String>) {
+    persisted_model_for_key(harness.config_name(), ctx)
+}
+
+pub fn persisted_ollama_model_for(ctx: &AppContext) -> (Option<String>, Option<String>) {
+    persisted_model_for_key(OLLAMA_HARNESS_CONFIG_NAME, ctx)
+}
+
+fn persisted_model_for_key(key: &str, ctx: &AppContext) -> (Option<String>, Option<String>) {
     let selection = CloudAgentSettings::as_ref(ctx)
         .last_selected_harness_model
         .value()
-        .get(harness.config_name())
+        .get(key)
         .cloned();
     (
         // Reasoning-only selections store an empty model id ("default
@@ -394,7 +444,7 @@ impl HarnessAvailabilityModel {
                         return;
                     }
                 };
-                let models = parse_codex_catalog(&output);
+                let models = append_available_ollama_models(parse_codex_catalog(&output));
                 if models.is_empty() {
                     return;
                 }

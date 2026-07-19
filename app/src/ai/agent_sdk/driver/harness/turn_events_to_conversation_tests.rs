@@ -49,7 +49,7 @@ fn maps_text_and_reasoning_to_native_message_types() {
 }
 
 #[test]
-fn renders_shell_tools_as_native_shell_commands() {
+fn renders_shell_tools_as_inline_read_only_cards() {
     let events = vec![
         TurnEvent::ToolCallStarted {
             call_id: "t1".to_string(),
@@ -65,39 +65,46 @@ fn renders_shell_tools_as_native_shell_commands() {
     let messages = &convo.tasks[0].messages;
     assert_eq!(messages.len(), 3); // user query + call + result
 
-    // Shell tools use Warp's native shell representation (not the MCP card):
-    // the user is driving a harness that runs commands.
+    // Shell transcripts use the generic read-only card shape. A native
+    // RunShellCommand message would also create a terminal block below it.
     match body(&messages[1]) {
         api::message::Message::ToolCall(tc) => {
             assert_eq!(tc.tool_call_id, "t1");
             match tc.tool.as_ref() {
-                Some(api::message::tool_call::Tool::RunShellCommand(cmd)) => {
-                    assert_eq!(cmd.command, "ls -la");
+                Some(api::message::tool_call::Tool::CallMcpTool(tool)) => {
+                    assert_eq!(tool.name, "Bash");
+                    assert_eq!(
+                        tool.args
+                            .as_ref()
+                            .and_then(|args| args.fields.get("command"))
+                            .and_then(|value| value.kind.as_ref()),
+                        Some(&prost_types::value::Kind::StringValue("ls -la".to_string()))
+                    );
                 }
-                other => panic!("expected RunShellCommand, got {other:?}"),
+                other => panic!("expected inline CallMcpTool, got {other:?}"),
             }
         }
         other => panic!("expected ToolCall for the call, got {other:?}"),
     }
-    // The result repeats the command and carries output + exit code — the
-    // shape `extract_command_blocks_from_messages` rebuilds real terminal
-    // blocks from on restore.
     match body(&messages[2]) {
         api::message::Message::ToolCallResult(tcr) => {
             assert_eq!(tcr.tool_call_id, "t1");
             match tcr.result.as_ref() {
-                Some(api::message::tool_call_result::Result::RunShellCommand(r)) => {
-                    assert_eq!(r.command, "ls -la");
-                    match r.result.as_ref() {
-                        Some(api::run_shell_command_result::Result::CommandFinished(finished)) => {
-                            assert!(finished.output.contains("file1"), "{}", finished.output);
-                            assert_eq!(finished.exit_code, 0);
-                            assert_eq!(finished.command_id, "t1");
+                Some(api::message::tool_call_result::Result::CallMcpTool(result)) => {
+                    match result.result.as_ref() {
+                        Some(api::call_mcp_tool_result::Result::Success(success)) => {
+                            let text = match success.results[0].result.as_ref() {
+                                Some(api::call_mcp_tool_result::success::result::Result::Text(
+                                    text,
+                                )) => &text.text,
+                                other => panic!("expected text output, got {other:?}"),
+                            };
+                            assert!(text.contains("file1"), "{text}");
                         }
-                        other => panic!("expected CommandFinished, got {other:?}"),
+                        other => panic!("expected successful inline result, got {other:?}"),
                     }
                 }
-                other => panic!("expected RunShellCommand result, got {other:?}"),
+                other => panic!("expected inline CallMcpTool result, got {other:?}"),
             }
         }
         other => panic!("expected ToolCallResult for the result, got {other:?}"),
@@ -105,7 +112,7 @@ fn renders_shell_tools_as_native_shell_commands() {
 }
 
 #[test]
-fn codex_error_outcome_carries_exit_code_and_output() {
+fn codex_shell_error_stays_in_the_inline_card() {
     let events = vec![
         TurnEvent::ToolCallStarted {
             call_id: "t1".to_string(),
@@ -120,16 +127,16 @@ fn codex_error_outcome_carries_exit_code_and_output() {
     let convo = turn_events_to_conversation("q", &events);
     match body(&convo.tasks[0].messages[2]) {
         api::message::Message::ToolCallResult(tcr) => match tcr.result.as_ref() {
-            Some(api::message::tool_call_result::Result::RunShellCommand(r)) => {
-                match r.result.as_ref() {
-                    Some(api::run_shell_command_result::Result::CommandFinished(finished)) => {
-                        assert_eq!(finished.exit_code, 2);
-                        assert_eq!(finished.output, "no such thing");
+            Some(api::message::tool_call_result::Result::CallMcpTool(result)) => {
+                match result.result.as_ref() {
+                    Some(api::call_mcp_tool_result::Result::Error(error)) => {
+                        assert!(error.message.contains("exit 2"), "{}", error.message);
+                        assert!(error.message.contains("no such thing"), "{}", error.message);
                     }
-                    other => panic!("expected CommandFinished, got {other:?}"),
+                    other => panic!("expected inline error result, got {other:?}"),
                 }
             }
-            other => panic!("expected RunShellCommand result, got {other:?}"),
+            other => panic!("expected inline CallMcpTool result, got {other:?}"),
         },
         other => panic!("expected ToolCallResult, got {other:?}"),
     }
