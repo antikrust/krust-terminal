@@ -97,6 +97,7 @@ pub mod mcp_servers_page;
 mod nav;
 pub mod pane_manager;
 mod platform;
+mod ollama_page;
 mod platform_page;
 mod privacy;
 mod privacy_page;
@@ -265,6 +266,7 @@ pub enum SettingsSection {
     AgentMCPServers,
     Knowledge,
     ThirdPartyCLIAgents,
+    Ollama,
     /// Internal backing-page identifier for CodeSettingsPageView. Multiple subpages
     /// (CodeIndexing, EditorAndCodeReview) share this single backing page,
     /// so this variant is needed as the key in `settings_pages`.
@@ -332,6 +334,7 @@ impl SettingsSection {
                 | Self::AgentMCPServers
                 | Self::Knowledge
                 | Self::ThirdPartyCLIAgents
+                | Self::Ollama
         )
     }
 
@@ -351,6 +354,8 @@ impl SettingsSection {
         match self {
             // AgentMCPServers renders the standalone MCPServers page directly.
             Self::AgentMCPServers => Self::MCPServers,
+            // Ollama is its own backing page rather than a mode of the AI page.
+            Self::Ollama => Self::Ollama,
             // All other AI subpages render within the AI page.
             s if s.is_ai_subpage() => Self::AI,
             // Code subpages render within the Code page.
@@ -371,6 +376,7 @@ impl SettingsSection {
             Self::AgentMCPServers,
             Self::Knowledge,
             Self::ThirdPartyCLIAgents,
+            Self::Ollama,
         ]
     }
 
@@ -416,6 +422,7 @@ impl FromStr for SettingsSection {
             "MCP servers" | "AgentMCPServers" => Ok(Self::AgentMCPServers),
             "Knowledge" => Ok(Self::Knowledge),
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
+            "Ollama" => Ok(Self::Ollama),
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
             "AppearanceGeneral" => Ok(Self::AppearanceGeneral),
@@ -1122,6 +1129,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::About(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Code(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::MCPServers(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::Ollama(handle) => $ctx.update_view(handle, $update),
         }
     };
 }
@@ -1254,6 +1262,10 @@ impl SettingsView {
             me.handle_platform_page_event(event, ctx);
         });
 
+        // Ollama page (local models)
+        let ollama_page_handle =
+            ctx.add_typed_action_view(ollama_page::OllamaPageView::new);
+
         // MCP Servers page
         let mcp_servers_page_handle = ctx.add_typed_action_view(MCPServersSettingsPageView::new);
         ctx.subscribe_to_view(&mcp_servers_page_handle, |me, _, event, ctx| {
@@ -1306,6 +1318,7 @@ impl SettingsView {
 
         settings_pages.extend(vec![
             SettingsPage::new(mcp_servers_page_handle),
+            SettingsPage::new(ollama_page_handle),
             SettingsPage::new(environments_page_handle.clone()),
             SettingsPage::new(privacy_page_handle),
             SettingsPage::new(about_page_handle),
@@ -2071,7 +2084,10 @@ impl SettingsView {
         // and auto-expand the umbrella containing it.
         if section.is_subpage() {
             // AI subpages: update the AI page's subpage mode.
-            if section.is_ai_subpage() && section != SettingsSection::AgentMCPServers {
+            if section.is_ai_subpage()
+                && section != SettingsSection::AgentMCPServers
+                && section != SettingsSection::Ollama
+            {
                 let subpage = AISubpage::from_section(section);
                 self.ai_page_handle.update(ctx, |view, ctx| {
                     view.set_active_subpage(subpage, ctx);
@@ -2167,6 +2183,7 @@ impl SettingsView {
             SettingsPageViewHandle::AI(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::CloudEnvironments(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::Ollama(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Code(v) => v.as_ref(app).should_render(app),
         }
     }

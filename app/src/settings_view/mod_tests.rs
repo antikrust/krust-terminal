@@ -681,7 +681,7 @@ fn collapsed_umbrella_is_a_single_nav_stop() {
         NavStop::CollapsedUmbrella {
             nav_index: 1,
             first_subpage: SettingsSection::WarpAgent,
-            last_subpage: SettingsSection::ThirdPartyCLIAgents,
+            last_subpage: SettingsSection::Ollama,
         }
     ));
     assert!(matches!(
@@ -716,7 +716,7 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
     let stops = build_nav_stops(&nav_items, |_| true);
 
     // Expect: Account, WarpAgent, AgentProfiles, AgentMCPServers, Knowledge,
-    // ThirdPartyCLIAgents, BillingAndUsage, <Code umbrella>,
+    // ThirdPartyCLIAgents, Ollama, BillingAndUsage, <Code umbrella>,
     // <Cloud platform umbrella>, Teams.
     let sections: Vec<_> = stops
         .iter()
@@ -734,6 +734,7 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
             "AgentMCPServers",
             "Knowledge",
             "ThirdPartyCLIAgents",
+            "Ollama",
             "BillingAndUsage",
             "Umbrella@3",
             "Umbrella@4",
@@ -771,7 +772,7 @@ fn collapsed_umbrella_with_filtered_subpages_uses_first_visible_subpage() {
             );
             assert_eq!(
                 *last_subpage,
-                SettingsSection::ThirdPartyCLIAgents,
+                SettingsSection::Ollama,
                 "last_subpage is unaffected by hiding WarpAgent and should remain the last visible subpage"
             );
         }
@@ -928,35 +929,37 @@ fn arrow_up_from_billing_and_usage_with_collapsed_agents_lands_on_last_subpage()
     let nav_items = realistic_nav_items();
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    // Pressing Up from BillingAndUsage should land on the collapsed Agents
-    // umbrella, which resolves to ThirdPartyCLIAgents (last visible subpage)
-    // so the user continues moving in natural reading order rather than being
-    // jumped back to the top of the umbrella.
+    // Pressing Up from BillingAndUsage should land on the collapsed AI
+    // umbrella, which resolves to Ollama (last visible subpage) so the user
+    // continues moving in natural reading order rather than being jumped back
+    // to the top of the umbrella.
     let next = simulate_cycle(
         &nav_items,
         &stops,
         SettingsSection::BillingAndUsage,
         CycleDirection::Up,
     );
-    assert_eq!(next, SettingsSection::ThirdPartyCLIAgents);
+    assert_eq!(next, SettingsSection::Ollama);
 }
 
 #[test]
 fn arrow_up_into_collapsed_umbrella_respects_search_filter_for_last_subpage() {
     let nav_items = realistic_nav_items();
-    // Hide the last two AI subpages; the last *visible* subpage of the
-    // still-collapsed Agents umbrella should be AgentMCPServers.
+    // Hide the trailing AI subpages; the last *visible* subpage of the
+    // still-collapsed AI umbrella should be AgentMCPServers.
     let is_visible = |section: SettingsSection| {
         !matches!(
             section,
-            SettingsSection::Knowledge | SettingsSection::ThirdPartyCLIAgents
+            SettingsSection::Knowledge
+                | SettingsSection::ThirdPartyCLIAgents
+                | SettingsSection::Ollama
         )
     };
     let stops = build_nav_stops(&nav_items, is_visible);
 
     // From BillingAndUsage, Up should land on the last *visible* AI subpage
-    // (AgentMCPServers), not on the filtered-out Knowledge/ThirdPartyCLIAgents
-    // or on the first subpage WarpAgent.
+    // (AgentMCPServers), not on the filtered-out trailing subpages or on the
+    // first subpage WarpAgent.
     let next = simulate_cycle(
         &nav_items,
         &stops,
@@ -972,12 +975,12 @@ fn arrow_down_from_expanded_last_subpage_leaves_umbrella() {
     set_expanded(&mut nav_items, 1, true); // expand Agents
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    // ThirdPartyCLIAgents is the last Agents subpage; Down should move to
-    // BillingAndUsage (the next top-level page in the nav order).
+    // Ollama is the last AI subpage; Down should move to BillingAndUsage
+    // (the next top-level page in the nav order).
     let next = simulate_cycle(
         &nav_items,
         &stops,
-        SettingsSection::ThirdPartyCLIAgents,
+        SettingsSection::Ollama,
         CycleDirection::Down,
     );
     assert_eq!(next, SettingsSection::BillingAndUsage);
