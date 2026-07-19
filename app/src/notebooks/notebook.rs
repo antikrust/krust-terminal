@@ -1412,15 +1412,8 @@ impl NotebookView {
             );
         }
 
-        // Add "Copy Link" to menu
-        if let Some(link) = self.notebook_link(ctx) {
-            menu_items.push(
-                MenuItemFields::new("Copy link")
-                    .with_on_select_action(NotebookAction::CopyLink(link))
-                    .with_icon(icons::Icon::Link)
-                    .into_item(),
-            );
-        }
+        // Fork: no "Copy link" — Drive objects are local-only, and object
+        // links point at Warp's servers. Sharing is file export.
 
         if !warpui::platform::is_mobile_device()
             && !ContextFlag::HideOpenOnDesktopButton.is_enabled()

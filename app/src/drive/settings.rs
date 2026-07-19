@@ -1,6 +1,5 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use warp_core::features::FeatureFlag;
 
 use super::DriveSortOrder;
 
@@ -25,29 +24,7 @@ define_settings_group!(WarpDriveSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    // Controls whether Warp Drive appears in the tools panel, command palette, and command search.
-    enable_warp_drive: EnableWarpDrive {
-        type: bool,
-        default: true,
-        supported_platforms: SupportedPlatforms::ALL,
-        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
-        surface: settings::SettingSurfaces::GUI,
-        private: false,
-        toml_path: "warp_drive.enabled",
-        description: "Whether Warp Drive is enabled.",
-    },
+    // Fork: the `enable_warp_drive` setting is gone — Warp Drive is a
+    // permanent part of the app (local-only, no account required). An empty
+    // Drive simply shows its zero state.
 ]);
-
-impl WarpDriveSettings {
-    /// Returns whether Warp Drive should be considered enabled.
-    /// Returns `false` when the user is anonymous or fully logged out,
-    /// regardless of the user setting.
-    pub fn is_warp_drive_enabled(app: &warpui::AppContext) -> bool {
-        use warpui::SingletonEntity as _;
-        let is_anonymous_or_logged_out = FeatureFlag::SkipFirebaseAnonymousUser.is_enabled()
-            && crate::auth::AuthStateProvider::as_ref(app)
-                .get()
-                .is_anonymous_or_logged_out();
-        *Self::as_ref(app).enable_warp_drive && !is_anonymous_or_logged_out
-    }
-}

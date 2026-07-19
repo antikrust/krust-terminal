@@ -442,11 +442,12 @@ impl AuthState {
 
     /// Returns the personal object limits the user has.
     /// Currently, only anonymous users have limits.
+    // Fork: Warp Drive is local-only, so the server-imposed anonymous-user
+    // object limits never apply. Returning None disables every limit gate
+    // and the "Sign up for free" storage banner without touching their call
+    // sites.
     pub fn personal_object_limits(&self) -> Option<PersonalObjectLimits> {
-        self.user
-            .read()
-            .as_ref()
-            .and_then(|user| user.personal_object_limits())
+        None
     }
 
     /// Set whether or not the user is onboarded.

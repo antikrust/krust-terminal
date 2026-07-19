@@ -263,7 +263,6 @@ use crate::default_terminal::DefaultTerminal;
 use crate::drive::export::ExportManager;
 use crate::drive::import::modal::{ImportModal, ImportModalEvent};
 use crate::drive::items::WarpDriveItemId;
-use crate::drive::settings::{WarpDriveSettings, WarpDriveSettingsChangedEvent};
 use crate::drive::workflows::arguments::ArgumentsState;
 use crate::drive::workflows::modal::{WorkflowModal, WorkflowModalEvent};
 use crate::drive::{
@@ -3148,13 +3147,6 @@ impl Workspace {
                 CodeSettingsChangedEvent::ShowProjectExplorer { .. }
                     | CodeSettingsChangedEvent::ShowGlobalSearch { .. }
             ) {
-                me.update_left_panel_available_views(ctx);
-                ctx.notify();
-            }
-        });
-
-        ctx.subscribe_to_model(&WarpDriveSettings::handle(ctx), |me, _, event, ctx| {
-            if let WarpDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
                 me.update_left_panel_available_views(ctx);
                 ctx.notify();
             }
@@ -7773,39 +7765,15 @@ impl Workspace {
     }
 
     /// Triggers the drive sharing onboarding block.
+    ///
+    /// Fork: Drive link-sharing is gone (sharing is file export), so the
+    /// onboarding block advertising it must never appear. Kept as a no-op
+    /// so the call site stays aligned with upstream.
     fn check_and_trigger_drive_sharing_onboarding_block(
         &mut self,
-        object_id: CloudObjectTypeAndId,
-        ctx: &mut ViewContext<Self>,
+        _object_id: CloudObjectTypeAndId,
+        _ctx: &mut ViewContext<Self>,
     ) {
-        if self.auth_state.is_anonymous_or_logged_out() {
-            return;
-        }
-
-        if *WarpDriveSettings::as_ref(ctx)
-            .sharing_onboarding_block_shown
-            .value()
-        {
-            return;
-        }
-
-        if let Some(terminal_view_handle) = self.active_session_view(ctx) {
-            let terminal_view_id = terminal_view_handle.id();
-
-            // Don't show onboarding block while agent is actively streaming
-            let is_agent_in_progress = BlocklistAIHistoryModel::handle(ctx)
-                .as_ref(ctx)
-                .active_conversation(terminal_view_id)
-                .is_some_and(|conversation| conversation.status().is_in_progress());
-
-            if is_agent_in_progress {
-                return;
-            }
-
-            terminal_view_handle.update(ctx, |terminal_view, ctx| {
-                terminal_view.insert_drive_sharing_onboarding_block(object_id, ctx);
-            });
-        }
     }
 
     fn check_and_trigger_telemetry_banner_for_existing_users(
@@ -23500,9 +23468,7 @@ impl Workspace {
                 entry_focus: GlobalSearchEntryFocus::Results,
             });
         }
-        if WarpDriveSettings::is_warp_drive_enabled(ctx) {
-            views.push(ToolPanelView::WarpDrive);
-        }
+        views.push(ToolPanelView::WarpDrive);
         if FeatureFlag::VerticalTabs.is_enabled() {
             views.push(ToolPanelView::Tabs);
         }
@@ -24316,9 +24282,7 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             OpenWarpDrive => {
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
-                    self.open_left_panel_view(&LeftPanelAction::WarpDrive, ctx);
-                }
+                self.open_left_panel_view(&LeftPanelAction::WarpDrive, ctx);
             }
             ToggleLeftPanel => {
                 let active_pane_group = self.active_tab_pane_group().clone();
@@ -25759,11 +25723,9 @@ impl TypedActionView for Workspace {
                 }
             }
             ToggleWarpDrive => {
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
-                    let is_showing =
-                        self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::WarpDrive;
-                    self.toggle_left_panel_view(&LeftPanelAction::WarpDrive, is_showing, ctx);
-                }
+                let is_showing =
+                    self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::WarpDrive;
+                self.toggle_left_panel_view(&LeftPanelAction::WarpDrive, is_showing, ctx);
             }
             ToggleGlobalSearch => {
                 if FeatureFlag::GlobalSearch.is_enabled()
@@ -26100,10 +26062,6 @@ impl View for Workspace {
         };
         if removable_from_group {
             context.set.insert("Workspace_ActiveOrSelectedTabsInGroup");
-        }
-
-        if WarpDriveSettings::is_warp_drive_enabled(app) {
-            context.set.insert(flags::ENABLE_WARP_DRIVE);
         }
 
         if AISettings::as_ref(app).is_any_ai_enabled(app)

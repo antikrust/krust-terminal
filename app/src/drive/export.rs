@@ -18,8 +18,12 @@ use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 use super::CloudObjectTypeAndId;
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "local_fs")]
+use crate::cloud_object::CloudObjectLocation;
 use crate::cloud_object::Space;
 use crate::safe_warn;
+#[cfg(feature = "local_fs")]
+use crate::server::ids::SyncId;
 use crate::view_components::DismissibleToast;
 use crate::workspace::{active_terminal_in_window, ToastStack};
 #[cfg(feature = "local_fs")]
@@ -59,6 +63,10 @@ struct Export {
     state: State,
     // Whether this is a bulk export.
     is_bulk: bool,
+    /// Fork: directory relative to the picked location this object should
+    /// be written into. `Some` for objects that came from expanding a
+    /// folder export, mirroring the Drive folder structure on disk.
+    subdir: Option<PathBuf>,
 }
 
 enum State {
@@ -87,6 +95,9 @@ impl ExportManager {
     }
 
     /// Export a list of objects.
+    ///
+    /// Fork: folders are expanded to their exportable descendants, and the
+    /// exported files mirror the Drive folder structure as directories.
     pub fn export(
         &mut self,
         window_id: WindowId,
@@ -96,27 +107,65 @@ impl ExportManager {
         let shell_family =
             active_terminal_in_window(window_id, ctx, |terminal, ctx| terminal.shell_family(ctx))
                 .unwrap_or_else(|| OperatingSystem::get().default_shell_family());
-        let is_bulk = objects.len() > 1;
-        let mut ids = Vec::new();
+
+        // Expand folders before the exportability filter below — a folder
+        // isn't an exportable object itself; it becomes directories.
+        let mut targets: Vec<(CloudObjectTypeAndId, Option<PathBuf>)> = Vec::new();
         for object in objects {
+            match object {
+                #[cfg(feature = "local_fs")]
+                CloudObjectTypeAndId::Folder(folder_id) => {
+                    targets.extend(
+                        Self::folder_export_targets(*folder_id, ctx)
+                            .into_iter()
+                            .map(|(object, subdir)| (object, Some(subdir))),
+                    );
+                }
+                #[cfg(not(feature = "local_fs"))]
+                CloudObjectTypeAndId::Folder(_) => {
+                    log::warn!("Folder export requires a local filesystem");
+                }
+                _ => targets.push((*object, None)),
+            }
+        }
+
+        if targets.is_empty() {
+            // Everything expanded away (e.g. an empty folder): tell the user
+            // instead of opening a file picker that would do nothing.
+            ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+                toast_stack.add_ephemeral_toast(
+                    DismissibleToast::error("Nothing to export".to_string()),
+                    window_id,
+                    ctx,
+                );
+            });
+            return;
+        }
+
+        let is_bulk = targets.len() > 1;
+        let mut ids = Vec::new();
+        for (object, subdir) in targets {
             match CloudModel::as_ref(ctx).get_by_uid(&object.uid()) {
                 None => log::warn!("Tried to export unknown object {object:?}"),
                 Some(obj) if !obj.can_export() => {
                     log::warn!("Tried to export un-exportable object {object:?}")
                 }
                 Some(cloud_object) => {
-                    let id = ExportId(*object, cloud_object.space(ctx));
+                    let id = ExportId(object, cloud_object.space(ctx));
                     ids.push(id);
                     match self.exports.entry(id) {
                         Entry::Occupied(_) => {
                             log::info!("Object {object:?} is already being exported")
                         }
                         Entry::Vacant(entry) => {
-                            entry.insert(Export::new(window_id, is_bulk));
+                            entry.insert(Export::new(window_id, is_bulk, subdir));
                         }
                     }
                 }
             }
+        }
+        if ids.is_empty() {
+            return;
         }
         ctx.open_file_picker(
             move |result, app| {
@@ -126,6 +175,42 @@ impl ExportManager {
             },
             FilePickerConfiguration::new().folders_only(),
         );
+    }
+
+    /// Walks a folder's active descendants, mapping each exportable object
+    /// to the directory (relative to the picked export location) that
+    /// mirrors its position in the Drive folder tree. Sub-folders become
+    /// nested directories; non-exportable objects are skipped.
+    #[cfg(feature = "local_fs")]
+    fn folder_export_targets(
+        root_id: SyncId,
+        ctx: &ModelContext<Self>,
+    ) -> Vec<(CloudObjectTypeAndId, PathBuf)> {
+        let cloud_model = CloudModel::as_ref(ctx);
+        let root_name = cloud_model
+            .get_by_uid(&root_id.uid())
+            .map(|folder| folder.display_name())
+            .unwrap_or_default();
+
+        let mut targets = Vec::new();
+        let mut stack = vec![(root_id, PathBuf::from(export_dir_name(&root_name)))];
+        while let Some((folder_id, dir)) = stack.pop() {
+            for child in cloud_model.active_cloud_objects_in_location_without_descendents(
+                CloudObjectLocation::Folder(folder_id),
+                ctx,
+            ) {
+                let type_and_id = child.cloud_object_type_and_id();
+                if let CloudObjectTypeAndId::Folder(child_folder_id) = type_and_id {
+                    stack.push((
+                        child_folder_id,
+                        dir.join(export_dir_name(&child.display_name())),
+                    ));
+                } else if child.can_export() {
+                    targets.push((type_and_id, dir.clone()));
+                }
+            }
+        }
+        targets
     }
 
     /// Handle the file picker selection.
@@ -180,8 +265,15 @@ impl ExportManager {
             Entry::Occupied(mut export) => match export.get().state {
                 State::ChoosingLocation => {
                     log::debug!("Exporting {id:?} to {}", path.display());
-                    match Self::export_one(id, export.get().is_bulk, path, id.0, shell_family, ctx)
-                    {
+                    match Self::export_one(
+                        id,
+                        export.get().is_bulk,
+                        export.get().subdir.clone(),
+                        path,
+                        id.0,
+                        shell_family,
+                        ctx,
+                    ) {
                         Ok(handle) => {
                             export.get_mut().state = State::Exporting(handle);
                         }
@@ -207,19 +299,29 @@ impl ExportManager {
         path: anyhow::Result<PathBuf>,
         ctx: &mut ModelContext<Self>,
     ) {
-        let (is_bulk, window_id) = match self.exports.entry(id) {
+        let (is_bulk, window_id, open_dir) = match self.exports.entry(id) {
             Entry::Occupied(export) => match path {
                 Ok(ref path) => {
                     let (is_bulk, window_id) = (export.get().is_bulk, export.get().window_id);
-                    // TODO: Will need queue for folders.
+                    // For folder-derived exports, the directory worth opening
+                    // from the completion toast is the exported folder's
+                    // root, not the (possibly nested) subdirectory the last
+                    // file happened to land in.
+                    let open_dir = match &export.get().subdir {
+                        Some(subdir) => path
+                            .ancestors()
+                            .nth(subdir.components().count())
+                            .map(Path::to_path_buf),
+                        None => path.parent().map(Path::to_path_buf),
+                    };
                     log::debug!("Exported {object:?} to {} successfully", path.display());
                     Self::handle_completion(export, path.clone(), ctx);
-                    (is_bulk, window_id)
+                    (is_bulk, window_id, open_dir)
                 }
                 Err(ref err) => {
                     let (is_bulk, window_id) = (export.get().is_bulk, export.get().window_id);
                     Self::handle_failure(export, err, ctx);
-                    (is_bulk, window_id)
+                    (is_bulk, window_id, None)
                 }
             },
             Entry::Vacant(_) => {
@@ -236,9 +338,7 @@ impl ExportManager {
                 };
 
                 let mut toast_link = ToastLink::new(link_label.to_string());
-                if let Ok(path) = path {
-                    // The path to open in the bulk case is one level up from the export dir.
-                    let root_dir = path.parent().unwrap_or(path.as_path()).to_path_buf();
+                if let Some(root_dir) = open_dir {
                     toast_link = toast_link
                         .with_onclick_action(WorkspaceAction::OpenInExplorer { path: root_dir });
                 }
@@ -257,6 +357,7 @@ impl ExportManager {
     fn export_one(
         id: ExportId,
         is_bulk: bool,
+        subdir: Option<PathBuf>,
         parent_path: &Path,
         object: CloudObjectTypeAndId,
         shell_family: ShellFamily,
@@ -320,14 +421,17 @@ impl ExportManager {
             safe_filename(&name)
         };
 
-        let path = if is_bulk {
-            parent_path.join(safe_filename(&id.1.name(ctx)))
-        } else {
-            parent_path.to_path_buf()
+        // Folder-derived exports mirror the Drive folder tree; plain bulk
+        // exports keep the upstream behavior of a space-named directory.
+        let path = match &subdir {
+            Some(subdir) => parent_path.join(subdir),
+            None if is_bulk => parent_path.join(safe_filename(&id.1.name(ctx))),
+            None => parent_path.to_path_buf(),
         };
+        let create_dirs = is_bulk || subdir.is_some();
 
         Ok(ctx.spawn(
-            async move { write_object(path, is_bulk, name, extension, data).await },
+            async move { write_object(path, create_dirs, name, extension, data).await },
             move |me, result, ctx| {
                 me.handle_object_export(id, object, result, ctx);
             },
@@ -338,6 +442,7 @@ impl ExportManager {
     fn export_one(
         _id: ExportId,
         _is_bulk: bool,
+        _subdir: Option<PathBuf>,
         _parent_path: &Path,
         _object: CloudObjectTypeAndId,
         _shell_family: ShellFamily,
@@ -425,11 +530,12 @@ impl Entity for ExportManager {
 impl SingletonEntity for ExportManager {}
 
 impl Export {
-    fn new(window_id: WindowId, is_bulk: bool) -> Self {
+    fn new(window_id: WindowId, is_bulk: bool, subdir: Option<PathBuf>) -> Self {
         Self {
             is_bulk,
             state: State::ChoosingLocation,
             window_id,
+            subdir,
         }
     }
 }
@@ -461,7 +567,7 @@ impl ExportId {
 #[cfg(feature = "local_fs")]
 async fn write_object(
     parent_path: PathBuf,
-    is_bulk: bool,
+    create_dirs: bool,
     object_name: String,
     extension: &str,
     object_data: Vec<u8>,
@@ -475,7 +581,7 @@ async fn write_object(
     }
 
     // Create the full path if it doesn't exist
-    if is_bulk {
+    if create_dirs {
         async_fs::create_dir_all(&parent_path)
             .await
             .with_context(|| format!("could not create directory {}", parent_path.display()))?;
@@ -527,6 +633,17 @@ fn make_forbidden_filenames_matcher() -> AhoCorasick {
         .match_kind(MatchKind::LeftmostFirst)
         .build(patterns)
         .expect("Path patterns should compile")
+}
+
+/// Directory name for an exported Drive folder: its display name made
+/// filesystem-safe, or "Untitled" when the folder has no name.
+#[cfg(feature = "local_fs")]
+fn export_dir_name(name: &str) -> String {
+    if name.trim().is_empty() {
+        "Untitled".to_string()
+    } else {
+        safe_filename(name)
+    }
 }
 
 /// Replaces characters that are not allowed in a path name. This is _not_ escaping - disallowed

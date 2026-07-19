@@ -7,7 +7,6 @@ use warpui::keymap::BindingId;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{conversations, warp_drive};
-use crate::drive::settings::WarpDriveSettings;
 use crate::search::action::CommandBindingDataSource;
 use crate::search::binding_source::BindingSource;
 use crate::search::command_palette::mixer::{CommandPaletteItemAction, ItemSummary};
@@ -92,7 +91,7 @@ impl DataSourceStore {
                 HashSet::from([QueryFilter::Sessions]),
             );
 
-            if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+            {
                 let mut warp_drive_filters = HashSet::from([
                     QueryFilter::Notebooks,
                     QueryFilter::Plans,

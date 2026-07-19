@@ -7,7 +7,6 @@ use warpui::{AppContext, SingletonEntity as _};
 
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::{ActionPermission, WriteToPtyPermission};
-use crate::drive::settings::WarpDriveSettings;
 use crate::settings::ai::DefaultSessionMode;
 use crate::settings::{AISettings, CodeSettings};
 use crate::workspace::tab_settings::TabSettings;
@@ -91,11 +90,7 @@ fn apply_ui_customization_settings(
             .set_value(ui.show_code_review_button, ctx));
     });
 
-    WarpDriveSettings::handle(app).update(app, |settings, ctx| {
-        report_if_error!(settings
-            .enable_warp_drive
-            .set_value(ui.show_warp_drive, ctx));
-    });
+    // Fork: no enable_warp_drive setting to apply — Drive is always on.
 
     CodeSettings::handle(app).update(app, |settings, ctx| {
         report_if_error!(settings

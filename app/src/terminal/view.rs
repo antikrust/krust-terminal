@@ -16846,7 +16846,7 @@ impl TerminalView {
                     );
                 }
 
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+                {
                     items.push(MenuItem::Separator);
                     items.push(
                         MenuItemFields::new("Save as workflow")
@@ -17563,7 +17563,7 @@ impl TerminalView {
         }
 
         // Section 3: Teams related
-        if !all_current_input_text.is_empty() && WarpDriveSettings::is_warp_drive_enabled(ctx) {
+        if !all_current_input_text.is_empty() {
             items.extend([
                 MenuItem::Separator,
                 MenuItemFields::new("Save as workflow")

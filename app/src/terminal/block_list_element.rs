@@ -64,7 +64,6 @@ use super::{heights_approx_eq, TerminalModel, HEIGHT_FUDGE_FACTOR_LINES};
 use crate::ai::blocklist::{ai_brand_color, ATTACH_AS_AGENT_MODE_CONTEXT_TEXT};
 use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::Appearance;
-use crate::drive::settings::WarpDriveSettings;
 use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
 use crate::settings::{
@@ -1223,7 +1222,7 @@ impl BlockListElement {
             self.ask_ai_assistant_button = Some(element);
         }
 
-        if WarpDriveSettings::is_warp_drive_enabled(app) {
+        {
             let icon = Container::new(
                 ConstrainedBox::new(
                     ui_components::icons::Icon::Save

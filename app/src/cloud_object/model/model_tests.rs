@@ -750,29 +750,13 @@ fn test_load_cloud_objects_on_initial_load_with_empty_cache() {
 }
 
 #[test]
-fn test_loading_all_cloud_objects_after_switching_from_offline() {
+fn test_network_transitions_do_not_refetch_local_objects() {
     let _flag = FeatureFlag::KnowledgeSidebar.override_enabled(true);
 
     let personal_workflows = mock_random_workflows(100, Owner::mock_current_user());
     let personal_workflows_len = personal_workflows.len();
-    let team_workflows = mock_random_workflows(
-        200,
-        Owner::Team {
-            team_uid: ServerId::from(1),
-        },
-    );
-    let team_workflows_len = team_workflows.len();
     let personal_folders = mock_random_folders(300, Owner::mock_current_user());
     let personal_folders_len = personal_folders.len();
-    let team_folders = mock_random_folders(
-        400,
-        Owner::Team {
-            team_uid: ServerId::from(1),
-        },
-    );
-    let team_folders_len = team_folders.len();
-    let notebooks = mock_server_notebooks();
-    let notebooks_len = notebooks.len();
 
     App::test((), |mut app| async move {
         // Sequences used for ordering requests (so first call will return something different than
@@ -812,34 +796,11 @@ fn test_loading_all_cloud_objects_after_switching_from_offline() {
                 })
             });
 
-        // Second call will return objects from the team (as a list of updated / new to user objects)
-        // It'll also be called only once, and with personal_workflows in the input
-        // We expect this call to happen _after_ the network status change (offline -> online).
-        cloud_object_server_api_mock
-            .expect_fetch_changed_objects()
-            .times(1)
-            // verify that the list of objects passed equals the number of personal workflows we
-            // already have
-            .withf(move |objects_to_update, _| {
-                objects_to_update.workflows.len() == personal_workflows_len
-                    && objects_to_update.folders.len() == personal_folders_len
-            })
-            .in_sequence(&mut cloud_objects_sequence)
-            .returning(move |_, _| {
-                Ok(InitialLoadResponse {
-                    updated_notebooks: notebooks.clone(),
-                    updated_workflows: team_workflows.clone(),
-                    updated_folders: team_folders.clone(),
-                    deleted_notebooks: vec![],
-                    deleted_workflows: vec![],
-                    deleted_folders: vec![],
-                    user_profiles: vec![],
-                    updated_generic_string_objects: Default::default(),
-                    deleted_generic_string_objects: Default::default(),
-                    action_histories: Default::default(),
-                    mcp_gallery: Default::default(),
-                })
-            });
+        // Fork: network transitions are irrelevant to the local object
+        // client — going offline no longer stops polling, and coming back
+        // online must not trigger an out-of-band refetch. The mock's single
+        // `times(1)` expectation above therefore also asserts that no second
+        // fetch happens across the offline/online transition below.
 
         // No workflows or notebooks (or other objects) loaded from sqlite passed to CloudModel
         initialize_app(&mut app, Vec::new(), Arc::new(cloud_object_server_api_mock));
@@ -866,13 +827,13 @@ fn test_loading_all_cloud_objects_after_switching_from_offline() {
             network_status.reachability_changed(true, ctx);
         });
 
-        // Spend time waiting for the load to finish etc.
+        // Give any (erroneous) refetch a chance to run.
         warpui::r#async::Timer::after(Duration::from_secs(1)).await;
 
-        // Now CloudModel should include all objects that were fetched via initial load
-        check_cloud_workflows(&mut app, personal_workflows_len + team_workflows_len);
-        check_cloud_folders(&mut app, personal_folders_len + team_folders_len);
-        check_cloud_notebooks(&mut app, notebooks_len);
+        // The local drive is unchanged by network transitions.
+        check_cloud_workflows(&mut app, personal_workflows_len);
+        check_cloud_folders(&mut app, personal_folders_len);
+        check_cloud_notebooks(&mut app, 0);
     })
 }
 

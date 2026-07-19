@@ -395,6 +395,9 @@ impl SyncQueue {
         self.should_dequeue
     }
 
+    // Fork: production code no longer stops dequeueing (the local object
+    // client works offline), so this is only exercised by tests.
+    #[cfg_attr(not(test), expect(dead_code))]
     pub fn stop_dequeueing(&mut self) {
         self.should_dequeue = false
     }

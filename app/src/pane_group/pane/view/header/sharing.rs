@@ -77,12 +77,13 @@ impl<P: BackingView> PaneHeader<P> {
     }
 
     pub fn is_sharing_dialog_enabled<C: warpui::ViewAsRef>(&self, ctx: &C) -> bool {
-        let sharing_enabled = self.has_shareable_object(ctx);
-        if self.has_shareable_shared_session(ctx) {
-            sharing_enabled && FeatureFlag::SessionSharingAcls.is_enabled()
-        } else {
-            sharing_enabled
-        }
+        // Fork: Warp Drive objects are local-only, so panes backed by Drive
+        // objects (notebooks, workflows, env vars) never offer the sharing
+        // dialog — sharing them is file export instead. Shared sessions are
+        // a separate feature and keep their flag-gated behavior.
+        self.has_shareable_object(ctx)
+            && self.has_shareable_shared_session(ctx)
+            && FeatureFlag::SessionSharingAcls.is_enabled()
     }
 
     /// Share the panes' contents.

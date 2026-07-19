@@ -15,7 +15,6 @@ use settings::Setting as _;
 use warp_core::channel::ChannelState;
 use warpui::{AppContext, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
-use crate::drive::settings::WarpDriveSettings;
 use crate::features::FeatureFlag;
 use crate::local_control::resolver::{reject_target_families, require_active_window_id_for_action};
 use crate::local_control::LocalControlBridge;
@@ -312,9 +311,6 @@ pub(crate) fn surface_unavailable_reason(
         | SurfaceDestination::ThemePicker
         | SurfaceDestination::Keybindings
         | SurfaceDestination::ResourceCenter => None,
-        SurfaceDestination::WarpDrive if !WarpDriveSettings::is_warp_drive_enabled(ctx) => {
-            Some("Warp Drive is disabled")
-        }
         SurfaceDestination::WarpDrive => None,
         SurfaceDestination::AiAssistant if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) => {
             Some("AI features are disabled")

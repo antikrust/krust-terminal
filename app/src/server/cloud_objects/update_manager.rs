@@ -624,9 +624,9 @@ impl UpdateManager {
     }
 
     pub fn start_polling_for_updated_objects(&mut self, ctx: &mut ModelContext<Self>) {
-        let is_online = NetworkStatus::as_ref(ctx).is_online();
-
-        if !self.should_poll_for_updated_objects && is_online {
+        // Fork: no is_online gate — the object client answers from local
+        // state, so Drive must keep working in airplane mode.
+        if !self.should_poll_for_updated_objects {
             self.should_poll_for_updated_objects = true;
             self.poll_for_updated_objects(ctx);
         }
@@ -683,12 +683,11 @@ impl UpdateManager {
             return;
         }
 
-        // Don't poll when the user is logged out to avoid spamming auth errors in the logs.
-        // Polling will be restarted when the user logs in via `initiate_data_pollers`.
-        if !AuthStateProvider::as_ref(ctx).get().is_logged_in() {
-            self.should_poll_for_updated_objects = false;
-            return;
-        }
+        // Fork: upstream skipped polling while logged out to avoid spamming
+        // auth errors. The object client is now the local one — polling is
+        // free, never errors, and the first "load" is what marks
+        // has_initial_load and starts the SyncQueue dequeueing, so it must
+        // run regardless of auth state.
 
         let object_client = self.object_client.clone();
         let cloud_model = CloudModel::as_ref(ctx);
@@ -744,15 +743,16 @@ impl UpdateManager {
         event: &NetworkStatusEvent,
         ctx: &mut ModelContext<Self>,
     ) {
+        // Fork: network status is irrelevant to the local object client, so
+        // going offline no longer stops polling or SyncQueue dequeueing, and
+        // coming online is at most a safety-net start (idempotent while
+        // polling is already running).
         match event {
             NetworkStatusEvent::NetworkStatusChanged { new_status } => match new_status {
                 NetworkStatusKind::Online => {
                     self.start_polling_for_updated_objects(ctx);
                 }
-                NetworkStatusKind::Offline => {
-                    self.stop_polling_for_updated_objects();
-                    SyncQueue::handle(ctx).update(ctx, |queue, _ctx| queue.stop_dequeueing())
-                }
+                NetworkStatusKind::Offline => {}
             },
         }
     }

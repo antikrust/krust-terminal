@@ -80,9 +80,6 @@ use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::{
     AnonymousUserSignupEntrypoint, SharingDialogSource, TelemetryEvent,
 };
-use crate::settings::app_installation_detection::{
-    UserAppInstallDetectionSettings, UserAppInstallStatus,
-};
 use crate::ui_components::blended_colors;
 use crate::ui_components::buttons::{highlight, icon_button};
 use crate::ui_components::icons::{Icon, ICON_DIMENSIONS};
@@ -643,23 +640,13 @@ impl DriveIndex {
                 .as_ref(ctx)
                 .num_trashed_cloud_objects_per_space(spaces.iter(), ctx),
         };
-        let mut sections = spaces
+        let sections = spaces
             .iter()
             .map(|space| DriveIndexSection::Space(*space))
             .collect::<Vec<_>>();
 
-        if !user_workspaces.as_ref(ctx).has_teams() {
-            if user_workspaces
-                .as_ref(ctx)
-                .total_teammates_in_joinable_teams()
-                > 0
-            {
-                sections.insert(0, DriveIndexSection::JoinTeam);
-                sections.insert(1, DriveIndexSection::CreateATeam);
-            } else {
-                sections.insert(0, DriveIndexSection::CreateATeam);
-            }
-        }
+        // Fork: no "Create a team" / "Join team" upsell sections — Drive is
+        // local-only and teams don't exist without a server.
 
         // Item UI state is attached by index, not by id, so this is re-initialized whenever there's any type of change
         let item_mouse_states = num_cloud_objects_per_space
@@ -4440,28 +4427,18 @@ impl DriveIndex {
                     }
                 }
 
-                if let Some(object) = object {
-                    if let Some(object_link) = object.object_link() {
-                        menu_items.push(
-                            MenuItemFields::new("Copy link")
-                                .with_on_select_action(DriveIndexAction::CopyObjectLinkToClipboard(
-                                    object_link,
-                                ))
-                                .with_icon(Icon::Link)
-                                .into_item(),
-                        );
-                        if editability.can_edit() {
-                            menu_items.push(
-                                MenuItemFields::new("Share")
-                                    .with_on_select_action(DriveIndexAction::ToggleShareDialog {
-                                        warp_drive_item_id: *warp_drive_item_id,
-                                    })
-                                    .with_icon(Icon::Share)
-                                    .into_item(),
-                            );
-                        }
-                    }
-                }
+                // Fork: no "Copy link" / "Share" for folders — Drive objects
+                // are local-only; sharing is file export instead. Exporting
+                // a folder writes its contents as a directory tree.
+                #[cfg(feature = "local_fs")]
+                menu_items.push(
+                    MenuItemFields::new("Export")
+                        .with_on_select_action(DriveIndexAction::ExportObject(
+                            *cloud_object_type_and_id,
+                        ))
+                        .with_icon(Icon::Download)
+                        .into_item(),
+                );
 
                 if !FeatureFlag::SharedWithMe.is_enabled() || editability.can_edit() {
                     menu_items.push(
@@ -4669,46 +4646,11 @@ impl DriveIndex {
                     | ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                         JsonObjectType::EnvVarCollection,
                     )) => {
-                        if let Some(object_link) = object.object_link() {
-                            menu_items.push(
-                                MenuItemFields::new("Copy link")
-                                    .with_on_select_action(
-                                        DriveIndexAction::CopyObjectLinkToClipboard(object_link),
-                                    )
-                                    .with_icon(Icon::Link)
-                                    .into_item(),
-                            );
-                        }
-                        if editability.can_edit() {
-                            menu_items.push(
-                                MenuItemFields::new("Share")
-                                    .with_on_select_action(DriveIndexAction::ToggleShareDialog {
-                                        warp_drive_item_id: *warp_drive_item_id,
-                                    })
-                                    .with_icon(Icon::Share)
-                                    .into_item(),
-                            );
-                        }
-                        if !warpui::platform::is_mobile_device()
-                            && !ContextFlag::HideOpenOnDesktopButton.is_enabled()
-                            && *UserAppInstallDetectionSettings::as_ref(app)
-                                .user_app_installation_detected
-                                .value()
-                                == UserAppInstallStatus::Detected
-                        {
-                            if let Some(object_link) = object.object_link() {
-                                if let Ok(url) = Url::parse(&object_link) {
-                                    menu_items.push(
-                                        MenuItemFields::new("Open on Desktop")
-                                            .with_on_select_action(
-                                                DriveIndexAction::OpenObjectLinkOnDesktop(url),
-                                            )
-                                            .with_icon(Icon::Laptop)
-                                            .into_item(),
-                                    );
-                                }
-                            }
-                        }
+                        // Fork: no "Copy link" / "Share" / "Open on Desktop"
+                        // — Drive objects are local-only and object links
+                        // point at Warp's servers. Sharing is the "Export"
+                        // item below instead.
+
                         // Only allow duplicate if in Personal space, or Team space when online
                         if matches!(space, Space::Personal)
                             || (self.is_online(app) && matches!(space, Space::Team { .. }))

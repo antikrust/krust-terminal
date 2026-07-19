@@ -2144,12 +2144,12 @@ impl RootView {
 
                 let is_logged_in = AuthStateProvider::as_ref(ctx).get().is_logged_in();
                 // If the user isn't logged in, only require login if the applied
-                // settings need an account (AI or Warp Drive enabled).
+                // settings need an account (AI enabled). Fork: Warp Drive is
+                // local-only and never requires an account.
                 let ai_enabled = selected_settings.is_ai_enabled();
-                let warp_drive_enabled = selected_settings.is_warp_drive_enabled();
                 // With old onboarding, we ask user to log in before onboarding, so don't do it after onboarding completes.
                 let requires_login = !is_logged_in
-                    && (ai_enabled || warp_drive_enabled)
+                    && ai_enabled
                     && FeatureFlag::OpenWarpNewSettingsModes.is_enabled();
 
                 if requires_login {

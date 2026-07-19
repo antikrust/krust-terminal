@@ -2087,12 +2087,21 @@ pub(crate) fn initialize_app(
         )
     });
 
-    ctx.add_singleton_model(|ctx| {
+    let update_manager_handle = ctx.add_singleton_model(|ctx| {
         UpdateManager::new(
             persistence_writer.sender(),
             server_api_provider.as_ref(ctx).get_cloud_objects_client(),
             ctx,
         )
+    });
+
+    // Fork: upstream only started cloud-object polling on login (via
+    // TeamTesterStatus::initiate_data_pollers). The object client is now the
+    // local one, and its first "load" is what marks has_initial_load and
+    // starts SyncQueue dequeueing — Warp Drive mutations sit in the queue
+    // until it runs — so kick it off at startup, logged in or not.
+    update_manager_handle.update(ctx, |update_manager, ctx| {
+        update_manager.start_polling_for_updated_objects(ctx);
     });
 
     let toml_file_path = settings::user_preferences_toml_file_path();

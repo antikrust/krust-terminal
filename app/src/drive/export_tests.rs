@@ -14,6 +14,7 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{
     CloudObjectMetadata, CloudObjectPermissions, ObjectIdType, ObjectType, Space,
 };
+use crate::drive::folders::{CloudFolder, CloudFolderModel, FolderId};
 use crate::drive::CloudObjectTypeAndId;
 use crate::notebooks::{CloudNotebook, CloudNotebookModel, NotebookId};
 use crate::server::ids::SyncId;
@@ -507,5 +508,158 @@ fn test_export_multiple_objects() {
         assert!(workflow1_path.exists(), "Workflow 1 file does not exist");
         assert!(workflow2_path.exists(), "Workflow 2 file does not exist");
         assert!(notebook_path.exists(), "Notebook file does not exist");
+    });
+}
+
+/// Add a mocked folder, optionally nested inside a parent folder.
+fn add_folder(id: SyncId, name: &str, parent: Option<SyncId>, app: &mut App) {
+    let mut metadata = CloudObjectMetadata::mock();
+    metadata.folder_id = parent;
+    CloudModel::handle(app).update(app, |cloud_model, _ctx| {
+        cloud_model.add_object(
+            id,
+            CloudFolder::new(
+                id,
+                CloudFolderModel::new(name, false),
+                metadata,
+                CloudObjectPermissions::mock_personal(),
+            ),
+        );
+    });
+}
+
+/// Add a mocked workflow inside a folder.
+fn add_workflow_in_folder(id: SyncId, workflow: Workflow, folder: SyncId, app: &mut App) {
+    let mut metadata = CloudObjectMetadata::mock();
+    metadata.folder_id = Some(folder);
+    CloudModel::handle(app).update(app, |cloud_model, _ctx| {
+        cloud_model.add_object(
+            id,
+            CloudWorkflow::new(
+                id,
+                CloudWorkflowModel::new(workflow),
+                metadata,
+                CloudObjectPermissions::mock_personal(),
+            ),
+        );
+    });
+}
+
+/// Add a mocked notebook inside a folder.
+fn add_notebook_in_folder(id: SyncId, title: &str, data: &str, folder: SyncId, app: &mut App) {
+    let mut metadata = CloudObjectMetadata::mock();
+    metadata.folder_id = Some(folder);
+    CloudModel::handle(app).update(app, |cloud_model, _ctx| {
+        cloud_model.add_object(
+            id,
+            CloudNotebook::new(
+                id,
+                CloudNotebookModel {
+                    title: title.to_string(),
+                    data: data.to_string(),
+                    ai_document_id: None,
+                    conversation_id: None,
+                },
+                metadata,
+                CloudObjectPermissions::mock_personal(),
+            ),
+        );
+    });
+}
+
+/// Fork: exporting a folder writes its exportable descendants as a directory
+/// tree mirroring the Drive folder structure.
+#[test]
+fn test_export_folder_mirrors_structure() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+
+        let folder_a = SyncId::ServerId(FolderId::from(1).into());
+        let folder_b = SyncId::ServerId(FolderId::from(2).into());
+        add_folder(folder_a, "Folder A", None, &mut app);
+        add_folder(folder_b, "Sub Folder", Some(folder_a), &mut app);
+
+        let workflow_id = SyncId::ServerId(WorkflowId::from(123).into());
+        add_workflow_in_folder(
+            workflow_id,
+            Workflow::new("Test workflow", "echo hello world"),
+            folder_a,
+            &mut app,
+        );
+        let notebook_id = SyncId::ServerId(NotebookId::from(456).into());
+        add_notebook_in_folder(notebook_id, "Test notebook", "# Hello", folder_b, &mut app);
+
+        let exporter = ExportTest::new(&mut app);
+
+        // Register completion receivers for both descendants, then export the
+        // folder and simulate the directory pick.
+        let workflow_export_id = ExportId(
+            CloudObjectTypeAndId::from_id_and_type(workflow_id, ObjectType::Workflow),
+            Space::Personal,
+        );
+        let notebook_export_id = ExportId(
+            CloudObjectTypeAndId::from_id_and_type(notebook_id, ObjectType::Notebook),
+            Space::Personal,
+        );
+        let (workflow_tx, workflow_rx) = oneshot::channel();
+        let (notebook_tx, notebook_rx) = oneshot::channel();
+        exporter
+            .pending_exports
+            .lock()
+            .insert(workflow_export_id, workflow_tx);
+        exporter
+            .pending_exports
+            .lock()
+            .insert(notebook_export_id, notebook_tx);
+
+        ExportManager::handle(&app).update(&mut app, |export_manager, ctx| {
+            let window_id = WindowId::new();
+            export_manager.export(
+                window_id,
+                &[CloudObjectTypeAndId::from_id_and_type(
+                    folder_a,
+                    ObjectType::Folder,
+                )],
+                ctx,
+            );
+            export_manager.handle_files_picked(
+                vec![workflow_export_id, notebook_export_id],
+                Ok(vec![exporter
+                    .target_dir
+                    .path()
+                    .to_str()
+                    .expect("Path must be UTF-8")
+                    .to_owned()]),
+                ShellFamily::Posix,
+                ctx,
+            );
+        });
+
+        let expected_workflow_path = exporter.path("Folder A/Test workflow.yaml", None, &app);
+        let expected_notebook_path =
+            exporter.path("Folder A/Sub Folder/Test notebook.md", None, &app);
+
+        assert_eq!(
+            workflow_rx.await,
+            Ok(ExportEvent::Completed {
+                id: workflow_export_id,
+                path: expected_workflow_path.clone(),
+            })
+        );
+        assert_eq!(
+            notebook_rx.await,
+            Ok(ExportEvent::Completed {
+                id: notebook_export_id,
+                path: expected_notebook_path.clone(),
+            })
+        );
+
+        assert!(fs::read_to_string(&expected_workflow_path)
+            .expect("failed to read exported workflow")
+            .contains("name: Test workflow"),);
+        assert_eq!(
+            fs::read_to_string(&expected_notebook_path).expect("failed to read exported notebook"),
+            "# Hello\n"
+        );
     });
 }

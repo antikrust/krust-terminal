@@ -56,6 +56,7 @@ use crate::ai::predict::{generate_ai_input_suggestions, generate_am_query_sugges
 use crate::ai::voice::transcribe::{TranscribeRequest, TranscribeResponse};
 use crate::auth::auth_manager::AuthManager;
 use crate::auth::auth_state::AuthState;
+use crate::server::cloud_objects::local_object_client::LocalObjectClient;
 use crate::server::telemetry::TelemetryApi;
 use crate::settings::PrivacySettingsSnapshot;
 use crate::{settings_view, ChannelState};
@@ -1319,8 +1320,12 @@ impl ServerApiProvider {
         self.server_api.clone()
     }
 
+    /// Fork: Warp Drive objects are local-only. Every consumer of this
+    /// client (SyncQueue, UpdateManager, Listener, preferences syncer)
+    /// gets the always-succeeding local client instead of the GraphQL
+    /// client, so Drive never talks to Warp's servers.
     pub fn get_cloud_objects_client(&self) -> Arc<dyn ObjectClient> {
-        self.server_api.clone()
+        Arc::new(LocalObjectClient::new())
     }
 
     pub fn get_integrations_client(&self) -> Arc<dyn integrations::IntegrationsClient> {

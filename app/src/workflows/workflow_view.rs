@@ -3184,15 +3184,8 @@ impl BackingView for WorkflowView {
     fn pane_header_overflow_menu_items(&self, ctx: &AppContext) -> Vec<MenuItem<WorkflowAction>> {
         let mut menu_items = Vec::new();
 
-        // Add "Copy Link" to menu
-        if let Some(link) = self.workflow_link(ctx) {
-            menu_items.push(
-                MenuItemFields::new("Copy link")
-                    .with_on_select_action(WorkflowAction::CopyLink(link))
-                    .with_icon(Icon::Link)
-                    .into_item(),
-            );
-        }
+        // Fork: no "Copy link" — Drive objects are local-only, and object
+        // links point at Warp's servers. Sharing is file export.
 
         if self.can_open_on_desktop(ctx) {
             if let Some(link) = self.workflow_link(ctx) {
