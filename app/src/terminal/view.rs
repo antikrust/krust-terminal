@@ -187,6 +187,7 @@ use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
 use super::find::FindOptions;
+use super::misery::{CompletedCommand as MiseryCompletedCommand, MiseryLineView, MiserySession};
 use super::model::block::{
     BlockSection, BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS,
 };
@@ -2827,6 +2828,11 @@ pub struct TerminalView {
 
     warpify_state: WarpifyState,
 
+    /// Misery mode state for this terminal. Session-scoped so its
+    /// anti-repetition memory spans the whole terminal rather than resetting
+    /// per block.
+    misery: MiserySession,
+
     /// The keystroke bound to canceling a command.
     ///
     /// This is cached on the view because the UI framework APIs needed to lookup keystroke for an
@@ -4445,6 +4451,7 @@ impl TerminalView {
             input_hoverable_handle: Default::default(),
             find_model,
             warpify_state: Default::default(),
+            misery: Default::default(),
             cancel_command_keystroke: keybinding_name_to_keystroke(CANCEL_COMMAND_KEYBINDING, ctx),
             is_file_drop_target: false,
             is_ssh_file_uploader: false,
@@ -5031,6 +5038,106 @@ impl TerminalView {
     /// Advances the queued-prompts queue after a dispatched queued command's block completes.
     /// Runs after input cleanup so queued-command draft preservation can observe the in-flight
     /// flag first.
+    /// Misery mode, submit voice: weary anticipation as the command starts.
+    ///
+    /// Always records the command for repetition detection, even when nothing
+    /// is said — "not this again" on the third `ls` depends on having counted
+    /// the first two.
+    fn maybe_show_misery_line_for_started_block(
+        &mut self,
+        command: &str,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let ai_settings = AISettings::as_ref(ctx);
+        if !ai_settings.is_misery_mode_enabled() {
+            return;
+        }
+        let swear_mode = ai_settings.is_swear_mode_enabled();
+
+        let working_directory = self
+            .model
+            .lock()
+            .block_list()
+            .active_block()
+            .pwd()
+            .cloned();
+
+        let Some(line) =
+            self.misery
+                .on_command_submitted(command, working_directory.as_deref(), swear_mode)
+        else {
+            return;
+        };
+
+        // `insert_below_long_running_block: false` puts the line above the
+        // block that is now running, so it reads as a reaction to the command
+        // rather than a comment on output that hasn't arrived yet.
+        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, ctx));
+        self.insert_rich_content(
+            None,
+            handle,
+            None,
+            RichContentInsertionPosition::Append {
+                insert_below_long_running_block: false,
+            },
+            ctx,
+        );
+    }
+
+    /// Misery mode: after a command finishes, the terminal may pass comment on
+    /// it. Most commands get nothing — see `misery::deserve` for the adaptive
+    /// rate.
+    ///
+    /// The line is inserted as rich content rather than written to the PTY, so
+    /// a command's real stdout is never touched.
+    fn maybe_show_misery_line_for_completed_block(
+        &mut self,
+        completed: &UserBlockCompleted,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let ai_settings = AISettings::as_ref(ctx);
+        if !ai_settings.is_misery_mode_enabled() {
+            return;
+        }
+        let swear_mode = ai_settings.is_swear_mode_enabled();
+
+        // Agent-driven commands are not the user's doing, so mocking them
+        // would be aimed at the wrong target.
+        if completed.was_part_of_agent_interaction {
+            return;
+        }
+
+        let serialized = &completed.serialized_block;
+        let Some(line) = self.misery.on_command_completed(
+            MiseryCompletedCommand {
+                command: &completed.command,
+                working_directory: serialized.pwd.as_deref(),
+                exit_code: serialized.exit_code.value(),
+                started_at: completed.started_at,
+                output_lines: completed.num_output_lines,
+            },
+            swear_mode,
+        ) else {
+            return;
+        };
+
+        self.insert_misery_line(line, ctx);
+    }
+
+    /// Inserts a generated misery line into the block list.
+    fn insert_misery_line(&mut self, line: String, ctx: &mut ViewContext<Self>) {
+        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, ctx));
+        self.insert_rich_content(
+            None,
+            handle,
+            None,
+            RichContentInsertionPosition::Append {
+                insert_below_long_running_block: true,
+            },
+            ctx,
+        );
+    }
+
     /// No-ops unless a queued command is in flight for a conversation owned by this terminal view;
     /// clearing the flag before draining keeps repeated calls idempotent.
     pub(crate) fn on_queued_command_finished(&mut self, ctx: &mut ViewContext<Self>) {
@@ -12022,6 +12129,8 @@ impl TerminalView {
                 }
                 self.did_notify_long_running = false;
 
+                self.maybe_show_misery_line_for_started_block(command, ctx);
+
                 // Snapshot the prompt state as of when the command began executing.
                 // Commands may themselves affect the prompt (if running `git checkout`), for
                 // example, so we want the saved prompt state to match what the user saw when
@@ -12356,6 +12465,7 @@ impl TerminalView {
                     if !user_block_completed.was_part_of_agent_interaction {
                         self.on_queued_command_finished(ctx);
                     }
+                    self.maybe_show_misery_line_for_completed_block(user_block_completed, ctx);
                 }
 
                 // For the case when the user uses session configuration with a

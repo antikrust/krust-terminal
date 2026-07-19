@@ -32,11 +32,15 @@ use rand::{Rng, SeedableRng};
 pub mod classify;
 mod deserve;
 mod grammar;
+mod session;
 mod templates;
+mod view;
 mod vocab;
 
 pub use classify::{CommandClass, ParsedCommand};
+pub use session::{CompletedCommand, MiserySession};
 pub use templates::Phase;
+pub use view::MiseryLineView;
 
 /// How many recently-emitted lines to remember, to avoid repeats.
 const RECENT_LINES_MEMORY: usize = 40;
@@ -116,13 +120,8 @@ impl MiseryEngine {
         let command = classify::parse(&ctx.command_name)?;
         let history = self.history(&command);
 
-        let probability = deserve::probability(
-            &command,
-            phase,
-            history,
-            ctx.exit_code,
-            ctx.duration,
-        );
+        let probability =
+            deserve::probability(&command, phase, history, ctx.exit_code, ctx.duration);
         let speaking = self.rng.gen::<f32>() < probability;
         self.note_spoke(speaking);
         if !speaking {
@@ -184,11 +183,7 @@ impl MiseryEngine {
             // discount it to get "how many times *before* this one".
             .saturating_sub(1) as u32;
 
-        let recent_misery_count = self
-            .recent_spoke
-            .iter()
-            .filter(|spoke| **spoke)
-            .count() as u32;
+        let recent_misery_count = self.recent_spoke.iter().filter(|spoke| **spoke).count() as u32;
 
         deserve::History {
             repeat_count,

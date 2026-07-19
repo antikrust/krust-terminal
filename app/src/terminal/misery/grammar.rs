@@ -10,15 +10,10 @@
 use rand::seq::SliceRandom;
 use rand::Rng;
 
-use super::vocab;
-use super::MiseryContext;
+use super::{vocab, MiseryContext};
 
 /// Expands `template`, or returns `None` if any slot in it can't be filled.
-pub fn expand<R: Rng + ?Sized>(
-    template: &str,
-    ctx: &MiseryContext,
-    rng: &mut R,
-) -> Option<String> {
+pub fn expand<R: Rng + ?Sized>(template: &str, ctx: &MiseryContext, rng: &mut R) -> Option<String> {
     let mut out = String::with_capacity(template.len() + 32);
     let mut rest = template;
 
@@ -156,8 +151,22 @@ fn indefinite_article(word: &str) -> &'static str {
     // Matched on longer prefixes so genuinely vowel-sounding words like
     // "unimaginative" and "inert" are not caught.
     const YOO_WORDS: &[&str] = &[
-        "unique", "useful", "user", "usual", "united", "universal", "universe", "unicorn",
-        "unified", "uniform", "unilateral", "utility", "utopian", "eulogy", "european", "ukulele",
+        "unique",
+        "useful",
+        "user",
+        "usual",
+        "united",
+        "universal",
+        "universe",
+        "unicorn",
+        "unified",
+        "uniform",
+        "unilateral",
+        "utility",
+        "utopian",
+        "eulogy",
+        "european",
+        "ukulele",
         "one",
     ];
     if YOO_WORDS.iter().any(|w| lower.starts_with(w)) {

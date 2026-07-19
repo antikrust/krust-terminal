@@ -12,7 +12,10 @@ fn classifies_common_commands() {
     assert_eq!(parsed("rm -rf build").class, CommandClass::Destructive);
     assert_eq!(parsed("clear").class, CommandClass::Clear);
     assert_eq!(parsed("git status").class, CommandClass::Vcs);
-    assert_eq!(parsed("curl https://example.com").class, CommandClass::Network);
+    assert_eq!(
+        parsed("curl https://example.com").class,
+        CommandClass::Network
+    );
 }
 
 #[test]

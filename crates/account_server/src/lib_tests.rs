@@ -35,7 +35,12 @@ async fn call(
 
     let response = router(state.clone()).oneshot(request).await.expect("call");
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let value = if bytes.is_empty() {
         serde_json::Value::Null
     } else {

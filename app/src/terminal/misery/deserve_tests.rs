@@ -45,7 +45,10 @@ fn failure_increases_the_score() {
 fn pipelines_are_treated_as_effort() {
     let bare = p("ls", History::default(), Some(0), None);
     let piped = p("ls | wc -l", History::default(), Some(0), None);
-    assert!(piped < bare, "pipelines should be spared: {bare} -> {piped}");
+    assert!(
+        piped < bare,
+        "pipelines should be spared: {bare} -> {piped}"
+    );
 }
 
 #[test]

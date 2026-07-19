@@ -21,9 +21,9 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
+use argon2::Argon2;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
-use argon2::Argon2;
 use axum::extract::{DefaultBodyLimit, Path as UrlPath, State};
 use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, StatusCode};
@@ -31,7 +31,7 @@ use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -294,10 +294,7 @@ async fn login(
 /// login timing for unknown emails.
 const DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$wJUnbYyyEUENQZ4CU3Bhcg$Sib9jzGnCyvUJhO8SmClh8oPuF0eSNhkc9dw4qb7Sq8";
 
-async fn logout(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> Result<StatusCode, ApiError> {
+async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<StatusCode, ApiError> {
     let token = headers
         .get(AUTHORIZATION)
         .and_then(|v| v.to_str().ok())

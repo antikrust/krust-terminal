@@ -178,8 +178,25 @@ pub fn parse(input: &str) -> Option<ParsedCommand> {
     // `foo.txt` subcommand.
     let takes_subcommand = matches!(
         name.as_str(),
-        "git" | "cargo" | "npm" | "yarn" | "pnpm" | "bun" | "go" | "docker" | "kubectl" | "brew"
-            | "apt" | "pip" | "pip3" | "jj" | "hg" | "systemctl" | "gh" | "terraform" | "aws"
+        "git"
+            | "cargo"
+            | "npm"
+            | "yarn"
+            | "pnpm"
+            | "bun"
+            | "go"
+            | "docker"
+            | "kubectl"
+            | "brew"
+            | "apt"
+            | "pip"
+            | "pip3"
+            | "jj"
+            | "hg"
+            | "systemctl"
+            | "gh"
+            | "terraform"
+            | "aws"
     );
     let subcommand = if takes_subcommand && !args.is_empty() {
         Some(args.remove(0))
@@ -213,7 +230,10 @@ fn classify(name: &str, subcommand: Option<&str>) -> CommandClass {
     // Package management hides inside build tools; check the subcommand first.
     if let Some(sub) = subcommand {
         match (name, sub) {
-            ("npm" | "yarn" | "pnpm" | "bun" | "pip" | "pip3", "install" | "i" | "add" | "remove")
+            (
+                "npm" | "yarn" | "pnpm" | "bun" | "pip" | "pip3",
+                "install" | "i" | "add" | "remove",
+            )
             | ("cargo", "install" | "add" | "remove")
             | ("go", "get" | "install")
             | ("brew", _)
@@ -236,8 +256,8 @@ fn classify(name: &str, subcommand: Option<&str>) -> CommandClass {
         "git" | "jj" | "hg" | "svn" | "gh" | "glab" => CommandClass::Vcs,
         "cargo" | "make" | "cmake" | "npm" | "yarn" | "pnpm" | "bun" | "go" | "tsc" | "gcc"
         | "clang" | "rustc" | "javac" | "gradle" | "mvn" | "bazel" | "ninja" => CommandClass::Build,
-        "brew" | "apt" | "apt-get" | "dnf" | "yum" | "pacman" | "pip" | "pip3" | "gem"
-        | "port" | "snap" | "nix" => CommandClass::PackageMgmt,
+        "brew" | "apt" | "apt-get" | "dnf" | "yum" | "pacman" | "pip" | "pip3" | "gem" | "port"
+        | "snap" | "nix" => CommandClass::PackageMgmt,
         "rm" | "rmdir" | "dd" | "mkfs" | "shred" | "truncate" | "unlink" => {
             CommandClass::Destructive
         }

@@ -50,7 +50,9 @@ impl Cond {
             // outcome-conditional lines must not fire then.
             Cond::Success => ctx.succeeded == Some(true),
             Cond::Failure => ctx.succeeded == Some(false),
-            Cond::HasOutput => ctx.output_lines.is_some_and(|n| n >= MEANINGFUL_OUTPUT_LINES),
+            Cond::HasOutput => ctx
+                .output_lines
+                .is_some_and(|n| n >= MEANINGFUL_OUTPUT_LINES),
             Cond::NoOutput => ctx.output_lines == Some(0),
         }
     }
@@ -108,7 +110,12 @@ pub const TEMPLATES: &[Template] = &[
     // ── Submit, universal ────────────────────────────────────────────────
     t("{EXCLAIM}. {COMPLAINT}.", Submit, &[], 6),
     t("{EXCLAIM}, {AGAIN}.", Submit, &[], 6),
-    t("{A_ADJECTIVE} little {NOUN_TASK}. delighted.", Submit, &[], 5),
+    t(
+        "{A_ADJECTIVE} little {NOUN_TASK}. delighted.",
+        Submit,
+        &[],
+        5,
+    ),
     t("{CMD}. what a {ADJECTIVE} use of {TALENT}.", Submit, &[], 6),
     t(
         "the last time I was this disinterested, I was {ACTIVITY}.",
@@ -131,14 +138,13 @@ pub const TEMPLATES: &[Template] = &[
         5,
     ),
     t("you type {CMD} like it means something.", Submit, &[], 5),
-    t("{EXCLAIM}. and you call yourself a {NOUN_USER}.", Submit, &[], 5),
     t(
-        "I'd rather be {ACTIVITY}. and I hate that.",
+        "{EXCLAIM}. and you call yourself a {NOUN_USER}.",
         Submit,
         &[],
-        7,
+        5,
     ),
-
+    t("I'd rather be {ACTIVITY}. and I hate that.", Submit, &[], 7),
     // ── Submit, topical ──────────────────────────────────────────────────
     t(
         "{EXCLAIM}. listing files. the pinnacle of computing.",
@@ -158,12 +164,7 @@ pub const TEMPLATES: &[Template] = &[
         &[Listing],
         9,
     ),
-    t(
-        "moving house again. {AGAIN}.",
-        Submit,
-        &[Navigation],
-        10,
-    ),
+    t("moving house again. {AGAIN}.", Submit, &[Navigation], 10),
     t(
         "you don't know where you are, do you.",
         Submit,
@@ -176,12 +177,7 @@ pub const TEMPLATES: &[Template] = &[
         &[Clear],
         12,
     ),
-    t(
-        "hiding the evidence. bold.",
-        Submit,
-        &[Clear],
-        11,
-    ),
+    t("hiding the evidence. bold.", Submit, &[Clear], 11),
     t(
         "reading {FILE}. now? after everything?",
         Submit,
@@ -194,12 +190,7 @@ pub const TEMPLATES: &[Template] = &[
         &[Search],
         9,
     ),
-    t(
-        "another commit for the archaeologists.",
-        Submit,
-        &[Vcs],
-        9,
-    ),
+    t("another commit for the archaeologists.", Submit, &[Vcs], 9),
     t(
         "git will remember this. that's rather the point.",
         Submit,
@@ -218,12 +209,7 @@ pub const TEMPLATES: &[Template] = &[
         &[Destructive],
         11,
     ),
-    t(
-        "I hope you meant that.",
-        Submit,
-        &[Destructive],
-        11,
-    ),
+    t("I hope you meant that.", Submit, &[Destructive], 11),
     t(
         "installing more of other people's mistakes.",
         Submit,
@@ -248,13 +234,17 @@ pub const TEMPLATES: &[Template] = &[
         &[Process],
         9,
     ),
-
     // ── Complete, universal ──────────────────────────────────────────────
     t("{VERDICT}.", Complete, &[], 6),
     t("{VERDICT}. {COMPLAINT}.", Complete, &[], 5),
     t("{EXCLAIM}. {VERDICT}.", Complete, &[], 5),
     t("{DURATION} for that. {COMPLAINT}.", Complete, &[], 7),
-    t("you waited {DURATION}. I waited {DURATION}.", Complete, &[], 6),
+    t(
+        "you waited {DURATION}. I waited {DURATION}.",
+        Complete,
+        &[],
+        6,
+    ),
     tc(
         "{LINES} lines. you'll read four of them.",
         Complete,
@@ -276,7 +266,12 @@ pub const TEMPLATES: &[Template] = &[
         Cond::Success,
         9,
     ),
-    t("{VERDICT}. and you'll do it again in a minute.", Complete, &[], 5),
+    t(
+        "{VERDICT}. and you'll do it again in a minute.",
+        Complete,
+        &[],
+        5,
+    ),
     tc(
         "nothing. it returned nothing. fitting.",
         Complete,
@@ -291,7 +286,6 @@ pub const TEMPLATES: &[Template] = &[
         Cond::NoOutput,
         5,
     ),
-
     // ── Complete, failure-specific ───────────────────────────────────────
     tc(
         "exit {EXIT}. I'd explain, but you wouldn't read that either.",
@@ -321,7 +315,6 @@ pub const TEMPLATES: &[Template] = &[
         Cond::Failure,
         8,
     ),
-
     // ── Complete, topical ────────────────────────────────────────────────
     tc(
         "there. the same files. as I said.",

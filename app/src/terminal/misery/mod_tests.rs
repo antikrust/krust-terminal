@@ -227,7 +227,10 @@ fn adaptive_rate_mocks_trivia_more_than_work() {
         }
         let mut engine = MiseryEngine::with_seed(seed);
         for _ in 0..20 {
-            if engine.generate(&ctx("cargo build"), Phase::Complete).is_some() {
+            if engine
+                .generate(&ctx("cargo build"), Phase::Complete)
+                .is_some()
+            {
                 work_hits += 1;
             }
         }
