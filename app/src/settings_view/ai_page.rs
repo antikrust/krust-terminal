@@ -93,7 +93,7 @@ use crate::settings::{
     AwsBedrockCredentialsEnabled, CanUseWarpCreditsForFallback, CodeSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
-    LongRunningCommandSubmissionMode, MemoryEnabled, NLDInTerminalEnabled,
+    LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
     NaturalLanguageAutosuggestionsEnabled, OrchestrationMessageDisplayMode, PromptSubmissionMode,
     RuleSuggestionsEnabled, SharedBlockTitleGenerationEnabled, ShouldRenderCLIAgentToolbar,
     ShouldRenderUseAgentToolbarForUserCommands, ShouldShowOzUpdatesInZeroState, ShowAgentTips,
@@ -517,6 +517,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 builder(SettingsAction::AI(AISettingsPageAction::ToggleSwearMode)),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::SWEAR_MODE_FLAG,
+            )
+            .with_group(bindings::BindingGroup::WarpAi),
+            ToggleSettingActionPair::new(
+                "misery mode",
+                builder(SettingsAction::AI(AISettingsPageAction::ToggleMiseryMode)),
+                &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
+                flags::MISERY_MODE_FLAG,
             )
             .with_group(bindings::BindingGroup::WarpAi),
             ToggleSettingActionPair::new(
@@ -3634,6 +3641,7 @@ pub enum AISettingsPageAction {
     ToggleFileBasedMcp,
     ToggleIncludeAgentCommandsInHistory,
     ToggleSwearMode,
+    ToggleMiseryMode,
     ToggleAgentAttribution,
 
     // Custom model routers
@@ -4400,6 +4408,12 @@ impl TypedActionView for AISettingsPageView {
             AISettingsPageAction::ToggleSwearMode => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.swear_mode.toggle_and_save_value(ctx));
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleMiseryMode => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.misery_mode.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
             }
@@ -6442,13 +6456,14 @@ struct AIInputWidget {
     show_agent_tips_toggle: SwitchStateHandle,
     include_agent_commands_in_history_toggle: SwitchStateHandle,
     swear_mode_toggle: SwitchStateHandle,
+    misery_mode_toggle: SwitchStateHandle,
 }
 
 impl SettingsWidget for AIInputWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "oz agent ai input natural language detection autodetection prompt terminal command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc swear swear mode sweary profanity"
+        "oz agent ai input natural language detection autodetection prompt terminal command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc swear swear mode sweary profanity misery misery mode insults contempt"
     }
 
     fn render(
@@ -6524,6 +6539,19 @@ impl SettingsWidget for AIInputWidget {
             *ai_settings.swear_mode,
             is_any_ai_enabled,
             self.swear_mode_toggle.clone(),
+            &view.local_only_icon_tooltip_states,
+            app,
+        ));
+
+        // Misery mode is an escalation of swear mode, so it greys out entirely
+        // until swear mode is on rather than sitting there as a live toggle
+        // that silently does nothing.
+        widget_children.push(render_ai_setting_toggle::<MiseryMode>(
+            "Misery mode",
+            AISettingsPageAction::ToggleMiseryMode,
+            *ai_settings.misery_mode,
+            is_any_ai_enabled && *ai_settings.swear_mode,
+            self.misery_mode_toggle.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         ));

@@ -1745,6 +1745,20 @@ define_settings_group!(AISettings, settings: [
         description: "Controls whether agent status text uses sweary variants.",
     },
 
+    // Fork: misery mode — an escalation of swear mode in which the terminal
+    // annotates your commands with contempt. Implemented by
+    // `crate::terminal::misery`. Has no effect unless swear mode is also on.
+    misery_mode: MiseryMode {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.misery_mode",
+        description: "Controls whether the terminal insults you about the commands you run.",
+    },
+
     // auto-handoff sleep modal has been shown to the user.
     //
     // We model it as a setting so it's only shown once to a given user regardless of the number of
@@ -1780,6 +1794,14 @@ impl AISettings {
     /// one switch.
     pub fn is_swear_mode_enabled(&self) -> bool {
         *self.swear_mode.value()
+    }
+
+    /// Whether misery mode is on. Deliberately gated behind swear mode as
+    /// well: misery is an escalation of it, not an independent axis, and
+    /// enabling the harsher surface without the milder one would be a
+    /// surprising thing for a settings toggle to do.
+    pub fn is_misery_mode_enabled(&self) -> bool {
+        self.is_swear_mode_enabled() && *self.misery_mode.value()
     }
 
     pub fn register_and_subscribe_to_events(app: &mut AppContext) {
