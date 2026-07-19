@@ -23495,6 +23495,12 @@ impl Workspace {
     /// Computes the list of available left panel views based on current AI settings and feature flags.
     fn compute_left_panel_views(ctx: &AppContext) -> Vec<ToolPanelView> {
         let mut views = vec![];
+        // Tabs leads the toolbelt: it's the view you reach for most, and the
+        // first entry is also what the panel falls back to when the active
+        // view disappears.
+        if FeatureFlag::VerticalTabs.is_enabled() {
+            views.push(ToolPanelView::Tabs);
+        }
         if cfg!(feature = "local_fs") && *CodeSettings::as_ref(ctx).show_project_explorer.value() {
             views.push(ToolPanelView::ProjectExplorer);
         }
@@ -23513,9 +23519,6 @@ impl Workspace {
             });
         }
         views.push(ToolPanelView::WarpDrive);
-        if FeatureFlag::VerticalTabs.is_enabled() {
-            views.push(ToolPanelView::Tabs);
-        }
         views
     }
 
