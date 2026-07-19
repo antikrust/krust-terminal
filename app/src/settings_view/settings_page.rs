@@ -29,7 +29,6 @@ use warpui::{Action, AppContext, SingletonEntity, ViewContext, ViewHandle};
 use super::about_page::AboutPageView;
 use super::ai_page::{AISettingsPageAction, AISettingsPageView};
 use super::appearance_page::AppearanceSettingsPageView;
-use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use super::code_page::CodeSettingsPageView;
 use super::environments_page::EnvironmentsPageView;
 use super::features_page::FeaturesPageView;
@@ -112,7 +111,6 @@ pub enum SettingsPageViewHandle {
     Scripting(ViewHandle<ScriptingSettingsPageView>),
     AI(ViewHandle<AISettingsPageView>),
     CloudEnvironments(ViewHandle<EnvironmentsPageView>),
-    BillingAndUsage(ViewHandle<BillingAndUsageDispatchView>),
     MCPServers(ViewHandle<MCPServersSettingsPageView>),
 }
 
@@ -134,7 +132,6 @@ impl SettingsPageViewHandle {
             Scripting(view_handle) => ChildView::new(view_handle).finish(),
             AI(view_handle) => ChildView::new(view_handle).finish(),
             CloudEnvironments(view_handle) => ChildView::new(view_handle).finish(),
-            BillingAndUsage(view_handle) => ChildView::new(view_handle).finish(),
             MCPServers(view_handle) => ChildView::new(view_handle).finish(),
         }
     }

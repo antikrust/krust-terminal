@@ -5,7 +5,6 @@ use std::str::FromStr;
 use about_page::AboutPageView;
 use ai_page::{AISettingsPageAction, AISettingsPageEvent, AISettingsPageView, AISubpage};
 use appearance_page::{AppearancePageAction, AppearanceSettingsPageView, AppearanceSubpage};
-use billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use billing_and_usage_page::BillingAndUsagePageEvent;
 use code_page::{CodeSettingsPageAction, CodeSettingsPageEvent, CodeSubpage};
 use environments_page::EnvironmentsPageView;
@@ -595,6 +594,7 @@ pub mod flags {
     pub const GIT_OPERATIONS_AUTOGEN_FLAG: &str = "Git_Operations_Autogen";
     pub const INCLUDE_AGENT_COMMANDS_IN_HISTORY_FLAG: &str = "Include_Agent_Commands_In_History";
     pub const SWEAR_MODE_FLAG: &str = "Swear_Mode";
+    pub const MISERY_MODE_FLAG: &str = "Misery_Mode";
     pub const AI_RULES_FLAG: &str = "AI_Rules";
     pub const SUGGESTED_RULES_FLAG: &str = "Suggested_Rules";
     pub const WARP_DRIVE_CONTEXT_FLAG: &str = "Warp_Drive_Context";
@@ -1120,7 +1120,6 @@ macro_rules! update_page {
             SettingsPageViewHandle::CloudEnvironments(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::About(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Code(handle) => $ctx.update_view(handle, $update),
-            SettingsPageViewHandle::BillingAndUsage(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::MCPServers(handle) => $ctx.update_view(handle, $update),
         }
     };
@@ -1217,13 +1216,6 @@ impl SettingsView {
             me.handle_environments_page_event(event, ctx);
         });
 
-        // Billing & Usage page (internally, this routes to the v1 or v2 version. Depending on FFs and current plan).
-        let billing_and_usage_handle = ctx.add_view(BillingAndUsageDispatchView::new);
-        ctx.subscribe_to_view(&billing_and_usage_handle, |me, _, event, ctx| {
-            me.handle_billing_and_usage_page_event(event, ctx);
-        });
-        let billing_and_usage_page = SettingsPage::new(billing_and_usage_handle);
-
         // Keybindings page
         let keybindings_handle = ctx.add_typed_action_view(KeybindingsView::new);
 
@@ -1309,7 +1301,6 @@ impl SettingsView {
         let mut settings_pages = vec![
             SettingsPage::new(main_page_handle),
             SettingsPage::new(ai_page_handle),
-            billing_and_usage_page,
             SettingsPage::new(code_page_handle),
             SettingsPage::new(teams_page_handle),
             SettingsPage::new(appearance_page_handle),
@@ -1339,7 +1330,6 @@ impl SettingsView {
                 "Agents",
                 SettingsSection::ai_subpages().to_vec(),
             )),
-            SettingsNavItem::Page(SettingsSection::BillingAndUsage),
             SettingsNavItem::Umbrella(SettingsUmbrella::new(
                 "Code",
                 vec![
@@ -1790,6 +1780,9 @@ impl SettingsView {
             MainSettingsPageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
+            MainSettingsPageEvent::Billing(event) => {
+                self.handle_billing_and_usage_page_event(event, ctx)
+            }
             _ => (),
         }
     }
@@ -2027,9 +2020,14 @@ impl SettingsView {
     ) {
         // Map internal backing-page sections to their default subpage.
         // External callers should use subpage variants directly.
+        // Billing & usage is now a section of the Account page, not a page of
+        // its own. Callers still ask for it by name, so redirect them to the
+        // Account page and scroll down to the billing section.
+        let scroll_to_billing = section == SettingsSection::BillingAndUsage;
         let section = match section {
             SettingsSection::AI => SettingsSection::WarpAgent,
             SettingsSection::Code => SettingsSection::CodeIndexing,
+            SettingsSection::BillingAndUsage => SettingsSection::Account,
             other => other,
         };
 
@@ -2112,6 +2110,19 @@ impl SettingsView {
                 ctx
             );
         }
+
+        if scroll_to_billing {
+            if let Some(page) = self.current_settings_page() {
+                update_page!(
+                    &page.view_handle,
+                    |view, _| {
+                        view.scroll_to_widget(main_page::BILLING_AND_USAGE_WIDGET_ID);
+                    },
+                    ctx
+                );
+            }
+        }
+
         ctx.notify();
     }
 
@@ -2137,7 +2148,6 @@ impl SettingsView {
             SettingsPageViewHandle::Keybindings(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Features(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),
-            SettingsPageViewHandle::BillingAndUsage(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::OzCloudAPIKeys(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Privacy(v) => v.as_ref(app).should_render(app),
@@ -2354,8 +2364,8 @@ impl SettingsView {
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
         match page_handle {
-            SettingsPageViewHandle::BillingAndUsage(view) => {
-                view.read(app, |view, _| view.get_modal_content(app))
+            SettingsPageViewHandle::Main(view) => {
+                view.read(app, |view, _| view.billing_modal_content(app))
             }
             SettingsPageViewHandle::Privacy(view) => {
                 view.read(app, |view, _| view.get_modal_content())

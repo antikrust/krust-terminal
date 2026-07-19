@@ -13,9 +13,9 @@ use warp_errors::{report_error, report_if_error};
 use warp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
 use warpui::assets::asset_cache::AssetSource;
 use warpui::elements::{
-    Align, Border, CacheOption, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
-    Element, Empty, Flex, Image, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
-    Radius, Shrinkable, Text,
+    Align, Border, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius,
+    CrossAxisAlignment, Element, Empty, Flex, Image, MainAxisAlignment, MainAxisSize,
+    MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
 use warpui::fonts::Weight;
 use warpui::keymap::ContextPredicate;
@@ -28,10 +28,12 @@ use warpui::{
     ViewContext, ViewHandle,
 };
 
+use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
+use super::billing_and_usage_page::BillingAndUsagePageEvent;
 use super::settings_page::{
-    render_body_item, render_customer_type_badge, AdditionalInfo, LocalOnlyIconState, MatchData,
-    PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, ToggleState,
-    HEADER_PADDING,
+    render_body_item, render_customer_type_badge, render_sub_header, AdditionalInfo,
+    LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle,
+    SettingsWidget, ToggleState, HEADER_PADDING,
 };
 use super::{flags, SettingsAction, SettingsSection, ToggleSettingActionPair};
 use crate::appearance::Appearance;
@@ -150,17 +152,22 @@ impl From<&MainPageAction> for LoginGatedFeature {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum MainSettingsPageEvent {
     CheckForUpdate,
     #[allow(dead_code)]
     OpenWarpDrive,
     SignupAnonymousUser,
+    /// Re-emitted from the embedded billing & usage section.
+    Billing(BillingAndUsagePageEvent),
 }
 
 pub struct MainSettingsPageView {
     page: PageType<Self>,
     auth_state: Arc<AuthState>,
+    /// Billing & usage used to be its own settings page; it now renders as the
+    /// last section of this page.
+    billing_and_usage: ViewHandle<BillingAndUsageDispatchView>,
 }
 
 impl Entity for MainSettingsPageView {
@@ -295,9 +302,25 @@ impl MainSettingsPageView {
 
         widgets.push(Box::new(LogoutWidget::default()));
 
+        // Billing & usage is merged in as the final section of the Account page.
+        let billing_and_usage = ctx.add_view(BillingAndUsageDispatchView::new);
+        ctx.subscribe_to_view(&billing_and_usage, |_, _, event, ctx| {
+            ctx.emit(MainSettingsPageEvent::Billing(event.clone()));
+        });
+        widgets.push(Box::new(BillingAndUsageWidget::default()));
+
         let page = PageType::new_uncategorized(widgets, Some("Account"));
 
-        MainSettingsPageView { page, auth_state }
+        MainSettingsPageView {
+            page,
+            auth_state,
+            billing_and_usage,
+        }
+    }
+
+    pub fn billing_modal_content(&self, app: &AppContext) -> Option<Box<dyn Element>> {
+        self.billing_and_usage
+            .read(app, |view, _| view.get_modal_content(app))
     }
 
     fn handle_autoupdate_state_change(
@@ -1134,6 +1157,71 @@ impl SettingsWidget for LogoutWidget {
     }
 }
 
+/// Renders the billing & usage section at the bottom of the Account page.
+/// The heavy lifting lives in [`BillingAndUsageDispatchView`], which picks
+/// between the v1 and v2 billing pages.
+#[derive(Default)]
+struct BillingAndUsageWidget;
+
+/// Stable id so callers that used to navigate to the standalone
+/// "Billing and usage" page can scroll straight to this section instead.
+pub const BILLING_AND_USAGE_WIDGET_ID: &str = "billing_and_usage";
+
+impl SettingsWidget for BillingAndUsageWidget {
+    type View = MainSettingsPageView;
+
+    fn widget_id(&self) -> &'static str {
+        BILLING_AND_USAGE_WIDGET_ID
+    }
+
+    fn search_terms(&self) -> &str {
+        "plan billing a.i. ai usage limit credits balance overview"
+    }
+
+    fn should_render(&self, app: &AppContext) -> bool {
+        self.dispatch_should_render(app)
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        Container::new(
+            Flex::column()
+                .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .with_child(
+                    Container::new(Empty::new().finish())
+                        .with_border(
+                            Border::bottom(1.).with_border_fill(appearance.theme().outline()),
+                        )
+                        .finish(),
+                )
+                .with_child(
+                    Container::new(render_sub_header(appearance, "Billing and usage", None))
+                        .with_margin_top(VERTICAL_MARGIN)
+                        .finish(),
+                )
+                .with_child(ChildView::new(&view.billing_and_usage).finish())
+                .finish(),
+        )
+        .with_margin_top(VERTICAL_MARGIN)
+        .finish()
+    }
+}
+
+impl BillingAndUsageWidget {
+    /// `SettingsWidget::should_render` only gets an `AppContext`, but the
+    /// anonymous-user check lives on the dispatch view, so read it through the
+    /// singleton auth state the same way the dispatch view does.
+    fn dispatch_should_render(&self, app: &AppContext) -> bool {
+        !AuthStateProvider::as_ref(app)
+            .get()
+            .is_anonymous_or_logged_out()
+    }
+}
+
 impl SettingsPageMeta for MainSettingsPageView {
     fn section() -> SettingsSection {
         SettingsSection::Account
@@ -1143,12 +1231,15 @@ impl SettingsPageMeta for MainSettingsPageView {
         true
     }
 
-    fn on_page_selected(&mut self, _: bool, ctx: &mut ViewContext<Self>) {
+    fn on_page_selected(&mut self, allow_steal_focus: bool, ctx: &mut ViewContext<Self>) {
         // We want to immediately see if the user is part of a workspace rather than wait for the next poll.
         std::mem::drop(
             TeamUpdateManager::handle(ctx)
                 .update(ctx, |manager, ctx| manager.refresh_workspace_metadata(ctx)),
         );
+        self.billing_and_usage.update(ctx, |view, ctx| {
+            view.on_page_selected(allow_steal_focus, ctx);
+        });
     }
 
     fn update_filter(&mut self, query: &str, ctx: &mut ViewContext<Self>) -> MatchData {
