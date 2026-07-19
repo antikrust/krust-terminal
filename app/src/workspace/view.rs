@@ -23080,12 +23080,6 @@ impl Workspace {
                 .insert(flags::NATURAL_LANGUAGE_AUTOSUGGESTIONS_FLAG);
         }
 
-        if ai_settings.is_shared_block_title_generation_enabled(app) {
-            context
-                .set
-                .insert(flags::SHARED_BLOCK_TITLE_GENERATION_FLAG);
-        }
-
         if *ai_settings.should_show_oz_updates_in_zero_state.value() {
             context
                 .set
