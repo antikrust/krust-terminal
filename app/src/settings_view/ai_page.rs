@@ -3565,6 +3565,9 @@ pub enum AISettingsPageEvent {
     SignupAnonymousUser,
     ShowModal,
     HideModal,
+    /// The "subscribe to turn this off" upsell was clicked. Placeholder until
+    /// there is an account system to send them to.
+    SubscribeToDisableFlavour,
 }
 
 impl Entity for AISettingsPageView {
@@ -3642,6 +3645,7 @@ pub enum AISettingsPageAction {
     ToggleIncludeAgentCommandsInHistory,
     ToggleSwearMode,
     ToggleMiseryMode,
+    SubscribeToDisableFlavour,
     ToggleAgentAttribution,
 
     // Custom model routers
@@ -4416,6 +4420,9 @@ impl TypedActionView for AISettingsPageView {
                     report_if_error!(settings.misery_mode.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
+            }
+            AISettingsPageAction::SubscribeToDisableFlavour => {
+                ctx.emit(AISettingsPageEvent::SubscribeToDisableFlavour);
             }
             #[cfg(feature = "local_fs")]
             AISettingsPageAction::SetConversationLayout(layout) => {
@@ -6457,6 +6464,7 @@ struct AIInputWidget {
     include_agent_commands_in_history_toggle: SwitchStateHandle,
     swear_mode_toggle: SwitchStateHandle,
     misery_mode_toggle: SwitchStateHandle,
+    subscribe_link: MouseStateHandle,
 }
 
 impl SettingsWidget for AIInputWidget {
@@ -6533,28 +6541,55 @@ impl SettingsWidget for AIInputWidget {
             app,
         ));
 
+        // Turning the flavour settings off is the one paid feature. While
+        // nobody is entitled, both render as on and locked, with an upsell
+        // beneath them — showing a live toggle that silently refuses to move
+        // would read as a bug rather than a joke.
+        let can_disable = AISettings::can_disable_flavour_settings();
+
         widget_children.push(render_ai_setting_toggle::<SwearMode>(
             "Swear mode",
             AISettingsPageAction::ToggleSwearMode,
-            *ai_settings.swear_mode,
-            is_any_ai_enabled,
+            ai_settings.is_swear_mode_enabled(),
+            is_any_ai_enabled && can_disable,
             self.swear_mode_toggle.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         ));
 
-        // Misery mode is an escalation of swear mode, so it greys out entirely
-        // until swear mode is on rather than sitting there as a live toggle
-        // that silently does nothing.
+        // Misery mode is an escalation of swear mode, so once subscriptions
+        // exist it greys out until swear mode is on rather than sitting there
+        // as a live toggle that silently does nothing.
         widget_children.push(render_ai_setting_toggle::<MiseryMode>(
             "Misery mode",
             AISettingsPageAction::ToggleMiseryMode,
-            *ai_settings.misery_mode,
-            is_any_ai_enabled && *ai_settings.swear_mode,
+            ai_settings.is_misery_mode_enabled(),
+            is_any_ai_enabled && can_disable && ai_settings.is_swear_mode_enabled(),
             self.misery_mode_toggle.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         ));
+
+        if !can_disable {
+            widget_children.push(
+                appearance
+                    .ui_builder()
+                    .link(
+                        "Subscribe to turn these off".into(),
+                        None,
+                        Some(Box::new(move |ctx| {
+                            ctx.dispatch_typed_action(
+                                AISettingsPageAction::SubscribeToDisableFlavour,
+                            );
+                        })),
+                        self.subscribe_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .with_margin_top(4.)
+                    .finish(),
+            );
+        }
 
         if FeatureFlag::QueueSlashCommand.is_enabled() {
             widget_children.push(render_dropdown_item(

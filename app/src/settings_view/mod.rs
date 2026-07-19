@@ -1960,6 +1960,15 @@ impl SettingsView {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
             }
+            AISettingsPageEvent::SubscribeToDisableFlavour => {
+                // There is nothing to subscribe to yet. Until the account
+                // system lands this stays a toast rather than a dead click —
+                // see `AISettings::can_disable_flavour_settings`.
+                ctx.emit(SettingsViewEvent::ShowToast {
+                    message: "No. You'll take it and you'll like it.".to_string(),
+                    flavor: ToastFlavor::Default,
+                });
+            }
         }
     }
 

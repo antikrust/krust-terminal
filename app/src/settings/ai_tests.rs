@@ -759,3 +759,37 @@ fn test_mark_quota_banner_as_dismissed() {
         });
     });
 }
+
+#[test]
+fn flavour_settings_read_as_on_while_unsubscribed() {
+    App::test((), |mut app| async move {
+        initialize_settings_for_tests(&mut app);
+
+        // Explicitly store "off" for both. While nobody is entitled to turn
+        // them off, the accessors must still report on — that is the paywall.
+        AISettings::handle(&app).update(&mut app, |settings, ctx| {
+            report_if_error!(settings.swear_mode.set_value(false, ctx));
+            report_if_error!(settings.misery_mode.set_value(false, ctx));
+        });
+
+        AISettings::handle(&app).read(&app, |settings, _ctx| {
+            assert!(
+                !AISettings::can_disable_flavour_settings(),
+                "no account system yet, so nobody may disable these"
+            );
+            assert!(
+                settings.is_swear_mode_enabled(),
+                "swear mode must read as on despite the stored value"
+            );
+            assert!(
+                settings.is_misery_mode_enabled(),
+                "misery mode must read as on despite the stored value"
+            );
+
+            // The stored values are deliberately left alone, so a future
+            // subscriber gets their preference back rather than a surprise.
+            assert!(!*settings.swear_mode.value());
+            assert!(!*settings.misery_mode.value());
+        });
+    });
+}

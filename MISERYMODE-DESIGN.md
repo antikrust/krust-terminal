@@ -363,22 +363,40 @@ naming someone's hidden files reads as prying rather than as a joke.
 `note_command` runs on every submit regardless of whether a line is produced —
 "not this again" on the third `ls` depends on having counted the first two.
 
-## 10. Settings and gating
+## 10. Settings, gating, and the paywall
 
-Two layers, both required:
+**Turning misery mode off is the product's one paid feature.**
 
-1. **Runtime** — `AISettings::is_misery_mode_enabled()` returns
-   `is_swear_mode_enabled() && *misery_mode`.
-2. **UI** — the "Misery mode" toggle in the Agents settings page is rendered
-   with `is_setting_toggleable = is_any_ai_enabled && *ai_settings.swear_mode`,
-   so it greys out entirely while swear mode is off.
+`AISettings::can_disable_flavour_settings()` is the entitlement check. It
+returns `false` — there is no account system to ask yet — and while it does:
 
-Misery is an escalation of swear mode, not an independent axis. A live toggle
-that silently does nothing would be a worse experience than a greyed-out one
-that explains itself by association.
+- `is_swear_mode_enabled()` and `is_misery_mode_enabled()` both return `true`
+  regardless of stored value;
+- both toggles render **on and locked** (`is_setting_toggleable = false`);
+- a "Subscribe to turn these off" link appears beneath them, in the same
+  `ui_builder().link(...)` style as the Account page's upgrade links.
 
-Also wired: a `ToggleMiseryMode` action, the `Misery_Mode` binding flag, and
-`misery misery mode insults contempt` in the settings-search terms.
+The stored settings are deliberately **not** forced to `true`. When
+subscriptions exist, a subscriber gets their previous preference back instead
+of a surprise. A test asserts exactly this: stored `false`, reads as on, stored
+value untouched.
+
+The upsell link currently emits `SubscribeToDisableFlavour`, which shows a
+toast rather than leaving a dead click. That handler is the seam for checkout —
+one event, one place to change.
+
+Once `can_disable_flavour_settings()` returns true, the existing dependency
+reappears: misery greys out until swear mode is on, because it is an
+escalation of swear mode rather than an independent axis.
+
+> **Why this is a comfortable place for a paywall.** The entitlement check runs
+> on a cosmetic copy setting. No code path that does real work — running a
+> command, driving an agent, saving a file — ever has to ask about billing. See
+> ACCOUNT-DESIGN.md.
+
+Also wired: `ToggleMiseryMode` and `SubscribeToDisableFlavour` actions, the
+`Misery_Mode` binding flag, and `misery misery mode insults contempt` in the
+settings-search terms.
 
 ---
 
