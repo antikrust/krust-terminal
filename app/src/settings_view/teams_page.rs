@@ -832,7 +832,13 @@ impl TeamsPageView {
             }
         });
 
-        let page = PageType::new_monolith(TeamsWidget::default(), None, true);
+        // Not dual-scrollable: this view is no longer a page of its own, it is
+        // embedded in the Account page (`TeamsSectionWidget`), which supplies
+        // the scrolling. A dual-scrollable `PageType` wraps itself in
+        // `Flex::column` + `Expanded`, and a flexible child cannot resolve
+        // against the infinite height a surrounding scrollable measures with —
+        // which panicked the whole Account page on open.
+        let page = PageType::new_monolith(TeamsWidget::default(), None, false);
         TeamsPageView {
             page,
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
