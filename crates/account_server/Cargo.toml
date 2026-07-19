@@ -1,0 +1,32 @@
+[package]
+name = "account_server"
+edition = "2024"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "account-server"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+# Password hashing at rest. Deliberately the only non-workspace dependency;
+# never roll your own KDF.
+argon2 = "0.5"
+axum.workspace = true
+chrono.workspace = true
+diesel = { workspace = true, features = ["sqlite", "chrono"] }
+diesel_migrations = { version = "2.2.0", features = ["sqlite"] }
+libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
+log.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "signal"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+tower = { workspace = true, features = ["util"] }
+http-body-util = "0.1"
