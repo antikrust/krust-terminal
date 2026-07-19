@@ -1745,6 +1745,20 @@ define_settings_group!(AISettings, settings: [
         description: "Controls whether agent status text uses sweary variants.",
     },
 
+    // Fork: whether the local Ollama integration is active. Independent of
+    // whether the binary is installed — this is the user's choice, that is a
+    // fact about the machine.
+    ollama_enabled: OllamaEnabled {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_enabled",
+        description: "Controls whether local models served by Ollama are offered.",
+    },
+
     // Fork: misery mode — an escalation of swear mode in which the terminal
     // annotates your commands with contempt. Implemented by
     // `crate::terminal::misery`. Has no effect unless swear mode is also on.
