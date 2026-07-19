@@ -1,6 +1,5 @@
 pub mod ai;
 pub mod auth;
-pub mod block;
 #[cfg(not(target_family = "wasm"))]
 pub(crate) mod download;
 pub mod harness_support;
@@ -21,7 +20,6 @@ use ::http::header::CONTENT_LENGTH;
 use ai::AIClient;
 use anyhow::{anyhow, Context, Result};
 use auth::AuthClient;
-use block::BlockClient;
 use channel_versions::ChannelVersions;
 use chrono::{DateTime, FixedOffset};
 use instant::Instant;
@@ -1302,17 +1300,6 @@ impl ServerApiProvider {
 
     pub fn get_auth_client(&self) -> Arc<dyn AuthClient> {
         self.auth_client.clone()
-    }
-
-    /// Orphaned server plumbing for the removed block-sharing feature. The
-    /// warp.dev permalink / embed flow was removed from the UI, but its client,
-    /// GraphQL mutations, and block model form a vertical that also feeds
-    /// telemetry and block-height code; tearing all of it out is a larger,
-    /// riskier change than the removal warranted. Kept so that chain stays
-    /// reachable rather than cascading into dead-code churn.
-    #[allow(dead_code)]
-    pub fn get_block_client(&self) -> Arc<dyn BlockClient> {
-        self.server_api.clone()
     }
 
     pub fn get_workspace_client(&self) -> Arc<dyn WorkspaceClient> {
