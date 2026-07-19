@@ -46,6 +46,12 @@ impl StringModel for AIFact {
         }
     }
 
+    // Fork: rules export as markdown files so "Export all Library objects"
+    // backs them up alongside workflows, notebooks, and env vars.
+    fn can_export(&self) -> bool {
+        true
+    }
+
     fn update_object_queue_item(
         &self,
         revision_ts: Option<Revision>,

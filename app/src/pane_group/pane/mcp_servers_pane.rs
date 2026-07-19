@@ -14,11 +14,9 @@
 
 use std::collections::HashMap;
 
-use warp_core::ui::appearance::Appearance;
 use warpui::elements::{
-    Align, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
-    Container, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, ScrollbarWidth,
-    Stack,
+    ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement,
+    ParentOffsetBounds, Stack,
 };
 use warpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
@@ -37,7 +35,6 @@ use crate::settings_view::mcp_servers_page::MCPServersSettingsPageView;
 use crate::workspace::PaneViewLocator;
 
 const HEADER_TEXT: &str = "MCP Servers";
-const PANE_MAX_WIDTH: f32 = 900.;
 const PANE_PADDING: f32 = 16.;
 
 #[derive(Debug, Clone)]
@@ -52,7 +49,6 @@ pub struct MCPServersPaneView {
     pane_configuration: ModelHandle<PaneConfiguration>,
     focus_handle: Option<PaneFocusHandle>,
     page_view: ViewHandle<MCPServersSettingsPageView>,
-    clipped_scroll_state: ClippedScrollStateHandle,
 }
 
 impl MCPServersPaneView {
@@ -68,7 +64,6 @@ impl MCPServersPaneView {
             pane_configuration,
             focus_handle: None,
             page_view,
-            clipped_scroll_state: Default::default(),
         }
     }
 
@@ -98,27 +93,15 @@ impl View for MCPServersPaneView {
     }
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
-        let appearance = Appearance::as_ref(app);
-
-        let base = ClippedScrollable::vertical(
-            self.clipped_scroll_state.clone(),
-            Align::new(
-                Container::new(
-                    ConstrainedBox::new(ChildView::new(&self.page_view).finish())
-                        .with_max_width(PANE_MAX_WIDTH)
-                        .finish(),
-                )
-                .with_uniform_padding(PANE_PADDING)
-                .finish(),
-            )
-            .top_center()
-            .finish(),
-            ScrollbarWidth::Auto,
-            appearance.theme().nonactive_ui_detail().into(),
-            appearance.theme().active_ui_detail().into(),
-            warpui::elements::Fill::None,
-        )
-        .finish();
+        // The page was built with its own dual scrollables
+        // (`PageType::new_monolith(..., true)`), so it must get the pane's
+        // finite bounds directly. Wrapping it in another scrollable hands
+        // its internal flex an infinite height constraint, which panics
+        // the layout ("flex contains flexible children but has an infinite
+        // constraint along the flex axis").
+        let base = Container::new(ChildView::new(&self.page_view).finish())
+            .with_uniform_padding(PANE_PADDING)
+            .finish();
 
         // The settings container normally overlays the page's modals
         // (installation confirmation, deletion prompts); do the same here.

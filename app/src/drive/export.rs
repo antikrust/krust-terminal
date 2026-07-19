@@ -17,6 +17,8 @@ use warpui::r#async::SpawnedFutureHandle;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 use super::CloudObjectTypeAndId;
+#[cfg(feature = "local_fs")]
+use crate::ai::facts::{AIFact, CloudAIFact};
 use crate::cloud_object::model::persistence::CloudModel;
 #[cfg(feature = "local_fs")]
 use crate::cloud_object::CloudObjectLocation;
@@ -406,6 +408,19 @@ impl ExportManager {
                         "env",
                         exported_variables,
                     )
+                } else if let Some(ai_fact) = cloud_model
+                    .get_by_uid(&id.uid())
+                    .and_then(|object| -> Option<&CloudAIFact> { object.into() })
+                {
+                    // Fork: rules export as markdown so "Export all" backs
+                    // up the user's global rules with everything else.
+                    let AIFact::Memory(memory) = &ai_fact.model().string_model;
+                    let name = memory
+                        .name
+                        .clone()
+                        .filter(|name| !name.trim().is_empty())
+                        .unwrap_or_else(|| rule_export_name(&memory.content));
+                    (name, "md", memory.content.clone().into_bytes())
                 } else {
                     anyhow::bail!("exporting {object_type:?} not yet supported")
                 }
@@ -633,6 +648,21 @@ fn make_forbidden_filenames_matcher() -> AhoCorasick {
         .match_kind(MatchKind::LeftmostFirst)
         .build(patterns)
         .expect("Path patterns should compile")
+}
+
+/// Filename stem for a rule without an explicit name: the first line of its
+/// content, capped to a filename-friendly length. `safe_filename` handles
+/// forbidden characters afterwards.
+#[cfg(feature = "local_fs")]
+fn rule_export_name(content: &str) -> String {
+    const MAX_LEN: usize = 60;
+    let first_line = content.lines().next().unwrap_or_default().trim();
+    let truncated: String = first_line.chars().take(MAX_LEN).collect();
+    if truncated.is_empty() {
+        "Rule".to_string()
+    } else {
+        truncated
+    }
 }
 
 /// Directory name for an exported Drive folder: its display name made
