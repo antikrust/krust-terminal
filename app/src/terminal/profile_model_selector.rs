@@ -59,6 +59,7 @@ use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::context_chips::display_chip::{udi_font_size, udi_icon_size};
 use crate::context_chips::spacing;
 use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields};
+use crate::settings::ai::{AISettings, AISettingsChangedEvent};
 use crate::settings_view::SettingsSection;
 use crate::terminal::input::{MenuPositioning, MenuPositioningProvider};
 use crate::terminal::view::ambient_agent::{AmbientAgentViewModel, AmbientAgentViewModelEvent};
@@ -540,6 +541,15 @@ impl ProfileModelSelector {
             },
         );
 
+        // "Use local models" gates whether Ollama models appear in this menu,
+        // so rebuild it when that switch flips — otherwise turning local
+        // models off would leave the Ollama group sitting in the picker.
+        ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, event, ctx| {
+            if let AISettingsChangedEvent::OllamaEnabled { .. } = event {
+                me.refresh_state(ctx);
+            }
+        });
+
         let manage_api_key_button = ctx.add_typed_action_view(|_ctx| {
             ActionButton::new("Manage", SecondaryTheme)
                 .with_tooltip("Manage API keys")
@@ -983,6 +993,9 @@ impl ProfileModelSelector {
         // separate so users get three clear choices: Claude, Codex, Ollama.
         let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>, bool)> = {
             let availability = HarnessAvailabilityModel::as_ref(ctx);
+            // Local models are opt-in: when "Use local models" is off, Ollama
+            // models stay out of the picker entirely.
+            let ollama_enabled = *AISettings::as_ref(ctx).ollama_enabled.value();
             if group_harnesses {
                 let mut groups = Vec::new();
                 for available in availability
@@ -1002,7 +1015,7 @@ impl ProfileModelSelector {
                             codex_models,
                             false,
                         ));
-                        if !ollama_models.is_empty() {
+                        if ollama_enabled && !ollama_models.is_empty() {
                             groups.push((
                                 available.harness,
                                 "Ollama".to_string(),
@@ -1030,8 +1043,15 @@ impl ProfileModelSelector {
                     .and_then(ollama_model_name)
                     .is_some();
                 if selected_harness == Harness::Codex {
-                    models
-                        .retain(|model| ollama_model_name(&model.id).is_some() == ollama_selected);
+                    models.retain(|model| {
+                        let is_ollama = ollama_model_name(&model.id).is_some();
+                        if ollama_enabled {
+                            is_ollama == ollama_selected
+                        } else {
+                            // Local models off: never surface Ollama, only Codex.
+                            !is_ollama
+                        }
+                    });
                 }
                 vec![(
                     selected_harness,
