@@ -182,12 +182,7 @@ fn decode_entities(input: &str) -> String {
 /// Small on purpose: enough to get someone running a local model today,
 /// without pretending to mirror a library that changes weekly.
 pub fn bundled() -> Vec<CatalogEntry> {
-    fn entry(
-        name: &str,
-        description: &str,
-        capabilities: &[&str],
-        sizes: &[f64],
-    ) -> CatalogEntry {
+    fn entry(name: &str, description: &str, capabilities: &[&str], sizes: &[f64]) -> CatalogEntry {
         CatalogEntry {
             name: name.to_string(),
             description: description.to_string(),
