@@ -1319,15 +1319,40 @@ impl BlockList {
         index: BlockIndex,
         item: BlockHeightItem,
     ) -> TotalIndex {
+        self.insert_non_block_item_relative_to_block(index, item, SeekBias::Right)
+    }
+
+    /// Insert a non-block item at the *head* of the gap preceding `index`,
+    /// ahead of any non-block items already sitting in that gap.
+    ///
+    /// `insert_non_block_item_before_block` appends to the end of the gap, so
+    /// ordering there follows insertion time. That is wrong for anything whose
+    /// event is delivered late: a block's own trailing content must stay
+    /// attached to that block even if the next block's leading content was
+    /// inserted first.
+    fn insert_non_block_item_at_gap_head(
+        &mut self,
+        index: BlockIndex,
+        item: BlockHeightItem,
+    ) -> TotalIndex {
+        self.insert_non_block_item_relative_to_block(index, item, SeekBias::Left)
+    }
+
+    fn insert_non_block_item_relative_to_block(
+        &mut self,
+        index: BlockIndex,
+        item: BlockHeightItem,
+        bias: SeekBias,
+    ) -> TotalIndex {
         self.finish_background_block();
 
         let (new_tree, inserted_index) = {
             let mut cursor = self.block_heights.cursor::<BlockIndex, ()>();
 
             // Position the cursor so that the tree includes everything except the block at index.
-            // To do so, we need to seek the cursor up to right before the index and then use a SeekBias::Right
-            // to clamp it between (index-1, index).
-            let mut prefix = cursor.slice(&index, SeekBias::Right);
+            // SeekBias::Right clamps between (index-1, index), placing the item at the end of the
+            // gap; SeekBias::Left stops before the gap's existing items, placing it at the head.
+            let mut prefix = cursor.slice(&index, bias);
 
             // The index of the inserted item will be the count before insertion.
             let insertion_index = TotalIndex(prefix.summary().total_count);
@@ -3494,6 +3519,25 @@ impl BlockList {
         if let Some(block) = self.blocks.get(block_index.0) {
             block.update_last_painted_at(Local::now());
         }
+    }
+
+    /// Insert rich content immediately after `block_index`, ahead of any rich
+    /// content already queued in the following gap. Use this for content that
+    /// belongs to `block_index` itself and whose event may arrive late.
+    pub fn insert_rich_content_after_block_index(
+        &mut self,
+        item: RichContentItem,
+        block_index: BlockIndex,
+    ) {
+        let view_id = item.view_id;
+        let inserted_index = self.insert_non_block_item_at_gap_head(
+            BlockIndex(block_index.0 + 1),
+            BlockHeightItem::RichContent(item),
+        );
+        self.removable_blocklist_item_positions
+            .insert(RemovableBlocklistItem::RichContent(view_id), inserted_index);
+        self.mark_rich_content_dirty(view_id);
+        self.maintain_pinned_to_bottom();
     }
 
     pub fn insert_rich_content_before_block_index(

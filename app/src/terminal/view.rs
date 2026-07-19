@@ -5048,6 +5048,7 @@ impl TerminalView {
     fn maybe_show_misery_line_for_started_block(
         &mut self,
         command: &str,
+        block_id: &BlockId,
         ctx: &mut ViewContext<Self>,
     ) {
         let ai_settings = AISettings::as_ref(ctx);
@@ -5056,13 +5057,7 @@ impl TerminalView {
         }
         let swear_mode = ai_settings.is_swear_mode_enabled();
 
-        let working_directory = self
-            .model
-            .lock()
-            .block_list()
-            .active_block()
-            .pwd()
-            .cloned();
+        let working_directory = self.model.lock().block_list().active_block().pwd().cloned();
 
         let Some(line) =
             self.misery
@@ -5071,17 +5066,20 @@ impl TerminalView {
             return;
         };
 
-        // `insert_below_long_running_block: false` puts the line above the
-        // block that is now running, so it reads as a reaction to the command
-        // rather than a comment on output that hasn't arrived yet.
+        // Anchor to this block's own index rather than to whatever happens to
+        // be active. Completion events are delivered with a delay, so a
+        // position relative to "the active block" races the previous command's
+        // verdict and can land above it.
+        let Some(block_index) = self.model.lock().block_list().block_index_for_id(block_id) else {
+            return;
+        };
+
         let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Submit, ctx));
         self.insert_rich_content(
             None,
             handle,
             None,
-            RichContentInsertionPosition::Append {
-                insert_below_long_running_block: false,
-            },
+            RichContentInsertionPosition::BeforeBlockIndex(block_index),
             ctx,
         );
     }
@@ -5123,19 +5121,17 @@ impl TerminalView {
             return;
         };
 
-        self.insert_misery_line(line, ctx);
-    }
-
-    /// Inserts a generated misery line into the block list.
-    fn insert_misery_line(&mut self, line: String, ctx: &mut ViewContext<Self>) {
+        // Anchor immediately after the block that just finished, rather than
+        // appending relative to the active block. Completion is delivered
+        // after a precmd delay, by which time the *next* command may already
+        // have started and inserted its own line — appending would put this
+        // verdict below it.
         let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Complete, ctx));
         self.insert_rich_content(
             None,
             handle,
             None,
-            RichContentInsertionPosition::Append {
-                insert_below_long_running_block: true,
-            },
+            RichContentInsertionPosition::AfterBlockIndex(completed.index),
             ctx,
         );
     }
@@ -12131,7 +12127,7 @@ impl TerminalView {
                 }
                 self.did_notify_long_running = false;
 
-                self.maybe_show_misery_line_for_started_block(command, ctx);
+                self.maybe_show_misery_line_for_started_block(command, block_id, ctx);
 
                 // Snapshot the prompt state as of when the command began executing.
                 // Commands may themselves affect the prompt (if running `git checkout`), for

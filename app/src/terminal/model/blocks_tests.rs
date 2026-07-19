@@ -2404,3 +2404,50 @@ fn test_device_status_uses_active_block_if_no_typeahead() {
 
     assert_eq!(writer, "\x1b[1;21R".as_bytes());
 }
+
+/// Misery mode anchors its two voices to explicit block indices: a command's
+/// verdict goes immediately after its own block, and the next command's
+/// opening line goes immediately before that command's block. When those are
+/// the same gap, the verdict must still come first — completion events are
+/// delivered after a precmd delay, so the *later* insertion is the one that
+/// must not win.
+#[test]
+fn rich_content_targeting_the_same_gap_keeps_insertion_order() {
+    let mut block_list =
+        new_bootstrapped_block_list(None, None, ChannelEventListener::new_for_test());
+
+    let first_block = insert_block(&mut block_list, "cd somewhere", "");
+    let second_block = insert_block(&mut block_list, "ll", "output");
+
+    // Insert the *next* command's opening line first, mimicking the real
+    // event order where AfterBlockStarted beats the delayed completion.
+    let opening_line = EntityId::new();
+    block_list.insert_rich_content_before_block_index(
+        RichContentItem::new_for_test(None, opening_line, None),
+        second_block,
+    );
+
+    // Then the previous command's verdict, anchored after its own block.
+    let verdict = EntityId::new();
+    block_list.insert_rich_content_after_block_index(
+        RichContentItem::new_for_test(None, verdict, None),
+        first_block,
+    );
+
+    let opening_pos = block_list
+        .removable_blocklist_item_positions
+        .get(&RemovableBlocklistItem::RichContent(opening_line))
+        .copied()
+        .expect("opening line inserted");
+    let verdict_pos = block_list
+        .removable_blocklist_item_positions
+        .get(&RemovableBlocklistItem::RichContent(verdict))
+        .copied()
+        .expect("verdict inserted");
+
+    assert!(
+        verdict_pos < opening_pos,
+        "the finished command's verdict must sit above the next command's \
+         opening line (verdict at {verdict_pos:?}, opening at {opening_pos:?})"
+    );
+}

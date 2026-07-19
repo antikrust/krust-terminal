@@ -31,6 +31,10 @@ pub enum RichContentInsertionPosition {
     },
     /// Insert before the block at the given index.
     BeforeBlockIndex(BlockIndex),
+    /// Insert immediately after the block at the given index, ahead of any
+    /// content already queued in the following gap. For content that belongs
+    /// to that block but whose event may arrive after the next block starts.
+    AfterBlockIndex(BlockIndex),
     /// Insert after the rich content item with the given view ID, falling back to appending if it
     /// is no longer present.
     AfterRichContent(EntityId),
@@ -340,6 +344,12 @@ impl TerminalView {
                     .lock()
                     .block_list_mut()
                     .insert_rich_content_before_block_index(item, block_index);
+            }
+            RichContentInsertionPosition::AfterBlockIndex(block_index) => {
+                self.model
+                    .lock()
+                    .block_list_mut()
+                    .insert_rich_content_after_block_index(item, block_index);
             }
             RichContentInsertionPosition::AfterRichContent(view_id) => {
                 let mut model = self.model.lock();
