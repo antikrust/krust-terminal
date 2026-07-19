@@ -28,14 +28,15 @@ use warpui::{
     ViewContext, ViewHandle,
 };
 
+use super::avatar_picker::AvatarPickerWidget;
 use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use super::billing_and_usage_page::BillingAndUsagePageEvent;
-use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::settings_page::{
     render_body_item, render_customer_type_badge, render_sub_header, AdditionalInfo,
     LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle,
     SettingsWidget, ToggleState, HEADER_PADDING,
 };
+use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::{flags, SettingsAction, SettingsSection, ToggleSettingActionPair};
 use crate::appearance::Appearance;
 use crate::auth::auth_manager::{AuthManager, LoginGatedFeature};
@@ -45,6 +46,7 @@ use crate::auth::{AuthStateProvider, UserUid};
 use crate::autoupdate::{self, AutoupdateStage, AutoupdateState};
 use crate::server::ids::ServerId;
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
+use crate::settings::identity::IdentitySettings;
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::update_manager::TeamUpdateManager;
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -129,6 +131,10 @@ pub enum MainPageAction {
     OpenUrl(String),
     #[cfg(not(target_family = "wasm"))]
     RefreshIapCredentials,
+    /// Avatar picker: switching art style keeps your variant number, so
+    /// moving between styles shows the same slot rather than resetting.
+    SelectAvatarStyle(String),
+    SelectAvatarSeed(String),
 }
 
 impl MainPageAction {
@@ -201,6 +207,30 @@ impl TypedActionView for MainSettingsPageView {
         }
 
         match action {
+            MainPageAction::SelectAvatarStyle(style) => {
+                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.avatar_style.set_value(style.clone(), ctx));
+                    // Picking a style before ever picking a variant would
+                    // otherwise leave you with no avatar at all; land on the
+                    // first variant so the choice is visible immediately.
+                    if settings.avatar_seed.is_empty() {
+                        if let Some(first) = crate::ui_components::avatar_set::style(style)
+                            .and_then(|s| s.variants.first())
+                        {
+                            report_if_error!(settings
+                                .avatar_seed
+                                .set_value(first.0.to_string(), ctx));
+                        }
+                    }
+                });
+                ctx.notify();
+            }
+            MainPageAction::SelectAvatarSeed(seed) => {
+                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.avatar_seed.set_value(seed.clone(), ctx));
+                });
+                ctx.notify();
+            }
             MainPageAction::Relaunch => {
                 autoupdate::initiate_relaunch_for_update(ctx);
             }
@@ -287,6 +317,9 @@ impl MainSettingsPageView {
         let mut widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
             Box::new(SignupBannerWidget),
             Box::new(AccountWidget::default()),
+            // Your avatar is local identity, not account data, so it sits
+            // with the account info and works signed out.
+            Box::new(AvatarPickerWidget::default()),
             Box::new(DividerWidget {}),
         ];
 

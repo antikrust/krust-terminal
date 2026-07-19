@@ -13,6 +13,7 @@ mod editor;
 mod emacs_bindings;
 pub mod font;
 mod gpu;
+pub mod identity;
 pub mod import;
 mod init;
 pub mod initializer;

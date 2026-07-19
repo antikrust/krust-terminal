@@ -332,6 +332,7 @@ use crate::server::telemetry::{
 };
 use crate::session_management::{SessionNavigationData, SessionSource, TabNavigationData};
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
+use crate::settings::identity::IdentitySettings;
 use crate::settings::{
     active_theme_kind, respect_system_theme, AISettings, AISettingsChangedEvent,
     AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
@@ -21298,7 +21299,11 @@ impl Workspace {
             .username_for_display()
             .unwrap_or(DEFAULT_USER_DISPLAY_NAME.to_owned());
 
-        let avatar_content = if self.auth_state.is_anonymous_or_logged_out() {
+        // Fork: an avatar you picked is local identity and wins over anything
+        // account-derived — it is the one you chose, and it works signed out.
+        let avatar_content = if let Some(path) = IdentitySettings::selected_avatar_path(ctx) {
+            AvatarContent::BundledImage { path }
+        } else if self.auth_state.is_anonymous_or_logged_out() {
             AvatarContent::Icon(icons::Icon::Gear)
         } else {
             self.auth_state

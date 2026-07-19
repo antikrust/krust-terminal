@@ -3,14 +3,14 @@ use warpui::elements::{
     Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,
     MainAxisAlignment, MouseStateHandle, ParentElement, Wrap,
 };
-use warpui::ui_components::components::UiComponent;
+use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{AppContext, Entity, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     MatchData, PageType, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
     SettingsWidget,
 };
-use super::SettingsSection;
+use super::{avatar_picker, SettingsSection};
 use crate::appearance::Appearance;
 use crate::channel::ChannelState;
 use crate::workspace::WorkspaceAction;
@@ -116,6 +116,32 @@ impl SettingsWidget for AboutPageWidget {
                         .build()
                         .with_margin_top(16.)
                         .finish(),
+                )
+                // Attribution for the bundled avatar art. Several of the
+                // DiceBear styles are CC BY 4.0, which makes crediting them a
+                // licence condition of shipping them — not a nicety. The
+                // per-style detail is in
+                // app/assets/bundled/avatars/LICENSES.md.
+                .with_child(
+                    ConstrainedBox::new(
+                        appearance
+                            .ui_builder()
+                            .wrappable_text(avatar_picker::AVATAR_ATTRIBUTION, true)
+                            .with_style(UiComponentStyles {
+                                font_size: Some(11.),
+                                font_color: Some(
+                                    appearance
+                                        .theme()
+                                        .sub_text_color(appearance.theme().surface_2())
+                                        .into(),
+                                ),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .with_max_width(420.)
+                    .finish(),
                 )
                 .finish(),
         )

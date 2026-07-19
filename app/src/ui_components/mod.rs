@@ -4,6 +4,7 @@
 //! within the app.
 pub(crate) mod agent_icon;
 pub(crate) mod avatar;
+pub(crate) mod avatar_set;
 pub(crate) mod blended_colors;
 pub(crate) mod breadcrumb;
 pub mod buttons;

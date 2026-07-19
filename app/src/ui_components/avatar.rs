@@ -24,6 +24,13 @@ pub enum AvatarContent {
         /// The first initial is rendered prior to loading the image.
         display_name: String,
     },
+
+    /// Renders an avatar bundled with the app (see
+    /// [`crate::ui_components::avatar_set`]). Unlike [`Self::Image`] this
+    /// needs no network, so it renders immediately and works offline.
+    BundledImage {
+        path: &'static str,
+    },
 }
 
 #[derive(Clone)]
@@ -54,6 +61,16 @@ impl UiComponent for Avatar {
                     .before_load(
                         Align::new(Self::first_initial(&display_name, self.styles)).finish(),
                     );
+                if let Some(radius) = styles.border_radius {
+                    image = image.with_corner_radius(radius);
+                }
+                image.finish()
+            }
+            AvatarContent::BundledImage { path } => {
+                let mut image = Image::new(
+                    warpui::assets::asset_cache::AssetSource::Bundled { path },
+                    CacheOption::BySize,
+                );
                 if let Some(radius) = styles.border_radius {
                     image = image.with_corner_radius(radius);
                 }
