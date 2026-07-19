@@ -22,6 +22,7 @@ pub(super) mod get_started_pane;
 pub(super) mod get_started_view;
 #[cfg(not(target_family = "wasm"))]
 pub(super) mod local_harness_launch;
+pub(super) mod mcp_servers_pane;
 pub(super) mod network_log_pane;
 pub(super) mod notebook_pane;
 pub(super) mod settings_pane;
@@ -146,6 +147,7 @@ pub(crate) enum IPaneType {
     ExecutionProfileEditor,
     GetStarted,
     NetworkLog,
+    MCPServers,
     DeferredPlaceholder,
     /// A pane type only for tests.
     #[cfg(test)]
@@ -170,6 +172,7 @@ impl Display for IPaneType {
             IPaneType::ExecutionProfileEditor => write!(f, "Execution Profile Editor"),
             IPaneType::GetStarted => write!(f, "GetStarted"),
             IPaneType::NetworkLog => write!(f, "Network Log"),
+            IPaneType::MCPServers => write!(f, "MCP Servers"),
             IPaneType::DeferredPlaceholder => write!(f, "Placeholder"),
             #[cfg(test)]
             IPaneType::Dummy => write!(f, "Dummy"),
@@ -274,6 +277,14 @@ impl PaneId {
         Self::new_from_ctx(IPaneType::NetworkLog, ctx)
     }
 
+    /// Creates a [`PaneId`] from a
+    /// [`ViewContext<PaneView<mcp_servers_pane::MCPServersPaneView>>`].
+    pub fn from_mcp_servers_pane_ctx(
+        ctx: &ViewContext<PaneView<mcp_servers_pane::MCPServersPaneView>>,
+    ) -> Self {
+        Self::new_from_ctx(IPaneType::MCPServers, ctx)
+    }
+
     /// Creates a [`PaneId`] from a [`PaneView<TerminalView>`] entity ID.
     pub fn from_terminal_pane_view(
         terminal_pane_view: &ViewHandle<terminal_pane::TerminalPaneView>,
@@ -376,6 +387,14 @@ impl PaneId {
         network_log_pane_view: &ViewHandle<PaneView<NetworkLogView>>,
     ) -> Self {
         Self::new(IPaneType::NetworkLog, network_log_pane_view)
+    }
+
+    /// Creates a [`PaneId`] from a
+    /// [`PaneView<mcp_servers_pane::MCPServersPaneView>`] entity ID.
+    pub fn from_mcp_servers_pane_view(
+        mcp_servers_pane_view: &ViewHandle<PaneView<mcp_servers_pane::MCPServersPaneView>>,
+    ) -> Self {
+        Self::new(IPaneType::MCPServers, mcp_servers_pane_view)
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
@@ -496,6 +515,12 @@ impl PaneId {
             }
             IPaneType::NetworkLog => {
                 ChildView::<PaneView<NetworkLogView>>::with_id(self.0.pane_view_id).finish()
+            }
+            IPaneType::MCPServers => {
+                ChildView::<PaneView<mcp_servers_pane::MCPServersPaneView>>::with_id(
+                    self.0.pane_view_id,
+                )
+                .finish()
             }
             IPaneType::DeferredPlaceholder => warpui::elements::Empty::new().finish(),
             #[cfg(test)]

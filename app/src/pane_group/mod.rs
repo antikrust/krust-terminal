@@ -192,6 +192,7 @@ pub use pane::env_var_collection_pane::EnvVarCollectionPane;
 pub use pane::environment_management_pane::EnvironmentManagementPane;
 pub use pane::execution_profile_editor_pane::ExecutionProfileEditorPane;
 pub use pane::file_pane::FilePane;
+pub use pane::mcp_servers_pane::{MCPServersPane, MCPServersPaneManager};
 pub use pane::network_log_pane::NetworkLogPane;
 pub use pane::notebook_pane::NotebookPane;
 pub use pane::settings_pane::SettingsPane;
@@ -1958,6 +1959,11 @@ impl PaneGroup {
             LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
                 // Editor panes are not restored from persistence.
                 Err(anyhow::anyhow!("Can't restore editor panes"))
+            }
+            LeafContents::MCPServers => {
+                // Fork: never persisted (see `LeafContents::is_persisted`);
+                // the pane is reopened from the Library on demand.
+                Err(anyhow::anyhow!("MCP Servers panes are not restored"))
             }
             LeafContents::NetworkLog => {
                 // Network log panes are intentionally not restored. Two

@@ -290,8 +290,8 @@ use crate::pane_group::FilePane;
 use crate::pane_group::{
     self, AIFactPane, AnyPaneContent, ChildAgentOrigin, CodeDiffPane, CodePane, CodeReviewPanelArg,
     CustomRouterEditorPane, Direction as PaneGroupDirection, Direction, EnvironmentManagementPane,
-    ExecutionProfileEditorPane, NetworkLogPane, NewTerminalOptions, PaneGroup, PaneId, PanesLayout,
-    TabBarHoverIndex, TerminalPaneId,
+    ExecutionProfileEditorPane, MCPServersPane, MCPServersPaneManager, NetworkLogPane,
+    NewTerminalOptions, PaneGroup, PaneId, PanesLayout, TabBarHoverIndex, TerminalPaneId,
 };
 use crate::persistence::ModelEvent;
 use crate::projects::ProjectManagementModel;
@@ -14808,6 +14808,30 @@ impl Workspace {
         });
     }
 
+    /// Fork: opens the MCP Servers pane (the same management UI as the
+    /// settings page, hosted in a split pane) instead of yanking the user
+    /// into settings. At most one per window; reopening focuses it.
+    pub(crate) fn open_mcp_server_collection_pane(&mut self, ctx: &mut ViewContext<Self>) {
+        let manager = MCPServersPaneManager::handle(ctx);
+
+        if let Some(locator) = manager.as_ref(ctx).find_pane(ctx.window_id()) {
+            self.focus_pane(locator, ctx);
+        } else {
+            let pane = MCPServersPane::new(ctx);
+            self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
+                pane_group.add_pane_with_direction(
+                    Direction::Left,
+                    pane,
+                    true, /* focus_new_pane */
+                    ctx,
+                );
+            });
+        }
+
+        // Mark the Library row as selected, mirroring the Rules row.
+        self.set_selected_object(Some(WarpDriveItemId::MCPServerCollection), ctx);
+    }
+
     /// Opens the in-app network log pane as a right-split of the active pane
     /// group. If a pane already exists for the current window, refreshes its
     /// snapshot from the in-memory model and focuses it instead of opening
@@ -17319,7 +17343,8 @@ impl Workspace {
                 );
             }
             DrivePanelEvent::OpenMCPServerCollection => {
-                self.show_settings_with_section(Some(SettingsSection::MCPServers), ctx);
+                // Fork: open the MCP Servers pane instead of settings.
+                self.open_mcp_server_collection_pane(ctx);
 
                 send_telemetry_from_ctx!(
                     TelemetryEvent::MCPServerCollectionPaneOpened {
@@ -25022,7 +25047,8 @@ impl TypedActionView for Workspace {
                 );
             }
             OpenMCPServerCollection => {
-                self.show_settings_with_section(Some(SettingsSection::MCPServers), ctx);
+                // Fork: open the MCP Servers pane instead of settings.
+                self.open_mcp_server_collection_pane(ctx);
 
                 send_telemetry_from_ctx!(
                     TelemetryEvent::MCPServerCollectionPaneOpened {

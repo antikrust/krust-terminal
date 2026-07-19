@@ -150,6 +150,9 @@ pub enum LeafContents {
     /// The in-app network log pane. Not persisted across restarts because the
     /// backing log is an in-memory ring buffer that starts empty on launch.
     NetworkLog,
+    /// Fork: the MCP Servers pane opened from the Library. Not persisted —
+    /// it holds no pane-local state and reopening is one click.
+    MCPServers,
     /// A new first-time user experience which prioritizes choosing a coding repository.
     GetStarted,
 }
@@ -171,6 +174,9 @@ impl LeafContents {
             // starts empty on launch; persisting would also regress back to
             // an on-disk log via the app-state database.
             LeafContents::NetworkLog
+            // Fork: the MCP Servers pane is opened on demand from the
+            // Library and has no pane-local state worth restoring.
+            | LeafContents::MCPServers
             // Environment management panes are opened on-demand via workspace
             // actions and have no persistable state.
             | LeafContents::EnvironmentManagement(_) => false,

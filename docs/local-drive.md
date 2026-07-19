@@ -98,6 +98,16 @@ Network transitions no longer stop polling or dequeueing
   `check_and_trigger_drive_sharing_onboarding_block` (workspace/view.rs) is
   a no-op.
 
+## Library rows that open panes
+
+Rules opens the AI-fact pane (upstream behavior). Fork: **MCP Servers**
+opens `MCPServersPane` (pane_group/pane/mcp_servers_pane.rs) — the same
+management view as the settings page, hosted in a split pane so the user
+keeps their terminal context — instead of navigating to settings. One per
+window (`MCPServersPaneManager`), not persisted across restarts
+(`LeafContents::MCPServers`), and the Library row is marked selected on
+open, mirroring Rules.
+
 ## Traps
 
 * **Do not** give `LocalObjectClient` a writable SQLite connection. The app
