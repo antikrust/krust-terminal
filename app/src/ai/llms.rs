@@ -207,6 +207,23 @@ fn is_usable_llm(info: &LLMInfo, app: &AppContext) -> bool {
         .is_none_or(|reason| !reason.should_clear_preference(has_byok_key))
 }
 
+/// Whether the user's Grok (xAI) subscription is linked.
+///
+/// Grok is a connect-to-enable provider: its models are hidden from every
+/// model dropdown until the SuperGrok subscription is linked. This is the
+/// cloud-model echo of the local "Use local models" switch — when Grok is
+/// off, it isn't in the menu at all, rather than sitting there unusable.
+fn is_grok_connected(app: &AppContext) -> bool {
+    ApiKeyManager::as_ref(app).grok_tokens().is_some()
+}
+
+/// Filter predicate that hides Grok (xAI) models unless `grok_connected`.
+/// Built once per dropdown so the `bool` (not `app`) is what the iterator
+/// closure captures.
+fn shows_grok(grok_connected: bool) -> impl Fn(&&LLMInfo) -> bool {
+    move |llm| grok_connected || llm.provider != LLMProvider::Xai
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct LLMSpec {
     pub cost: f32,
@@ -968,6 +985,8 @@ impl LLMPreferences {
             .choices
             .iter()
             .filter(|llm| !matches!(llm.disable_reason, Some(DisableReason::AdminDisabled)))
+            // Grok is out of the menu until its subscription is linked.
+            .filter(shows_grok(is_grok_connected(app)))
             // Gate cloud/team routers behind the same flag as local routers so
             // the entire custom-router feature is controlled by one flag.
             .filter(move |llm| {
@@ -986,6 +1005,8 @@ impl LLMPreferences {
             .choices
             .iter()
             .filter(|llm| !matches!(llm.disable_reason, Some(DisableReason::AdminDisabled)))
+            // Grok is out of the menu until its subscription is linked.
+            .filter(shows_grok(is_grok_connected(app)))
             // Gate cloud/team routers behind the same flag as local routers.
             .filter(move |llm| {
                 routers_enabled || !custom_model_routers::is_cloud_custom_router_id(llm.id.as_str())
@@ -1001,6 +1022,8 @@ impl LLMPreferences {
             .choices
             .iter()
             .filter(|llm| !matches!(llm.disable_reason, Some(DisableReason::AdminDisabled)))
+            // Grok is out of the menu until its subscription is linked.
+            .filter(shows_grok(is_grok_connected(app)))
             .chain(self.custom_llm_choices(app))
     }
 
