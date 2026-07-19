@@ -75,6 +75,7 @@ mod admin_actions;
 mod agent_assisted_environment_modal;
 mod ai_page;
 mod appearance_page;
+mod avatar_picker;
 mod billing_and_usage;
 mod billing_and_usage_dispatch;
 mod billing_and_usage_page;
@@ -90,7 +91,6 @@ mod features;
 mod features_page;
 pub(crate) mod handoff_environment_creation_modal;
 pub mod keybindings;
-mod avatar_picker;
 mod main_page;
 pub mod mcp_servers;
 pub mod mcp_servers_page;
@@ -323,7 +323,7 @@ impl SettingsSection {
         matches!(self, Self::AppearanceGeneral | Self::AppearanceTxtFx)
     }
 
-    /// Returns true if this section is a subpage under the "Agents" umbrella.
+    /// Returns true if this section is a subpage under the "AI" umbrella.
     pub fn is_ai_subpage(&self) -> bool {
         matches!(
             self,
@@ -363,7 +363,7 @@ impl SettingsSection {
         }
     }
 
-    /// The ordered list of AI subpage sections shown under the Agents umbrella.
+    /// The ordered list of AI subpage sections shown under the AI umbrella.
     pub fn ai_subpages() -> &'static [Self] {
         &[
             Self::WarpAgent,
@@ -1311,12 +1311,12 @@ impl SettingsView {
             SettingsPage::new(about_page_handle),
         ]);
 
-        // Build sidebar nav items. AI page is presented as an "Agents" umbrella
+        // Build sidebar nav items. The AI page is presented as an "AI" umbrella
         // with subpages; the actual AI SettingsPage is hidden from direct sidebar listing.
         let mut nav_items = vec![
             SettingsNavItem::Page(SettingsSection::Account),
             SettingsNavItem::Umbrella(SettingsUmbrella::new(
-                "Agents",
+                "AI",
                 SettingsSection::ai_subpages().to_vec(),
             )),
             SettingsNavItem::Umbrella(SettingsUmbrella::new(

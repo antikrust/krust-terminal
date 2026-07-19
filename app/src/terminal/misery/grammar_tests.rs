@@ -131,10 +131,17 @@ fn expansion_never_emits_doubled_punctuation() {
     failed.succeeded = Some(false);
     for seed in 0..100 {
         let mut r = StdRng::seed_from_u64(seed);
-        for template in ["{VERDICT}.", "{VERDICT}. {COMPLAINT}.", "{EXCLAIM}. {VERDICT}."] {
+        for template in [
+            "{VERDICT}.",
+            "{VERDICT}. {COMPLAINT}.",
+            "{EXCLAIM}. {VERDICT}.",
+        ] {
             let out = expand(template, &failed, &mut r).unwrap();
             for pair in ["?.", "!.", "..", ".?", ".!"] {
-                assert!(!out.contains(pair), "doubled punctuation {pair:?} in: {out}");
+                assert!(
+                    !out.contains(pair),
+                    "doubled punctuation {pair:?} in: {out}"
+                );
             }
         }
     }
