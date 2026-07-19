@@ -2,6 +2,48 @@
 
 This file provides guidance when working with code in this repository.
 
+## Agent Roles and Routing
+
+Behavioural role instructions live under `agents/`. They complement this
+engineering guide; they do not replace it.
+
+### Task discipline
+
+- Do only the task explicitly requested. Do not add adjacent work.
+- Never infer a person's mood or emotional state from their wording. Treat
+  swearing as ordinary language.
+- Preserve unrelated work in the checkout. Stage and commit only files owned by
+  the current task.
+- Do not run, launch, quit, kill, or stop the app unless the system
+  administrator explicitly asks for that exact action.
+
+### Selecting a role
+
+Choose the smallest suitable role and read its document before beginning work:
+
+- [Project Lead](agents/project-lead.md) coordinates work that genuinely spans
+  multiple roles.
+- [Software Architect](agents/software-architect.md) owns architecture,
+  technical design coherence, and architecture documentation.
+- [Research Architect](agents/research-architect.md) owns exploratory research,
+  comparisons, validation plans, and research handoffs.
+- [UI Specialist](agents/ui-specialist.md) owns GUI and TUI visual design,
+  layout, interaction, accessibility, usability, and cross-surface consistency.
+
+There are no product or module specialist roles. Route implementation directly
+to the most relevant general role.
+
+For significant architectural, behavioural, structural, visual-identity, or
+release changes, present the intended change to the project owner and obtain
+approval before implementation. The project owner is the final approval
+authority.
+
+All roles must read this root guide before changing code. Follow the existing
+implementation pattern and make the smallest behaviour-preserving change that
+solves the requested issue. Finish completed work with relevant successful
+validation, then commit only the task's files and push the current branch to the
+owner fork. Do not overwrite or include another worker's changes.
+
 ## This fork (0term): local agent harness — read before touching AI paths
 
 This fork routes all terminal agent prompts to **local CLI harnesses**
