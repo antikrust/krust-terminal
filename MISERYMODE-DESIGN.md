@@ -1,0 +1,390 @@
+# Misery mode — technical design
+
+An escalation of swear mode in which the terminal annotates your commands with
+contempt. It reads as though something is paying attention to what you're
+doing; it is in fact a weighted template grammar over static word lists plus
+live context. No model, no network, no latency.
+
+Written 2026-07-19. Describes the implementation as it currently stands in
+`app/src/terminal/misery/`.
+
+---
+
+## 1. Status
+
+**Engine: complete and tested.** 1,977 lines across 10 files (984 of them
+tests), 45 tests passing, zero warnings.
+
+**Rendering: not wired.** The engine produces strings; nothing displays them
+yet. See §9.
+
+| File | LOC | Role |
+|---|---:|---|
+| `mod.rs` | 216 | `MiseryEngine`, `MiseryContext`, session state, anti-repetition |
+| `classify.rs` | 260 | Command → `ParsedCommand` + `CommandClass` |
+| `templates.rs` | 402 | The template bank (54 templates), `Phase`, `Cond` |
+| `grammar.rs` | 194 | Slot resolution and expansion |
+| `vocab.rs` | 215 | 14 word lists, 153 entries |
+| `*_tests.rs` | 600 | 45 tests |
+
+Settings: `AISettings.misery_mode` (`agents.warp_agent.other.misery_mode`),
+default off, never synced to cloud.
+
+---
+
+## 2. Pipeline
+
+```
+  raw command string
+        │
+        ▼
+  classify::parse ─────────► ParsedCommand { name, subcommand, args,
+        │                                    flags, class, is_compound }
+        ▼
+  deserve::probability ────► f32, clamped to 0.04..=0.75
+        │                     (skip and stay silent on a failed roll)
+        ▼
+  templates::candidates ───► filter by Phase + CommandClass + Cond
+        │
+        ▼
+  grammar::expand ─────────► fill {SLOT}s, or fail and retry
+        │
+        ▼
+  anti-repetition check ───► reject if said in the last 40 lines
+        │
+        ▼
+  "42 filenames. you were looking for one."
+```
+
+Everything is synchronous and allocation-light. The expensive-looking step —
+`candidates` — is a linear scan of 54 static entries.
+
+---
+
+## 3. Two voices
+
+Driven by `Phase`, chosen by the caller:
+
+| | `Phase::Submit` | `Phase::Complete` |
+|---|---|---|
+| **When** | command submitted, before output | block finished |
+| **Tense** | present | past |
+| **Stance** | weary anticipation | verdict |
+| **Knows** | command text only | + exit code, duration, output volume |
+| **Example** | `bugger me. listing files. the pinnacle of computing.` | `42 filenames. you were looking for one.` |
+
+Submit fires at 0.55× the completion rate (`deserve.rs`), so most commands
+produce at most one line and the two-line case stays a treat rather than the
+norm.
+
+---
+
+## 4. Classification
+
+`classify::parse` is deliberately **not** a shell parser. It:
+
+- takes the first segment of any pipeline or `&&` list — that's the intent
+  being judged, so `ls | wc -l` classifies as `Listing`;
+- skips wrappers and env assignments (`sudo`, `env`, `time`, `nohup`,
+  `RUST_LOG=debug …`) to find the real command;
+- strips directory prefixes and `.exe`;
+- splits flags from positionals, treating `-5` and a bare `-` as operands;
+- extracts a subcommand only for commands that actually have them, so
+  `cat foo.txt` doesn't acquire a `foo.txt` subcommand.
+
+A wrong classification costs a slightly off-topic insult. That is an acceptable
+failure mode, and the reason this doesn't reach for a real parser.
+
+### `CommandClass` and baseline contempt
+
+14 classes, each with a starting probability:
+
+| Class | Baseline | Class | Baseline |
+|---|---:|---|---:|
+| `Clear` | 0.50 | `Search` | 0.20 |
+| `Listing` | 0.45 | `Vcs` | 0.18 |
+| `Navigation` | 0.42 | `Editor` | 0.15 |
+| `Inspection` | 0.30 | `Network` | 0.15 |
+| `Shell` | 0.28 | `Unknown` | 0.15 |
+| `Process` | 0.25 | `PackageMgmt` | 0.12 |
+| `Destructive` | 0.25 | `Build` | 0.07 |
+
+`Destructive` sits mid-table on purpose: `rm -rf` earns *attention*, not
+contempt. `Build` is lowest because it's the one thing that looks like work.
+
+> **Design note — these baselines were originally 2× higher and it was a bug.**
+> With `Listing` at 0.9, `ls` saturated the 0.75 clamp on its own, so
+> repetition, failure and pipeline modifiers all became no-ops. Three tests
+> caught it. Any future edit here must leave headroom for the modifiers.
+
+### Hooking the real parser
+
+`crates/warp_completer/src/parsers/hir` already produces
+`Command::{Classified(ShellCommand), Unclassified(ExternalCommand)}` with a
+proper `command_name_span()`. `classify::parse` accepts a raw string so the
+engine stays unit-testable without a live shell, but a caller holding a real
+HIR parse can pass the extracted name for better accuracy on exotic input.
+
+---
+
+## 5. Adaptive frequency (`deserve.rs`)
+
+The single most important design decision: **misery mode is only funny if it
+knows when to shut up.** A flat rate mocks a hard command and ignores your
+fifth `ls` in a row.
+
+Starting from the class baseline:
+
+| Signal | Effect |
+|---|---|
+| Repeated command (1 / 2 / 3+ times recently) | +0.10 / +0.22 / +0.32 |
+| Bare command, no args or flags | +0.08 |
+| Compound (pipe, `&&`, redirect) | −0.18 |
+| Non-zero exit | +0.30 |
+| Slow (>5s) **and** trivial | +0.25 |
+| Slow (>5s) and not trivial | −0.20 |
+| Each recent line already emitted (window 4) | −0.16 |
+| `Phase::Submit` | ×0.55 |
+
+Clamped to `0.04..=0.75`.
+
+The two bounds are both deliberate. The ceiling means even a fifth consecutive
+`ls` is never a certainty — unpredictability is most of the comedy. The floor
+is never zero, because the rare unearned jab during a long build is the funniest
+one.
+
+Consequences worth stating: a pipeline is treated as evidence of thought and
+gets spared; a slow trivial command is its own punchline while a slow build is
+left alone; and the backoff window means misery arrives in waves rather than a
+constant drizzle.
+
+---
+
+## 6. Template bank (`templates.rs`)
+
+54 templates — 32 submit, 27 complete (counts overlap where a template names
+both phases in its class list). Each declares:
+
+```rust
+Template {
+    text:    "{LINES} lines. you'll read four of them.",
+    phase:   Complete,
+    classes: &[],            // empty = universal
+    cond:    Cond::HasOutput,
+    weight:  7,
+}
+```
+
+**`classes`** — topical targeting. Empty means universal, and universal lines
+carry lower weights (4–9) than topical ones (9–12) so the specific jab wins
+when both apply.
+
+**`cond`** — outcome precondition. Five variants: `Any`, `Success`, `Failure`,
+`HasOutput` (≥3 lines), `NoOutput`.
+
+> **Design note — `Cond` exists because slot-checking was not enough.** Slot
+> resolution catches missing *data*. It does not catch wrong *tone*. Printing
+> real samples exposed three cases that all type-checked and all read as bugs:
+>
+> | Output | Problem |
+> |---|---|
+> | `0 lines. you'll read four of them.` | volume remark on no output |
+> | `exit 0. I'd explain, but you wouldn't read that either.` | failure voice on success |
+> | `done in 3.4 seconds. I spent it…` on a failed `git push` | success voice on failure |
+>
+> `Cond` fixed all three, and four tests now lock them down. `Cond::Success`
+> and `Cond::Failure` both check `succeeded == Some(_)`, which also stops
+> outcome language leaking into the submit phase where no outcome exists.
+
+---
+
+## 7. The grammar (`grammar.rs`)
+
+Templates contain `{SLOT}` placeholders. Expansion walks the string once,
+resolving each against the context and an RNG.
+
+**A slot that cannot be resolved fails the entire expansion**, and the caller
+picks a different template. This is what prevents `I was alphabetising
+against` in an empty directory. It also means a `{DURATION}` template can sit
+in the bank unguarded — the submit phase filters it out automatically.
+
+### Slots
+
+| Slot | Source |
+|---|---|
+| `{EXCLAIM}` | `EXCLAIM_CLEAN` or `EXCLAIM_SWEAR` per swear mode |
+| `{NOUN_USER}` | `NOUN_USER_CLEAN` or `NOUN_USER_SWEAR` per swear mode |
+| `{AGAIN}` `{TALENT}` `{ADJECTIVE}` `{NOUN_TASK}` `{COMPLAINT}` `{NEVER_EVEN}` `{GERUND}` `{PREP}` | direct word lists |
+| `{A_ADJECTIVE}` | adjective with its indefinite article agreed |
+| `{VERDICT}` | `VERDICT_SUCCESS` or `VERDICT_FAILURE` per outcome |
+| `{ACTIVITY}` | **synthesised** — see below |
+| `{FILE}` `{CMD}` `{DIR}` | live context |
+| `{DURATION}` `{LINES}` `{EXIT}` | completion facts |
+
+### `{ACTIVITY}` — the load-bearing trick
+
+Combines a gerund with one or two of the user's **real filenames**:
+
+```
+cross-referencing `Cargo.toml` against `README.md`
+summarising `ACCOUNT-DESIGN.md`
+counting the semicolons in `build.rs` versus `src`
+```
+
+20 gerunds × 6 prepositions × the local file set. This is what makes the output
+sound researched rather than sampled — and it cost 26 lines of vocabulary.
+
+**Filenames only. File contents are never read.**
+
+### Two details that matter
+
+- **Filenames are drawn without replacement.** The pool is shuffled once per
+  expansion and consumed by cursor, so two `{FILE}` slots in one line can never
+  name the same file. Tested across 50 seeds.
+- **Indefinite articles agree.** `{A_ADJECTIVE}` yields "an inert little
+  exercise", not "a inert". Spelling is a poor proxy for pronunciation, so
+  `indefinite_article` carries explicit lists for the two classes where it
+  lies: "yoo"-initial vowels take *a* (a **u**seful tool), silent-h words take
+  *an* (an **h**our). Prefix-matched on whole words so "unimaginative" and
+  "inert" aren't caught by a naive `u`/`i` rule.
+
+---
+
+## 8. Session state (`mod.rs`)
+
+`MiseryEngine` is stateful — one per session. The state is what makes
+consecutive lines feel authored:
+
+| Buffer | Size | Purpose |
+|---|---:|---|
+| `recent_lines` | 40 | Never repeat a line within the window |
+| `recent_commands` | 6 | Repetition detection for `deserve` |
+| `recent_spoke` | 4 | Backoff so misery comes in waves |
+
+`pick_line` retries up to 24 times, because a draw can fail two ways — the
+template didn't expand (missing slot) or the result was said recently. Both are
+cheap.
+
+### API
+
+```rust
+MiseryEngine::new()                         // entropy-seeded
+MiseryEngine::with_seed(u64)                // reproducible
+
+engine.note_command(&parsed);               // once per command, at submit
+engine.generate(&ctx, phase) -> Option<String>        // rolls for deservedness
+engine.generate_forced(&ctx, phase) -> Option<String> // always tries; for previews
+```
+
+`generate` returning `None` is the **common** case and is not an error.
+
+---
+
+## 9. Not yet done: rendering
+
+The engine produces strings. Nothing displays them.
+
+**Hard constraint: these must never be written to the PTY.** Injecting into
+the real output stream would corrupt piped output and break anything parsing
+it — `ls | wc -l` would start counting insults. Lines must render as block
+*decorations*, visually inside the output area but outside the byte stream.
+
+The hook belongs in `app/src/terminal/block_list_element.rs` at block-completion
+time, reading:
+
+| `MiseryContext` field | Source |
+|---|---|
+| `command_name` | `Block::command_to_string()` |
+| `exit_code` / `succeeded` | block exit code |
+| `duration` | `Block::command_start_time()` |
+| `output_lines` | block output row count |
+| `nearby_files` | session cwd listing (names only, cached) |
+| `directory_name` | cwd basename |
+| `swear_mode` | `AISettings::is_swear_mode_enabled()` |
+
+Engine ownership should sit alongside the terminal session so the
+anti-repetition memory spans the session rather than resetting per block.
+
+*This was left unwired deliberately: `block_list_element.rs` was being edited
+concurrently by another session at the time, and was briefly broken. It is a
+contained next step.*
+
+---
+
+## 10. Settings and gating
+
+Two layers, both required:
+
+1. **Runtime** — `AISettings::is_misery_mode_enabled()` returns
+   `is_swear_mode_enabled() && *misery_mode`.
+2. **UI** — the "Misery mode" toggle in the Agents settings page is rendered
+   with `is_setting_toggleable = is_any_ai_enabled && *ai_settings.swear_mode`,
+   so it greys out entirely while swear mode is off.
+
+Misery is an escalation of swear mode, not an independent axis. A live toggle
+that silently does nothing would be a worse experience than a greyed-out one
+that explains itself by association.
+
+Also wired: a `ToggleMiseryMode` action, the `Misery_Mode` binding flag, and
+`misery misery mode insults contempt` in the settings-search terms.
+
+---
+
+## 11. Test coverage
+
+45 tests. The interesting ones are the property-style checks, which is where
+the real bugs surfaced:
+
+**Invariants over 400+ generated lines:**
+- no unfilled `{SLOT}` or stray brace, no double spaces, never empty
+- no volume claim when output was empty
+- no `exit 0` in a failure-voiced line
+- no success voice (`done in`, `built. in`, `it's gone`, `congratulations`) on
+  a failure
+- no outcome language at all during submit
+
+**Behavioural:**
+- >60 distinct lines from 400 draws on a single command
+- no repeat within the 40-line memory
+- distinct command classes reach lines the other cannot
+- survives an empty directory and an unparseable command
+
+**Statistical** (40 seeds × 20 draws):
+- `ls` is mocked more than `cargo build`
+- failures outdraw successes
+
+---
+
+## 12. Extending it
+
+**Adding vocabulary is always cheaper than adding templates.** One new gerund
+multiplies against every template using `{ACTIVITY}`; one new template adds one
+line shape. Current lists:
+
+| List | Entries | List | Entries |
+|---|---:|---|---:|
+| `EXCLAIM_CLEAN` | 15 | `NOUN_USER_CLEAN` | 9 |
+| `EXCLAIM_SWEAR` | 12 | `NOUN_USER_SWEAR` | 8 |
+| `GERUND` | 20 | `NEVER_EVEN` | 10 |
+| `ADJECTIVE` | 14 | `NOUN_TASK` | 10 |
+| `TALENT` | 12 | `AGAIN` | 9 |
+| `COMPLAINT` | 12 | `VERDICT_SUCCESS` | 8 |
+| `PREP` | 6 | `VERDICT_FAILURE` | 8 |
+
+Two rules when adding:
+
+1. **Entries within a list must be interchangeable.** Every entry will
+   eventually be paired with every partner. A line that only works with one
+   specific neighbour will look broken.
+2. **Tag outcome-specific templates with a `Cond`.** If it says "failed",
+   "exit", or counts output, it needs one. The tests will catch you, but the
+   samples will catch you faster — print them.
+
+### Ideas not implemented
+
+- **Time-of-day awareness** — different contempt at 3am.
+- **Streak detection across classes** — noticing an `ls`/`cd`/`ls` loop as a
+  pattern rather than three separate repeats.
+- **Typo callbacks** — referencing a command that failed with 127 earlier.
+- **Escalation over a session** — the voice getting progressively more
+  personal the longer you work.
