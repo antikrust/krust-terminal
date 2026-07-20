@@ -8,14 +8,11 @@
 use super::classify::{CommandClass, ParsedCommand};
 use super::templates::Phase;
 
-/// Ceiling on how often we'll speak, regardless of how deserving the command
-/// is. Even a fifth consecutive `ls` shouldn't be a certainty — unpredictability
-/// is most of the comedy.
-const MAX_PROBABILITY: f32 = 0.75;
-
-/// Floor for commands that look like real work. Never quite zero: the rare
-/// unearned insult during a long build is the funniest one.
-const MIN_PROBABILITY: f32 = 0.04;
+/// Fork: the submit ("anticipation") line fires *most* of the time — the
+/// terminal is impatient — but stays just short of certain so it isn't quite
+/// every command. The verdict, by contrast, always fires (see `probability`).
+const SUBMIT_MAX_PROBABILITY: f32 = 0.95;
+const SUBMIT_MIN_PROBABILITY: f32 = 0.65;
 
 /// Inputs the scorer needs beyond the command itself.
 #[derive(Debug, Clone, Copy, Default)]
@@ -35,6 +32,12 @@ pub fn probability(
     exit_code: Option<i32>,
     duration_millis: Option<u64>,
 ) -> f32 {
+    // Fork: the verdict is not optional. The terminal always passes comment on
+    // a finished command — "always supposed to say something at the end."
+    if phase == Phase::Complete {
+        return 1.0;
+    }
+
     let mut score = command.class.baseline_contempt();
 
     // Repetition is the richest seam. Third time is where "not this again"
@@ -73,19 +76,11 @@ pub fn probability(
         }
     }
 
-    // Back off if we've been talking a lot lately.
+    // Back off a touch if we've been talking a lot lately, so the anticipation
+    // line isn't quite every single command — but keep it common.
     score -= 0.16 * history.recent_misery_count as f32;
 
-    // The completion phase is the more interesting one, so submit stays
-    // rarer — this is what stops every command producing two lines. It must
-    // not be so rare that the voice never registers as a pattern, though:
-    // at 0.55 combined with a shared backoff window, submit lines landed
-    // around 18% and read as noise rather than as a second voice.
-    if phase == Phase::Submit {
-        score *= 0.8;
-    }
-
-    score.clamp(MIN_PROBABILITY, MAX_PROBABILITY)
+    score.clamp(SUBMIT_MIN_PROBABILITY, SUBMIT_MAX_PROBABILITY)
 }
 
 #[cfg(test)]

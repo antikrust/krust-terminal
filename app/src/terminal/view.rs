@@ -162,7 +162,7 @@ use warpui::elements::{
     Shrinkable, Stack, Text,
 };
 use warpui::event::ModifiersState;
-use warpui::fonts::{Cache as FontCache, FamilyId, Properties};
+use warpui::fonts::{Cache as FontCache, FamilyId, Properties, Style};
 use warpui::geometry::vector::{vec2f, Vector2F};
 use warpui::image_cache::ImageType;
 use warpui::keymap::Keystroke;
@@ -187,9 +187,7 @@ use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
 use super::find::FindOptions;
-use super::misery::{
-    CompletedCommand as MiseryCompletedCommand, MiseryLineView, MiserySession, Phase as MiseryPhase,
-};
+use super::misery::{CompletedCommand as MiseryCompletedCommand, MiserySession};
 use super::model::block::{
     BlockSection, BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS,
 };
@@ -5064,22 +5062,14 @@ impl TerminalView {
             return;
         };
 
-        // Anchor to this block's own index rather than to whatever happens to
-        // be active. Completion events are delivered with a delay, so a
-        // position relative to "the active block" races the previous command's
-        // verdict and can land above it.
-        let Some(block_index) = self.model.lock().block_list().block_index_for_id(block_id) else {
-            return;
-        };
-
-        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Submit, ctx));
-        self.insert_rich_content(
-            None,
-            handle,
-            Some(RichContentMetadata::MiseryLine),
-            RichContentInsertionPosition::BeforeBlockIndex(block_index),
-            ctx,
-        );
+        // Attach the anticipation line to the block's own label row (next to
+        // the prompt, where the duration sits), keyed by block id. Block-
+        // attached, so it renders at the top of the right block and can't drift.
+        self.model
+            .lock()
+            .block_list_mut()
+            .set_block_misery_submit(block_id, Some(line));
+        ctx.notify();
     }
 
     /// Misery mode: after a command finishes, the terminal may pass comment on
@@ -24215,6 +24205,7 @@ impl TerminalView {
         padding_x: Pixels,
         tool_tip_below_button: bool,
         appearance: &Appearance,
+        show_useless_information: bool,
     ) -> Box<dyn Element> {
         let terminal_theme_prompt: ColorU = appearance
             .theme()
@@ -24232,8 +24223,32 @@ impl TerminalView {
 
         let mut label_row = Flex::row().with_child(prompt);
 
-        let is_live = Self::is_block_duration_live(model, index);
-        if let Some(duration_string) = Self::block_duration_text(model, index) {
+        // Fork (misery mode): the anticipation line, at the top next to the
+        // prompt — where the duration used to sit.
+        if let Some(submit) = model
+            .block_list()
+            .block_at(index)
+            .and_then(|block| block.misery_submit())
+        {
+            label_row.add_child(
+                Text::new_inline(
+                    format!("  {submit}"),
+                    appearance.monospace_font_family(),
+                    appearance.monospace_font_size() * WARP_PROMPT_HEIGHT_LINES,
+                )
+                .with_style(Properties::default().style(Style::Italic))
+                .with_color(terminal_theme_prompt)
+                .finish(),
+            );
+        }
+
+        // Fork: the execution-time readout is "useless information" — only
+        // shown when that appearance toggle is on. Its spot is the misery
+        // line's now.
+        if let Some(duration_string) =
+            Self::block_duration_text(model, index).filter(|_| show_useless_information)
+        {
+            let is_live = Self::is_block_duration_live(model, index);
             let duration = Text::new_inline(
                 duration_string,
                 appearance.monospace_font_family(),
@@ -24289,7 +24304,7 @@ impl TerminalView {
             } else {
                 duration
             });
-        } else if Self::is_block_executing(model, index) {
+        } else if show_useless_information && Self::is_block_executing(model, index) {
             // Block is executing but less than 1 second has elapsed — no duration
             // text to show yet. Add an invisible LiveElement to kick off the
             // repaint timer so the counter appears as soon as 1s elapses.
@@ -24725,6 +24740,12 @@ impl TerminalView {
             enforce_minimum_contrast,
             appearance,
             Box::new(move |range, label_mouse_states, model, app| {
+                // Fork: the execution-time readout is "useless information" —
+                // only shown when that appearance toggle is on. Its spot next
+                // to the prompt is where the misery anticipation line goes.
+                let show_useless_information = *BlockVisibilitySettings::as_ref(app)
+                    .should_show_useless_information
+                    .value();
                 range
                     .iter()
                     .enumerate()
@@ -24737,6 +24758,7 @@ impl TerminalView {
                             padding_x,
                             i == 0,
                             Appearance::as_ref(app),
+                            show_useless_information,
                         );
                         // Special-case the last block so there is a reliable way to target it
                         // regardless of the length of the list.

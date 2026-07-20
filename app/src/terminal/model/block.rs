@@ -332,10 +332,13 @@ pub struct Block {
     show_in_band_command_blocks: bool,
     show_memory_stats: bool,
 
-    /// Fork (misery mode): the "verdict" line rendered in this block's footer
-    /// once the command finishes (sharing the memory-stats footer machinery).
-    /// Block-attached so it can't drift onto the wrong block the way the old
+    /// Fork (misery mode): block-attached commentary. `misery_submit` is the
+    /// "anticipation" line rendered in this block's label row (next to the
+    /// prompt, where the duration sits); `misery_verdict` is the "verdict" line
+    /// rendered in the footer once the command finishes. Both are attached to
+    /// the block so they can't drift onto the wrong block the way the old
     /// gap-inserted rich content did.
+    misery_submit: Option<String>,
     misery_verdict: Option<String>,
 
     /// The timestamp at which this block was created (i.e.: the previous block
@@ -1015,6 +1018,7 @@ impl Block {
             show_bootstrap_block: show_warp_bootstrap_input,
             show_in_band_command_blocks,
             show_memory_stats,
+            misery_submit: None,
             misery_verdict: None,
             creation_ts: Local::now(),
             start_ts: None,
@@ -2797,6 +2801,15 @@ impl Block {
 
     pub fn set_show_memory_stats(&mut self, show_memory_stats: bool) {
         self.show_memory_stats = show_memory_stats
+    }
+
+    /// Fork (misery mode): the anticipation line rendered in the label row.
+    pub fn misery_submit(&self) -> Option<&str> {
+        self.misery_submit.as_deref()
+    }
+
+    pub fn set_misery_submit(&mut self, line: Option<String>) {
+        self.misery_submit = line;
     }
 
     /// Fork (misery mode): the verdict line rendered in the footer.

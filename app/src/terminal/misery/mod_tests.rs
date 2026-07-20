@@ -252,56 +252,34 @@ fn the_two_voices_do_not_starve_each_other() {
 }
 
 #[test]
-fn adaptive_rate_mocks_trivia_more_than_work() {
-    // Statistical, over a single engine so back-off applies to both equally.
-    let mut trivial_hits = 0;
-    let mut work_hits = 0;
+fn the_verdict_fires_on_essentially_every_command() {
+    // Fork: the adaptive rate is gone at completion. The terminal always has
+    // something to say at the end — trivia or real work, success or failure,
+    // all get a verdict. (`generate` can still miss when no template fills, so
+    // the rate is near-total rather than exactly total.)
+    let commands: &[(&str, i32)] = &[
+        ("ls", 0),
+        ("cargo build", 0),
+        ("git push", 1),
+        ("clear", 0),
+        ("cat notes.md", 0),
+    ];
+    let (mut spoke, mut total) = (0, 0);
     for seed in 0..40 {
         let mut engine = MiseryEngine::with_seed(seed);
-        for _ in 0..20 {
-            if engine.generate(&ctx("ls"), Phase::Complete).is_some() {
-                trivial_hits += 1;
-            }
-        }
-        let mut engine = MiseryEngine::with_seed(seed);
-        for _ in 0..20 {
-            if engine
-                .generate(&ctx("cargo build"), Phase::Complete)
-                .is_some()
-            {
-                work_hits += 1;
+        for (command, exit) in commands {
+            let mut c = ctx(command);
+            c.exit_code = Some(*exit);
+            c.succeeded = Some(*exit == 0);
+            total += 1;
+            if engine.generate(&c, Phase::Complete).is_some() {
+                spoke += 1;
             }
         }
     }
+    let rate = spoke as f64 / total as f64;
     assert!(
-        trivial_hits > work_hits,
-        "ls ({trivial_hits}) should be mocked more than cargo build ({work_hits})"
-    );
-}
-
-#[test]
-fn failing_commands_attract_more_attention() {
-    let mut ok_hits = 0;
-    let mut fail_hits = 0;
-    for seed in 0..40 {
-        let mut engine = MiseryEngine::with_seed(seed);
-        let mut c = ctx("git push");
-        for _ in 0..20 {
-            if engine.generate(&c, Phase::Complete).is_some() {
-                ok_hits += 1;
-            }
-        }
-        let mut engine = MiseryEngine::with_seed(seed);
-        c.exit_code = Some(1);
-        c.succeeded = Some(false);
-        for _ in 0..20 {
-            if engine.generate(&c, Phase::Complete).is_some() {
-                fail_hits += 1;
-            }
-        }
-    }
-    assert!(
-        fail_hits > ok_hits,
-        "failures ({fail_hits}) should outdraw successes ({ok_hits})"
+        rate > 0.95,
+        "the verdict should fire on nearly every command, got {rate:.2}"
     );
 }

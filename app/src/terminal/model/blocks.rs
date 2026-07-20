@@ -2521,6 +2521,16 @@ impl BlockList {
         );
     }
 
+    /// Fork (misery mode): attach the anticipation line to a specific block's
+    /// label row. Keyed by id so it stays put; no height change (the label row
+    /// is fixed height), so a plain repaint is enough.
+    pub fn set_block_misery_submit(&mut self, block_id: &BlockId, line: Option<String>) {
+        if let Some(block) = self.mut_block_from_id(block_id) {
+            block.set_misery_submit(line);
+            self.event_proxy.send_wakeup_event();
+        }
+    }
+
     /// Fork (misery mode): attach the verdict line to a specific block,
     /// rebuilding heights so its footer slot is reserved.
     pub fn set_block_misery_verdict(&mut self, block_id: &BlockId, line: Option<String>) {

@@ -5,112 +5,77 @@ fn cmd(input: &str) -> ParsedCommand {
     classify::parse(input).expect("should parse")
 }
 
-fn p(input: &str, history: History, exit: Option<i32>, millis: Option<u64>) -> f32 {
-    probability(&cmd(input), Phase::Complete, history, exit, millis)
+/// The anticipation line is the only one still driven by the adaptive score;
+/// the verdict is unconditional (see `the_verdict_always_fires`).
+fn submit_p(input: &str, history: History) -> f32 {
+    probability(&cmd(input), Phase::Submit, history, None, None)
 }
 
 #[test]
-fn trivial_commands_score_above_real_work() {
-    let listing = p("ls", History::default(), Some(0), None);
-    let building = p("cargo build", History::default(), Some(0), None);
+fn the_verdict_always_fires() {
+    // Fork: the terminal always passes comment at the end, whatever the command.
+    for input in ["ls", "cargo build", "git push", "clear"] {
+        let p = probability(&cmd(input), Phase::Complete, History::default(), Some(0), None);
+        assert_eq!(p, 1.0, "{input} should always get a verdict");
+    }
+}
+
+#[test]
+fn the_anticipation_fires_most_of_the_time() {
+    // Even the command that looks most like real work clears the floor.
+    let p = submit_p("cargo build", History::default());
     assert!(
-        listing > building,
-        "ls ({listing}) should outrank cargo build ({building})"
+        (SUBMIT_MIN_PROBABILITY..=SUBMIT_MAX_PROBABILITY).contains(&p),
+        "submit {p} should sit within [{SUBMIT_MIN_PROBABILITY}, {SUBMIT_MAX_PROBABILITY}]"
     );
+    assert!(p >= 0.5, "the anticipation should fire most of the time, got {p}");
 }
 
 #[test]
-fn repetition_increases_the_score() {
-    let once = p("ls", History::default(), Some(0), None);
-    let thrice = p(
+fn repetition_escalates_the_anticipation() {
+    let once = submit_p("ls", History::default());
+    let thrice = submit_p(
         "ls",
         History {
             repeat_count: 3,
             ..Default::default()
         },
-        Some(0),
-        None,
     );
-    assert!(thrice > once, "repeats should escalate: {once} -> {thrice}");
-}
-
-#[test]
-fn failure_increases_the_score() {
-    let ok = p("git push", History::default(), Some(0), None);
-    let failed = p("git push", History::default(), Some(1), None);
-    assert!(failed > ok, "failure should escalate: {ok} -> {failed}");
-}
-
-#[test]
-fn pipelines_are_treated_as_effort() {
-    let bare = p("ls", History::default(), Some(0), None);
-    let piped = p("ls | wc -l", History::default(), Some(0), None);
+    assert!(thrice >= once, "repeats should not lower it: {once} -> {thrice}");
     assert!(
-        piped < bare,
-        "pipelines should be spared: {bare} -> {piped}"
+        thrice > SUBMIT_MIN_PROBABILITY,
+        "a third `ls` should lift the anticipation above the floor, got {thrice}"
     );
 }
 
 #[test]
-fn slow_real_work_is_spared_but_slow_trivia_is_not() {
-    let slow_build = p("cargo build", History::default(), Some(0), Some(60_000));
-    let fast_build = p("cargo build", History::default(), Some(0), Some(100));
-    assert!(slow_build < fast_build, "long builds should be spared");
-
-    let slow_ls = p("ls", History::default(), Some(0), Some(60_000));
-    let fast_ls = p("ls", History::default(), Some(0), Some(100));
-    assert!(slow_ls > fast_ls, "a slow ls is its own punchline");
-}
-
-#[test]
-fn recent_misery_backs_off() {
-    let quiet = p("ls", History::default(), Some(0), None);
-    let noisy = p(
-        "ls",
-        History {
-            recent_misery_count: 3,
-            ..Default::default()
-        },
-        Some(0),
-        None,
-    );
-    assert!(noisy < quiet, "should back off: {quiet} -> {noisy}");
-}
-
-#[test]
-fn submit_phase_is_rarer_than_completion() {
-    let history = History::default();
-    let submit = probability(&cmd("ls"), Phase::Submit, history, None, None);
-    let complete = probability(&cmd("ls"), Phase::Complete, history, Some(0), None);
+fn the_anticipation_is_rarer_than_the_verdict() {
+    let submit = submit_p("ls", History::default());
+    let complete = probability(&cmd("ls"), Phase::Complete, History::default(), Some(0), None);
     assert!(
         submit < complete,
-        "submit ({submit}) should be rarer than complete ({complete})"
+        "anticipation ({submit}) should be rarer than the certain verdict ({complete})"
     );
 }
 
 #[test]
-fn always_within_bounds() {
+fn the_anticipation_stays_within_bounds() {
     // Hammer the extremes from both directions.
-    let extreme_high = p(
+    let extreme_high = submit_p(
         "clear",
         History {
             repeat_count: 99,
             recent_misery_count: 0,
         },
-        Some(1),
-        Some(60_000),
     );
-    assert!(extreme_high <= MAX_PROBABILITY, "{extreme_high}");
+    assert!(extreme_high <= SUBMIT_MAX_PROBABILITY, "{extreme_high}");
 
-    let extreme_low = p(
+    let extreme_low = submit_p(
         "cargo build && ./deploy",
         History {
             repeat_count: 0,
             recent_misery_count: 99,
         },
-        Some(0),
-        Some(600_000),
     );
-    assert!(extreme_low >= MIN_PROBABILITY, "{extreme_low}");
-    assert!(extreme_low > 0.0, "never fully silent");
+    assert!(extreme_low >= SUBMIT_MIN_PROBABILITY, "{extreme_low}");
 }
