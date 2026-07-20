@@ -2848,6 +2848,10 @@ impl AISettingsPageView {
                 }
             }
             Some(AISubpage::Profiles) => {
+                // Profiles and Knowledge are no longer their own nav items —
+                // both are folded into General (ThirdPartyCLIAgents) below.
+                // These arms remain only for any programmatic navigation and
+                // mirror what General renders for that section.
                 if !FeatureFlag::UsageBasedPricing.is_enabled() {
                     widgets.push(Box::new(UsageWidget::default()));
                 }
@@ -2859,7 +2863,17 @@ impl AISettingsPageView {
                 }
             }
             Some(AISubpage::ThirdPartyCLIAgents) => {
+                // "General": its own CLI-agent settings, then the Knowledge
+                // section, then Profiles last — each widget renders its own
+                // sub-header, so they read as distinct sections on one page.
                 widgets.push(Box::new(CLIAgentWidget::default()));
+                if FeatureFlag::AIRules.is_enabled() {
+                    widgets.push(Box::new(AIFactWidget::default()));
+                }
+                if !FeatureFlag::UsageBasedPricing.is_enabled() {
+                    widgets.push(Box::new(UsageWidget::default()));
+                }
+                widgets.push(Box::new(AgentsWidget::default()));
             }
             Some(AISubpage::Grok) => {
                 // The Grok connect row lives in ApiKeysWidget (its buttons and
@@ -4504,11 +4518,15 @@ impl SettingsPageMeta for AISettingsPageView {
     }
 
     fn on_page_selected(&mut self, _: bool, ctx: &mut ViewContext<Self>) {
-        // The credit-usage counters are only rendered by `UsageWidget`, which
-        // lives on the Profiles subpage. Other AI subpages (Warp Agent,
-        // Knowledge, Third party CLI agents) don't display usage, so refreshing
-        // it there is a pointless warp-server round-trip on every page open.
-        if self.active_subpage == Some(AISubpage::Profiles) {
+        // The credit-usage counters are rendered by `UsageWidget`, which now
+        // lives on the General subpage (ThirdPartyCLIAgents) — the former
+        // Profiles content was merged there. Other AI subpages don't display
+        // usage, so refreshing it there is a pointless warp-server round-trip
+        // on every page open.
+        if matches!(
+            self.active_subpage,
+            Some(AISubpage::ThirdPartyCLIAgents | AISubpage::Profiles)
+        ) {
             AIRequestUsageModel::handle(ctx).update(ctx, |ai_request_usage_model, ctx| {
                 ai_request_usage_model.refresh_request_usage_async(ctx)
             });

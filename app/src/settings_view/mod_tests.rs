@@ -130,10 +130,12 @@ fn non_subpage_sections_map_to_themselves() {
 fn ai_subpages_list_contains_all_ai_subpage_variants() {
     let subpages = SettingsSection::ai_subpages();
     assert!(subpages.contains(&SettingsSection::WarpAgent));
-    assert!(subpages.contains(&SettingsSection::AgentProfiles));
     assert!(subpages.contains(&SettingsSection::AgentMCPServers));
-    assert!(subpages.contains(&SettingsSection::Knowledge));
     assert!(subpages.contains(&SettingsSection::ThirdPartyCLIAgents));
+    // Profiles and Knowledge are folded into General (ThirdPartyCLIAgents) as
+    // sections, so they're intentionally no longer standalone nav items.
+    assert!(!subpages.contains(&SettingsSection::AgentProfiles));
+    assert!(!subpages.contains(&SettingsSection::Knowledge));
 }
 
 #[test]
@@ -252,30 +254,16 @@ fn visible_subpages(
         .collect()
 }
 
-#[test]
-fn search_knowledge_shows_only_knowledge_subpage() {
-    // Simulate: searching "knowledge" matched the Knowledge subpage but not others.
-    let mut filter = HashMap::new();
-    filter.insert(SettingsSection::WarpAgent, MatchData::Countable(0));
-    filter.insert(SettingsSection::AgentProfiles, MatchData::Countable(0));
-    filter.insert(SettingsSection::Knowledge, MatchData::Countable(1));
-    filter.insert(
-        SettingsSection::ThirdPartyCLIAgents,
-        MatchData::Countable(0),
-    );
-
-    let visible = visible_subpages(&filter, SettingsSection::ai_subpages());
-
-    assert_eq!(visible, vec![SettingsSection::Knowledge]);
-}
+// (Knowledge and Profiles are no longer standalone subpages — their content
+// lives in General — so the former "search shows Knowledge/Profiles subpage"
+// tests were removed. General's own visibility is covered below.)
 
 #[test]
-fn search_agent_shows_profiles_and_cli_agents() {
-    // "agent" appears in both AgentProfiles and ThirdPartyCLIAgents search terms.
+fn search_general_shows_only_general_subpage() {
+    // A search that matches only General (ThirdPartyCLIAgents) surfaces it and
+    // nothing else.
     let mut filter = HashMap::new();
     filter.insert(SettingsSection::WarpAgent, MatchData::Countable(0));
-    filter.insert(SettingsSection::AgentProfiles, MatchData::Countable(2));
-    filter.insert(SettingsSection::Knowledge, MatchData::Countable(0));
     filter.insert(
         SettingsSection::ThirdPartyCLIAgents,
         MatchData::Countable(1),
@@ -283,10 +271,7 @@ fn search_agent_shows_profiles_and_cli_agents() {
 
     let visible = visible_subpages(&filter, SettingsSection::ai_subpages());
 
-    assert!(visible.contains(&SettingsSection::AgentProfiles));
-    assert!(visible.contains(&SettingsSection::ThirdPartyCLIAgents));
-    assert!(!visible.contains(&SettingsSection::WarpAgent));
-    assert!(!visible.contains(&SettingsSection::Knowledge));
+    assert_eq!(visible, vec![SettingsSection::ThirdPartyCLIAgents]);
 }
 
 #[test]
@@ -434,11 +419,10 @@ fn nav_filter_falls_back_to_pages_filter_for_top_level_pages() {
 fn umbrella_visible_when_any_subpage_matches() {
     let mut filter = HashMap::new();
     filter.insert(SettingsSection::WarpAgent, MatchData::Countable(0));
-    filter.insert(SettingsSection::AgentProfiles, MatchData::Countable(0));
-    filter.insert(SettingsSection::Knowledge, MatchData::Countable(1));
+    filter.insert(SettingsSection::AgentMCPServers, MatchData::Countable(0));
     filter.insert(
         SettingsSection::ThirdPartyCLIAgents,
-        MatchData::Countable(0),
+        MatchData::Countable(1),
     );
 
     assert!(umbrella_visible(&filter, SettingsSection::ai_subpages()));
@@ -489,26 +473,26 @@ fn auto_select_jumps_away_from_filtered_out_subpage() {
     // User is on Knowledge, searches "agent" which matches Profiles but not Knowledge.
     let mut filter = HashMap::new();
     filter.insert(SettingsSection::WarpAgent, MatchData::Countable(0));
-    filter.insert(SettingsSection::AgentProfiles, MatchData::Countable(2));
-    filter.insert(SettingsSection::Knowledge, MatchData::Countable(0));
+    filter.insert(SettingsSection::AgentMCPServers, MatchData::Countable(2));
     filter.insert(
         SettingsSection::ThirdPartyCLIAgents,
-        MatchData::Countable(1),
+        MatchData::Countable(0),
     );
 
-    let current = SettingsSection::Knowledge;
+    let current = SettingsSection::WarpAgent;
     assert!(
         !is_current_visible(current, &filter, &[]),
-        "Knowledge should not be visible when it has 0 matches"
+        "WarpAgent should not be visible when it has 0 matches"
     );
 
-    // The nav order: Oz, Profiles, ..., Knowledge, ThirdPartyCLI
+    // The nav order now leads with General (ThirdPartyCLIAgents); with it
+    // filtered out too, the first visible subpage is AgentMCPServers.
     let nav_order = SettingsSection::ai_subpages();
     let first = first_visible_section(nav_order, &filter, &[]);
     assert_eq!(
         first,
-        Some(SettingsSection::AgentProfiles),
-        "Should auto-select Profiles as the first visible subpage"
+        Some(SettingsSection::AgentMCPServers),
+        "Should auto-select the first visible subpage (MCP servers)"
     );
 }
 
@@ -677,8 +661,8 @@ fn collapsed_umbrella_is_a_single_nav_stop() {
         stops[1],
         NavStop::CollapsedUmbrella {
             nav_index: 1,
-            first_subpage: SettingsSection::WarpAgent,
-            last_subpage: SettingsSection::Ollama,
+            first_subpage: SettingsSection::ThirdPartyCLIAgents,
+            last_subpage: SettingsSection::Grok,
         }
     ));
     assert!(matches!(
@@ -712,9 +696,10 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
 
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    // Expect: Account, WarpAgent, AgentProfiles, AgentMCPServers, Knowledge,
-    // ThirdPartyCLIAgents, Ollama, BillingAndUsage, <Code umbrella>,
-    // <Cloud platform umbrella>, Teams.
+    // Expect: Account, ThirdPartyCLIAgents (General), WarpAgent,
+    // AgentMCPServers, Ollama, Grok, BillingAndUsage, <Code umbrella>,
+    // <Cloud platform umbrella>, Teams. (Knowledge/Profiles are now sections
+    // within General.)
     let sections: Vec<_> = stops
         .iter()
         .map(|s| match s {
@@ -726,12 +711,11 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
         sections,
         vec![
             "Account",
-            "WarpAgent",
-            "AgentProfiles",
-            "AgentMCPServers",
-            "Knowledge",
             "ThirdPartyCLIAgents",
+            "WarpAgent",
+            "AgentMCPServers",
             "Ollama",
+            "Grok",
             "BillingAndUsage",
             "Umbrella@3",
             "Umbrella@4",
@@ -747,8 +731,8 @@ fn collapsed_umbrella_with_filtered_subpages_uses_first_visible_subpage() {
     let nav_items = realistic_nav_items();
 
     let stops = build_nav_stops(&nav_items, |section| {
-        // Hide WarpAgent (first AI subpage); keep the rest.
-        section != SettingsSection::WarpAgent
+        // Hide General/ThirdPartyCLIAgents (first AI subpage); keep the rest.
+        section != SettingsSection::ThirdPartyCLIAgents
     });
 
     let agents_stop = stops
@@ -764,13 +748,13 @@ fn collapsed_umbrella_with_filtered_subpages_uses_first_visible_subpage() {
         } => {
             assert_eq!(
                 *first_subpage,
-                SettingsSection::AgentProfiles,
-                "WarpAgent is hidden by the filter, so the first visible subpage is AgentProfiles"
+                SettingsSection::WarpAgent,
+                "General is hidden by the filter, so the first visible subpage is WarpAgent"
             );
             assert_eq!(
                 *last_subpage,
-                SettingsSection::Ollama,
-                "last_subpage is unaffected by hiding WarpAgent and should remain the last visible subpage"
+                SettingsSection::Grok,
+                "last_subpage is unaffected by hiding the first subpage and remains the last visible subpage"
             );
         }
         _ => unreachable!(),
@@ -837,11 +821,11 @@ fn current_stop_index_maps_subpage_to_collapsed_umbrella() {
     let nav_items = realistic_nav_items();
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    let idx = current_stop_index(&stops, &nav_items, SettingsSection::Knowledge);
+    let idx = current_stop_index(&stops, &nav_items, SettingsSection::Ollama);
     assert_eq!(
         idx,
         Some(1),
-        "Knowledge is under the collapsed Agents umbrella at nav_index 1"
+        "Ollama is under the collapsed Agents umbrella at nav_index 1"
     );
 }
 
@@ -910,15 +894,15 @@ fn arrow_down_from_account_with_collapsed_agents_lands_on_first_subpage() {
     let nav_items = realistic_nav_items();
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    // Pressing Down from Account should auto-expand Agents and select WarpAgent,
-    // not skip over to BillingAndUsage.
+    // Pressing Down from Account should auto-expand Agents and select the
+    // first subpage (General/ThirdPartyCLIAgents), not skip to BillingAndUsage.
     let next = simulate_cycle(
         &nav_items,
         &stops,
         SettingsSection::Account,
         CycleDirection::Down,
     );
-    assert_eq!(next, SettingsSection::WarpAgent);
+    assert_eq!(next, SettingsSection::ThirdPartyCLIAgents);
 }
 
 #[test]
@@ -927,7 +911,7 @@ fn arrow_up_from_billing_and_usage_with_collapsed_agents_lands_on_last_subpage()
     let stops = build_nav_stops(&nav_items, |_| true);
 
     // Pressing Up from BillingAndUsage should land on the collapsed AI
-    // umbrella, which resolves to Ollama (last visible subpage) so the user
+    // umbrella, which resolves to Grok (last visible subpage) so the user
     // continues moving in natural reading order rather than being jumped back
     // to the top of the umbrella.
     let next = simulate_cycle(
@@ -936,7 +920,7 @@ fn arrow_up_from_billing_and_usage_with_collapsed_agents_lands_on_last_subpage()
         SettingsSection::BillingAndUsage,
         CycleDirection::Up,
     );
-    assert_eq!(next, SettingsSection::Ollama);
+    assert_eq!(next, SettingsSection::Grok);
 }
 
 #[test]
@@ -947,9 +931,7 @@ fn arrow_up_into_collapsed_umbrella_respects_search_filter_for_last_subpage() {
     let is_visible = |section: SettingsSection| {
         !matches!(
             section,
-            SettingsSection::Knowledge
-                | SettingsSection::ThirdPartyCLIAgents
-                | SettingsSection::Ollama
+            SettingsSection::ThirdPartyCLIAgents | SettingsSection::Ollama | SettingsSection::Grok
         )
     };
     let stops = build_nav_stops(&nav_items, is_visible);
@@ -972,12 +954,12 @@ fn arrow_down_from_expanded_last_subpage_leaves_umbrella() {
     set_expanded(&mut nav_items, 1, true); // expand Agents
     let stops = build_nav_stops(&nav_items, |_| true);
 
-    // Ollama is the last AI subpage; Down should move to BillingAndUsage
+    // Grok is the last AI subpage; Down should move to BillingAndUsage
     // (the next top-level page in the nav order).
     let next = simulate_cycle(
         &nav_items,
         &stops,
-        SettingsSection::Ollama,
+        SettingsSection::Grok,
         CycleDirection::Down,
     );
     assert_eq!(next, SettingsSection::BillingAndUsage);
@@ -1014,19 +996,19 @@ fn arrow_down_across_adjacent_collapsed_umbrellas() {
 #[test]
 fn arrow_down_collapsed_umbrella_respects_search_filter() {
     let nav_items = realistic_nav_items();
-    // Search filter hides WarpAgent and AgentProfiles so the first visible AI
+    // Search filter hides General and WarpAgent so the first visible AI
     // subpage is AgentMCPServers.
     let is_visible = |section: SettingsSection| {
         !matches!(
             section,
-            SettingsSection::WarpAgent | SettingsSection::AgentProfiles
+            SettingsSection::ThirdPartyCLIAgents | SettingsSection::WarpAgent
         )
     };
     let stops = build_nav_stops(&nav_items, is_visible);
 
     // From Account, Down should land on AgentMCPServers (first visible
-    // subpage of the still-collapsed Agents umbrella), not on WarpAgent /
-    // AgentProfiles.
+    // subpage of the still-collapsed Agents umbrella), not on General /
+    // WarpAgent.
     let next = simulate_cycle(
         &nav_items,
         &stops,

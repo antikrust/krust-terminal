@@ -380,12 +380,13 @@ impl SettingsSection {
 
     /// The ordered list of AI subpage sections shown under the AI umbrella.
     pub fn ai_subpages() -> &'static [Self] {
+        // General (backed by ThirdPartyCLIAgents) leads the AI umbrella and
+        // now hosts the former Knowledge and Profiles pages as sections
+        // within it (see ai_page.rs), so neither is a standalone nav item.
         &[
-            Self::WarpAgent,
-            Self::AgentProfiles,
-            Self::AgentMCPServers,
-            Self::Knowledge,
             Self::ThirdPartyCLIAgents,
+            Self::WarpAgent,
+            Self::AgentMCPServers,
             Self::Ollama,
             Self::Grok,
         ]
