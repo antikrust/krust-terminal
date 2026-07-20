@@ -40,6 +40,7 @@ use account_client::{Account, AccountClient, AccountError, ServerConfig};
 use warp_core::user_preferences::GetUserPreferences;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
+pub mod settings_sync;
 pub mod signup_modal;
 
 /// Registers the account modal's key bindings. Call once at startup.
@@ -126,6 +127,11 @@ impl AccountSession {
         self.session.as_ref().map(|s| &s.account)
     }
 
+    /// The current session's bearer token, if signed in.
+    pub fn token(&self) -> Option<String> {
+        self.session.as_ref().map(|s| s.token.clone())
+    }
+
     /// The configured server URL (for a settings/UI field), if set.
     pub fn server_url(ctx: &AppContext) -> Option<String> {
         read_pref(ctx, SERVER_URL_KEY)
@@ -206,6 +212,9 @@ impl AccountSession {
                 });
                 set_account_active(true);
                 ctx.emit(AccountEvent::SignedIn(account));
+                // Pull + push settings now that we have a session.
+                settings_sync::AccountSettingsSync::handle(ctx)
+                    .update(ctx, |sync, ctx| sync.sync(ctx));
             }
             Err(err) => ctx.emit(AccountEvent::Failed(err.to_string())),
         }

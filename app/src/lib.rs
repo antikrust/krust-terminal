@@ -1409,6 +1409,7 @@ pub(crate) fn initialize_app(
     // the app today is to gate the swear/misery "off" toggle (see
     // `crate::account`). Restores a persisted session on construction.
     ctx.add_singleton_model(crate::account::AccountSession::new);
+    ctx.add_singleton_model(crate::account::settings_sync::AccountSettingsSync::new);
 
     ctx.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
 
