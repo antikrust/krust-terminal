@@ -50,6 +50,7 @@ use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::{AuthRedirectPayload, AuthView, AuthViewVariant};
 use crate::auth::login_slide::{LoginSlideEvent, LoginSlideSource, LoginSlideView};
 use crate::auth::needs_sso_link_view::NeedsSsoLinkView;
+use crate::account::signup_modal::{AccountModalEvent, AccountModalView};
 use crate::auth::paste_auth_token_modal::{PasteAuthTokenModalEvent, PasteAuthTokenModalView};
 #[cfg(target_family = "wasm")]
 use crate::auth::web_handoff::{WebHandoffEvent, WebHandoffView};
@@ -473,6 +474,15 @@ pub fn init(app: &mut AppContext) {
         .with_enabled(|| {
             FeatureFlag::AgentOnboarding.is_enabled() && ChannelState::enable_debug_features()
         }),
+        // Fork: open the account signup/login modal. No default key — reachable
+        // from the command palette as "Account: Sign in"; bind it if you like.
+        EditableBinding::new(
+            "root_view:open_account_modal",
+            "Account: Sign in",
+            RootViewAction::OpenAccountModal,
+        )
+        .with_group(bindings::BindingGroup::Settings.as_str())
+        .with_context_predicate(id!("RootView")),
     ])
 }
 
@@ -1648,6 +1658,8 @@ pub struct RootView {
     /// settings to apply after a new user login / initial cloud load completes
     pending_post_auth_onboarding_settings: Option<SelectedSettings>,
     paste_auth_token_modal: Option<ViewHandle<PasteAuthTokenModalView>>,
+    /// Fork: the account signup/login modal, when open.
+    account_modal: Option<ViewHandle<AccountModalView>>,
 }
 
 impl RootView {
@@ -1748,6 +1760,7 @@ impl RootView {
             pending_tutorial: None,
             pending_post_auth_onboarding_settings: None,
             paste_auth_token_modal: None,
+            account_modal: None,
         };
 
         match &root_view.auth_onboarding_state {
@@ -3135,7 +3148,26 @@ impl RootView {
         }
     }
 
+    fn open_account_modal(&mut self, ctx: &mut ViewContext<Self>) {
+        let modal = ctx.add_typed_action_view(AccountModalView::new);
+        ctx.subscribe_to_view(&modal, |me, _, event, ctx| match event {
+            AccountModalEvent::Closed => {
+                me.account_modal = None;
+                me.focus(ctx);
+                ctx.notify();
+            }
+        });
+        ctx.focus(&modal);
+        self.account_modal = Some(modal);
+        ctx.notify();
+    }
+
     pub fn focus(&mut self, ctx: &mut ViewContext<Self>) -> bool {
+        if let Some(modal) = &self.account_modal {
+            ctx.focus(modal);
+            ctx.notify();
+            return true;
+        }
         if let Some(modal) = &self.paste_auth_token_modal {
             ctx.focus(modal);
             ctx.notify();
@@ -3301,7 +3333,7 @@ impl View for RootView {
     fn on_focus(&mut self, focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
         if focus_ctx.is_self_focused() {
             self.focus(ctx);
-        } else if self.paste_auth_token_modal.is_some() {
+        } else if self.account_modal.is_some() || self.paste_auth_token_modal.is_some() {
             // Modal is open — focus belongs to the editor inside it.
         } else if matches!(
             self.auth_onboarding_state,
@@ -3347,6 +3379,10 @@ impl View for RootView {
         stack.add_child(child);
 
         if let Some(modal) = &self.paste_auth_token_modal {
+            stack.add_child(ChildView::new(modal).finish());
+        }
+
+        if let Some(modal) = &self.account_modal {
             stack.add_child(ChildView::new(modal).finish());
         }
 
@@ -3414,6 +3450,8 @@ pub enum RootViewAction {
     ShowOrHideNonQuakeModeWindows,
     ToggleFullscreen,
     DebugEnterOnboardingState,
+    /// Fork: open the account signup/login modal.
+    OpenAccountModal,
 }
 
 impl TypedActionView for RootView {
@@ -3436,6 +3474,9 @@ impl TypedActionView for RootView {
             }
             RootViewAction::DebugEnterOnboardingState => {
                 self.debug_enter_onboarding_state(&(), ctx);
+            }
+            RootViewAction::OpenAccountModal => {
+                self.open_account_modal(ctx);
             }
         }
     }
