@@ -47,6 +47,8 @@ All bodies are JSON. Auth is `Authorization: Bearer <token>`.
 | `GET /v1/shares` | — (auth) | `{shares: [{id, kind, name, team, created_at}]}` — your own, payloads omitted |
 | `GET /v1/shares/{id}` | — (**no auth**) | `{id, kind, name, data, created_at}`; `404` if unknown or revoked |
 | `DELETE /v1/shares/{id}` | — (auth, owner only) | `204`; `404` for unknown *or* someone else's |
+| `POST /v1/chat` | `{body}` (auth) | `201 {id, author_email, body, created_at}`; `400` on empty/oversize |
+| `GET /v1/chat?since=<id>` | — (auth) | `{messages: [{id, author_email, body, created_at}]}`, oldest first, capped at 200 |
 
 Conventions: `base_version: 0` means "creating the first document".
 Scopes are free-form (≤64 chars); the client uses `global` plus platform
