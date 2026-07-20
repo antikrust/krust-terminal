@@ -122,6 +122,9 @@ pub enum AISubpage {
     Knowledge,
     /// Third-party CLI agent settings.
     ThirdPartyCLIAgents,
+    /// Grok (xAI) subscription — its own page rather than a row buried in the
+    /// Warp Agent page's API-keys section.
+    Grok,
 }
 
 impl AISubpage {
@@ -131,6 +134,7 @@ impl AISubpage {
             SettingsSection::AgentProfiles => Some(Self::Profiles),
             SettingsSection::Knowledge => Some(Self::Knowledge),
             SettingsSection::ThirdPartyCLIAgents => Some(Self::ThirdPartyCLIAgents),
+            SettingsSection::Grok => Some(Self::Grok),
             // AgentMCPServers renders the standalone MCPServers page, not an AI subpage.
             _ => None,
         }
@@ -2857,6 +2861,12 @@ impl AISettingsPageView {
             }
             Some(AISubpage::ThirdPartyCLIAgents) => {
                 widgets.push(Box::new(CLIAgentWidget::default()));
+            }
+            Some(AISubpage::Grok) => {
+                // The Grok connect row lives in ApiKeysWidget (its buttons and
+                // OAuth wiring are there); on this subpage the widget renders
+                // only that row. See ApiKeysWidget::render_grok_page.
+                widgets.push(Box::new(ApiKeysWidget::new(ctx)));
             }
         }
 
@@ -8698,6 +8708,70 @@ impl ApiKeysWidget {
         list.finish()
     }
 
+    /// The whole content of the "Grok" settings subpage: a header, the
+    /// connect/disconnect row, and — mid-connect — the paste-the-code
+    /// fallback. Moved off the Warp Agent page's API-keys section so Grok
+    /// stands on its own, the cloud-model counterpart to the Ollama page.
+    fn render_grok_page(
+        &self,
+        view: &AISettingsPageView,
+        appearance: &Appearance,
+        is_enabled: bool,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let mut column = Flex::column().with_child(render_separator(appearance));
+
+        // Without the feature there is nothing to connect; leave the page bare
+        // rather than show a dead row.
+        if !FeatureFlag::SuperGrok.is_enabled() {
+            return column.finish();
+        }
+        // `view` is only read on native (the OAuth attempt state); keep it
+        // "used" on wasm so the shared signature doesn't warn.
+        #[cfg(target_family = "wasm")]
+        let _ = view;
+
+        column.add_child(
+            build_sub_header(
+                appearance,
+                "Grok (xAI)",
+                Some(styles::header_font_color(is_enabled, app)),
+            )
+            .with_padding_bottom(HEADER_PADDING)
+            .finish(),
+        );
+
+        #[cfg(not(target_family = "wasm"))]
+        let has_grok_oauth_attempt = view.grok_oauth_attempt.is_some();
+        #[cfg(not(target_family = "wasm"))]
+        let is_grok_connecting =
+            ApiKeyManager::as_ref(app).grok_tokens().is_none() && has_grok_oauth_attempt;
+        #[cfg(target_family = "wasm")]
+        let is_grok_connecting = false;
+
+        column.add_child(
+            Container::new(self.render_grok_subscription_row(
+                appearance,
+                is_enabled,
+                is_grok_connecting,
+                app,
+            ))
+            .with_margin_top(16.)
+            .finish(),
+        );
+
+        #[cfg(not(target_family = "wasm"))]
+        if has_grok_oauth_attempt {
+            column.add_child(
+                Container::new(self.render_grok_manual_code_entry(view, appearance))
+                    .with_margin_top(8.)
+                    .finish(),
+            );
+        }
+
+        column.finish()
+    }
+
     /// The "Connect SuperGrok subscription" row: label and description on the
     /// left, a Connect/Disconnect button on the right, and a "Connected on
     /// ..." status line underneath while a subscription is connected.
@@ -8955,6 +9029,13 @@ impl SettingsWidget for ApiKeysWidget {
             managed_byok_byoe_enabled,
         } = visibility;
 
+        // Grok has its own subpage now. When it's open, this widget is nothing
+        // but the Grok connect row — the API-key editors and custom-inference
+        // controls belong on the other AI pages, not here.
+        if view.active_subpage == Some(AISubpage::Grok) {
+            return self.render_grok_page(view, appearance, provider_keys_enabled, app);
+        }
+
         let mut column = Flex::column().with_child(render_separator(appearance));
 
         if visibility.show_section() {
@@ -9076,36 +9157,8 @@ impl SettingsWidget for ApiKeysWidget {
             }
         }
 
-        // Entrypoint for connecting a SuperGrok (xAI) subscription via OAuth.
-        if FeatureFlag::SuperGrok.is_enabled() && show_provider_keys {
-            #[cfg(not(target_family = "wasm"))]
-            let grok_tokens = ApiKeyManager::as_ref(app).grok_tokens();
-            #[cfg(not(target_family = "wasm"))]
-            let has_grok_oauth_attempt = view.grok_oauth_attempt.is_some();
-            #[cfg(not(target_family = "wasm"))]
-            let is_grok_connecting = grok_tokens.is_none() && has_grok_oauth_attempt;
-            #[cfg(target_family = "wasm")]
-            let is_grok_connecting = false;
-            column.add_child(
-                Container::new(self.render_grok_subscription_row(
-                    appearance,
-                    provider_keys_enabled,
-                    is_grok_connecting,
-                    app,
-                ))
-                .with_margin_top(16.)
-                .finish(),
-            );
-
-            #[cfg(not(target_family = "wasm"))]
-            if has_grok_oauth_attempt {
-                column.add_child(
-                    Container::new(self.render_grok_manual_code_entry(view, appearance))
-                        .with_margin_top(8.)
-                        .finish(),
-                );
-            }
-        }
+        // Grok's connect row used to live here; it now has its own subpage
+        // (rendered by render_grok_page via the early return above).
 
         // Warp credit fallback applies to member-provided API keys, not custom endpoints.
         if is_byo_enabled && show_provider_keys {

@@ -263,6 +263,7 @@ pub enum SettingsSection {
     Knowledge,
     ThirdPartyCLIAgents,
     Ollama,
+    Grok,
     /// Internal backing-page identifier for CodeSettingsPageView. Multiple subpages
     /// (CodeIndexing, EditorAndCodeReview) share this single backing page,
     /// so this variant is needed as the key in `settings_pages`.
@@ -330,6 +331,7 @@ impl SettingsSection {
                 | Self::Knowledge
                 | Self::ThirdPartyCLIAgents
                 | Self::Ollama
+                | Self::Grok
         )
     }
 
@@ -372,6 +374,7 @@ impl SettingsSection {
             Self::Knowledge,
             Self::ThirdPartyCLIAgents,
             Self::Ollama,
+            Self::Grok,
         ]
     }
 
@@ -417,6 +420,7 @@ impl FromStr for SettingsSection {
             "Knowledge" => Ok(Self::Knowledge),
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
             "Ollama" => Ok(Self::Ollama),
+            "Grok" => Ok(Self::Grok),
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
             "AppearanceGeneral" => Ok(Self::AppearanceGeneral),
