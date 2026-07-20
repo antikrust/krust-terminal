@@ -36,6 +36,7 @@ use warpui::{
     ViewContext, ViewHandle, WindowId,
 };
 
+use crate::account::chat::{ChatModalEvent, ChatModalView};
 use crate::account::signup_modal::{AccountModalEvent, AccountModalView};
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::blocklist::SerializedBlockListItem;
@@ -483,6 +484,10 @@ pub fn init(app: &mut AppContext) {
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("RootView")),
+        // Fork: open the global chat modal (also from the command palette).
+        EditableBinding::new("root_view:open_chat_modal", "Chat", RootViewAction::OpenChatModal)
+            .with_group(bindings::BindingGroup::Settings.as_str())
+            .with_context_predicate(id!("RootView")),
     ])
 }
 
@@ -1660,6 +1665,8 @@ pub struct RootView {
     paste_auth_token_modal: Option<ViewHandle<PasteAuthTokenModalView>>,
     /// Fork: the account signup/login modal, when open.
     account_modal: Option<ViewHandle<AccountModalView>>,
+    /// Fork: the global chat modal, when open.
+    chat_modal: Option<ViewHandle<ChatModalView>>,
 }
 
 impl RootView {
@@ -1761,6 +1768,7 @@ impl RootView {
             pending_post_auth_onboarding_settings: None,
             paste_auth_token_modal: None,
             account_modal: None,
+            chat_modal: None,
         };
 
         match &root_view.auth_onboarding_state {
@@ -3162,7 +3170,26 @@ impl RootView {
         ctx.notify();
     }
 
+    fn open_chat_modal(&mut self, ctx: &mut ViewContext<Self>) {
+        let modal = ctx.add_typed_action_view(ChatModalView::new);
+        ctx.subscribe_to_view(&modal, |me, _, event, ctx| match event {
+            ChatModalEvent::Closed => {
+                me.chat_modal = None;
+                me.focus(ctx);
+                ctx.notify();
+            }
+        });
+        ctx.focus(&modal);
+        self.chat_modal = Some(modal);
+        ctx.notify();
+    }
+
     pub fn focus(&mut self, ctx: &mut ViewContext<Self>) -> bool {
+        if let Some(modal) = &self.chat_modal {
+            ctx.focus(modal);
+            ctx.notify();
+            return true;
+        }
         if let Some(modal) = &self.account_modal {
             ctx.focus(modal);
             ctx.notify();
@@ -3333,7 +3360,10 @@ impl View for RootView {
     fn on_focus(&mut self, focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
         if focus_ctx.is_self_focused() {
             self.focus(ctx);
-        } else if self.account_modal.is_some() || self.paste_auth_token_modal.is_some() {
+        } else if self.chat_modal.is_some()
+            || self.account_modal.is_some()
+            || self.paste_auth_token_modal.is_some()
+        {
             // Modal is open — focus belongs to the editor inside it.
         } else if matches!(
             self.auth_onboarding_state,
@@ -3383,6 +3413,10 @@ impl View for RootView {
         }
 
         if let Some(modal) = &self.account_modal {
+            stack.add_child(ChildView::new(modal).finish());
+        }
+
+        if let Some(modal) = &self.chat_modal {
             stack.add_child(ChildView::new(modal).finish());
         }
 
@@ -3452,6 +3486,8 @@ pub enum RootViewAction {
     DebugEnterOnboardingState,
     /// Fork: open the account signup/login modal.
     OpenAccountModal,
+    /// Fork: open the global chat modal.
+    OpenChatModal,
 }
 
 impl TypedActionView for RootView {
@@ -3477,6 +3513,9 @@ impl TypedActionView for RootView {
             }
             RootViewAction::OpenAccountModal => {
                 self.open_account_modal(ctx);
+            }
+            RootViewAction::OpenChatModal => {
+                self.open_chat_modal(ctx);
             }
         }
     }

@@ -40,12 +40,14 @@ use account_client::{Account, AccountClient, AccountError, ServerConfig};
 use warp_core::user_preferences::GetUserPreferences;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
+pub mod chat;
 pub mod settings_sync;
 pub mod signup_modal;
 
-/// Registers the account modal's key bindings. Call once at startup.
+/// Registers the account + chat modal key bindings. Call once at startup.
 pub fn init(app: &mut AppContext) {
     signup_modal::init(app);
+    chat::init(app);
 }
 
 /// Private-preference keys. These live in the platform-native store, never in
