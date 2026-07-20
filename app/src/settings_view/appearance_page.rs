@@ -1687,15 +1687,17 @@ impl AppearanceSettingsPageView {
                     "Text FX",
                     vec![
                         Box::new(TextEffectsToggleWidget::default()),
-                        Box::new(TextEffectWidget),
-                        Box::new(TextEffectSpinnerWidget),
-                        Box::new(TextEffectSpeedWidget),
-                        Box::new(TextEffectIntensityWidget),
-                        Box::new(TextEffectColorWidget),
-                        Box::new(TextEffectColorSpeedWidget),
-                        Box::new(TextEffectColorIntensityWidget),
-                        Box::new(TextEffectScopeWidget),
-                        Box::new(TextEffectLargeOutputWidget),
+                        // Dropdowns wrapped so their rows match the toggle rows'
+                        // bottom spacing — one even gap down the whole section.
+                        Box::new(EvenlySpaced(TextEffectWidget)),
+                        Box::new(EvenlySpaced(TextEffectSpinnerWidget)),
+                        Box::new(EvenlySpaced(TextEffectSpeedWidget)),
+                        Box::new(EvenlySpaced(TextEffectIntensityWidget)),
+                        Box::new(EvenlySpaced(TextEffectColorWidget)),
+                        Box::new(EvenlySpaced(TextEffectColorSpeedWidget)),
+                        Box::new(EvenlySpaced(TextEffectColorIntensityWidget)),
+                        Box::new(EvenlySpaced(TextEffectScopeWidget)),
+                        Box::new(EvenlySpaced(TextEffectLargeOutputWidget)),
                         Box::new(TextEffectsAgentModeWidget::default()),
                         Box::new(TextEffectsTitleBarPickerWidget::default()),
                     ],
@@ -5094,6 +5096,45 @@ impl SettingsWidget for LigaturesWidget {
                 .finish(),
             None,
         )
+    }
+}
+
+/// Wraps a Text FX dropdown so its row ends with the same bottom padding the
+/// section's toggle rows already have. Toggles (`render_body_item`) pad by
+/// `HEADER_PADDING`; the shared `render_dropdown_item` does not, so mixing the
+/// two left uneven vertical gaps down the page. Adding the padding here — not
+/// in the shared helper — keeps dropdown spacing on every other settings page
+/// untouched. `should_render`/`widget_id`/`search_terms` forward to the inner
+/// widget so search, visibility, and scroll-position keys are unaffected.
+struct EvenlySpaced<W>(W);
+
+impl<W> SettingsWidget for EvenlySpaced<W>
+where
+    W: SettingsWidget<View = AppearanceSettingsPageView>,
+{
+    type View = AppearanceSettingsPageView;
+
+    fn widget_id(&self) -> &'static str {
+        self.0.widget_id()
+    }
+
+    fn search_terms(&self) -> &str {
+        self.0.search_terms()
+    }
+
+    fn should_render(&self, app: &AppContext) -> bool {
+        self.0.should_render(app)
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        Container::new(self.0.render(view, appearance, app))
+            .with_padding_bottom(HEADER_PADDING)
+            .finish()
     }
 }
 
