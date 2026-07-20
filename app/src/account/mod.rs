@@ -244,9 +244,7 @@ impl AccountSession {
     /// has been configured yet.
     fn client(ctx: &AppContext) -> Result<AccountClient, AccountError> {
         let base_url = read_pref(ctx, SERVER_URL_KEY).ok_or_else(|| {
-            AccountError::Config(
-                "no account server configured — set its address first".to_owned(),
-            )
+            AccountError::Config("no account server configured — set its address first".to_owned())
         })?;
         AccountClient::new(ServerConfig {
             base_url,

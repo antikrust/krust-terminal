@@ -180,12 +180,24 @@ impl AccountModalView {
         if self.busy {
             return;
         }
-        let server = self.server_input.as_ref(ctx).buffer_text(ctx).trim().to_owned();
-        let email = self.email_input.as_ref(ctx).buffer_text(ctx).trim().to_owned();
+        let server = self
+            .server_input
+            .as_ref(ctx)
+            .buffer_text(ctx)
+            .trim()
+            .to_owned();
+        let email = self
+            .email_input
+            .as_ref(ctx)
+            .buffer_text(ctx)
+            .trim()
+            .to_owned();
         let password = self.password_input.as_ref(ctx).buffer_text(ctx);
 
         if server.is_empty() {
-            self.status = Some(Status::Error("Enter the account server address.".to_owned()));
+            self.status = Some(Status::Error(
+                "Enter the account server address.".to_owned(),
+            ));
             ctx.notify();
             return;
         }
@@ -240,15 +252,11 @@ impl View for AccountModalView {
         let input_text_color: ColorU = internal_colors::text_main(theme, input_bg_solid);
         let ui_builder = appearance.ui_builder();
 
-        let title = FormattedTextElement::from_str(
-            "Account",
-            appearance.ui_font_family(),
-            16.,
-        )
-        .with_color(internal_colors::text_main(theme, dialog_surface_solid))
-        .with_weight(Weight::Bold)
-        .with_line_height_ratio(1.25)
-        .finish();
+        let title = FormattedTextElement::from_str("Account", appearance.ui_font_family(), 16.)
+            .with_color(internal_colors::text_main(theme, dialog_surface_solid))
+            .with_weight(Weight::Bold)
+            .with_line_height_ratio(1.25)
+            .finish();
 
         let close_button = ui_builder
             .close_button(24., self.close_mouse_state.clone())

@@ -23,9 +23,9 @@
 //! sign-in already delivers cross-device settings; continuous push is a
 //! follow-up. Scope is `global` only for now (platform scopes later).
 
+use ::settings::SettingsManager;
 use account_client::{AccountClient, ScopeDocument, SettingsWrite};
 use serde_json::{Map, Value};
-use ::settings::SettingsManager;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::AccountSession;
@@ -77,7 +77,10 @@ impl AccountSettingsSync {
 
     fn on_remote_fetched(
         &mut self,
-        result: Result<(AccountClient, String, Option<ScopeDocument>), account_client::AccountError>,
+        result: Result<
+            (AccountClient, String, Option<ScopeDocument>),
+            account_client::AccountError,
+        >,
         ctx: &mut ModelContext<Self>,
     ) {
         let (client, token, remote) = match result {
