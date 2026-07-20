@@ -466,12 +466,18 @@ Everything above is subtraction; this is the only addition.
   (opaque server token → `Authorization: Bearer`); folding it onto the real
   `AuthState` credential happens when the fake auth is removed (phase D/4).
 
-**Still to do:** the native signup/login **UI** (email+password modal) and the
-server-address/fingerprint settings fields — `AccountSession::{set_server,
-sign_up, log_in, log_out}` are the seams it drives; moving the token from the
-private store to the Keychain (`PersistedUser` secure storage); and phase E
-settings sync. No browser handoff, no `warp://` redirect, no Firebase URLs —
-the same `Credentials` → `AuthToken` → request-header path the code already has.
+**Done since (compile-verified, 2026-07-20):** the signup/login **UI**
+(`app/src/account/signup_modal.rs`, opened from the command palette "Account:
+Sign in"), and **settings sync** (`app/src/account/settings_sync.rs`) — a clean
+path built directly on `account_client`'s `get_settings`/`put_settings`, *not*
+the dead cloud-object syncer (which is inert now that Drive is local-only). No
+browser handoff, no `warp://` redirect, no Firebase URLs — the same
+`Credentials` → `AuthToken` → request-header path the code already has.
+
+**Still to do:** move the token from the private store to the Keychain
+(`PersistedUser` secure storage); settings-sync push-on-change + platform
+scopes; and folding the token onto `Credentials::Bearer` (part of phase D, the
+fake-auth teardown, deferred to a runnable session).
 
 ### Phase 6 — settings page
 

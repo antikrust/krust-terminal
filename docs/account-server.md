@@ -198,16 +198,26 @@ the original sketch suggested): the server's opaque token maps directly onto
 `Authorization: Bearer`, and `Credentials::is_externally_managed()` is already
 `true` for `Bearer`, so no refresh/reauth machinery fights it.
 
-**Not yet built:**
+**Also built (compile-verified), 2026-07-20:**
 
-- The signup/login UI (a native email+password modal) and the settings fields
-  for the server address + fingerprint. `AccountSession::{set_server, sign_up,
-  log_in, log_out}` are the seams it drives.
-- Settings sync (phase E): `cloud_preferences_syncer`'s payload construction
-  stays; its transport (cloud-objects GraphQL) is replaced with
-  `GET/PUT /v1/settings/{scope}`, the 409 body feeding the existing
-  local/remote reconciliation. Which settings sync at all is decided
-  client-side (`SyncToCloud` declarations) — pruning that list ("less
-  settings") never requires a server change.
+- **Signup/login UI**: `app/src/account/signup_modal.rs` (server URL + email +
+  masked password, "Log in" / "Create account", status line), opened from the
+  command palette ("Account: Sign in") and hosted in root_view like the paste
+  modal. The server address + optional fingerprint are typed into the modal (or
+  seeded in the `account.*` private prefs); trust-on-first-use pins the cert.
+- **Settings sync**: `app/src/account/settings_sync.rs` — a *clean new path*
+  using `get_settings`/`put_settings` directly, **not** the dead
+  `cloud_preferences_syncer`/cloud-object machinery (that turned out to be inert
+  now that Drive is local-only). On sign-in/startup it GETs the `global` scope,
+  applies it via `SettingsManager::update_setting_with_storage_key`, and PUTs the
+  local syncable blob with 409-version-merge. Sign-in-time only for now (no
+  push-on-change), `global` scope only.
+
+**Still to do:**
+
 - The Account page's `team` field ↔ `GET/PUT /v1/account`
   (`AccountClient::set_team`).
+- Settings-sync push-on-change (needs a change subscription guarded against the
+  echo of applying remote values) and platform (non-`global`) scopes.
+- Fold the account token onto `Credentials::Bearer` when the fake auth is
+  removed (ACCOUNT-DESIGN phase D — deferred to a runnable session).
