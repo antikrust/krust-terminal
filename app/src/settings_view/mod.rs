@@ -274,6 +274,7 @@ pub enum SettingsSection {
     EditorAndCodeReview,
     // ── Appearance umbrella subpages ──
     AppearanceGeneral,
+    AppearanceInput,
     AppearanceTxtFx,
     AppearanceBlocks,
     // ── Cloud platform umbrella subpages ──
@@ -296,10 +297,14 @@ impl Display for SettingsSection {
             SettingsSection::AgentProfiles => write!(f, "Profiles"),
             SettingsSection::AgentMCPServers => write!(f, "MCP servers"),
             SettingsSection::Knowledge => write!(f, "Knowledge"),
-            SettingsSection::ThirdPartyCLIAgents => write!(f, "Third party CLI agents"),
+            // Relabelled to "General": this subpage now hosts a stripped-down set
+            // of the CLI-agent settings (the internal variant name is kept to avoid
+            // churning ~20 test references and the deep-link map).
+            SettingsSection::ThirdPartyCLIAgents => write!(f, "General"),
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
             SettingsSection::AppearanceGeneral => write!(f, "General"),
+            SettingsSection::AppearanceInput => write!(f, "Input"),
             SettingsSection::AppearanceTxtFx => write!(f, "Text"),
             SettingsSection::AppearanceBlocks => write!(f, "Blocks"),
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
@@ -322,7 +327,10 @@ impl SettingsSection {
     pub fn is_appearance_subpage(&self) -> bool {
         matches!(
             self,
-            Self::AppearanceGeneral | Self::AppearanceTxtFx | Self::AppearanceBlocks
+            Self::AppearanceGeneral
+                | Self::AppearanceInput
+                | Self::AppearanceTxtFx
+                | Self::AppearanceBlocks
         )
     }
 
@@ -398,6 +406,7 @@ impl SettingsSection {
     pub fn appearance_subpages() -> &'static [Self] {
         &[
             Self::AppearanceGeneral,
+            Self::AppearanceInput,
             Self::AppearanceTxtFx,
             Self::AppearanceBlocks,
         ]
@@ -433,6 +442,7 @@ impl FromStr for SettingsSection {
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
             "AppearanceGeneral" => Ok(Self::AppearanceGeneral),
+            "Input" | "AppearanceInput" => Ok(Self::AppearanceInput),
             // "txtFX" kept for backward compatibility with older deeplinks.
             "Text" | "txtFX" | "AppearanceTxtFx" => Ok(Self::AppearanceTxtFx),
             "Blocks" | "AppearanceBlocks" => Ok(Self::AppearanceBlocks),

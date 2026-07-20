@@ -1,7 +1,7 @@
 use warp_core::settings::Setting;
 use warpui::elements::{
-    Border, Clipped, Container, DropTarget, Element, Flex, Hoverable, ParentElement, SavePosition,
-    Stack,
+    Border, Clipped, Container, CrossAxisAlignment, DropTarget, Element, Expanded, Flex, Hoverable,
+    ParentElement, SavePosition, Stack,
 };
 use warpui::presenter::ChildView;
 use warpui::{AppContext, SingletonEntity};
@@ -15,7 +15,7 @@ use super::{Input, InputAction, InputDropTargetData};
 use crate::appearance::Appearance;
 use crate::context_chips::spacing;
 use crate::features::FeatureFlag;
-use crate::settings::{AppEditorSettings, InputModeSettings};
+use crate::settings::{AppEditorSettings, InputModeSettings, InputSettings};
 use crate::terminal::block_list_settings::BlockListSettings;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::settings::TerminalSettings;
@@ -51,38 +51,55 @@ impl Input {
             }
         }
 
+        let is_compact_input = InputSettings::as_ref(app).is_compact_terminal_input_enabled();
+
         let prompt_elements = self
             .prompt_render_helper
             .render_universal_developer_input_prompt(&model, appearance, app);
 
-        column.add_child(prompt_elements);
+        let input_box = self.render_input_box(show_vim_status, appearance, app);
 
-        let terminal_spacing = TerminalSettings::as_ref(app)
-            .terminal_input_spacing(appearance.line_height_ratio(), app);
-        column.add_child(
-            Container::new(self.render_input_box(show_vim_status, appearance, app))
-                .with_margin_top(
-                    terminal_spacing.prompt_to_editor_padding
-                        * spacing::UDI_PROMPT_BOTTOM_PADDING_FACTOR,
-                )
-                .finish(),
-        );
-
-        if should_show_terminal_input_message_bar(&model, app) {
+        if is_compact_input {
+            // Compact single-line layout: the editor fills the row and the folder chip is pushed
+            // to the far right, giving a normal-terminal feel. The message bar hint is omitted.
             column.add_child(
-                Clipped::new(ChildView::new(&self.terminal_input_message_bar).finish()).finish(),
-            );
-        } else if !(matches!(input_mode, InputMode::PinnedToTop)
-            && self
-                .suggestions_mode_model
-                .as_ref(app)
-                .is_inline_menu_open())
-        {
-            column.add_child(
-                Container::new(Flex::row().finish())
-                    .with_margin_bottom(8.)
+                Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(Expanded::new(1., input_box).finish())
+                    .with_child(Container::new(prompt_elements).with_margin_right(8.).finish())
                     .finish(),
             );
+        } else {
+            column.add_child(prompt_elements);
+
+            let terminal_spacing = TerminalSettings::as_ref(app)
+                .terminal_input_spacing(appearance.line_height_ratio(), app);
+            column.add_child(
+                Container::new(input_box)
+                    .with_margin_top(
+                        terminal_spacing.prompt_to_editor_padding
+                            * spacing::UDI_PROMPT_BOTTOM_PADDING_FACTOR,
+                    )
+                    .finish(),
+            );
+
+            if should_show_terminal_input_message_bar(&model, app) {
+                column.add_child(
+                    Clipped::new(ChildView::new(&self.terminal_input_message_bar).finish())
+                        .finish(),
+                );
+            } else if !(matches!(input_mode, InputMode::PinnedToTop)
+                && self
+                    .suggestions_mode_model
+                    .as_ref(app)
+                    .is_inline_menu_open())
+            {
+                column.add_child(
+                    Container::new(Flex::row().finish())
+                        .with_margin_bottom(8.)
+                        .finish(),
+                );
+            }
         }
 
         if matches!(input_mode, InputMode::PinnedToTop) {

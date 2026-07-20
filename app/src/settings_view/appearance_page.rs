@@ -59,12 +59,12 @@ use crate::server::telemetry::{InputUXChangeOrigin, TelemetryEvent};
 use crate::settings::app_icon::{AppIcon, AppIconSettings, ShowDockIconState};
 use crate::settings::{
     active_theme_kind, respect_system_theme, AIFontName, AISettings, AppEditorSettings,
-    BlockVisibilitySettings, ShouldShowUselessInformation,
-    CodeSettings, CursorBlink, CursorBlinkEnabled, CursorDisplayType, EnforceMinimumContrast,
-    FocusPaneOnHover, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType,
-    InputModeSettings, InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName,
-    PaneSettings, ShouldDimInactivePanes, ThemeSettings, UseSystemTheme, UseThinStrokes,
-    DEFAULT_MONOSPACE_FONT_NAME,
+    BlockVisibilitySettings, CodeSettings, CompactTerminalInput, CursorBlink, CursorBlinkEnabled,
+    CursorDisplayType, EnforceMinimumContrast, FocusPaneOnHover, FontSettings,
+    FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputModeState,
+    InputSettings, InputSettingsChangedEvent, MonospaceFontName, PaneSettings,
+    ShouldDimInactivePanes, ShouldShowUselessInformation, ThemeSettings, UseSystemTheme,
+    UseThinStrokes, DEFAULT_MONOSPACE_FONT_NAME,
 };
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::blockgrid_element::BlockGridElement;
@@ -520,6 +520,7 @@ pub enum AppearancePageAction {
     ToggleJumpToBottomOfBlockButton,
     ToggleShowBlockDividers,
     ToggleUselessInformation,
+    ToggleCompactTerminalInput,
     ToggleCompactMode,
     ToggleCursorBlink,
     ToggleRespectSystemTheme,
@@ -581,12 +582,16 @@ pub enum AppearanceSubpage {
     /// The Blocks page: block appearance toggles, including the "useless
     /// information" footer stats.
     Blocks,
+    /// The Input page: input type, prompt, input mode, and the compact
+    /// single-line input toggle.
+    Input,
 }
 
 impl AppearanceSubpage {
     pub fn from_section(section: SettingsSection) -> Option<Self> {
         match section {
             SettingsSection::AppearanceGeneral => Some(Self::General),
+            SettingsSection::AppearanceInput => Some(Self::Input),
             SettingsSection::AppearanceTxtFx => Some(Self::TxtFx),
             SettingsSection::AppearanceBlocks => Some(Self::Blocks),
             _ => None,
@@ -698,6 +703,7 @@ impl TypedActionView for AppearanceSettingsPageView {
             ToggleJumpToBottomOfBlockButton => self.toggle_jump_to_bottom_of_block_button(ctx),
             ToggleShowBlockDividers => self.toggle_show_block_dividers(ctx),
             ToggleUselessInformation => self.toggle_useless_information(ctx),
+            ToggleCompactTerminalInput => self.toggle_compact_terminal_input(ctx),
             ToggleCompactMode => self.toggle_compact_mode(ctx),
             ToggleCursorBlink => self.toggle_cursor_blink(ctx),
             ToggleOpenWindowsAtCustomSize => self.toggle_open_windows_at_custom_size(ctx),
@@ -1628,6 +1634,7 @@ impl AppearanceSettingsPageView {
         // The PromptWidget and InputModeWidget will handle their own visibility
 
         let category_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
+            Box::new(CompactInputWidget::default()),
             Box::new(InputTypeWidget::default()),
             Box::new(PromptWidget::default()),
             Box::new(InputModeWidget::default()),
@@ -1762,8 +1769,13 @@ impl AppearanceSettingsPageView {
             // General drops the categories that now have their own pages.
             Some(AppearanceSubpage::General) => categories.retain(|category| {
                 let title = category.title();
-                title != "Text" && title != "Text FX" && title != "Blocks"
+                title != "Input" && title != "Text" && title != "Text FX" && title != "Blocks"
             }),
+            // The "Input" page: input type, prompt, input mode, and the compact
+            // single-line input toggle.
+            Some(AppearanceSubpage::Input) => {
+                categories.retain(|category| category.title() == "Input")
+            }
             // The "Text" page: the normal text controls up top, Text FX below
             // (they already sit in that order in the list).
             Some(AppearanceSubpage::TxtFx) => categories.retain(|category| {
@@ -2493,6 +2505,12 @@ impl AppearanceSettingsPageView {
             report_if_error!(settings
                 .should_show_useless_information
                 .toggle_and_save_value(ctx));
+        });
+    }
+
+    pub fn toggle_compact_terminal_input(&mut self, ctx: &mut ViewContext<Self>) {
+        InputSettings::handle(ctx).update(ctx, |settings, ctx| {
+            report_if_error!(settings.compact_terminal_input.toggle_and_save_value(ctx));
         });
     }
 
@@ -4556,6 +4574,53 @@ impl SettingsWidget for UselessInformationWidget {
                 })
                 .finish(),
             Some("Show a per-block footer with its memory usage — grid vs flat storage.".into()),
+        )
+    }
+}
+
+#[derive(Default)]
+struct CompactInputWidget {
+    switch_state: SwitchStateHandle,
+}
+
+impl SettingsWidget for CompactInputWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "compact input single line terminal collapse hide hint folder chip right one line"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let enabled = InputSettings::as_ref(app).is_compact_terminal_input_enabled();
+        render_body_item::<AppearancePageAction>(
+            "Compact input".into(),
+            None,
+            LocalOnlyIconState::for_setting(
+                CompactTerminalInput::storage_key(),
+                CompactTerminalInput::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            appearance
+                .ui_builder()
+                .switch(self.switch_state.clone())
+                .check(enabled)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(AppearancePageAction::ToggleCompactTerminalInput);
+                })
+                .finish(),
+            Some(
+                "Collapse the terminal input to one line: hide the hint bar and move the folder chip to the right."
+                    .into(),
+            ),
         )
     }
 }

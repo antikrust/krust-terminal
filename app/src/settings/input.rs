@@ -190,6 +190,19 @@ define_settings_group!(InputSettings,
             toml_path: "terminal.input.show_terminal_input_message_bar",
             description: "Whether the terminal input message bar is shown.",
         },
+        // Whether to render the terminal input in compact single-line mode: the editor and the
+        // folder chip share one row (chip pushed to the right) and the message bar hint is hidden.
+        // Only applicable when FeatureFlag::AgentView is enabled.
+        compact_terminal_input: CompactTerminalInput {
+            type: bool,
+            default: false,
+            supported_platforms: SupportedPlatforms::ALL,
+            sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+            surface: settings::SettingSurfaces::GUI,
+            private: false,
+            toml_path: "terminal.input.compact_terminal_input",
+            description: "Whether the terminal input is shown in compact single-line mode.",
+        },
         // Per-menu custom content heights set by drag-to-resize. Not user-visible.
         inline_menu_custom_content_heights: InlineMenuCustomContentHeights {
             type: HashMap<InlineMenuType, f32>,
@@ -247,5 +260,9 @@ impl InputSettings {
 
     pub fn is_terminal_input_message_bar_enabled(&self) -> bool {
         *self.show_terminal_input_message_bar
+    }
+
+    pub fn is_compact_terminal_input_enabled(&self) -> bool {
+        *self.compact_terminal_input
     }
 }

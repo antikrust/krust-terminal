@@ -657,6 +657,9 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
 pub struct AISettingsPageView {
     page: PageType<Self>,
     active_subpage: Option<AISubpage>,
+    /// Whether the collapsible "Rich Input" section on the General (CLI agents)
+    /// page is expanded. Transient UI state; not persisted.
+    cli_rich_input_expanded: bool,
     voice_input_toggle_key_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
     local_only_icon_tooltip_states: RefCell<HashMap<String, MouseStateHandle>>,
     autodetection_denylist_editor: ViewHandle<EditorView>,
@@ -675,7 +678,6 @@ pub struct AISettingsPageView {
     cli_agent_footer_command_mouse_state_handles: Vec<MouseStateHandle>,
     cli_agent_footer_command_agent_dropdowns: Vec<ViewHandle<Dropdown<AISettingsPageAction>>>,
     agent_toolbar_inline_editor: ViewHandle<AgentToolbarInlineEditor>,
-    cli_agent_toolbar_inline_editor: ViewHandle<AgentToolbarInlineEditor>,
 
     apply_code_diffs_dropdown_menu: ViewHandle<Dropdown<AISettingsPageAction>>,
     read_files_dropdown_menu: ViewHandle<Dropdown<AISettingsPageAction>>,
@@ -1851,9 +1853,6 @@ impl AISettingsPageView {
         let agent_toolbar_inline_editor = ctx.add_typed_action_view(|ctx| {
             AgentToolbarInlineEditor::new(AgentToolbarEditorMode::AgentView, ctx)
         });
-        let cli_agent_toolbar_inline_editor = ctx.add_typed_action_view(|ctx| {
-            AgentToolbarInlineEditor::new(AgentToolbarEditorMode::CLIAgent, ctx)
-        });
 
         #[cfg(feature = "local_fs")]
         let conversation_layout_dropdown = ctx.add_typed_action_view(|ctx| {
@@ -1927,6 +1926,7 @@ impl AISettingsPageView {
         Self {
             page: Self::build_page(None, ctx),
             active_subpage: None,
+            cli_rich_input_expanded: false,
             voice_input_toggle_key_dropdown,
             autodetection_denylist_editor,
             local_only_icon_tooltip_states: Default::default(),
@@ -1938,7 +1938,6 @@ impl AISettingsPageView {
             cli_agent_footer_command_mouse_state_handles,
             cli_agent_footer_command_agent_dropdowns: Self::create_cli_agent_dropdowns(ctx),
             agent_toolbar_inline_editor,
-            cli_agent_toolbar_inline_editor,
             base_model_dropdown,
             coding_model_dropdown,
             context_window_slider_state,
@@ -3653,6 +3652,9 @@ pub enum AISettingsPageAction {
     ToggleAutoOpenRichInputOnCLIAgentStart,
     ToggleAutoDismissRichInputAfterSubmit,
     ToggleSubmitRichInputOnCtrlEnter,
+    /// Expand/collapse the "Rich Input" section on the General (CLI agents) page.
+    /// Transient UI state, not a persisted setting.
+    ToggleCLIRichInputExpanded,
     SetCLIAgentForCommand {
         pattern: String,
         agent: Option<CLIAgent>,
@@ -3913,6 +3915,10 @@ impl TypedActionView for AISettingsPageView {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.submit_on_ctrl_enter.toggle_and_save_value(ctx));
                 });
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleCLIRichInputExpanded => {
+                self.cli_rich_input_expanded = !self.cli_rich_input_expanded;
                 ctx.notify();
             }
             AISettingsPageAction::ToggleUseAgentToolbar => {
@@ -7392,6 +7398,7 @@ struct CLIAgentWidget {
     auto_open_rich_input_on_cli_agent_start_toggle: SwitchStateHandle,
     auto_dismiss_rich_input_toggle: SwitchStateHandle,
     submit_on_ctrl_enter_toggle: SwitchStateHandle,
+    rich_input_expand_button: MouseStateHandle,
 }
 
 impl SettingsWidget for CLIAgentWidget {
@@ -7472,73 +7479,98 @@ impl SettingsWidget for CLIAgentWidget {
             };
 
             if FeatureFlag::CLIAgentRichInput.is_enabled() {
-                // Setting 1: Auto show/hide rich input based on agent status
-                let auto_show_toggle_label = render_body_item_label::<AISettingsPageAction>(
-                    "Auto show/hide Rich Input based on agent status".into(),
-                    Some(styles::header_font_color(true, app)),
-                    Some(AdditionalInfo {
-                        mouse_state: self.auto_toggle_rich_input_info_tooltip.clone(),
-                        on_click_action: None,
-                        secondary_text: None,
-                        tooltip_override_text: Some(
-                            "Requires the Warp plugin for your coding agent".to_owned(),
-                        ),
-                    }),
-                    LocalOnlyIconState::for_setting(
-                        AutoToggleRichInput::storage_key(),
-                        AutoToggleRichInput::sync_to_cloud(),
-                        &mut view.local_only_icon_tooltip_states.borrow_mut(),
-                        app,
-                    ),
-                    ToggleState::Enabled,
-                    appearance,
-                );
-                column.add_child(build_toggle_element(
-                    auto_show_toggle_label,
-                    render_ai_feature_switch(
-                        self.auto_toggle_rich_input_toggle.clone(),
-                        *ai_settings.auto_toggle_rich_input,
-                        true,
-                        AISettingsPageAction::ToggleAutoToggleRichInput,
-                        app,
-                    ),
-                    appearance,
-                    None,
-                ));
-
+                // Collapsible "Rich Input" section: keeps the four behaviour
+                // options available without a wall of switches.
+                let expanded = view.cli_rich_input_expanded;
+                let chevron = if expanded { "\u{25be}" } else { "\u{25b8}" };
                 column.add_child(
-                    render_ai_setting_toggle::<AutoOpenRichInputOnCLIAgentStart>(
-                        "Auto open Rich Input when a coding agent session starts",
-                        AISettingsPageAction::ToggleAutoOpenRichInputOnCLIAgentStart,
-                        *ai_settings.auto_open_rich_input_on_cli_agent_start,
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Text, self.rich_input_expand_button.clone())
+                        .with_style(
+                            UiComponentStyles::default()
+                                .set_border_width(0.)
+                                .set_padding(Coords::uniform(8.)),
+                        )
+                        .with_text_label(format!("{chevron}  Rich Input"))
+                        .build()
+                        .on_click(move |ctx, _, _| {
+                            ctx.dispatch_typed_action(
+                                AISettingsPageAction::ToggleCLIRichInputExpanded,
+                            );
+                        })
+                        .finish(),
+                );
+
+                if expanded {
+                    // Setting 1: Auto show/hide rich input based on agent status
+                    let auto_show_toggle_label = render_body_item_label::<AISettingsPageAction>(
+                        "Auto show/hide Rich Input based on agent status".into(),
+                        Some(styles::header_font_color(true, app)),
+                        Some(AdditionalInfo {
+                            mouse_state: self.auto_toggle_rich_input_info_tooltip.clone(),
+                            on_click_action: None,
+                            secondary_text: None,
+                            tooltip_override_text: Some(
+                                "Requires the Warp plugin for your coding agent".to_owned(),
+                            ),
+                        }),
+                        LocalOnlyIconState::for_setting(
+                            AutoToggleRichInput::storage_key(),
+                            AutoToggleRichInput::sync_to_cloud(),
+                            &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                            app,
+                        ),
+                        ToggleState::Enabled,
+                        appearance,
+                    );
+                    column.add_child(build_toggle_element(
+                        auto_show_toggle_label,
+                        render_ai_feature_switch(
+                            self.auto_toggle_rich_input_toggle.clone(),
+                            *ai_settings.auto_toggle_rich_input,
+                            true,
+                            AISettingsPageAction::ToggleAutoToggleRichInput,
+                            app,
+                        ),
+                        appearance,
+                        None,
+                    ));
+
+                    column.add_child(
+                        render_ai_setting_toggle::<AutoOpenRichInputOnCLIAgentStart>(
+                            "Auto open Rich Input when a coding agent session starts",
+                            AISettingsPageAction::ToggleAutoOpenRichInputOnCLIAgentStart,
+                            *ai_settings.auto_open_rich_input_on_cli_agent_start,
+                            true,
+                            self.auto_open_rich_input_on_cli_agent_start_toggle.clone(),
+                            &view.local_only_icon_tooltip_states,
+                            app,
+                        ),
+                    );
+
+                    // Setting 2: Auto dismiss rich input after prompt submission
+                    column.add_child(render_ai_setting_toggle::<AutoDismissRichInputAfterSubmit>(
+                        "Auto dismiss Rich Input after prompt submission",
+                        AISettingsPageAction::ToggleAutoDismissRichInputAfterSubmit,
+                        *ai_settings.auto_dismiss_rich_input_after_submit,
                         true,
-                        self.auto_open_rich_input_on_cli_agent_start_toggle.clone(),
+                        self.auto_dismiss_rich_input_toggle.clone(),
                         &view.local_only_icon_tooltip_states,
                         app,
-                    ),
-                );
+                    ));
 
-                // Setting 2: Auto dismiss rich input after prompt submission
-                column.add_child(render_ai_setting_toggle::<AutoDismissRichInputAfterSubmit>(
-                    "Auto dismiss Rich Input after prompt submission",
-                    AISettingsPageAction::ToggleAutoDismissRichInputAfterSubmit,
-                    *ai_settings.auto_dismiss_rich_input_after_submit,
-                    true,
-                    self.auto_dismiss_rich_input_toggle.clone(),
-                    &view.local_only_icon_tooltip_states,
-                    app,
-                ));
-
-                // Setting 3: Submit Rich Input with Ctrl+Enter
-                column.add_child(render_ai_setting_toggle::<SubmitRichInputOnCtrlEnter>(
-                    "Submit Rich Input with Ctrl+Enter",
-                    AISettingsPageAction::ToggleSubmitRichInputOnCtrlEnter,
-                    *ai_settings.submit_on_ctrl_enter,
-                    true,
-                    self.submit_on_ctrl_enter_toggle.clone(),
-                    &view.local_only_icon_tooltip_states,
-                    app,
-                ));
+                    // Setting 3: Submit Rich Input with Ctrl+Enter
+                    column.add_child(render_ai_setting_toggle::<SubmitRichInputOnCtrlEnter>(
+                        "Submit Rich Input with Ctrl+Enter",
+                        AISettingsPageAction::ToggleSubmitRichInputOnCtrlEnter,
+                        *ai_settings.submit_on_ctrl_enter,
+                        true,
+                        self.submit_on_ctrl_enter_toggle.clone(),
+                        &view.local_only_icon_tooltip_states,
+                        app,
+                    ));
+                }
             }
 
             let command_list = {
@@ -7657,13 +7689,6 @@ impl SettingsWidget for CLIAgentWidget {
 
             column.add_child(command_list);
             column.add_child(command_list_description);
-
-            if FeatureFlag::AgentToolbarEditor.is_enabled() {
-                column.add_child(render_toolbar_layout_editor(
-                    &view.cli_agent_toolbar_inline_editor,
-                    appearance,
-                ));
-            }
         }
 
         column.finish()

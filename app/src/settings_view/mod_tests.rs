@@ -175,10 +175,7 @@ fn subpage_display_names_are_correct() {
     assert_eq!(SettingsSection::AgentProfiles.to_string(), "Profiles");
     assert_eq!(SettingsSection::AgentMCPServers.to_string(), "MCP servers");
     assert_eq!(SettingsSection::Knowledge.to_string(), "Knowledge");
-    assert_eq!(
-        SettingsSection::ThirdPartyCLIAgents.to_string(),
-        "Third party CLI agents"
-    );
+    assert_eq!(SettingsSection::ThirdPartyCLIAgents.to_string(), "General");
     assert_eq!(
         SettingsSection::CodeIndexing.to_string(),
         "Indexing and projects"
