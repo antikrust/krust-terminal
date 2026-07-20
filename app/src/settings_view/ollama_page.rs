@@ -364,6 +364,13 @@ impl OllamaPageView {
                         me.installs.insert(stream_tag.clone(), InstallState::Done);
                         // A completed pull changes what's on disk.
                         me.refresh(ctx);
+                        // Surface the new model in the picker menu without an
+                        // app restart (the harness list is otherwise built
+                        // once at launch).
+                        crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx)
+                            .update(ctx, |availability, ctx| {
+                                availability.refresh_ollama_models(ctx);
+                            });
                     }
                     service::PullEvent::Failed(reason) => {
                         me.installs

@@ -471,6 +471,35 @@ impl HarnessAvailabilityModel {
         );
     }
 
+    /// Re-reads installed Ollama models from disk and refreshes the picker's
+    /// Ollama list in place — so a model pulled on the Ollama settings page
+    /// appears in the model menu without an app restart. Ollama models are
+    /// appended onto the Codex harness row (see [`append_available_ollama_models`]),
+    /// so only that row's Ollama portion is rebuilt; a `Changed` event makes
+    /// the picker re-render.
+    pub fn refresh_ollama_models(&mut self, ctx: &mut ModelContext<Self>) {
+        let Some(row) = self
+            .harnesses
+            .iter_mut()
+            .find(|h| h.harness == Harness::Codex)
+        else {
+            return;
+        };
+        // Keep the codex models; drop the previously-appended Ollama ones and
+        // re-append a fresh read from disk.
+        let codex_only: Vec<HarnessModelInfo> = row
+            .available_models
+            .iter()
+            .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
+            .cloned()
+            .collect();
+        let rebuilt = append_available_ollama_models(codex_only);
+        if row.available_models != rebuilt {
+            row.available_models = rebuilt;
+            ctx.emit(HarnessAvailabilityEvent::Changed);
+        }
+    }
+
     pub fn available_harnesses(&self) -> &[HarnessAvailability] {
         &self.harnesses
     }
