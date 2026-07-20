@@ -332,6 +332,12 @@ pub struct Block {
     show_in_band_command_blocks: bool,
     show_memory_stats: bool,
 
+    /// Fork (misery mode): the "verdict" line rendered in this block's footer
+    /// once the command finishes (sharing the memory-stats footer machinery).
+    /// Block-attached so it can't drift onto the wrong block the way the old
+    /// gap-inserted rich content did.
+    misery_verdict: Option<String>,
+
     /// The timestamp at which this block was created (i.e.: the previous block
     /// finished and this was created, waiting for the user to execute a
     /// command).
@@ -1009,6 +1015,7 @@ impl Block {
             show_bootstrap_block: show_warp_bootstrap_input,
             show_in_band_command_blocks,
             show_memory_stats,
+            misery_verdict: None,
             creation_ts: Local::now(),
             start_ts: None,
             completed_ts: None,
@@ -2082,7 +2089,13 @@ impl Block {
     }
 
     pub fn has_footer(&self) -> bool {
-        self.show_memory_stats
+        self.footer_line_count() > 0
+    }
+
+    /// Number of footer lines: the misery verdict (fork) plus the memory-stats
+    /// readout ("Add useless information"), each an optional single line.
+    fn footer_line_count(&self) -> usize {
+        self.misery_verdict.is_some() as usize + self.show_memory_stats as usize
     }
 
     pub fn footer_top_padding(&self) -> Lines {
@@ -2094,12 +2107,16 @@ impl Block {
     }
 
     pub fn footer_height(&self) -> Lines {
-        if !self.has_footer() || !self.ready_to_render() {
+        if !self.ready_to_render() {
             Lines::zero()
         } else {
-            // The footer is one line of text.
-            1.0.into_lines()
+            (self.footer_line_count() as f32).into_lines()
         }
+    }
+
+    /// Whether this block shows the memory-usage footer ("Add useless information").
+    pub fn show_memory_stats(&self) -> bool {
+        self.show_memory_stats
     }
 
     /// Resize terminal to new dimensions.
@@ -2780,6 +2797,15 @@ impl Block {
 
     pub fn set_show_memory_stats(&mut self, show_memory_stats: bool) {
         self.show_memory_stats = show_memory_stats
+    }
+
+    /// Fork (misery mode): the verdict line rendered in the footer.
+    pub fn misery_verdict(&self) -> Option<&str> {
+        self.misery_verdict.as_deref()
+    }
+
+    pub fn set_misery_verdict(&mut self, line: Option<String>) {
+        self.misery_verdict = line;
     }
 
     pub fn is_mode_set(&self, mode: TermMode) -> bool {

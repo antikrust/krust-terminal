@@ -2521,6 +2521,22 @@ impl BlockList {
         );
     }
 
+    /// Fork (misery mode): attach the verdict line to a specific block,
+    /// rebuilding heights so its footer slot is reserved.
+    pub fn set_block_misery_verdict(&mut self, block_id: &BlockId, line: Option<String>) {
+        let target = block_id.clone();
+        self.update_blocks_and_sumtree(
+            None,
+            None,
+            move |b| {
+                if b.id() == &target {
+                    b.set_misery_verdict(line.clone());
+                }
+            },
+            |_| {},
+        );
+    }
+
     pub fn grid_at_location<T>(&self, location: &WithinBlock<T>) -> &BlockGrid {
         let block = &self.blocks[location.block_index.0];
         block

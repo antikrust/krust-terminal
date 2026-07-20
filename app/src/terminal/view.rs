@@ -5099,12 +5099,6 @@ impl TerminalView {
         }
         let swear_mode = ai_settings.is_swear_mode_enabled();
 
-        // Agent-driven commands are not the user's doing, so mocking them
-        // would be aimed at the wrong target.
-        if completed.was_part_of_agent_interaction {
-            return;
-        }
-
         let serialized = &completed.serialized_block;
         let Some(line) = self.misery.on_command_completed(
             MiseryCompletedCommand {
@@ -5119,19 +5113,17 @@ impl TerminalView {
             return;
         };
 
-        // Anchor immediately after the block that just finished, rather than
-        // appending relative to the active block. Completion is delivered
-        // after a precmd delay, by which time the *next* command may already
-        // have started and inserted its own line — appending would put this
-        // verdict below it.
-        let handle = ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Complete, ctx));
-        self.insert_rich_content(
-            None,
-            handle,
-            Some(RichContentMetadata::MiseryLine),
-            RichContentInsertionPosition::AfterBlockIndex(completed.index),
-            ctx,
-        );
+        // Attach the verdict to the finished block's own footer, keyed by block
+        // id. Because it renders as part of the block rather than as free
+        // rich content between blocks, it stays on the right block regardless
+        // of index shifts or the precmd-delayed completion racing the next
+        // command — the failure mode of the old gap-inserted approach that put
+        // the verdict on the previous block.
+        self.model
+            .lock()
+            .block_list_mut()
+            .set_block_misery_verdict(&serialized.id, Some(line));
+        ctx.notify();
     }
 
     /// No-ops unless a queued command is in flight for a conversation owned by this terminal view;
