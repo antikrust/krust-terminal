@@ -495,6 +495,9 @@ fn ensure_owner_only_file(_path: &Path) -> Result<()> {
     Ok(())
 }
 
+// Fork: only reached via `persistence::remove`, which `auth::log_out` no longer
+// calls (non-destructive logout). Retained alongside it.
+#[allow(dead_code)]
 pub(super) fn remove(sender: SyncSender<ModelEvent>) {
     // Instruct the writer thread to remove the database and pause processing
     // events.

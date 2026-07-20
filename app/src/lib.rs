@@ -1,5 +1,6 @@
 #![allow(clippy::doc_lazy_continuation)]
 
+mod account;
 mod ai;
 mod alloc;
 mod antivirus;
@@ -1402,6 +1403,12 @@ pub(crate) fn initialize_app(
     );
 
     ctx.add_singleton_model(|_ctx| AuthStateProvider::new(auth_state.clone()));
+
+    // Fork: our own account session — create/sign in to the account server.
+    // Deliberately independent of the fake `AuthState` above; its only job in
+    // the app today is to gate the swear/misery "off" toggle (see
+    // `crate::account`). Restores a persisted session on construction.
+    ctx.add_singleton_model(crate::account::AccountSession::new);
 
     ctx.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
 

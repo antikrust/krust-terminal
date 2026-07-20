@@ -1829,20 +1829,23 @@ impl AISettings {
 
     /// Whether the user is entitled to turn swear mode and misery mode *off*.
     ///
-    /// This is the fork's one paid feature: peace and quiet. Until there is an
-    /// account system to ask, nobody is entitled, so both settings read as on
-    /// regardless of their stored value and their toggles render locked.
+    /// This is the fork's one account-gated feature: peace and quiet. Creating
+    /// an account against our server unlocks it; with no account, nobody is
+    /// entitled, so both settings read as on regardless of their stored value
+    /// and their toggles render locked.
     ///
     /// The stored settings are deliberately left intact rather than forced to
-    /// `true` — when subscriptions exist, a subscriber gets their previous
-    /// preference back instead of a surprise.
+    /// `true` — a signed-in user gets their previous preference back instead of
+    /// a surprise.
     ///
-    /// This is the single place to wire the entitlement check. See
-    /// ACCOUNT-DESIGN.md — it is intentionally the only paywall in the app,
-    /// and it gates a cosmetic setting rather than any real capability, so no
-    /// code path that does actual work ever has to ask about billing.
+    /// This is the single place the entitlement is checked, and it reads the
+    /// context-free [`crate::account::has_account`] flag so the swear/misery
+    /// getters don't have to thread an `AppContext`. See ACCOUNT-DESIGN.md: it
+    /// is intentionally the only account gate in the app, and it gates a
+    /// cosmetic setting rather than any real capability, so no code path that
+    /// does actual work ever has to ask about accounts.
     pub fn can_disable_flavour_settings() -> bool {
-        false
+        crate::account::has_account()
     }
 
     pub fn register_and_subscribe_to_events(app: &mut AppContext) {

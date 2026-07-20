@@ -1,0 +1,28 @@
+[package]
+name = "account_client"
+edition = "2024"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+# reqwest 0.13 already defaults to a rustls (aws-lc-rs) backend, so a
+# preconfigured TLS config is accepted out of the box — we hand it a
+# ClientConfig that pins the server certificate by fingerprint (see src/tls.rs).
+reqwest = { workspace = true, features = ["json"] }
+rustls.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+# Boot the real server in-process so the pinning + REST loop is exercised
+# end to end over a genuine TLS handshake, not mocked.
+account_server = { path = "../account_server" }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net"] }

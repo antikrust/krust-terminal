@@ -167,17 +167,47 @@ is why the fingerprint is printed at startup for out-of-band comparison.
 or for terminating TLS on the same host; never expose it, since bearer tokens
 ride every request.
 
-## Client wiring (not yet built)
+## Client wiring (phase 5 — in progress)
 
-Phase 5 of ACCOUNT-DESIGN.md. The mapping when we get there:
+Phase 5 of ACCOUNT-DESIGN.md.
 
-- signup/signin form → `POST /v1/signup` / `/v1/login`; the returned token
-  rides the existing `Credentials`/`AuthToken` path
-  (`Credentials::ApiKey` end-to-end first, as the design doc suggests).
-- `cloud_preferences_syncer`'s payload construction stays; its transport
-  (cloud-objects GraphQL) is replaced with `GET/PUT /v1/settings/{scope}`,
-  the 409 body feeding the existing local/remote reconciliation.
-- The Account page's `team` field ↔ `GET/PUT /v1/account`.
-- Which settings sync at all is decided client-side (`SyncToCloud`
-  declarations) — today 236 global + 13 per-platform; pruning that list
-  ("less settings") never requires a server change.
+**Built and tested:**
+
+- `crates/account_client` — a standalone client for this API. It pins the
+  server certificate by SHA-256 fingerprint (the same digest this server logs
+  at startup; trust-on-first-use when no fingerprint is pre-seeded), so a
+  password is never sent to a server whose certificate does not match the pin.
+  Every endpoint is exercised end to end against a real in-process instance of
+  this server over a genuine TLS handshake (`src/lib_tests.rs`), including that
+  a wrong pin aborts before any credential is sent.
+- `app/src/account` — an `AccountSession` singleton wrapping the client:
+  in-app `sign_up` / `log_in` / `log_out`, the returned token persisted to the
+  platform-native private store, the server address + pinned fingerprint kept
+  alongside it, and a process-global "account active" flag. A persisted session
+  is restored at startup.
+- The one account gate is **live**:
+  `AISettings::can_disable_flavour_settings()` reads that flag, so turning
+  swear/misery mode off requires an account. No account ⇒ both forced on.
+- The session is deliberately kept separate from the legacy `AuthState`/fake
+  auth for now, so it can't destabilize the ~140 files that read it and the
+  fake-auth boot can't clobber the token. When the fake auth is removed
+  (ACCOUNT-DESIGN phase D) the token moves onto `Credentials::Bearer`.
+
+The token uses the **`Bearer`** credential shape end to end (not `ApiKey` as
+the original sketch suggested): the server's opaque token maps directly onto
+`Authorization: Bearer`, and `Credentials::is_externally_managed()` is already
+`true` for `Bearer`, so no refresh/reauth machinery fights it.
+
+**Not yet built:**
+
+- The signup/login UI (a native email+password modal) and the settings fields
+  for the server address + fingerprint. `AccountSession::{set_server, sign_up,
+  log_in, log_out}` are the seams it drives.
+- Settings sync (phase E): `cloud_preferences_syncer`'s payload construction
+  stays; its transport (cloud-objects GraphQL) is replaced with
+  `GET/PUT /v1/settings/{scope}`, the 409 body feeding the existing
+  local/remote reconciliation. Which settings sync at all is decided
+  client-side (`SyncToCloud` declarations) — pruning that list ("less
+  settings") never requires a server change.
+- The Account page's `team` field ↔ `GET/PUT /v1/account`
+  (`AccountClient::set_team`).

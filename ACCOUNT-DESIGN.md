@@ -447,14 +447,31 @@ are the substrate for phase 5.
 
 ### Phase 5 — in-app signup (the actual new work)
 
-Everything above is subtraction; this is the only addition. A native signup/
-signin form that posts to our own endpoint, receives a token, stores it via the
-existing `PersistedUser` secure-storage path, and populates the cloud-identity
-half of the split from phase 2. No browser handoff, no `warp://` redirect, no
-Firebase URLs — but the same `Credentials` → `AuthToken` → request-header path
-the code already has. Backed by a stub endpoint until there is a real service;
-`Credentials::ApiKey` is the cheapest way to test the whole chain end-to-end
-before any signup UI exists.
+Everything above is subtraction; this is the only addition.
+
+**Status — started (transport + session layers built and tested):**
+
+- `crates/account_client` — a fingerprint-pinned REST client for the account
+  server (`docs/account-server.md`), unit- + integration-tested over a real TLS
+  handshake against an in-process server.
+- `app/src/account` — an `AccountSession` singleton: in-app signup/login/logout,
+  token persisted to the platform-native private store, server address +
+  pinned fingerprint stored alongside it, and a process-global "account active"
+  flag restored at startup.
+- The one account gate is **live**: `AISettings::can_disable_flavour_settings()`
+  reads that flag, so turning swear/misery mode off requires an account.
+- Kept deliberately **separate from `AuthState`/the fake auth** for now (so it
+  can't destabilize the ~140 files that read it, and the fake-auth boot can't
+  clobber the token). The token uses `Credentials::Bearer` semantics already
+  (opaque server token → `Authorization: Bearer`); folding it onto the real
+  `AuthState` credential happens when the fake auth is removed (phase D/4).
+
+**Still to do:** the native signup/login **UI** (email+password modal) and the
+server-address/fingerprint settings fields — `AccountSession::{set_server,
+sign_up, log_in, log_out}` are the seams it drives; moving the token from the
+private store to the Keychain (`PersistedUser` secure storage); and phase E
+settings sync. No browser handoff, no `warp://` redirect, no Firebase URLs —
+the same `Credentials` → `AuthToken` → request-header path the code already has.
 
 ### Phase 6 — settings page
 
@@ -469,8 +486,10 @@ point the alias redirect added in this session can be deleted along with
 
 ## 6. Traps
 
-- **`log_out()` deletes the SQLite database.** Any refactor that keeps a logout
-  affordance without implementing per-user scoping keeps a footgun.
+- **`log_out()` used to delete the SQLite database.** The fork removed that
+  wipe (non-destructive logout — phase 0 landed). The now-orphaned
+  `persistence::remove` / `sqlite::remove` are retained behind
+  `#[allow(dead_code)]` in case per-user scoping is ever implemented.
 - **`UserUid` is interned globally and never freed** (`lasso::ThreadedRodeo`,
   `LazyLock`). Fine for a handful of ids; do not start minting them per-request.
 - **`UserUid::default()` interns `""`** specifically to avoid a panic in

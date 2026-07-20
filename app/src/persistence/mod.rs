@@ -173,6 +173,10 @@ pub fn initialize(
 
 // Remove sqlite database as part of Logout v0.
 // TODO: Implement per user scoping of sqlite.
+// Fork: no longer called — `auth::log_out` stopped wiping the database on
+// logout (non-destructive logout; see ACCOUNT-DESIGN.md). Retained in case
+// per-user scoping is ever implemented.
+#[allow(dead_code)]
 #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
 pub fn remove(sender: &Option<SyncSender<ModelEvent>>) {
     cfg_if::cfg_if! {

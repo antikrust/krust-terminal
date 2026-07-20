@@ -19,6 +19,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c71b1793ee61086797f5c80b6efa2b8ffa6d5dd703f118545808a7f2e27f7046"
 
 [[package]]
+name = "account_client"
+version = "0.0.0"
+dependencies = [
+ "account_server",
+ "anyhow",
+ "axum-server",
+ "log",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "account_server"
 version = "0.0.0"
 dependencies = [
@@ -15124,6 +15143,7 @@ dependencies = [
 name = "warp"
 version = "0.1.0"
 dependencies = [
+ "account_client",
  "addr",
  "aha-reqwest-eventsource",
  "aho-corasick",

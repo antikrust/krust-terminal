@@ -49,10 +49,7 @@ use crate::terminal::shared_session::manager::Manager as SharedSessionManager;
 use crate::workflows::manager::WorkflowManager;
 use crate::workspace::{Workspace, WorkspaceAction};
 use crate::workspaces::update_manager::TeamUpdateManager;
-use crate::{
-    focus_running_window_and_show_native_modal, persistence, send_telemetry_sync_from_app_ctx,
-    GlobalResourceHandlesProvider,
-};
+use crate::{focus_running_window_and_show_native_modal, send_telemetry_sync_from_app_ctx};
 
 pub fn init(app: &mut AppContext) {
     auth_view_modal::init(app);
@@ -204,7 +201,16 @@ pub fn maybe_log_out(app: &mut AppContext) {
     }
 }
 
-// Log out the user, clears workspace state, stops running processes, and deletes database.
+// Log out the user, clears in-memory workspace/AI state, and stops running processes.
+//
+// Fork: this is intentionally NOT destructive to on-disk data. Upstream's
+// "Logout v0" deleted the entire sqlite database on logout because sessions and
+// cloud objects were never per-user scoped, so switching cloud accounts would
+// otherwise leak data between them. This fork has no multi-account cloud to leak
+// between, and the local data (terminal history, Library objects, agent
+// conversations) belongs to the machine rather than to a cloud identity — so the
+// wipe was pure data loss. See ACCOUNT-DESIGN.md ("log_out() becomes
+// non-destructive").
 pub fn log_out(app: &mut AppContext) {
     send_telemetry_sync_from_app_ctx!(TelemetryEvent::LogOut, app);
 
@@ -212,12 +218,9 @@ pub fn log_out(app: &mut AppContext) {
         index_manager.reset_codebase_indexing(ctx);
     });
 
-    let global_resource_handles = GlobalResourceHandlesProvider::as_ref(app).get();
-
-    // As part of Logout v0, we remove sqlite3 so sessions and cloud objects don't persist between accounts.
-    // TODO: Implement per-user scoping of sqlite3.
-    persistence::remove(&global_resource_handles.model_event_sender);
-
+    // Fork: no sqlite wipe here (see the note on `log_out`). We still run every
+    // in-memory reset below so the current session's view is cleared, but the
+    // on-disk database survives — logging out never loses local data.
     AuthManager::handle(app).update(app, |auth_manager, ctx| {
         auth_manager.log_out(ctx);
     });

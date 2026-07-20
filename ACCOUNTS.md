@@ -15,9 +15,10 @@ given instead of line numbers where possible.
 - All requests to Warp's servers therefore go out **unauthenticated** and fail
   with `Unauthorized: User not in context`. The local Claude/Codex harness
   doesn't care; a few upstream code paths needed silencing (see below).
-- **Do not click "Log out"** — upstream's logout deletes the local sqlite
-  database ("Logout v0" wipes sessions so accounts don't leak into each other).
-  Ripping that out is on the roadmap.
+- **"Log out" is now non-destructive** — upstream's logout deleted the local
+  sqlite database ("Logout v0" wiped sessions so accounts don't leak into each
+  other). The fork removed that wipe (see below), so logging out no longer
+  loses local data.
 - End goal: replace the whole account system with a **local profile** (display
   name + optional per-provider API keys), no server, no Firebase, no billing.
 
@@ -128,19 +129,24 @@ Where it all lives:
   the server dead it always shows "Upgrade" linking to warp.dev — rip-out
   candidate.
 
-## ⚠ Log out is destructive
+## Log out is no longer destructive
 
-`app/src/auth/mod.rs::log_out()` (dispatched from the user menu's "Log out"):
+`app/src/auth/mod.rs::log_out()` (dispatched from the user menu's "Log out")
+used to **delete the sqlite database** (`persistence::remove(...)` — upstream's
+"Logout v0": no per-user scoping, so it nuked everything). The fork removed that
+call. Logout now:
 
 1. sends telemetry, resets codebase indexing,
-2. **deletes the sqlite database** (`persistence::remove(...)` — upstream's
-   "Logout v0": no per-user scoping, so they nuke everything),
-3. clears `AuthManager` state and Keychain persistence,
-4. resets every AI/history/cloud model in memory.
+2. clears `AuthManager` state and Keychain persistence,
+3. resets every AI/history/cloud model in memory,
 
-Under fake auth there is no way back to a login screen that works — you'd
-restart into the test user again, minus your local history. Until we remove or
-repurpose the menu item, don't press it.
+but leaves the on-disk database intact, so **no local data is lost**. See
+ACCOUNT-DESIGN.md (non-destructive logout).
+
+Remaining rough edge: under the still-present fake auth there is no working
+login screen to land on after logout — you restart into the test user again.
+Turning the menu item into "Switch profile" (or removing it) is part of the
+fake-auth teardown (phase D), not yet done.
 
 ## Roadmap: proper local accounts for 0term
 
