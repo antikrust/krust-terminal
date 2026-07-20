@@ -817,6 +817,28 @@ impl SettingsWidget for CatalogWidget {
             column.add_child(fit_legend(appearance));
         }
 
+        // Ensure every visible model tag has a *stable* install-button
+        // mouse-state handle before the immutable borrow below. A click spans
+        // several render frames (down → hover → up); without a persistent
+        // handle each render handed the link a throwaway `unwrap_or_default`
+        // one, so the click never completed and Install did nothing.
+        {
+            let mut handles_mut = view.state_handles.borrow_mut();
+            for entry in view
+                .catalog
+                .iter()
+                .filter(|e| !e.is_embedding_only() && !e.sizes.is_empty())
+                .take(VISIBLE_CATALOG_LIMIT)
+            {
+                for size in &entry.sizes {
+                    handles_mut
+                        .install_buttons
+                        .entry(entry.tag_for(size))
+                        .or_default();
+                }
+            }
+        }
+
         let handles = view.state_handles.borrow();
         // Chat models only: embedding models can't be talked to, and listing
         // them here would just be noise.
