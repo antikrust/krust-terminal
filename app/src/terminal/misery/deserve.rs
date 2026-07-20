@@ -38,6 +38,12 @@ pub fn probability(
         return 1.0;
     }
 
+    // Fork: quote the user back sometimes in agent mode — often enough to land,
+    // rare enough that it stays a nasty little surprise rather than a tic.
+    if phase == Phase::Quote {
+        return 0.6;
+    }
+
     let mut score = command.class.baseline_contempt();
 
     // Repetition is the richest seam. Third time is where "not this again"

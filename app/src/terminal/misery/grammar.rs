@@ -123,8 +123,24 @@ fn resolve<R: Rng + ?Sized>(
         "LINES" => ctx.output_lines.map(|n| n.to_string()),
         "EXIT" => ctx.exit_code.map(|c| c.to_string()),
 
+        "QUOTE" => quote_fragment(ctx, rng),
+
         _ => None,
     }
+}
+
+/// A short run of the user's agent prompt, flung back at them — "repeating a
+/// bit of what you said to take the piss" rather than a full quote. Returns
+/// `None` (which fails the whole template, so quote lines never surface)
+/// unless there is a prompt to quote, i.e. unless we're in agent mode.
+fn quote_fragment<R: Rng + ?Sized>(ctx: &MiseryContext, rng: &mut R) -> Option<String> {
+    let words: Vec<&str> = ctx.user_prompt.as_deref()?.split_whitespace().collect();
+    if words.is_empty() {
+        return None;
+    }
+    let window = rng.gen_range(2..=5).min(words.len());
+    let start = rng.gen_range(0..=words.len() - window);
+    Some(words[start..start + window].join(" "))
 }
 
 fn exclaim_list(ctx: &MiseryContext) -> &'static [&'static str] {

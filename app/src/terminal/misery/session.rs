@@ -64,6 +64,7 @@ impl MiserySession {
             duration: None,
             output_lines: None,
             swear_mode,
+            user_prompt: None,
         };
         self.engine.generate(&ctx, Phase::Submit)
     }
@@ -88,8 +89,26 @@ impl MiserySession {
             duration,
             output_lines: Some(completed.output_lines.min(u32::MAX as u64) as u32),
             swear_mode,
+            user_prompt: None,
         };
         self.engine.generate(&ctx, Phase::Complete)
+    }
+
+    /// Called when the user submits a natural-language prompt to the agent.
+    /// May return a line that flings a fragment of that prompt back at them —
+    /// agent mode only (a shell command has nothing to quote).
+    pub fn on_agent_prompt(&mut self, prompt: &str, swear_mode: bool) -> Option<String> {
+        let ctx = MiseryContext {
+            command_name: prompt
+                .split_whitespace()
+                .next()
+                .unwrap_or("agent")
+                .to_owned(),
+            user_prompt: Some(prompt.to_owned()),
+            swear_mode,
+            ..Default::default()
+        };
+        self.engine.generate(&ctx, Phase::Quote)
     }
 
     /// Filenames in `path`, cached. Names only — file contents are never read.

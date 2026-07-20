@@ -16,7 +16,9 @@ use crate::ai::blocklist::BlocklistAIHistoryModel;
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
 use crate::persistence::ModelEvent;
 use crate::server::telemetry::TelemetryAgentViewEntryOrigin;
+use crate::settings::AISettings;
 use crate::terminal::input::message_bar::{Message, MessageItem};
+use crate::terminal::misery::{MiseryLineView, Phase as MiseryPhase};
 use crate::terminal::model::rich_content::RichContentType;
 use crate::terminal::view::load_ai_conversation::{
     RestoreConversationEntryBehavior, RestoredAIConversation,
@@ -75,6 +77,10 @@ impl TerminalView {
             return;
         }
 
+        // Fork (misery mode): snapshot the prompt before it is moved into
+        // `try_enter_agent_view`, so we can fling a fragment of it back below.
+        let quote_prompt = initial_prompt.clone();
+
         if let Err(e) = self.try_enter_agent_view(initial_prompt, origin.clone(), None, ctx) {
             report_error!(
                 anyhow::Error::new(e).context("Failed to enter agent view for new conversation"),
@@ -82,6 +88,30 @@ impl TerminalView {
             );
             self.show_error_toast(e.to_string(), ctx);
         }
+
+        // Fork (misery mode): quote the user's own prompt back at them — agent
+        // mode's version of the anticipation line. Inserted as terminal-scoped
+        // rich content so it shows in the inline conversation.
+        if let Some(prompt) = quote_prompt.as_deref() {
+            let ai = AISettings::as_ref(ctx);
+            if ai.is_misery_mode_enabled() {
+                let swear_mode = ai.is_swear_mode_enabled();
+                if let Some(line) = self.misery.on_agent_prompt(prompt, swear_mode) {
+                    let handle =
+                        ctx.add_view(|ctx| MiseryLineView::new(line, MiseryPhase::Quote, ctx));
+                    self.insert_rich_content(
+                        None,
+                        handle,
+                        Some(RichContentMetadata::MiseryLine),
+                        RichContentInsertionPosition::Append {
+                            insert_below_long_running_block: false,
+                        },
+                        ctx,
+                    );
+                }
+            }
+        }
+
         self.redetermine_global_focus(ctx);
     }
 

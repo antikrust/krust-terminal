@@ -17,6 +17,7 @@ fn ctx(command: &str) -> MiseryContext {
         duration: Some(2_000),
         output_lines: Some(12),
         swear_mode: false,
+        user_prompt: None,
     }
 }
 
@@ -282,4 +283,26 @@ fn the_verdict_fires_on_essentially_every_command() {
         rate > 0.95,
         "the verdict should fire on nearly every command, got {rate:.2}"
     );
+}
+
+#[test]
+fn quotes_fling_a_fragment_of_the_prompt_back() {
+    let mut engine = MiseryEngine::with_seed(7);
+    let prompt = "refactor the auth module to use the new session api";
+    let mut c = ctx("refactor");
+    c.user_prompt = Some(prompt.to_owned());
+    let line = engine
+        .generate_forced(&c, Phase::Quote)
+        .expect("agent mode should produce a quote");
+    assert!(
+        prompt.split_whitespace().any(|word| line.contains(word)),
+        "the quote should echo the prompt back: {line}"
+    );
+}
+
+#[test]
+fn quotes_never_fire_for_a_shell_command() {
+    // No `user_prompt` (terminal mode), so every quote template fails to fill.
+    let mut engine = MiseryEngine::with_seed(7);
+    assert!(engine.generate_forced(&ctx("ls"), Phase::Quote).is_none());
 }

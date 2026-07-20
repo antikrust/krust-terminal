@@ -52,6 +52,9 @@ impl View for MiseryLineView {
         let (top_padding, bottom_padding) = match self.phase {
             Phase::Submit => (DETACHED_PADDING, ATTACHED_PADDING),
             Phase::Complete => (ATTACHED_PADDING, DETACHED_PADDING),
+            // The quote reacts to a prompt the user just sent the agent; it
+            // stands on its own, detached from the blocks either side.
+            Phase::Quote => (DETACHED_PADDING, DETACHED_PADDING),
         };
 
         // Dim and italic: the terminal is muttering, not announcing. Using the

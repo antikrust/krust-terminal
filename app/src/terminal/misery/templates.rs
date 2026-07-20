@@ -20,6 +20,10 @@ pub enum Phase {
     Submit,
     /// Fired when the block completes, with exit code and timing available.
     Complete,
+    /// Fork: fired when the user submits a natural-language agent prompt — the
+    /// terminal flings a fragment of it back mockingly. Agent mode only; there
+    /// is nothing to quote for a shell command.
+    Quote,
 }
 
 /// An outcome precondition. Slot-level checks catch missing *data*; this
@@ -104,9 +108,29 @@ const fn tc(
 }
 
 use CommandClass::*;
-use Phase::{Complete, Submit};
+use Phase::{Complete, Quote, Submit};
 
 pub const TEMPLATES: &[Template] = &[
+    // ── Quote: fling a fragment of the user's agent prompt back ──────────
+    // Every one needs `{QUOTE}`, which only resolves in agent mode, so these
+    // can never surface for a shell command even though they are universal.
+    t(
+        "'{QUOTE}'! ner ner ner! ner ner NER! {EXCLAIM}, what a {NOUN_USER}.",
+        Quote,
+        &[],
+        6,
+    ),
+    t("oh, '{QUOTE}'. {COMPLAINT}.", Quote, &[], 6),
+    t("'{QUOTE}'? how very {ADJECTIVE}. {EXCLAIM}.", Quote, &[], 5),
+    t("'{QUOTE}', {NEVER_EVEN}.", Quote, &[], 5),
+    t(
+        "{EXCLAIM}. '{QUOTE}'. what {A_ADJECTIVE} thing to ask for.",
+        Quote,
+        &[],
+        5,
+    ),
+    t("'{QUOTE}'. mate. {COMPLAINT}.", Quote, &[], 5),
+
     // ── Submit, universal ────────────────────────────────────────────────
     t("{EXCLAIM}. {COMPLAINT}.", Submit, &[], 6),
     t("{EXCLAIM}, {AGAIN}.", Submit, &[], 6),

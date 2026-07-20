@@ -73,6 +73,11 @@ pub struct MiseryContext {
     /// Whether the user has swear mode on, which selects the harsher
     /// vocabulary tiers.
     pub swear_mode: bool,
+    /// Fork: the user's natural-language agent prompt, for the `{QUOTE}` slot.
+    /// Set only in agent mode; `None` for shell commands, which is what keeps
+    /// the quote templates from ever firing in the terminal (a shell command
+    /// has nothing to quote back).
+    pub user_prompt: Option<String>,
 }
 
 /// The stateful generator. One per session — the anti-repetition memory is
@@ -207,6 +212,9 @@ impl MiseryEngine {
         match phase {
             Phase::Submit => &self.recent_spoke_submit,
             Phase::Complete => &self.recent_spoke_complete,
+            // Quote has no backoff window (its rate is fixed); this value is
+            // never read for it, so any window will do.
+            Phase::Quote => &self.recent_spoke_submit,
         }
     }
 
@@ -214,6 +222,8 @@ impl MiseryEngine {
         let window = match phase {
             Phase::Submit => &mut self.recent_spoke_submit,
             Phase::Complete => &mut self.recent_spoke_complete,
+            // Quote doesn't pace itself off a window.
+            Phase::Quote => return,
         };
         if window.len() == MISERY_BACKOFF_WINDOW {
             window.pop_front();

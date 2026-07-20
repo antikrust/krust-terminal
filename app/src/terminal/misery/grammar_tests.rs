@@ -17,6 +17,7 @@ fn ctx() -> MiseryContext {
         duration: Some(1500),
         output_lines: Some(42),
         swear_mode: false,
+        user_prompt: None,
     }
 }
 
