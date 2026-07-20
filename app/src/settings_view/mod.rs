@@ -275,6 +275,7 @@ pub enum SettingsSection {
     // ── Appearance umbrella subpages ──
     AppearanceGeneral,
     AppearanceTxtFx,
+    AppearanceBlocks,
     // ── Cloud platform umbrella subpages ──
     CloudEnvironments,
     OzCloudAPIKeys,
@@ -299,7 +300,8 @@ impl Display for SettingsSection {
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
             SettingsSection::AppearanceGeneral => write!(f, "General"),
-            SettingsSection::AppearanceTxtFx => write!(f, "txtFX"),
+            SettingsSection::AppearanceTxtFx => write!(f, "Text"),
+            SettingsSection::AppearanceBlocks => write!(f, "Blocks"),
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
             SettingsSection::OzCloudAPIKeys => write!(f, "Oz Cloud API Keys"),
             _ => write!(f, "{self:?}"),
@@ -318,7 +320,10 @@ impl SettingsSection {
 
     /// Returns true if this section is a subpage under the "Appearance" umbrella.
     pub fn is_appearance_subpage(&self) -> bool {
-        matches!(self, Self::AppearanceGeneral | Self::AppearanceTxtFx)
+        matches!(
+            self,
+            Self::AppearanceGeneral | Self::AppearanceTxtFx | Self::AppearanceBlocks
+        )
     }
 
     /// Returns true if this section is a subpage under the "AI" umbrella.
@@ -391,7 +396,11 @@ impl SettingsSection {
     /// The ordered list of Appearance subpage sections shown under the
     /// Appearance umbrella.
     pub fn appearance_subpages() -> &'static [Self] {
-        &[Self::AppearanceGeneral, Self::AppearanceTxtFx]
+        &[
+            Self::AppearanceGeneral,
+            Self::AppearanceTxtFx,
+            Self::AppearanceBlocks,
+        ]
     }
 }
 
@@ -424,7 +433,9 @@ impl FromStr for SettingsSection {
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
             "AppearanceGeneral" => Ok(Self::AppearanceGeneral),
-            "txtFX" | "AppearanceTxtFx" => Ok(Self::AppearanceTxtFx),
+            // "txtFX" kept for backward compatibility with older deeplinks.
+            "Text" | "txtFX" | "AppearanceTxtFx" => Ok(Self::AppearanceTxtFx),
+            "Blocks" | "AppearanceBlocks" => Ok(Self::AppearanceBlocks),
             "CloudEnvironments" => Ok(Self::CloudEnvironments),
             "Oz Cloud API Keys" | "OzCloudAPIKeys" => Ok(Self::OzCloudAPIKeys),
             _ => Err(()),

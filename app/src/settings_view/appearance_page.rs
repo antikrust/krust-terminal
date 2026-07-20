@@ -571,10 +571,16 @@ pub enum AppearancePageAction {
 /// Identifies which subpage of the Appearance settings the user is viewing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AppearanceSubpage {
-    /// Everything except txtFX: themes, windows, text, cursor, and so on.
+    /// Everything except the Text and Blocks pages: themes, windows, cursor,
+    /// tabs, and so on.
     General,
-    /// The txtFX text-effect controls.
+    /// The Text page: the normal text controls up top and the Text FX
+    /// (text-effect) controls beneath them. Named `TxtFx` for continuity with
+    /// the existing setting keys; the UI calls it "Text".
     TxtFx,
+    /// The Blocks page: block appearance toggles, including the "useless
+    /// information" footer stats.
+    Blocks,
 }
 
 impl AppearanceSubpage {
@@ -582,6 +588,7 @@ impl AppearanceSubpage {
         match section {
             SettingsSection::AppearanceGeneral => Some(Self::General),
             SettingsSection::AppearanceTxtFx => Some(Self::TxtFx),
+            SettingsSection::AppearanceBlocks => Some(Self::Blocks),
             _ => None,
         }
     }
@@ -1677,7 +1684,7 @@ impl AppearanceSettingsPageView {
         if FeatureFlag::TextEffects.is_enabled() {
             categories.push(
                 Category::new(
-                    "txtFX",
+                    "Text FX",
                     vec![
                         Box::new(TextEffectsToggleWidget::default()),
                         Box::new(TextEffectWidget),
@@ -1750,11 +1757,21 @@ impl AppearanceSettingsPageView {
         // Subpage views show only their slice of the categories; the full
         // list stays for the no-subpage (search) mode.
         match subpage {
-            Some(AppearanceSubpage::General) => {
-                categories.retain(|category| category.title() != "txtFX")
-            }
-            Some(AppearanceSubpage::TxtFx) => {
-                categories.retain(|category| category.title() == "txtFX")
+            // General drops the categories that now have their own pages.
+            Some(AppearanceSubpage::General) => categories.retain(|category| {
+                let title = category.title();
+                title != "Text" && title != "Text FX" && title != "Blocks"
+            }),
+            // The "Text" page: the normal text controls up top, Text FX below
+            // (they already sit in that order in the list).
+            Some(AppearanceSubpage::TxtFx) => categories.retain(|category| {
+                let title = category.title();
+                title == "Text" || title == "Text FX"
+            }),
+            // The "Blocks" page: just the block appearance toggles (including
+            // "useless information").
+            Some(AppearanceSubpage::Blocks) => {
+                categories.retain(|category| category.title() == "Blocks")
             }
             None => {}
         }
