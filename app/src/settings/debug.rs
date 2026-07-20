@@ -1,5 +1,5 @@
 use settings::macros::define_settings_group;
-use settings::{Setting, SupportedPlatforms, SyncToCloud};
+use settings::{SupportedPlatforms, SyncToCloud};
 
 // Debug mode settings.
 //
@@ -52,22 +52,5 @@ define_settings_group!(DebugSettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: true,
-    },
-    show_memory_stats: ShowMemoryStats {
-        type: bool,
-        default: true,
-        supported_platforms: SupportedPlatforms::ALL,
-        sync_to_cloud: SyncToCloud::Never,
-        surface: settings::SettingSurfaces::GUI,
-        private: true,
     }
 ]);
-
-impl DebugSettings {
-    pub fn should_show_memory_stats(&self) -> bool {
-        // We only want to show memory stats in dogfood and not in tests.
-        *self.show_memory_stats.value()
-            && warp_core::channel::ChannelState::enable_debug_features()
-            && !cfg!(test)
-    }
-}

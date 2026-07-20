@@ -69,3 +69,6 @@ __pycache__/
 
 # Project notes
 .note/
+
+# Codex CLI worktrees (local tooling)
+.codex/

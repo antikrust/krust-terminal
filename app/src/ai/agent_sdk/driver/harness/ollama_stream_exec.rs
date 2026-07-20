@@ -15,14 +15,16 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
+use async_trait::async_trait;
 use command::r#async::Command;
 use futures::io::{AsyncRead, AsyncReadExt};
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use uuid::Uuid;
 use warpui::r#async::Timer;
 
 use super::claude_stream_exec::run_jsonl_stream;
+use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
 pub const OLLAMA_HARNESS_CONFIG_NAME: &str = "ollama";
@@ -48,6 +50,121 @@ Return exactly one JSON object and no markdown.
 To run a command: {"type":"shell","command":"the exact shell command"}
 To answer the user: {"type":"text","text":"your answer"}
 After a shell result, either request the next necessary command or answer the user."#;
+
+/// One MCP tool's schema, detached from any live transport so the
+/// chat-with-tools loop stays testable without a real MCP connection.
+#[derive(Debug, Clone)]
+pub(crate) struct McpToolSpec {
+    pub name: String,
+    pub description: String,
+    pub input_schema: Value,
+}
+
+impl McpToolSpec {
+    fn to_ollama_tool_json(&self) -> Value {
+        json!({
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.input_schema,
+            }
+        })
+    }
+}
+
+/// Executes an MCP tool call requested by a tool-capable Ollama model.
+///
+/// A trait rather than a concrete `TemplatableMCPServerManager` reference so
+/// the chat-with-tools loop below can be unit tested with a fake, and so this
+/// module doesn't need to know how Warp's MCP servers are spawned/reconnected
+/// — only how to invoke one by name.
+#[async_trait]
+pub(crate) trait McpToolCaller: Send + Sync {
+    async fn call(&self, name: &str, arguments: Value) -> Result<String, String>;
+}
+
+/// Dispatches to whichever configured MCP server advertises each tool name.
+///
+/// Built from a snapshot of `TemplatableMCPServerManager` state (see
+/// `terminal::view`, where `ctx` is available) before this run's background
+/// task is spawned; `ReconnectingPeer` itself needs no further `ctx` access
+/// to make calls.
+pub(crate) struct ConfiguredMcpTools {
+    callers: HashMap<String, ReconnectingPeer>,
+}
+
+impl ConfiguredMcpTools {
+    pub(crate) fn new(callers: HashMap<String, ReconnectingPeer>) -> Self {
+        Self { callers }
+    }
+}
+
+#[async_trait]
+impl McpToolCaller for ConfiguredMcpTools {
+    async fn call(&self, name: &str, arguments: Value) -> Result<String, String> {
+        let Some(peer) = self.callers.get(name) else {
+            return Err(format!("no MCP server advertises a '{name}' tool"));
+        };
+        let arguments = match arguments {
+            Value::Object(map) => map,
+            Value::Null => serde_json::Map::new(),
+            other => {
+                return Err(format!(
+                    "tool '{name}' arguments must be a JSON object, got: {other}"
+                ));
+            }
+        };
+        let result = peer
+            .call_tool(
+                rmcp::model::CallToolRequestParams::new(name.to_string()).with_arguments(arguments),
+            )
+            .await
+            .map_err(|error| error.to_string())?;
+        let text = call_tool_result_to_text(&result);
+        if result.is_error == Some(true) {
+            Err(text)
+        } else {
+            Ok(text)
+        }
+    }
+}
+
+fn call_tool_result_to_text(result: &rmcp::model::CallToolResult) -> String {
+    if let Some(structured) = &result.structured_content {
+        return structured.to_string();
+    }
+    result
+        .content
+        .iter()
+        .filter_map(|content| match &content.raw {
+            rmcp::model::RawContent::Text(text) => Some(text.text.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// System prompt used only when MCP tools were resolved for this run.
+/// Kept separate from [`OLLAMA_SYSTEM_PROMPT`] because native tool-calling
+/// models are prompted through the `/api/chat` `tools` field instead of the
+/// constrained shell/text JSON contract.
+fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
+    let tool_names = tools
+        .iter()
+        .map(|tool| tool.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "You are the local coding agent inside Warp terminal.\n\
+         You have access to these tools: {tool_names}. Call one whenever it would answer the \
+         user more accurately than your own knowledge alone — for example a web search tool for \
+         current events, prices, documentation, or anything that may have changed since you were \
+         trained.\n\
+         Answer the user directly in plain text once you have what you need; do not call a tool \
+         you don't need."
+    )
+}
 
 pub fn ollama_model_name(model_id: &str) -> Option<&str> {
     model_id
@@ -560,6 +677,7 @@ fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: impl Into<Str
 
 /// Runs one Ollama agent turn, including up to eight structured shell calls,
 /// and converts the whole lifecycle into Warp's local-harness event stream.
+#[allow(clippy::too_many_arguments)]
 pub async fn run_ollama_stream(
     first_command: Command,
     prompt: &str,
@@ -567,6 +685,8 @@ pub async fn run_ollama_stream(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
+    mcp_tools: &[McpToolSpec],
+    tool_caller: Option<Arc<dyn McpToolCaller>>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     run_ollama_stream_inner(
@@ -576,6 +696,8 @@ pub async fn run_ollama_stream(
         session_id,
         working_dir,
         path,
+        mcp_tools,
+        tool_caller,
         true,
         on_event,
     )
@@ -583,6 +705,7 @@ pub async fn run_ollama_stream(
 }
 
 #[cfg(test)]
+#[allow(clippy::too_many_arguments)]
 async fn run_ollama_stream_without_service_start(
     first_command: Command,
     prompt: &str,
@@ -590,6 +713,8 @@ async fn run_ollama_stream_without_service_start(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
+    mcp_tools: &[McpToolSpec],
+    tool_caller: Option<Arc<dyn McpToolCaller>>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     run_ollama_stream_inner(
@@ -599,12 +724,15 @@ async fn run_ollama_stream_without_service_start(
         session_id,
         working_dir,
         path,
+        mcp_tools,
+        tool_caller,
         false,
         on_event,
     )
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_ollama_stream_inner(
     first_command: Command,
     prompt: &str,
@@ -612,6 +740,8 @@ async fn run_ollama_stream_inner(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
+    mcp_tools: &[McpToolSpec],
+    tool_caller: Option<Arc<dyn McpToolCaller>>,
     start_service: bool,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
@@ -635,6 +765,65 @@ async fn run_ollama_stream_inner(
         }
     }
 
+    if !mcp_tools.is_empty() {
+        if let Some(tool_caller) = tool_caller {
+            match run_ollama_chat_with_tools(
+                first_command,
+                prompt,
+                model,
+                working_dir,
+                path,
+                mcp_tools,
+                tool_caller.as_ref(),
+                &mut on_event,
+            )
+            .await?
+            {
+                ToolChatOutcome::Completed(status) => return Ok(status),
+                ToolChatOutcome::UnsupportedByModel => {
+                    log::info!(
+                        "ollama_stream: {model} does not support native tool calling; \
+                         falling back to the shell-only protocol for this turn"
+                    );
+                    return run_ollama_generate_loop(
+                        None,
+                        prompt,
+                        model,
+                        session_id,
+                        working_dir,
+                        path,
+                        on_event,
+                    )
+                    .await;
+                }
+            }
+        }
+    }
+
+    run_ollama_generate_loop(
+        Some(first_command),
+        prompt,
+        model,
+        session_id,
+        working_dir,
+        path,
+        on_event,
+    )
+    .await
+}
+
+/// The original constrained shell/text protocol over `/api/generate`, used
+/// whenever no MCP tools are configured, or the model doesn't advertise
+/// native tool-calling support.
+async fn run_ollama_generate_loop(
+    first_command: Option<Command>,
+    prompt: &str,
+    model: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    mut on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
     let mut context = contexts()
         .lock()
         .ok()
@@ -645,7 +834,7 @@ async fn run_ollama_stream_inner(
         "Current working directory: {}\n\nUser request:\n{prompt}",
         working_dir.display()
     );
-    let mut next_command = Some(first_command);
+    let mut next_command = first_command;
 
     for tool_call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
         let request = ollama_generate_request(model, &next_prompt, context.as_deref());
@@ -735,6 +924,292 @@ async fn run_ollama_stream_inner(
     }
 
     unreachable!("the bounded Ollama tool loop always returns")
+}
+
+/// Outcome of one attempt to run a tool-capable Ollama chat turn.
+enum ToolChatOutcome {
+    /// The turn ran to completion (including any tool calls); events were
+    /// already emitted, including the terminal `TurnCompleted`.
+    Completed(ExitStatus),
+    /// Ollama rejected the request because `model` doesn't support native
+    /// tool-calling. No events beyond `SessionInit`/service-start have been
+    /// emitted, so the caller can safely retry via the shell/text protocol.
+    UnsupportedByModel,
+}
+
+/// Runs one Ollama turn over `/api/chat` with `mcp_tools` advertised as
+/// native tools, looping on tool calls (executed through `tool_caller`)
+/// until the model answers in plain text or [`MAX_TOOL_CALLS_PER_TURN`] is
+/// reached.
+///
+/// Ollama returns a plain error (no `message` field) when `model` doesn't
+/// advertise tool support; that surfaces as
+/// [`ToolChatOutcome::UnsupportedByModel`] on the very first response so the
+/// caller can retry with the older shell/text protocol instead of failing
+/// the turn outright.
+#[allow(clippy::too_many_arguments)]
+async fn run_ollama_chat_with_tools(
+    first_command: Command,
+    prompt: &str,
+    model: &str,
+    working_dir: &Path,
+    path: &str,
+    mcp_tools: &[McpToolSpec],
+    tool_caller: &dyn McpToolCaller,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<ToolChatOutcome> {
+    let tool_defs: Vec<Value> = mcp_tools
+        .iter()
+        .map(McpToolSpec::to_ollama_tool_json)
+        .collect();
+    let mut messages = vec![
+        json!({ "role": "system", "content": ollama_tool_system_prompt(mcp_tools) }),
+        json!({
+            "role": "user",
+            "content": format!(
+                "Current working directory: {}\n\nUser request:\n{prompt}",
+                working_dir.display()
+            ),
+        }),
+    ];
+
+    let mut next_command = Some(first_command);
+    for call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
+        let request = json!({
+            "model": model,
+            "messages": messages,
+            "tools": tool_defs,
+            "stream": true,
+            "options": { "temperature": 0 },
+        })
+        .to_string();
+
+        let command = next_command
+            .take()
+            .unwrap_or_else(|| new_ollama_command(working_dir, path));
+        let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
+        let parser_accumulator = Arc::clone(&accumulator);
+        let status = run_jsonl_stream(
+            command,
+            &request,
+            move |line| {
+                parser_accumulator
+                    .lock()
+                    .map(|mut accumulator| accumulator.push_line(line))
+                    .unwrap_or_default()
+            },
+            &mut *on_event,
+        )
+        .await?;
+
+        if !status.success() {
+            emit_failed_turn(
+                on_event,
+                "Could not reach the local Ollama service at 127.0.0.1:11434",
+            );
+            return Ok(ToolChatOutcome::Completed(status));
+        }
+
+        let response = accumulator
+            .lock()
+            .map(|accumulator| accumulator.clone().finish(model))
+            .unwrap_or_else(|_| Err("Ollama response state became unavailable".to_string()));
+        let response = match response {
+            Ok(response) => response,
+            Err(error) => {
+                if call_index == 0 && error.contains("does not support tools") {
+                    return Ok(ToolChatOutcome::UnsupportedByModel);
+                }
+                emit_failed_turn(on_event, error);
+                return Ok(ToolChatOutcome::Completed(status));
+            }
+        };
+
+        if response.tool_calls.is_empty() {
+            on_event(TurnEvent::TurnCompleted {
+                usage: Some(response.usage),
+                is_error: false,
+                error_message: None,
+            });
+            return Ok(ToolChatOutcome::Completed(status));
+        }
+
+        if call_index == MAX_TOOL_CALLS_PER_TURN {
+            emit_failed_turn(
+                on_event,
+                "Ollama reached the limit of eight tool calls in one turn",
+            );
+            return Ok(ToolChatOutcome::Completed(status));
+        }
+
+        messages.push(json!({
+            "role": "assistant",
+            "content": response.content,
+            "tool_calls": response
+                .tool_calls
+                .iter()
+                .map(|call| json!({
+                    "function": { "name": call.name, "arguments": call.arguments },
+                }))
+                .collect::<Vec<_>>(),
+        }));
+
+        for call in &response.tool_calls {
+            let call_id = format!("ollama-tool-{}", Uuid::new_v4());
+            on_event(TurnEvent::ToolCallStarted {
+                call_id: call_id.clone(),
+                name: call.name.clone(),
+                input: call.arguments.clone(),
+            });
+            let tool_content = match tool_caller.call(&call.name, call.arguments.clone()).await {
+                Ok(text) => {
+                    on_event(TurnEvent::ToolCallResult {
+                        call_id,
+                        outcome: ToolCallOutcome::Success(json!({ "result": text })),
+                    });
+                    text
+                }
+                Err(error) => {
+                    on_event(TurnEvent::ToolCallResult {
+                        call_id,
+                        outcome: ToolCallOutcome::Error(error.clone()),
+                    });
+                    error
+                }
+            };
+            messages.push(json!({ "role": "tool", "content": tool_content }));
+        }
+    }
+
+    unreachable!("the bounded tool-call loop always returns")
+}
+
+#[derive(Clone, Debug)]
+struct OllamaToolCall {
+    name: String,
+    arguments: Value,
+}
+
+struct OllamaChatResult {
+    content: String,
+    tool_calls: Vec<OllamaToolCall>,
+    usage: TurnUsage,
+}
+
+#[derive(Clone, Default)]
+struct OllamaChatAccumulator {
+    content: String,
+    tool_calls: Vec<OllamaToolCall>,
+    error: Option<String>,
+    done: bool,
+    prompt_eval_count: u64,
+    eval_count: u64,
+    total_duration: Option<u64>,
+}
+
+impl OllamaChatAccumulator {
+    fn push_line(&mut self, line: &str) -> Vec<TurnEvent> {
+        let chunk: OllamaChatChunk = match serde_json::from_str(line) {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                log::warn!("ollama_stream: failed to parse chat response chunk: {error}");
+                self.error = Some("Ollama returned an invalid response".to_string());
+                return Vec::new();
+            }
+        };
+
+        if let Some(error) = chunk.error {
+            self.error = Some(error);
+        }
+
+        let mut events = Vec::new();
+        if let Some(message) = chunk.message {
+            if !message.content.is_empty() {
+                self.content.push_str(&message.content);
+                events.push(TurnEvent::TextDelta {
+                    text: message.content,
+                });
+            }
+            if !message.tool_calls.is_empty() {
+                self.tool_calls = message
+                    .tool_calls
+                    .into_iter()
+                    .map(|call| OllamaToolCall {
+                        name: call.function.name,
+                        arguments: call.function.arguments,
+                    })
+                    .collect();
+            }
+        }
+
+        self.prompt_eval_count = self.prompt_eval_count.max(chunk.prompt_eval_count);
+        self.eval_count = self.eval_count.max(chunk.eval_count);
+        if chunk.total_duration.is_some() {
+            self.total_duration = chunk.total_duration;
+        }
+        self.done |= chunk.done;
+        events
+    }
+
+    fn finish(self, model: &str) -> Result<OllamaChatResult, String> {
+        if let Some(error) = self.error {
+            return Err(error);
+        }
+        if !self.done {
+            return Err("Ollama ended the response before completing it".to_string());
+        }
+        Ok(OllamaChatResult {
+            content: self.content,
+            tool_calls: self.tool_calls,
+            usage: TurnUsage {
+                input_tokens: self.prompt_eval_count,
+                output_tokens: self.eval_count,
+                cache_read_input_tokens: 0,
+                cache_creation_input_tokens: 0,
+                model_id: Some(model.to_string()),
+                // Usage metadata only; see the matching note on the
+                // shell/text protocol's `finish`.
+                context_window: Some(16_384),
+                cost_usd: Some(0.0),
+                duration_ms: self
+                    .total_duration
+                    .map(|nanoseconds| nanoseconds / 1_000_000),
+            },
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct OllamaChatToolCallFunction {
+    name: String,
+    #[serde(default)]
+    arguments: Value,
+}
+
+#[derive(Deserialize)]
+struct OllamaChatToolCall {
+    function: OllamaChatToolCallFunction,
+}
+
+#[derive(Default, Deserialize)]
+struct OllamaChatMessage {
+    #[serde(default)]
+    content: String,
+    #[serde(default)]
+    tool_calls: Vec<OllamaChatToolCall>,
+}
+
+#[derive(Deserialize)]
+struct OllamaChatChunk {
+    message: Option<OllamaChatMessage>,
+    error: Option<String>,
+    #[serde(default)]
+    prompt_eval_count: u64,
+    #[serde(default)]
+    eval_count: u64,
+    total_duration: Option<u64>,
+    #[serde(default)]
+    done: bool,
 }
 
 #[derive(Deserialize)]

@@ -54,6 +54,7 @@ use crate::view_components::DismissibleToast;
 use crate::workspace::ToastStack;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::{send_telemetry_from_ctx, GlobalResourceHandlesProvider};
+use serde_json::json;
 
 /// Controls the behavior of `spawn_server_impl`.
 enum SpawnMode {
@@ -1179,6 +1180,81 @@ impl TemplatableMCPServerManager {
             return;
         };
         self.install_from_template(templatable_mcp_server, HashMap::new(), true, ctx);
+    }
+
+    /// Fixed uuid for the built-in "Web Search" MCP server template, so
+    /// [`get_installation_by_template_uuid`](Self::get_installation_by_template_uuid)
+    /// recognizes it across app restarts instead of installing (and
+    /// re-showing) a duplicate every launch. Doubles as its `gallery_data`
+    /// id — see that field's comment on [`Self::ensure_builtin_web_search_server`].
+    const BUILTIN_WEB_SEARCH_TEMPLATE_UUID: Uuid =
+        Uuid::from_u128(0x2355db49_c68a_4008_90da_70802fc50e85);
+
+    /// Installs Warp's built-in "Web Search" MCP server the first time it's
+    /// needed, so harnesses that don't have their own web search — chiefly
+    /// tool-capable local Ollama models, see
+    /// `ai::agent_sdk::driver::harness::ollama_stream_exec` — get one
+    /// without the user hand-configuring anything. A no-op after the first
+    /// call (or if the current executable can't be resolved, in which case
+    /// there's no sensible `command` to spawn).
+    ///
+    /// Unlike Figma, this isn't pulled from the cloud gallery: it's a
+    /// first-party feature of this binary, spawned as a subcommand of
+    /// itself (see `ai::mcp::web_search_server` and
+    /// `warp_cli::WorkerCommand::WebSearchMcpServer`) rather than an
+    /// external process the user installs.
+    pub fn ensure_builtin_web_search_server(&mut self, ctx: &mut ModelContext<Self>) {
+        if self
+            .get_installation_by_template_uuid(Self::BUILTIN_WEB_SEARCH_TEMPLATE_UUID)
+            .is_some()
+        {
+            return;
+        }
+        let Ok(exe) = std::env::current_exe() else {
+            log::warn!(
+                "Could not resolve the current executable; skipping the built-in web search MCP server"
+            );
+            return;
+        };
+        // The template must be pre-wrapped under a name key, the same shape
+        // `parsing::normalize_mcp_json` produces for a pasted single-server
+        // JSON (`{"<name>": {"command": ..., "args": [...]}}`) — resolution
+        // expects a name -> server map, not a bare server object. Skipping
+        // this wrapping parses each top-level field (e.g. `args`) as if it
+        // were its own server, which fails loudly once spawned.
+        let template_json = json!({
+            "Web Search": {
+                "command": exe.to_string_lossy(),
+                "args": ["web-search-mcp-server"],
+            }
+        })
+        .to_string();
+        let server = TemplatableMCPServer {
+            uuid: Self::BUILTIN_WEB_SEARCH_TEMPLATE_UUID,
+            name: "Web Search".to_string(),
+            description: Some(
+                "Built-in keyless web search (DuckDuckGo), for models and agents that don't \
+                 have their own."
+                    .to_string(),
+            ),
+            template: JsonTemplate {
+                json: template_json,
+                variables: Vec::new(),
+            },
+            version: 0,
+            // Not really gallery-sourced, but this is the sanctioned way to
+            // opt an installation out of `delete_orphaned_installations`,
+            // which otherwise removes any local installation whose
+            // template uuid isn't a *real* cloud object (ours never is —
+            // it's constructed in-process, never pushed to the server).
+            // Without this, the server gets reinstalled and immediately
+            // deleted again on every reconciliation pass.
+            gallery_data: Some(GalleryData {
+                gallery_item_id: Self::BUILTIN_WEB_SEARCH_TEMPLATE_UUID,
+                version: 0,
+            }),
+        };
+        self.install_from_template(server, HashMap::new(), true, ctx);
     }
 
     pub fn delete_templatable_mcp_server_installation(

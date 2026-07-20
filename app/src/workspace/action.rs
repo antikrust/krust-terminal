@@ -503,7 +503,6 @@ pub enum WorkspaceAction {
     ToggleRecordingMode,
     ToggleInBandGenerators,
     ToggleDebugNetworkStatus,
-    ToggleShowMemoryStats,
     RunAISuggestedCommand(String),
     RunCommand(String),
     InsertInInput {
@@ -1129,7 +1128,6 @@ impl WorkspaceAction {
             | ToggleRecordingMode
             | ToggleInBandGenerators
             | ToggleDebugNetworkStatus
-            | ToggleShowMemoryStats
             | RunAISuggestedCommand { .. }
             | RunCommand { .. }
             | InsertInInput { .. }

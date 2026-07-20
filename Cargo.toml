@@ -393,6 +393,7 @@ mockito = "1.7.0"
 sysinfo = { version = "0.37.0", default-features = false, features = [
   "system",
   "multithread",
+  "disk",
 ] }
 windows = { version = "0.62.2", features = [
   "Win32",

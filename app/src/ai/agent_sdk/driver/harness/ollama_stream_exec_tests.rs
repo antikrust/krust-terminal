@@ -5,11 +5,37 @@ use command::r#async::Command;
 use futures_lite::future::block_on;
 use uuid::Uuid;
 
+use serde_json::{json, Value};
+
 use super::{
     execute_shell, ollama_curl_args, ollama_generate_request, ollama_model_name, ollama_serve_args,
-    run_ollama_stream_without_service_start, OllamaAgentReply, OllamaResponseAccumulator,
-    CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID,
+    run_ollama_stream_without_service_start, McpToolCaller, McpToolSpec, OllamaAgentReply,
+    OllamaResponseAccumulator, CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID,
 };
+
+struct FakeToolCaller;
+
+#[async_trait::async_trait]
+impl McpToolCaller for FakeToolCaller {
+    async fn call(&self, name: &str, arguments: Value) -> Result<String, String> {
+        match name {
+            "web_search" => Ok(format!("results for {}", arguments["query"])),
+            other => Err(format!("no such tool: {other}")),
+        }
+    }
+}
+
+fn web_search_tool_spec() -> McpToolSpec {
+    McpToolSpec {
+        name: "web_search".to_string(),
+        description: "Search the web".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": { "query": { "type": "string" } },
+            "required": ["query"],
+        }),
+    }
+}
 
 #[test]
 fn picker_id_maps_to_native_ollama_model_name() {
@@ -194,6 +220,8 @@ fn session_starts_before_model_progress_and_text() {
         &Uuid::new_v4(),
         Path::new("/tmp"),
         "/usr/bin:/bin",
+        &[],
+        None,
         |event| events.push(event),
     ))
     .unwrap();
@@ -244,4 +272,148 @@ fn shell_execution_never_buffers_unbounded_output() {
         "{}",
         execution.stdout.len()
     );
+}
+
+#[test]
+fn mcp_tool_specs_become_ollama_function_definitions() {
+    let tool_json = web_search_tool_spec().to_ollama_tool_json();
+    assert_eq!(tool_json["type"], "function");
+    assert_eq!(tool_json["function"]["name"], "web_search");
+    assert_eq!(tool_json["function"]["description"], "Search the web");
+    assert_eq!(
+        tool_json["function"]["parameters"]["properties"]["query"]["type"],
+        "string"
+    );
+}
+
+#[test]
+fn chat_accumulator_collects_streamed_text_and_final_tool_call() {
+    use super::OllamaChatAccumulator;
+
+    let mut accumulator = OllamaChatAccumulator::default();
+    let first = json!({
+        "message": { "role": "assistant", "content": "Looking that up" },
+        "done": false,
+    })
+    .to_string();
+    let second = json!({
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                { "function": { "name": "web_search", "arguments": { "query": "rust 2024" } } }
+            ],
+        },
+        "done": true,
+        "prompt_eval_count": 10,
+        "eval_count": 4,
+        "total_duration": 3_000_000,
+    })
+    .to_string();
+
+    let first_events = accumulator.push_line(&first);
+    assert_eq!(
+        first_events,
+        vec![TurnEvent::TextDelta {
+            text: "Looking that up".to_string()
+        }]
+    );
+    assert_eq!(accumulator.push_line(&second), Vec::new());
+
+    let result = accumulator.finish("qwen2.5-coder:7b").unwrap();
+    assert_eq!(result.content, "Looking that up");
+    assert_eq!(result.tool_calls.len(), 1);
+    assert_eq!(result.tool_calls[0].name, "web_search");
+    assert_eq!(result.tool_calls[0].arguments["query"], "rust 2024");
+    assert_eq!(result.usage.input_tokens, 10);
+    assert_eq!(result.usage.output_tokens, 4);
+}
+
+#[test]
+fn chat_turn_without_tool_calls_completes_directly() {
+    let response = json!({
+        "message": { "role": "assistant", "content": "It's sunny." },
+        "done": true,
+        "prompt_eval_count": 5,
+        "eval_count": 2,
+    })
+    .to_string();
+    let mut command = Command::new("sh");
+    command.args([
+        "-c",
+        "cat >/dev/null; printf '%s\\n' \"$OLLAMA_TEST_RESPONSE\"",
+    ]);
+    command.env("OLLAMA_TEST_RESPONSE", response);
+
+    let mut events = Vec::new();
+    let outcome = block_on(super::run_ollama_chat_with_tools(
+        command,
+        "what's the weather",
+        "qwen2.5-coder:7b",
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+        &[web_search_tool_spec()],
+        &FakeToolCaller,
+        &mut |event| events.push(event),
+    ))
+    .unwrap();
+
+    assert!(matches!(outcome, super::ToolChatOutcome::Completed(status) if status.success()));
+    assert_eq!(events.len(), 2, "{events:?}");
+    assert_eq!(
+        events[0],
+        TurnEvent::TextDelta {
+            text: "It's sunny.".to_string()
+        }
+    );
+    match &events[1] {
+        TurnEvent::TurnCompleted {
+            usage: Some(usage),
+            is_error: false,
+            error_message: None,
+        } => {
+            assert_eq!(usage.input_tokens, 5);
+            assert_eq!(usage.output_tokens, 2);
+        }
+        other => panic!("expected a successful TurnCompleted, got {other:?}"),
+    }
+}
+
+#[test]
+fn chat_turn_falls_back_when_model_lacks_tool_support() {
+    let response = json!({ "error": "\"qwen2.5-coder:7b\" does not support tools" }).to_string();
+    let mut command = Command::new("sh");
+    command.args([
+        "-c",
+        "cat >/dev/null; printf '%s\\n' \"$OLLAMA_TEST_RESPONSE\"",
+    ]);
+    command.env("OLLAMA_TEST_RESPONSE", response);
+
+    let mut events = Vec::new();
+    let outcome = block_on(super::run_ollama_chat_with_tools(
+        command,
+        "what's the weather",
+        "qwen2.5-coder:7b",
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+        &[web_search_tool_spec()],
+        &FakeToolCaller,
+        &mut |event| events.push(event),
+    ))
+    .unwrap();
+
+    assert!(matches!(
+        outcome,
+        super::ToolChatOutcome::UnsupportedByModel
+    ));
+    assert!(events.is_empty(), "{events:?}");
+}
+
+#[test]
+fn fake_tool_caller_dispatches_by_name() {
+    let ok = block_on(FakeToolCaller.call("web_search", json!({ "query": "warp" })));
+    assert_eq!(ok, Ok("results for \"warp\"".to_string()));
+
+    let err = block_on(FakeToolCaller.call("unknown_tool", Value::Null));
+    assert_eq!(err, Err("no such tool: unknown_tool".to_string()));
 }

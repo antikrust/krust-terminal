@@ -7,6 +7,7 @@
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 
+use super::capability;
 use super::catalog::{self, CatalogEntry};
 
 /// Ollama's local HTTP API. Fixed port — Ollama does not advertise itself.
@@ -71,9 +72,19 @@ struct TagEntry {
 /// models on disk but no API — fall back to reading Ollama's manifests
 /// directly. That keeps "what's installed" answerable without starting the
 /// engine just to look, which is the whole point of the Installed list.
+///
+/// An API response of *zero* models is treated the same as an error and
+/// double-checked against disk: a long-running server only scans its
+/// manifests directory at startup, so it has no way to notice models that
+/// appeared on disk afterward — exactly what happens right after
+/// `move_models_dir` moves files into a fresh folder while an old server
+/// process (started before the move, possibly not even one Warp spawned)
+/// keeps running against its stale in-memory view. Without this, a
+/// perfectly intact move looks like every model vanished.
 pub async fn list_installed(client: &reqwest::Client) -> Result<Vec<InstalledModel>> {
     match list_installed_via_api(client).await {
-        Ok(models) => Ok(models),
+        Ok(models) if !models.is_empty() => Ok(models),
+        Ok(_) => Ok(list_installed_from_disk(&models_dir())),
         Err(api_err) => {
             let from_disk = list_installed_from_disk(&models_dir());
             if from_disk.is_empty() {
@@ -125,10 +136,243 @@ pub fn models_dir() -> std::path::PathBuf {
     if let Some(dir) = std::env::var_os("OLLAMA_MODELS") {
         return std::path::PathBuf::from(dir);
     }
+    default_models_dir()
+}
+
+/// The models folder Ollama uses absent any override — what "Reset to
+/// default" moves models back to.
+pub fn default_models_dir() -> std::path::PathBuf {
     dirs::home_dir()
         .unwrap_or_default()
         .join(".ollama")
         .join("models")
+}
+
+/// Applies the persisted custom models folder (if any) to this process's
+/// `OLLAMA_MODELS`, so `models_dir()` and any `ollama serve` this process
+/// later spawns both pick it up.
+///
+/// Only ever *sets* the variable, never clears it: a user who exported
+/// `OLLAMA_MODELS` in their own shell before launching Warp gets to keep
+/// that (see `models_dir`'s doc comment) when Warp has no override of its
+/// own opinion on the matter.
+pub fn apply_models_dir_override(app: &warpui::AppContext) {
+    use crate::settings::ai::AISettings;
+    use settings::Setting as _;
+    use warpui::SingletonEntity as _;
+    if let Some(dir) = AISettings::as_ref(app)
+        .ollama_models_dir_override
+        .value()
+        .as_deref()
+        .filter(|dir| !dir.is_empty())
+    {
+        std::env::set_var("OLLAMA_MODELS", dir);
+    }
+}
+
+/// One update from a streaming models-folder move.
+#[derive(Debug, Clone)]
+pub enum MoveEvent {
+    /// Fraction 0.0..=1.0 of total bytes copied so far.
+    Progress(f32),
+    /// The move finished; `Ok` means models were copied and the old folder
+    /// removed, `Err` carries a user-facing reason.
+    Finished(std::result::Result<(), String>),
+}
+
+/// Moves everything under `from` into `to`, streaming byte-level progress on
+/// `tx` and always ending with exactly one [`MoveEvent::Finished`].
+///
+/// Copies before deleting: `from` is only removed once every file has copied
+/// successfully, so a mid-copy failure (disk full, permissions) leaves the
+/// original models exactly as they were rather than half-migrated. Refuses
+/// up front if `to`'s volume doesn't have room — this is exactly how models
+/// end up stranded on a too-small system drive in the first place.
+pub async fn move_models_dir(
+    from: std::path::PathBuf,
+    to: std::path::PathBuf,
+    tx: async_channel::Sender<MoveEvent>,
+) {
+    let result = move_models_dir_inner(from, to, tx.clone()).await;
+    let _ = tx
+        .send(MoveEvent::Finished(result.map_err(|err| err.to_string())))
+        .await;
+}
+
+async fn move_models_dir_inner(
+    from: std::path::PathBuf,
+    to: std::path::PathBuf,
+    tx: async_channel::Sender<MoveEvent>,
+) -> Result<()> {
+    if from == to {
+        return Ok(());
+    }
+    if to.starts_with(&from) {
+        return Err(anyhow!(
+            "Can't move the models folder into itself ({})",
+            to.display()
+        ));
+    }
+    if !from.exists() {
+        // Nothing to migrate — e.g. Ollama has no models yet. The new
+        // folder still becomes the target for future installs.
+        return Ok(());
+    }
+
+    tokio::task::spawn_blocking(move || {
+        check_fits(&from, &to)?;
+        let total = dir_size_bytes(&from).max(1);
+        let mut copied: u64 = 0;
+        copy_dir_recursive(&from, &to, &mut |bytes| {
+            copied = copied.saturating_add(bytes);
+            // Unbounded channel: `try_send` only fails if the receiver is
+            // gone (the page closed), in which case dropping progress is
+            // exactly right.
+            let _ = tx.try_send(MoveEvent::Progress(
+                (copied as f32 / total as f32).clamp(0.0, 1.0),
+            ));
+        })
+        .and_then(|_| remove_dir_all_checked(&from))
+    })
+    .await
+    .map_err(|err| anyhow!("Move task panicked: {err}"))?
+}
+
+/// Headroom required on top of the raw byte count: other processes can
+/// consume space during a long copy, and filesystems have their own
+/// overhead the raw file sizes don't account for.
+const SPACE_CHECK_MARGIN_BYTES: u64 = 500 * 1024 * 1024;
+
+/// Refuses the move if `to`'s volume doesn't have room for what's in `from`,
+/// rather than starting a copy that runs out of space partway through.
+/// Best-effort: if free space can't be determined for `to` (e.g. an
+/// unrecognized mount), the move proceeds rather than blocking on an
+/// unknown.
+fn check_fits(from: &std::path::Path, to: &std::path::Path) -> Result<()> {
+    let needed = dir_size_bytes(from);
+    let Some(available) = available_space_bytes(to) else {
+        return Ok(());
+    };
+    if needed + SPACE_CHECK_MARGIN_BYTES > available {
+        return Err(anyhow!(
+            "Not enough space at {}: this needs about {}, but only {} is free",
+            to.display(),
+            capability::format_gb(needed),
+            capability::format_gb(available)
+        ));
+    }
+    Ok(())
+}
+
+/// Total size in bytes of every file under `dir`. Best-effort: unreadable
+/// entries are skipped rather than failing the whole count, since this only
+/// ever feeds an advisory "will it fit" check, not the copy itself.
+fn dir_size_bytes(dir: &std::path::Path) -> u64 {
+    walkdir::WalkDir::new(dir)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_file())
+        .filter_map(|entry| entry.metadata().ok())
+        .map(|metadata| metadata.len())
+        .sum()
+}
+
+/// Free space on the volume containing `path`, or `None` if it can't be
+/// determined.
+///
+/// `path` (the chosen destination folder) may not exist yet, so this walks
+/// up to the nearest existing ancestor before matching it against a mount
+/// point — a fresh `Foo/Bar/Models` folder picked for the first time still
+/// resolves to the right volume rather than falling through to `None`.
+fn available_space_bytes(path: &std::path::Path) -> Option<u64> {
+    let mut probe = path;
+    while !probe.exists() {
+        probe = probe.parent()?;
+    }
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    disks
+        .list()
+        .iter()
+        .filter(|disk| probe.starts_with(disk.mount_point()))
+        // Longest mount point match wins, e.g. `/Volumes/Foo` over `/`.
+        .max_by_key(|disk| disk.mount_point().as_os_str().len())
+        .map(|disk| disk.available_space())
+}
+
+/// Recursively copies `from`'s contents into `to`, creating directories as
+/// needed and invoking `on_bytes` with the size of each chunk written so a
+/// caller can drive a progress bar. Synchronous — always run inside
+/// `spawn_blocking`.
+fn copy_dir_recursive(
+    from: &std::path::Path,
+    to: &std::path::Path,
+    on_bytes: &mut dyn FnMut(u64),
+) -> Result<()> {
+    std::fs::create_dir_all(to).with_context(|| format!("Couldn't create {}", to.display()))?;
+    for entry in walkdir::WalkDir::new(from) {
+        let entry = entry.with_context(|| format!("Couldn't read {}", from.display()))?;
+        let rel = entry
+            .path()
+            .strip_prefix(from)
+            .expect("walkdir yields paths under `from`");
+        if rel.as_os_str().is_empty() {
+            continue;
+        }
+        let dest = to.join(rel);
+        if entry.file_type().is_dir() {
+            std::fs::create_dir_all(&dest)
+                .with_context(|| format!("Couldn't create {}", dest.display()))?;
+        } else {
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)
+                    .with_context(|| format!("Couldn't create {}", parent.display()))?;
+            }
+            copy_file_with_progress(entry.path(), &dest, on_bytes).with_context(|| {
+                format!(
+                    "Couldn't copy {} to {}",
+                    entry.path().display(),
+                    dest.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+/// Copies one file in bounded chunks, reporting each chunk's byte count to
+/// `on_bytes`. Chunked rather than `std::fs::copy` so a multi-GB model blob
+/// advances the progress bar smoothly instead of jumping in one step when
+/// the whole file lands.
+fn copy_file_with_progress(
+    src: &std::path::Path,
+    dst: &std::path::Path,
+    on_bytes: &mut dyn FnMut(u64),
+) -> std::io::Result<()> {
+    use std::io::{Read as _, Write as _};
+
+    let mut reader = std::io::BufReader::new(std::fs::File::open(src)?);
+    let mut writer = std::io::BufWriter::new(std::fs::File::create(dst)?);
+    let mut buffer = vec![0_u8; 4 * 1024 * 1024];
+    loop {
+        let read = reader.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        writer.write_all(&buffer[..read])?;
+        on_bytes(read as u64);
+    }
+    writer.flush()
+}
+
+/// Removes `dir` only after the copy above has fully succeeded — never
+/// called on a partially-migrated source.
+fn remove_dir_all_checked(dir: &std::path::Path) -> Result<()> {
+    std::fs::remove_dir_all(dir).with_context(|| {
+        format!(
+            "Models copied, but couldn't remove old folder {}",
+            dir.display()
+        )
+    })
 }
 
 /// One layer inside an on-disk manifest. Only the size matters here; a model's
@@ -361,6 +605,122 @@ pub fn validate_model_tag(input: &str) -> Result<String> {
     }
 
     Ok(tag.to_string())
+}
+
+/// One update from a streaming model pull.
+#[derive(Debug, Clone)]
+pub enum PullEvent {
+    /// Download progress. `fraction` is `None` for phases without a byte
+    /// count (e.g. "pulling manifest", "verifying"), where the bar should
+    /// read as indeterminate; `status` is Ollama's own phase label.
+    Progress {
+        fraction: Option<f32>,
+        status: String,
+    },
+    /// The pull completed and the model is now on disk.
+    Done,
+    /// The pull failed, with a user-facing reason.
+    Failed(String),
+}
+
+#[derive(Deserialize)]
+struct PullResponseLine {
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    total: Option<u64>,
+    #[serde(default)]
+    completed: Option<u64>,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+/// Pulls `tag` via Ollama's streaming `/api/pull`, forwarding progress on
+/// `tx` until the pull ends. Starts the local service first (a cold machine
+/// has no server to pull through). Always ends with exactly one
+/// [`PullEvent::Done`] or [`PullEvent::Failed`].
+///
+/// Uses the HTTP API rather than shelling out to `ollama pull` so we get
+/// structured byte counts (`completed`/`total`) to drive a progress bar,
+/// instead of parsing the CLI's human-readable progress lines.
+pub async fn pull_model(client: &reqwest::Client, tag: &str, tx: async_channel::Sender<PullEvent>) {
+    use futures::StreamExt as _;
+
+    if !ensure_running(client).await {
+        let _ = tx
+            .send(PullEvent::Failed(
+                "Could not start the local Ollama service".to_string(),
+            ))
+            .await;
+        return;
+    }
+
+    let response = client
+        .post(format!("{API_BASE}/api/pull"))
+        .json(&serde_json::json!({ "model": tag, "stream": true }))
+        .send()
+        .await;
+    let response = match response {
+        Ok(response) if response.status().is_success() => response,
+        Ok(response) => {
+            let _ = tx
+                .send(PullEvent::Failed(format!(
+                    "Ollama returned {} pulling {tag}",
+                    response.status()
+                )))
+                .await;
+            return;
+        }
+        Err(error) => {
+            let _ = tx.send(PullEvent::Failed(error.to_string())).await;
+            return;
+        }
+    };
+
+    // The response is newline-delimited JSON; a single read chunk may hold
+    // several lines or a partial one, so buffer across chunks and emit only
+    // complete lines.
+    let mut stream = response.bytes_stream();
+    let mut buffer: Vec<u8> = Vec::new();
+    while let Some(chunk) = stream.next().await {
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                let _ = tx.send(PullEvent::Failed(error.to_string())).await;
+                return;
+            }
+        };
+        buffer.extend_from_slice(&chunk);
+
+        while let Some(newline) = buffer.iter().position(|&byte| byte == b'\n') {
+            let line: Vec<u8> = buffer.drain(..=newline).collect();
+            let line = &line[..line.len() - 1];
+            if line.is_empty() {
+                continue;
+            }
+            let Ok(parsed) = serde_json::from_slice::<PullResponseLine>(line) else {
+                continue;
+            };
+            if let Some(error) = parsed.error {
+                let _ = tx.send(PullEvent::Failed(error)).await;
+                return;
+            }
+            let fraction = match (parsed.completed, parsed.total) {
+                (Some(completed), Some(total)) if total > 0 => {
+                    Some((completed as f32 / total as f32).clamp(0.0, 1.0))
+                }
+                _ => None,
+            };
+            let _ = tx
+                .send(PullEvent::Progress {
+                    fraction,
+                    status: parsed.status.unwrap_or_default(),
+                })
+                .await;
+        }
+    }
+
+    let _ = tx.send(PullEvent::Done).await;
 }
 
 #[cfg(test)]

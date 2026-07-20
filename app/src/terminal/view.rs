@@ -227,7 +227,7 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
-    ollama_curl_args, ollama_model_name, run_ollama_stream,
+    self, ollama_curl_args, ollama_model_name, run_ollama_stream,
 };
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
     tool_call_action_result, turn_event_to_messages,
@@ -292,6 +292,7 @@ use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientPr
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
 use crate::ai::loading::shimmering_warp_loading_text;
+use crate::ai::mcp::TemplatableMCPServerManager;
 #[cfg(feature = "local_fs")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
 use crate::ai::predict::prompt_suggestions::{
@@ -377,8 +378,8 @@ use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::import::view::{SettingsImportEvent, SettingsImportView};
 use crate::settings::{
     AISettings, AISettingsChangedEvent, AliasExpansionSettings, AppEditorSettings,
-    BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings, DebugSettings,
-    DebugSettingsChangedEvent, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent,
+    BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings,
+    EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent,
     InputModeSettings, InputModeSettingsChangedEvent, InputSettings, PaneSettings,
     PaneSettingsChangedEvent, PrivacySettings, PrivacySettingsChangedEvent,
     PrivacySettingsSnapshot, SelectionSettings, VimBannerSettings,
@@ -3697,16 +3698,6 @@ impl TerminalView {
             }
         });
 
-        ctx.subscribe_to_model(
-            &DebugSettings::handle(ctx),
-            |me, debug_settings, event, ctx| {
-                if let DebugSettingsChangedEvent::ShowMemoryStats { .. } = event {
-                    me.model.lock().block_list_mut().set_show_memory_stats(
-                        debug_settings.as_ref(ctx).should_show_memory_stats(),
-                    );
-                }
-            },
-        );
 
         ctx.subscribe_to_model(&UserWorkspaces::handle(ctx), |me, _, event, ctx| {
             if matches!(event, UserWorkspacesEvent::TeamsChanged) {
@@ -4121,6 +4112,20 @@ impl TerminalView {
                     model
                         .block_list_mut()
                         .set_show_in_band_command_blocks(should_show_in_band_command_blocks);
+                    ctx.notify();
+                }
+                BlockVisibilitySettingsChangedEvent::ShouldShowUselessInformation { .. } => {
+                    // Fork: the "Add useless information" toggle drives the
+                    // per-block memory footer, still called `show_memory_stats`
+                    // internally. Push it to every block so the change is live.
+                    let should_show = *block_visibility_settings_handle
+                        .as_ref(ctx)
+                        .should_show_useless_information
+                        .value();
+                    me.model
+                        .lock()
+                        .block_list_mut()
+                        .set_show_memory_stats(should_show);
                     ctx.notify();
                 }
                 BlockVisibilitySettingsChangedEvent::ShouldShowSSHBlock { .. } => {}
@@ -5071,7 +5076,7 @@ impl TerminalView {
         self.insert_rich_content(
             None,
             handle,
-            None,
+            Some(RichContentMetadata::MiseryLine),
             RichContentInsertionPosition::BeforeBlockIndex(block_index),
             ctx,
         );
@@ -5123,7 +5128,7 @@ impl TerminalView {
         self.insert_rich_content(
             None,
             handle,
-            None,
+            Some(RichContentMetadata::MiseryLine),
             RichContentInsertionPosition::AfterBlockIndex(completed.index),
             ctx,
         );
@@ -23500,6 +23505,26 @@ impl TerminalView {
         let harness = thread
             .map(|(harness, _, _)| harness)
             .unwrap_or(requested_kind);
+
+        // "Use local models" only hides Ollama from the picker for *new*
+        // selections (see profile_model_selector.rs) — a conversation
+        // already bound to Ollama otherwise keeps running against it
+        // regardless of the toggle, silently starting the local service
+        // back up. Enforce it here too so switching local models off
+        // actually stops a live Ollama conversation from continuing.
+        if harness == LocalHarnessKind::Ollama && !*AISettings::as_ref(ctx).ollama_enabled.value() {
+            let window_id = ctx.window_id();
+            ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+                let toast = DismissibleToast::error(
+                    "Local models are off. Turn on Use local models in Settings to continue \
+                     this conversation, or start a new one with a different model."
+                        .to_owned(),
+                );
+                toast_stack.add_ephemeral_toast(toast, window_id, ctx);
+            });
+            return;
+        }
+
         // A continued thread keeps its own engine. If the picker currently
         // points at a different harness, its model id and reasoning must not
         // leak into this run (codex 400s on claude ids and vice versa) — use
@@ -23627,6 +23652,47 @@ impl TerminalView {
         }
         command.env("PATH", &path);
 
+        // Snapshot Warp's configured MCP servers into plain tool schemas plus
+        // reconnecting call handles, while `ctx` is still available — the
+        // background pump below runs as a detached task with no `ctx` access
+        // of its own. `ReconnectingPeer` needs no further `ctx` to make
+        // calls, so this is safe to move into that task as-is. Only models
+        // that end up advertising native tool support actually use these;
+        // see `ollama_stream_exec::run_ollama_chat_with_tools`.
+        let (ollama_mcp_tools, ollama_tool_caller): (
+            Vec<ollama_stream_exec::McpToolSpec>,
+            Option<Arc<dyn ollama_stream_exec::McpToolCaller>>,
+        ) = if harness == LocalHarnessKind::Ollama {
+            // First run in this session: installs and starts Warp's
+            // built-in web search server so it's available below. A no-op
+            // on every call after the first.
+            TemplatableMCPServerManager::handle(ctx).update(ctx, |manager, ctx| {
+                manager.ensure_builtin_web_search_server(ctx);
+            });
+            let manager = TemplatableMCPServerManager::as_ref(ctx);
+            let mut specs = Vec::new();
+            let mut callers = HashMap::new();
+            for tool in manager.tools() {
+                let name = tool.name.to_string();
+                let Some(peer) = manager.server_with_tool_name(name.clone()) else {
+                    continue;
+                };
+                specs.push(ollama_stream_exec::McpToolSpec {
+                    name: name.clone(),
+                    description: tool.description.clone().unwrap_or_default().to_string(),
+                    input_schema: serde_json::Value::Object((*tool.input_schema).clone()),
+                });
+                callers.insert(name, peer);
+            }
+            let caller = (!callers.is_empty()).then(|| {
+                Arc::new(ollama_stream_exec::ConfiguredMcpTools::new(callers))
+                    as Arc<dyn ollama_stream_exec::McpToolCaller>
+            });
+            (specs, caller)
+        } else {
+            (Vec::new(), None)
+        };
+
         let spawner = ctx.spawner();
         let background = ctx.background_executor().clone();
         let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<ai::agent::TurnEvent>();
@@ -23634,6 +23700,8 @@ impl TerminalView {
         let pump_prompt = prompt;
         let pump_working_dir = working_dir;
         let pump_path = path;
+        let pump_mcp_tools = ollama_mcp_tools;
+        let pump_tool_caller = ollama_tool_caller;
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -23827,6 +23895,8 @@ impl TerminalView {
                             &session_id,
                             &pump_working_dir,
                             &pump_path,
+                            &pump_mcp_tools,
+                            pump_tool_caller,
                             on_event,
                         )
                         .await

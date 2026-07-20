@@ -17,7 +17,11 @@ use std::time::Duration;
 use ai::skills::{ParsedSkill, SkillPathOrigin, SkillReference};
 use anyhow::anyhow;
 use chrono::{DateTime, Local};
-use input_context::{input_context_for_request, parse_context_attachments};
+use input_context::{
+    enabled_rule_attachments, input_context_for_request, parse_context_attachments,
+};
+
+use crate::settings::AISettings;
 use itertools::Itertools;
 use parking_lot::FairMutex;
 use pending_response_streams::PendingResponseStreams;
@@ -3464,6 +3468,17 @@ fn input_for_query(
     let mut referenced_attachments = parse_context_attachments(&query, context_model, app);
     referenced_attachments.extend(additional_attachments);
     add_pending_file_attachments(&mut referenced_attachments, file_attachments);
+
+    // Fork: attach the user's global rules (AI facts) to their own request,
+    // once per user message, instead of relying on the server-side
+    // `rules_enabled` injection (a no-op with the local Drive). Gated on the
+    // "Rules" toggle. `or_insert` so an explicit `@`-mention of a rule keeps
+    // precedence over the auto-attached copy of the same rule.
+    if AISettings::as_ref(app).is_memory_enabled(app) {
+        for (key, attachment) in enabled_rule_attachments(app) {
+            referenced_attachments.entry(key).or_insert(attachment);
+        }
+    }
 
     AIAgentInput::UserQuery {
         query,

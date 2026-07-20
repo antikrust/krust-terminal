@@ -59,6 +59,7 @@ use crate::server::telemetry::{InputUXChangeOrigin, TelemetryEvent};
 use crate::settings::app_icon::{AppIcon, AppIconSettings, ShowDockIconState};
 use crate::settings::{
     active_theme_kind, respect_system_theme, AIFontName, AISettings, AppEditorSettings,
+    BlockVisibilitySettings, ShouldShowUselessInformation,
     CodeSettings, CursorBlink, CursorBlinkEnabled, CursorDisplayType, EnforceMinimumContrast,
     FocusPaneOnHover, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType,
     InputModeSettings, InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName,
@@ -518,6 +519,7 @@ pub enum AppearancePageAction {
     ToggleWorkspaceDecorationVisibility,
     ToggleJumpToBottomOfBlockButton,
     ToggleShowBlockDividers,
+    ToggleUselessInformation,
     ToggleCompactMode,
     ToggleCursorBlink,
     ToggleRespectSystemTheme,
@@ -688,6 +690,7 @@ impl TypedActionView for AppearanceSettingsPageView {
             ToggleWorkspaceDecorationVisibility => self.toggle_workspace_decoration_visiblity(ctx),
             ToggleJumpToBottomOfBlockButton => self.toggle_jump_to_bottom_of_block_button(ctx),
             ToggleShowBlockDividers => self.toggle_show_block_dividers(ctx),
+            ToggleUselessInformation => self.toggle_useless_information(ctx),
             ToggleCompactMode => self.toggle_compact_mode(ctx),
             ToggleCursorBlink => self.toggle_cursor_blink(ctx),
             ToggleOpenWindowsAtCustomSize => self.toggle_open_windows_at_custom_size(ctx),
@@ -1640,6 +1643,7 @@ impl AppearanceSettingsPageView {
         if FeatureFlag::MinimalistUI.is_enabled() {
             block_settings_widgets.push(Box::new(ShowBlockDividersWidget::default()));
         }
+        block_settings_widgets.push(Box::new(UselessInformationWidget::default()));
         categories.push(Category::new("Blocks", block_settings_widgets));
 
         let font_settings = FontSettings::as_ref(ctx);
@@ -2462,6 +2466,14 @@ impl AppearanceSettingsPageView {
             report_if_error!(block_list_settings
                 .show_block_dividers
                 .set_value(new_value, ctx));
+        });
+    }
+
+    pub fn toggle_useless_information(&mut self, ctx: &mut ViewContext<Self>) {
+        BlockVisibilitySettings::handle(ctx).update(ctx, |settings, ctx| {
+            report_if_error!(settings
+                .should_show_useless_information
+                .toggle_and_save_value(ctx));
         });
     }
 
@@ -4480,6 +4492,51 @@ impl SettingsWidget for ShowBlockDividersWidget {
                 })
                 .finish(),
             None,
+        )
+    }
+}
+
+#[derive(Default)]
+struct UselessInformationWidget {
+    switch_state: SwitchStateHandle,
+}
+
+impl SettingsWidget for UselessInformationWidget {
+    type View = AppearanceSettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "add useless information memory statistics block footer grid flat storage"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let settings = BlockVisibilitySettings::as_ref(app);
+        let enabled = settings.should_show_useless_information.value();
+        render_body_item::<AppearancePageAction>(
+            "Add useless information".into(),
+            None,
+            LocalOnlyIconState::for_setting(
+                ShouldShowUselessInformation::storage_key(),
+                ShouldShowUselessInformation::sync_to_cloud(),
+                &mut view.local_only_icon_tooltip_states.borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            appearance
+                .ui_builder()
+                .switch(self.switch_state.clone())
+                .check(*enabled)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(AppearancePageAction::ToggleUselessInformation);
+                })
+                .finish(),
+            Some("Show a per-block footer with its memory usage — grid vs flat storage.".into()),
         )
     }
 }

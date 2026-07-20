@@ -267,6 +267,13 @@ pub enum RichContentMetadata {
     AgentViewZeroState,
     TerminalViewZeroState,
     PluginInstructionsBlock,
+    /// A misery-mode line (see `crate::terminal::misery`). Commentary on a
+    /// terminal command, not agent-view content — so it must stay in the
+    /// terminal transcript regardless of any active conversation. This marker
+    /// keeps `insert_rich_content` from tagging it with the active conversation
+    /// id, which would otherwise hide it in `TranscriptScope::Terminal`
+    /// whenever an inline agent conversation is live.
+    MiseryLine,
     PendingUserQuery {
         pending_user_query_block_handle: ViewHandle<PendingUserQueryBlock>,
     },
@@ -304,7 +311,17 @@ impl TerminalView {
         );
         let is_use_agent_footer = handle.id() == self.use_agent_footer.id();
 
-        let (agent_view_conversation_id, should_hide) = if is_agent_view_scoped_terminal_content {
+        // Misery lines belong to the terminal transcript permanently. Tagging
+        // them with the active conversation (the generic branch below) would
+        // hide them in `TranscriptScope::Terminal` while an inline agent
+        // conversation is active — which is exactly when this fork spends most
+        // of its time — so pin them to the terminal scope explicitly.
+        let is_terminal_scoped_permanent =
+            matches!(metadata, Some(RichContentMetadata::MiseryLine));
+
+        let (agent_view_conversation_id, should_hide) = if is_terminal_scoped_permanent {
+            (None, false)
+        } else if is_agent_view_scoped_terminal_content {
             (None, self.agent_view_controller.as_ref(ctx).is_active())
         } else if is_use_agent_footer {
             (

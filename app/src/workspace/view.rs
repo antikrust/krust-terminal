@@ -8908,12 +8908,6 @@ impl Workspace {
         });
     }
 
-    fn toggle_show_memory_stats(&self, ctx: &mut ViewContext<Self>) {
-        DebugSettings::handle(ctx).update(ctx, |debug_settings, ctx| {
-            report_if_error!(debug_settings.show_memory_stats.toggle_and_save_value(ctx));
-        })
-    }
-
     fn open_import_modal(
         &mut self,
         owner: Owner,
@@ -24162,7 +24156,6 @@ impl TypedActionView for Workspace {
             ToggleRecordingMode => self.toggle_recording_mode(ctx),
             ToggleInBandGenerators => self.toggle_in_band_generators(ctx),
             ToggleDebugNetworkStatus => self.toggle_debug_network_status(ctx),
-            ToggleShowMemoryStats => self.toggle_show_memory_stats(ctx),
             ToggleResourceCenter => self.toggle_resource_center(ctx),
             ToggleUserMenu => self.toggle_user_menu(ctx),
             ToggleKeybindingsPage => self.toggle_keybindings_page(ctx),
@@ -26174,10 +26167,6 @@ impl View for Workspace {
             let network_status = NetworkStatus::as_ref(app);
             if network_status.is_online() {
                 context.set.insert(flags::DEBUG_NETWORK_ONLINE_FLAG);
-            }
-
-            if debug_settings.should_show_memory_stats() {
-                context.set.insert(flags::DEBUG_SHOW_MEMORY_STATS_FLAG);
             }
         }
 

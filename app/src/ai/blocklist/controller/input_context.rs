@@ -23,6 +23,7 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{
     GenericCloudObject, GenericStringObjectFormat, JsonObjectType, ObjectType,
 };
+use crate::drive::CloudObjectTypeAndId;
 #[cfg(not(target_family = "wasm"))]
 use crate::remote_server::codebase_index_model::RemoteCodebaseIndexModel;
 use crate::terminal::model::block::BlockId;
@@ -354,4 +355,40 @@ fn get_object_attachment_payload(
         }
         _ => None, // Other object types not supported for drive object attachments
     }
+}
+
+/// Fork: builds `DriveObject` attachments for every stored global rule (AI
+/// fact), so the agent receives the user's rules as part of their own request
+/// instead of relying on the server-side `rules_enabled` injection (which is a
+/// no-op with the local Drive, since the server has no copy of these objects).
+///
+/// This is the programmatic equivalent of `@`-mentioning every rule: each
+/// attachment has the same shape the server already understands. Keyed by a
+/// synthetic `<rule:uid>` reference so it merges cleanly with any rule the user
+/// referenced explicitly (the explicit one wins — see the caller's `or_insert`).
+pub(super) fn enabled_rule_attachments(ctx: &AppContext) -> HashMap<String, AIAgentAttachment> {
+    let ai_fact_type =
+        ObjectType::GenericStringObject(GenericStringObjectFormat::Json(JsonObjectType::AIFact));
+
+    let mut attachments = HashMap::new();
+    for type_and_id in CloudModel::as_ref(ctx).get_all_exportable_object_ids() {
+        let CloudObjectTypeAndId::GenericStringObject { id, .. } = &type_and_id else {
+            continue;
+        };
+        let uid = id.uid();
+        // `get_object_attachment_payload` only produces a payload for AI facts;
+        // other generic string objects (e.g. env-var collections) return `None`,
+        // so this naturally filters the enumeration down to rules.
+        let Some(payload) = get_object_attachment_payload(&uid, ai_fact_type.clone(), ctx) else {
+            continue;
+        };
+        attachments.insert(
+            format!("<rule:{uid}>"),
+            AIAgentAttachment::DriveObject {
+                uid,
+                payload: Some(payload),
+            },
+        );
+    }
+    attachments
 }

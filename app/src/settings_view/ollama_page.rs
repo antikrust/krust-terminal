@@ -14,10 +14,10 @@ use warp_core::ui::theme::Fill as ThemeFill;
 use warp_errors::report_if_error;
 use warpui::elements::{
     Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Element, Empty, Flex,
-    MouseStateHandle, ParentElement, Text,
+    MouseStateHandle, ParentElement, Shrinkable, Text,
 };
 use warpui::fonts::Weight;
-use warpui::ui_components::components::UiComponent;
+use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::ui_components::switch::SwitchStateHandle;
 use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
@@ -52,6 +52,11 @@ pub enum OllamaPageAction {
     OpenOllamaDownload,
     /// Reveal the folder Ollama stores models in.
     RevealModelFolder,
+    /// Open a folder picker and, on selection, move existing models there and
+    /// point future installs at it.
+    ChangeModelsFolder,
+    /// Move models back to the default folder and clear the override.
+    ResetModelsFolder,
     Install {
         tag: String,
     },
@@ -59,10 +64,24 @@ pub enum OllamaPageAction {
     InstallTyped,
 }
 
+/// Where a models-folder move is headed.
+enum ModelsFolderTarget {
+    /// A folder the user picked.
+    Custom(std::path::PathBuf),
+    /// Back to `~/.ollama/models`, clearing the override.
+    Default,
+}
+
 /// Progress of a pull the user started.
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstallState {
-    Running,
+    /// A pull is in flight. `fraction` is the download progress (0.0..=1.0)
+    /// once Ollama reports byte counts, or `None` during byteless phases
+    /// like "pulling manifest" — in which case `phase` names the phase.
+    Running {
+        fraction: Option<f32>,
+        phase: String,
+    },
     Failed(String),
     Done,
 }
@@ -85,6 +104,15 @@ pub struct OllamaPageView {
     model_input: ViewHandle<EditorView>,
     /// Validation error for the typed tag, shown beneath the field.
     input_error: Option<String>,
+    /// Set while a chosen folder's models are being copied to their new
+    /// home. The "Change" link is disabled meanwhile — starting a second
+    /// move before the first finishes would race on the same files.
+    migrating_models: bool,
+    /// Fraction (0.0..=1.0) of the in-progress move, for its progress bar.
+    migration_progress: Option<f32>,
+    /// Set if the last move failed, so the page can say why instead of
+    /// silently reverting to the old folder.
+    migration_error: Option<String>,
     state_handles: RefCell<StateHandles>,
 }
 
@@ -95,6 +123,8 @@ struct StateHandles {
     install_typed_link: MouseStateHandle,
     download_link: MouseStateHandle,
     reveal_folder_link: MouseStateHandle,
+    change_folder_link: MouseStateHandle,
+    reset_folder_link: MouseStateHandle,
     install_buttons: HashMap<String, MouseStateHandle>,
 }
 
@@ -112,10 +142,18 @@ impl OllamaPageView {
             editor
         });
 
+        // Picks up the persisted custom folder (if any) so `models_dir()`
+        // reflects it from the moment this page is open, not just after the
+        // user next changes it.
+        service::apply_models_dir_override(ctx);
+
         let mut view = Self {
             page: PageType::new_uncategorized(widgets, Some("Ollama")),
             model_input,
             input_error: None,
+            migrating_models: false,
+            migration_progress: None,
+            migration_error: None,
             installed: None,
             service_running: false,
             catalog: Vec::new(),
@@ -127,6 +165,118 @@ impl OllamaPageView {
         };
         view.refresh(ctx);
         view
+    }
+
+    /// Opens a folder picker and, once the user chooses a folder, moves
+    /// existing models there and points future installs at it.
+    fn change_models_folder(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.migrating_models {
+            return;
+        }
+        ctx.open_file_picker(
+            move |result, ctx| {
+                let Ok(paths) = result else { return };
+                let Some(path) = paths.into_iter().next() else {
+                    return;
+                };
+                let picked: std::path::PathBuf = path.into();
+                // Always land in a `models` subfolder of whatever the user
+                // picked, matching the `~/.ollama/models` convention —
+                // otherwise blobs/manifests land loose in the picked folder
+                // itself, which looks wrong next to any other folder
+                // already living alongside it (and is inconsistent with a
+                // folder that already has its own `models/` in it).
+                let new_dir = if picked.file_name().and_then(|name| name.to_str()) == Some("models")
+                {
+                    picked
+                } else {
+                    picked.join("models")
+                };
+                if let Some(handle) = ctx.handle().upgrade(ctx) {
+                    handle.update(ctx, |me, ctx| {
+                        me.start_folder_move(ModelsFolderTarget::Custom(new_dir), ctx)
+                    });
+                }
+            },
+            warpui::platform::FilePickerConfiguration::new().folders_only(),
+        );
+    }
+
+    /// Moves models back to `~/.ollama/models` and clears the custom-folder
+    /// setting, without needing a picker.
+    fn reset_models_folder(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.migrating_models {
+            return;
+        }
+        self.start_folder_move(ModelsFolderTarget::Default, ctx);
+    }
+
+    fn start_folder_move(&mut self, target: ModelsFolderTarget, ctx: &mut ViewContext<Self>) {
+        let old_dir = service::models_dir();
+        let new_dir = match &target {
+            ModelsFolderTarget::Custom(dir) => dir.clone(),
+            ModelsFolderTarget::Default => service::default_models_dir(),
+        };
+        if new_dir == old_dir {
+            return;
+        }
+
+        self.migrating_models = true;
+        self.migration_progress = None;
+        self.migration_error = None;
+        ctx.notify();
+
+        // The override value to persist once the move succeeds depends only
+        // on the target, so resolve it up front — the streaming handler
+        // below is `FnMut` and can't consume `target` out of itself.
+        let is_default = matches!(target, ModelsFolderTarget::Default);
+        let override_value = match target {
+            ModelsFolderTarget::Custom(dir) => Some(dir.to_string_lossy().into_owned()),
+            ModelsFolderTarget::Default => None,
+        };
+
+        let (tx, rx) = async_channel::unbounded();
+        ctx.background_executor()
+            .spawn(async move { service::move_models_dir(old_dir, new_dir, tx).await })
+            .detach();
+
+        ctx.spawn_stream_local(
+            rx,
+            move |me, event, ctx| {
+                match event {
+                    service::MoveEvent::Progress(fraction) => {
+                        me.migration_progress = Some(fraction);
+                    }
+                    service::MoveEvent::Finished(Ok(())) => {
+                        me.migrating_models = false;
+                        me.migration_progress = None;
+                        // `apply_models_dir_override` only ever *sets*
+                        // `OLLAMA_MODELS` (never clears it, in case the
+                        // user's own shell set it independently of Warp) —
+                        // but resetting to default is the one place the
+                        // user explicitly asked to stop overriding it, so
+                        // clear the env var here too.
+                        if is_default {
+                            std::env::remove_var("OLLAMA_MODELS");
+                        }
+                        report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                            settings
+                                .ollama_models_dir_override
+                                .set_value(override_value.clone(), ctx)
+                        }));
+                        service::apply_models_dir_override(ctx);
+                        me.refresh(ctx);
+                    }
+                    service::MoveEvent::Finished(Err(error)) => {
+                        me.migrating_models = false;
+                        me.migration_progress = None;
+                        me.migration_error = Some(error);
+                    }
+                }
+                ctx.notify();
+            },
+            |_, _| {},
+        );
     }
 
     /// Re-probes the local service and re-fetches the library listing.
@@ -156,61 +306,67 @@ impl OllamaPageView {
         );
     }
 
-    /// Starts `ollama pull <tag>`.
+    /// Pulls `tag` via Ollama's streaming API, updating a live progress bar.
     fn install(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
-        if matches!(self.installs.get(&tag), Some(InstallState::Running)) {
+        if matches!(self.installs.get(&tag), Some(InstallState::Running { .. })) {
             return;
         }
-        let Some(binary) = service::resolve_binary() else {
+        if service::resolve_binary().is_none() {
             self.installs.insert(
                 tag,
                 InstallState::Failed("Ollama isn't installed".to_string()),
             );
             ctx.notify();
             return;
-        };
+        }
 
-        self.installs.insert(tag.clone(), InstallState::Running);
+        // Starts in the byteless "Installing…" state; the first byte-count
+        // update from the stream flips it to a determinate bar.
+        self.installs.insert(
+            tag.clone(),
+            InstallState::Running {
+                fraction: None,
+                phase: String::new(),
+            },
+        );
         ctx.notify();
 
+        let (progress_tx, progress_rx) = async_channel::unbounded();
+        let client = reqwest::Client::new();
         let pull_tag = tag.clone();
-        ctx.spawn(
-            async move {
-                // `ollama pull` streams progress to stderr; we only surface
-                // the outcome. Anything richer means parsing a progress format
-                // Ollama does not commit to.
-                let result = command::r#async::Command::new(binary)
-                    .arg("pull")
-                    .arg(&pull_tag)
-                    .output()
-                    .await;
+        ctx.background_executor()
+            .spawn(async move {
+                service::pull_model(&client, &pull_tag, progress_tx).await;
+            })
+            .detach();
 
-                let state = match result {
-                    Ok(output) if output.status.success() => InstallState::Done,
-                    Ok(output) => {
-                        let stderr = String::from_utf8_lossy(&output.stderr);
-                        let reason = stderr
-                            .lines()
-                            .rev()
-                            .find(|line| !line.trim().is_empty())
-                            .unwrap_or("pull failed")
-                            .trim()
-                            .to_string();
-                        InstallState::Failed(reason)
+        let stream_tag = tag;
+        ctx.spawn_stream_local(
+            progress_rx,
+            move |me, event, ctx| {
+                match event {
+                    service::PullEvent::Progress { fraction, status } => {
+                        me.installs.insert(
+                            stream_tag.clone(),
+                            InstallState::Running {
+                                fraction,
+                                phase: status,
+                            },
+                        );
                     }
-                    Err(err) => InstallState::Failed(err.to_string()),
-                };
-                (pull_tag, state)
-            },
-            |me, (pull_tag, state), ctx| {
-                let finished = state == InstallState::Done;
-                me.installs.insert(pull_tag, state);
-                ctx.notify();
-                // A completed pull changes what's on disk.
-                if finished {
-                    me.refresh(ctx);
+                    service::PullEvent::Done => {
+                        me.installs.insert(stream_tag.clone(), InstallState::Done);
+                        // A completed pull changes what's on disk.
+                        me.refresh(ctx);
+                    }
+                    service::PullEvent::Failed(reason) => {
+                        me.installs
+                            .insert(stream_tag.clone(), InstallState::Failed(reason));
+                    }
                 }
+                ctx.notify();
             },
+            |_, _| {},
         );
     }
 
@@ -299,6 +455,8 @@ impl TypedActionView for OllamaPageView {
             OllamaPageAction::RevealModelFolder => {
                 ctx.open_file_path_in_explorer(&service::models_dir());
             }
+            OllamaPageAction::ChangeModelsFolder => self.change_models_folder(ctx),
+            OllamaPageAction::ResetModelsFolder => self.reset_models_folder(ctx),
             OllamaPageAction::Install { tag } => self.install(tag.clone(), ctx),
             OllamaPageAction::InstallTyped => self.install_typed(ctx),
         }
@@ -453,7 +611,17 @@ impl SettingsWidget for InstalledWidget {
             Container::new(
                 Flex::row()
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                    .with_child(render_sub_header(appearance, "Installed", None))
+                    .with_child(
+                        // `render_sub_header` is itself a flex row with a
+                        // flexible child; sharing this row with the Expanded
+                        // spacer below means it's measured under an infinite
+                        // width constraint unless it's flexible too — bare it
+                        // panics with "flex contains flexible children but
+                        // has an infinite constraint" (matches the idiom in
+                        // privacy_page.rs's safe-mode title row).
+                        Shrinkable::new(1.0, render_sub_header(appearance, "Installed", None))
+                            .finish(),
+                    )
                     .with_child(warpui::elements::Expanded::new(1., Empty::new().finish()).finish())
                     .with_child(model_folder_header(view, appearance))
                     .finish(),
@@ -461,6 +629,37 @@ impl SettingsWidget for InstalledWidget {
             .with_margin_top(VERTICAL_MARGIN)
             .finish(),
         );
+
+        if view.migrating_models {
+            let mut moving = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Start);
+            moving.add_child(body_text(
+                "Moving models to the new folder… this can take a while for large models.",
+                appearance,
+            ));
+            // Wider bar here than the install cell — there's a full row to
+            // fill, and a big model move is exactly where the user wanted
+            // reassurance something's happening.
+            moving.add_child(
+                Container::new(progress_row(
+                    view.migration_progress.unwrap_or(0.0),
+                    240.,
+                    appearance,
+                ))
+                .with_margin_top(6.)
+                .finish(),
+            );
+            column.add_child(Container::new(moving.finish()).with_margin_top(8.).finish());
+        } else if let Some(error) = &view.migration_error {
+            column.add_child(
+                Container::new(notice(
+                    &format!("Couldn't move models folder: {error}"),
+                    ThemeFill::error(),
+                    appearance,
+                ))
+                .with_margin_top(8.)
+                .finish(),
+            );
+        }
 
         match view.installed.as_ref() {
             None => column.add_child(body_text(
@@ -695,25 +894,51 @@ fn render_catalog_entry(
             .finish(),
         );
 
-        let status = match (already, state) {
-            (true, _) => "Installed".to_string(),
-            (_, Some(InstallState::Running)) => "Installing…".to_string(),
-            (_, Some(InstallState::Done)) => "Installed".to_string(),
-            (_, Some(InstallState::Failed(reason))) => format!("Failed: {reason}"),
-            _ => verdict
-                .as_ref()
-                .map(|v| capability::format_gb(v.required_bytes))
-                .unwrap_or_default(),
+        // Status / estimated-RAM column, fixed-width so the Install links
+        // line up down the table. While a pull is running with a known byte
+        // count, this cell is a live progress bar with a percentage;
+        // otherwise it's a short status string.
+        let status_element: Box<dyn Element> = match (already, state) {
+            (
+                false,
+                Some(InstallState::Running {
+                    fraction: Some(fraction),
+                    ..
+                }),
+            ) => install_progress(*fraction, appearance),
+            _ => {
+                let status = match (already, state) {
+                    (true, _) => "Installed".to_string(),
+                    // Byteless phase: surface Ollama's own label (e.g.
+                    // "pulling manifest", "verifying sha256 digest") so the
+                    // cell shows real activity before the download's %
+                    // appears. Falls back to a generic verb when empty.
+                    (_, Some(InstallState::Running { phase, .. })) if !phase.is_empty() => {
+                        format!("{}…", capitalize_first(phase))
+                    }
+                    (_, Some(InstallState::Running { .. })) => "Installing…".to_string(),
+                    (_, Some(InstallState::Done)) => "Installed".to_string(),
+                    (_, Some(InstallState::Failed(reason))) => format!("Failed: {reason}"),
+                    _ => verdict
+                        .as_ref()
+                        .map(|v| capability::format_gb(v.required_bytes))
+                        .unwrap_or_default(),
+                };
+                sub_text(&status, appearance)
+            }
         };
-        // Status / estimated-RAM column, fixed-width so the Install links line
-        // up down the table.
         row.add_child(
-            ConstrainedBox::new(sub_text(&status, appearance))
+            ConstrainedBox::new(status_element)
                 .with_width(STATUS_COL_WIDTH)
                 .finish(),
         );
 
-        if !already && !matches!(state, Some(InstallState::Running | InstallState::Done)) {
+        if !already
+            && !matches!(
+                state,
+                Some(InstallState::Running { .. } | InstallState::Done)
+            )
+        {
             let action_tag = tag.clone();
             let mouse_state = handles
                 .install_buttons
@@ -782,6 +1007,60 @@ fn sub_text(text: &str, appearance: &Appearance) -> Box<dyn Element> {
     .finish()
 }
 
+/// A determinate progress bar of the given track width, followed by a
+/// right-hand percentage label. Shared by model installs and folder moves so
+/// both read the same. `fraction` is clamped to 0.0..=1.0.
+fn progress_row(fraction: f32, width: f32, appearance: &Appearance) -> Box<dyn Element> {
+    let fraction = fraction.clamp(0.0, 1.0);
+    let theme = appearance.theme();
+    let bar = appearance
+        .ui_builder()
+        .custom_progress_bar(
+            fraction,
+            UiComponentStyles {
+                // A visible track (outline) behind the accent-filled portion,
+                // rather than the page background, so the empty part still
+                // reads as a bar. `.into()` bridges warp_core's theme `Fill`
+                // to warpui's element `Fill`.
+                background: Some(theme.outline().into()),
+                foreground: Some(theme.accent().into()),
+                width: Some(width),
+                height: Some(4.),
+                ..Default::default()
+            },
+        )
+        .build()
+        .finish();
+    Flex::row()
+        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_child(bar)
+        .with_child(
+            Container::new(sub_text(
+                &format!("{}%", (fraction * 100.0).round() as u32),
+                appearance,
+            ))
+            .with_margin_left(8.)
+            .finish(),
+        )
+        .finish()
+}
+
+/// Progress cell for an in-flight model install, sized to sit in the
+/// catalog's status column.
+fn install_progress(fraction: f32, appearance: &Appearance) -> Box<dyn Element> {
+    progress_row(fraction, 72., appearance)
+}
+
+/// Uppercases the first character of `text`, for turning Ollama's lowercase
+/// phase labels ("pulling manifest") into sentence case.
+fn capitalize_first(text: &str) -> String {
+    let mut chars = text.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
 /// A divider between page sections, with room above and below so the line
 /// doesn't crowd the text and buttons on either side.
 fn section_break(appearance: &Appearance) -> Box<dyn Element> {
@@ -795,33 +1074,70 @@ fn section_break(appearance: &Appearance) -> Box<dyn Element> {
 /// section so the location is visible and reachable at a glance.
 fn model_folder_header(view: &OllamaPageView, appearance: &Appearance) -> Box<dyn Element> {
     let path = service::models_dir();
-    let reveal = view.state_handles.borrow().reveal_folder_link.clone();
-    Flex::row()
-        .with_cross_axis_alignment(CrossAxisAlignment::Center)
-        .with_child(sub_text(
-            &format!("MODEL FOLDER: {}", path.display()),
-            appearance,
-        ))
-        .with_child(
+    let is_default = path == service::default_models_dir();
+    let (reveal, change, reset) = {
+        let handles = view.state_handles.borrow();
+        (
+            handles.reveal_folder_link.clone(),
+            handles.change_folder_link.clone(),
+            handles.reset_folder_link.clone(),
+        )
+    };
+
+    let folder_link =
+        |label: &'static str, action: OllamaPageAction, mouse_state: MouseStateHandle| {
             Container::new(
                 appearance
                     .ui_builder()
                     .link(
-                        "Reveal".into(),
+                        label.into(),
                         None,
-                        Some(Box::new(|ctx| {
-                            ctx.dispatch_typed_action(OllamaPageAction::RevealModelFolder);
+                        Some(Box::new(move |ctx| {
+                            ctx.dispatch_typed_action(action.clone());
                         })),
-                        reveal,
+                        mouse_state,
                     )
                     .soft_wrap(false)
                     .build()
                     .finish(),
             )
             .with_margin_left(12.)
-            .finish(),
-        )
-        .finish()
+            .finish()
+        };
+
+    let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
+    row.add_child(sub_text(
+        &format!("MODEL FOLDER: {}", path.display()),
+        appearance,
+    ));
+    row.add_child(folder_link(
+        "Reveal",
+        OllamaPageAction::RevealModelFolder,
+        reveal,
+    ));
+    row.add_child(folder_link(
+        if view.migrating_models {
+            "Moving…"
+        } else {
+            "Change…"
+        },
+        OllamaPageAction::ChangeModelsFolder,
+        change,
+    ));
+    // Only worth offering once there's actually somewhere else to come back
+    // from — a fresh install with no override has nothing to reset.
+    if !is_default {
+        row.add_child(folder_link(
+            if view.migrating_models {
+                "Moving…"
+            } else {
+                "Reset to default"
+            },
+            OllamaPageAction::ResetModelsFolder,
+            reset,
+        ));
+    }
+    row.finish()
 }
 
 /// A compact fit badge — STARVED / WON'T FIT — coloured by severity, or

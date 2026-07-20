@@ -846,6 +846,13 @@ fn debug_menu_items() -> Vec<MenuItem> {
         )));
 
         debug_menu_items.push(MenuItem::Custom(CustomMenuItem::new(
+            "Open Network Log",
+            move |ctx| ctx.dispatch_global_action("workspace:open_network_log_pane", &()),
+            no_updates,
+            None,
+        )));
+
+        debug_menu_items.push(MenuItem::Custom(CustomMenuItem::new(
             EXPORT_DEFAULT_SETTINGS_CSV_MENU_ITEM_NAME,
             move |ctx| {
                 let default_settings = SettingsManager::handle(ctx).as_ref(ctx).default_values();

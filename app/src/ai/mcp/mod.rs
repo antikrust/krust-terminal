@@ -70,6 +70,8 @@ pub use parsing::ParsedTemplatableMCPServerResult;
 use warp_errors::report_error;
 #[cfg(not(target_family = "wasm"))]
 pub mod reconnecting_peer;
+#[cfg(not(target_family = "wasm"))]
+pub mod web_search_server;
 
 impl CloudObjectUuid for MCPServer {
     fn uuid(&self) -> uuid::Uuid {

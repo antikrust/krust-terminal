@@ -12,6 +12,7 @@ use itertools::Itertools;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
 use session_sharing_protocol::common::{ParticipantId, Selection};
+use settings::Setting;
 use vec1::Vec1;
 use warp_core::semantic_selection::SemanticSelection;
 use warp_core::ui::builder::UiBuilder;
@@ -67,7 +68,7 @@ use crate::appearance::Appearance;
 use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
 use crate::settings::{
-    AISettings, DebugSettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing,
+    AISettings, BlockVisibilitySettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing,
 };
 use crate::terminal::alt_screen::{should_intercept_mouse, should_intercept_scroll};
 use crate::terminal::block_list_viewport::AutoscrollBehavior;
@@ -3601,7 +3602,10 @@ impl Element for BlockListElement {
         // references to the terminal model
         drop(viewport_iter);
 
-        if DebugSettings::as_ref(app).should_show_memory_stats() {
+        if *BlockVisibilitySettings::as_ref(app)
+            .should_show_useless_information
+            .value()
+        {
             for block_index in &visible_block_indices {
                 if let Some(block) = model.block_list().block_at(*block_index) {
                     if !block.has_footer() {

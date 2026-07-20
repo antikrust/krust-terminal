@@ -18,7 +18,7 @@ use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::ai::blocklist::SerializedBlockListItem;
 use crate::appearance::Appearance;
 use crate::pane_group::pane::DetachType;
-use crate::settings::{BlockVisibilitySettings, DebugSettings, InputModeSettings};
+use crate::settings::{BlockVisibilitySettings, InputModeSettings};
 use crate::PrivacySettings;
 
 pub trait TerminalManager: Any {
@@ -60,7 +60,7 @@ pub struct BlockSpacing {
 impl BlockSpacing {
     /// The GUI blocklist's spacing, derived from the user's settings: padding
     /// from the terminal-spacing style, the rendered Warp prompt's height, and
-    /// the debug memory-stats footer toggle.
+    /// the "Add useless information" footer toggle.
     pub(super) fn for_gui(ctx: &AppContext) -> Self {
         let appearance = Appearance::as_ref(ctx);
         let terminal_spacing =
@@ -68,7 +68,10 @@ impl BlockSpacing {
         Self {
             block_padding: terminal_spacing.block_padding,
             warp_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
-            show_memory_stats: DebugSettings::as_ref(ctx).should_show_memory_stats(),
+            // Fork: gated on the "Add useless information" appearance toggle.
+            show_memory_stats: *BlockVisibilitySettings::as_ref(ctx)
+                .should_show_useless_information
+                .value(),
         }
     }
 }

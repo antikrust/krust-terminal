@@ -847,6 +847,11 @@ fn run_worker_command(worker: &warp_cli::WorkerCommand) -> Result<()> {
             .map_err(|err| anyhow!(err.to_string()))?;
             Ok(())
         }
+        #[cfg(not(target_family = "wasm"))]
+        warp_cli::WorkerCommand::WebSearchMcpServer => {
+            crate::ai::mcp::web_search_server::run_stdio_server();
+            Ok(())
+        }
         #[cfg(not(any(
             feature = "local_tty",
             feature = "plugin_host",

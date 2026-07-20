@@ -120,6 +120,13 @@ impl MCPServersListPageView {
             me.handle_templatable_mcp_manager_event(event, ctx);
         });
 
+        // Installs Warp's built-in web search server the first time this
+        // page is opened, so it shows up without the user pasting any JSON.
+        // A no-op after the first call.
+        templatable_manager.update(ctx, |manager, ctx| {
+            manager.ensure_builtin_web_search_server(ctx);
+        });
+
         // Subscribe to MCP gallery server manager state changes
         let gallery_manager = MCPGalleryManager::handle(ctx);
         ctx.subscribe_to_model(&gallery_manager, |me, _, event, ctx| {

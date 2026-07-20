@@ -1704,6 +1704,62 @@ fn test_conversation_scoped_rich_content_hidden_outside_fullscreen_agent_view() 
     assert!(item_hidden_in_inline.is_some_and(|item| item.should_hide));
 }
 
+/// The counterpart to the test above: rich content inserted *untagged*
+/// (`agent_view_conversation_id: None`) must stay visible in `Terminal` scope,
+/// even while an inline agent conversation is live. This is the invariant misery
+/// mode relies on — its lines are commentary on terminal commands, so
+/// `insert_rich_content` tags them with `RichContentMetadata::MiseryLine` and
+/// pins them to the terminal scope rather than the active conversation. Before
+/// that, misery lines inherited the active conversation id and were hidden the
+/// moment one went live (inline mode keeps `TranscriptScope::Terminal`), which
+/// is why the feature silently stopped rendering.
+#[test]
+fn test_terminal_scoped_rich_content_survives_active_inline_conversation() {
+    FeatureFlag::AgentView.set_enabled(true);
+    let mut block_list =
+        new_bootstrapped_block_list(None, None, ChannelEventListener::new_for_test());
+    let conversation_id = AIConversationId::new();
+    let view_id = EntityId::new();
+
+    block_list.append_rich_content(RichContentItem::new_for_test(None, view_id, None), false);
+
+    // A fullscreen agent conversation is one place terminal-scoped content is
+    // legitimately hidden: it does not belong to that conversation's transcript.
+    block_list.set_transcript_scope(TranscriptScope::Conversation(conversation_id));
+    let item_in_fullscreen =
+        block_list
+            .block_heights()
+            .items()
+            .iter()
+            .find_map(|item| match item {
+                BlockHeightItem::RichContent(rich_content) if rich_content.view_id == view_id => {
+                    Some(*rich_content)
+                }
+                _ => None,
+            });
+    assert!(item_in_fullscreen.is_some_and(|item| item.should_hide));
+
+    // Back in the terminal — including an *inline* agent conversation, which
+    // never leaves `Terminal` scope — the line must be visible again.
+    block_list.set_transcript_scope(TranscriptScope::Terminal);
+    let item_in_terminal = block_list
+        .block_heights()
+        .items()
+        .iter()
+        .find_map(|item| match item {
+            BlockHeightItem::RichContent(rich_content) if rich_content.view_id == view_id => {
+                Some(*rich_content)
+            }
+            _ => None,
+        });
+    assert!(item_in_terminal.is_some());
+    assert!(
+        item_in_terminal.is_some_and(|item| !item.should_hide),
+        "terminal-scoped rich content must stay visible in Terminal scope"
+    );
+    assert!(item_in_terminal.is_some_and(|item| item.last_laid_out_height > BlockHeight::zero()));
+}
+
 #[test]
 fn test_clear_user_executed_command_blocks_for_conversation() {
     let mut block_list =

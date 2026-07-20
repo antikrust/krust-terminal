@@ -517,6 +517,16 @@ pub enum WorkerCommand {
         /// Paths to search.
         paths: Vec<std::path::PathBuf>,
     },
+
+    /// Runs the built-in web-search MCP server over stdio.
+    ///
+    /// Spawned as a subprocess of this same binary by the MCP server
+    /// manager (see `ai::mcp::web_search_server`), the same way this
+    /// process spawns the terminal server and ripgrep workers — not meant
+    /// to be invoked directly.
+    #[cfg(not(target_family = "wasm"))]
+    #[clap(hide = true)]
+    WebSearchMcpServer,
 }
 
 /// CLI-related subcommands. The command-line interface to Warp isn't a full SDK (e.g. with language bindings),

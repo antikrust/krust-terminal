@@ -1746,6 +1746,22 @@ define_settings_group!(AISettings, settings: [
         description: "Controls whether local models served by Ollama are offered.",
     },
 
+    // Fork: custom folder for Ollama's models, for machines whose system
+    // drive is too small to hold them. Applied as `OLLAMA_MODELS` — the same
+    // variable Ollama itself already honors — by
+    // `ai::ollama::service::apply_models_dir_override`. Machine-specific, so
+    // never synced.
+    ollama_models_dir_override: OllamaModelsDirOverride {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_models_dir_override",
+        description: "Custom folder where Ollama stores downloaded models, overriding the default ~/.ollama/models.",
+    },
+
     // Fork: misery mode — an escalation of swear mode in which the terminal
     // annotates your commands with contempt. Implemented by
     // `crate::terminal::misery`. Has no effect unless swear mode is also on.
