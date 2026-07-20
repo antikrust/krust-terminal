@@ -8818,14 +8818,6 @@ impl ApiKeysWidget {
             &self.grok_connect_button
         };
 
-        let header_row = Flex::row()
-            .with_main_axis_size(MainAxisSize::Max)
-            .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
-            .with_cross_axis_alignment(CrossAxisAlignment::Center)
-            .with_child(Shrinkable::new(1., label).finish())
-            .with_child(button.as_ref(app).render(app))
-            .finish();
-
         let description = Container::new(
             Text::new(
                 "Connect your SuperGrok subscription to use Grok models in the Warp Agent through your xAI account.",
@@ -8839,9 +8831,16 @@ impl ApiKeysWidget {
         .with_margin_right(styles::TOGGLE_WIDTH_MARGIN)
         .finish();
 
+        // Button on top, above the label and blurb — not tucked off to their
+        // right.
         let mut column = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
-            .with_child(header_row)
+            .with_child(
+                Container::new(button.as_ref(app).render(app))
+                    .with_margin_bottom(8.)
+                    .finish(),
+            )
+            .with_child(label)
             .with_child(description);
 
         if let Some(tokens) = grok_tokens {
