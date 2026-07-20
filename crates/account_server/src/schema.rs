@@ -38,8 +38,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    messages (id) {
+        id -> Integer,
+        account_id -> Integer,
+        author_email -> Text,
+        body -> Text,
+        team -> Nullable<Text>,
+        created_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(tokens -> accounts (account_id));
 diesel::joinable!(settings_blobs -> accounts (account_id));
 diesel::joinable!(shares -> accounts (account_id));
+diesel::joinable!(messages -> accounts (account_id));
 
-diesel::allow_tables_to_appear_in_same_query!(accounts, tokens, settings_blobs, shares);
+diesel::allow_tables_to_appear_in_same_query!(accounts, tokens, settings_blobs, shares, messages);

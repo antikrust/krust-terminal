@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 use argon2::Argon2;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
-use axum::extract::{DefaultBodyLimit, Path as UrlPath, State};
+use axum::extract::{DefaultBodyLimit, Path as UrlPath, Query, State};
 use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::{get, post, put};
@@ -38,7 +38,7 @@ use sha2::{Digest, Sha256};
 
 mod schema;
 pub mod tls;
-use schema::{accounts, settings_blobs, shares, tokens};
+use schema::{accounts, messages, settings_blobs, shares, tokens};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -75,6 +75,7 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/settings/{scope}", put(put_settings))
         .route("/v1/shares", get(list_shares).post(create_share))
         .route("/v1/shares/{id}", get(get_share).delete(delete_share))
+        .route("/v1/chat", get(get_chat).post(post_chat))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(state)
 }
@@ -688,6 +689,114 @@ async fn list_shares(
         })
         .collect();
     Ok(Json(serde_json::json!({ "shares": shares })))
+}
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+/// One global room for now: every signed-in account posts to and reads the same
+/// stream. Team-scoped rooms arrive later by filtering on `messages.team`.
+const MAX_MESSAGE_LEN: usize = 4000;
+/// Cap on how many messages one poll returns.
+const MAX_MESSAGES: i64 = 200;
+
+#[derive(Deserialize)]
+struct PostMessageBody {
+    body: String,
+}
+
+#[derive(Deserialize)]
+struct ChatQuery {
+    /// Return messages with an id greater than this; omit for the whole (capped)
+    /// history.
+    since: Option<i32>,
+}
+
+#[derive(Serialize)]
+struct MessageBody {
+    id: i32,
+    author_email: String,
+    body: String,
+    created_at: String,
+}
+
+async fn post_chat(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<PostMessageBody>,
+) -> Result<(StatusCode, Json<MessageBody>), ApiError> {
+    let account_id = authenticate(&state, &headers)?;
+    let text = body.body.trim();
+    if text.is_empty() || text.len() > MAX_MESSAGE_LEN {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid message"));
+    }
+    let mut db = state.db.lock().map_err(internal)?;
+    // Snapshot the author's email and team at post time (denormalized on the row).
+    let (author_email, team) = accounts::table
+        .filter(accounts::id.eq(account_id))
+        .select((accounts::email, accounts::team))
+        .first::<(String, Option<String>)>(&mut *db)
+        .map_err(internal)?;
+    diesel::insert_into(messages::table)
+        .values((
+            messages::account_id.eq(account_id),
+            messages::author_email.eq(&author_email),
+            messages::body.eq(text),
+            messages::team.eq(&team),
+        ))
+        .execute(&mut *db)
+        .map_err(internal)?;
+    // The single locked connection makes "the newest row" the one we just wrote.
+    let (id, created_at) = messages::table
+        .order(messages::id.desc())
+        .select((messages::id, messages::created_at))
+        .first::<(i32, chrono::NaiveDateTime)>(&mut *db)
+        .map_err(internal)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(MessageBody {
+            id,
+            author_email,
+            body: text.to_owned(),
+            created_at: created_at.and_utc().to_rfc3339(),
+        }),
+    ))
+}
+
+/// Reads the global room. Requires a valid token (you must have an account to
+/// see the room) but returns every message regardless of team — team filtering
+/// arrives with team rooms.
+async fn get_chat(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<ChatQuery>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    authenticate(&state, &headers)?;
+    let since = query.since.unwrap_or(0);
+    let mut db = state.db.lock().map_err(internal)?;
+    let rows = messages::table
+        .filter(messages::id.gt(since))
+        .order(messages::id.asc())
+        .limit(MAX_MESSAGES)
+        .select((
+            messages::id,
+            messages::author_email,
+            messages::body,
+            messages::created_at,
+        ))
+        .load::<(i32, String, String, chrono::NaiveDateTime)>(&mut *db)
+        .map_err(internal)?;
+    let messages: Vec<MessageBody> = rows
+        .into_iter()
+        .map(|(id, author_email, body, created_at)| MessageBody {
+            id,
+            author_email,
+            body,
+            created_at: created_at.and_utc().to_rfc3339(),
+        })
+        .collect();
+    Ok(Json(serde_json::json!({ "messages": messages })))
 }
 
 #[cfg(test)]

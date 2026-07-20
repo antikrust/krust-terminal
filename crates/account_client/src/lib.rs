@@ -75,6 +75,16 @@ pub enum SettingsWrite {
     Conflict { version: i32, data: serde_json::Value },
 }
 
+/// A chat message in the global room.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Message {
+    pub id: i32,
+    pub author_email: String,
+    pub body: String,
+    /// RFC3339 timestamp of when the server stored the message.
+    pub created_at: String,
+}
+
 /// A typed failure from an account operation.
 #[derive(Debug, thiserror::Error)]
 pub enum AccountError {
@@ -289,6 +299,48 @@ impl AccountClient {
         }
     }
 
+    /// Posts a message to the global chat room; returns the stored message.
+    pub async fn send_chat(&self, token: &str, body: &str) -> Result<Message, AccountError> {
+        let resp = self
+            .send(
+                self.http
+                    .post(self.url("v1/chat"))
+                    .bearer_auth(token)
+                    .json(&PostMessage {
+                        body: body.to_owned(),
+                    }),
+            )
+            .await?;
+        match resp.status().as_u16() {
+            200 | 201 => self.decode(resp).await,
+            401 => Err(AccountError::Unauthorized),
+            400 => Err(AccountError::BadRequest(self.message(resp).await)),
+            _ => Err(self.unexpected(resp).await),
+        }
+    }
+
+    /// Fetches global-room messages with an id greater than `since` (or the whole
+    /// capped history when `since` is `None`), oldest first.
+    pub async fn get_chat(
+        &self,
+        token: &str,
+        since: Option<i32>,
+    ) -> Result<Vec<Message>, AccountError> {
+        let mut request = self.http.get(self.url("v1/chat")).bearer_auth(token);
+        if let Some(since) = since {
+            request = request.query(&[("since", since)]);
+        }
+        let resp = self.send(request).await?;
+        match resp.status().as_u16() {
+            200 | 201 => {
+                let body: ChatMessages = self.decode(resp).await?;
+                Ok(body.messages)
+            }
+            401 => Err(AccountError::Unauthorized),
+            _ => Err(self.unexpected(resp).await),
+        }
+    }
+
     // ---- internals -------------------------------------------------------
 
     async fn send(&self, builder: reqwest::RequestBuilder) -> Result<reqwest::Response, AccountError> {
@@ -378,6 +430,16 @@ struct PutAccount {
 struct PutSettings {
     base_version: i32,
     data: serde_json::Value,
+}
+
+#[derive(serde::Serialize)]
+struct PostMessage {
+    body: String,
+}
+
+#[derive(Deserialize)]
+struct ChatMessages {
+    messages: Vec<Message>,
 }
 
 #[derive(Deserialize)]

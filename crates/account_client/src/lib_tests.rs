@@ -233,3 +233,66 @@ async fn wrong_pin_aborts_before_sending_credentials() {
         .expect_err("signup must not succeed against an unpinned certificate");
     assert!(matches!(err, AccountError::Pinning(_)), "got {err:?}");
 }
+
+#[tokio::test]
+async fn chat_roundtrip() {
+    let (base_url, fingerprint, _dir) = spawn_tls_server().await;
+    let client = AccountClient::new(ServerConfig {
+        base_url,
+        pinned_fingerprint: Some(fingerprint),
+    })
+    .expect("client");
+    wait_until_ready(&client).await;
+
+    let token = client
+        .signup("chatter@example.com", "hunter2!!")
+        .await
+        .expect("signup");
+
+    // The room starts empty.
+    assert!(
+        client
+            .get_chat(&token, None)
+            .await
+            .expect("get chat")
+            .is_empty()
+    );
+
+    // Posting trims and echoes the stored message with its author.
+    let first = client
+        .send_chat(&token, "  hello world  ")
+        .await
+        .expect("send first");
+    assert_eq!(first.body, "hello world");
+    assert_eq!(first.author_email, "chatter@example.com");
+    let second = client.send_chat(&token, "second").await.expect("send second");
+    assert!(second.id > first.id);
+
+    // Reading returns the whole room, oldest first.
+    let all = client.get_chat(&token, None).await.expect("get all");
+    assert_eq!(all.len(), 2);
+    assert_eq!(all[0].body, "hello world");
+    assert_eq!(all[1].body, "second");
+
+    // `since` returns only newer messages.
+    let newer = client
+        .get_chat(&token, Some(first.id))
+        .await
+        .expect("get since");
+    assert_eq!(newer.len(), 1);
+    assert_eq!(newer[0].id, second.id);
+
+    // Empty messages are rejected; unauthenticated access is refused.
+    assert!(matches!(
+        client.send_chat(&token, "   ").await,
+        Err(AccountError::BadRequest(_))
+    ));
+    assert!(matches!(
+        client.get_chat("bogus-token", None).await,
+        Err(AccountError::Unauthorized)
+    ));
+    assert!(matches!(
+        client.send_chat("bogus-token", "hi").await,
+        Err(AccountError::Unauthorized)
+    ));
+}
