@@ -4237,6 +4237,7 @@ impl PaneGroup {
             | IPaneType::GetStarted
             | IPaneType::NetworkLog
             | IPaneType::MCPServers
+            | IPaneType::Chat
             | IPaneType::DeferredPlaceholder => TypedPane::Other,
             #[cfg(test)]
             IPaneType::Dummy => TypedPane::Other,

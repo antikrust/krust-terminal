@@ -158,6 +158,7 @@ impl TryFrom<PaneNodeSnapshot> for PaneTemplateType {
                 | LeafContents::GetStarted
                 | LeafContents::NetworkLog
                 | LeafContents::MCPServers
+                | LeafContents::Chat
                 | LeafContents::AIDocument(_)
                 | LeafContents::EnvironmentManagement(_)
                 | LeafContents::AmbientAgent(_) => {

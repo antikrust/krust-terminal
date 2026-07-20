@@ -1422,6 +1422,15 @@ pub fn init(app: &mut AppContext) {
     .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
     .with_group(bindings::BindingGroup::WarpAi.as_str())]);
 
+    // Fork: open the global chat pane (command palette "Chat").
+    app.register_editable_bindings([EditableBinding::new(
+        "workspace:open_chat",
+        BindingDescription::new("Chat"),
+        WorkspaceAction::OpenChat,
+    )
+    .with_context_predicate(id!("Workspace"))
+    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+
     app.register_editable_bindings([EditableBinding::new(
         "workspace:jump_to_latest_toast",
         "Jump to latest agent task",

@@ -14846,6 +14846,25 @@ impl Workspace {
         self.set_selected_object(Some(WarpDriveItemId::MCPServerCollection), ctx);
     }
 
+    /// Fork: opens the global chat pane as a split, or focuses it if it's
+    /// already open. At most one per window.
+    pub(crate) fn open_chat_pane(&mut self, ctx: &mut ViewContext<Self>) {
+        let manager = crate::pane_group::ChatPaneManager::handle(ctx);
+        if let Some(locator) = manager.as_ref(ctx).find_pane(ctx.window_id()) {
+            self.focus_pane(locator, ctx);
+        } else {
+            let pane = crate::pane_group::ChatPane::new(ctx);
+            self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
+                pane_group.add_pane_with_direction(
+                    Direction::Right,
+                    pane,
+                    true, /* focus_new_pane */
+                    ctx,
+                );
+            });
+        }
+    }
+
     /// Opens the in-app network log pane as a right-split of the active pane
     /// group. If a pane already exists for the current window, refreshes its
     /// snapshot from the in-memory model and focuses it instead of opening
@@ -25070,6 +25089,9 @@ impl TypedActionView for Workspace {
                     },
                     ctx
                 );
+            }
+            OpenChat => {
+                self.open_chat_pane(ctx);
             }
             OpenEnvironmentManagementPane => {
                 self.open_environment_management_pane(None, EnvironmentsPage::Create, ctx);

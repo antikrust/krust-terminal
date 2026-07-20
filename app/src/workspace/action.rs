@@ -540,6 +540,8 @@ pub enum WorkspaceAction {
     },
     OpenAIFactCollection,
     OpenMCPServerCollection,
+    /// Fork: open the global chat pane.
+    OpenChat,
     /// Open the Environment Management pane in Create mode.
     OpenEnvironmentManagementPane,
     ToggleAIDocumentPane {
@@ -1143,6 +1145,7 @@ impl WorkspaceAction {
             | TabHoverWidthEnd
             | OpenAIFactCollection
             | OpenMCPServerCollection
+            | OpenChat
             | FocusTerminalViewInWorkspace { .. }
             | FocusPane(..)
             | ShiftSelectTabRange { .. }

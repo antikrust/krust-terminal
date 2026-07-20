@@ -192,6 +192,7 @@ pub use pane::env_var_collection_pane::EnvVarCollectionPane;
 pub use pane::environment_management_pane::EnvironmentManagementPane;
 pub use pane::execution_profile_editor_pane::ExecutionProfileEditorPane;
 pub use pane::file_pane::FilePane;
+pub use pane::chat_pane::{ChatPane, ChatPaneManager};
 pub use pane::mcp_servers_pane::{MCPServersPane, MCPServersPaneManager};
 pub use pane::network_log_pane::NetworkLogPane;
 pub use pane::notebook_pane::NotebookPane;
@@ -1961,6 +1962,11 @@ impl PaneGroup {
                 // Fork: never persisted (see `LeafContents::is_persisted`);
                 // the pane is reopened from the Library on demand.
                 Err(anyhow::anyhow!("MCP Servers panes are not restored"))
+            }
+            LeafContents::Chat => {
+                // Fork: never persisted (see `LeafContents::is_persisted`);
+                // reopened on demand via the "Chat" action.
+                Err(anyhow::anyhow!("Chat panes are not restored"))
             }
             LeafContents::NetworkLog => {
                 // Network log panes are intentionally not restored. Two

@@ -1659,6 +1659,7 @@ pub(crate) fn initialize_app(
     ctx.add_singleton_model(|_| NetworkLogPaneManager::default());
     // Fork: tracks the per-window MCP Servers pane opened from the Library.
     ctx.add_singleton_model(|_| pane_group::MCPServersPaneManager::default());
+    ctx.add_singleton_model(|_| pane_group::ChatPaneManager::default());
     ctx.add_singleton_model(|_| pricing::PricingInfoModel::new());
     ctx.add_singleton_model(|ctx| {
         // Not using the *Provider types isn't ideal, but it's worth it for the ability to move managed secrets to a separate crate.

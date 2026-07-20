@@ -153,6 +153,8 @@ pub enum LeafContents {
     /// Fork: the MCP Servers pane opened from the Library. Not persisted —
     /// it holds no pane-local state and reopening is one click.
     MCPServers,
+    /// Fork: the global chat pane. Not persisted — reopened on demand.
+    Chat,
     /// A new first-time user experience which prioritizes choosing a coding repository.
     GetStarted,
 }
@@ -177,6 +179,8 @@ impl LeafContents {
             // Fork: the MCP Servers pane is opened on demand from the
             // Library and has no pane-local state worth restoring.
             | LeafContents::MCPServers
+            // Fork: the chat pane is opened on demand and holds no state.
+            | LeafContents::Chat
             // Environment management panes are opened on-demand via workspace
             // actions and have no persistable state.
             | LeafContents::EnvironmentManagement(_) => false,

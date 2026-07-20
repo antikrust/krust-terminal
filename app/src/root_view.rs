@@ -484,10 +484,15 @@ pub fn init(app: &mut AppContext) {
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("RootView")),
-        // Fork: open the global chat modal (also from the command palette).
-        EditableBinding::new("root_view:open_chat_modal", "Chat", RootViewAction::OpenChatModal)
-            .with_group(bindings::BindingGroup::Settings.as_str())
-            .with_context_predicate(id!("RootView")),
+        // Fork: open the global chat popup (the split-pane "Chat" tab is the
+        // primary surface; this is the same room in a modal).
+        EditableBinding::new(
+            "root_view:open_chat_modal",
+            "Chat (popup)",
+            RootViewAction::OpenChatModal,
+        )
+        .with_group(bindings::BindingGroup::Settings.as_str())
+        .with_context_predicate(id!("RootView")),
     ])
 }
 

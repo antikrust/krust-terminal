@@ -22,6 +22,7 @@ pub(super) mod get_started_pane;
 pub(super) mod get_started_view;
 #[cfg(not(target_family = "wasm"))]
 pub(super) mod local_harness_launch;
+pub(super) mod chat_pane;
 pub(super) mod mcp_servers_pane;
 pub(super) mod network_log_pane;
 pub(super) mod notebook_pane;
@@ -148,6 +149,7 @@ pub(crate) enum IPaneType {
     GetStarted,
     NetworkLog,
     MCPServers,
+    Chat,
     DeferredPlaceholder,
     /// A pane type only for tests.
     #[cfg(test)]
@@ -173,6 +175,7 @@ impl Display for IPaneType {
             IPaneType::GetStarted => write!(f, "GetStarted"),
             IPaneType::NetworkLog => write!(f, "Network Log"),
             IPaneType::MCPServers => write!(f, "MCP Servers"),
+            IPaneType::Chat => write!(f, "Chat"),
             IPaneType::DeferredPlaceholder => write!(f, "Placeholder"),
             #[cfg(test)]
             IPaneType::Dummy => write!(f, "Dummy"),
@@ -285,6 +288,12 @@ impl PaneId {
         Self::new_from_ctx(IPaneType::MCPServers, ctx)
     }
 
+    /// Creates a [`PaneId`] from a
+    /// [`ViewContext<PaneView<chat_pane::ChatPaneView>>`].
+    pub fn from_chat_pane_ctx(ctx: &ViewContext<PaneView<chat_pane::ChatPaneView>>) -> Self {
+        Self::new_from_ctx(IPaneType::Chat, ctx)
+    }
+
     /// Creates a [`PaneId`] from a [`PaneView<TerminalView>`] entity ID.
     pub fn from_terminal_pane_view(
         terminal_pane_view: &ViewHandle<terminal_pane::TerminalPaneView>,
@@ -395,6 +404,13 @@ impl PaneId {
         mcp_servers_pane_view: &ViewHandle<PaneView<mcp_servers_pane::MCPServersPaneView>>,
     ) -> Self {
         Self::new(IPaneType::MCPServers, mcp_servers_pane_view)
+    }
+
+    /// Creates a [`PaneId`] from a [`PaneView<chat_pane::ChatPaneView>`] entity ID.
+    pub fn from_chat_pane_view(
+        chat_pane_view: &ViewHandle<PaneView<chat_pane::ChatPaneView>>,
+    ) -> Self {
+        Self::new(IPaneType::Chat, chat_pane_view)
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
@@ -521,6 +537,9 @@ impl PaneId {
                     self.0.pane_view_id,
                 )
                 .finish()
+            }
+            IPaneType::Chat => {
+                ChildView::<PaneView<chat_pane::ChatPaneView>>::with_id(self.0.pane_view_id).finish()
             }
             IPaneType::DeferredPlaceholder => warpui::elements::Empty::new().finish(),
             #[cfg(test)]
