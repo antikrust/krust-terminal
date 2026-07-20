@@ -175,6 +175,18 @@ pub fn ollama_model_name(model_id: &str) -> Option<&str> {
 /// Arguments for the system curl binary. The JSON request is sent over stdin,
 /// avoiding prompt quoting and argument-length issues.
 pub fn ollama_curl_args() -> Vec<String> {
+    ollama_curl_args_for("http://127.0.0.1:11434/api/generate")
+}
+
+/// Curl args for the `/api/chat` endpoint, used by the native tool-calling
+/// path. Distinct from [`ollama_curl_args`] (which targets `/api/generate`):
+/// posting a chat body — `messages` + `tools` — to `/api/generate` silently
+/// returns an empty completion, so the two must not be swapped.
+pub fn ollama_chat_curl_args() -> Vec<String> {
+    ollama_curl_args_for("http://127.0.0.1:11434/api/chat")
+}
+
+fn ollama_curl_args_for(url: &str) -> Vec<String> {
     [
         "--silent",
         "--show-error",
@@ -183,7 +195,7 @@ pub fn ollama_curl_args() -> Vec<String> {
         "Content-Type: application/json",
         "--data-binary",
         "@-",
-        "http://127.0.0.1:11434/api/generate",
+        url,
     ]
     .into_iter()
     .map(str::to_string)
@@ -543,6 +555,15 @@ fn new_ollama_command(working_dir: &Path, path: &str) -> Command {
     command
 }
 
+/// A curl command targeting `/api/chat`, for the native tool-calling loop.
+fn new_ollama_chat_command(working_dir: &Path, path: &str) -> Command {
+    let mut command = Command::new("/usr/bin/curl");
+    command.args(ollama_chat_curl_args());
+    command.current_dir(working_dir);
+    command.env("PATH", path);
+    command
+}
+
 async fn run_ollama_call(
     command: Command,
     request: &str,
@@ -765,10 +786,18 @@ async fn run_ollama_stream_inner(
         }
     }
 
+    // Try the native tool-calling path first when tools are configured.
+    // On a model that doesn't support tools this falls through (not returns)
+    // to the shell/text generate loop below, which reuses `first_command`.
+    // `tool_caller` is borrowed, not consumed, so `first_command` stays
+    // available for that fallback.
     if !mcp_tools.is_empty() {
-        if let Some(tool_caller) = tool_caller {
+        if let Some(tool_caller) = &tool_caller {
+            // Build a fresh `/api/chat` command here — `first_command` targets
+            // `/api/generate` and is reserved for the fallback loop below.
+            let chat_command = new_ollama_chat_command(working_dir, path);
             match run_ollama_chat_with_tools(
-                first_command,
+                chat_command,
                 prompt,
                 model,
                 working_dir,
@@ -785,16 +814,6 @@ async fn run_ollama_stream_inner(
                         "ollama_stream: {model} does not support native tool calling; \
                          falling back to the shell-only protocol for this turn"
                     );
-                    return run_ollama_generate_loop(
-                        None,
-                        prompt,
-                        model,
-                        session_id,
-                        working_dir,
-                        path,
-                        on_event,
-                    )
-                    .await;
                 }
             }
         }
@@ -947,6 +966,11 @@ enum ToolChatOutcome {
 /// [`ToolChatOutcome::UnsupportedByModel`] on the very first response so the
 /// caller can retry with the older shell/text protocol instead of failing
 /// the turn outright.
+///
+/// `first_command` must target `/api/chat` (production passes
+/// [`new_ollama_chat_command`]); posting a chat body to `/api/generate`
+/// silently returns an empty completion. It's a parameter, rather than built
+/// internally, only so tests can inject a canned-response command.
 #[allow(clippy::too_many_arguments)]
 async fn run_ollama_chat_with_tools(
     first_command: Command,
@@ -973,6 +997,8 @@ async fn run_ollama_chat_with_tools(
         }),
     ];
 
+    // Every request in this loop hits `/api/chat` — never `/api/generate`,
+    // which silently returns an empty completion for a chat-shaped body.
     let mut next_command = Some(first_command);
     for call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
         let request = json!({
@@ -986,7 +1012,7 @@ async fn run_ollama_chat_with_tools(
 
         let command = next_command
             .take()
-            .unwrap_or_else(|| new_ollama_command(working_dir, path));
+            .unwrap_or_else(|| new_ollama_chat_command(working_dir, path));
         let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
         let status = run_jsonl_stream(
