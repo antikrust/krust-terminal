@@ -1,11 +1,14 @@
 //! The avatar picker modal.
 //!
 //! The Account page shows exactly one avatar (see [`super::main_page`]);
-//! clicking it opens this modal: named sections down the left (one per
-//! DiceBear art style), a scrollable grid of generated variants on the right,
-//! and a "Saved" shelf you can pin candidates to while browsing (the pin chip
-//! on each tile). Clicking any tile makes it your avatar immediately; a photo
-//! can be uploaded instead, which wins over any generated pick.
+//! clicking it opens this modal: your current pick at the top (next to the
+//! Upload / Reshuffle controls), the "Saved" shelf of pinned candidates under
+//! it, then named sections down the left (one per DiceBear art style) and a
+//! scrollable grid of generated variants. Reshuffle deals the whole grid
+//! again with fresh random seeds; the pin chip on each tile puts a face aside
+//! on the shelf before it is shuffled away. Clicking any tile makes it your
+//! avatar immediately; a photo can be uploaded instead, which wins over any
+//! generated pick.
 //!
 //! Every picture is generated natively on demand — see
 //! [`crate::ui_components::dicebear`] — so the grid is live art, not a frozen
@@ -45,6 +48,8 @@ const CONTENT_GAP: f32 = 16.;
 const CONTENT_WIDTH: f32 = AVATAR_MODAL_WIDTH - 48. - RAIL_WIDTH - CONTENT_GAP;
 const GRID_HEIGHT: f32 = 316.;
 const TILE_SIZE: f32 = 60.;
+/// The current pick shown at the top of the modal.
+const CURRENT_SIZE: f32 = 60.;
 const SAVED_TILE_SIZE: f32 = 44.;
 const TILE_GAP: f32 = 8.;
 /// How many generated variants each section offers. Seeds are just "1"..N —
@@ -59,6 +64,9 @@ pub enum AvatarPickerAction {
     Select { style: String, seed: String },
     /// Pin `(style, seed)` to the Saved shelf, or unpin it.
     ToggleFavorite { style: String, seed: String },
+    /// Deal a fresh set of faces: every grid tile gets a new random seed.
+    /// Pin anything you like first — a reshuffle replaces the whole grid.
+    Reshuffle,
     /// Pick a local photo to use instead of a generated avatar.
     UploadPhoto,
     /// Drop the uploaded photo, reverting to the generated avatar.
@@ -68,6 +76,10 @@ pub enum AvatarPickerAction {
 pub struct AvatarPickerModal {
     /// The section being browsed. View-local: browsing is not choosing.
     selected_style: String,
+    /// The seeds behind the grid tiles. Starts as "1".."48" (the range starter
+    /// avatars are assigned from) and is replaced wholesale by Reshuffle.
+    /// Session-local on purpose: the Saved shelf is the durable place.
+    variant_seeds: Vec<String>,
     scroll_state: ClippedScrollStateHandle,
     section_states: Vec<MouseStateHandle>,
     tile_states: Vec<MouseStateHandle>,
@@ -75,6 +87,7 @@ pub struct AvatarPickerModal {
     saved_states: Vec<MouseStateHandle>,
     saved_pin_states: Vec<MouseStateHandle>,
     upload_state: MouseStateHandle,
+    reshuffle_state: MouseStateHandle,
     remove_state: MouseStateHandle,
 }
 
@@ -85,6 +98,7 @@ impl AvatarPickerModal {
         ctx.subscribe_to_model(&IdentitySettings::handle(ctx), |_, _, _, ctx| ctx.notify());
         Self {
             selected_style: dicebear::DEFAULT_STYLE.to_owned(),
+            variant_seeds: (1..=VARIANT_COUNT).map(|n| n.to_string()).collect(),
             scroll_state: Default::default(),
             section_states: (0..dicebear::styles().len())
                 .map(|_| MouseStateHandle::default())
@@ -102,6 +116,7 @@ impl AvatarPickerModal {
                 .map(|_| MouseStateHandle::default())
                 .collect(),
             upload_state: MouseStateHandle::default(),
+            reshuffle_state: MouseStateHandle::default(),
             remove_state: MouseStateHandle::default(),
         }
     }
@@ -306,7 +321,7 @@ impl View for AvatarPickerModal {
             );
         }
 
-        // Photo controls: upload always; remove only when a photo is set.
+        // Controls: upload always, reshuffle always; remove only with a photo.
         let button_style = UiComponentStyles {
             font_size: Some(13.),
             padding: Some(Coords::uniform(6.).left(12.).right(12.)),
@@ -326,6 +341,22 @@ impl View for AvatarPickerModal {
                         ctx.dispatch_typed_action(AvatarPickerAction::UploadPhoto)
                     })
                     .finish(),
+            )
+            .with_child(
+                Container::new(
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Secondary, self.reshuffle_state.clone())
+                        .with_text_label("Reshuffle".to_string())
+                        .with_style(button_style.clone())
+                        .build()
+                        .on_click(|ctx, _, _| {
+                            ctx.dispatch_typed_action(AvatarPickerAction::Reshuffle)
+                        })
+                        .finish(),
+                )
+                .with_margin_left(TILE_GAP)
+                .finish(),
             );
         if has_photo {
             controls.add_child(
@@ -347,10 +378,52 @@ impl View for AvatarPickerModal {
         }
 
         let mut content = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Start);
-        content.add_child(
-            Container::new(controls.finish())
-                .with_margin_bottom(14.)
+
+        // The current pick, big and first, with the controls beside it.
+        let current_picture: Box<dyn Element> = {
+            let theme = appearance.theme();
+            match IdentitySettings::selected_avatar_source(app) {
+                Some(source) => Container::new(
+                    ConstrainedBox::new(
+                        Image::new(source, CacheOption::BySize)
+                            .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+                            .finish(),
+                    )
+                    .with_width(CURRENT_SIZE)
+                    .with_height(CURRENT_SIZE)
+                    .finish(),
+                )
+                .with_border(Border::all(2.).with_border_fill(theme.accent()))
+                .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+                .with_uniform_padding(2.)
                 .finish(),
+                None => Container::new(
+                    ConstrainedBox::new(elements::Empty::new().finish())
+                        .with_width(CURRENT_SIZE)
+                        .with_height(CURRENT_SIZE)
+                        .finish(),
+                )
+                .with_background(theme.surface_3())
+                .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+                .with_uniform_padding(2.)
+                .finish(),
+            }
+        };
+        content.add_child(
+            Container::new(
+                Flex::row()
+                    .with_main_axis_size(MainAxisSize::Min)
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(
+                        Container::new(current_picture)
+                            .with_margin_right(CONTENT_GAP)
+                            .finish(),
+                    )
+                    .with_child(controls.finish())
+                    .finish(),
+            )
+            .with_margin_bottom(14.)
+            .finish(),
         );
 
         // The Saved shelf: everything pinned, across all sections.
@@ -393,17 +466,16 @@ impl View for AvatarPickerModal {
         let section_label = dicebear::label(&self.selected_style).unwrap_or("Avatars");
         content.add_child(Self::small_label(section_label, appearance));
         let mut grid = Wrap::row().with_run_spacing(TILE_GAP);
-        for index in 0..VARIANT_COUNT {
-            let seed = (index + 1).to_string();
+        for (index, seed) in self.variant_seeds.iter().take(VARIANT_COUNT).enumerate() {
             let selected =
-                !has_photo && self.selected_style == chosen_style && seed == chosen_seed;
+                !has_photo && self.selected_style == chosen_style && *seed == chosen_seed;
             let favorited = favorites
                 .iter()
-                .any(|(s, d)| *s == self.selected_style && *d == seed);
+                .any(|(s, d)| *s == self.selected_style && d == seed);
             grid.add_child(
                 Container::new(Self::tile(
                     &self.selected_style,
-                    &seed,
+                    seed,
                     TILE_SIZE,
                     selected,
                     favorited,
@@ -471,6 +543,18 @@ impl TypedActionView for AvatarPickerModal {
             }
             AvatarPickerAction::ToggleFavorite { style, seed } => {
                 IdentitySettings::toggle_favorite_avatar(style, seed, ctx);
+                ctx.notify();
+            }
+            AvatarPickerAction::Reshuffle => {
+                use rand::Rng as _;
+                let mut rng = rand::thread_rng();
+                let mut seen = std::collections::HashSet::new();
+                self.variant_seeds = std::iter::from_fn(|| Some(rng.gen_range(1..=999_999u32)))
+                    .filter(|n| seen.insert(*n))
+                    .take(VARIANT_COUNT)
+                    .map(|n| n.to_string())
+                    .collect();
+                self.scroll_state.scroll_to(Pixels::zero());
                 ctx.notify();
             }
             AvatarPickerAction::UploadPhoto => {

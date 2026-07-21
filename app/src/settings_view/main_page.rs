@@ -34,7 +34,7 @@ use super::billing_and_usage_page::BillingAndUsagePageEvent;
 use super::settings_page::{
     render_body_item, render_customer_type_badge, render_sub_header, AdditionalInfo,
     LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle,
-    SettingsWidget, ToggleState, HEADER_PADDING,
+    SettingsWidget, ToggleState, HEADER_FONT_SIZE, HEADER_PADDING,
 };
 use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::{flags, SettingsAction, SettingsSection, ToggleSettingActionPair};
@@ -322,11 +322,19 @@ impl MainSettingsPageView {
                 Modal::new(Some("Choose your avatar".to_string()), body, ctx)
                     .with_modal_style(UiComponentStyles {
                         width: Some(AVATAR_MODAL_WIDTH),
-                        height: Some(560.),
+                        height: Some(600.),
+                        ..Default::default()
+                    })
+                    // The title matches the settings page headings (same font
+                    // family via the modal's appearance handling; same size
+                    // and weight here).
+                    .with_header_style(UiComponentStyles {
+                        font_size: Some(HEADER_FONT_SIZE),
+                        font_weight: Some(Weight::Bold),
                         ..Default::default()
                     })
                     .with_body_style(UiComponentStyles {
-                        height: Some(490.),
+                        height: Some(530.),
                         ..Default::default()
                     })
                     .with_background_opacity(100)

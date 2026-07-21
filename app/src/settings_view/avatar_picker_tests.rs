@@ -66,6 +66,17 @@ fn modal_lays_out_with_pinned_tiles_and_across_sections() {
 
         view.update(&mut app, |modal, ctx| modal.sync_to_current_choice(ctx));
 
+        // Reshuffle deals a full grid of fresh, distinct seeds (and renders).
+        let before = view.read(&app, |modal, _| modal.variant_seeds.clone());
+        view.update(&mut app, |modal, ctx| {
+            modal.handle_action(&AvatarPickerAction::Reshuffle, ctx);
+        });
+        let after = view.read(&app, |modal, _| modal.variant_seeds.clone());
+        assert_eq!(after.len(), before.len());
+        assert_ne!(after, before, "reshuffle must replace the grid");
+        let distinct: std::collections::HashSet<_> = after.iter().collect();
+        assert_eq!(distinct.len(), after.len(), "seeds must be distinct");
+
         // Sanity on the state the renders ran with.
         app.read(|ctx| {
             assert_eq!(IdentitySettings::favorite_avatars(ctx).len(), 2);
