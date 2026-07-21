@@ -280,13 +280,159 @@ fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
         .join(", ");
     format!(
         "You are the local coding agent inside derp terminal.\n\
-         You have access to these tools: {tool_names}. Call one whenever it would answer the \
-         user more accurately than your own knowledge alone — for example a web search tool for \
-         current events, prices, documentation, or anything that may have changed since you were \
-         trained.\n\
-         Answer the user directly in plain text once you have what you need; do not call a tool \
-         you don't need."
+         You have access to these tools: {tool_names}. Use them to actually inspect and change \
+         the user's machine instead of guessing:\n\
+         - run_code executes a short program (bash, python, javascript, or ruby) and returns its \
+         stdout, stderr and exit code; use bash for ordinary shell commands like ls, cat, git, or \
+         build/test commands.\n\
+         - read_file and write_file read and create files; paths may be absolute or relative to \
+         the working directory.\n\
+         - a web_search tool, when present, is for current events, prices, docs, or anything that \
+         may have changed since you were trained.\n\
+         Each run_code call runs in a fresh process — nothing persists between calls, so re-import \
+         or re-declare anything you need every time.\n\
+         Answer the user directly in plain text once you have what you need; don't call a tool you \
+         don't need."
     )
+}
+
+/// The built-in file/code tools handed to every tool-capable local model, in
+/// addition to any exposed MCP servers. Executed in-process by the harness
+/// (see [`dispatch_builtin_tool`]) rather than through an MCP subprocess, for
+/// two reasons a persistent MCP server can't satisfy: they must run in *this
+/// turn's* working directory, and each `run_code` call must be stateless. A
+/// stateful code REPL was exactly what made the global `js` MCP tool unusable
+/// here — weak models re-ran `const fs = …` every call and it collided with
+/// "Identifier 'fs' has already been declared".
+const BUILTIN_READ_FILE: &str = "read_file";
+const BUILTIN_WRITE_FILE: &str = "write_file";
+const BUILTIN_RUN_CODE: &str = "run_code";
+
+/// Whether `name` is one of the in-harness built-in tools (dispatched locally)
+/// rather than a name that must be routed to an MCP server.
+fn is_builtin_local_tool(name: &str) -> bool {
+    matches!(
+        name,
+        BUILTIN_READ_FILE | BUILTIN_WRITE_FILE | BUILTIN_RUN_CODE
+    )
+}
+
+/// Tool specs for the built-in file/code tools, advertised over `/api/chat`
+/// alongside any exposed MCP servers.
+fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
+    vec![
+        McpToolSpec {
+            name: BUILTIN_READ_FILE.to_string(),
+            description: "Read a UTF-8 text file from the user's machine and return its contents. \
+                Paths may be absolute or relative to the current working directory."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path, absolute or relative to the working directory."
+                    }
+                },
+                "required": ["path"]
+            }),
+        },
+        McpToolSpec {
+            name: BUILTIN_WRITE_FILE.to_string(),
+            description: "Create or overwrite a text file on the user's machine with the given \
+                contents, creating parent directories as needed."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path, absolute or relative to the working directory."
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The full file contents to write."
+                    }
+                },
+                "required": ["path", "content"]
+            }),
+        },
+        McpToolSpec {
+            name: BUILTIN_RUN_CODE.to_string(),
+            description: "Run a short program and return its stdout, stderr and exit code. Each \
+                call runs in a fresh process in the working directory — nothing persists between \
+                calls, so re-declare anything you need. Supported languages: bash, python, \
+                javascript (node), ruby."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "language": {
+                        "type": "string",
+                        "description": "One of: bash, python, javascript, ruby."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "The program source to run."
+                    }
+                },
+                "required": ["language", "code"]
+            }),
+        },
+    ]
+}
+
+/// Executes a built-in file/code tool in-process, returning the text to feed
+/// back to the model (`Ok`) or an error string (`Err`). Mirrors the shell/text
+/// protocol's `read_file`/`write_file`/`shell` actions so both Ollama paths
+/// expose the same file and code capabilities.
+async fn dispatch_builtin_tool(
+    name: &str,
+    arguments: &Value,
+    working_dir: &Path,
+    path: &str,
+) -> Result<String, String> {
+    let arg_str = |key: &str| {
+        arguments
+            .get(key)
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+    };
+    match name {
+        BUILTIN_READ_FILE => {
+            let file = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
+            read_file_bounded(&resolve_under(working_dir, file))
+        }
+        BUILTIN_WRITE_FILE => {
+            let file = arg_str("path").ok_or("write_file requires a non-empty string `path`")?;
+            let content = arguments
+                .get("content")
+                .and_then(Value::as_str)
+                .ok_or("write_file requires a string `content`")?;
+            let target = resolve_under(working_dir, file);
+            let bytes = write_file(&target, content)?;
+            Ok(format!("Wrote {bytes} bytes to {}", target.display()))
+        }
+        BUILTIN_RUN_CODE => {
+            let language =
+                arg_str("language").ok_or("run_code requires a non-empty string `language`")?;
+            let code = arguments
+                .get("code")
+                .and_then(Value::as_str)
+                .ok_or("run_code requires a string `code`")?;
+            let execution = run_code(language, code, working_dir, path).await;
+            let text = format!(
+                "exit {}\n<stdout>\n{}\n</stdout>\n<stderr>\n{}\n</stderr>",
+                execution.exit_code, execution.stdout, execution.stderr
+            );
+            if execution.exit_code == 0 {
+                Ok(text)
+            } else {
+                Err(text)
+            }
+        }
+        other => Err(format!("unknown built-in tool '{other}'")),
+    }
 }
 
 pub fn ollama_model_name(model_id: &str) -> Option<&str> {
@@ -632,13 +778,66 @@ async fn run_ollama_call(
 }
 
 async fn execute_shell(command_text: &str, working_dir: &Path, path: &str) -> ShellExecution {
-    // Capture both pipes incrementally with hard byte caps;
-    // `Command::output()` buffered an unbounded long-running command in memory
-    // before truncation could happen.
     let mut command = Command::new("/bin/zsh");
     command.args(["-lc", command_text]);
     command.current_dir(working_dir);
     command.env("PATH", path);
+    run_captured(command).await
+}
+
+/// Runs `code` in a fresh interpreter process for `language`, capturing its
+/// output. Stateless by construction — each call is a brand-new process — which
+/// is the whole point versus a persistent code REPL: the global `js` MCP tool
+/// kept one Node context alive across calls, so weak models colliding on a
+/// re-declared `const fs` made it unusable (see [`is_builtin_local_tool`]).
+async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) -> ShellExecution {
+    let (program, ext) = match language.trim().to_ascii_lowercase().as_str() {
+        // Shell goes straight through the login-shell path.
+        "bash" | "sh" | "shell" | "zsh" => return execute_shell(code, working_dir, path).await,
+        "python" | "python3" | "py" => ("python3", "py"),
+        "javascript" | "js" | "node" => ("node", "js"),
+        "ruby" | "rb" => ("ruby", "rb"),
+        other => {
+            return ShellExecution {
+                stdout: String::new(),
+                stderr: format!(
+                    "run_code: unsupported language '{other}'. Use bash, python, javascript, or ruby."
+                ),
+                exit_code: 1,
+            };
+        }
+    };
+
+    // Stage the program in a temp file (rather than `-c`/`-e`) so multi-line
+    // source and any quoting survive intact for every interpreter, then run it
+    // through the login shell so `program` resolves from the user's real PATH.
+    // Passing the path as `$1` avoids re-quoting a temp dir that has spaces.
+    let script = std::env::temp_dir().join(format!("derp-ollama-{}.{ext}", Uuid::new_v4()));
+    if let Err(error) = std::fs::write(&script, code) {
+        return ShellExecution {
+            stdout: String::new(),
+            stderr: format!("run_code: could not stage the program: {error}"),
+            exit_code: 1,
+        };
+    }
+    let run = format!("{program} \"$1\"");
+    let script_arg = script.to_string_lossy();
+    let mut command = Command::new("/bin/zsh");
+    command.args(["-lc", run.as_str(), "derp-run-code", &*script_arg]);
+    command.current_dir(working_dir);
+    command.env("PATH", path);
+    let execution = run_captured(command).await;
+    let _ = std::fs::remove_file(&script);
+    execution
+}
+
+/// Spawns `command` with stdin closed and both pipes captured under hard byte
+/// caps, returning its output. Shared by [`execute_shell`] and [`run_code`].
+///
+/// Capture is incremental (`capture_bounded`) rather than `Command::output()`
+/// because that buffered an unbounded long-running command in memory before
+/// truncation could happen.
+async fn run_captured(mut command: Command) -> ShellExecution {
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -860,31 +1059,31 @@ async fn run_ollama_stream_inner(
         .await;
     }
 
-    // Agent, native tools: MCP tool-calling over /api/chat.
-    if native_tools && !mcp_tools.is_empty() {
-        if let Some(tool_caller) = &tool_caller {
-            // Build a fresh `/api/chat` command here — `first_command` targets
-            // `/api/generate` and is reserved for the fallback loop below.
-            let chat_command = new_ollama_chat_command(working_dir, path);
-            match run_ollama_chat_with_tools(
-                chat_command,
-                prompt,
-                model,
-                working_dir,
-                path,
-                mcp_tools,
-                tool_caller.as_ref(),
-                &mut on_event,
-            )
-            .await?
-            {
-                ToolChatOutcome::Completed(status) => return Ok(status),
-                ToolChatOutcome::UnsupportedByModel => {
-                    log::info!(
-                        "ollama_stream: {model} unexpectedly rejected tools; \
-                         falling back to the shell-only protocol for this turn"
-                    );
-                }
+    // Agent, native tools: tool-calling over /api/chat. Tool-capable models
+    // always get the built-in file/code tools here (plus any exposed MCP
+    // servers), so this runs even when no MCP server is configured.
+    if native_tools {
+        // Build a fresh `/api/chat` command here — `first_command` targets
+        // `/api/generate` and is reserved for the fallback loop below.
+        let chat_command = new_ollama_chat_command(working_dir, path);
+        match run_ollama_chat_with_tools(
+            chat_command,
+            prompt,
+            model,
+            working_dir,
+            path,
+            mcp_tools,
+            tool_caller.as_deref(),
+            &mut on_event,
+        )
+        .await?
+        {
+            ToolChatOutcome::Completed(status) => return Ok(status),
+            ToolChatOutcome::UnsupportedByModel => {
+                log::info!(
+                    "ollama_stream: {model} unexpectedly rejected tools; \
+                     falling back to the shell-only protocol for this turn"
+                );
             }
         }
     }
@@ -1275,10 +1474,10 @@ enum ToolChatOutcome {
     UnsupportedByModel,
 }
 
-/// Runs one Ollama turn over `/api/chat` with `mcp_tools` advertised as
-/// native tools, looping on tool calls (executed through `tool_caller`)
-/// until the model answers in plain text or [`MAX_TOOL_CALLS_PER_TURN`] is
-/// reached.
+/// Runs one Ollama turn over `/api/chat` with the built-in file/code tools —
+/// plus any exposed `mcp_tools` — advertised as native tools, looping on tool
+/// calls (built-ins run in-process, the rest through `tool_caller`) until the
+/// model answers in plain text or [`MAX_TOOL_CALLS_PER_TURN`] is reached.
 ///
 /// Ollama returns a plain error (no `message` field) when `model` doesn't
 /// advertise tool support; that surfaces as
@@ -1298,15 +1497,21 @@ async fn run_ollama_chat_with_tools(
     working_dir: &Path,
     path: &str,
     mcp_tools: &[McpToolSpec],
-    tool_caller: &dyn McpToolCaller,
+    tool_caller: Option<&dyn McpToolCaller>,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<ToolChatOutcome> {
-    let tool_defs: Vec<Value> = mcp_tools
+    // Built-in file/code tools are always offered to tool-capable models;
+    // any exposed MCP servers (e.g. web search) are appended after them.
+    let all_tools: Vec<McpToolSpec> = builtin_local_tool_specs()
+        .into_iter()
+        .chain(mcp_tools.iter().cloned())
+        .collect();
+    let tool_defs: Vec<Value> = all_tools
         .iter()
         .map(McpToolSpec::to_ollama_tool_json)
         .collect();
     let mut messages = vec![
-        json!({ "role": "system", "content": ollama_tool_system_prompt(mcp_tools) }),
+        json!({ "role": "system", "content": ollama_tool_system_prompt(&all_tools) }),
         json!({
             "role": "user",
             "content": format!(
@@ -1406,7 +1611,16 @@ async fn run_ollama_chat_with_tools(
                 name: call.name.clone(),
                 input: call.arguments.clone(),
             });
-            let tool_content = match tool_caller.call(&call.name, call.arguments.clone()).await {
+            // Built-in file/code tools run in-process (working dir + stateless);
+            // anything else is routed to whichever MCP server advertised it.
+            let result = if is_builtin_local_tool(&call.name) {
+                dispatch_builtin_tool(&call.name, &call.arguments, working_dir, path).await
+            } else if let Some(tool_caller) = tool_caller {
+                tool_caller.call(&call.name, call.arguments.clone()).await
+            } else {
+                Err(format!("no tool named '{}' is available", call.name))
+            };
+            let tool_content = match result {
                 Ok(text) => {
                     on_event(TurnEvent::ToolCallResult {
                         call_id,

@@ -423,7 +423,7 @@ fn chat_turn_without_tool_calls_completes_directly() {
         Path::new("/tmp"),
         "/usr/bin:/bin",
         &[web_search_tool_spec()],
-        &FakeToolCaller,
+        Some(&FakeToolCaller),
         &mut |event| events.push(event),
     ))
     .unwrap();
@@ -469,7 +469,7 @@ fn chat_turn_falls_back_when_model_lacks_tool_support() {
         Path::new("/tmp"),
         "/usr/bin:/bin",
         &[web_search_tool_spec()],
-        &FakeToolCaller,
+        Some(&FakeToolCaller),
         &mut |event| events.push(event),
     ))
     .unwrap();
@@ -488,4 +488,72 @@ fn fake_tool_caller_dispatches_by_name() {
 
     let err = block_on(FakeToolCaller.call("unknown_tool", Value::Null));
     assert_eq!(err, Err("no such tool: unknown_tool".to_string()));
+}
+
+#[test]
+fn builtin_tool_specs_cover_the_in_harness_tools() {
+    use super::{builtin_local_tool_specs, is_builtin_local_tool};
+    let names: Vec<String> = builtin_local_tool_specs()
+        .into_iter()
+        .map(|tool| tool.name)
+        .collect();
+    assert_eq!(names, vec!["read_file", "write_file", "run_code"]);
+    assert!(is_builtin_local_tool("run_code"));
+    assert!(!is_builtin_local_tool("web_search"));
+}
+
+#[test]
+fn builtin_file_tools_write_then_read_round_trip() {
+    use super::dispatch_builtin_tool;
+    // Paths resolve under the working dir, so a relative path is enough.
+    let dir = std::env::temp_dir().join(format!("derp-ollama-test-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let write = block_on(dispatch_builtin_tool(
+        "write_file",
+        &json!({ "path": "note.txt", "content": "hello world" }),
+        &dir,
+        "/usr/bin:/bin",
+    ));
+    assert!(write.is_ok(), "{write:?}");
+
+    let read = block_on(dispatch_builtin_tool(
+        "read_file",
+        &json!({ "path": "note.txt" }),
+        &dir,
+        "/usr/bin:/bin",
+    ));
+    assert_eq!(read, Ok("hello world".to_string()));
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn run_code_runs_bash_statelessly() {
+    use super::run_code;
+    let execution = block_on(run_code(
+        "bash",
+        "printf 'hi'",
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+    ));
+    assert_eq!(execution.exit_code, 0);
+    assert_eq!(execution.stdout, "hi");
+}
+
+#[test]
+fn run_code_rejects_unknown_language() {
+    use super::run_code;
+    let execution = block_on(run_code(
+        "cobol",
+        "DISPLAY 1",
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+    ));
+    assert_eq!(execution.exit_code, 1);
+    assert!(
+        execution.stderr.contains("unsupported"),
+        "{}",
+        execution.stderr
+    );
 }

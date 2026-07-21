@@ -1190,6 +1190,24 @@ impl TemplatableMCPServerManager {
     const BUILTIN_WEB_SEARCH_TEMPLATE_UUID: Uuid =
         Uuid::from_u128(0x2355db49_c68a_4008_90da_70802fc50e85);
 
+    /// Template UUIDs of Warp's built-in, Ollama-safe MCP servers — always
+    /// exposed to local models (see [`Self::is_exposed_to_local_models`]).
+    const BUILTIN_LOCAL_MODEL_TEMPLATES: &'static [Uuid] =
+        &[Self::BUILTIN_WEB_SEARCH_TEMPLATE_UUID];
+
+    /// Whether the given installed server may be handed to local (Ollama)
+    /// models. Third-party MCP servers are hidden from them by default —
+    /// weak local models misuse general-purpose or stateful tools (e.g. a
+    /// persistent js REPL) — so only Warp's built-in, Ollama-safe servers
+    /// qualify. A future per-server opt-in will extend this to let the user
+    /// promote a trusted third-party server into the local set.
+    pub fn is_exposed_to_local_models(&self, installation_uuid: Uuid) -> bool {
+        let Some(installation) = self.locally_installed_servers.get(&installation_uuid) else {
+            return false;
+        };
+        Self::BUILTIN_LOCAL_MODEL_TEMPLATES.contains(&installation.template_uuid())
+    }
+
     /// Installs Warp's built-in "Web Search" MCP server the first time it's
     /// needed, so harnesses that don't have their own web search — chiefly
     /// tool-capable local Ollama models, see

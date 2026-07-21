@@ -23668,6 +23668,19 @@ impl TerminalView {
             let mut callers = HashMap::new();
             for tool in manager.tools() {
                 let name = tool.name.to_string();
+                // Local models only get Warp's built-in, Ollama-safe servers;
+                // third-party MCP servers are hidden from them by default
+                // because weak local models misuse general-purpose or stateful
+                // tools (e.g. a persistent js REPL). Built-in file/code tools
+                // are added in-harness (see `ollama_stream_exec`), not here.
+                let exposed = manager
+                    .server_from_tool(name.clone())
+                    .is_some_and(|installation_uuid| {
+                        manager.is_exposed_to_local_models(*installation_uuid)
+                    });
+                if !exposed {
+                    continue;
+                }
                 let Some(peer) = manager.server_with_tool_name(name.clone()) else {
                     continue;
                 };
