@@ -263,13 +263,19 @@ fn first_line_ellipsized(text: &str) -> String {
     }
 }
 
-/// The blue-tinted fill for tool cards: the theme's ANSI blue washed over
-/// the neutral surface, strong enough to actually read as blue (a 20-ish
-/// alpha vanished into the grey). Deliberately blue rather than the theme
-/// accent — accents vary per theme (green reads as "success", not "tool").
+/// The blue-tinted fill for tool cards: a fixed, unambiguous blue washed
+/// over the neutral surface. Deliberately NOT theme-derived — the accent may
+/// be any color (green read as "success"), and theme ANSI blues vary wildly
+/// (some are washed-out enough to render as light grey).
 fn tool_card_fill(theme: &WarpTheme) -> Fill {
+    const TOOL_BLUE: pathfinder_color::ColorU = pathfinder_color::ColorU {
+        r: 59,
+        g: 130,
+        b: 246,
+        a: 255,
+    };
     theme.surface_2().blend(&Fill::Solid(
-        warp_core::ui::color::coloru_with_opacity(theme.ansi_fg_blue(), 45),
+        warp_core::ui::color::coloru_with_opacity(TOOL_BLUE, 50),
     ))
 }
 
