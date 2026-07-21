@@ -61,7 +61,7 @@ use crate::settings::InputModeSettings;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::model::block::Block;
 use crate::terminal::TerminalModel;
-use crate::themes::theme::Blend;
+use crate::themes::theme::{Blend, Fill, WarpTheme};
 use crate::ui_components::blended_colors;
 use crate::ui_components::json_tree::{
     render_json_tree, CopyJsonFn, JsonTreeColors, JsonTreeState, PathSegment, ToggleFn,
@@ -261,6 +261,15 @@ fn first_line_ellipsized(text: &str) -> String {
     } else {
         first.to_string()
     }
+}
+
+/// The blue-tinted fill for tool cards: a light wash of the theme's ANSI
+/// blue over the neutral surface. Deliberately blue rather than the theme
+/// accent — accents vary per theme (green reads as "success", not "tool").
+fn tool_card_fill(theme: &WarpTheme) -> Fill {
+    theme.surface_2().blend(&Fill::Solid(
+        warp_core::ui::color::coloru_with_opacity(theme.ansi_fg_blue(), 22),
+    ))
 }
 
 /// The plain text inside a renderable result, when it is just text: a JSON
@@ -1370,12 +1379,11 @@ impl RequestedCommandView {
             config = config.with_corner_radius_override(CornerRadius::with_top(Radius::Pixels(7.)));
         }
 
-        // Tool cards get an accent-tinted header (instead of the neutral
-        // grey) so they read as agent actions at a glance.
+        // Tool cards get a blue-tinted header (instead of the neutral grey)
+        // so they read as agent actions at a glance.
         if self.action_type.is_mcp_tool() {
             let theme = Appearance::as_ref(app).theme();
-            config =
-                config.with_background(theme.surface_2().blend(&theme.accent_overlay()));
+            config = config.with_background(tool_card_fill(theme));
         }
 
         if let Some(font_override) = font_override {
@@ -2036,8 +2044,8 @@ impl View for RequestedCommandView {
         {
             theme.accent()
         } else if self.action_type.is_mcp_tool() {
-            // Match the accent-tinted header on tool cards.
-            theme.surface_2().blend(&theme.accent_overlay())
+            // Match the blue-tinted header on tool cards.
+            tool_card_fill(theme)
         } else {
             theme.surface_2()
         };
