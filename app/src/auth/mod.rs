@@ -224,6 +224,11 @@ pub fn log_out(app: &mut AppContext) {
     AuthManager::handle(app).update(app, |auth_manager, ctx| {
         auth_manager.log_out(ctx);
     });
+    // Fork: also sign out of our own account (crate::account) — clears the
+    // local session at once and best-effort revokes the token server-side.
+    crate::account::AccountSession::handle(app).update(app, |session, ctx| {
+        session.log_out(ctx);
+    });
     AIExecutionProfilesModel::handle(app).update(app, |ai_execution_profiles_model, _| {
         ai_execution_profiles_model.reset();
     });

@@ -3685,29 +3685,13 @@ impl AuthOnboardingState {
                 // No workspace to clean up for onboarding/login slide state
             }
             AuthOnboardingState::Terminal(workspace) => {
-                // Clean up current workspace before resetting.
+                // Fork: the app is fully usable signed out, so logging out
+                // clears identity and cloud state but keeps the workspace —
+                // it does NOT tear the terminal down and return to the Warp
+                // auth/onboarding screens.
                 workspace.update(ctx, |workspace, ctx| {
                     workspace.on_log_out(ctx);
                 });
-
-                let global_resource_handles =
-                    GlobalResourceHandlesProvider::as_ref(ctx).get().clone();
-                // When a user logs out, reset workspace_setting so user logs back into a
-                // fresh workspace.
-                let workspace_setting = NewWorkspaceSource::Empty {
-                    previous_active_window: None,
-                    shell: None,
-                };
-                let workspace_args = WorkspaceArgs {
-                    global_resource_handles,
-                    server_time: None,
-                    workspace_setting,
-                };
-
-                // Auth no longer holds the original workspace view handle
-                // This way it is destroyed at this step, and we will re-create
-                // a new workspace view handle when the user logs in.
-                *self = AuthOnboardingState::Auth(workspace_args.into());
                 ctx.emit(RootViewEvent::AuthOnboardingStateChanged);
             }
         }
