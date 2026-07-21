@@ -71,6 +71,7 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
         "codellama:13b",
         "quote: \"",
         Some(&[10, 20]),
+        "You are the agent. Ordinary local developer commands are permitted.",
     ))
     .unwrap();
     assert_eq!(request["model"], "codellama:13b");
@@ -87,6 +88,7 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
     assert!(request["options"].get("num_batch").is_none());
     assert_eq!(request["options"]["temperature"], 0);
     assert_eq!(request["context"], serde_json::json!([10, 20]));
+    // The system prompt passed in is forwarded verbatim.
     assert!(request["system"]
         .as_str()
         .is_some_and(|system| system.contains("Ordinary local developer commands")));
@@ -165,7 +167,7 @@ fn sets_context_window_but_leaves_other_runtime_knobs_default() {
     for model_id in [CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID] {
         let model = ollama_model_name(model_id).unwrap();
         let request: serde_json::Value =
-            serde_json::from_str(&ollama_generate_request(model, "test", None)).unwrap();
+            serde_json::from_str(&ollama_generate_request(model, "test", None, "sys")).unwrap();
         // We do raise the context window (the tiny default caused "lack of
         // context"), but leave output length, threads, and batch to Ollama.
         assert_eq!(request["options"]["num_ctx"], 8192, "{model}");

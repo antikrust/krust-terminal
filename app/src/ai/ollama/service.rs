@@ -52,6 +52,73 @@ pub struct InstalledModel {
     pub size_bytes: u64,
 }
 
+/// What a model can do, from Ollama's `/api/show`. Drives the agent-vs-chat
+/// split: a model that advertises native tool-calling is "good enough to be
+/// an agent" (run shell/MCP tools); everything else is chat-only.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelCapabilities {
+    /// Advertises native tool-calling — the signal for agent mode.
+    pub tools: bool,
+    /// Trained context window in tokens, if reported.
+    pub context_length: Option<u64>,
+    /// Human parameter size, e.g. `8.0B`, if reported.
+    pub parameter_size: Option<String>,
+}
+
+impl ModelCapabilities {
+    /// A terse role label for the settings page.
+    pub fn role_label(&self) -> &'static str {
+        if self.tools {
+            "Agent — runs tools"
+        } else {
+            "Chat only"
+        }
+    }
+}
+
+/// Queries `/api/show` for a model's capabilities. `None` if the server is
+/// unreachable or the response can't be read — callers should degrade to
+/// "unknown / chat-only" rather than block.
+pub async fn fetch_capabilities(
+    client: &reqwest::Client,
+    model: &str,
+) -> Option<ModelCapabilities> {
+    let response = client
+        .post(format!("{API_BASE}/api/show"))
+        .json(&serde_json::json!({ "model": model }))
+        .send()
+        .await
+        .ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let value: serde_json::Value = response.json().await.ok()?;
+
+    let tools = value
+        .get("capabilities")
+        .and_then(|caps| caps.as_array())
+        .is_some_and(|caps| caps.iter().any(|cap| cap.as_str() == Some("tools")));
+    let context_length = value
+        .get("model_info")
+        .and_then(|info| info.as_object())
+        .and_then(|info| {
+            info.iter()
+                .find(|(key, _)| key.ends_with("context_length"))
+                .and_then(|(_, val)| val.as_u64())
+        });
+    let parameter_size = value
+        .get("details")
+        .and_then(|details| details.get("parameter_size"))
+        .and_then(|size| size.as_str())
+        .map(str::to_string);
+
+    Some(ModelCapabilities {
+        tools,
+        context_length,
+        parameter_size,
+    })
+}
+
 #[derive(Deserialize)]
 struct TagsResponse {
     #[serde(default)]

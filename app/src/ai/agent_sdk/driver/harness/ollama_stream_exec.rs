@@ -41,7 +41,7 @@ const MAX_TOOL_CALLS_PER_TURN: usize = 8;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
 const OLLAMA_PROGRESS_TEXT: &str = "Planning locally with Ollama…";
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
-const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside Warp terminal.
+const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside derp terminal.
 You can inspect and modify the user's computer by requesting one shell command at a time.
 For any request involving local files, directories, processes, repositories, or the machine environment, use the shell command response instead of claiming you lack access.
 Ordinary local developer commands such as pwd, ls, find, rg, git, cat, and build/test commands are permitted.
@@ -49,6 +49,58 @@ Return exactly one JSON object and no markdown.
 To run a command: {"type":"shell","command":"the exact shell command"}
 To answer the user: {"type":"text","text":"your answer"}
 After a shell result, either request the next necessary command or answer the user."#;
+
+/// System prompt for chat-only models — those that don't advertise
+/// tool-calling (see [`model_supports_tools`]). Deliberately says it can't
+/// run commands: the coding-agent prompt made weak models *hallucinate*
+/// command output ("ls" → a made-up directory listing) instead of doing
+/// anything real. As a plain assistant they answer honestly.
+const OLLAMA_CHAT_SYSTEM_PROMPT: &str = "You are a helpful assistant running locally inside derp terminal. \
+Answer the user's question directly, accurately, and in full. \
+You cannot run shell commands or read the user's files — if something would require that, say so rather than inventing output.";
+
+/// Whether `model` advertises Ollama's `tools` capability — the signal to
+/// run it as an agent (coding-agent prompt + shell/MCP tools) rather than a
+/// plain chat model. Fails closed to chat when the server can't be asked.
+///
+/// Uses `curl` rather than the reqwest client in
+/// [`crate::ai::ollama::service::fetch_capabilities`] so it works from the
+/// harness's non-Tokio executor (the settings page, which is on Tokio, uses
+/// the reqwest path).
+async fn model_supports_tools(model: &str, path: &str) -> bool {
+    // Model tags are validated to letters/digits/`.-_:/` before reaching the
+    // harness, so inlining the body via `-d` can't inject shell/JSON.
+    let body = json!({ "model": model }).to_string();
+    let mut command = Command::new("/usr/bin/curl");
+    command.args([
+        "--silent",
+        "--fail",
+        "--max-time",
+        "5",
+        "--header",
+        "Content-Type: application/json",
+        "-d",
+        &body,
+        "http://127.0.0.1:11434/api/show",
+    ]);
+    command.env("PATH", path);
+
+    let Ok(output) = command.output().await else {
+        return false;
+    };
+    if !output.status.success() {
+        return false;
+    }
+    serde_json::from_slice::<Value>(&output.stdout)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("capabilities")
+                .and_then(|caps| caps.as_array())
+                .map(|caps| caps.iter().any(|cap| cap.as_str() == Some("tools")))
+        })
+        .unwrap_or(false)
+}
 
 /// One MCP tool's schema, detached from any live transport so the
 /// chat-with-tools loop stays testable without a real MCP connection.
@@ -155,7 +207,7 @@ fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     format!(
-        "You are the local coding agent inside Warp terminal.\n\
+        "You are the local coding agent inside derp terminal.\n\
          You have access to these tools: {tool_names}. Call one whenever it would answer the \
          user more accurately than your own knowledge alone — for example a web search tool for \
          current events, prices, documentation, or anything that may have changed since you were \
@@ -257,10 +309,15 @@ async fn ensure_ollama_service(path: &str) -> std::io::Result<()> {
     ))
 }
 
-fn ollama_generate_request(model: &str, prompt: &str, context: Option<&[i64]>) -> String {
+fn ollama_generate_request(
+    model: &str,
+    prompt: &str,
+    context: Option<&[i64]>,
+    system: &str,
+) -> String {
     let mut request = json!({
         "model": model,
-        "system": OLLAMA_SYSTEM_PROMPT,
+        "system": system,
         "prompt": prompt,
         // Stream from Ollama so Warp can transition from Sending to Thinking
         // when inference actually begins. The accumulator below coalesces the
@@ -670,12 +727,15 @@ async fn run_ollama_stream_inner(
         }
     }
 
-    // Try the native tool-calling path first when tools are configured.
-    // On a model that doesn't support tools this falls through (not returns)
-    // to the shell/text generate loop below, which reuses `first_command`.
-    // `tool_caller` is borrowed, not consumed, so `first_command` stays
-    // available for that fallback.
-    if !mcp_tools.is_empty() {
+    // Agent vs chat is decided per model by whether it advertises
+    // tool-calling. Tool-capable models get the coding-agent scaffolding
+    // (MCP tools over /api/chat when configured, otherwise the shell/text
+    // protocol); everything else runs as a plain chat model — no shell
+    // framing, so it can't hallucinate having run commands.
+    let is_agent = model_supports_tools(model, path).await;
+
+    // Native MCP tool-calling, only for models that actually support it.
+    if is_agent && !mcp_tools.is_empty() {
         if let Some(tool_caller) = &tool_caller {
             // Build a fresh `/api/chat` command here — `first_command` targets
             // `/api/generate` and is reserved for the fallback loop below.
@@ -695,7 +755,7 @@ async fn run_ollama_stream_inner(
                 ToolChatOutcome::Completed(status) => return Ok(status),
                 ToolChatOutcome::UnsupportedByModel => {
                     log::info!(
-                        "ollama_stream: {model} does not support native tool calling; \
+                        "ollama_stream: {model} unexpectedly rejected tools; \
                          falling back to the shell-only protocol for this turn"
                     );
                 }
@@ -703,6 +763,11 @@ async fn run_ollama_stream_inner(
         }
     }
 
+    let system = if is_agent {
+        OLLAMA_SYSTEM_PROMPT
+    } else {
+        OLLAMA_CHAT_SYSTEM_PROMPT
+    };
     run_ollama_generate_loop(
         Some(first_command),
         prompt,
@@ -710,14 +775,17 @@ async fn run_ollama_stream_inner(
         session_id,
         working_dir,
         path,
+        system,
         on_event,
     )
     .await
 }
 
-/// The original constrained shell/text protocol over `/api/generate`, used
-/// whenever no MCP tools are configured, or the model doesn't advertise
-/// native tool-calling support.
+/// The `/api/generate` loop. With the agent system prompt it's the shell/text
+/// protocol (request a command, run it, repeat); with the chat prompt it's a
+/// plain single-answer turn (the model just replies in prose). `system`
+/// selects which — see [`run_ollama_stream_inner`].
+#[allow(clippy::too_many_arguments)]
 async fn run_ollama_generate_loop(
     first_command: Option<Command>,
     prompt: &str,
@@ -725,6 +793,7 @@ async fn run_ollama_generate_loop(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
+    system: &str,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     let mut context = contexts()
@@ -740,7 +809,7 @@ async fn run_ollama_generate_loop(
     let mut next_command = first_command;
 
     for tool_call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
-        let request = ollama_generate_request(model, &next_prompt, context.as_deref());
+        let request = ollama_generate_request(model, &next_prompt, context.as_deref(), system);
         let command = next_command
             .take()
             .unwrap_or_else(|| new_ollama_command(working_dir, path));
