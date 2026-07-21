@@ -532,6 +532,30 @@ fn builtin_file_tools_write_then_read_round_trip() {
 }
 
 #[test]
+fn read_file_on_a_directory_returns_its_listing() {
+    use super::dispatch_builtin_tool;
+    // Models regularly ask to "read" a folder; that must answer with the
+    // listing, not burn the tool call on an "Is a directory" error.
+    let dir = std::env::temp_dir().join(format!("derp-ollama-dir-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(dir.join("keys")).unwrap();
+    std::fs::write(dir.join("config"), "x").unwrap();
+
+    let listing = block_on(dispatch_builtin_tool(
+        "read_file",
+        &json!({ "path": dir.to_string_lossy() }),
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+    ))
+    .expect("directory read succeeds");
+    assert!(listing.contains("is a directory"), "{listing}");
+    assert!(listing.contains("config"), "{listing}");
+    // Subdirectories are marked with a trailing slash.
+    assert!(listing.contains("keys/"), "{listing}");
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn run_code_runs_bash_statelessly() {
     use super::run_code;
     let execution = block_on(run_code(
