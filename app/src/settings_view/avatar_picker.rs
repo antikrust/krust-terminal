@@ -49,7 +49,7 @@ const SAVED_TILE_SIZE: f32 = 44.;
 const TILE_GAP: f32 = 8.;
 /// How many generated variants each section offers. Seeds are just "1"..N —
 /// generation is deterministic, so the same grid comes back every time.
-const VARIANT_COUNT: usize = 48;
+const VARIANT_COUNT: usize = dicebear::VARIANT_SEEDS;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AvatarPickerAction {

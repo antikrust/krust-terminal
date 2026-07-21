@@ -91,6 +91,11 @@ pub fn styles() -> &'static [StyleInfo] {
 /// The default style id for a fresh install.
 pub const DEFAULT_STYLE: &str = "bottts";
 
+/// How many numbered variants pickers offer per style (seeds `"1"..="48"`).
+/// Also the range a randomly assigned starter avatar is drawn from, so the
+/// assignment always shows as selected in the picker grid.
+pub const VARIANT_SEEDS: usize = 48;
+
 /// The display label for a style id, if known.
 pub fn label(style_id: &str) -> Option<&'static str> {
     BUNDLE

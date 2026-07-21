@@ -1,6 +1,7 @@
-//! The avatar setting resolves to a source: nothing chosen -> `None` (render an
-//! initial); a chosen (style, seed) -> a generated source; an uploaded photo
-//! wins over the generated avatar.
+//! The avatar setting resolves to a source: a chosen (style, seed) -> a
+//! generated source; an uploaded photo wins over the generated avatar; and a
+//! brand-new install is assigned a random robot at startup rather than
+//! rendering an empty face.
 
 use settings::Setting as _;
 use warpui::assets::asset_cache::AssetSource;
@@ -10,15 +11,62 @@ use super::*;
 use crate::test_util::settings::initialize_settings_for_tests;
 
 #[test]
-fn a_fresh_install_has_no_avatar_chosen() {
+fn a_fresh_install_is_assigned_a_random_robot() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
         app.update(IdentitySettings::register);
 
+        // Before the startup assignment runs there is genuinely nothing chosen.
+        app.read(|ctx| assert!(IdentitySettings::selected_avatar_source(ctx).is_none()));
+
+        app.update(IdentitySettings::assign_random_avatar_if_unset);
+        let first = app.read(|ctx| {
+            let settings = IdentitySettings::as_ref(ctx);
+            let seed: usize = settings
+                .avatar_seed
+                .to_string()
+                .parse()
+                .expect("assigned seed is numeric");
+            assert!(
+                (1..=dicebear::VARIANT_SEEDS).contains(&seed),
+                "assignment stays within the picker's variant range"
+            );
+            // The default style is untouched, so the face is a robot.
+            assert_eq!(settings.avatar_style.to_string(), DEFAULT_AVATAR_STYLE);
+            assert!(matches!(
+                IdentitySettings::selected_avatar_source(ctx),
+                Some(AssetSource::Async { .. })
+            ));
+            settings.avatar_seed.to_string()
+        });
+
+        // Sticky: running again keeps the same face.
+        app.update(IdentitySettings::assign_random_avatar_if_unset);
+        app.read(|ctx| {
+            assert_eq!(IdentitySettings::as_ref(ctx).avatar_seed.to_string(), first);
+        });
+    })
+}
+
+#[test]
+fn assignment_never_overrides_an_uploaded_photo() {
+    App::test((), |mut app| async move {
+        initialize_settings_for_tests(&mut app);
+        app.update(IdentitySettings::register);
+
+        app.update(|ctx| {
+            IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
+                settings
+                    .avatar_photo_path
+                    .set_value("/tmp/me.png".to_string(), ctx)
+                    .expect("set photo");
+            });
+        });
+        app.update(IdentitySettings::assign_random_avatar_if_unset);
         app.read(|ctx| {
             assert!(
-                IdentitySettings::selected_avatar_source(ctx).is_none(),
-                "an unchosen avatar renders an initial, not a face picked for you"
+                IdentitySettings::as_ref(ctx).avatar_seed.is_empty(),
+                "a photo user keeps their photo; no seed is invented"
             );
         });
     })

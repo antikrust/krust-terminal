@@ -134,6 +134,10 @@ pub fn init(
         migrate_native_settings_to_settings_file(ctx);
     }
 
+    // After stored settings (and any migration) are in: a brand-new user gets
+    // a random robot avatar rather than an empty face. No-op for everyone else.
+    IdentitySettings::assign_random_avatar_if_unset(ctx);
+
     let use_thin_strokes = *FontSettings::as_ref(ctx).use_thin_strokes;
 
     let general_settings = GeneralSettings::as_ref(ctx);

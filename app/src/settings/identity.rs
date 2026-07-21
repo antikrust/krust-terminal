@@ -106,6 +106,28 @@ impl IdentitySettings {
         ))
     }
 
+    /// A brand-new install gets a face: if no avatar was ever chosen (no seed,
+    /// no photo), pick a random variant of the default style — a random robot —
+    /// and save it. Runs once, right after settings load; sticky thereafter,
+    /// and it never overrides a real choice, an uploaded photo, or a value
+    /// arriving via settings sync.
+    pub fn assign_random_avatar_if_unset(ctx: &mut warpui::AppContext) {
+        use rand::Rng as _;
+        use warpui::SingletonEntity as _;
+        let settings = Self::as_ref(ctx);
+        if !settings.avatar_seed.is_empty() || !settings.avatar_photo_path.is_empty() {
+            return;
+        }
+        let seed = rand::thread_rng()
+            .gen_range(1..=dicebear::VARIANT_SEEDS)
+            .to_string();
+        Self::handle(ctx).update(ctx, |settings, ctx| {
+            if let Err(error) = settings.avatar_seed.set_value(seed, ctx) {
+                warp_errors::report_error!(error.context("assigning a starter avatar"));
+            }
+        });
+    }
+
     /// The saved-avatar shortlist as `(style, seed)` pairs, in save order.
     /// Entries whose style has since been culled from the bundle are skipped.
     pub fn favorite_avatars(app: &warpui::AppContext) -> Vec<(String, String)> {

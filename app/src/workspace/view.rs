@@ -21314,7 +21314,16 @@ impl Workspace {
 
         // Fork: an avatar you picked is local identity and wins over anything
         // account-derived — it is the one you chose, and it works signed out.
-        let avatar_content = if let Some(source) = IdentitySettings::selected_avatar_source(ctx) {
+        let identity_source = IdentitySettings::selected_avatar_source(ctx);
+        let has_identity_avatar = identity_source.is_some();
+        // Generated art brings its own silhouette (robots and friends sit on a
+        // transparent background), so it renders without the circular accent
+        // chip and gets more room. An uploaded photo keeps the circle crop.
+        let is_generated_art = matches!(
+            identity_source,
+            Some(warpui::assets::asset_cache::AssetSource::Async { .. })
+        );
+        let avatar_content = if let Some(source) = identity_source {
             AvatarContent::Source {
                 source,
                 display_name: display_name.clone(),
@@ -21331,20 +21340,28 @@ impl Workspace {
                 .unwrap_or(AvatarContent::DisplayName(display_name.clone()))
         };
 
-        let mut avatar = Avatar::new(
-            avatar_content,
-            UiComponentStyles {
-                width: Some(20.),
-                height: Some(20.),
-                border_radius: Some(CornerRadius::with_all(Radius::Percentage(50.))),
-                font_family_id: Some(appearance.ui_font_family()),
-                font_weight: Some(Weight::Bold),
-                background: Some(appearance.theme().accent().into()),
-                font_size: Some(12.),
-                font_color: Some(ColorU::black()),
-                ..Default::default()
-            },
-        );
+        let mut avatar_styles = UiComponentStyles {
+            width: Some(20.),
+            height: Some(20.),
+            border_radius: Some(CornerRadius::with_all(Radius::Percentage(50.))),
+            font_family_id: Some(appearance.ui_font_family()),
+            font_weight: Some(Weight::Bold),
+            background: Some(appearance.theme().accent().into()),
+            font_size: Some(12.),
+            font_color: Some(ColorU::black()),
+            ..Default::default()
+        };
+        if has_identity_avatar {
+            avatar_styles.width = Some(26.);
+            avatar_styles.height = Some(26.);
+        }
+        if is_generated_art {
+            // Soften only the literal corners — visible on the few styles with
+            // an opaque backdrop; everything else renders unclipped.
+            avatar_styles.border_radius = Some(CornerRadius::with_all(Radius::Pixels(6.)));
+            avatar_styles.background = None;
+        }
+        let mut avatar = Avatar::new(avatar_content, avatar_styles);
 
         // Render the subtle autoupdate UI if autoupdate is ready and there is no incoming prominent update version.
         let autoupdate_stage = autoupdate::get_update_state(ctx);
