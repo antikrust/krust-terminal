@@ -222,6 +222,7 @@ fn session_starts_before_model_progress_and_text() {
         "/usr/bin:/bin",
         &[],
         None,
+        None,
         |event| events.push(event),
     ))
     .unwrap();

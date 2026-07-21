@@ -65,15 +65,37 @@ pub struct ModelCapabilities {
     pub parameter_size: Option<String>,
 }
 
-impl ModelCapabilities {
-    /// A terse role label for the settings page.
-    pub fn role_label(&self) -> &'static str {
-        if self.tools {
-            "Agent — runs tools"
-        } else {
-            "Chat only"
+/// The user's per-model agent/chat override, read from the
+/// `ollama_model_mode_overrides` JSON setting: `Some(true)` = force agent,
+/// `Some(false)` = force chat, `None` = auto-detect from capabilities.
+pub fn model_mode_override(overrides_json: Option<&str>, model: &str) -> Option<bool> {
+    let map: serde_json::Value = serde_json::from_str(overrides_json?).ok()?;
+    match map.get(model).and_then(|value| value.as_str()) {
+        Some("agent") => Some(true),
+        Some("chat") => Some(false),
+        _ => None,
+    }
+}
+
+/// Returns the override JSON with `model` set to `mode` (`Some(true)` agent,
+/// `Some(false)` chat) or, for `None`, cleared back to auto-detect. Pure —
+/// the caller persists the result.
+pub fn with_mode_override(overrides_json: Option<&str>, model: &str, mode: Option<bool>) -> String {
+    let mut map: serde_json::Map<String, serde_json::Value> = overrides_json
+        .and_then(|json| serde_json::from_str(json).ok())
+        .unwrap_or_default();
+    match mode {
+        Some(true) => {
+            map.insert(model.to_string(), serde_json::Value::from("agent"));
+        }
+        Some(false) => {
+            map.insert(model.to_string(), serde_json::Value::from("chat"));
+        }
+        None => {
+            map.remove(model);
         }
     }
+    serde_json::Value::Object(map).to_string()
 }
 
 /// Queries `/api/show` for a model's capabilities. `None` if the server is

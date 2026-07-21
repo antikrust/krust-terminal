@@ -57,6 +57,10 @@ pub enum OllamaPageAction {
     ChangeModelsFolder,
     /// Move models back to the default folder and clear the override.
     ResetModelsFolder,
+    /// Cycle a model's agent/chat override: Auto → Agent → Chat → Auto.
+    CycleModelMode {
+        tag: String,
+    },
     Install {
         tag: String,
     },
@@ -134,6 +138,9 @@ struct StateHandles {
     change_folder_link: MouseStateHandle,
     reset_folder_link: MouseStateHandle,
     install_buttons: HashMap<String, MouseStateHandle>,
+    /// Per-installed-model agent/chat override links, keyed by tag. Stable
+    /// handles so the click registers (see the install-button note).
+    mode_links: HashMap<String, MouseStateHandle>,
 }
 
 impl OllamaPageView {
@@ -210,6 +217,37 @@ impl OllamaPageView {
             },
             warpui::platform::FilePickerConfiguration::new().folders_only(),
         );
+    }
+
+    /// Cycles a model's agent/chat override: Auto → force Agent → force
+    /// Chat → Auto, persisting it to `ollama_model_mode_overrides`.
+    fn cycle_model_mode(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
+        let current = service::model_mode_override(
+            AISettings::as_ref(ctx)
+                .ollama_model_mode_overrides
+                .value()
+                .as_deref(),
+            &tag,
+        );
+        let next = match current {
+            None => Some(true),        // Auto → force Agent
+            Some(true) => Some(false), // Agent → force Chat
+            Some(false) => None,       // Chat → Auto
+        };
+        let updated = service::with_mode_override(
+            AISettings::as_ref(ctx)
+                .ollama_model_mode_overrides
+                .value()
+                .as_deref(),
+            &tag,
+            next,
+        );
+        report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            settings
+                .ollama_model_mode_overrides
+                .set_value(Some(updated), ctx)
+        }));
+        ctx.notify();
     }
 
     /// Moves models back to `~/.ollama/models` and clears the custom-folder
@@ -494,6 +532,7 @@ impl TypedActionView for OllamaPageView {
             }
             OllamaPageAction::ChangeModelsFolder => self.change_models_folder(ctx),
             OllamaPageAction::ResetModelsFolder => self.reset_models_folder(ctx),
+            OllamaPageAction::CycleModelMode { tag } => self.cycle_model_mode(tag.clone(), ctx),
             OllamaPageAction::Install { tag } => self.install(tag.clone(), ctx),
             OllamaPageAction::InstallTyped => self.install_typed(ctx),
         }
@@ -638,7 +677,7 @@ impl SettingsWidget for InstalledWidget {
         &self,
         view: &Self::View,
         appearance: &Appearance,
-        _app: &AppContext,
+        app: &AppContext,
     ) -> Box<dyn Element> {
         let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
         column.add_child(section_break(appearance));
@@ -698,6 +737,21 @@ impl SettingsWidget for InstalledWidget {
             );
         }
 
+        // The per-model agent/chat override map, and stable click handles for
+        // each installed model's mode link (a click spans several frames — a
+        // throwaway handle would never register; same reason as the catalog
+        // install buttons).
+        let overrides_json = AISettings::as_ref(app)
+            .ollama_model_mode_overrides
+            .value()
+            .clone();
+        if let Some(models) = view.installed.as_ref() {
+            let mut handles = view.state_handles.borrow_mut();
+            for model in models {
+                handles.mode_links.entry(model.name.clone()).or_default();
+            }
+        }
+
         match view.installed.as_ref() {
             None => column.add_child(body_text(
                 "Couldn't reach Ollama to list installed models.",
@@ -727,16 +781,52 @@ impl SettingsWidget for InstalledWidget {
                         .with_margin_left(12.)
                         .finish(),
                     );
-                    // Role + capability: whether this model can run tools
-                    // (agent) or is chat-only, plus its context window. This
-                    // is what the harness keys its agent-vs-chat behaviour on.
-                    if let Some(caps) = view.capabilities.get(&model.name) {
-                        row.add_child(
-                            Container::new(sub_text(&role_summary(caps), appearance))
-                                .with_margin_left(12.)
+                    // Role + capability, reflecting any override: what the
+                    // harness will actually do with this model, plus its
+                    // context window.
+                    let override_mode =
+                        service::model_mode_override(overrides_json.as_deref(), &model.name);
+                    let caps = view.capabilities.get(&model.name);
+                    row.add_child(
+                        Container::new(sub_text(
+                            &role_summary(caps, override_mode),
+                            appearance,
+                        ))
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                    // The mode override control: cycles Auto → Agent → Chat.
+                    let mode_state = view
+                        .state_handles
+                        .borrow()
+                        .mode_links
+                        .get(&model.name)
+                        .cloned()
+                        .unwrap_or_default();
+                    let cycle_tag = model.name.clone();
+                    row.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .link(
+                                    override_link_label(override_mode).into(),
+                                    None,
+                                    Some(Box::new(move |ctx| {
+                                        ctx.dispatch_typed_action(
+                                            OllamaPageAction::CycleModelMode {
+                                                tag: cycle_tag.clone(),
+                                            },
+                                        );
+                                    })),
+                                    mode_state,
+                                )
+                                .soft_wrap(false)
+                                .build()
                                 .finish(),
-                        );
-                    }
+                        )
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
                     // Same fit flag as the catalog, so an already-installed
                     // model that is too big for this machine still says so.
                     if let Some(badge) = view
@@ -1149,14 +1239,34 @@ fn install_progress(fraction: f32, appearance: &Appearance) -> Box<dyn Element> 
     progress_row(fraction, 72., appearance)
 }
 
-/// A one-line role + capability summary for an installed model, e.g.
-/// "Agent — runs tools · 128K context" or "Chat only · 2K context".
-fn role_summary(caps: &service::ModelCapabilities) -> String {
-    let mut summary = caps.role_label().to_string();
-    if let Some(context) = caps.context_length {
+/// A one-line role + capability summary for an installed model, reflecting
+/// any override. Examples: "Agent — runs tools · 128K context",
+/// "Chat only · 2K context", "Agent (forced) · 16K context".
+fn role_summary(
+    caps: Option<&service::ModelCapabilities>,
+    override_mode: Option<bool>,
+) -> String {
+    let native_tools = caps.is_some_and(|caps| caps.tools);
+    let mut summary = match override_mode {
+        Some(true) => "Agent (forced)".to_string(),
+        Some(false) => "Chat (forced)".to_string(),
+        None if native_tools => "Agent — runs tools".to_string(),
+        None => "Chat only".to_string(),
+    };
+    if let Some(context) = caps.and_then(|caps| caps.context_length) {
         summary.push_str(&format!(" · {} context", format_context(context)));
     }
     summary
+}
+
+/// Label for the mode-override cycle link, showing where a click will go
+/// next (Auto → Agent → Chat → Auto).
+fn override_link_label(override_mode: Option<bool>) -> &'static str {
+    match override_mode {
+        None => "[auto — force agent?]",
+        Some(true) => "[forced agent — force chat?]",
+        Some(false) => "[forced chat — back to auto?]",
+    }
 }
 
 /// Formats a token context window compactly: 131072 → "128K", 2048 → "2K".

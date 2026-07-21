@@ -1762,6 +1762,24 @@ define_settings_group!(AISettings, settings: [
         description: "Custom folder where Ollama stores downloaded models, overriding the default ~/.ollama/models.",
     },
 
+    // Fork: per-model agent/chat overrides for Ollama, as a JSON object of
+    // `{ "<model tag>": "agent" | "chat" }`. Absent entries fall back to
+    // auto-detection from the model's advertised tool capability. Lets a
+    // coding model that predates Ollama's native tool flag (codellama,
+    // deepseek-coder) be forced into agent mode to use the shell/text
+    // protocol. Read/written by the Ollama settings page; consumed by the
+    // harness via `terminal::view`.
+    ollama_model_mode_overrides: OllamaModelModeOverrides {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_model_mode_overrides",
+        description: "Per-model agent/chat overrides for Ollama, as a JSON map of model tag to \"agent\" or \"chat\".",
+    },
+
     // Fork: misery mode — an escalation of swear mode in which the terminal
     // annotates your commands with contempt. Implemented by
     // `crate::terminal::misery`. Has no effect unless swear mode is also on.

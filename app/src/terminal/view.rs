@@ -23570,6 +23570,18 @@ impl TerminalView {
             .as_deref()
             .and_then(ollama_model_name)
             .map(str::to_owned);
+        // The user's per-model agent/chat override (if any) for the selected
+        // Ollama model, read here while `ctx` is available; the background
+        // pump below has none. `None` lets the harness auto-detect.
+        let ollama_agent_override = ollama_model.as_deref().and_then(|model| {
+            crate::ai::ollama::service::model_mode_override(
+                AISettings::as_ref(ctx)
+                    .ollama_model_mode_overrides
+                    .value()
+                    .as_deref(),
+                model,
+            )
+        });
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
@@ -23684,6 +23696,7 @@ impl TerminalView {
         let pump_path = path;
         let pump_mcp_tools = ollama_mcp_tools;
         let pump_tool_caller = ollama_tool_caller;
+        let pump_agent_override = ollama_agent_override;
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -23879,6 +23892,7 @@ impl TerminalView {
                             &pump_path,
                             &pump_mcp_tools,
                             pump_tool_caller,
+                            pump_agent_override,
                             on_event,
                         )
                         .await

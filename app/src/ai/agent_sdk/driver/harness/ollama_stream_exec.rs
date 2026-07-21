@@ -649,6 +649,7 @@ pub async fn run_ollama_stream(
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
+    agent_override: Option<bool>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     run_ollama_stream_inner(
@@ -660,6 +661,7 @@ pub async fn run_ollama_stream(
         path,
         mcp_tools,
         tool_caller,
+        agent_override,
         true,
         on_event,
     )
@@ -677,6 +679,7 @@ async fn run_ollama_stream_without_service_start(
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
+    agent_override: Option<bool>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     run_ollama_stream_inner(
@@ -688,6 +691,7 @@ async fn run_ollama_stream_without_service_start(
         path,
         mcp_tools,
         tool_caller,
+        agent_override,
         false,
         on_event,
     )
@@ -704,6 +708,7 @@ async fn run_ollama_stream_inner(
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
+    agent_override: Option<bool>,
     start_service: bool,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
@@ -727,15 +732,19 @@ async fn run_ollama_stream_inner(
         }
     }
 
-    // Agent vs chat is decided per model by whether it advertises
-    // tool-calling. Tool-capable models get the coding-agent scaffolding
-    // (MCP tools over /api/chat when configured, otherwise the shell/text
-    // protocol); everything else runs as a plain chat model — no shell
-    // framing, so it can't hallucinate having run commands.
-    let is_agent = model_supports_tools(model, path).await;
+    // Two distinct capabilities:
+    //  - `native_tools`: the model advertises Ollama tool-calling, so it can
+    //    drive MCP tools over /api/chat. Detected from /api/show.
+    //  - `is_agent`: run the coding-agent scaffolding at all (shell/text
+    //    protocol). Defaults to `native_tools`, but the user can override per
+    //    model — e.g. force codellama/deepseek-coder (coding models that
+    //    predate the tool flag) into agent mode to use the shell protocol.
+    let native_tools = model_supports_tools(model, path).await;
+    let is_agent = agent_override.unwrap_or(native_tools);
 
-    // Native MCP tool-calling, only for models that actually support it.
-    if is_agent && !mcp_tools.is_empty() {
+    // Native MCP tool-calling: only when the model actually supports it and
+    // the user hasn't forced it to plain chat.
+    if is_agent && native_tools && !mcp_tools.is_empty() {
         if let Some(tool_caller) = &tool_caller {
             // Build a fresh `/api/chat` command here — `first_command` targets
             // `/api/generate` and is reserved for the fallback loop below.
