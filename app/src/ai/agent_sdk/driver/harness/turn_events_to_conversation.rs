@@ -330,6 +330,7 @@ fn tool_result_text(value: &serde_json::Value) -> String {
     }
     value
         .get("output")
+        .or_else(|| value.get("result"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .unwrap_or_else(|| match value {

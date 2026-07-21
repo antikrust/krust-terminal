@@ -532,6 +532,27 @@ fn builtin_file_tools_write_then_read_round_trip() {
 }
 
 #[test]
+fn file_paths_expand_tilde_to_home() {
+    use super::resolve_under;
+    let home = dirs::home_dir().expect("home dir exists in tests");
+    // "~/.ssh/config" must reach the real home, not "<cwd>/~/.ssh/config".
+    assert_eq!(
+        resolve_under(Path::new("/tmp"), "~/.ssh/config"),
+        home.join(".ssh/config")
+    );
+    assert_eq!(resolve_under(Path::new("/tmp"), "~"), home);
+    // Everything else keeps the existing rules.
+    assert_eq!(
+        resolve_under(Path::new("/tmp"), "notes.txt"),
+        Path::new("/tmp/notes.txt")
+    );
+    assert_eq!(
+        resolve_under(Path::new("/tmp"), "/etc/hosts"),
+        Path::new("/etc/hosts")
+    );
+}
+
+#[test]
 fn read_file_on_a_directory_returns_its_listing() {
     use super::dispatch_builtin_tool;
     // Models regularly ask to "read" a folder; that must answer with the

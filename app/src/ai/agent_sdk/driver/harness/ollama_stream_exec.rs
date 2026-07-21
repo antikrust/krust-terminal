@@ -432,14 +432,29 @@ async fn dispatch_builtin_tool(
                 .and_then(Value::as_str)
                 .ok_or("run_code requires a string `code`")?;
             let execution = run_code(language, code, working_dir, path).await;
-            let text = format!(
-                "exit {}\n<stdout>\n{}\n</stdout>\n<stderr>\n{}\n</stderr>",
-                execution.exit_code, execution.stdout, execution.stderr
-            );
             if execution.exit_code == 0 {
+                // Success reads like command output — no exit/stdout/stderr
+                // scaffolding cluttering the tool card (or the model's
+                // context). Stderr is appended only when present.
+                let mut text = execution.stdout;
+                if !execution.stderr.is_empty() {
+                    if !text.is_empty() && !text.ends_with('\n') {
+                        text.push('\n');
+                    }
+                    text.push_str("[stderr]\n");
+                    text.push_str(&execution.stderr);
+                }
+                if text.trim().is_empty() {
+                    text = "(no output — exit 0)".to_string();
+                }
                 Ok(text)
             } else {
-                Err(text)
+                // Failures keep the full labelled shape: the exit code and
+                // both streams are exactly what the model needs to react.
+                Err(format!(
+                    "exit {}\n<stdout>\n{}\n</stdout>\n<stderr>\n{}\n</stderr>",
+                    execution.exit_code, execution.stdout, execution.stderr
+                ))
             }
         }
         other => Err(format!("unknown built-in tool '{other}'")),
@@ -1447,6 +1462,19 @@ async fn run_ollama_generate_loop(
 /// Resolves a model-supplied path against the turn's working directory when
 /// it's relative, leaving absolute paths as-is.
 fn resolve_under(working_dir: &Path, path: &str) -> std::path::PathBuf {
+    // Models write `~/...` constantly; the filesystem doesn't know `~`.
+    // Without this, "~/.ssh/config" joined onto the working dir and failed
+    // with "No such file or directory".
+    if path == "~" {
+        if let Some(home) = dirs::home_dir() {
+            return home;
+        }
+    }
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(rest);
+        }
+    }
     let candidate = Path::new(path);
     if candidate.is_absolute() {
         candidate.to_path_buf()
