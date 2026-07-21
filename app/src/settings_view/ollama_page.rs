@@ -123,11 +123,12 @@ pub struct OllamaPageView {
     model_input: ViewHandle<EditorView>,
     /// Validation error for the typed tag, shown beneath the field.
     input_error: Option<String>,
-    /// The tag most recently submitted via the "Install by name" field, so
-    /// its progress/status renders beneath that field — a typed tag isn't
-    /// necessarily in the visible catalog, which renders progress for its
-    /// own rows only.
-    typed_install_tag: Option<String>,
+    /// Tags submitted via the "Install by name" field this session, in
+    /// submission order — each renders its own progress/status row beneath
+    /// the field, so several installs started there run (and show) at once.
+    /// A typed tag isn't necessarily in the visible catalog, which renders
+    /// progress for its own rows only.
+    typed_install_tags: Vec<String>,
     /// Set while a chosen folder's models are being copied to their new
     /// home. The "Change" link is disabled meanwhile — starting a second
     /// move before the first finishes would race on the same files.
@@ -181,7 +182,7 @@ impl OllamaPageView {
             page: PageType::new_uncategorized(widgets, Some("Ollama")),
             model_input,
             input_error: None,
-            typed_install_tag: None,
+            typed_install_tags: Vec::new(),
             migrating_models: false,
             migration_progress: None,
             migration_error: None,
@@ -503,8 +504,11 @@ impl OllamaPageView {
                     editor.set_buffer_text("", ctx);
                 });
                 // Remember it so its progress renders under the field — a
-                // typed tag may not be in the visible catalog.
-                self.typed_install_tag = Some(tag.clone());
+                // typed tag may not be in the visible catalog. A list, not a
+                // slot: several installs started here each keep their row
+                // (re-submitting a tag just moves it to the end).
+                self.typed_install_tags.retain(|existing| existing != &tag);
+                self.typed_install_tags.push(tag.clone());
                 self.install(tag, ctx);
             }
             Err(err) => {
@@ -1010,17 +1014,30 @@ impl SettingsWidget for CatalogWidget {
             column.add_child(notice(err, ThemeFill::error(), appearance));
         }
 
-        // Progress/status for a model installed via the field above (its tag
-        // may not appear in the catalog list, which shows its own rows'
-        // progress). Mirrors the catalog cell: a live bar while downloading,
-        // a phase label before bytes flow, then a terminal status.
-        if let Some(tag) = &view.typed_install_tag {
+        // Progress/status for models installed via the field above (their
+        // tags may not appear in the catalog list, which shows its own rows'
+        // progress). One row per typed install, so concurrent downloads all
+        // stay visible. Mirrors the catalog cell: a live bar while
+        // downloading, a phase label before bytes flow, then a terminal
+        // status. Bars are labelled with their tag — several unlabelled bars
+        // stacked would be ambiguous.
+        for tag in &view.typed_install_tags {
             if let Some(state) = view.installs.get(tag) {
                 let status: Box<dyn Element> = match state {
                     InstallState::Running {
                         fraction: Some(fraction),
                         ..
-                    } => progress_row(*fraction, 200., appearance),
+                    } => {
+                        let mut labelled = Flex::row()
+                            .with_cross_axis_alignment(CrossAxisAlignment::Center);
+                        labelled.add_child(sub_text(tag, appearance));
+                        labelled.add_child(
+                            Container::new(progress_row(*fraction, 200., appearance))
+                                .with_margin_left(12.)
+                                .finish(),
+                        );
+                        labelled.finish()
+                    }
                     InstallState::Running { phase, .. } if !phase.is_empty() => sub_text(
                         &format!("{}: {}…", tag, capitalize_first(phase)),
                         appearance,
