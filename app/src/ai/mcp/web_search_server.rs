@@ -229,6 +229,10 @@ pub(crate) fn parse_duckduckgo_html(html: &str, max_results: usize) -> Vec<Searc
     titles
         .into_iter()
         .zip(snippets.into_iter().chain(std::iter::repeat(String::new())))
+        // Drop DuckDuckGo's sponsored results — they resolve to a
+        // `duckduckgo.com/y.js?ad_domain=…` redirect, not a real page, and
+        // are just noise for a model reading the results.
+        .filter(|((url, _), _)| !is_ad_url(url))
         .take(max_results)
         .map(|((url, title), snippet)| SearchResult {
             title,
@@ -236,6 +240,12 @@ pub(crate) fn parse_duckduckgo_html(html: &str, max_results: usize) -> Vec<Searc
             snippet,
         })
         .collect()
+}
+
+/// Whether a resolved result URL is a DuckDuckGo ad/redirect rather than a
+/// real destination.
+fn is_ad_url(url: &str) -> bool {
+    url.contains("/y.js") || url.contains("ad_domain=") || url.contains("ad_provider=")
 }
 
 /// Unwraps DuckDuckGo's `//duckduckgo.com/l/?uddg=<encoded-url>&rut=...`

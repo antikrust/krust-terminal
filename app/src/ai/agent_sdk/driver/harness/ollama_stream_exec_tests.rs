@@ -214,6 +214,40 @@ fn structured_search_reply_is_recognized() {
 }
 
 #[test]
+fn structured_file_actions_are_recognized() {
+    let mut read = OllamaResponseAccumulator::default();
+    read.push_line(
+        &serde_json::json!({
+            "response": r#"{"type":"read_file","path":"src/main.rs"}"#,
+            "done": true,
+        })
+        .to_string(),
+    );
+    assert_eq!(
+        read.finish("codellama:13b").unwrap().reply,
+        super::OllamaAgentReply::ReadFile {
+            path: "src/main.rs".to_string()
+        }
+    );
+
+    let mut write = OllamaResponseAccumulator::default();
+    write.push_line(
+        &serde_json::json!({
+            "response": r#"{"type":"write_file","path":"notes.txt","content":"hello"}"#,
+            "done": true,
+        })
+        .to_string(),
+    );
+    assert_eq!(
+        write.finish("codellama:13b").unwrap().reply,
+        super::OllamaAgentReply::WriteFile {
+            path: "notes.txt".to_string(),
+            content: "hello".to_string()
+        }
+    );
+}
+
+#[test]
 fn web_search_intent_heuristic() {
     use super::wants_web_search;
     assert!(wants_web_search("search for therob on duckduckgo"));

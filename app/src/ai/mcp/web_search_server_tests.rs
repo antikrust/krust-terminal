@@ -25,6 +25,32 @@ const SAMPLE_HTML: &str = r#"
 </div>
 "#;
 
+const AD_HTML: &str = r#"
+<div class="results_links web-result">
+    <h2 class="result__title">
+        <a class="result__a" href="//duckduckgo.com/y.js?ad_domain=amazon.co.uk&amp;ad_provider=bingv7aa">
+            Buy Rust Books - Amazon
+        </a>
+    </h2>
+    <a class="result__snippet">Sponsored</a>
+</div>
+<div class="results_links web-result">
+    <h2 class="result__title">
+        <a class="result__a" href="https://doc.rust-lang.org/">
+            The Rust Programming Language
+        </a>
+    </h2>
+    <a class="result__snippet">Official docs.</a>
+</div>
+"#;
+
+#[test]
+fn drops_duckduckgo_sponsored_results() {
+    let results = parse_duckduckgo_html(AD_HTML, 5);
+    assert_eq!(results.len(), 1, "the sponsored y.js result should be filtered");
+    assert_eq!(results[0].url, "https://doc.rust-lang.org/");
+}
+
 #[test]
 fn parses_titles_snippets_and_unwraps_ddg_redirect_urls() {
     let results = parse_duckduckgo_html(SAMPLE_HTML, 5);
