@@ -231,8 +231,10 @@ fn failed_turn_renders_its_error_message() {
     assert_eq!(messages.len(), 2); // user query + error block
     match body(&messages[1]) {
         api::message::Message::AgentOutput(o) => {
-            assert!(o.text.contains("error"), "flags error: {}", o.text);
+            assert!(o.text.contains("⚠"), "flags error: {}", o.text);
             assert!(o.text.contains("credit balance too low"));
+            // Rendered as clean text, not wrapped in a grey code block.
+            assert!(!o.text.contains("```"), "no code fence: {}", o.text);
         }
         other => panic!("expected AgentOutput, got {other:?}"),
     }

@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 
-use ai::agent::TurnUsage;
+use ai::agent::{TurnEvent, TurnUsage};
 use ai::skills::SkillPathOrigin;
 use chrono::Local;
 use prost_types::FieldMask;
@@ -25,7 +25,9 @@ use super::history_model::BlocklistAIHistoryModel;
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{AIAgentInput, UserQueryMode};
-use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::user_query_message;
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
+    turn_event_to_messages, user_query_message,
+};
 use crate::ai::llms::LLMId;
 
 /// A handle to one in-progress local-harness exchange. Created with
@@ -42,6 +44,10 @@ pub(crate) struct LocalHarnessStream {
     /// server protocol's append action updates this message in place, so an
     /// Ollama token never becomes a separate line or output block.
     streaming_text_message_id: Option<String>,
+    /// Assistant text rendered so far in the current turn, used to drop a
+    /// failed-turn error that merely repeats it (see [`messages_for_event`]).
+    /// Cleared at each turn boundary.
+    shown_texts: Vec<String>,
 }
 
 impl LocalHarnessStream {
@@ -78,6 +84,7 @@ impl LocalHarnessStream {
             terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
+            shown_texts: Vec::new(),
         };
 
         let request_input = this.request_input(prompt);
@@ -190,6 +197,7 @@ impl LocalHarnessStream {
             terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
+            shown_texts: Vec::new(),
         };
 
         let request_input = this.request_input(prompt);
@@ -245,6 +253,48 @@ impl LocalHarnessStream {
     /// The request id to stamp on messages so they associate with this exchange.
     pub(crate) fn request_id(&self) -> &str {
         &self.request_id
+    }
+
+    /// Converts one streamed event to renderable messages, dropping a
+    /// failed-turn error that merely repeats text the harness already
+    /// surfaced. Both claude and codex report a usage/session limit as a
+    /// normal assistant message *and* a failed turn, which would otherwise
+    /// render the same text twice (a plain line plus an error box).
+    ///
+    /// The genuine invisible-failure case — a run that fails before producing
+    /// any output — still renders, since nothing preceded the error.
+    pub(crate) fn messages_for_event(
+        &mut self,
+        event: &TurnEvent,
+        shell_commands: &mut HashMap<String, String>,
+    ) -> Vec<api::Message> {
+        // Remember assistant text shown so far this turn.
+        if let TurnEvent::Text { text } = event {
+            self.shown_texts.push(text.clone());
+        }
+        // A failed turn whose error just repeats already-shown text is a
+        // duplicate: render nothing (the turn still ends with error status).
+        if let TurnEvent::TurnCompleted {
+            is_error: true,
+            error_message: Some(message),
+            ..
+        } = event
+        {
+            let needle = message.trim();
+            let duplicate = !needle.is_empty()
+                && self.shown_texts.iter().any(|shown| shown.contains(needle));
+            if duplicate {
+                self.shown_texts.clear();
+                return Vec::new();
+            }
+        }
+        let messages =
+            turn_event_to_messages(self.root_task_id(), self.request_id(), event, shell_commands);
+        // A completed turn (success or error) closes the dedup window.
+        if matches!(event, TurnEvent::TurnCompleted { .. }) {
+            self.shown_texts.clear();
+        }
+        messages
     }
 
     /// Appends `messages` to the exchange as a new streaming chunk; the UI
@@ -522,6 +572,7 @@ impl LocalHarnessStream {
             terminal_surface_id: self.terminal_surface_id,
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
+            shown_texts: Vec::new(),
         };
 
         let request_input = next.request_input_with(

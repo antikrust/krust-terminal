@@ -417,3 +417,60 @@ fn tool_result_split_lands_a_continuation_exchange_in_the_same_conversation() {
         });
     });
 }
+
+#[test]
+fn failed_turn_error_that_repeats_shown_text_is_dropped() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut shell_commands = std::collections::HashMap::new();
+
+        // The harness surfaces a session limit as normal text first...
+        let text = stream.messages_for_event(
+            &TurnEvent::Text {
+                text: "You've hit your session limit".to_string(),
+            },
+            &mut shell_commands,
+        );
+        assert_eq!(text.len(), 1, "the message renders once");
+
+        // ...then as a failed turn carrying the same message, which must not
+        // render a second (duplicate) error block.
+        let dup = stream.messages_for_event(
+            &TurnEvent::TurnCompleted {
+                usage: None,
+                is_error: true,
+                error_message: Some("You've hit your session limit".to_string()),
+            },
+            &mut shell_commands,
+        );
+        assert!(dup.is_empty(), "duplicate error is suppressed: {dup:?}");
+    });
+}
+
+#[test]
+fn failed_turn_error_with_no_prior_output_still_renders() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut shell_commands = std::collections::HashMap::new();
+
+        // A run that fails before producing any output must still show its
+        // error (the invisible-failure case).
+        let error = stream.messages_for_event(
+            &TurnEvent::TurnCompleted {
+                usage: None,
+                is_error: true,
+                error_message: Some("the CLI crashed".to_string()),
+            },
+            &mut shell_commands,
+        );
+        assert_eq!(error.len(), 1, "invisible failure still renders once");
+    });
+}

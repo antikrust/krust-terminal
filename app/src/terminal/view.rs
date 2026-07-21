@@ -227,9 +227,7 @@ use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, 
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream,
 };
-use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
-    tool_call_action_result, turn_event_to_messages,
-};
+use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
@@ -23806,9 +23804,7 @@ impl TerminalView {
                             if let ai::agent::TurnEvent::TextDelta { text } = &event {
                                 stream.apply_text_delta(text, ctx);
                             } else {
-                                let messages = turn_event_to_messages(
-                                    stream.root_task_id(),
-                                    stream.request_id(),
+                                let messages = stream.messages_for_event(
                                     &event,
                                     &mut view.local_harness_shell_commands,
                                 );

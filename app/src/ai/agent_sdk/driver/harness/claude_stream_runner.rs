@@ -38,7 +38,6 @@ use super::super::terminal::{CommandHandle, TerminalDriver};
 use super::super::{AgentDriver, AgentDriverError};
 use super::claude_code::prepare_claude_environment_config;
 use super::claude_stream_exec::{run_claude_stream, stream_json_args};
-use super::turn_events_to_conversation::turn_event_to_messages;
 use super::{
     HarnessCleanupDisposition, HarnessRunner, JSONMCPServer, ResumePayload, SavePoint,
     ThirdPartyHarness,
@@ -243,7 +242,7 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                             let result = drain_spawner
                                 .spawn(move |_, ctx: &mut ModelContext<AgentDriver>| {
                                     let app: &mut AppContext = ctx;
-                                    let stream = taken.unwrap_or_else(|| {
+                                    let mut stream = taken.unwrap_or_else(|| {
                                         LocalHarnessStream::begin(
                                             terminal_surface_id,
                                             &begin_prompt,
@@ -251,12 +250,8 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                                         )
                                     });
                                     let mut shell_commands = taken_shell_commands;
-                                    let messages = turn_event_to_messages(
-                                        stream.root_task_id(),
-                                        stream.request_id(),
-                                        &event,
-                                        &mut shell_commands,
-                                    );
+                                    let messages =
+                                        stream.messages_for_event(&event, &mut shell_commands);
                                     stream.apply_messages(messages, app);
                                     (stream, shell_commands)
                                 })

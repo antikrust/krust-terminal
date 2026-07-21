@@ -53,7 +53,7 @@ pub fn parse_codex_jsonl_line(line: &str) -> Vec<TurnEvent> {
             error_message: error.map(|error| error.message),
         }],
         RawEvent::Error { message } => vec![TurnEvent::Text {
-            text: format!("**⚠ codex error**\n```\n{message}\n```"),
+            text: format!("**⚠ Codex error:** {message}"),
         }],
         RawEvent::Other => Vec::new(),
     }
@@ -168,7 +168,7 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
             .message
             .or(item.text)
             .map(|message| TurnEvent::Text {
-                text: format!("**⚠ codex error**\n```\n{message}\n```"),
+                text: format!("**⚠ Codex error:** {message}"),
             })
             .into_iter()
             .collect(),

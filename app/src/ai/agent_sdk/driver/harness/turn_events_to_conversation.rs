@@ -115,7 +115,7 @@ pub(crate) fn turn_event_to_messages(
             vec![agent_output_message(
                 task_id,
                 request_id,
-                format!("**⚠ error**\n```\n{detail}\n```"),
+                format!("**⚠ Error:** {detail}"),
             )]
         }
         // Session metadata and the successful completion marker carry no
