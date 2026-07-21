@@ -14,12 +14,11 @@ use warp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
 use warpui::assets::asset_cache::AssetSource;
 use warpui::elements::{
     Align, Border, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius,
-    CrossAxisAlignment, Element, Empty, Flex, Image, MainAxisAlignment, MainAxisSize,
+    CrossAxisAlignment, Element, Empty, Flex, Hoverable, Image, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
 use warpui::fonts::Weight;
 use warpui::keymap::ContextPredicate;
-use warpui::platform::file_picker::FilePickerConfiguration;
 use warpui::platform::Cursor;
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -29,7 +28,7 @@ use warpui::{
     ViewContext, ViewHandle,
 };
 
-use super::avatar_picker::AvatarPickerWidget;
+use super::avatar_picker::{AvatarPickerModal, AVATAR_MODAL_WIDTH};
 use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
 use super::billing_and_usage_page::BillingAndUsagePageEvent;
 use super::settings_page::{
@@ -41,6 +40,7 @@ use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::{flags, SettingsAction, SettingsSection, ToggleSettingActionPair};
 use crate::appearance::Appearance;
 use crate::auth::auth_manager::{AuthManager, LoginGatedFeature};
+use crate::modal::{Modal, ModalEvent, ModalViewState};
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::auth::{AuthStateProvider, UserUid};
@@ -54,7 +54,9 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::workspaces::workspace::CustomerType;
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
-const PHOTO_SIZE: f32 = 40.;
+/// The one avatar on the page — bigger than the old row of choices, since it
+/// is now also the button that opens the picker.
+const AVATAR_DISPLAY_SIZE: f32 = 56.;
 const REGULAR_TEXT_FONT_SIZE: f32 = 12.;
 const VERTICAL_MARGIN: f32 = 24.;
 const LOG_OUT_TEXT: &str = "Log out";
@@ -132,14 +134,9 @@ pub enum MainPageAction {
     OpenUrl(String),
     #[cfg(not(target_family = "wasm"))]
     RefreshIapCredentials,
-    /// Avatar picker: switching art style keeps your variant number, so
-    /// moving between styles shows the same slot rather than resetting.
-    SelectAvatarStyle(String),
-    SelectAvatarSeed(String),
-    /// Open a file picker to use a local photo as the avatar.
-    UploadAvatarPhoto,
-    /// Clear the uploaded photo, reverting to the generated avatar.
-    RemoveAvatarPhoto,
+    /// Open the avatar picker modal (see [`super::avatar_picker`]). All avatar
+    /// changes happen inside the modal, which writes straight to settings.
+    OpenAvatarPicker,
 }
 
 impl MainPageAction {
@@ -185,6 +182,11 @@ pub struct MainSettingsPageView {
     /// Teams likewise: the full team-management UI, hosted here rather than on
     /// a page of its own.
     teams: ViewHandle<TeamsPageView>,
+    /// The avatar picker modal, opened by clicking the avatar in the account
+    /// header. The body view holds only browsing state; choices go straight to
+    /// [`IdentitySettings`].
+    avatar_picker_modal: ModalViewState<Modal<AvatarPickerModal>>,
+    avatar_picker_body: ViewHandle<AvatarPickerModal>,
 }
 
 impl Entity for MainSettingsPageView {
@@ -212,44 +214,10 @@ impl TypedActionView for MainSettingsPageView {
         }
 
         match action {
-            MainPageAction::SelectAvatarStyle(style) => {
-                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
-                    report_if_error!(settings.avatar_style.set_value(style.clone(), ctx));
-                    // Choosing a generated avatar clears any uploaded photo.
-                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
-                    // Land on a variant so the choice is visible immediately.
-                    if settings.avatar_seed.is_empty() {
-                        report_if_error!(settings.avatar_seed.set_value("1".to_string(), ctx));
-                    }
-                });
-                ctx.notify();
-            }
-            MainPageAction::SelectAvatarSeed(seed) => {
-                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
-                    report_if_error!(settings.avatar_seed.set_value(seed.clone(), ctx));
-                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
-                });
-                ctx.notify();
-            }
-            MainPageAction::UploadAvatarPhoto => {
-                ctx.open_file_picker(
-                    move |result, ctx| {
-                        if let Some(Ok(path)) =
-                            result.map(|paths| paths.into_iter().next()).transpose()
-                        {
-                            IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
-                                report_if_error!(settings.avatar_photo_path.set_value(path, ctx));
-                            });
-                            ctx.notify();
-                        }
-                    },
-                    FilePickerConfiguration::new(),
-                );
-            }
-            MainPageAction::RemoveAvatarPhoto => {
-                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
-                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
-                });
+            MainPageAction::OpenAvatarPicker => {
+                self.avatar_picker_body
+                    .update(ctx, |body, ctx| body.sync_to_current_choice(ctx));
+                self.avatar_picker_modal.open();
                 ctx.notify();
             }
             MainPageAction::Relaunch => {
@@ -335,12 +303,42 @@ impl MainSettingsPageView {
             ctx.notify();
         });
 
+        // The avatar (shown in the account header, chosen via a modal) is
+        // local identity, not account data, so it works signed out. The page
+        // repaints on identity changes because the modal writes settings
+        // directly rather than dispatching page actions.
+        ctx.subscribe_to_model(&IdentitySettings::handle(ctx), |_, _, _, ctx| {
+            ctx.notify();
+        });
+        let avatar_picker_body = ctx.add_typed_action_view(AvatarPickerModal::new);
+        let avatar_picker_modal_view = {
+            let body = avatar_picker_body.clone();
+            ctx.add_typed_action_view(move |ctx| {
+                Modal::new(Some("Choose your avatar".to_string()), body, ctx)
+                    .with_modal_style(UiComponentStyles {
+                        width: Some(AVATAR_MODAL_WIDTH),
+                        height: Some(560.),
+                        ..Default::default()
+                    })
+                    .with_body_style(UiComponentStyles {
+                        height: Some(490.),
+                        ..Default::default()
+                    })
+                    .with_background_opacity(100)
+                    .with_dismiss_on_click()
+            })
+        };
+        ctx.subscribe_to_view(&avatar_picker_modal_view, |me, _, event, ctx| match event {
+            ModalEvent::Close => {
+                me.avatar_picker_modal.close();
+                ctx.notify();
+            }
+        });
+        let avatar_picker_modal = ModalViewState::new(avatar_picker_modal_view);
+
         let mut widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
             Box::new(SignupBannerWidget),
             Box::new(AccountWidget::default()),
-            // Your avatar is local identity, not account data, so it sits
-            // with the account info and works signed out.
-            Box::new(AvatarPickerWidget::default()),
             Box::new(DividerWidget {}),
         ];
 
@@ -384,10 +382,17 @@ impl MainSettingsPageView {
             auth_state,
             billing_and_usage,
             teams,
+            avatar_picker_modal,
+            avatar_picker_body,
         }
     }
 
-    pub fn billing_modal_content(&self, app: &AppContext) -> Option<Box<dyn Element>> {
+    /// The page's active modal, if any: the avatar picker, or whatever the
+    /// embedded billing section has open.
+    pub fn modal_content(&self, app: &AppContext) -> Option<Box<dyn Element>> {
+        if self.avatar_picker_modal.is_open() {
+            return Some(self.avatar_picker_modal.render());
+        }
         self.billing_and_usage
             .read(app, |view, _| view.get_modal_content(app))
     }
@@ -407,6 +412,7 @@ struct AccountWidgetStateHandles {
     anonymous_user_sign_up_button: MouseStateHandle,
     enterprise_contact_us_link: MouseStateHandle,
     stripe_billing_portal_link: MouseStateHandle,
+    avatar: MouseStateHandle,
 }
 
 #[derive(Default)]
@@ -415,8 +421,67 @@ struct AccountWidget {
 }
 
 impl AccountWidget {
+    /// The one avatar on the page: your chosen picture, or your initial until
+    /// you choose one. Clicking it opens the picker modal — it is the way in,
+    /// so it gets a hand cursor and an accent ring on hover.
+    fn render_clickable_avatar(
+        &self,
+        source: Option<&AssetSource>,
+        auth_state: &AuthState,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let accent = theme.accent();
+        let surface = theme.surface_3();
+        let text_color = theme.active_ui_text_color();
+        let font = appearance.ui_font_family();
+        let source = source.cloned();
+        let initial = auth_state
+            .username_for_display()
+            .and_then(|name| name.chars().next())
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_else(|| "?".to_string());
+        Hoverable::new(self.ui_state_handles.avatar.clone(), move |mouse| {
+            let border = if mouse.is_hovered() {
+                Border::all(2.).with_border_fill(accent.clone())
+            } else {
+                Border::all(2.).with_border_color(ColorU::transparent_black())
+            };
+            let picture: Box<dyn Element> = match &source {
+                Some(source) => Image::new(source.clone(), CacheOption::BySize)
+                    .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+                    .finish(),
+                None => Container::new(
+                    Align::new(
+                        Text::new_inline(initial.clone(), font, 20.)
+                            .with_color(text_color.clone().into_solid())
+                            .finish(),
+                    )
+                    .finish(),
+                )
+                .with_background(surface.clone())
+                .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+                .finish(),
+            };
+            Container::new(
+                ConstrainedBox::new(picture)
+                    .with_width(AVATAR_DISPLAY_SIZE)
+                    .with_height(AVATAR_DISPLAY_SIZE)
+                    .finish(),
+            )
+            .with_border(border)
+            .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
+            .with_uniform_padding(2.)
+            .finish()
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(|ctx, _, _| ctx.dispatch_typed_action(MainPageAction::OpenAvatarPicker))
+        .finish()
+    }
+
     fn render_anonymous_account_info(
         &self,
+        avatar_source: Option<&AssetSource>,
         auth_state: &AuthState,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
@@ -490,7 +555,19 @@ impl AccountWidget {
                 Shrinkable::new(
                     1.0,
                     Flex::row()
+                        .with_child(
+                            // Your avatar is local identity: it works signed
+                            // out, so the picker is reachable here too.
+                            Container::new(self.render_clickable_avatar(
+                                avatar_source,
+                                auth_state,
+                                appearance,
+                            ))
+                            .with_margin_right(HEADER_PADDING)
+                            .finish(),
+                        )
                         .with_child(user_info)
+                        .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_main_axis_alignment(MainAxisAlignment::Start)
                         .with_main_axis_size(MainAxisSize::Max)
                         .finish(),
@@ -510,26 +587,16 @@ impl AccountWidget {
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let mut user_info = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
-        if let Some(profile_image_source) = profile_image_source {
-            // Only continue if profile_image_source is a source with a non empty url/path
-            if matches!(profile_image_source, AssetSource::Async { ref id, .. } if !id.key().is_empty())
-                || matches!(profile_image_source, AssetSource::Bundled { path, .. } if !path.is_empty())
-                || matches!(profile_image_source, AssetSource::LocalFile { path, .. } if !path.is_empty())
-            {
-                let photo = Image::new(profile_image_source.clone(), CacheOption::BySize)
-                    .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)));
-                user_info.add_child(
-                    Container::new(
-                        ConstrainedBox::new(photo.finish())
-                            .with_height(PHOTO_SIZE)
-                            .with_width(PHOTO_SIZE)
-                            .finish(),
-                    )
-                    .with_margin_right(HEADER_PADDING)
-                    .finish(),
-                );
-            }
-        }
+        // The one avatar, and the door to the picker modal.
+        user_info.add_child(
+            Container::new(self.render_clickable_avatar(
+                profile_image_source,
+                auth_state,
+                appearance,
+            ))
+            .with_margin_right(HEADER_PADDING)
+            .finish(),
+        );
 
         let display_name = auth_state.username_for_display().map(|screen_name| {
             let email = auth_state.user_email();
@@ -717,12 +784,17 @@ impl SettingsWidget for AccountWidget {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
+        // Fork: the avatar is local identity — a natively generated DiceBear
+        // avatar or an uploaded photo — not the (dead) account photo URL. It
+        // renders (and opens its picker) signed in or out.
+        let profile_image_source = IdentitySettings::selected_avatar_source(app);
         let account_info = if view.auth_state.is_anonymous_or_logged_out() {
-            self.render_anonymous_account_info(view.auth_state.as_ref(), appearance)
+            self.render_anonymous_account_info(
+                profile_image_source.as_ref(),
+                view.auth_state.as_ref(),
+                appearance,
+            )
         } else {
-            // Fork: the avatar is local identity — a natively generated DiceBear
-            // avatar or an uploaded photo — not the (dead) account photo URL.
-            let profile_image_source = IdentitySettings::selected_avatar_source(app);
             self.render_account_info(
                 profile_image_source.as_ref(),
                 view.auth_state.as_ref(),

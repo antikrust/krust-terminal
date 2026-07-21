@@ -2384,7 +2384,7 @@ impl SettingsView {
     ) -> Option<Box<dyn Element>> {
         match page_handle {
             SettingsPageViewHandle::Main(view) => {
-                view.read(app, |view, _| view.billing_modal_content(app))
+                view.read(app, |view, _| view.modal_content(app))
             }
             SettingsPageViewHandle::Privacy(view) => {
                 view.read(app, |view, _| view.get_modal_content())

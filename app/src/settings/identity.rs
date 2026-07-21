@@ -13,7 +13,7 @@
 //! the bundled set.
 
 use settings::macros::define_settings_group;
-use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
+use settings::{RespectUserSyncSetting, Setting as _, SupportedPlatforms, SyncToCloud};
 use warpui::assets::asset_cache::AssetSource;
 
 use crate::ui_components::dicebear;
@@ -63,7 +63,24 @@ define_settings_group!(IdentitySettings, settings: [
         toml_path: "identity.avatar_photo_path",
         description: "Path to an uploaded avatar photo, overriding the generated avatar.",
     },
+    // Avatars you put aside while browsing the picker, as comma-separated
+    // "style:seed" entries in the order you saved them. A shortlist, not a
+    // selection — the chosen avatar is (avatar_style, avatar_seed).
+    avatar_favorites: AvatarFavoritesSetting {
+        type: String,
+        default: String::new(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "identity.avatar_favorites",
+        description: "Avatars you saved while browsing the picker.",
+    },
 ]);
+
+/// The most favorites the picker will keep. Old entries are not evicted; the
+/// picker just stops adding, which is easier to understand than silent loss.
+pub const MAX_AVATAR_FAVORITES: usize = 24;
 
 impl IdentitySettings {
     /// The source for the chosen avatar: an uploaded photo if one is set,
@@ -88,6 +105,63 @@ impl IdentitySettings {
             &settings.avatar_seed,
         ))
     }
+
+    /// The saved-avatar shortlist as `(style, seed)` pairs, in save order.
+    /// Entries whose style has since been culled from the bundle are skipped.
+    pub fn favorite_avatars(app: &warpui::AppContext) -> Vec<(String, String)> {
+        use warpui::SingletonEntity as _;
+        parse_favorites(&Self::as_ref(app).avatar_favorites.to_string())
+    }
+
+    /// Whether `(style, seed)` is on the shortlist.
+    pub fn is_favorite_avatar(app: &warpui::AppContext, style: &str, seed: &str) -> bool {
+        Self::favorite_avatars(app)
+            .iter()
+            .any(|(s, d)| s == style && d == seed)
+    }
+
+    /// Adds `(style, seed)` to the shortlist, or removes it if already there.
+    /// Adding beyond [`MAX_AVATAR_FAVORITES`] is a no-op.
+    pub fn toggle_favorite_avatar(style: &str, seed: &str, ctx: &mut warpui::AppContext) {
+        use warpui::SingletonEntity as _;
+        let mut favorites = Self::favorite_avatars(ctx);
+        let existing = favorites
+            .iter()
+            .position(|(s, d)| s == style && d == seed);
+        match existing {
+            Some(index) => {
+                favorites.remove(index);
+            }
+            None if favorites.len() >= MAX_AVATAR_FAVORITES => return,
+            None => favorites.push((style.to_owned(), seed.to_owned())),
+        }
+        let serialized = format_favorites(&favorites);
+        Self::handle(ctx).update(ctx, |settings, ctx| {
+            if let Err(error) = settings.avatar_favorites.set_value(serialized, ctx) {
+                warp_errors::report_error!(error.context("saving avatar favorites"));
+            }
+        });
+    }
+}
+
+/// `"a:1,b:2"` -> `[(a, 1), (b, 2)]`. Entries without a `:`, with an empty
+/// half, or naming an unbundled style are dropped rather than propagated.
+fn parse_favorites(raw: &str) -> Vec<(String, String)> {
+    raw.split(',')
+        .filter_map(|entry| {
+            let (style, seed) = entry.trim().split_once(':')?;
+            (!style.is_empty() && !seed.is_empty() && dicebear::label(style).is_some())
+                .then(|| (style.to_owned(), seed.to_owned()))
+        })
+        .collect()
+}
+
+fn format_favorites(favorites: &[(String, String)]) -> String {
+    favorites
+        .iter()
+        .map(|(style, seed)| format!("{style}:{seed}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 #[cfg(test)]
