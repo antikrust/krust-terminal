@@ -195,13 +195,24 @@ impl AvatarPickerModal {
                 .with_cursor(Cursor::PointingHand)
                 .on_click(move |ctx, _, _| ctx.dispatch_typed_action(pin.clone()))
                 .finish();
+                // The overlay must carry its own finite size: the wrap grid
+                // measures tiles under an infinite max constraint, where an
+                // unconstrained expanding flex is a layout error (a debug-build
+                // panic — the modal crashed whenever a chip was visible).
+                // Tile box = picture + 2px padding and 2px border per side.
+                let tile_box = size + 8.;
                 stack = stack.with_child(
-                    Flex::row()
-                        .with_main_axis_size(MainAxisSize::Max)
-                        .with_main_axis_alignment(MainAxisAlignment::End)
-                        .with_cross_axis_alignment(CrossAxisAlignment::Start)
-                        .with_child(chip)
-                        .finish(),
+                    ConstrainedBox::new(
+                        Flex::row()
+                            .with_main_axis_size(MainAxisSize::Max)
+                            .with_main_axis_alignment(MainAxisAlignment::End)
+                            .with_cross_axis_alignment(CrossAxisAlignment::Start)
+                            .with_child(chip)
+                            .finish(),
+                    )
+                    .with_width(tile_box)
+                    .with_height(tile_box)
+                    .finish(),
                 );
             }
             stack.finish()
@@ -365,10 +376,16 @@ impl View for AvatarPickerModal {
                     .finish(),
                 );
             }
+            // Like the grid below, the shelf wrap needs a finite width: the
+            // content column measures children under an infinite max.
             content.add_child(
-                Container::new(shelf.finish())
-                    .with_margin_bottom(12.)
-                    .finish(),
+                ConstrainedBox::new(
+                    Container::new(shelf.finish())
+                        .with_margin_bottom(12.)
+                        .finish(),
+                )
+                .with_width(CONTENT_WIDTH)
+                .finish(),
             );
         }
 
@@ -480,6 +497,10 @@ impl TypedActionView for AvatarPickerModal {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "avatar_picker_tests.rs"]
+mod tests;
 
 /// Kept out of the modal so the About page can render the same credit without
 /// depending on settings-page types.
