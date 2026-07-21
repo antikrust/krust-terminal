@@ -3915,14 +3915,23 @@ pub fn render_user_avatar(
     } else {
         AvatarContent::DisplayName(user_display_name.to_owned())
     };
+    // Avatar art (chosen avatar or uploaded photo) brings its own background,
+    // so the colored disc would just halo it — drop it and render the art a
+    // bit larger. The disc stays for bare initials, which need it.
+    let is_avatar_art = matches!(content, AvatarContent::Source { .. });
+    let size = if is_avatar_art {
+        icon_size(app) * 1.5
+    } else {
+        icon_size(app)
+    };
     let avatar = Avatar::new(
         content,
         UiComponentStyles {
-            width: Some(icon_size(app)),
-            height: Some(icon_size(app)),
+            width: Some(size),
+            height: Some(size),
             font_family_id: Some(appearance.ui_font_family()),
             font_size: Some(appearance.monospace_font_size() - 2.),
-            background: Some(background.into()),
+            background: (!is_avatar_art).then(|| background.into()),
             font_color: Some(blended_colors::text_main(theme, background)),
             border_radius: Some(CornerRadius::with_all(Radius::Percentage(50.))),
             ..Default::default()
