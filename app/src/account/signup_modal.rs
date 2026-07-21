@@ -84,10 +84,11 @@ impl AccountModalView {
         let email_input = Self::make_input(ctx, "you@example.com", false);
         let password_input = Self::make_input(ctx, "password", true);
 
-        // Prefill the server address if one was configured before.
-        if let Some(url) = AccountSession::server_url(ctx) {
-            server_input.update(ctx, |editor, ctx| editor.set_buffer_text(&url, ctx));
-        }
+        // Prefill the server address: whatever was configured before, or our
+        // server as the default so a fresh install signs up in two fields.
+        let prefill = AccountSession::server_url(ctx)
+            .unwrap_or_else(|| "https://therob.lol:10101".to_string());
+        server_input.update(ctx, |editor, ctx| editor.set_buffer_text(&prefill, ctx));
 
         // Enter in any field attempts a log in (the common case).
         for handle in [&server_input, &email_input, &password_input] {
