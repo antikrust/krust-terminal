@@ -175,6 +175,28 @@ fn convert_color(color: &str) -> String {
     }
 }
 
+/// Per-style zoom applied at generation time, as `(scale, vertical anchor)`
+/// where anchor 0.5 scales about the center and 0.0 about the top edge.
+///
+/// Some sets sit small inside their viewBox (measured: max content extents
+/// across seeds, rasterized at 128px). Head-only sets zoom about the center;
+/// bust-style sets anchor to the top so the zoom crops empty space below the
+/// shoulders rather than the hair.
+fn style_zoom(style_id: &str) -> (f32, f32) {
+    match style_id {
+        // Head-only sets with margins on every side.
+        "big-smile" => (1.1, 0.5),
+        "croodles" => (1.15, 0.5),
+        "lorelei" => (1.15, 0.5),
+        // Busts: full height, narrow — keep the head, crop the floor.
+        "avataaars" => (1.15, 0.0),
+        "micah" => (1.1, 0.0),
+        "miniavs" => (1.2, 0.0),
+        "personas" => (1.2, 0.0),
+        _ => (1.0, 0.5),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Generation
 // ---------------------------------------------------------------------------
@@ -227,8 +249,19 @@ pub fn generate(style_id: &str, seed: &str) -> Option<String> {
     }
 
     // 3. Assemble the body from the layout, then wrap in the root <svg>.
+    // The per-style zoom scales only the body — a background rect keeps
+    // filling the whole viewBox.
     let layout = data.layout.as_deref().unwrap_or("");
-    let body = substitute(layout, data, &picked, &colors, 0);
+    let mut body = substitute(layout, data, &picked, &colors, 0);
+    let (scale, anchor) = style_zoom(style_id);
+    if scale != 1.0 {
+        let mut parts = data.view_box.split_whitespace().skip(2);
+        let w: f32 = parts.next().and_then(|v| v.parse().ok()).unwrap_or(100.);
+        let h: f32 = parts.next().and_then(|v| v.parse().ok()).unwrap_or(100.);
+        let tx = w * (1. - scale) / 2.;
+        let ty = h * (1. - scale) * anchor;
+        body = format!("<g transform=\"translate({tx:.2} {ty:.2}) scale({scale})\">{body}</g>");
+    }
     Some(format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{}\" fill=\"none\">{background}{body}</svg>",
         data.view_box

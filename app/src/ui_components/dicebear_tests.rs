@@ -27,12 +27,12 @@ fn every_style_generates_valid_svg() {
     }
 }
 
-/// The styles that ship a background palette must paint it; the rest must not.
-/// (fun-emoji without its background rect is eyes floating on nothing, and
-/// croodles is black ink that needs its pastel paper to read on dark themes.)
+/// The styles whose official defaults paint a background must paint it here
+/// too; nobody else gets one invented for them. (fun-emoji without its
+/// background rect is eyes floating on nothing.)
 #[test]
 fn background_styles_paint_a_backdrop() {
-    for style in ["fun-emoji", "thumbs", "shapes", "croodles"] {
+    for style in ["fun-emoji", "thumbs", "shapes"] {
         let svg = generate(style, "1").expect("generates");
         assert!(
             svg.contains("<rect fill=\"#"),
@@ -46,16 +46,14 @@ fn background_styles_paint_a_backdrop() {
     );
 }
 
-/// Styles culled for looking wrong on dark themes stay culled. (Croodles was
-/// culled once too, but it came back on a pastel paper background — it turned
-/// out to be somebody's favourite set.)
+/// The full upstream collection ships — a cull experiment removed four styles
+/// and it turned out people had favourites among them, so: everything stays.
 #[test]
-fn culled_styles_are_gone_and_fall_back() {
-    for culled in ["lorelei", "notionists", "identicon"] {
-        assert!(generate(culled, "1").is_none(), "{culled} should be culled");
+fn the_full_collection_is_bundled() {
+    for style in ["croodles", "lorelei", "notionists", "identicon"] {
+        assert!(generate(style, "1").is_some(), "{style} must be bundled");
     }
-    assert!(generate("croodles", "1").is_some(), "croodles is back");
-    assert_eq!(styles().len(), 15);
+    assert_eq!(styles().len(), 18);
 }
 
 #[test]
