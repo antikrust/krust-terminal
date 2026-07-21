@@ -95,7 +95,7 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
 }
 
 #[test]
-fn buffers_response_and_emits_only_thinking_while_streaming() {
+fn buffers_response_and_emits_nothing_while_streaming() {
     let mut accumulator = OllamaResponseAccumulator::default();
     let first = serde_json::json!({
         "response": "{\"type\":\"text\",",
@@ -112,12 +112,9 @@ fn buffers_response_and_emits_only_thinking_while_streaming() {
     })
     .to_string();
 
-    // The first content chunk emits the Thinking shimmer; no token-level
-    // streaming — the whole answer is delivered by `finish`.
-    assert!(matches!(
-        accumulator.push_line(&first).as_slice(),
-        [TurnEvent::Thinking { .. }]
-    ));
+    // No synthetic thinking and no token-level streaming — the whole answer
+    // is delivered by `finish`.
+    assert!(accumulator.push_line(&first).is_empty());
     assert!(accumulator.push_line(&second).is_empty());
 
     let result = accumulator.finish("codellama:13b").unwrap();
@@ -294,11 +291,11 @@ fn session_starts_before_model_progress_and_text() {
 
     assert!(status.success());
     assert!(matches!(events[0], TurnEvent::SessionInit { .. }));
-    assert!(matches!(events[1], TurnEvent::Thinking { .. }));
-    // The answer arrives as one complete Text event, not streamed deltas.
-    assert_eq!(events[2], TurnEvent::Text { text: "OK".into() });
+    // The answer arrives as one complete Text event — no synthetic thinking,
+    // no streamed deltas.
+    assert_eq!(events[1], TurnEvent::Text { text: "OK".into() });
     assert!(matches!(
-        events[3],
+        events[2],
         TurnEvent::TurnCompleted {
             is_error: false,
             ..
@@ -379,10 +376,10 @@ fn chat_accumulator_collects_streamed_text_and_final_tool_call() {
     .to_string();
 
     let first_events = accumulator.push_line(&first);
-    // Content is buffered, not streamed — only the shimmer is emitted live, so
-    // a tool call emitted as JSON text never reaches the user mid-stream.
-    assert_eq!(first_events.len(), 1, "{first_events:?}");
-    assert!(matches!(first_events[0], TurnEvent::Thinking { .. }));
+    // Content is buffered, not streamed, and non-reasoning models get no
+    // synthetic thinking — nothing is emitted mid-stream, so a tool call
+    // emitted as JSON text never reaches the user.
+    assert!(first_events.is_empty(), "{first_events:?}");
     assert_eq!(accumulator.push_line(&second), Vec::new());
 
     let result = accumulator.finish("qwen2.5-coder:7b").unwrap();
@@ -425,16 +422,15 @@ fn chat_turn_without_tool_calls_completes_directly() {
     .unwrap();
 
     assert!(matches!(outcome, super::ToolChatOutcome::Completed(status) if status.success()));
-    // Thinking shimmer, then the answer, then completion.
-    assert_eq!(events.len(), 3, "{events:?}");
-    assert!(matches!(events[0], TurnEvent::Thinking { .. }));
+    // The answer, then completion — no synthetic thinking row.
+    assert_eq!(events.len(), 2, "{events:?}");
     assert_eq!(
-        events[1],
+        events[0],
         TurnEvent::Text {
             text: "It's sunny.".to_string()
         }
     );
-    match &events[2] {
+    match &events[1] {
         TurnEvent::TurnCompleted {
             usage: Some(usage),
             is_error: false,

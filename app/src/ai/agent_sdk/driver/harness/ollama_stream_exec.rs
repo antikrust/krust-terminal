@@ -39,7 +39,6 @@ pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
 const MAX_TOOL_CALLS_PER_TURN: usize = 8;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
-const OLLAMA_PROGRESS_TEXT: &str = "Planning locally with Ollama…";
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside derp terminal.
 You can inspect and modify the user's computer by requesting one shell command at a time.
@@ -575,7 +574,6 @@ struct OllamaResponseAccumulator {
     total_duration: Option<u64>,
     context: Option<Vec<i64>>,
     done: bool,
-    progress_emitted: bool,
 }
 
 impl OllamaResponseAccumulator {
@@ -592,15 +590,12 @@ impl OllamaResponseAccumulator {
         if let Some(error) = chunk.error {
             self.error = Some(error);
         }
-        let mut events = Vec::new();
+        let events = Vec::new();
         if !chunk.response.is_empty() {
             self.response.push_str(&chunk.response);
-            if !self.progress_emitted {
-                self.progress_emitted = true;
-                events.push(TurnEvent::Thinking {
-                    text: OLLAMA_PROGRESS_TEXT.to_string(),
-                });
-            }
+            // No synthetic "thinking" while generating — /api/generate has no
+            // real reasoning to show, and a fake reasoning row is just noise
+            // (the conversation status shimmer already covers the wait).
             // The full answer is emitted once at completion (see the Text arm
             // in `run_ollama_generate_loop`). Incremental token streaming was
             // removed: with the `format` grammar gone, models frequently reply
@@ -1731,7 +1726,6 @@ struct OllamaChatAccumulator {
     prompt_eval_count: u64,
     eval_count: u64,
     total_duration: Option<u64>,
-    progress_emitted: bool,
 }
 
 impl OllamaChatAccumulator {
@@ -1756,16 +1750,10 @@ impl OllamaChatAccumulator {
             // — the display setting decides whether it's shown, kept open, or
             // hidden (see turn_events_to_conversation). Non-reasoning models
             // never send this, so it's a harmless no-op for them.
+            // Models without the capability never send this and get no
+            // synthetic substitute — a fake "thinking" row is just noise.
             if let Some(thinking) = message.thinking.filter(|text| !text.is_empty()) {
-                self.progress_emitted = true;
                 events.push(TurnEvent::Thinking { text: thinking });
-            } else if !self.progress_emitted {
-                // No real reasoning: show the generic shimmer once, matching
-                // the /api/generate path so both modes look the same.
-                self.progress_emitted = true;
-                events.push(TurnEvent::Thinking {
-                    text: OLLAMA_PROGRESS_TEXT.to_string(),
-                });
             }
             if !message.content.is_empty() {
                 // Buffer content instead of streaming it: a tool-capable model

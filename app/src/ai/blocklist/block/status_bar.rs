@@ -34,6 +34,7 @@ use crate::ai::agent::{
     icons, AIAgentExchangeId, AIAgentOutput, AIAgentOutputMessageType, CancellationReason,
     SummarizationType,
 };
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name;
 use crate::ai::agent_tips::AITipModel;
 use crate::ai::blocklist::agent_view::shortcuts::AgentShortcutViewModel;
 use crate::ai::blocklist::agent_view::{
@@ -113,6 +114,12 @@ pub struct BlocklistAIStatusBar {
     /// Handle for the periodic timer that updates the summarization timer UI.
     summarization_timer_handle: Option<SpawnedFutureHandle>,
     summarization_start_time: Option<Instant>,
+    /// When the in-flight run's shimmer line started, and the periodic timer
+    /// that re-renders it so its rotating message advances (see
+    /// `rotating_warping_text`) — a buffered local Ollama turn produces no
+    /// mid-stream updates of its own, so nothing else would refresh the line.
+    warping_rotation_started_at: Option<Instant>,
+    warping_rotation_timer_handle: Option<SpawnedFutureHandle>,
     /// Handle for the 1-second periodic timer that refreshes the "Last read …" suffix in
     /// the warping indicator while the active block has a recorded LRC snapshot.
     last_read_refresh_handle: Option<SpawnedFutureHandle>,
@@ -370,6 +377,8 @@ impl BlocklistAIStatusBar {
             is_summarization_cancel_dialog_open: false,
             summarization_timer_handle: None,
             summarization_start_time: None,
+            warping_rotation_started_at: None,
+            warping_rotation_timer_handle: None,
             last_read_refresh_handle: None,
             ambient_agent_view_model: None,
             current_tip: None,
@@ -515,6 +524,10 @@ impl BlocklistAIStatusBar {
             return;
         };
         let status = model.status(ctx);
+        let is_run_in_flight = matches!(
+            status,
+            AIBlockOutputStatus::Pending | AIBlockOutputStatus::PartiallyReceived { .. }
+        );
 
         // Auto-clear summarization confirmation dialog if summarization is no longer active
         if self.is_summarization_cancel_dialog_open
@@ -525,6 +538,14 @@ impl BlocklistAIStatusBar {
                 BlocklistAIStatusBarEvent::SummarizationCancelDialogToggled { is_open: false },
             );
             self.stop_summarization_timer();
+        }
+
+        // Keep the shimmer line's rotating message advancing while the run is
+        // in flight; stop (and reset the rotation clock) once it settles.
+        if is_run_in_flight {
+            self.start_warping_rotation(ctx);
+        } else {
+            self.stop_warping_rotation();
         }
 
         match status {
@@ -685,6 +706,86 @@ impl BlocklistAIStatusBar {
         }
     }
 
+    /// Starts (or keeps) the periodic re-render that advances the shimmer
+    /// line's rotating message while a run is in flight. Mirrors
+    /// [`Self::start_summarization_timer`]'s self-rescheduling shape.
+    fn start_warping_rotation(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.warping_rotation_started_at.is_none() {
+            self.warping_rotation_started_at = Some(Instant::now());
+        }
+        if self.warping_rotation_timer_handle.is_some() {
+            return;
+        }
+        let handle = ctx.spawn(
+            async move {
+                Timer::after(Duration::from_millis(2500)).await;
+            },
+            |me, _unit, ctx| {
+                me.warping_rotation_timer_handle = None;
+                if me.warping_rotation_started_at.is_some() {
+                    ctx.notify();
+                    me.start_warping_rotation(ctx);
+                }
+            },
+        );
+        self.warping_rotation_timer_handle = Some(handle);
+    }
+
+    fn stop_warping_rotation(&mut self) {
+        self.warping_rotation_started_at = None;
+        if let Some(handle) = self.warping_rotation_timer_handle.take() {
+            handle.abort();
+        }
+    }
+
+    /// The shimmer line's text. Local Ollama runs rotate through a few honest
+    /// messages — one line, updating in place — because a buffered local turn
+    /// otherwise sits on a single static label for its entire generation.
+    /// Other harnesses keep the plain Sending/Thinking split.
+    fn rotating_warping_text(&self, has_output: bool, swear_mode: bool, app: &AppContext) -> String {
+        let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness(app);
+        let ollama_model = model_id.as_deref().and_then(ollama_model_name);
+        let Some(model) = ollama_model else {
+            return match (has_output, swear_mode) {
+                (true, false) => THINKING_MESSAGE,
+                (true, true) => SWEAR_THINKING_MESSAGE,
+                (false, false) => LOAD_OUTPUT_MESSAGE,
+                (false, true) => SWEAR_LOAD_OUTPUT_MESSAGE,
+            }
+            .to_owned();
+        };
+        let running = format!("Running {model} locally...");
+        let messages: [&str; 4] = if swear_mode {
+            [
+                if has_output {
+                    SWEAR_THINKING_MESSAGE
+                } else {
+                    SWEAR_LOAD_OUTPUT_MESSAGE
+                },
+                &running,
+                "chewing through it...",
+                "still fucking going...",
+            ]
+        } else {
+            [
+                if has_output {
+                    THINKING_MESSAGE
+                } else {
+                    LOAD_OUTPUT_MESSAGE
+                },
+                &running,
+                "Chewing through it...",
+                "Still going — local models take a moment...",
+            ]
+        };
+        let index = self
+            .warping_rotation_started_at
+            .map(|start| (start.elapsed().as_secs() / 3) as usize)
+            .unwrap_or(0)
+            % messages.len();
+        messages[index].to_owned()
+    }
+
     fn should_refresh_last_read_timer(&self, ctx: &ViewContext<Self>) -> bool {
         let active_block_id = self
             .terminal_model
@@ -836,13 +937,8 @@ impl BlocklistAIStatusBar {
         let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
         let default_warping_text = fallback_warping_text
             .as_deref()
-            .unwrap_or(match (has_output, swear_mode) {
-                (true, false) => THINKING_MESSAGE,
-                (true, true) => SWEAR_THINKING_MESSAGE,
-                (false, false) => LOAD_OUTPUT_MESSAGE,
-                (false, true) => SWEAR_LOAD_OUTPUT_MESSAGE,
-            })
-            .to_owned();
+            .map(str::to_owned)
+            .unwrap_or_else(|| self.rotating_warping_text(has_output, swear_mode, app));
         let secondary_element = if fallback_warping_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
