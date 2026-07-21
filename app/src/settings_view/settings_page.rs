@@ -746,6 +746,67 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
     }
 }
 
+/// The font size of the large page header the AI settings pages lead with
+/// (the "AI Manager" look).
+pub(super) const PAGE_TITLE_LARGE_FONT_SIZE: f32 = 24.;
+
+/// A page-level title widget matching the AI Manager header: the large bold
+/// title with the standard section separator underneath. Generic over the
+/// page view so any settings page can lead with it. Pages whose first widget
+/// already draws a leading separator pass `with_separator: false` so the line
+/// isn't doubled.
+pub(super) struct PageTitleWidget<V> {
+    title: &'static str,
+    with_separator: bool,
+    _view: std::marker::PhantomData<V>,
+}
+
+impl<V> PageTitleWidget<V> {
+    pub fn new(title: &'static str, with_separator: bool) -> Self {
+        Self {
+            title,
+            with_separator,
+            _view: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<V: warpui::View> SettingsWidget for PageTitleWidget<V> {
+    type View = V;
+
+    fn search_terms(&self) -> &str {
+        self.title
+    }
+
+    fn render(
+        &self,
+        _view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let mut column = Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_child(
+                Container::new(
+                    Text::new_inline(
+                        self.title,
+                        appearance.ui_font_family(),
+                        PAGE_TITLE_LARGE_FONT_SIZE,
+                    )
+                    .with_style(Properties::default().weight(Weight::Bold))
+                    .with_color(appearance.theme().active_ui_text_color().into())
+                    .finish(),
+                )
+                .with_padding_bottom(15.)
+                .finish(),
+            );
+        if self.with_separator {
+            column.add_child(render_separator(appearance));
+        }
+        column.finish()
+    }
+}
+
 pub fn render_page_title(text: &str, size: f32, appearance: &Appearance) -> Box<dyn Element> {
     Container::new(
         Align::new(

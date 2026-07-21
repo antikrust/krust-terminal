@@ -22,7 +22,7 @@ use warpui::ui_components::switch::SwitchStateHandle;
 use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
-    render_separator, render_sub_header, MatchData, PageType, SettingsPageMeta,
+    render_separator, render_sub_header, MatchData, PageTitleWidget, PageType, SettingsPageMeta,
     SettingsPageViewHandle, SettingsWidget,
 };
 use super::SettingsSection;
@@ -162,6 +162,9 @@ struct StateHandles {
 impl OllamaPageView {
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
         let widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
+            // The standard large AI-page title (with its separator; the
+            // widgets below draw none of their own at the top).
+            Box::new(PageTitleWidget::new("Ollama", true)),
             Box::new(StatusWidget),
             Box::new(InstalledWidget),
             Box::new(CatalogWidget),
@@ -179,7 +182,7 @@ impl OllamaPageView {
         service::apply_models_dir_override(ctx);
 
         let mut view = Self {
-            page: PageType::new_uncategorized(widgets, Some("Ollama")),
+            page: PageType::new_uncategorized(widgets, None),
             model_input,
             input_error: None,
             typed_install_tags: Vec::new(),

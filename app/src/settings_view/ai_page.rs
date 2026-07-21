@@ -47,8 +47,8 @@ use super::settings_page::{
     render_body_item_label_with_icon, render_custom_size_header, render_dropdown_item,
     render_dropdown_item_label, render_full_pane_width_ai_button, render_input_list,
     render_separator, render_settings_info_banner, InputListItem, LocalOnlyIconState, MatchData,
-    PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, ToggleState,
-    HEADER_PADDING, TOGGLE_BUTTON_RIGHT_PADDING,
+    PageTitleWidget, PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget,
+    ToggleState, HEADER_PADDING, TOGGLE_BUTTON_RIGHT_PADDING,
 };
 use super::{
     editor_text_colors, flags, SettingActionPairContexts, SettingActionPairDescriptions,
@@ -2866,6 +2866,9 @@ impl AISettingsPageView {
                 // "General": its own CLI-agent settings, then the Knowledge
                 // section, then Profiles last — each widget renders its own
                 // sub-header, so they read as distinct sections on one page.
+                // The page leads with the standard large title (the widgets
+                // below have no leading separator, so the title draws one).
+                widgets.push(Box::new(PageTitleWidget::new("General", true)));
                 widgets.push(Box::new(CLIAgentWidget::default()));
                 if FeatureFlag::AIRules.is_enabled() {
                     widgets.push(Box::new(AIFactWidget::default()));
@@ -2878,7 +2881,10 @@ impl AISettingsPageView {
             Some(AISubpage::Grok) => {
                 // The Grok connect row lives in ApiKeysWidget (its buttons and
                 // OAuth wiring are there); on this subpage the widget renders
-                // only that row. See ApiKeysWidget::render_grok_page.
+                // only that row. See ApiKeysWidget::render_grok_page. The page
+                // leads with the standard large title; the widget's own
+                // leading separator becomes the line underneath it.
+                widgets.push(Box::new(PageTitleWidget::new("Grok (xAI)", false)));
                 widgets.push(Box::new(ApiKeysWidget::new(ctx)));
             }
         }
@@ -8715,16 +8721,6 @@ impl ApiKeysWidget {
         // "used" on wasm so the shared signature doesn't warn.
         #[cfg(target_family = "wasm")]
         let _ = view;
-
-        column.add_child(
-            build_sub_header(
-                appearance,
-                "Grok (xAI)",
-                Some(styles::header_font_color(is_enabled, app)),
-            )
-            .with_padding_bottom(HEADER_PADDING)
-            .finish(),
-        );
 
         #[cfg(not(target_family = "wasm"))]
         let has_grok_oauth_attempt = view.grok_oauth_attempt.is_some();
