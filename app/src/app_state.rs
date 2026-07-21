@@ -324,6 +324,8 @@ pub enum LeftPanelDisplayedTab {
     WarpDrive,
     ConversationListView,
     Tabs,
+    /// Fork: the embedded global chat room.
+    Chat,
 }
 
 impl From<ToolPanelView> for LeftPanelDisplayedTab {
@@ -334,6 +336,7 @@ impl From<ToolPanelView> for LeftPanelDisplayedTab {
             ToolPanelView::WarpDrive => LeftPanelDisplayedTab::WarpDrive,
             ToolPanelView::ConversationListView => LeftPanelDisplayedTab::ConversationListView,
             ToolPanelView::Tabs => LeftPanelDisplayedTab::Tabs,
+            ToolPanelView::Chat => LeftPanelDisplayedTab::Chat,
         }
     }
 }

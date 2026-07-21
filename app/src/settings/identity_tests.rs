@@ -14,7 +14,6 @@ use crate::test_util::settings::initialize_settings_for_tests;
 fn a_fresh_install_is_assigned_a_random_robot() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         // Before the startup assignment runs there is genuinely nothing chosen.
         app.read(|ctx| assert!(IdentitySettings::selected_avatar_source(ctx).is_none()));
@@ -52,7 +51,6 @@ fn a_fresh_install_is_assigned_a_random_robot() {
 fn assignment_never_overrides_an_uploaded_photo() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -76,7 +74,6 @@ fn assignment_never_overrides_an_uploaded_photo() {
 fn choosing_an_avatar_resolves_to_a_generated_source() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -104,7 +101,6 @@ fn choosing_an_avatar_resolves_to_a_generated_source() {
 fn favorites_round_trip_and_toggle() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         app.update(|ctx| {
             IdentitySettings::toggle_favorite_avatar("bottts", "7", ctx);
@@ -134,7 +130,6 @@ fn favorites_round_trip_and_toggle() {
 fn malformed_or_culled_favorites_are_dropped_on_read() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -158,7 +153,6 @@ fn malformed_or_culled_favorites_are_dropped_on_read() {
 fn an_uploaded_photo_takes_precedence() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
 
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {

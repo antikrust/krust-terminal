@@ -85,6 +85,13 @@ pub fn initialize_settings_for_tests_with_mode(
     FontSettings::register(app);
     GeneralSettings::register(app);
     GPUSettings::register(app);
+    // Identity (avatar) settings: the Account page header subscribes to these,
+    // so any test that builds settings views needs them registered.
+    crate::settings::identity::IdentitySettings::register(app);
+    // Fork account singletons: the left panel embeds the chat room, so any
+    // test that builds a workspace pulls these (boot registers them in lib.rs).
+    app.add_singleton_model(crate::account::chat::ChatModel::new);
+    app.add_singleton_model(crate::account::AccountSession::new);
     InputModeSettings::register(app);
     InputSettings::register(app);
     KeysSettings::register(app);

@@ -389,6 +389,8 @@ pub enum WorkspaceAction {
     /// Unconditionally opens Warp Drive. This is used in the case of user lifecycle
     /// events like new user onboarding or when the user joins a team.
     OpenWarpDrive,
+    /// Fork: opens the left panel on the embedded Chat view.
+    OpenChatPanel,
     /// Toggles the right panel. This happens as an explicit action from the user.
     ToggleRightPanel,
     /// Opens the code review panel (right panel) without toggling. If already open,
@@ -1074,6 +1076,7 @@ impl WorkspaceAction {
             | ToggleLeftPanel
             | ToggleWarpDrive
             | OpenWarpDrive
+            | OpenChatPanel
             | ClosePanel
             | ToggleRightPanel
             | OpenCodeReviewPanel(..)

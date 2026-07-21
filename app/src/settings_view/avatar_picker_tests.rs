@@ -19,7 +19,6 @@ use crate::test_util::settings::initialize_settings_for_tests;
 fn modal_lays_out_with_pinned_tiles_and_across_sections() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
-        app.update(IdentitySettings::register);
         app.add_singleton_model(|_| Appearance::mock());
 
         let (_, view) = app.add_window(WindowStyle::NotStealFocus, AvatarPickerModal::new);

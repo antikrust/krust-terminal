@@ -32,6 +32,7 @@ use crate::drive::panel::{
 use crate::pane_group::pane::view::header::components::HEADER_EDGE_PADDING;
 use crate::pane_group::pane::view::header::PANE_HEADER_HEIGHT;
 use crate::pane_group::working_directories::WorkingDirectory;
+use crate::pane_group::ChatPaneView;
 use crate::pane_group::{
     PaneGroup, WorkingDirectoriesEvent, WorkingDirectoriesModel, {self},
 };
@@ -72,15 +73,22 @@ struct MouseStateHandles {
     global_search_button: MouseStateHandle,
     warp_drive_button: MouseStateHandle,
     tabs_button: MouseStateHandle,
+    chat_button: MouseStateHandle,
+    chat_detach_button: MouseStateHandle,
 }
 
 #[derive(Clone, Debug)]
 pub enum LeftPanelAction {
     ProjectExplorer,
-    GlobalSearch { entry_focus: GlobalSearchEntryFocus },
+    GlobalSearch {
+        entry_focus: GlobalSearchEntryFocus,
+    },
     WarpDrive,
     ConversationListView,
     Tabs,
+    /// Fork: the global chat room, embedded in the panel (detachable into its
+    /// own tab via the header button).
+    Chat,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -106,10 +114,14 @@ pub enum LeftPanelEvent {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolPanelView {
     ProjectExplorer,
-    GlobalSearch { entry_focus: GlobalSearchEntryFocus },
+    GlobalSearch {
+        entry_focus: GlobalSearchEntryFocus,
+    },
     WarpDrive,
     ConversationListView,
     Tabs,
+    /// Fork: the global chat room.
+    Chat,
 }
 
 /// Encapsulates the active view state to enforce that all mutations go through
@@ -178,6 +190,8 @@ pub struct LeftPanelView {
     close_button_mouse_state: MouseStateHandle,
     warp_drive_view: ViewHandle<DrivePanel>,
     conversation_list_view: ViewHandle<ConversationListView>,
+    /// Fork: the embedded global chat room (same view the Chat tab uses).
+    chat_view: ViewHandle<ChatPaneView>,
     active_view: active_view_state::ActiveViewState,
     toolbelt_buttons: Vec<ToolbeltButtonConfig>,
     active_pane_group: Option<WeakViewHandle<PaneGroup>>,
@@ -222,6 +236,7 @@ impl LeftPanelView {
         };
         let warp_drive_view = ctx.add_typed_action_view(DrivePanel::new);
         let conversation_list_view = ctx.add_typed_action_view(ConversationListView::new);
+        let chat_view = ctx.add_typed_action_view(ChatPaneView::new);
 
         ctx.subscribe_to_view(&warp_drive_view, |_me, _, event, ctx| {
             ctx.emit(LeftPanelEvent::WarpDrive(event.clone()));
@@ -337,6 +352,7 @@ impl LeftPanelView {
             close_button_mouse_state: Default::default(),
             warp_drive_view,
             conversation_list_view,
+            chat_view,
             active_view: active_view_state::new(active_view),
             toolbelt_buttons,
             active_pane_group: None,
@@ -469,6 +485,15 @@ impl LeftPanelView {
                     tooltip_keybinding_names,
                 }
             }
+            ToolPanelView::Chat => ToolbeltButtonConfig {
+                icon: Icon::MessageChatSquare,
+                active_icon: None,
+                tooltip_text: "Chat".to_string(),
+                action: LeftPanelAction::Chat,
+                render_with_active_state: false,
+                tooltip_keybinding: None,
+                tooltip_keybinding_names: vec![],
+            },
             ToolPanelView::Tabs => ToolbeltButtonConfig {
                 icon: Icon::Menu,
                 active_icon: None,
@@ -743,6 +768,9 @@ impl LeftPanelView {
                 });
             }
             ToolPanelView::Tabs => {}
+            ToolPanelView::Chat => {
+                self.chat_view.update(ctx, |view, ctx| view.focus(ctx));
+            }
         }
     }
 
@@ -910,6 +938,7 @@ impl LeftPanelView {
                     self.active_view.get() == ToolPanelView::ConversationListView
                 }
                 LeftPanelAction::Tabs => self.active_view.get() == ToolPanelView::Tabs,
+                LeftPanelAction::Chat => self.active_view.get() == ToolPanelView::Chat,
             };
         }
     }
@@ -925,6 +954,7 @@ impl LeftPanelView {
             LeftPanelAction::WarpDrive => WorkspaceAction::OpenWarpDrive,
             LeftPanelAction::ConversationListView => WorkspaceAction::OpenConversationListView,
             LeftPanelAction::Tabs => WorkspaceAction::OpenVerticalTabsPanel,
+            LeftPanelAction::Chat => WorkspaceAction::OpenChatPanel,
         };
         let ui_builder = appearance.ui_builder().clone();
         let tooltip_keybinding = button_config.tooltip_keybinding.clone();
@@ -1060,6 +1090,9 @@ impl LeftPanelView {
             LeftPanelAction::Tabs => {
                 active_view_state::set(self, ToolPanelView::Tabs, ctx);
             }
+            LeftPanelAction::Chat => {
+                active_view_state::set(self, ToolPanelView::Chat, ctx);
+            }
         }
     }
 
@@ -1160,6 +1193,7 @@ impl View for LeftPanelView {
                 ToolPanelView::WarpDrive => ctx.focus(&self.warp_drive_view),
                 ToolPanelView::ConversationListView => ctx.focus(&self.conversation_list_view),
                 ToolPanelView::Tabs => {}
+                ToolPanelView::Chat => ctx.focus(&self.chat_view),
             }
         }
     }
@@ -1184,6 +1218,7 @@ impl LeftPanelView {
                 .conversation_list_view_button
                 .clone(),
             LeftPanelAction::Tabs => self.mouse_state_handles.tabs_button.clone(),
+            LeftPanelAction::Chat => self.mouse_state_handles.chat_button.clone(),
         }
     }
 
@@ -1224,6 +1259,53 @@ impl LeftPanelView {
             .finish(),
             ToolPanelView::ConversationListView => {
                 Shrinkable::new(1.0, ChildView::new(&self.conversation_list_view).finish()).finish()
+            }
+            ToolPanelView::Chat => {
+                // A slim header carrying the detach control, then the same
+                // chat view the dedicated Chat tab uses.
+                let appearance = Appearance::as_ref(app);
+                let icon_color = appearance
+                    .theme()
+                    .sub_text_color(appearance.theme().background());
+                let tooltip = appearance
+                    .ui_builder()
+                    .tool_tip("Open as tab".to_string())
+                    .build()
+                    .finish();
+                let detach = icon_button_with_color(
+                    appearance,
+                    Icon::LinkExternal,
+                    false,
+                    self.mouse_state_handles.chat_detach_button.clone(),
+                    icon_color,
+                )
+                .with_tooltip(move || tooltip)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(WorkspaceAction::OpenChat);
+                })
+                .with_cursor(Cursor::PointingHand)
+                .finish();
+                let header = Container::new(
+                    Flex::row()
+                        .with_main_axis_size(MainAxisSize::Max)
+                        .with_main_axis_alignment(MainAxisAlignment::End)
+                        .with_child(detach)
+                        .finish(),
+                )
+                .with_padding_right(4.)
+                .finish();
+                Shrinkable::new(
+                    1.0,
+                    Flex::column()
+                        .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+                        .with_child(header)
+                        .with_child(
+                            Shrinkable::new(1.0, ChildView::new(&self.chat_view).finish()).finish(),
+                        )
+                        .finish(),
+                )
+                .finish()
             }
             ToolPanelView::Tabs => Empty::new().finish(),
         }

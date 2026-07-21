@@ -711,7 +711,6 @@ pub(super) struct VerticalTabsPanelState {
     new_tab_hover_state: MouseStateHandle,
     new_tab_button_state: MouseStateHandle,
     pub(super) search_query: String,
-    chat_button_mouse_state: MouseStateHandle,
     settings_button_mouse_state: MouseStateHandle,
     panes_segment_mouse_state: MouseStateHandle,
     tabs_segment_mouse_state: MouseStateHandle,
@@ -750,7 +749,6 @@ impl Default for VerticalTabsPanelState {
             new_tab_hover_state: Default::default(),
             new_tab_button_state: Default::default(),
             search_query: String::new(),
-            chat_button_mouse_state: Default::default(),
             settings_button_mouse_state: Default::default(),
             panes_segment_mouse_state: Default::default(),
             tabs_segment_mouse_state: Default::default(),
@@ -1418,7 +1416,6 @@ fn render_control_bar(
         .with_child(Shrinkable::new(1., text_input).finish())
         .finish();
 
-    let chat_button = render_chat_button(state, appearance);
     let settings_button = render_settings_button(state, appearance);
     let new_tab_button = render_new_tab_button(state, workspace, appearance, app);
 
@@ -1428,7 +1425,6 @@ fn render_control_bar(
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_spacing(CONTROL_BAR_SPACING)
             .with_child(Shrinkable::new(1., search_bar).finish())
-            .with_child(chat_button)
             .with_child(settings_button)
             .with_child(new_tab_button)
             .finish(),
@@ -1491,60 +1487,6 @@ fn render_detail_kind_badge_icon(
             typed.icon().to_warpui_icon(fill).finish()
         }
     }
-}
-
-/// Fork: the left panel's door to the global Chat tab (workspace:open_chat).
-/// Same visual language as the settings button beside it.
-fn render_chat_button(
-    state: &VerticalTabsPanelState,
-    appearance: &Appearance,
-) -> Box<dyn Element> {
-    let theme = appearance.theme();
-    let sub_text = theme.sub_text_color(theme.background());
-    let ui_builder = appearance.ui_builder().clone();
-
-    Hoverable::new(state.chat_button_mouse_state.clone(), move |hover_state| {
-        let icon = ConstrainedBox::new(
-            WarpIcon::MessageChatSquare.to_warpui_icon(sub_text).finish(),
-        )
-        .with_width(16.)
-        .with_height(16.)
-        .finish();
-
-        let background = if hover_state.is_hovered() {
-            internal_colors::fg_overlay_2(theme)
-        } else {
-            ThemeFill::Solid(ColorU::transparent_black())
-        };
-
-        let button_container = Container::new(icon)
-            .with_padding(Padding::uniform(2.))
-            .with_background(background)
-            .with_corner_radius(CornerRadius::with_all(CONTROL_BAR_BUTTON_RADIUS))
-            .finish();
-
-        if hover_state.is_hovered() {
-            let tooltip = ui_builder.tool_tip("Chat".to_string()).build().finish();
-            let mut stack = Stack::new().with_child(button_container);
-            stack.add_positioned_overlay_child(
-                tooltip,
-                OffsetPositioning::offset_from_parent(
-                    vec2f(0., 4.),
-                    ParentOffsetBounds::WindowByPosition,
-                    ParentAnchor::BottomMiddle,
-                    ChildAnchor::TopMiddle,
-                ),
-            );
-            stack.finish()
-        } else {
-            button_container
-        }
-    })
-    .on_click(|ctx, _, _| {
-        ctx.dispatch_typed_action(WorkspaceAction::OpenChat);
-    })
-    .with_cursor(Cursor::PointingHand)
-    .finish()
 }
 
 fn render_settings_button(

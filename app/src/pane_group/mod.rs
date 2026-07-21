@@ -192,7 +192,7 @@ pub use pane::env_var_collection_pane::EnvVarCollectionPane;
 pub use pane::environment_management_pane::EnvironmentManagementPane;
 pub use pane::execution_profile_editor_pane::ExecutionProfileEditorPane;
 pub use pane::file_pane::FilePane;
-pub use pane::chat_pane::{ChatPane, ChatPaneManager};
+pub use pane::chat_pane::{ChatPane, ChatPaneManager, ChatPaneView};
 pub use pane::mcp_servers_pane::{MCPServersPane, MCPServersPaneManager};
 pub use pane::network_log_pane::NetworkLogPane;
 pub use pane::notebook_pane::NotebookPane;

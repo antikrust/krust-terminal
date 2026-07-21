@@ -4140,6 +4140,7 @@ impl Workspace {
                 LeftPanelDisplayedTab::WarpDrive => ToolPanelView::WarpDrive,
                 LeftPanelDisplayedTab::ConversationListView => ToolPanelView::ConversationListView,
                 LeftPanelDisplayedTab::Tabs => ToolPanelView::Tabs,
+                LeftPanelDisplayedTab::Chat => ToolPanelView::Chat,
             };
             lp.restore_active_view_from_snapshot(active_view, ctx);
             lp.set_active_pane_group(pane_group.clone(), &self.working_directories_model, ctx);
@@ -20139,6 +20140,7 @@ impl Workspace {
                         ToolPanelView::WarpDrive => "Library",
                         ToolPanelView::ConversationListView => "Agent conversations",
                         ToolPanelView::Tabs => "Tabs",
+                        ToolPanelView::Chat => "Chat",
                     }
                 } else {
                     "Tools panel"
@@ -20194,6 +20196,7 @@ impl Workspace {
                 ToolPanelView::WarpDrive => "Library",
                 ToolPanelView::ConversationListView => "Agent conversations",
                 ToolPanelView::Tabs => "Tabs",
+                ToolPanelView::Chat => "Chat",
             }
         } else {
             "Tools panel"
@@ -23539,6 +23542,10 @@ impl Workspace {
                 entry_focus: GlobalSearchEntryFocus::Results,
             });
         }
+        // Fork: the global chat room lives in the panel too (detachable into
+        // its own tab from there). Always present — chat asks you to sign in
+        // when you post, it doesn't hide.
+        views.push(ToolPanelView::Chat);
         views.push(ToolPanelView::WarpDrive);
         views
     }
@@ -24350,6 +24357,9 @@ impl TypedActionView for Workspace {
             }
             OpenWarpDrive => {
                 self.open_left_panel_view(&LeftPanelAction::WarpDrive, ctx);
+            }
+            OpenChatPanel => {
+                self.open_left_panel_view(&LeftPanelAction::Chat, ctx);
             }
             ToggleLeftPanel => {
                 let active_pane_group = self.active_tab_pane_group().clone();
