@@ -19,6 +19,7 @@ use warpui::elements::{
 };
 use warpui::fonts::Weight;
 use warpui::keymap::ContextPredicate;
+use warpui::platform::file_picker::FilePickerConfiguration;
 use warpui::platform::Cursor;
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -135,6 +136,10 @@ pub enum MainPageAction {
     /// moving between styles shows the same slot rather than resetting.
     SelectAvatarStyle(String),
     SelectAvatarSeed(String),
+    /// Open a file picker to use a local photo as the avatar.
+    UploadAvatarPhoto,
+    /// Clear the uploaded photo, reverting to the generated avatar.
+    RemoveAvatarPhoto,
 }
 
 impl MainPageAction {
@@ -210,17 +215,11 @@ impl TypedActionView for MainSettingsPageView {
             MainPageAction::SelectAvatarStyle(style) => {
                 IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.avatar_style.set_value(style.clone(), ctx));
-                    // Picking a style before ever picking a variant would
-                    // otherwise leave you with no avatar at all; land on the
-                    // first variant so the choice is visible immediately.
+                    // Choosing a generated avatar clears any uploaded photo.
+                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
+                    // Land on a variant so the choice is visible immediately.
                     if settings.avatar_seed.is_empty() {
-                        if let Some(first) = crate::ui_components::avatar_set::style(style)
-                            .and_then(|s| s.variants.first())
-                        {
-                            report_if_error!(settings
-                                .avatar_seed
-                                .set_value(first.0.to_string(), ctx));
-                        }
+                        report_if_error!(settings.avatar_seed.set_value("1".to_string(), ctx));
                     }
                 });
                 ctx.notify();
@@ -228,6 +227,28 @@ impl TypedActionView for MainSettingsPageView {
             MainPageAction::SelectAvatarSeed(seed) => {
                 IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.avatar_seed.set_value(seed.clone(), ctx));
+                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
+                });
+                ctx.notify();
+            }
+            MainPageAction::UploadAvatarPhoto => {
+                ctx.open_file_picker(
+                    move |result, ctx| {
+                        if let Some(Ok(path)) =
+                            result.map(|paths| paths.into_iter().next()).transpose()
+                        {
+                            IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
+                                report_if_error!(settings.avatar_photo_path.set_value(path, ctx));
+                            });
+                            ctx.notify();
+                        }
+                    },
+                    FilePickerConfiguration::new(),
+                );
+            }
+            MainPageAction::RemoveAvatarPhoto => {
+                IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.avatar_photo_path.set_value(String::new(), ctx));
                 });
                 ctx.notify();
             }
@@ -699,9 +720,9 @@ impl SettingsWidget for AccountWidget {
         let account_info = if view.auth_state.is_anonymous_or_logged_out() {
             self.render_anonymous_account_info(view.auth_state.as_ref(), appearance)
         } else {
-            let profile_image_source = view.auth_state.user_photo_url().map(|url| {
-                asset_cache::url_source_with_persistence(url, &warp_core::paths::cache_dir())
-            });
+            // Fork: the avatar is local identity — a natively generated DiceBear
+            // avatar or an uploaded photo — not the (dead) account photo URL.
+            let profile_image_source = IdentitySettings::selected_avatar_source(app);
             self.render_account_info(
                 profile_image_source.as_ref(),
                 view.auth_state.as_ref(),

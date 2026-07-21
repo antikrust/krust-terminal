@@ -21314,8 +21314,11 @@ impl Workspace {
 
         // Fork: an avatar you picked is local identity and wins over anything
         // account-derived — it is the one you chose, and it works signed out.
-        let avatar_content = if let Some(path) = IdentitySettings::selected_avatar_path(ctx) {
-            AvatarContent::BundledImage { path }
+        let avatar_content = if let Some(source) = IdentitySettings::selected_avatar_source(ctx) {
+            AvatarContent::Source {
+                source,
+                display_name: display_name.clone(),
+            }
         } else if self.auth_state.is_anonymous_or_logged_out() {
             AvatarContent::Icon(icons::Icon::Gear)
         } else {

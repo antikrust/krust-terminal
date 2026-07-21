@@ -14,12 +14,13 @@
 
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
+use warpui::assets::asset_cache::AssetSource;
 
-use crate::ui_components::avatar_set;
+use crate::ui_components::dicebear;
 
 /// The style a brand-new install starts on. Robots is DiceBear's most
-/// recognisable set and the wildcard picker's default too.
-pub const DEFAULT_AVATAR_STYLE: &str = "bottts";
+/// recognisable set.
+pub const DEFAULT_AVATAR_STYLE: &str = dicebear::DEFAULT_STYLE;
 
 define_settings_group!(IdentitySettings, settings: [
     // The chosen art style, e.g. "bottts". Stored as a string rather than an
@@ -49,16 +50,43 @@ define_settings_group!(IdentitySettings, settings: [
         toml_path: "identity.avatar_seed",
         description: "Which variant of the avatar style is yours.",
     },
+    // Fork: path to an uploaded avatar photo. When set it takes precedence over
+    // the generated (style, seed) avatar. Never synced — the image is a local
+    // file, so another device would only receive a broken path.
+    avatar_photo_path: AvatarPhotoPathSetting {
+        type: String,
+        default: String::new(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "identity.avatar_photo_path",
+        description: "Path to an uploaded avatar photo, overriding the generated avatar.",
+    },
 ]);
 
 impl IdentitySettings {
-    /// The bundled asset path for the chosen avatar, or `None` when nothing is
-    /// chosen yet or the stored pair no longer exists in the bundled set (an
-    /// older or newer build, or a hand-edited settings file).
-    pub fn selected_avatar_path(app: &warpui::AppContext) -> Option<&'static str> {
+    /// The source for the chosen avatar: an uploaded photo if one is set,
+    /// otherwise the natively generated DiceBear avatar for the stored
+    /// `(style, seed)`. `None` when nothing is chosen — callers render an
+    /// initial instead.
+    pub fn selected_avatar_source(app: &warpui::AppContext) -> Option<AssetSource> {
         use warpui::SingletonEntity as _;
         let settings = Self::as_ref(app);
-        avatar_set::asset_path(&settings.avatar_style, &settings.avatar_seed)
+        let photo = settings.avatar_photo_path.to_string();
+        if !photo.is_empty() {
+            return Some(AssetSource::LocalFile {
+                path: photo,
+                content_version: None,
+            });
+        }
+        if settings.avatar_seed.is_empty() {
+            return None;
+        }
+        Some(dicebear::avatar_source(
+            &settings.avatar_style,
+            &settings.avatar_seed,
+        ))
     }
 }
 

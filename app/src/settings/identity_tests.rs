@@ -1,7 +1,9 @@
-//! The avatar setting has to survive values the bundled set does not contain:
-//! a fresh install (no seed), and settings written by another build.
+//! The avatar setting resolves to a source: nothing chosen -> `None` (render an
+//! initial); a chosen (style, seed) -> a generated source; an uploaded photo
+//! wins over the generated avatar.
 
 use settings::Setting as _;
+use warpui::assets::asset_cache::AssetSource;
 use warpui::{App, SingletonEntity as _};
 
 use super::*;
@@ -14,9 +16,8 @@ fn a_fresh_install_has_no_avatar_chosen() {
         app.update(IdentitySettings::register);
 
         app.read(|ctx| {
-            assert_eq!(
-                IdentitySettings::selected_avatar_path(ctx),
-                None,
+            assert!(
+                IdentitySettings::selected_avatar_source(ctx).is_none(),
                 "an unchosen avatar renders an initial, not a face picked for you"
             );
         });
@@ -24,35 +25,35 @@ fn a_fresh_install_has_no_avatar_chosen() {
 }
 
 #[test]
-fn choosing_a_bundled_avatar_resolves_to_its_asset() {
+fn choosing_an_avatar_resolves_to_a_generated_source() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
         app.update(IdentitySettings::register);
-
-        let style = avatar_set::STYLES.first().expect("a bundled style");
-        let (seed, path) = style.variants.first().expect("a bundled variant");
 
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
                 settings
                     .avatar_style
-                    .set_value(style.id.to_string(), ctx)
+                    .set_value("bottts".to_string(), ctx)
                     .expect("set style");
                 settings
                     .avatar_seed
-                    .set_value(seed.to_string(), ctx)
+                    .set_value("1".to_string(), ctx)
                     .expect("set seed");
             });
         });
 
         app.read(|ctx| {
-            assert_eq!(IdentitySettings::selected_avatar_path(ctx), Some(*path));
+            assert!(matches!(
+                IdentitySettings::selected_avatar_source(ctx),
+                Some(AssetSource::Async { .. })
+            ));
         });
     })
 }
 
 #[test]
-fn a_stale_or_hand_edited_choice_falls_back_instead_of_breaking() {
+fn an_uploaded_photo_takes_precedence() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
         app.update(IdentitySettings::register);
@@ -60,18 +61,21 @@ fn a_stale_or_hand_edited_choice_falls_back_instead_of_breaking() {
         app.update(|ctx| {
             IdentitySettings::handle(ctx).update(ctx, |settings, ctx| {
                 settings
-                    .avatar_style
-                    .set_value("a-style-from-another-build".to_string(), ctx)
-                    .expect("set style");
-                settings
                     .avatar_seed
-                    .set_value("99".to_string(), ctx)
+                    .set_value("1".to_string(), ctx)
                     .expect("set seed");
+                settings
+                    .avatar_photo_path
+                    .set_value("/tmp/me.png".to_string(), ctx)
+                    .expect("set photo");
             });
         });
 
         app.read(|ctx| {
-            assert_eq!(IdentitySettings::selected_avatar_path(ctx), None);
+            assert!(matches!(
+                IdentitySettings::selected_avatar_source(ctx),
+                Some(AssetSource::LocalFile { .. })
+            ));
         });
     })
 }

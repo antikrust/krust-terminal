@@ -1,23 +1,21 @@
-//! The avatar picker on the Account settings page.
+//! The avatar controls on the Account settings page.
 //!
-//! Two rows of pictures: the art styles (one sample each) and, below them, the
-//! variants of whichever style is currently yours. Clicking either writes
-//! straight to [`IdentitySettings`], so the picker holds no state of its own
-//! and always shows what is actually saved — there is no "unsaved selection"
-//! to reconcile, and no Save button to forget to press.
+//! The current avatar is shown big in the account header (see
+//! [`super::main_page`]); this widget is the options beneath it: **Upload a
+//! photo**, and a DiceBear picker (art styles, then generated variants of the
+//! chosen style). Every avatar is generated natively — see
+//! [`crate::ui_components::dicebear`] — so the variants are live, not a frozen
+//! bundle. Clicking writes straight to [`IdentitySettings`], so the widget holds
+//! no state and always reflects what is saved.
 //!
-//! Only the current style's variants are rendered, which keeps this to ~28
-//! images rather than the ~192 in the bundled set.
-//!
-//! The art is third-party and several styles are CC BY 4.0, so attribution is
-//! a licence condition — it lives on the About page, sourced from
-//! app/assets/bundled/avatars/LICENSES.md.
+//! The art is third-party and several styles are CC BY 4.0, so attribution is a
+//! licence condition — it lives on the About page (see [`AVATAR_ATTRIBUTION`]).
 
 use warpui::assets::asset_cache::AssetSource;
 use warpui::color::ColorU;
 use warpui::elements::{
-    Border, CacheOption, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element,
-    Flex, Hoverable, Image, MouseStateHandle, ParentElement, Radius, Text, Wrap,
+    Border, CacheOption, Container, CornerRadius, CrossAxisAlignment, Element, Flex, Hoverable,
+    Image, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text, Wrap,
 };
 use warpui::platform::Cursor;
 use warpui::AppContext;
@@ -26,44 +24,46 @@ use super::main_page::{MainPageAction, MainSettingsPageView};
 use super::settings_page::SettingsWidget;
 use crate::appearance::Appearance;
 use crate::settings::identity::IdentitySettings;
-use crate::ui_components::avatar_set;
+use crate::ui_components::dicebear;
 
 /// Size of a picture in the variants row.
 const VARIANT_SIZE: f32 = 56.;
 /// Size of a picture in the styles row — smaller, since there are more of them.
 const STYLE_SIZE: f32 = 40.;
 const GAP: f32 = 8.;
-/// The variant shown as a style's sample in the styles row.
-const SAMPLE_SEED: &str = "01";
+/// The seed shown as a style's sample in the styles row.
+const SAMPLE_SEED: &str = "1";
+/// How many generated variants to offer for the chosen style.
+const VARIANT_COUNT: usize = 15;
 
 pub struct AvatarPickerWidget {
-    /// One hover handle per style chip and per variant tile. Allocated once so
-    /// the count is stable across renders, which is what these handles key on.
+    /// One hover handle per style chip and per variant tile, plus the two action
+    /// buttons. Allocated once so the count is stable across renders.
     style_states: Vec<MouseStateHandle>,
     variant_states: Vec<MouseStateHandle>,
+    upload_state: MouseStateHandle,
+    remove_state: MouseStateHandle,
 }
 
 impl Default for AvatarPickerWidget {
     fn default() -> Self {
-        let max_variants = avatar_set::STYLES
-            .iter()
-            .map(|style| style.variants.len())
-            .max()
-            .unwrap_or_default();
         Self {
-            style_states: (0..avatar_set::STYLES.len())
+            style_states: (0..dicebear::styles().len())
                 .map(|_| MouseStateHandle::default())
                 .collect(),
-            variant_states: (0..max_variants)
+            variant_states: (0..VARIANT_COUNT)
                 .map(|_| MouseStateHandle::default())
                 .collect(),
+            upload_state: MouseStateHandle::default(),
+            remove_state: MouseStateHandle::default(),
         }
     }
 }
 
 impl AvatarPickerWidget {
+    /// A round avatar tile rendering a generated (or uploaded) source.
     fn tile(
-        path: &'static str,
+        source: AssetSource,
         size: f32,
         selected: bool,
         state: MouseStateHandle,
@@ -82,8 +82,8 @@ impl AvatarPickerWidget {
                 Border::all(2.).with_border_color(ColorU::transparent_black().into())
             };
             Container::new(
-                ConstrainedBox::new(
-                    Image::new(AssetSource::Bundled { path }, CacheOption::BySize)
+                warpui::elements::ConstrainedBox::new(
+                    Image::new(source.clone(), CacheOption::BySize)
                         .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
                         .finish(),
                 )
@@ -94,6 +94,39 @@ impl AvatarPickerWidget {
             .with_border(border)
             .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
             .with_uniform_padding(2.)
+            .finish()
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(move |ctx, _, _| on_click(ctx))
+        .finish()
+    }
+
+    /// A small text button (Upload / Remove).
+    fn action_button(
+        text: &str,
+        state: MouseStateHandle,
+        appearance: &Appearance,
+        on_click: impl Fn(&mut warpui::EventContext) + 'static,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let label = text.to_string();
+        Hoverable::new(state, move |mouse| {
+            let bg = if mouse.is_hovered() {
+                theme.surface_3()
+            } else {
+                theme.surface_2()
+            };
+            let text_fill = theme.main_text_color(bg.clone());
+            Container::new(
+                Text::new_inline(label.clone(), appearance.ui_font_family(), 13.)
+                    .with_color(text_fill.into_solid())
+                    .finish(),
+            )
+            .with_background(bg)
+            .with_border(Border::all(1.).with_border_color(theme.outline().into()))
+            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.)))
+            .with_horizontal_padding(12.)
+            .with_vertical_padding(6.)
             .finish()
         })
         .with_cursor(Cursor::PointingHand)
@@ -121,7 +154,7 @@ impl SettingsWidget for AvatarPickerWidget {
     type View = MainSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "avatar picture profile image style"
+        "avatar picture profile image style upload photo dicebear"
     }
 
     fn render(
@@ -135,28 +168,45 @@ impl SettingsWidget for AvatarPickerWidget {
         let settings = IdentitySettings::as_ref(app);
         let current_style = settings.avatar_style.to_string();
         let current_seed = settings.avatar_seed.to_string();
+        let has_photo = !settings.avatar_photo_path.is_empty();
 
-        // An unknown style (older build, hand-edited settings) falls back to
-        // the first bundled one so the picker still renders something usable.
-        let style = avatar_set::style(&current_style)
-            .or_else(|| avatar_set::STYLES.first())
-            .expect("the bundled set is never empty");
+        // Upload a photo / remove it.
+        let mut actions = Flex::row()
+            .with_main_axis_size(MainAxisSize::Min)
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(Self::action_button(
+                "Upload a photo",
+                self.upload_state.clone(),
+                appearance,
+                |ctx| ctx.dispatch_typed_action(MainPageAction::UploadAvatarPhoto),
+            ));
+        if has_photo {
+            actions.add_child(
+                Container::new(Self::action_button(
+                    "Remove photo",
+                    self.remove_state.clone(),
+                    appearance,
+                    |ctx| ctx.dispatch_typed_action(MainPageAction::RemoveAvatarPhoto),
+                ))
+                .with_margin_left(GAP)
+                .finish(),
+            );
+        }
 
+        // Art styles, one generated sample each.
         let mut styles_row = Wrap::row().with_run_spacing(GAP);
-        for (index, candidate) in avatar_set::STYLES.iter().enumerate() {
-            let Some(path) = avatar_set::asset_path(candidate.id, SAMPLE_SEED) else {
-                continue;
-            };
-            let id = candidate.id;
+        for (index, style) in dicebear::styles().iter().enumerate() {
+            let id = style.id.clone();
+            let selected = !has_photo && style.id == current_style;
             styles_row.add_child(
                 Container::new(Self::tile(
-                    path,
+                    dicebear::avatar_source(&style.id, SAMPLE_SEED),
                     STYLE_SIZE,
-                    candidate.id == style.id,
+                    selected,
                     self.style_states[index].clone(),
                     appearance,
                     move |ctx| {
-                        ctx.dispatch_typed_action(MainPageAction::SelectAvatarStyle(id.to_string()))
+                        ctx.dispatch_typed_action(MainPageAction::SelectAvatarStyle(id.clone()))
                     },
                 ))
                 .with_margin_right(GAP)
@@ -164,37 +214,44 @@ impl SettingsWidget for AvatarPickerWidget {
             );
         }
 
+        // Generated variants of the chosen style.
         let mut variants_row = Wrap::row().with_run_spacing(GAP);
-        for (index, (seed, path)) in style.variants.iter().enumerate() {
-            let seed_owned = seed.to_string();
+        for index in 0..VARIANT_COUNT {
+            let seed = (index + 1).to_string();
+            let selected = !has_photo && seed == current_seed;
             variants_row.add_child(
                 Container::new(Self::tile(
-                    path,
+                    dicebear::avatar_source(&current_style, &seed),
                     VARIANT_SIZE,
-                    *seed == current_seed && style.id == current_style,
+                    selected,
                     self.variant_states[index].clone(),
                     appearance,
                     move |ctx| {
-                        ctx.dispatch_typed_action(MainPageAction::SelectAvatarSeed(
-                            seed_owned.clone(),
-                        ))
+                        ctx.dispatch_typed_action(MainPageAction::SelectAvatarSeed(seed.clone()))
                     },
                 ))
                 .with_margin_right(GAP)
                 .finish(),
             );
         }
+
+        let style_label = dicebear::label(&current_style).unwrap_or("Avatar");
 
         Container::new(
             Flex::column()
                 .with_cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Self::label("Style", appearance))
+                .with_child(actions.finish())
+                .with_child(
+                    Container::new(Self::label("Choose an avatar", appearance))
+                        .with_margin_top(16.)
+                        .finish(),
+                )
                 .with_child(
                     Container::new(styles_row.finish())
                         .with_margin_bottom(16.)
                         .finish(),
                 )
-                .with_child(Self::label(style.label, appearance))
+                .with_child(Self::label(style_label, appearance))
                 .with_child(variants_row.finish())
                 .finish(),
         )
@@ -204,11 +261,11 @@ impl SettingsWidget for AvatarPickerWidget {
     }
 }
 
-/// Kept out of the widget so the About page can render the same credit
-/// without depending on settings-page types.
+/// Kept out of the widget so the About page can render the same credit without
+/// depending on settings-page types.
 ///
 /// This is a licence condition for the CC BY 4.0 styles, not a courtesy — see
-/// app/assets/bundled/avatars/LICENSES.md for the per-style detail.
+/// dicebear.com/licenses for the per-style detail.
 pub const AVATAR_ATTRIBUTION: &str =
     "Avatars generated with DiceBear (dicebear.com). Each style is © its respective artist, \
      licensed CC0, CC BY 4.0, or free for commercial use — see dicebear.com/licenses.";

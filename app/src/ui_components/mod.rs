@@ -4,12 +4,12 @@
 //! within the app.
 pub(crate) mod agent_icon;
 pub(crate) mod avatar;
-pub(crate) mod avatar_set;
 pub(crate) mod blended_colors;
 pub(crate) mod breadcrumb;
 pub mod buttons;
 pub(crate) mod color_dot;
 pub(crate) mod dialog;
+pub mod dicebear;
 pub(crate) mod icon_with_status;
 pub(crate) mod item_highlight;
 pub mod json_tree;

@@ -25,11 +25,12 @@ pub enum AvatarContent {
         display_name: String,
     },
 
-    /// Renders an avatar bundled with the app (see
-    /// [`crate::ui_components::avatar_set`]). Unlike [`Self::Image`] this
-    /// needs no network, so it renders immediately and works offline.
-    BundledImage {
-        path: &'static str,
+    /// Renders an image from an arbitrary [`AssetSource`] — a natively
+    /// generated DiceBear avatar or an uploaded local photo. The initial shows
+    /// until it loads; no network is involved for generated/local sources.
+    Source {
+        source: warpui::assets::asset_cache::AssetSource,
+        display_name: String,
     },
 }
 
@@ -66,10 +67,12 @@ impl UiComponent for Avatar {
                 }
                 image.finish()
             }
-            AvatarContent::BundledImage { path } => {
-                let mut image = Image::new(
-                    warpui::assets::asset_cache::AssetSource::Bundled { path },
-                    CacheOption::BySize,
+            AvatarContent::Source {
+                source,
+                display_name,
+            } => {
+                let mut image = Image::new(source, CacheOption::BySize).before_load(
+                    Align::new(Self::first_initial(&display_name, self.styles)).finish(),
                 );
                 if let Some(radius) = styles.border_radius {
                     image = image.with_corner_radius(radius);
