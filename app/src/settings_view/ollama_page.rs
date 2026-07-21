@@ -29,6 +29,13 @@ use super::SettingsSection;
 use crate::ai::ollama::capability::{self, Fit, MemoryVerdict};
 use crate::ai::ollama::catalog::{CatalogEntry, ModelSize};
 use crate::ai::ollama::service::{self, CatalogSource, InstalledModel};
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+    OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
+};
+use crate::ai::cloud_agent_settings::CloudAgentSettings;
+use crate::ai::harness_availability::HarnessAvailabilityModel;
+use crate::util::bindings::CustomAction;
+use warpui::windowing::WindowManager;
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, SingleLineEditorOptions};
 use crate::settings::ai::AISettings;
@@ -59,6 +66,11 @@ pub enum OllamaPageAction {
     ResetModelsFolder,
     /// Cycle a model's agent/chat override: Auto → Agent → Chat → Auto.
     CycleModelMode {
+        tag: String,
+    },
+    /// Select this model as the local harness and open a fresh terminal tab
+    /// to use it.
+    OpenTerminalWithModel {
         tag: String,
     },
     Install {
@@ -141,6 +153,9 @@ struct StateHandles {
     /// Per-installed-model agent/chat override links, keyed by tag. Stable
     /// handles so the click registers (see the install-button note).
     mode_links: HashMap<String, MouseStateHandle>,
+    /// Per-installed-model "open terminal" links, keyed by tag. Stable for the
+    /// same reason as `mode_links`.
+    terminal_links: HashMap<String, MouseStateHandle>,
 }
 
 impl OllamaPageView {
@@ -248,6 +263,35 @@ impl OllamaPageView {
                 .set_value(Some(updated), ctx)
         }));
         ctx.notify();
+    }
+
+    /// Selects `tag` as the local harness model and opens a fresh terminal tab
+    /// to use it — the quick path from "this model is installed" to chatting
+    /// with it, without going through the harness model picker.
+    fn open_terminal_with_model(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
+        let model_id = format!("{OLLAMA_MODEL_ID_PREFIX}{tag}");
+        // Persist the selection the same way the model picker does for Ollama,
+        // so the new tab's harness picks it up when it initializes.
+        CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+            let _ = settings
+                .last_selected_harness
+                .set_value(Some(OLLAMA_HARNESS_CONFIG_NAME.to_string()), ctx);
+            settings.persist_harness_model_selection_for_key(
+                OLLAMA_HARNESS_CONFIG_NAME,
+                &model_id,
+                None,
+                ctx,
+            );
+        });
+        // Keep the harness picker in sync with the new selection.
+        HarnessAvailabilityModel::handle(ctx)
+            .update(ctx, |availability, ctx| availability.refresh_ollama_models(ctx));
+        // Open a new tab in the active window; it reads the selection above
+        // when its local harness initializes.
+        let active_window = WindowManager::handle(ctx).as_ref(ctx).active_window();
+        if let Some(window_id) = active_window {
+            ctx.dispatch_custom_action(CustomAction::NewTab, window_id);
+        }
     }
 
     /// Moves models back to `~/.ollama/models` and clears the custom-folder
@@ -540,6 +584,9 @@ impl TypedActionView for OllamaPageView {
             OllamaPageAction::ChangeModelsFolder => self.change_models_folder(ctx),
             OllamaPageAction::ResetModelsFolder => self.reset_models_folder(ctx),
             OllamaPageAction::CycleModelMode { tag } => self.cycle_model_mode(tag.clone(), ctx),
+            OllamaPageAction::OpenTerminalWithModel { tag } => {
+                self.open_terminal_with_model(tag.clone(), ctx)
+            }
             OllamaPageAction::Install { tag } => self.install(tag.clone(), ctx),
             OllamaPageAction::InstallTyped => self.install_typed(ctx),
         }
@@ -756,6 +803,7 @@ impl SettingsWidget for InstalledWidget {
             let mut handles = view.state_handles.borrow_mut();
             for model in models {
                 handles.mode_links.entry(model.name.clone()).or_default();
+                handles.terminal_links.entry(model.name.clone()).or_default();
             }
         }
 
@@ -826,6 +874,38 @@ impl SettingsWidget for InstalledWidget {
                                         );
                                     })),
                                     mode_state,
+                                )
+                                .soft_wrap(false)
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                    // Open a terminal already set to use this model.
+                    let terminal_state = view
+                        .state_handles
+                        .borrow()
+                        .terminal_links
+                        .get(&model.name)
+                        .cloned()
+                        .unwrap_or_default();
+                    let terminal_tag = model.name.clone();
+                    row.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .link(
+                                    "Open terminal".into(),
+                                    None,
+                                    Some(Box::new(move |ctx| {
+                                        ctx.dispatch_typed_action(
+                                            OllamaPageAction::OpenTerminalWithModel {
+                                                tag: terminal_tag.clone(),
+                                            },
+                                        );
+                                    })),
+                                    terminal_state,
                                 )
                                 .soft_wrap(false)
                                 .build()
