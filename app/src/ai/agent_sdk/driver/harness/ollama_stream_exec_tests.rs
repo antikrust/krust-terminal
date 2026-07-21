@@ -253,6 +253,16 @@ fn web_search_intent_heuristic() {
     assert!(wants_web_search("summarise https://example.com/article"));
     assert!(!wants_web_search("write a haiku about the sea"));
     assert!(!wants_web_search("explain how a hash map works"));
+    // Local-machine prompts never search, even when a cue word appears —
+    // "current directory" is terminal talk, not live-information intent.
+    // (Regression: this exact prompt was thrown wholesale at DuckDuckGo.)
+    assert!(!wants_web_search(
+        "its called ubuntu@15.204.244.136 and its in the current directory. \
+         i wanted to know if the key inside it exists in my .ssh folder"
+    ));
+    assert!(!wants_web_search("what's in my current directory?"));
+    assert!(!wants_web_search("look up that function in ~/code/main.rs"));
+    assert!(!wants_web_search("search for TODOs in this folder"));
 }
 
 #[test]

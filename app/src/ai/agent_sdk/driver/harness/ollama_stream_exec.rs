@@ -154,7 +154,20 @@ async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
 /// means a normal chat answer, a false positive an extra search.
 fn wants_web_search(prompt: &str) -> bool {
     let lower = prompt.to_lowercase();
-    const CUES: [&str; 14] = [
+    // Prompts about the local machine are never web searches, whatever else
+    // they contain — in a terminal, "current directory", "my .ssh folder",
+    // or a path is everyday language, not live-information intent. (A real
+    // regression: "…its in the current directory. does the key exist in my
+    // .ssh folder" was thrown wholesale at DuckDuckGo via the "current " cue.)
+    const LOCAL_VETOES: [&str; 7] = [
+        "directory", "folder", " cwd", "~/", "./", "/users/", "/home/",
+    ];
+    if LOCAL_VETOES.iter().any(|veto| lower.contains(veto)) {
+        return false;
+    }
+    // "current " is deliberately absent: it was meant for "current events/
+    // price" but overwhelmingly matches terminal talk instead.
+    const CUES: [&str; 13] = [
         "search for",
         "search the web",
         "look up",
@@ -163,7 +176,6 @@ fn wants_web_search(prompt: &str) -> bool {
         "on the web",
         "online for",
         "latest",
-        "current ",
         "how much is",
         "price of",
         "news about",
