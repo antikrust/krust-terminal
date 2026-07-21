@@ -155,13 +155,13 @@ fn tool_result(id: Value, is_error: bool, text: String) -> Value {
     })
 }
 
-struct SearchResult {
+pub(crate) struct SearchResult {
     title: String,
     url: String,
     snippet: String,
 }
 
-fn format_results_as_text(query: &str, results: &[SearchResult]) -> String {
+pub(crate) fn format_results_as_text(query: &str, results: &[SearchResult]) -> String {
     if results.is_empty() {
         return format!("No results found for \"{query}\".");
     }
@@ -205,7 +205,7 @@ async fn search_duckduckgo(
 /// parser dependency): keys off the two stable `result__a` / `result__snippet`
 /// classes DDG's lite/html endpoint has used for years, not on surrounding
 /// structure, which is the part likeliest to change.
-fn parse_duckduckgo_html(html: &str, max_results: usize) -> Vec<SearchResult> {
+pub(crate) fn parse_duckduckgo_html(html: &str, max_results: usize) -> Vec<SearchResult> {
     let link_pattern =
         Regex::new(r#"(?s)<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#)
             .expect("valid regex");

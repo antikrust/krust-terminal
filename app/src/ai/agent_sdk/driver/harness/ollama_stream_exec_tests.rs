@@ -196,6 +196,35 @@ fn structured_shell_reply_is_recognized() {
 }
 
 #[test]
+fn structured_search_reply_is_recognized() {
+    let mut accumulator = OllamaResponseAccumulator::default();
+    accumulator.push_line(
+        &serde_json::json!({
+            "response": r#"{"type":"search","query":"rust 2024 edition"}"#,
+            "done": true,
+        })
+        .to_string(),
+    );
+    assert_eq!(
+        accumulator.finish("codellama:13b").unwrap().reply,
+        super::OllamaAgentReply::Search {
+            query: "rust 2024 edition".to_string()
+        }
+    );
+}
+
+#[test]
+fn web_search_intent_heuristic() {
+    use super::wants_web_search;
+    assert!(wants_web_search("search for therob on duckduckgo"));
+    assert!(wants_web_search("what's the LATEST version of rust?"));
+    assert!(wants_web_search("look up the price of a switch 2"));
+    assert!(wants_web_search("summarise https://example.com/article"));
+    assert!(!wants_web_search("write a haiku about the sea"));
+    assert!(!wants_web_search("explain how a hash map works"));
+}
+
+#[test]
 fn session_starts_before_model_progress_and_text() {
     let native_response = serde_json::json!({
         "response": r#"{"type":"text","text":"OK"}"#,
