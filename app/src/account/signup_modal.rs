@@ -1,9 +1,12 @@
 //! Signup / login modal for the fork's account server.
 //!
-//! A native form (no browser, no Firebase): a server address, an email, and a
-//! masked password, with "Log in" and "Create account" buttons. It drives
-//! [`AccountSession`](super::AccountSession) — on success the session flips the
-//! account-active flag, which unlocks the swear/misery "off" toggle.
+//! A native form (no browser, no Firebase): an email and a masked password,
+//! with "Log in" and "Create account" buttons. The server address is not part
+//! of the form — users see a sign-in, not infrastructure; the address comes
+//! from [`AccountSession::DEFAULT_SERVER_URL`] (or a previously stored pref).
+//! It drives [`AccountSession`](super::AccountSession) — on success the
+//! session flips the account-active flag, which unlocks the swear/misery
+//! "off" toggle.
 //!
 //! Structurally modelled on `auth::paste_auth_token_modal`, the codebase's other
 //! single-purpose text-entry modal, so it reuses the same `EditorView` inputs,
@@ -62,10 +65,14 @@ pub enum AccountModalEvent {
 }
 
 pub struct AccountModalView {
-    server_input: ViewHandle<EditorView>,
     email_input: ViewHandle<EditorView>,
     password_input: ViewHandle<EditorView>,
     close_mouse_state: MouseStateHandle,
+    /// The footer buttons live on the view, not in `render`: `button::Button`
+    /// carries the press/hover state between frames, and a button rebuilt
+    /// every render never sees its own mouse-up — clicks silently do nothing.
+    log_in_button: button::Button,
+    sign_up_button: button::Button,
     /// Status line under the inputs: an error, or a success confirmation.
     status: Option<Status>,
     /// True while a request is in flight (inputs disabled).
@@ -80,18 +87,11 @@ enum Status {
 
 impl AccountModalView {
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
-        let server_input = Self::make_input(ctx, "https://host:10101", false);
         let email_input = Self::make_input(ctx, "you@example.com", false);
         let password_input = Self::make_input(ctx, "password", true);
 
-        // Prefill the server address: whatever was configured before, or our
-        // server as the default so a fresh install signs up in two fields.
-        let prefill = AccountSession::server_url(ctx)
-            .unwrap_or_else(|| "https://therob.lol:10101".to_string());
-        server_input.update(ctx, |editor, ctx| editor.set_buffer_text(&prefill, ctx));
-
         // Enter in any field attempts a log in (the common case).
-        for handle in [&server_input, &email_input, &password_input] {
+        for handle in [&email_input, &password_input] {
             ctx.subscribe_to_view(handle, |me, _, event, ctx| {
                 use crate::editor::Event::{AltEnter, CmdEnter, Enter, ShiftEnter};
                 if matches!(event, Enter | AltEnter | CmdEnter | ShiftEnter) {
@@ -120,10 +120,11 @@ impl AccountModalView {
         });
 
         Self {
-            server_input,
             email_input,
             password_input,
             close_mouse_state: MouseStateHandle::default(),
+            log_in_button: button::Button::default(),
+            sign_up_button: button::Button::default(),
             status: None,
             busy: false,
         }
@@ -171,7 +172,7 @@ impl AccountModalView {
         } else {
             InteractionState::Disabled
         };
-        for handle in [&self.server_input, &self.email_input, &self.password_input] {
+        for handle in [&self.email_input, &self.password_input] {
             handle.update(ctx, |editor, ctx| editor.set_interaction_state(state, ctx));
         }
     }
@@ -181,12 +182,6 @@ impl AccountModalView {
         if self.busy {
             return;
         }
-        let server = self
-            .server_input
-            .as_ref(ctx)
-            .buffer_text(ctx)
-            .trim()
-            .to_owned();
         let email = self
             .email_input
             .as_ref(ctx)
@@ -195,21 +190,17 @@ impl AccountModalView {
             .to_owned();
         let password = self.password_input.as_ref(ctx).buffer_text(ctx);
 
-        if server.is_empty() {
-            self.status = Some(Status::Error(
-                "Enter the account server address.".to_owned(),
-            ));
-            ctx.notify();
-            return;
-        }
         if email.is_empty() || password.is_empty() {
             self.status = Some(Status::Error("Enter an email and password.".to_owned()));
             ctx.notify();
             return;
         }
 
-        // Record the server address (trust-on-first-use pins the certificate on
-        // the first connect) before authenticating.
+        // The server is ours, not the user's business: a stored pref (dev
+        // override) wins, otherwise the built-in address. Trust-on-first-use
+        // pins the certificate on the first connect.
+        let server = AccountSession::server_url(ctx)
+            .unwrap_or_else(|| AccountSession::DEFAULT_SERVER_URL.to_owned());
         AccountSession::set_server(ctx, &server, None);
 
         self.status = None;
@@ -310,11 +301,6 @@ impl View for AccountModalView {
 
         // Build the inputs at render scope — `text_input` borrows `ui_builder`,
         // so it cannot be built inside a closure that returns the element.
-        let server_input_el = ui_builder
-            .text_input(self.server_input.clone())
-            .with_style(input_style.clone())
-            .build()
-            .finish();
         let email_input_el = ui_builder
             .text_input(self.email_input.clone())
             .with_style(input_style.clone())
@@ -346,7 +332,6 @@ impl View for AccountModalView {
                     .with_margin_bottom(4.)
                     .finish(),
             )
-            .with_child(field(make_label("Server"), server_input_el))
             .with_child(field(make_label("Email"), email_input_el))
             .with_child(field(make_label("Password"), password_input_el));
 
@@ -368,7 +353,7 @@ impl View for AccountModalView {
 
         let body = body.finish();
 
-        let log_in_button = button::Button::default().render(
+        let log_in_button = self.log_in_button.render(
             appearance,
             button::Params {
                 content: button::Content::Label("Log in".into()),
@@ -383,7 +368,7 @@ impl View for AccountModalView {
             },
         );
 
-        let sign_up_button = button::Button::default().render(
+        let sign_up_button = self.sign_up_button.render(
             appearance,
             button::Params {
                 content: button::Content::Label("Create account".into()),

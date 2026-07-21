@@ -142,6 +142,11 @@ impl AccountSession {
     /// Records the account server's address and (optionally) pinned certificate
     /// fingerprint. If the fingerprint is `None`, the first connection pins
     /// whatever the server presents (trust on first use) and stores it.
+    /// Our account server. Baked in rather than shown in the UI — users see a
+    /// sign-in form, not infrastructure. A previously stored `account.server_url`
+    /// pref still wins, so a dev box can point elsewhere.
+    pub const DEFAULT_SERVER_URL: &str = "https://therob.lol:10101";
+
     pub fn set_server(ctx: &AppContext, url: &str, fingerprint: Option<&str>) {
         write_pref(ctx, SERVER_URL_KEY, url.trim());
         match fingerprint.map(str::trim).filter(|f| !f.is_empty()) {
