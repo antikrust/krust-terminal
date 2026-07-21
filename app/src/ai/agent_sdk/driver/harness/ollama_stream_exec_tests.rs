@@ -379,15 +379,10 @@ fn chat_accumulator_collects_streamed_text_and_final_tool_call() {
     .to_string();
 
     let first_events = accumulator.push_line(&first);
-    // A Thinking shimmer leads, then the streamed text.
-    assert_eq!(first_events.len(), 2, "{first_events:?}");
+    // Content is buffered, not streamed — only the shimmer is emitted live, so
+    // a tool call emitted as JSON text never reaches the user mid-stream.
+    assert_eq!(first_events.len(), 1, "{first_events:?}");
     assert!(matches!(first_events[0], TurnEvent::Thinking { .. }));
-    assert_eq!(
-        first_events[1],
-        TurnEvent::TextDelta {
-            text: "Looking that up".to_string()
-        }
-    );
     assert_eq!(accumulator.push_line(&second), Vec::new());
 
     let result = accumulator.finish("qwen2.5-coder:7b").unwrap();
@@ -434,7 +429,7 @@ fn chat_turn_without_tool_calls_completes_directly() {
     assert!(matches!(events[0], TurnEvent::Thinking { .. }));
     assert_eq!(
         events[1],
-        TurnEvent::TextDelta {
+        TurnEvent::Text {
             text: "It's sunny.".to_string()
         }
     );
@@ -556,4 +551,31 @@ fn run_code_rejects_unknown_language() {
         "{}",
         execution.stderr
     );
+}
+
+#[test]
+fn recovers_tool_call_emitted_as_json_text() {
+    use super::parse_text_tool_call;
+    let tools = [web_search_tool_spec()];
+
+    // qwen2.5-coder emits the call as JSON text with `tool_calls` null.
+    let call = parse_text_tool_call(
+        "{\n  \"name\": \"web_search\",\n  \"arguments\": {\"query\": \"rust\"}\n}",
+        &tools,
+    )
+    .expect("recovers the call from text");
+    assert_eq!(call.name, "web_search");
+    assert_eq!(call.arguments["query"], "rust");
+
+    // Tolerates a code fence and surrounding prose.
+    assert!(parse_text_tool_call(
+        "Sure:\n```json\n{\"name\":\"web_search\",\"arguments\":{\"query\":\"x\"}}\n```",
+        &tools,
+    )
+    .is_some());
+
+    // Plain prose isn't a tool call.
+    assert!(parse_text_tool_call("Here's your answer.", &tools).is_none());
+    // A JSON object naming an unknown tool is left alone.
+    assert!(parse_text_tool_call(r#"{"name":"nope","arguments":{}}"#, &tools).is_none());
 }

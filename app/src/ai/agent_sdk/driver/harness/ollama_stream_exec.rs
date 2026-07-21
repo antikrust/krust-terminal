@@ -1575,14 +1575,29 @@ async fn run_ollama_chat_with_tools(
             }
         };
 
-        if response.tool_calls.is_empty() {
+        // Prefer structured tool calls; otherwise try to recover one from JSON
+        // text in the content — some tool-capable models (e.g. qwen2.5-coder)
+        // emit the call as text with `tool_calls` null. When recovered from
+        // text, the raw JSON is dropped rather than fed back as content.
+        let (assistant_content, tool_calls) = if !response.tool_calls.is_empty() {
+            (response.content.clone(), response.tool_calls.clone())
+        } else if let Some(call) = parse_text_tool_call(&response.content, &all_tools) {
+            (String::new(), vec![call])
+        } else {
+            // A genuine text answer: now that we know it isn't a tool call,
+            // surface it as one Text event (content was buffered, not streamed).
+            if !response.content.trim().is_empty() {
+                on_event(TurnEvent::Text {
+                    text: response.content.clone(),
+                });
+            }
             on_event(TurnEvent::TurnCompleted {
                 usage: Some(response.usage),
                 is_error: false,
                 error_message: None,
             });
             return Ok(ToolChatOutcome::Completed(status));
-        }
+        };
 
         if call_index == MAX_TOOL_CALLS_PER_TURN {
             emit_failed_turn(
@@ -1594,9 +1609,8 @@ async fn run_ollama_chat_with_tools(
 
         messages.push(json!({
             "role": "assistant",
-            "content": response.content,
-            "tool_calls": response
-                .tool_calls
+            "content": assistant_content,
+            "tool_calls": tool_calls
                 .iter()
                 .map(|call| json!({
                     "function": { "name": call.name, "arguments": call.arguments },
@@ -1604,7 +1618,7 @@ async fn run_ollama_chat_with_tools(
                 .collect::<Vec<_>>(),
         }));
 
-        for call in &response.tool_calls {
+        for call in &tool_calls {
             let call_id = format!("ollama-tool-{}", Uuid::new_v4());
             on_event(TurnEvent::ToolCallStarted {
                 call_id: call_id.clone(),
@@ -1647,6 +1661,35 @@ async fn run_ollama_chat_with_tools(
 struct OllamaToolCall {
     name: String,
     arguments: Value,
+}
+
+/// Recovers a tool call that a model emitted as JSON text in its message
+/// content instead of the structured `tool_calls` field. Ollama returns
+/// `tool_calls: null` for such models (notably qwen2.5-coder), so without this
+/// the raw JSON would be shown to the user instead of the tool running.
+///
+/// Scans for the outermost `{...}` object in `content`, tolerating a code fence
+/// or a little surrounding prose, and only accepts it when `name` matches one
+/// of the advertised tools (so an ordinary JSON answer isn't mistaken for one).
+fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaToolCall> {
+    let start = content.find('{')?;
+    let end = content.rfind('}')?;
+    if end <= start {
+        return None;
+    }
+    let value: Value = serde_json::from_str(&content[start..=end]).ok()?;
+    let name = value.get("name").and_then(Value::as_str)?;
+    if !tools.iter().any(|tool| tool.name == name) {
+        return None;
+    }
+    let arguments = value
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+    Some(OllamaToolCall {
+        name: name.to_string(),
+        arguments,
+    })
 }
 
 struct OllamaChatResult {
@@ -1701,10 +1744,12 @@ impl OllamaChatAccumulator {
                 });
             }
             if !message.content.is_empty() {
+                // Buffer content instead of streaming it: a tool-capable model
+                // may emit a tool call as JSON text here (see
+                // parse_text_tool_call), which must never reach the user. The
+                // final answer is emitted once, as a Text event, only after
+                // run_ollama_chat_with_tools confirms it isn't a tool call.
                 self.content.push_str(&message.content);
-                events.push(TurnEvent::TextDelta {
-                    text: message.content,
-                });
             }
             if !message.tool_calls.is_empty() {
                 self.tool_calls = message
