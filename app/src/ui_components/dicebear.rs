@@ -51,6 +51,11 @@ struct StyleData {
     view_box: String,
     groups: Vec<Group>,
     colors: Vec<ColorGroup>,
+    /// Background palette, present only for styles whose official default
+    /// render paints one (fun-emoji, thumbs, shapes). One entry is picked per
+    /// avatar and drawn as a full-viewBox rect behind the body.
+    #[serde(default)]
+    background: Option<Vec<String>>,
     /// Body template with `{{group:NAME}}` markers; `None` should not happen for
     /// a well-formed style.
     layout: Option<String>,
@@ -175,6 +180,21 @@ pub fn generate(style_id: &str, seed: &str) -> Option<String> {
     let data = BUNDLE.data.get(style_id)?;
     let mut prng = Prng::new(seed);
 
+    // 0. Background, for the styles that ship one: picked first, drawn first.
+    let background = data
+        .background
+        .as_ref()
+        .and_then(|values| prng.pick(values))
+        .map(|color| {
+            let color = convert_color(color);
+            // Every DiceBear viewBox is "0 0 W H".
+            let mut parts = data.view_box.split_whitespace().skip(2);
+            let w = parts.next().unwrap_or("100");
+            let h = parts.next().unwrap_or("100");
+            format!("<rect fill=\"{color}\" width=\"{w}\" height=\"{h}\"/>")
+        })
+        .unwrap_or_default();
+
     // 1. Colours (one pick per group, in data order).
     let mut colors: HashMap<&str, String> = HashMap::new();
     for group in &data.colors {
@@ -200,7 +220,7 @@ pub fn generate(style_id: &str, seed: &str) -> Option<String> {
     let layout = data.layout.as_deref().unwrap_or("");
     let body = substitute(layout, data, &picked, &colors, 0);
     Some(format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{}\" fill=\"none\">{body}</svg>",
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{}\" fill=\"none\">{background}{body}</svg>",
         data.view_box
     ))
 }
@@ -277,8 +297,15 @@ impl AsyncAssetType for DiceBearAvatar {}
 /// An [`AssetSource`] that renders the avatar for `(style_id, seed)` on demand
 /// and caches it by id, so an `Image` can display a generated avatar the same
 /// way it displays any other asset.
+///
+/// An unknown style id (e.g. one saved before that style was culled from the
+/// bundle) falls back to [`DEFAULT_STYLE`] instead of an empty tile.
 pub fn avatar_source(style_id: &str, seed: &str) -> AssetSource {
-    let style = style_id.to_owned();
+    let style = if BUNDLE.data.contains_key(style_id) {
+        style_id.to_owned()
+    } else {
+        DEFAULT_STYLE.to_owned()
+    };
     let seed = seed.to_owned();
     AssetSource::Async {
         id: AsyncAssetId::new::<DiceBearAvatar>(format!("{style}:{seed}")),

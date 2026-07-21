@@ -43,6 +43,11 @@ async function loadComponents(styleId) {
 
 // Parse the create() body template out of the compiled index.js: the ordered
 // sequence of <g ...>${... components.GROUP ...}</g> (or bare ${...GROUP...}).
+//
+// Interpolations are found with a balanced scanner, not a lazy regex: bodies
+// like personas' `fill="${escape.xml(`${colors.skin}`)}"` nest template
+// literals inside the interpolation, and a `[^]*?` match stops at the first
+// `}` and corrupts the template.
 function extractLayout(styleId) {
   const src = readFileSync(
     new URL(`./node_modules/@dicebear/${styleId}/lib/index.js`, import.meta.url)
@@ -50,22 +55,119 @@ function extractLayout(styleId) {
   // The body is a single template literal assigned to `body:`.
   const m = src.match(/body:\s*`([\s\S]*?)`,\s*\n\s*extra/);
   if (!m) return null;
-  let body = m[1];
-  // Replace each ${ ... components.GROUP ... } interpolation with {{group:GROUP}}.
-  body = body.replace(/\$\{[^]*?\}/g, (expr) => {
-    const g = expr.match(/components\.(\w+)/);
-    return g ? `{{group:${g[1]}}}` : '';
-  });
+  const body = processTemplate(m[1]);
+  if (/[`]|\$\{/.test(body)) {
+    throw new Error(`${styleId}: layout extraction left template artifacts`);
+  }
   return body;
 }
 
+// Rewrite every ${...} interpolation in a template-literal body into our
+// markers, scanning braces/backticks in a balanced way.
+function processTemplate(tpl) {
+  let out = '';
+  let i = 0;
+  while (i < tpl.length) {
+    const d = tpl.indexOf('${', i);
+    if (d === -1) {
+      out += tpl.slice(i);
+      break;
+    }
+    out += tpl.slice(i, d);
+    let j = d + 2;
+    let depth = 1;
+    let expr = '';
+    while (j < tpl.length && depth > 0) {
+      const ch = tpl[j];
+      if (ch === '`') {
+        // Copy a whole nested template literal (including its own ${...}s,
+        // themselves balanced) into the expression verbatim.
+        expr += '`';
+        j++;
+        while (j < tpl.length && tpl[j] !== '`') {
+          if (tpl[j] === '\\') {
+            expr += tpl[j] + (tpl[j + 1] ?? '');
+            j += 2;
+            continue;
+          }
+          if (tpl[j] === '$' && tpl[j + 1] === '{') {
+            let d2 = 1;
+            expr += '${';
+            j += 2;
+            while (j < tpl.length && d2 > 0) {
+              if (tpl[j] === '{') d2++;
+              else if (tpl[j] === '}') d2--;
+              if (d2 > 0) expr += tpl[j];
+              j++;
+            }
+            expr += '}';
+            continue;
+          }
+          expr += tpl[j];
+          j++;
+        }
+        expr += '`';
+        j++; // past the closing backtick
+        continue;
+      }
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          j++;
+          break;
+        }
+      }
+      if (depth > 0) expr += ch;
+      j++;
+    }
+    out += classifyExpr(expr);
+    i = j;
+  }
+  return out;
+}
+
+// Turn one interpolation expression into markers. Nested template literals
+// (visibility ternaries, escape.xml(`...`) wrappers) contribute their
+// processed contents; the falsy ternary branch is the empty literal in every
+// style we bundle, so joining all branches is safe. A bare expression maps to
+// its component/color reference, or disappears.
+function classifyExpr(expr) {
+  const nested = [];
+  let k = 0;
+  while (k < expr.length) {
+    if (expr[k] === '`') {
+      let body = '';
+      let depth = 0;
+      k++;
+      while (k < expr.length && !(expr[k] === '`' && depth === 0)) {
+        if (expr[k] === '$' && expr[k + 1] === '{') depth++;
+        else if (expr[k] === '}' && depth > 0) depth--;
+        body += expr[k];
+        k++;
+      }
+      nested.push(body);
+    }
+    k++;
+  }
+  if (nested.length) return nested.map(processTemplate).join('');
+  const g = expr.match(/components\.(\w+)/);
+  if (g) return `{{group:${g[1]}}}`;
+  const c = expr.match(/colors\.(\w+)/);
+  if (c) return `{{color:${c[1]}}}`;
+  return '';
+}
+
+// The bundled styles. Culled relative to upstream's full collection: croodles
+// (black ink, invisible on dark themes), lorelei + notionists (ghost-white line
+// art on dark), and identicon (a hash pattern, not an avatar).
 const REGISTRY = [
   ['bottts', 'Robots'], ['adventurer', 'Adventurer'], ['avataaars', 'Avataaars'],
-  ['big-ears', 'Big Ears'], ['big-smile', 'Big Smile'], ['croodles', 'Croodles'],
-  ['fun-emoji', 'Fun Emoji'], ['lorelei', 'Lorelei'], ['micah', 'Micah'],
-  ['miniavs', 'Miniavs'], ['notionists', 'Notionists'], ['open-peeps', 'Open Peeps'],
+  ['big-ears', 'Big Ears'], ['big-smile', 'Big Smile'],
+  ['fun-emoji', 'Fun Emoji'], ['micah', 'Micah'],
+  ['miniavs', 'Miniavs'], ['open-peeps', 'Open Peeps'],
   ['personas', 'Personas'], ['pixel-art', 'Pixel Art'], ['thumbs', 'Thumbs'],
-  ['identicon', 'Identicon'], ['shapes', 'Shapes'], ['rings', 'Rings'],
+  ['shapes', 'Shapes'], ['rings', 'Rings'],
 ];
 
 async function extractStyle(styleId) {
@@ -122,14 +224,20 @@ async function extractStyle(styleId) {
   const sample = createAvatar(style, { seed: 'sample' }).toString();
   const viewBox = sample.match(/viewBox="([^"]*)"/)?.[1] ?? '0 0 100 100';
 
+  // Background palette: only for styles whose DEFAULT render actually paints
+  // one. The schema default alone is not the truth — a style hook may disable
+  // it (avataaars' onPostCreate clears its own legacy default, for example),
+  // so probe a real render and trust what it did.
+  const probe = createAvatar(style, { seed: 'probe' }).toJson();
+  const paintsBackground = probe.extra.primaryBackgroundColor !== 'transparent';
+  const background = paintsBackground ? schema.backgroundColor?.default ?? [] : [];
+
   return {
     id: styleId,
     viewBox,
     groups,
     colors,
-    backgroundColor: schema.backgroundColor?.default ?? [],
-    backgroundType: schema.backgroundType?.default ?? ['solid'],
-    backgroundRotation: schema.backgroundRotation?.default ?? [0],
+    ...(background.length ? { background } : {}),
     layout: extractLayout(styleId),
     // Reference renders for diffing the Rust engine.
     reference: Object.fromEntries(

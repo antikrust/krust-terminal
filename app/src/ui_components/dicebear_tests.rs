@@ -14,10 +14,44 @@ fn every_style_generates_valid_svg() {
                 "{} seed {seed:?}: leftover template marker",
                 style.id
             );
+            // Data-extraction artifacts (a broken `${...}` rewrite once leaked
+            // a stray backtick into personas' face fill).
+            assert!(
+                !svg.contains('`') && !svg.contains("${"),
+                "{} seed {seed:?}: extraction artifact in output",
+                style.id
+            );
             // More than just the wrapper: some picked component rendered.
             assert!(svg.len() > 120, "{} seed {seed:?}: suspiciously empty", style.id);
         }
     }
+}
+
+/// The styles that ship a background palette must paint it; the rest must not.
+/// (fun-emoji without its background rect is eyes floating on nothing.)
+#[test]
+fn background_styles_paint_a_backdrop() {
+    for style in ["fun-emoji", "thumbs", "shapes"] {
+        let svg = generate(style, "1").expect("generates");
+        assert!(
+            svg.contains("<rect fill=\"#"),
+            "{style}: missing background rect"
+        );
+    }
+    let plain = generate("bottts", "1").expect("generates");
+    assert!(
+        !plain.starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 180\" fill=\"none\"><rect fill=\"#"),
+        "bottts should not paint a background"
+    );
+}
+
+/// Styles culled for looking wrong on dark themes stay culled.
+#[test]
+fn culled_styles_are_gone_and_fall_back() {
+    for culled in ["croodles", "lorelei", "notionists", "identicon"] {
+        assert!(generate(culled, "1").is_none(), "{culled} should be culled");
+    }
+    assert_eq!(styles().len(), 14);
 }
 
 #[test]
@@ -42,12 +76,33 @@ fn styles_present_and_default_known() {
     assert_eq!(label(DEFAULT_STYLE), Some("Robots"));
 }
 
+/// Audit tool, not an assertion: dumps every style x seed as SVG files so the
+/// native output can be eyeballed next to the official JS renders (see
+/// `script/generate-avatar-data.mjs`). Run with:
+/// `DICEBEAR_DUMP_DIR=/tmp/dump cargo test -p warp --lib dicebear -- --ignored`
+#[test]
+#[ignore = "audit tool: writes SVGs to DICEBEAR_DUMP_DIR"]
+fn dump_all_styles_for_audit() {
+    let Some(dir) = std::env::var_os("DICEBEAR_DUMP_DIR") else {
+        return;
+    };
+    let dir = std::path::PathBuf::from(dir);
+    std::fs::create_dir_all(&dir).expect("create dump dir");
+    for style in styles() {
+        for seed in ["1", "2", "3", "4", "5", "6"] {
+            let svg = generate(&style.id, seed).expect("generates");
+            std::fs::write(dir.join(format!("{}_{seed}.svg", style.id)), svg)
+                .expect("write dump");
+        }
+    }
+}
+
 /// Guards the PRNG against accidental changes: hashing is a fixed algorithm, so
 /// these first-`next()` values are stable. Computed from the reference port.
 #[test]
 fn prng_is_stable() {
     // Two seeds that must not collide, proving the hash mixes input.
-    assert_ne!(generate("identicon", "a"), generate("identicon", "b"));
+    assert_ne!(generate("rings", "a"), generate("rings", "b"));
     // Empty seed still generates (hashSeed(0) -> 1).
-    assert!(generate("identicon", "").is_some());
+    assert!(generate("rings", "").is_some());
 }
