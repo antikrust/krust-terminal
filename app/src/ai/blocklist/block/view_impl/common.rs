@@ -97,6 +97,7 @@ use crate::terminal::text_effects::{
 };
 use crate::terminal::view::TerminalAction;
 use crate::terminal::{self, ShellLaunchData, TerminalModel};
+use crate::settings::identity::IdentitySettings;
 use crate::ui_components::avatar::{Avatar, AvatarContent};
 use crate::ui_components::blended_colors;
 use crate::ui_components::buttons::icon_button;
@@ -3897,13 +3898,25 @@ pub fn render_user_avatar(
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let background = avatar_color.unwrap_or_else(|| blended_colors::accent(theme).into());
+    // An explicit profile photo (e.g. a shared-session creator) wins; with
+    // none, prefer the locally chosen avatar (uploaded photo or generated
+    // DiceBear) over a bare initial — under local accounts there's no cloud
+    // photo URL, so this is what puts the user's own face on their messages.
+    let content = if let Some(url) = profile_image_path {
+        AvatarContent::Image {
+            url: url.to_owned(),
+            display_name: user_display_name.to_owned(),
+        }
+    } else if let Some(source) = IdentitySettings::selected_avatar_source(app) {
+        AvatarContent::Source {
+            source,
+            display_name: user_display_name.to_owned(),
+        }
+    } else {
+        AvatarContent::DisplayName(user_display_name.to_owned())
+    };
     let avatar = Avatar::new(
-        profile_image_path
-            .map(|url| AvatarContent::Image {
-                url: url.to_owned(),
-                display_name: user_display_name.to_owned(),
-            })
-            .unwrap_or(AvatarContent::DisplayName(user_display_name.to_owned())),
+        content,
         UiComponentStyles {
             width: Some(icon_size(app)),
             height: Some(icon_size(app)),
