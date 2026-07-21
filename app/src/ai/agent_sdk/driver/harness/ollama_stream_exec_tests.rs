@@ -415,6 +415,7 @@ fn chat_turn_without_tool_calls_completes_directly() {
         command,
         "what's the weather",
         "qwen2.5-coder:7b",
+        &Uuid::new_v4(),
         Path::new("/tmp"),
         "/usr/bin:/bin",
         &[web_search_tool_spec()],
@@ -461,6 +462,7 @@ fn chat_turn_falls_back_when_model_lacks_tool_support() {
         command,
         "what's the weather",
         "qwen2.5-coder:7b",
+        &Uuid::new_v4(),
         Path::new("/tmp"),
         "/usr/bin:/bin",
         &[web_search_tool_spec()],
@@ -578,4 +580,69 @@ fn recovers_tool_call_emitted_as_json_text() {
     assert!(parse_text_tool_call("Here's your answer.", &tools).is_none());
     // A JSON object naming an unknown tool is left alone.
     assert!(parse_text_tool_call(r#"{"name":"nope","arguments":{}}"#, &tools).is_none());
+}
+
+#[test]
+fn tool_chat_resumes_session_history_across_turns() {
+    use super::{chat_histories, run_ollama_chat_with_tools};
+
+    let session = Uuid::new_v4();
+    let make_command = |answer: &str| {
+        let response = json!({
+            "message": { "role": "assistant", "content": answer },
+            "done": true,
+            "prompt_eval_count": 1,
+            "eval_count": 1,
+        })
+        .to_string();
+        let mut command = Command::new("sh");
+        command.args(["-c", "cat >/dev/null; printf '%s\\n' \"$OLLAMA_TEST_RESPONSE\""]);
+        command.env("OLLAMA_TEST_RESPONSE", response);
+        command
+    };
+
+    // Turn 1.
+    block_on(run_ollama_chat_with_tools(
+        make_command("First answer."),
+        "first question",
+        "qwen2.5-coder:7b",
+        &session,
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+        &[],
+        Some(&FakeToolCaller),
+        &mut |_| {},
+    ))
+    .unwrap();
+
+    // Turn 2 in the same session must resume turn 1's messages.
+    block_on(run_ollama_chat_with_tools(
+        make_command("Second answer."),
+        "second question",
+        "qwen2.5-coder:7b",
+        &session,
+        Path::new("/tmp"),
+        "/usr/bin:/bin",
+        &[],
+        Some(&FakeToolCaller),
+        &mut |_| {},
+    ))
+    .unwrap();
+
+    let (_, messages) = chat_histories()
+        .lock()
+        .unwrap()
+        .get(&session)
+        .cloned()
+        .expect("session history is stored");
+    let has = |needle: &str| {
+        messages
+            .iter()
+            .any(|m| m["content"].as_str().is_some_and(|c| c.contains(needle)))
+    };
+    // Both turns' questions and answers are retained → context carries over.
+    assert!(has("first question"), "turn 1 question retained: {messages:?}");
+    assert!(has("First answer."), "turn 1 answer retained");
+    assert!(has("second question"), "turn 2 question present");
+    assert!(has("Second answer."), "turn 2 answer stored");
 }

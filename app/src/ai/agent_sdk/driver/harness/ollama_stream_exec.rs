@@ -1070,6 +1070,7 @@ async fn run_ollama_stream_inner(
             chat_command,
             prompt,
             model,
+            session_id,
             working_dir,
             path,
             mcp_tools,
@@ -1204,8 +1205,15 @@ async fn run_ollama_chat(
         .unwrap_or_else(|_| Err("Ollama response state became unavailable".to_string()));
     match result {
         Ok(result) => {
-            // The reply already streamed via the accumulator; record it so the
-            // next turn has context.
+            // The accumulator buffers content rather than streaming it (see
+            // OllamaChatAccumulator::push_line), so surface the whole answer
+            // here — chat mode has no tool calls to screen out first.
+            if !result.content.trim().is_empty() {
+                on_event(TurnEvent::Text {
+                    text: result.content.clone(),
+                });
+            }
+            // Record the reply so the next turn has context.
             messages.push(json!({ "role": "assistant", "content": result.content }));
             if let Ok(mut histories) = chat_histories().lock() {
                 histories.insert(*session_id, (model.to_string(), messages));
@@ -1494,6 +1502,7 @@ async fn run_ollama_chat_with_tools(
     first_command: Command,
     prompt: &str,
     model: &str,
+    session_id: &Uuid,
     working_dir: &Path,
     path: &str,
     mcp_tools: &[McpToolSpec],
@@ -1510,16 +1519,25 @@ async fn run_ollama_chat_with_tools(
         .iter()
         .map(McpToolSpec::to_ollama_tool_json)
         .collect();
-    let mut messages = vec![
-        json!({ "role": "system", "content": ollama_tool_system_prompt(&all_tools) }),
-        json!({
-            "role": "user",
-            "content": format!(
-                "Current working directory: {}\n\nUser request:\n{prompt}",
-                working_dir.display()
-            ),
-        }),
-    ];
+    // Resume this session's history (system + prior turns, including tool
+    // exchanges) or start fresh, then append this turn's user message — so
+    // tool-capable models keep context across turns like the other paths do.
+    let mut messages = chat_histories()
+        .lock()
+        .ok()
+        .and_then(|histories| histories.get(session_id).cloned())
+        .filter(|(saved_model, _)| saved_model == model)
+        .map(|(_, messages)| messages)
+        .unwrap_or_else(|| {
+            vec![json!({ "role": "system", "content": ollama_tool_system_prompt(&all_tools) })]
+        });
+    messages.push(json!({
+        "role": "user",
+        "content": format!(
+            "Current working directory: {}\n\nUser request:\n{prompt}",
+            working_dir.display()
+        ),
+    }));
 
     // Every request in this loop hits `/api/chat` — never `/api/generate`,
     // which silently returns an empty completion for a chat-shaped body.
@@ -1590,6 +1608,12 @@ async fn run_ollama_chat_with_tools(
                 on_event(TurnEvent::Text {
                     text: response.content.clone(),
                 });
+            }
+            // Persist this turn (including the answer) so the next turn in this
+            // session resumes with full context.
+            messages.push(json!({ "role": "assistant", "content": response.content }));
+            if let Ok(mut histories) = chat_histories().lock() {
+                histories.insert(*session_id, (model.to_string(), messages));
             }
             on_event(TurnEvent::TurnCompleted {
                 usage: Some(response.usage),
