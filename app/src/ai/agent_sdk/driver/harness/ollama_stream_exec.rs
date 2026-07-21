@@ -57,7 +57,8 @@ After a shell result, either request the next necessary command or answer the us
 /// anything real. As a plain assistant they answer honestly.
 const OLLAMA_CHAT_SYSTEM_PROMPT: &str = "You are a helpful assistant running locally inside derp terminal. \
 Answer the user's question directly, accurately, and in full. \
-You cannot run shell commands or read the user's files — if something would require that, say so rather than inventing output.";
+You have no tools: you cannot run shell commands, read the user's files, or search the web / browse the internet. \
+If a request would require any of those, say plainly that you can't do it — never pretend you searched or ran something, and never invent results.";
 
 /// Whether `model` advertises Ollama's `tools` capability — the signal to
 /// run it as an agent (coding-agent prompt + shell/MCP tools) rather than a
@@ -488,6 +489,17 @@ fn contexts() -> &'static Mutex<OllamaContexts> {
     CONTEXTS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Per-session chat message history for the plain-chat path (`/api/chat`),
+/// keyed by session. Kept separate from [`contexts`] (the `/api/generate`
+/// token array) because chat maintains structured role messages, which is
+/// what keeps the system prompt from leaking into the model's replies.
+type OllamaChatHistories = HashMap<Uuid, (String, Vec<Value>)>;
+
+fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
+    static HISTORIES: OnceLock<Mutex<OllamaChatHistories>> = OnceLock::new();
+    HISTORIES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 fn new_ollama_command(working_dir: &Path, path: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
     command.args(ollama_curl_args());
@@ -742,9 +754,25 @@ async fn run_ollama_stream_inner(
     let native_tools = model_supports_tools(model, path).await;
     let is_agent = agent_override.unwrap_or(native_tools);
 
-    // Native MCP tool-calling: only when the model actually supports it and
-    // the user hasn't forced it to plain chat.
-    if is_agent && native_tools && !mcp_tools.is_empty() {
+    // Chat-only models: a plain /api/chat turn with structured system/user/
+    // assistant roles. Deliberately NOT the /api/generate path — on weak
+    // models that templates the system prompt in a way they echo back into
+    // the answer on follow-up turns.
+    if !is_agent {
+        return run_ollama_chat(
+            prompt,
+            model,
+            session_id,
+            working_dir,
+            path,
+            OLLAMA_CHAT_SYSTEM_PROMPT,
+            on_event,
+        )
+        .await;
+    }
+
+    // Agent, native tools: MCP tool-calling over /api/chat.
+    if native_tools && !mcp_tools.is_empty() {
         if let Some(tool_caller) = &tool_caller {
             // Build a fresh `/api/chat` command here — `first_command` targets
             // `/api/generate` and is reserved for the fallback loop below.
@@ -772,11 +800,8 @@ async fn run_ollama_stream_inner(
         }
     }
 
-    let system = if is_agent {
-        OLLAMA_SYSTEM_PROMPT
-    } else {
-        OLLAMA_CHAT_SYSTEM_PROMPT
-    };
+    // Agent, shell/text protocol (native-tool models with no MCP configured,
+    // or coding models forced into agent mode).
     run_ollama_generate_loop(
         Some(first_command),
         prompt,
@@ -784,10 +809,86 @@ async fn run_ollama_stream_inner(
         session_id,
         working_dir,
         path,
-        system,
+        OLLAMA_SYSTEM_PROMPT,
         on_event,
     )
     .await
+}
+
+/// A plain chat turn over `/api/chat`, maintaining structured message history
+/// per session so the system prompt stays a distinct role (no leaking into
+/// replies) and follow-ups keep context. No tools, no shell — just an answer.
+async fn run_ollama_chat(
+    prompt: &str,
+    model: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    system: &str,
+    mut on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    // Resume this session's history (system + prior turns) or start fresh.
+    let mut messages = chat_histories()
+        .lock()
+        .ok()
+        .and_then(|histories| histories.get(session_id).cloned())
+        .filter(|(saved_model, _)| saved_model == model)
+        .map(|(_, messages)| messages)
+        .unwrap_or_else(|| vec![json!({ "role": "system", "content": system })]);
+    messages.push(json!({ "role": "user", "content": prompt }));
+
+    let request = json!({
+        "model": model,
+        "messages": messages,
+        "stream": true,
+        "options": { "temperature": 0, "num_ctx": 8192 },
+    })
+    .to_string();
+
+    let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
+    let parser_accumulator = Arc::clone(&accumulator);
+    let status = run_jsonl_stream(
+        new_ollama_chat_command(working_dir, path),
+        &request,
+        move |line| {
+            parser_accumulator
+                .lock()
+                .map(|mut accumulator| accumulator.push_line(line))
+                .unwrap_or_default()
+        },
+        &mut on_event,
+    )
+    .await?;
+
+    if !status.success() {
+        emit_failed_turn(
+            &mut on_event,
+            "Could not reach the local Ollama service at 127.0.0.1:11434",
+        );
+        return Ok(status);
+    }
+
+    let result = accumulator
+        .lock()
+        .map(|accumulator| accumulator.clone().finish(model))
+        .unwrap_or_else(|_| Err("Ollama response state became unavailable".to_string()));
+    match result {
+        Ok(result) => {
+            // The reply already streamed via the accumulator; record it so the
+            // next turn has context.
+            messages.push(json!({ "role": "assistant", "content": result.content }));
+            if let Ok(mut histories) = chat_histories().lock() {
+                histories.insert(*session_id, (model.to_string(), messages));
+            }
+            on_event(TurnEvent::TurnCompleted {
+                usage: Some(result.usage),
+                is_error: false,
+                error_message: None,
+            });
+        }
+        Err(error) => emit_failed_turn(&mut on_event, error),
+    }
+    Ok(status)
 }
 
 /// The `/api/generate` loop. With the agent system prompt it's the shell/text

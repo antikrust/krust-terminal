@@ -222,7 +222,9 @@ fn session_starts_before_model_progress_and_text() {
         "/usr/bin:/bin",
         &[],
         None,
-        None,
+        // Force agent mode so this exercises the /api/generate shell/text
+        // path against the mock command (chat-only would hit real /api/chat).
+        Some(true),
         |event| events.push(event),
     ))
     .unwrap();
