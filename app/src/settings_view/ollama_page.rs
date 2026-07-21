@@ -366,6 +366,13 @@ impl OllamaPageView {
                 me.catalog_source = source;
                 me.capabilities = capabilities;
                 me.catalog_loading = false;
+                // Sync the model picker to what's actually on disk — this
+                // catches models pulled outside Warp (e.g. `ollama pull` in a
+                // terminal), which wouldn't otherwise appear until restart.
+                crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx)
+                    .update(ctx, |availability, ctx| {
+                        availability.refresh_ollama_models(ctx);
+                    });
                 ctx.notify();
             },
         );
