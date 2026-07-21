@@ -93,7 +93,7 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
 }
 
 #[test]
-fn streamed_tokens_are_coalesced_into_one_text_reply() {
+fn buffers_response_and_emits_only_thinking_while_streaming() {
     let mut accumulator = OllamaResponseAccumulator::default();
     let first = serde_json::json!({
         "response": "{\"type\":\"text\",",
@@ -110,18 +110,13 @@ fn streamed_tokens_are_coalesced_into_one_text_reply() {
     })
     .to_string();
 
-    let first_events = accumulator.push_line(&first);
-    let second_events = accumulator.push_line(&second);
+    // The first content chunk emits the Thinking shimmer; no token-level
+    // streaming — the whole answer is delivered by `finish`.
     assert!(matches!(
-        first_events.as_slice(),
+        accumulator.push_line(&first).as_slice(),
         [TurnEvent::Thinking { .. }]
     ));
-    assert_eq!(
-        second_events,
-        vec![TurnEvent::TextDelta {
-            text: "OK".to_string()
-        }]
-    );
+    assert!(accumulator.push_line(&second).is_empty());
 
     let result = accumulator.finish("codellama:13b").unwrap();
     assert_eq!(
@@ -131,39 +126,37 @@ fn streamed_tokens_are_coalesced_into_one_text_reply() {
         }
     );
     assert_eq!(result.context, Some(vec![10, 20]));
-    assert_eq!(result.emitted_text, "OK");
     assert_eq!(result.usage.input_tokens, 12);
     assert_eq!(result.usage.output_tokens, 3);
     assert_eq!(result.usage.duration_ms, Some(2));
 }
 
 #[test]
-fn streamed_text_chunks_preserve_real_spacing_and_newlines_only() {
+fn finish_decodes_the_full_json_text_including_escapes() {
     let mut accumulator = OllamaResponseAccumulator::default();
-    let first = serde_json::json!({
-        "response": "{\"type\":\"text\",\"text\":\"alpha beta gamma delta epsilon",
-        "done": false,
-    })
-    .to_string();
-    let second = serde_json::json!({
-        "response": " zeta\\nreal line\"}",
-        "done": true,
-    })
-    .to_string();
-
-    let first_events = accumulator.push_line(&first);
-    assert!(matches!(first_events[0], TurnEvent::Thinking { .. }));
-    assert_eq!(
-        first_events[1],
-        TurnEvent::TextDelta {
-            text: "alpha beta gamma delta epsilon".to_string(),
-        }
+    accumulator.push_line(
+        &serde_json::json!({
+            "response": "{\"type\":\"text\",\"text\":\"alpha beta gamma delta epsilon",
+            "done": false,
+        })
+        .to_string(),
     );
+    accumulator.push_line(
+        &serde_json::json!({
+            "response": " zeta\\nreal line\"}",
+            "done": true,
+        })
+        .to_string(),
+    );
+
+    // The whole answer — including the escaped newline — comes back intact at
+    // finish; nothing is dropped from the tail.
+    let result = accumulator.finish("codellama:13b").unwrap();
     assert_eq!(
-        accumulator.push_line(&second),
-        vec![TurnEvent::TextDelta {
-            text: " zeta\nreal line".to_string(),
-        }]
+        result.reply,
+        OllamaAgentReply::Text {
+            text: "alpha beta gamma delta epsilon zeta\nreal line".to_string()
+        }
     );
 }
 
@@ -234,7 +227,8 @@ fn session_starts_before_model_progress_and_text() {
     assert!(status.success());
     assert!(matches!(events[0], TurnEvent::SessionInit { .. }));
     assert!(matches!(events[1], TurnEvent::Thinking { .. }));
-    assert_eq!(events[2], TurnEvent::TextDelta { text: "OK".into() });
+    // The answer arrives as one complete Text event, not streamed deltas.
+    assert_eq!(events[2], TurnEvent::Text { text: "OK".into() });
     assert!(matches!(
         events[3],
         TurnEvent::TurnCompleted {

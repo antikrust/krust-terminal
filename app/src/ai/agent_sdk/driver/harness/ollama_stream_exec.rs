@@ -39,7 +39,6 @@ pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
 const MAX_TOOL_CALLS_PER_TURN: usize = 8;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
-const MIN_VISIBLE_DELTA_BYTES: usize = 24;
 const OLLAMA_PROGRESS_TEXT: &str = "Planning locally with Ollama…";
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside Warp terminal.
@@ -302,7 +301,6 @@ struct OllamaResponseAccumulator {
     context: Option<Vec<i64>>,
     done: bool,
     progress_emitted: bool,
-    emitted_text: String,
 }
 
 impl OllamaResponseAccumulator {
@@ -328,21 +326,14 @@ impl OllamaResponseAccumulator {
                     text: OLLAMA_PROGRESS_TEXT.to_string(),
                 });
             }
-
-            // Ollama streams the constrained JSON object itself. Extract only
-            // the decoded value of its `text` field; exposing the raw JSON
-            // would show braces/escapes, while treating each token as a Text
-            // message is what produced the one-word-per-line layout.
-            if let Some(text) = partial_json_string_value(&self.response, "text") {
-                if text.starts_with(&self.emitted_text) {
-                    let delta = &text[self.emitted_text.len()..];
-                    if !delta.is_empty() && (delta.len() >= MIN_VISIBLE_DELTA_BYTES || chunk.done) {
-                        let delta = delta.to_string();
-                        self.emitted_text.push_str(&delta);
-                        events.push(TurnEvent::TextDelta { text: delta });
-                    }
-                }
-            }
+            // The full answer is emitted once at completion (see the Text arm
+            // in `run_ollama_generate_loop`). Incremental token streaming was
+            // removed: with the `format` grammar gone, models frequently reply
+            // in plain prose rather than the `{"type":"text",...}` object, and
+            // the mid-stream JSON-field extraction could drop the final
+            // sentence when its tail diverged from the reconstructed value.
+            // A shimmer while generating, then the complete answer, is both
+            // correct and simpler.
         }
         self.prompt_eval_count = self.prompt_eval_count.max(chunk.prompt_eval_count);
         self.eval_count = self.eval_count.max(chunk.eval_count);
@@ -374,7 +365,6 @@ impl OllamaResponseAccumulator {
         Ok(OllamaCallResult {
             reply,
             context: self.context,
-            emitted_text: self.emitted_text,
             usage: TurnUsage {
                 input_tokens: self.prompt_eval_count,
                 output_tokens: self.eval_count,
@@ -404,116 +394,7 @@ enum OllamaAgentReply {
 struct OllamaCallResult {
     reply: OllamaAgentReply,
     context: Option<Vec<i64>>,
-    emitted_text: String,
     usage: TurnUsage,
-}
-
-/// Decodes the available prefix of a JSON string field, including escapes,
-/// without requiring the closing quote to have arrived yet.
-fn partial_json_string_value(input: &str, key: &str) -> Option<String> {
-    let needle = format!("\"{key}\"");
-    let mut search_from = 0;
-    while let Some(relative) = input[search_from..].find(&needle) {
-        let key_start = search_from + relative;
-        let mut cursor = key_start + needle.len();
-        cursor += input[cursor..]
-            .chars()
-            .take_while(|character| character.is_whitespace())
-            .map(char::len_utf8)
-            .sum::<usize>();
-        if input.as_bytes().get(cursor) != Some(&b':') {
-            search_from = key_start + needle.len();
-            continue;
-        }
-        cursor += 1;
-        cursor += input[cursor..]
-            .chars()
-            .take_while(|character| character.is_whitespace())
-            .map(char::len_utf8)
-            .sum::<usize>();
-        if input.as_bytes().get(cursor) != Some(&b'"') {
-            return None;
-        }
-        return Some(decode_json_string_prefix(&input[cursor + 1..]));
-    }
-    None
-}
-
-fn decode_json_string_prefix(raw: &str) -> String {
-    let mut decoded = String::new();
-    let bytes = raw.as_bytes();
-    let mut index = 0;
-    while index < bytes.len() {
-        match bytes[index] {
-            b'"' => break,
-            b'\\' => {
-                let Some(escape) = bytes.get(index + 1).copied() else {
-                    break;
-                };
-                match escape {
-                    b'"' => decoded.push('"'),
-                    b'\\' => decoded.push('\\'),
-                    b'/' => decoded.push('/'),
-                    b'b' => decoded.push('\u{0008}'),
-                    b'f' => decoded.push('\u{000c}'),
-                    b'n' => decoded.push('\n'),
-                    b'r' => decoded.push('\r'),
-                    b't' => decoded.push('\t'),
-                    b'u' => {
-                        let Some(unit) = decode_hex_unit(bytes, index + 2) else {
-                            break;
-                        };
-                        if (0xD800..=0xDBFF).contains(&unit) {
-                            if bytes.get(index + 6..index + 8) != Some(&[b'\\', b'u']) {
-                                break;
-                            }
-                            let Some(low) = decode_hex_unit(bytes, index + 8) else {
-                                break;
-                            };
-                            if !(0xDC00..=0xDFFF).contains(&low) {
-                                break;
-                            }
-                            let codepoint = 0x1_0000
-                                + ((u32::from(unit) - 0xD800) << 10)
-                                + (u32::from(low) - 0xDC00);
-                            if let Some(character) = char::from_u32(codepoint) {
-                                decoded.push(character);
-                            }
-                            index += 12;
-                            continue;
-                        }
-                        let Some(character) = char::from_u32(u32::from(unit)) else {
-                            break;
-                        };
-                        decoded.push(character);
-                        index += 6;
-                        continue;
-                    }
-                    _ => break,
-                }
-                index += 2;
-            }
-            _ => {
-                let Some(character) = raw[index..].chars().next() else {
-                    break;
-                };
-                decoded.push(character);
-                index += character.len_utf8();
-            }
-        }
-    }
-    decoded
-}
-
-fn decode_hex_unit(bytes: &[u8], start: usize) -> Option<u16> {
-    let digits = bytes.get(start..start + 4)?;
-    std::str::from_utf8(digits).ok().and_then(|digits| {
-        digits
-            .chars()
-            .all(|digit| digit.is_ascii_hexdigit())
-            .then(|| u16::from_str_radix(digits, 16).ok())
-            .flatten()
-    })
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -891,23 +772,11 @@ async fn run_ollama_generate_loop(
 
         match response.reply {
             OllamaAgentReply::Text { text } => {
+                // The whole answer arrives here at once (no token streaming);
+                // `finish` has already decoded the model's `{"type":"text",..}`
+                // object down to its text, or fallen back to the raw prose.
                 if !text.is_empty() {
-                    if response.emitted_text.is_empty() {
-                        // Invalid/nonstandard JSON cannot be decoded safely
-                        // while incomplete; retain the complete-answer
-                        // fallback rather than showing raw protocol bytes.
-                        on_event(TurnEvent::Text { text });
-                    } else if let Some(delta) = text.strip_prefix(&response.emitted_text) {
-                        if !delta.is_empty() {
-                            on_event(TurnEvent::TextDelta {
-                                text: delta.to_string(),
-                            });
-                        }
-                    } else if text != response.emitted_text {
-                        log::warn!(
-                            "ollama_stream: final text did not extend the emitted streaming prefix"
-                        );
-                    }
+                    on_event(TurnEvent::Text { text });
                 }
                 on_event(TurnEvent::TurnCompleted {
                     usage: Some(response.usage),
