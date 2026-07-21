@@ -76,9 +76,12 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
     assert_eq!(request["model"], "codellama:13b");
     assert_eq!(request["prompt"], "quote: \"");
     assert_eq!(request["stream"], true);
-    assert_eq!(request["format"]["properties"]["type"]["enum"][0], "shell");
+    // No `format` grammar constraint — it crushed output on weaker models.
+    assert!(request.get("format").is_none());
     assert_eq!(request["keep_alive"], "5s");
-    assert!(request["options"].get("num_ctx").is_none());
+    // A generous context window is set (fixes the tiny-default "lack of
+    // context"); other runtime knobs stay at Ollama's defaults.
+    assert_eq!(request["options"]["num_ctx"], 8192);
     assert!(request["options"].get("num_predict").is_none());
     assert!(request["options"].get("num_thread").is_none());
     assert!(request["options"].get("num_batch").is_none());
@@ -165,12 +168,14 @@ fn streamed_text_chunks_preserve_real_spacing_and_newlines_only() {
 }
 
 #[test]
-fn neither_local_model_overrides_ollamas_runtime_capacity() {
+fn sets_context_window_but_leaves_other_runtime_knobs_default() {
     for model_id in [CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID] {
         let model = ollama_model_name(model_id).unwrap();
         let request: serde_json::Value =
             serde_json::from_str(&ollama_generate_request(model, "test", None)).unwrap();
-        assert!(request["options"].get("num_ctx").is_none(), "{model}");
+        // We do raise the context window (the tiny default caused "lack of
+        // context"), but leave output length, threads, and batch to Ollama.
+        assert_eq!(request["options"]["num_ctx"], 8192, "{model}");
         assert!(request["options"].get("num_predict").is_none(), "{model}");
         assert!(request["options"].get("num_thread").is_none(), "{model}");
         assert!(request["options"].get("num_batch").is_none(), "{model}");

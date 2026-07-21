@@ -270,17 +270,20 @@ fn ollama_generate_request(model: &str, prompt: &str, context: Option<&[i64]>) -
         "stream": true,
         // Release the large runner promptly after the tool loop goes idle.
         "keep_alive": "5s",
-        "format": {
-            "type": "object",
-            "properties": {
-                "type": { "type": "string", "enum": ["shell", "text"] },
-                "command": { "type": "string" },
-                "text": { "type": "string" }
-            },
-            "required": ["type"]
-        },
+        // Deliberately NO `format` grammar constraint. Forcing the shell/text
+        // JSON schema via constrained decoding wrecked output on weaker models
+        // — they'd satisfy the grammar with a near-empty object and stop
+        // (e.g. `{"type":"text","text":"Roman Empire Facts"}` for a request
+        // that wanted paragraphs). The system prompt still asks for that JSON;
+        // capable models comply and `finish()` parses it, while anything that
+        // answers in plain prose falls back to being shown as text.
         "options": {
             "temperature": 0,
+            // The models default to a 2048-token window (some as low as that),
+            // which is the "lack of context" users hit in longer chats. 8192 is
+            // a sane floor across the local models Warp lists; models trained
+            // shorter simply don't use the extra headroom.
+            "num_ctx": 8192,
         },
     });
     if let Some(context) = context {
