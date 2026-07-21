@@ -62,15 +62,25 @@ You have no tools of your own: you cannot run shell commands or read the user's 
 When a message includes web search results, use them to answer and cite the relevant ones. \
 Otherwise answer from your own knowledge; if you genuinely don't know, or it needs live data that wasn't provided, say so plainly rather than inventing an answer.";
 
-/// Whether `model` advertises Ollama's `tools` capability — the signal to
-/// run it as an agent (coding-agent prompt + shell/MCP tools) rather than a
-/// plain chat model. Fails closed to chat when the server can't be asked.
+/// The harness-relevant capabilities of a model, probed from `/api/show`.
+#[derive(Clone, Copy, Default)]
+struct HarnessModelCaps {
+    /// Native tool-calling — drives MCP tools over /api/chat, and the
+    /// agent-vs-chat default.
+    tools: bool,
+    /// Chain-of-thought reasoning (deepseek-r1, qwen3, …) — lets us ask for
+    /// `think:true` and surface the reasoning trace.
+    thinking: bool,
+}
+
+/// Probes `model`'s capabilities via `/api/show`. Fails closed (all false)
+/// when the server can't be asked.
 ///
 /// Uses `curl` rather than the reqwest client in
 /// [`crate::ai::ollama::service::fetch_capabilities`] so it works from the
 /// harness's non-Tokio executor (the settings page, which is on Tokio, uses
 /// the reqwest path).
-async fn model_supports_tools(model: &str, path: &str) -> bool {
+async fn probe_model_caps(model: &str, path: &str) -> HarnessModelCaps {
     // Model tags are validated to letters/digits/`.-_:/` before reaching the
     // harness, so inlining the body via `-d` can't inject shell/JSON.
     let body = json!({ "model": model }).to_string();
@@ -89,20 +99,23 @@ async fn model_supports_tools(model: &str, path: &str) -> bool {
     command.env("PATH", path);
 
     let Ok(output) = command.output().await else {
-        return false;
+        return HarnessModelCaps::default();
     };
     if !output.status.success() {
-        return false;
+        return HarnessModelCaps::default();
     }
+    let has = |value: &Value, name: &str| {
+        value
+            .get("capabilities")
+            .and_then(|caps| caps.as_array())
+            .is_some_and(|caps| caps.iter().any(|cap| cap.as_str() == Some(name)))
+    };
     serde_json::from_slice::<Value>(&output.stdout)
-        .ok()
-        .and_then(|value| {
-            value
-                .get("capabilities")
-                .and_then(|caps| caps.as_array())
-                .map(|caps| caps.iter().any(|cap| cap.as_str() == Some("tools")))
+        .map(|value| HarnessModelCaps {
+            tools: has(&value, "tools"),
+            thinking: has(&value, "thinking"),
         })
-        .unwrap_or(false)
+        .unwrap_or_default()
 }
 
 /// Runs a web search via DuckDuckGo's HTML endpoint (curl, to stay off the
@@ -808,7 +821,8 @@ async fn run_ollama_stream_inner(
     //    protocol). Defaults to `native_tools`, but the user can override per
     //    model — e.g. force codellama/deepseek-coder (coding models that
     //    predate the tool flag) into agent mode to use the shell protocol.
-    let native_tools = model_supports_tools(model, path).await;
+    let caps = probe_model_caps(model, path).await;
+    let native_tools = caps.tools;
     let is_agent = agent_override.unwrap_or(native_tools);
 
     // Chat-only models: a plain /api/chat turn with structured system/user/
@@ -823,6 +837,7 @@ async fn run_ollama_stream_inner(
             working_dir,
             path,
             OLLAMA_CHAT_SYSTEM_PROMPT,
+            caps.thinking,
             on_event,
         )
         .await;
@@ -875,6 +890,7 @@ async fn run_ollama_stream_inner(
 /// A plain chat turn over `/api/chat`, maintaining structured message history
 /// per session so the system prompt stays a distinct role (no leaking into
 /// replies) and follow-ups keep context. No tools, no shell — just an answer.
+#[allow(clippy::too_many_arguments)]
 async fn run_ollama_chat(
     prompt: &str,
     model: &str,
@@ -882,6 +898,7 @@ async fn run_ollama_chat(
     working_dir: &Path,
     path: &str,
     system: &str,
+    thinking: bool,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     // Resume this session's history (system + prior turns) or start fresh.
@@ -929,13 +946,18 @@ async fn run_ollama_chat(
     };
     messages.push(json!({ "role": "user", "content": user_content }));
 
-    let request = json!({
+    let mut request = json!({
         "model": model,
         "messages": messages,
         "stream": true,
         "options": { "temperature": 0, "num_ctx": 8192 },
-    })
-    .to_string();
+    });
+    // Only ask reasoning models to think — `think:true` errors on models that
+    // don't advertise the capability.
+    if thinking {
+        request["think"] = json!(true);
+    }
+    let request = request.to_string();
 
     let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
     let parser_accumulator = Arc::clone(&accumulator);
@@ -1305,6 +1327,7 @@ struct OllamaChatAccumulator {
     prompt_eval_count: u64,
     eval_count: u64,
     total_duration: Option<u64>,
+    progress_emitted: bool,
 }
 
 impl OllamaChatAccumulator {
@@ -1324,6 +1347,22 @@ impl OllamaChatAccumulator {
 
         let mut events = Vec::new();
         if let Some(message) = chunk.message {
+            // Reasoning models (deepseek-r1, qwen3, …) stream their chain of
+            // thought in a separate `thinking` field. Surface it as reasoning
+            // — the display setting decides whether it's shown, kept open, or
+            // hidden (see turn_events_to_conversation). Non-reasoning models
+            // never send this, so it's a harmless no-op for them.
+            if let Some(thinking) = message.thinking.filter(|text| !text.is_empty()) {
+                self.progress_emitted = true;
+                events.push(TurnEvent::Thinking { text: thinking });
+            } else if !self.progress_emitted {
+                // No real reasoning: show the generic shimmer once, matching
+                // the /api/generate path so both modes look the same.
+                self.progress_emitted = true;
+                events.push(TurnEvent::Thinking {
+                    text: OLLAMA_PROGRESS_TEXT.to_string(),
+                });
+            }
             if !message.content.is_empty() {
                 self.content.push_str(&message.content);
                 events.push(TurnEvent::TextDelta {
@@ -1395,6 +1434,9 @@ struct OllamaChatToolCall {
 struct OllamaChatMessage {
     #[serde(default)]
     content: String,
+    /// Chain-of-thought from reasoning models (absent otherwise).
+    #[serde(default)]
+    thinking: Option<String>,
     #[serde(default)]
     tool_calls: Vec<OllamaChatToolCall>,
 }

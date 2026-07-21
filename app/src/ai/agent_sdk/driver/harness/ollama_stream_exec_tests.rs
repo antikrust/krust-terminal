@@ -345,11 +345,14 @@ fn chat_accumulator_collects_streamed_text_and_final_tool_call() {
     .to_string();
 
     let first_events = accumulator.push_line(&first);
+    // A Thinking shimmer leads, then the streamed text.
+    assert_eq!(first_events.len(), 2, "{first_events:?}");
+    assert!(matches!(first_events[0], TurnEvent::Thinking { .. }));
     assert_eq!(
-        first_events,
-        vec![TurnEvent::TextDelta {
+        first_events[1],
+        TurnEvent::TextDelta {
             text: "Looking that up".to_string()
-        }]
+        }
     );
     assert_eq!(accumulator.push_line(&second), Vec::new());
 
@@ -392,14 +395,16 @@ fn chat_turn_without_tool_calls_completes_directly() {
     .unwrap();
 
     assert!(matches!(outcome, super::ToolChatOutcome::Completed(status) if status.success()));
-    assert_eq!(events.len(), 2, "{events:?}");
+    // Thinking shimmer, then the answer, then completion.
+    assert_eq!(events.len(), 3, "{events:?}");
+    assert!(matches!(events[0], TurnEvent::Thinking { .. }));
     assert_eq!(
-        events[0],
+        events[1],
         TurnEvent::TextDelta {
             text: "It's sunny.".to_string()
         }
     );
-    match &events[1] {
+    match &events[2] {
         TurnEvent::TurnCompleted {
             usage: Some(usage),
             is_error: false,
