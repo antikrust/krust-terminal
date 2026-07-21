@@ -61,6 +61,7 @@ use crate::settings::InputModeSettings;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::model::block::Block;
 use crate::terminal::TerminalModel;
+use crate::themes::theme::Blend;
 use crate::ui_components::blended_colors;
 use crate::ui_components::json_tree::{
     render_json_tree, CopyJsonFn, JsonTreeColors, JsonTreeState, PathSegment, ToggleFn,
@@ -225,6 +226,55 @@ pub(crate) fn mcp_result_to_renderable(result: &CallMCPToolResult) -> McpRendera
         }
         CallMCPToolResult::Error(e) => McpRenderable::Error(e.clone()),
         CallMCPToolResult::Cancelled => McpRenderable::Cancelled,
+    }
+}
+
+/// A command-like header for a tool call, derived from its arguments: the
+/// program itself for execution tools (`run_code`, shell wrappers), or
+/// `name target` for single-target tools (`read_file src/main.rs`,
+/// `web_search rust 2024`). `None` when the args carry no obvious headline —
+/// the caller falls back to the bare tool name.
+fn human_mcp_title(name: &str, args: &serde_json::Value) -> Option<String> {
+    let arg = |key: &str| {
+        args.get(key)
+            .and_then(|value| value.as_str())
+            .filter(|text| !text.trim().is_empty())
+    };
+    if let Some(program) = arg("command").or_else(|| arg("code")) {
+        return Some(first_line_ellipsized(program));
+    }
+    ["query", "path", "file", "url"]
+        .iter()
+        .find_map(|key| arg(key))
+        .map(|value| format!("{name} {}", first_line_ellipsized(value)))
+}
+
+/// The first line of `text`, capped for a one-line header, with an ellipsis
+/// when anything was cut.
+fn first_line_ellipsized(text: &str) -> String {
+    const MAX_HEADER_CHARS: usize = 80;
+    let trimmed = text.trim();
+    let first = trimmed.lines().next().unwrap_or_default().trim_end();
+    if trimmed.lines().count() > 1 || first.chars().count() > MAX_HEADER_CHARS {
+        let kept: String = first.chars().take(MAX_HEADER_CHARS).collect();
+        format!("{} …", kept.trim_end())
+    } else {
+        first.to_string()
+    }
+}
+
+/// The plain text inside a renderable result, when it is just text: a JSON
+/// string, or an object wrapping a single string field (the `{"result": …}` /
+/// `{"results": …}` shapes the local harness produces). Structured results
+/// return `None` and keep the JSON tree view.
+fn plain_text_from_tree(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(text) => Some(text.clone()),
+        serde_json::Value::Object(map) if map.len() == 1 => match map.values().next() {
+            Some(serde_json::Value::String(text)) => Some(text.clone()),
+            _ => None,
+        },
+        _ => None,
     }
 }
 
@@ -1320,6 +1370,14 @@ impl RequestedCommandView {
             config = config.with_corner_radius_override(CornerRadius::with_top(Radius::Pixels(7.)));
         }
 
+        // Tool cards get an accent-tinted header (instead of the neutral
+        // grey) so they read as agent actions at a glance.
+        if self.action_type.is_mcp_tool() {
+            let theme = Appearance::as_ref(app).theme();
+            config =
+                config.with_background(theme.surface_2().blend(&theme.accent_overlay()));
+        }
+
         if let Some(font_override) = font_override {
             config = config.with_font_family(font_override);
         }
@@ -1426,7 +1484,21 @@ impl RequestedCommandView {
     fn get_header_title_text(&self) -> String {
         match &self.action_type {
             RequestedActionViewType::Command => format_command_text(self.command_text()),
-            RequestedActionViewType::McpTool => self.extract_mcp_tool_name(self.command_text()),
+            RequestedActionViewType::McpTool => {
+                let name = self.extract_mcp_tool_name(self.command_text());
+                // The stream bakes an "MCP Tool: " prefix into the command
+                // text; drop it — the header should read like a command, not
+                // an implementation detail.
+                let name = name
+                    .strip_prefix("MCP Tool:")
+                    .map(str::trim)
+                    .unwrap_or(&name)
+                    .to_string();
+                self.mcp_request
+                    .as_ref()
+                    .and_then(|request| human_mcp_title(&name, &request.args))
+                    .unwrap_or(name)
+            }
         }
     }
 
@@ -1641,7 +1713,59 @@ impl View for RequestedCommandView {
         }
 
         if should_render_mcp_content {
-            if FeatureFlag::McpJsonTreeView.is_enabled() {
+            // Plain-text results — local-harness tools returning command
+            // output, file contents, or search results — render as output
+            // text, like a command card: the header already names the
+            // command, so Request/Response JSON trees would only repeat it
+            // with worse ergonomics. Structured results keep the tree view.
+            let plain_text_result = action_status
+                .as_ref()
+                .and_then(|status| status.finished_result().map(|result| &result.result))
+                .and_then(|result| match result {
+                    AIAgentActionResultType::CallMCPTool(result) => {
+                        match mcp_result_to_renderable(result) {
+                            McpRenderable::Tree(value) => plain_text_from_tree(&value),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                });
+            if let Some(output) = plain_text_result {
+                let output = if output.trim().is_empty() {
+                    "(no output)".to_string()
+                } else {
+                    output
+                };
+                let text_element = Text::new(
+                    output,
+                    appearance.monospace_font_family(),
+                    appearance.monospace_font_size(),
+                )
+                .with_color(blended_colors::text_main(theme, theme.background()))
+                .with_selectable(true)
+                .finish();
+                let selected_text = self.mcp_content_selected_text.clone();
+                let selectable_text = SelectableArea::new(
+                    self.mcp_content_selection_handle.clone(),
+                    #[allow(clippy::unwrap_used)]
+                    move |selection_args, _, _| {
+                        *selected_text.write().unwrap() = selection_args.selection;
+                    },
+                    text_element,
+                )
+                .on_selection_updated(|ctx, _| {
+                    ctx.dispatch_typed_action(RequestedCommandViewAction::SelectText);
+                })
+                .finish();
+                content.add_child(
+                    Container::new(selectable_text)
+                        .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
+                        .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
+                        .with_background(theme.background())
+                        .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
+                        .finish(),
+                );
+            } else if FeatureFlag::McpJsonTreeView.is_enabled() {
                 let colors = JsonTreeColors::from_theme(theme);
                 let font_family = appearance.monospace_font_family();
 
@@ -1911,6 +2035,9 @@ impl View for RequestedCommandView {
             .is_some_and(|status| status.is_blocked())
         {
             theme.accent()
+        } else if self.action_type.is_mcp_tool() {
+            // Match the accent-tinted header on tool cards.
+            theme.surface_2().blend(&theme.accent_overlay())
         } else {
             theme.surface_2()
         };

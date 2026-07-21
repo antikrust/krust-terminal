@@ -4,6 +4,7 @@ use std::rc::Rc;
 use pathfinder_color::ColorU;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::color::internal_colors;
+use warp_core::ui::theme::Fill;
 use warpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     EventHandler, Expanded, Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize,
@@ -119,6 +120,8 @@ pub struct HeaderConfig {
     pub font_color_override: Option<ColorU>,
     pub corner_radius_override: Option<CornerRadius>,
     pub soft_wrap_title: bool,
+    /// Header fill; defaults to the neutral `surface_2` when unset.
+    pub background_override: Option<Fill>,
 }
 
 impl HeaderConfig {
@@ -134,7 +137,13 @@ impl HeaderConfig {
             font_color_override: None,
             corner_radius_override: None,
             soft_wrap_title: false,
+            background_override: None,
         }
+    }
+
+    pub fn with_background(mut self, background: Fill) -> Self {
+        self.background_override = Some(background);
+        self
     }
 
     pub fn with_soft_wrap_title(mut self) -> Self {
@@ -190,7 +199,10 @@ impl HeaderConfig {
     ) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
-        let header_background = theme.surface_2();
+        let header_background = self
+            .background_override
+            .clone()
+            .unwrap_or_else(|| theme.surface_2());
 
         let mut header_row = Flex::row()
             .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
