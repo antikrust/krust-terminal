@@ -141,7 +141,7 @@ fn malformed_or_culled_favorites_are_dropped_on_read() {
                 settings
                     .avatar_favorites
                     // A culled style, garbage, an empty half, and one good entry.
-                    .set_value("croodles:2,garbage,:9,bottts:4".to_string(), ctx)
+                    .set_value("lorelei:2,garbage,:9,bottts:4".to_string(), ctx)
                     .expect("set favorites");
             });
         });

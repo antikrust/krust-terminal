@@ -28,10 +28,11 @@ fn every_style_generates_valid_svg() {
 }
 
 /// The styles that ship a background palette must paint it; the rest must not.
-/// (fun-emoji without its background rect is eyes floating on nothing.)
+/// (fun-emoji without its background rect is eyes floating on nothing, and
+/// croodles is black ink that needs its pastel paper to read on dark themes.)
 #[test]
 fn background_styles_paint_a_backdrop() {
-    for style in ["fun-emoji", "thumbs", "shapes"] {
+    for style in ["fun-emoji", "thumbs", "shapes", "croodles"] {
         let svg = generate(style, "1").expect("generates");
         assert!(
             svg.contains("<rect fill=\"#"),
@@ -45,13 +46,16 @@ fn background_styles_paint_a_backdrop() {
     );
 }
 
-/// Styles culled for looking wrong on dark themes stay culled.
+/// Styles culled for looking wrong on dark themes stay culled. (Croodles was
+/// culled once too, but it came back on a pastel paper background — it turned
+/// out to be somebody's favourite set.)
 #[test]
 fn culled_styles_are_gone_and_fall_back() {
-    for culled in ["croodles", "lorelei", "notionists", "identicon"] {
+    for culled in ["lorelei", "notionists", "identicon"] {
         assert!(generate(culled, "1").is_none(), "{culled} should be culled");
     }
-    assert_eq!(styles().len(), 14);
+    assert!(generate("croodles", "1").is_some(), "croodles is back");
+    assert_eq!(styles().len(), 15);
 }
 
 #[test]

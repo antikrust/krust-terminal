@@ -185,11 +185,16 @@ pub fn generate(style_id: &str, seed: &str) -> Option<String> {
     let data = BUNDLE.data.get(style_id)?;
     let mut prng = Prng::new(seed);
 
-    // 0. Background, for the styles that ship one: picked first, drawn first.
+    // 0. Background, for the styles that ship one. Drawn from its own prng
+    // rather than the main sequence, so a style's face picks stay stable
+    // whether or not it carries a palette. The seed goes FIRST in the derived
+    // key: the hash mixes per character, so a constant suffix re-scrambles the
+    // part that varies — with `bg:{seed}` the near-identical grid seeds
+    // ("1".."48") all landed on one palette entry.
     let background = data
         .background
         .as_ref()
-        .and_then(|values| prng.pick(values))
+        .and_then(|values| Prng::new(&format!("{seed}:bg")).pick(values))
         .map(|color| {
             let color = convert_color(color);
             // Every DiceBear viewBox is "0 0 W H".

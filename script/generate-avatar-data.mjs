@@ -158,17 +158,24 @@ function classifyExpr(expr) {
   return '';
 }
 
-// The bundled styles. Culled relative to upstream's full collection: croodles
-// (black ink, invisible on dark themes), lorelei + notionists (ghost-white line
-// art on dark), and identicon (a hash pattern, not an avatar).
+// The bundled styles. Culled relative to upstream's full collection:
+// lorelei + notionists (ghost-white line art on dark) and identicon (a hash
+// pattern, not an avatar).
 const REGISTRY = [
   ['bottts', 'Robots'], ['adventurer', 'Adventurer'], ['avataaars', 'Avataaars'],
-  ['big-ears', 'Big Ears'], ['big-smile', 'Big Smile'],
+  ['big-ears', 'Big Ears'], ['big-smile', 'Big Smile'], ['croodles', 'Croodles'],
   ['fun-emoji', 'Fun Emoji'], ['micah', 'Micah'],
   ['miniavs', 'Miniavs'], ['open-peeps', 'Open Peeps'],
   ['personas', 'Personas'], ['pixel-art', 'Pixel Art'], ['thumbs', 'Thumbs'],
   ['shapes', 'Shapes'], ['rings', 'Rings'],
 ];
+
+// Styles that paint no background by default but need one to stay legible on
+// dark app themes. Croodles is black ink — on paper it reads everywhere, so
+// it ships on the classic DiceBear pastel palette.
+const BACKGROUND_OVERRIDES = {
+  croodles: ['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf'],
+};
 
 async function extractStyle(styleId) {
   const style = collection[camel(styleId)];
@@ -230,7 +237,9 @@ async function extractStyle(styleId) {
   // so probe a real render and trust what it did.
   const probe = createAvatar(style, { seed: 'probe' }).toJson();
   const paintsBackground = probe.extra.primaryBackgroundColor !== 'transparent';
-  const background = paintsBackground ? schema.backgroundColor?.default ?? [] : [];
+  const background = paintsBackground
+    ? schema.backgroundColor?.default ?? []
+    : BACKGROUND_OVERRIDES[styleId] ?? [];
 
   return {
     id: styleId,
