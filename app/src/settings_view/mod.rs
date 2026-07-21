@@ -1786,6 +1786,9 @@ impl SettingsView {
                     })
                 }
             },
+            // The avatar picker modal is rendered by this view's overlay
+            // stack, so it appears/disappears only if we repaint.
+            MainSettingsPageEvent::AvatarPickerToggled => ctx.notify(),
             _ => (),
         }
     }

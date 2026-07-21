@@ -171,6 +171,10 @@ pub enum MainSettingsPageEvent {
     Billing(BillingAndUsagePageEvent),
     /// Re-emitted from the embedded teams section.
     Teams(TeamsPageViewEvent),
+    /// The avatar picker modal opened or closed. The modal element is rendered
+    /// by the parent settings view (see `get_modal_content_for_page`), so the
+    /// parent must repaint on toggles it cannot otherwise see.
+    AvatarPickerToggled,
 }
 
 pub struct MainSettingsPageView {
@@ -218,6 +222,7 @@ impl TypedActionView for MainSettingsPageView {
                 self.avatar_picker_body
                     .update(ctx, |body, ctx| body.sync_to_current_choice(ctx));
                 self.avatar_picker_modal.open();
+                ctx.emit(MainSettingsPageEvent::AvatarPickerToggled);
                 ctx.notify();
             }
             MainPageAction::Relaunch => {
@@ -331,6 +336,7 @@ impl MainSettingsPageView {
         ctx.subscribe_to_view(&avatar_picker_modal_view, |me, _, event, ctx| match event {
             ModalEvent::Close => {
                 me.avatar_picker_modal.close();
+                ctx.emit(MainSettingsPageEvent::AvatarPickerToggled);
                 ctx.notify();
             }
         });
