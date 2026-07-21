@@ -90,6 +90,9 @@ pub struct OllamaPageView {
     page: PageType<Self>,
     /// Models already on disk. `None` until the first probe completes.
     installed: Option<Vec<InstalledModel>>,
+    /// Per-model capabilities (tool support, context, params), keyed by tag,
+    /// for the role label in the Installed list. Empty until probed.
+    capabilities: HashMap<String, service::ModelCapabilities>,
     /// Whether the background service answered on its fixed port.
     service_running: bool,
     catalog: Vec<CatalogEntry>,
@@ -161,6 +164,7 @@ impl OllamaPageView {
             migration_progress: None,
             migration_error: None,
             installed: None,
+            capabilities: HashMap::new(),
             service_running: false,
             catalog: Vec::new(),
             catalog_source: CatalogSource::Live,
@@ -299,13 +303,30 @@ impl OllamaPageView {
                 let running = service::is_running(&client).await;
                 let installed = service::list_installed(&client).await.ok();
                 let (catalog, source) = service::fetch_catalog(&client).await;
-                (running, installed, catalog, source)
+                // Capabilities per installed model (tool support, context,
+                // params) so the list can label each one's role. Only worth
+                // asking when the server is up; /api/show is metadata-only and
+                // doesn't load the model.
+                let mut capabilities = HashMap::new();
+                if running {
+                    if let Some(models) = &installed {
+                        for model in models {
+                            if let Some(caps) =
+                                service::fetch_capabilities(&client, &model.name).await
+                            {
+                                capabilities.insert(model.name.clone(), caps);
+                            }
+                        }
+                    }
+                }
+                (running, installed, catalog, source, capabilities)
             },
-            |me, (running, installed, catalog, source), ctx| {
+            |me, (running, installed, catalog, source, capabilities), ctx| {
                 me.service_running = running;
                 me.installed = installed;
                 me.catalog = catalog;
                 me.catalog_source = source;
+                me.capabilities = capabilities;
                 me.catalog_loading = false;
                 ctx.notify();
             },
@@ -706,6 +727,16 @@ impl SettingsWidget for InstalledWidget {
                         .with_margin_left(12.)
                         .finish(),
                     );
+                    // Role + capability: whether this model can run tools
+                    // (agent) or is chat-only, plus its context window. This
+                    // is what the harness keys its agent-vs-chat behaviour on.
+                    if let Some(caps) = view.capabilities.get(&model.name) {
+                        row.add_child(
+                            Container::new(sub_text(&role_summary(caps), appearance))
+                                .with_margin_left(12.)
+                                .finish(),
+                        );
+                    }
                     // Same fit flag as the catalog, so an already-installed
                     // model that is too big for this machine still says so.
                     if let Some(badge) = view
@@ -1116,6 +1147,25 @@ fn progress_row(fraction: f32, width: f32, appearance: &Appearance) -> Box<dyn E
 /// catalog's status column.
 fn install_progress(fraction: f32, appearance: &Appearance) -> Box<dyn Element> {
     progress_row(fraction, 72., appearance)
+}
+
+/// A one-line role + capability summary for an installed model, e.g.
+/// "Agent — runs tools · 128K context" or "Chat only · 2K context".
+fn role_summary(caps: &service::ModelCapabilities) -> String {
+    let mut summary = caps.role_label().to_string();
+    if let Some(context) = caps.context_length {
+        summary.push_str(&format!(" · {} context", format_context(context)));
+    }
+    summary
+}
+
+/// Formats a token context window compactly: 131072 → "128K", 2048 → "2K".
+fn format_context(tokens: u64) -> String {
+    if tokens >= 1024 {
+        format!("{}K", tokens / 1024)
+    } else {
+        tokens.to_string()
+    }
 }
 
 /// Uppercases the first character of `text`, for turning Ollama's lowercase
