@@ -23801,14 +23801,23 @@ impl TerminalView {
                                 }
                                 turn_completed = true;
                             }
-                            if let ai::agent::TurnEvent::TextDelta { text } = &event {
-                                stream.apply_text_delta(text, ctx);
-                            } else {
-                                let messages = stream.messages_for_event(
-                                    &event,
-                                    &mut view.local_harness_shell_commands,
-                                );
-                                stream.apply_messages(messages, ctx);
+                            match &event {
+                                ai::agent::TurnEvent::TextDelta { text } => {
+                                    stream.apply_text_delta(text, ctx);
+                                }
+                                // Streamed reasoning grows one stable
+                                // "Thinking" section instead of a message
+                                // per delta.
+                                ai::agent::TurnEvent::Thinking { text } => {
+                                    stream.apply_thinking(text, ctx);
+                                }
+                                _ => {
+                                    let messages = stream.messages_for_event(
+                                        &event,
+                                        &mut view.local_harness_shell_commands,
+                                    );
+                                    stream.apply_messages(messages, ctx);
+                                }
                             }
                             match &event {
                                 ai::agent::TurnEvent::ToolCallStarted { call_id, .. } => {

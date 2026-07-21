@@ -250,9 +250,16 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                                         )
                                     });
                                     let mut shell_commands = taken_shell_commands;
-                                    let messages =
-                                        stream.messages_for_event(&event, &mut shell_commands);
-                                    stream.apply_messages(messages, app);
+                                    // Streamed reasoning grows one stable
+                                    // "Thinking" section instead of a
+                                    // message per delta.
+                                    if let TurnEvent::Thinking { text } = &event {
+                                        stream.apply_thinking(text, app);
+                                    } else {
+                                        let messages = stream
+                                            .messages_for_event(&event, &mut shell_commands);
+                                        stream.apply_messages(messages, app);
+                                    }
                                     (stream, shell_commands)
                                 })
                                 .await;

@@ -412,7 +412,7 @@ async fn dispatch_builtin_tool(
     match name {
         BUILTIN_READ_FILE => {
             let file = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
-            read_file_bounded(&resolve_under(working_dir, file))
+            read_path_bounded(&resolve_under(working_dir, file))
         }
         BUILTIN_WRITE_FILE => {
             let file = arg_str("path").ok_or("write_file requires a non-empty string `path`")?;
@@ -1381,7 +1381,7 @@ async fn run_ollama_generate_loop(
                     name: "ReadFile".to_string(),
                     input: json!({ "path": file_path }),
                 });
-                next_prompt = match read_file_bounded(&resolved) {
+                next_prompt = match read_path_bounded(&resolved) {
                     Ok(contents) => {
                         on_event(TurnEvent::ToolCallResult {
                             call_id,
@@ -1453,6 +1453,46 @@ fn resolve_under(working_dir: &Path, path: &str) -> std::path::PathBuf {
     } else {
         working_dir.join(candidate)
     }
+}
+
+/// Reads `path` for the model: file contents — or, when the model asks to
+/// read a directory, its listing. Models regularly conflate files and
+/// directories ("read my .ssh folder"); answering with the listing keeps the
+/// turn moving instead of burning the tool call on an "Is a directory" error.
+fn read_path_bounded(path: &Path) -> std::result::Result<String, String> {
+    if path.is_dir() {
+        return list_directory(path);
+    }
+    read_file_bounded(path)
+}
+
+/// A sorted, bounded listing of `path`'s entries, directories marked with a
+/// trailing slash.
+fn list_directory(path: &Path) -> std::result::Result<String, String> {
+    const MAX_ENTRIES: usize = 200;
+    let mut names: Vec<String> = std::fs::read_dir(path)
+        .map_err(|error| error.to_string())?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| {
+            let mut name = entry.file_name().to_string_lossy().into_owned();
+            if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+                name.push('/');
+            }
+            name
+        })
+        .collect();
+    names.sort();
+    let total = names.len();
+    names.truncate(MAX_ENTRIES);
+    let mut text = format!("{} is a directory with {total} entries:\n", path.display());
+    for name in &names {
+        text.push_str(name);
+        text.push('\n');
+    }
+    if total > MAX_ENTRIES {
+        text.push_str("… (truncated)\n");
+    }
+    Ok(text)
 }
 
 /// Reads a file as UTF-8, capped at [`MAX_TOOL_OUTPUT_BYTES`] so a huge file

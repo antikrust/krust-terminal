@@ -474,3 +474,52 @@ fn failed_turn_error_with_no_prior_output_still_renders() {
         assert_eq!(error.len(), 1, "invisible failure still renders once");
     });
 }
+
+#[test]
+fn thinking_deltas_grow_one_reasoning_section() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut shell_commands = std::collections::HashMap::new();
+
+        // qwen3-style word-by-word reasoning deltas…
+        app.update(|ctx| stream.apply_thinking("I should ", ctx));
+        app.update(|ctx| stream.apply_thinking("run ls.", ctx));
+        // …then the answer, then a fresh thinking run.
+        let text = stream.messages_for_event(
+            &TurnEvent::Text {
+                text: "Done.".to_string(),
+            },
+            &mut shell_commands,
+        );
+        app.update(|ctx| stream.apply_messages(text, ctx));
+        app.update(|ctx| stream.apply_thinking("Next step…", ctx));
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            let task = conversation
+                .get_task(conversation.get_root_task_id())
+                .expect("root task exists");
+            let reasoning: Vec<String> = task
+                .messages()
+                .filter_map(|message| match &message.message {
+                    Some(api::message::Message::AgentReasoning(reasoning)) => {
+                        Some(reasoning.reasoning.clone())
+                    }
+                    _ => None,
+                })
+                .collect();
+            // Two sections, not four one-word messages: consecutive deltas
+            // coalesced, and the post-answer run started a new section.
+            assert_eq!(
+                reasoning,
+                vec!["I should run ls.".to_string(), "Next step…".to_string()]
+            );
+        });
+    });
+}

@@ -48,6 +48,13 @@ pub(crate) struct LocalHarnessStream {
     /// failed-turn error that merely repeats it (see [`messages_for_event`]).
     /// Cleared at each turn boundary.
     shown_texts: Vec<String>,
+    /// Stable message receiving streamed reasoning for the current thinking
+    /// run — the reasoning twin of [`Self::streaming_text_message_id`].
+    /// Without it every thinking delta becomes its own collapsible
+    /// "Thinking" section (qwen3 streams reasoning word by word). Reset by
+    /// any non-thinking event so a post-tool thinking run opens a new
+    /// section.
+    streaming_reasoning_message_id: Option<String>,
 }
 
 impl LocalHarnessStream {
@@ -85,6 +92,7 @@ impl LocalHarnessStream {
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
+            streaming_reasoning_message_id: None,
         };
 
         let request_input = this.request_input(prompt);
@@ -198,6 +206,7 @@ impl LocalHarnessStream {
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
+            streaming_reasoning_message_id: None,
         };
 
         let request_input = this.request_input(prompt);
@@ -268,6 +277,10 @@ impl LocalHarnessStream {
         event: &TurnEvent,
         shell_commands: &mut HashMap<String, String>,
     ) -> Vec<api::Message> {
+        // Any non-delta event ends the current streaming thinking section;
+        // the next thinking delta starts a fresh one (e.g. after a tool
+        // call). Thinking itself is routed to `apply_thinking`, not here.
+        self.streaming_reasoning_message_id = None;
         // Remember assistant text shown so far this turn.
         if let TurnEvent::Text { text } = event {
             self.shown_texts.push(text.clone());
@@ -334,6 +347,8 @@ impl LocalHarnessStream {
             return;
         }
 
+        // Answer text ends any streaming thinking section.
+        self.streaming_reasoning_message_id = None;
         let is_first_delta = self.streaming_text_message_id.is_none();
         let message_id = self
             .streaming_text_message_id
@@ -386,6 +401,70 @@ impl LocalHarnessStream {
                 ctx,
             ) {
                 log::warn!("local_harness_stream: failed to append text delta: {error}");
+            }
+        });
+    }
+
+    /// Streams a reasoning delta into one stable, growing "Thinking" section
+    /// — the reasoning twin of [`Self::apply_text_delta`]. Reasoning models
+    /// (qwen3, deepseek-r1) stream their chain of thought word by word;
+    /// making each delta its own message rendered a stack of one-word
+    /// "Thinking" collapsibles.
+    pub(crate) fn apply_thinking(&mut self, text: &str, ctx: &mut AppContext) {
+        if text.is_empty() {
+            return;
+        }
+
+        let is_first_delta = self.streaming_reasoning_message_id.is_none();
+        let message_id = self
+            .streaming_reasoning_message_id
+            .get_or_insert_with(|| uuid::Uuid::new_v4().to_string())
+            .clone();
+        let message = api::Message {
+            id: message_id,
+            task_id: self.root_task_id.to_string(),
+            request_id: self.request_id.clone(),
+            message: Some(api::message::Message::AgentReasoning(
+                api::message::AgentReasoning {
+                    reasoning: text.to_string(),
+                    ..Default::default()
+                },
+            )),
+            ..Default::default()
+        };
+
+        let action = if is_first_delta {
+            api::client_action::Action::AddMessagesToTask(api::client_action::AddMessagesToTask {
+                task_id: self.root_task_id.to_string(),
+                messages: vec![message],
+            })
+        } else {
+            api::client_action::Action::AppendToMessageContent(
+                api::client_action::AppendToMessageContent {
+                    task_id: self.root_task_id.to_string(),
+                    message: Some(message),
+                    mask: Some(FieldMask {
+                        // Proto field path — see the note on the text mask in
+                        // `apply_text_delta`.
+                        paths: vec!["agent_reasoning.reasoning".to_string()],
+                    }),
+                },
+            )
+        };
+
+        let history = BlocklistAIHistoryModel::handle(ctx);
+        history.update(ctx, |history, ctx| {
+            if let Err(error) = history.apply_client_actions(
+                &self.stream_id,
+                vec![api::ClientAction {
+                    action: Some(action),
+                }],
+                self.conversation_id,
+                self.terminal_surface_id,
+                &self.skill_path_origin,
+                ctx,
+            ) {
+                log::warn!("local_harness_stream: failed to append thinking delta: {error}");
             }
         });
     }
@@ -573,6 +652,7 @@ impl LocalHarnessStream {
             skill_path_origin: SkillPathOrigin::Local,
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
+            streaming_reasoning_message_id: None,
         };
 
         let request_input = next.request_input_with(
