@@ -1198,14 +1198,47 @@ impl TemplatableMCPServerManager {
     /// Whether the given installed server may be handed to local (Ollama)
     /// models. Third-party MCP servers are hidden from them by default —
     /// weak local models misuse general-purpose or stateful tools (e.g. a
-    /// persistent js REPL) — so only Warp's built-in, Ollama-safe servers
-    /// qualify. A future per-server opt-in will extend this to let the user
-    /// promote a trusted third-party server into the local set.
-    pub fn is_exposed_to_local_models(&self, installation_uuid: Uuid) -> bool {
+    /// persistent js REPL). Warp's built-in, Ollama-safe servers always
+    /// qualify; anything else only if the user opted it in via the per-card
+    /// toggle on the MCP Servers page (persisted in
+    /// `AISettings::mcp_local_model_exposed_templates`).
+    pub fn is_exposed_to_local_models(&self, installation_uuid: Uuid, app: &AppContext) -> bool {
         let Some(installation) = self.locally_installed_servers.get(&installation_uuid) else {
             return false;
         };
-        Self::BUILTIN_LOCAL_MODEL_TEMPLATES.contains(&installation.template_uuid())
+        let template_uuid = installation.template_uuid();
+        if Self::BUILTIN_LOCAL_MODEL_TEMPLATES.contains(&template_uuid) {
+            return true;
+        }
+        AISettings::as_ref(app)
+            .mcp_local_model_exposed_templates
+            .value()
+            .as_deref()
+            .is_some_and(|json| Self::local_model_exposed_set(json).contains(&template_uuid))
+    }
+
+    /// Parses the opt-in setting: a JSON array of template UUID strings.
+    /// Tolerant of malformed JSON and unparseable entries (skipped).
+    fn local_model_exposed_set(json: &str) -> std::collections::HashSet<Uuid> {
+        serde_json::from_str::<Vec<String>>(json)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|value| Uuid::parse_str(value).ok())
+            .collect()
+    }
+
+    /// Returns the setting JSON with `template_uuid`'s exposure flipped —
+    /// the MCP Servers page writes this back on each toggle click.
+    pub fn toggle_local_model_exposure(current: Option<&str>, template_uuid: Uuid) -> String {
+        let mut set = current
+            .map(Self::local_model_exposed_set)
+            .unwrap_or_default();
+        if !set.insert(template_uuid) {
+            set.remove(&template_uuid);
+        }
+        let mut list: Vec<String> = set.iter().map(Uuid::to_string).collect();
+        list.sort();
+        serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Installs Warp's built-in "Web Search" MCP server the first time it's

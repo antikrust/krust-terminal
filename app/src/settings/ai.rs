@@ -1780,6 +1780,42 @@ define_settings_group!(AISettings, settings: [
         description: "Per-model agent/chat overrides for Ollama, as a JSON map of model tag to \"agent\" or \"chat\".",
     },
 
+    // Fork: MCP server templates the user opted in to exposing to local
+    // (Ollama) models, as a JSON array of template UUIDs. Warp's built-in
+    // Ollama-safe servers are always exposed; everything else is hidden
+    // from local models unless listed here — weak local models misuse
+    // general-purpose or stateful tools. Toggled per card on the MCP
+    // Servers page; consumed by
+    // `TemplatableMCPServerManager::is_exposed_to_local_models`.
+    mcp_local_model_exposed_templates: McpLocalModelExposedTemplates {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.mcp_local_model_exposed_templates",
+        description: "MCP server templates exposed to local models, as a JSON array of template UUIDs.",
+    },
+
+    // Fork: the Ollama multi-model committee's knobs, as a JSON object of
+    // `{ "reviewers": N, "max_loaded": N }`. One string setting rather than
+    // two numeric ones so later versions can add fields without a settings
+    // migration — the same pattern as `ollama_model_mode_overrides`. Parsed
+    // tolerantly by `ollama_committee::OllamaCommitteeConfig`; absent or
+    // malformed values fall back to defaults. Machine-specific (it encodes
+    // how many models this machine can hold), so never synced.
+    ollama_committee_config: OllamaCommitteeConfig {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_committee_config",
+        description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts.",
+    },
+
     // Fork: misery mode — an escalation of swear mode in which the terminal
     // annotates your commands with contempt. Implemented by
     // `crate::terminal::misery`. Has no effect unless swear mode is also on.

@@ -63,6 +63,8 @@ pub enum ServerCardAction {
     InstallServerUpdate(ServerCardItemId),
     ViewLogs(ServerCardItemId),
     LogOut(ServerCardItemId),
+    /// Flip whether this server's tools are exposed to local (Ollama) models.
+    ToggleLocalModels(ServerCardItemId),
     FullCardClick,
 }
 
@@ -75,6 +77,7 @@ pub enum ServerCardEvent {
     InstallServerUpdate(ServerCardItemId),
     ViewLogs(ServerCardItemId),
     LogOut(ServerCardItemId),
+    ToggleLocalModels(ServerCardItemId),
 }
 
 #[derive(Default)]
@@ -84,6 +87,7 @@ pub struct ServerCardMouseHandles {
     share_icon_button: MouseStateHandle,
     edit_icon_button: MouseStateHandle,
     update_icon_button: MouseStateHandle,
+    local_models_icon_button: MouseStateHandle,
 
     view_logs_button: MouseStateHandle,
     edit_config_button: MouseStateHandle,
@@ -346,6 +350,10 @@ pub struct ServerCardView {
     mouse_handles: ServerCardMouseHandles,
 
     is_tools_expanded: bool,
+    /// Whether to render the "expose to local models" toggle, and its state.
+    /// Set via [`Self::with_local_models`].
+    show_local_models_icon_button: bool,
+    local_models_exposed: bool,
 }
 
 impl ServerCardView {
@@ -371,7 +379,18 @@ impl ServerCardView {
             mouse_handles: Default::default(),
 
             is_tools_expanded: false,
+            show_local_models_icon_button: false,
+            local_models_exposed: false,
         }
+    }
+
+    /// Shows the per-server "expose to local models" toggle, seeded with the
+    /// current exposure state. A builder rather than a `ServerCardOptions`
+    /// field so the exhaustive status → options tables stay untouched.
+    pub fn with_local_models(mut self, exposed: bool) -> Self {
+        self.show_local_models_icon_button = true;
+        self.local_models_exposed = exposed;
+        self
     }
 
     pub fn title(&self) -> &str {
@@ -811,6 +830,33 @@ impl ServerCardView {
             actions_row = actions_row.with_child(self.render_update_available_icon(appearance));
         }
 
+        // Always visible (not hover-only): it conveys state, not just an
+        // action — active laptop = this server's tools are handed to local
+        // (Ollama) models, dimmed = cloud/CLI agents only.
+        if self.show_local_models_icon_button {
+            let tooltip = if self.local_models_exposed {
+                "Exposed to local models — click to hide"
+            } else {
+                "Hidden from local models — click to expose"
+            };
+            let ui_builder = appearance.ui_builder().clone();
+            let tooltip_text = tooltip.to_string();
+            actions_row = actions_row.with_child(
+                icon_button(
+                    appearance,
+                    Icon::Laptop,
+                    self.local_models_exposed,
+                    self.mouse_handles.local_models_icon_button.clone(),
+                )
+                .with_tooltip(move || ui_builder.tool_tip(tooltip_text.clone()).build().finish())
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(ServerCardAction::ToggleLocalModels(item_id));
+                })
+                .finish(),
+            );
+        }
+
         if self.render_options.show_view_logs_text_button {
             let view_logs_button = appearance
                 .ui_builder()
@@ -991,6 +1037,10 @@ impl TypedActionView for ServerCardView {
             }
             ServerCardAction::LogOut(item_id) => {
                 ctx.emit(ServerCardEvent::LogOut(*item_id));
+                ctx.notify();
+            }
+            ServerCardAction::ToggleLocalModels(item_id) => {
+                ctx.emit(ServerCardEvent::ToggleLocalModels(*item_id));
                 ctx.notify();
             }
             ServerCardAction::FullCardClick => ctx.emit(ServerCardEvent::Install(self.item_id)),

@@ -172,6 +172,16 @@ impl TemplatableMCPServerManager {
         false
     }
 
+    /// Web builds have no local-model harness; nothing is exposed.
+    pub fn is_exposed_to_local_models(&self, _installation_uuid: Uuid, _app: &AppContext) -> bool {
+        false
+    }
+
+    /// See the native impl; inert on web.
+    pub fn toggle_local_model_exposure(_current: Option<&str>, _template_uuid: Uuid) -> String {
+        "[]".to_string()
+    }
+
     pub fn is_server_template_shared(&self, _template_uuid: Uuid, _app: &AppContext) -> bool {
         false
     }

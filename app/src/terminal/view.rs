@@ -23674,7 +23674,7 @@ impl TerminalView {
                 let exposed = manager
                     .server_from_tool(name.clone())
                     .is_some_and(|installation_uuid| {
-                        manager.is_exposed_to_local_models(*installation_uuid)
+                        manager.is_exposed_to_local_models(*installation_uuid, ctx)
                     });
                 if !exposed {
                     continue;

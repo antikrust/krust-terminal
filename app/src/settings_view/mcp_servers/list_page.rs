@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
+use settings::Setting as _;
 use settings::ToggleableSetting as _;
 use strum::IntoEnumIterator;
 use uuid::Uuid;
@@ -410,6 +411,11 @@ impl MCPServersListPageView {
             None
         };
 
+        // Installed servers carry the "expose to local models" toggle so the
+        // user can promote a trusted server into the local (Ollama) tool set
+        // — everything non-built-in is hidden from local models by default.
+        let local_models_exposed = TemplatableMCPServerManager::as_ref(ctx)
+            .is_exposed_to_local_models(installation_uuid, ctx);
         let server_card = ServerCardView::new(
             item_id,
             installation.templatable_mcp_server().name.clone(),
@@ -423,7 +429,8 @@ impl MCPServersListPageView {
                 show_update_available_icon_button: should_show_update_symbol,
                 ..server_card_status.into()
             },
-        );
+        )
+        .with_local_models(local_models_exposed);
         self.register_server_card(server_card, ctx);
     }
 
@@ -490,6 +497,33 @@ impl MCPServersListPageView {
         TemplatableMCPServerManager::handle(ctx).update(ctx, |templatable_manager, ctx| {
             templatable_manager.share_templatable_mcp_server(template_uuid, ctx);
         });
+    }
+
+    /// Flips whether `installation_uuid`'s server is exposed to local
+    /// (Ollama) models, persisting the opt-in by template uuid so it
+    /// survives reinstalls. The next local-model turn picks it up — the
+    /// harness snapshots exposed tools per prompt.
+    fn toggle_local_models(&mut self, installation_uuid: Uuid, ctx: &mut ViewContext<Self>) {
+        let Some(template_uuid) =
+            TemplatableMCPServerManager::as_ref(ctx).get_template_uuid(installation_uuid)
+        else {
+            return;
+        };
+        let current = AISettings::as_ref(ctx)
+            .mcp_local_model_exposed_templates
+            .value()
+            .clone();
+        let updated = TemplatableMCPServerManager::toggle_local_model_exposure(
+            current.as_deref(),
+            template_uuid,
+        );
+        let _ = AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            settings
+                .mcp_local_model_exposed_templates
+                .set_value(Some(updated), ctx)
+        });
+        self.refresh_server_cards(ctx);
+        ctx.notify();
     }
 
     fn share_templatable_mcp_server_installation(
@@ -738,6 +772,11 @@ impl MCPServersListPageView {
                     return;
                 };
                 self.start_server_update(*installation_uuid, ctx);
+            }
+            ServerCardEvent::ToggleLocalModels(item_id) => {
+                if let ServerCardItemId::TemplatableMCPInstallation(installation_uuid) = item_id {
+                    self.toggle_local_models(*installation_uuid, ctx);
+                }
             }
             ServerCardEvent::LogOut(item_id) => {
                 if let Some(server_card) = self.get_server_card(*item_id) {
