@@ -14,8 +14,8 @@ use warp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
 use warpui::assets::asset_cache::AssetSource;
 use warpui::elements::{
     Align, Border, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius,
-    CrossAxisAlignment, Element, Empty, Flex, Hoverable, Image, MainAxisAlignment, MainAxisSize,
-    MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
+    CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, Image, MainAxisAlignment,
+    MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
 use warpui::fonts::Weight;
 use warpui::keymap::ContextPredicate;
@@ -373,7 +373,6 @@ impl MainSettingsPageView {
             widgets.push(Box::new(VersionInfoWidget::default()));
         }
 
-        widgets.push(Box::new(LogoutWidget::default()));
 
         // Teams and Billing & usage are merged in as the final sections of the
         // Account page, in that order.
@@ -427,6 +426,7 @@ struct AccountWidgetStateHandles {
     enterprise_contact_us_link: MouseStateHandle,
     stripe_billing_portal_link: MouseStateHandle,
     avatar: MouseStateHandle,
+    log_out_button: MouseStateHandle,
 }
 
 #[derive(Default)]
@@ -775,13 +775,41 @@ impl AccountWidget {
             .with_child(
                 Shrinkable::new(1.0, Align::new(user_info.finish()).left().finish()).finish(),
             )
-            .with_cross_axis_alignment(CrossAxisAlignment::Start);
+            .with_cross_axis_alignment(CrossAxisAlignment::Center);
 
         if !FeatureFlag::UsageBasedPricing.is_enabled() {
             row.add_child(Align::new(plan_info.finish()).right().finish());
         }
 
+        // Log out belongs on the account row itself, across from the identity
+        // it signs out — not as a stray button lower on the page.
+        row.add_child(
+            Container::new(self.render_log_out_button(appearance))
+                .with_margin_left(HEADER_PADDING)
+                .finish(),
+        );
+
         row.finish()
+    }
+
+    fn render_log_out_button(&self, appearance: &Appearance) -> Box<dyn Element> {
+        appearance
+            .ui_builder()
+            .button(
+                ButtonVariant::Secondary,
+                self.ui_state_handles.log_out_button.clone(),
+            )
+            .with_text_label(LOG_OUT_TEXT.into())
+            .with_style(UiComponentStyles {
+                font_size: Some(14.),
+                padding: Some(Coords::uniform(8.).left(24.).right(24.)),
+                ..Default::default()
+            })
+            .build()
+            .on_click(|ctx, _, _| {
+                ctx.dispatch_typed_action(WorkspaceAction::LogOut);
+            })
+            .finish()
     }
 }
 
@@ -844,6 +872,15 @@ impl SettingsWidget for SignupBannerWidget {
         "sign up signup account settings sync teams cloud"
     }
 
+    fn should_render(&self, app: &AppContext) -> bool {
+        // The pitch is for the signed-out: anyone with a sign-in (legacy auth
+        // or our account) shouldn't see it at all.
+        AuthStateProvider::as_ref(app)
+            .get()
+            .is_anonymous_or_logged_out()
+            && !crate::account::has_account()
+    }
+
     fn render(
         &self,
         _view: &Self::View,
@@ -879,13 +916,24 @@ impl SettingsWidget for SignupBannerWidget {
             )
             .finish();
 
+        // Stretch to the same column width as every other section: the card
+        // fills the row rather than hugging its text.
         Container::new(
-            Container::new(body)
-                .with_horizontal_padding(12.)
-                .with_vertical_padding(12.)
-                .with_background(theme.surface_1())
-                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
-                .with_border(Border::new(1.).with_border_fill(theme.outline()))
+            Flex::row()
+                .with_main_axis_size(MainAxisSize::Max)
+                .with_child(
+                    Expanded::new(
+                        1.,
+                        Container::new(body)
+                            .with_horizontal_padding(12.)
+                            .with_vertical_padding(12.)
+                            .with_background(theme.surface_1())
+                            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
+                            .with_border(Border::new(1.).with_border_fill(theme.outline()))
+                            .finish(),
+                    )
+                    .finish(),
+                )
                 .finish(),
         )
         .with_margin_top(VERTICAL_MARGIN)
@@ -1264,30 +1312,6 @@ impl SettingsWidget for VersionInfoWidget {
     }
 }
 
-#[derive(Default)]
-struct LogoutWidget {
-    mouse_state: MouseStateHandle,
-}
-
-impl LogoutWidget {
-    fn render_logout_button(&self, appearance: &Appearance) -> Box<dyn Element> {
-        appearance
-            .ui_builder()
-            .button(ButtonVariant::Secondary, self.mouse_state.clone())
-            .with_text_label(LOG_OUT_TEXT.into())
-            .with_style(UiComponentStyles {
-                font_size: Some(14.),
-                padding: Some(Coords::uniform(8.).left(32.).right(32.)),
-                ..Default::default()
-            })
-            .build()
-            .on_click(|ctx, _, _| {
-                ctx.dispatch_typed_action(WorkspaceAction::LogOut);
-            })
-            .finish()
-    }
-}
-
 /// Widget displaying IAP credential state and a refresh button. Only
 /// visible on staging channels where IAP is active.
 #[cfg(not(target_family = "wasm"))]
@@ -1395,35 +1419,6 @@ impl SettingsWidget for IapCredentialsWidget {
                 .with_child(label)
                 .with_child(status)
                 .with_child(button_row)
-                .finish(),
-        )
-        .with_margin_top(VERTICAL_MARGIN)
-        .finish()
-    }
-}
-
-impl SettingsWidget for LogoutWidget {
-    type View = MainSettingsPageView;
-
-    fn search_terms(&self) -> &str {
-        "sign out log out logout"
-    }
-
-    fn should_render(&self, app: &AppContext) -> bool {
-        !AuthStateProvider::as_ref(app)
-            .get()
-            .is_anonymous_or_logged_out()
-    }
-
-    fn render(
-        &self,
-        _view: &Self::View,
-        appearance: &Appearance,
-        _app: &AppContext,
-    ) -> Box<dyn Element> {
-        Container::new(
-            Align::new(self.render_logout_button(appearance))
-                .left()
                 .finish(),
         )
         .with_margin_top(VERTICAL_MARGIN)
