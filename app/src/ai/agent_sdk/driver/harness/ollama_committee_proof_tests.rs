@@ -347,3 +347,44 @@ fn suite_outcomes_render_with_the_suite_name() {
             .contains("could not be run")
     );
 }
+
+#[test]
+fn a_prover_that_broke_the_contract_gets_another_go_but_a_timeout_does_not() {
+    // The shapes worth retrying are the ones the model can fix if told: it
+    // raised (assert is the usual culprit), it forgot to decide, or it wrote
+    // something python couldn't parse.
+    assert!(proof_script_is_fixable(CRASHED_EXIT_CODE));
+    assert!(proof_script_is_fixable(NO_VERDICT_EXIT_CODE));
+    assert!(proof_script_is_fixable(2), "a syntax error is fixable");
+
+    // A verdict is not a failure, and a timeout will just time out again.
+    assert!(!proof_script_is_fixable(0));
+    assert!(!proof_script_is_fixable(1));
+    assert!(!proof_script_is_fixable(TIMEOUT_EXIT_CODE));
+}
+
+#[test]
+fn an_assertion_failure_is_a_crash_not_a_refutation() {
+    use futures_lite::future::block_on;
+
+    // The exact shape from the user's run: the prover asserted the correct
+    // behaviour instead of deciding. The assertion fails, python exits 1 —
+    // and exit 1 means "the code is fine", the opposite of what happened.
+    let dir = std::env::temp_dir();
+    let path = std::env::var("PATH").unwrap_or_default();
+    let execution = block_on(run_proof_script(
+        "share = 101 / 2\nassert isinstance(share, int), \"share should be an integer\"\nexit(1)",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(execution.exit_code, CRASHED_EXIT_CODE);
+    assert!(matches!(
+        classify_proof(&execution),
+        ProofOutcome::Inconclusive(_)
+    ));
+    assert!(
+        proof_script_is_fixable(execution.exit_code),
+        "and the prover is asked to try again"
+    );
+}

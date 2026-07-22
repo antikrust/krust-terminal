@@ -1309,27 +1309,81 @@ fn run_hints_follow_the_extension() {
     assert_eq!(run_hint("notes.txt"), None);
 }
 
+fn recheck(target: RecheckTarget, note: Option<&str>) -> Option<RecheckCommand> {
+    Some(RecheckCommand {
+        target,
+        note: note.map(str::to_string),
+    })
+}
+
 #[test]
 fn recheck_commands_parse_with_and_without_a_note() {
-    assert_eq!(parse_recheck_command("recheck 2"), Some((2, None)));
-    assert_eq!(parse_recheck_command("/redo 1"), Some((1, None)));
-    assert_eq!(parse_recheck_command("recheck finding 3"), Some((3, None)));
+    assert_eq!(
+        parse_recheck_command("recheck 2"),
+        recheck(RecheckTarget::One(2), None)
+    );
+    assert_eq!(
+        parse_recheck_command("/redo 1"),
+        recheck(RecheckTarget::One(1), None)
+    );
+    assert_eq!(
+        parse_recheck_command("recheck finding 3"),
+        recheck(RecheckTarget::One(3), None)
+    );
     assert_eq!(
         parse_recheck_command("recheck 2 the script imported a package that doesn't exist"),
-        Some((
-            2,
-            Some("the script imported a package that doesn't exist".to_string())
-        ))
+        recheck(
+            RecheckTarget::One(2),
+            Some("the script imported a package that doesn't exist")
+        )
     );
     assert_eq!(
         parse_recheck_command("reprove #4: bad import"),
-        Some((4, Some("bad import".to_string())))
+        recheck(RecheckTarget::One(4), Some("bad import"))
     );
-    // Not rechecks.
-    assert_eq!(parse_recheck_command("recheck"), None);
-    assert_eq!(parse_recheck_command("recheck everything"), None);
-    assert_eq!(parse_recheck_command("recheck 0"), None);
     assert_eq!(parse_recheck_command("review my changes"), None);
+}
+
+#[test]
+fn a_recheck_of_everything_is_a_recheck_of_everything() {
+    // The user's own line after watching every proof misfire the same way.
+    // This used to parse as nothing, fall through to panel mode, and put a
+    // complaint about proof scripts to three models that cannot see one.
+    assert_eq!(
+        parse_recheck_command("recheck all the scripts imported packages that dont exist"),
+        recheck(
+            RecheckTarget::All,
+            Some("the scripts imported packages that dont exist")
+        )
+    );
+    assert_eq!(
+        parse_recheck_command("recheck everything"),
+        recheck(RecheckTarget::All, None)
+    );
+    assert_eq!(
+        parse_recheck_command("recheck all of them — bad imports"),
+        recheck(RecheckTarget::All, Some("bad imports"))
+    );
+}
+
+#[test]
+fn a_recheck_that_names_nothing_asks_instead_of_starting_a_panel() {
+    // Recognisably a recheck, so it must not be answered as a question.
+    assert_eq!(
+        parse_recheck_command("recheck"),
+        recheck(RecheckTarget::Unclear, None)
+    );
+    assert_eq!(
+        parse_recheck_command("recheck 0"),
+        recheck(RecheckTarget::Unclear, Some("0"))
+    );
+    assert_eq!(
+        parse_recheck_command("recheck that nonsense about type errors"),
+        recheck(
+            RecheckTarget::Unclear,
+            Some("that nonsense about type errors")
+        )
+    );
 }
 
 // --- misc -----------------------------------------------------------------
@@ -1445,7 +1499,12 @@ fn committee_reviews_a_planted_bug_against_live_ollama() {
 fn the_warm_pass_marks_what_the_model_said_twice_and_keeps_what_it_said_once() {
     let cold = vec![
         finding("payday.py", Some(2), "high", "Float division of cents"),
-        finding("payday.py", Some(8), "high", "top_scores returns lowest scores"),
+        finding(
+            "payday.py",
+            Some(8),
+            "high",
+            "top_scores returns lowest scores",
+        ),
     ];
     let warm = vec![
         // Same defect, differently worded and one line off — the consensus
@@ -1458,7 +1517,12 @@ fn the_warm_pass_marks_what_the_model_said_twice_and_keeps_what_it_said_once() {
             detail: Some("A much fuller explanation than the cold pass gave".to_string()),
             repeated: false,
         },
-        finding("payday.py", Some(4), "medium", "Remainder is dropped entirely"),
+        finding(
+            "payday.py",
+            Some(4),
+            "medium",
+            "Remainder is dropped entirely",
+        ),
     ];
 
     let (folded, repeated, fresh) = fold_second_opinion(cold, warm);
@@ -1478,7 +1542,12 @@ fn the_warm_pass_marks_what_the_model_said_twice_and_keeps_what_it_said_once() {
 fn corroboration_reaches_consensus_but_never_outranks_two_models() {
     let mut said_twice = finding("payday.py", Some(2), "high", "Float division of cents");
     said_twice.repeated = true;
-    let agreed_once = finding("payday.py", Some(8), "high", "top_scores returns lowest scores");
+    let agreed_once = finding(
+        "payday.py",
+        Some(8),
+        "high",
+        "top_scores returns lowest scores",
+    );
 
     let merged = merge_findings(&[
         report("qwen2.5-coder:14b", vec![said_twice, agreed_once.clone()]),

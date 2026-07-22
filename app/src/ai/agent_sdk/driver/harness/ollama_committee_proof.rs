@@ -54,6 +54,15 @@ const CRASHED_EXIT_CODE: i32 = 125;
 /// stating a verdict. Also not a verdict.
 const NO_VERDICT_EXIT_CODE: i32 = 126;
 
+/// Whether a failed proof is worth one more attempt by the same model. A
+/// crash, a script that forgot to decide, or a syntax error are all the
+/// prover breaking the contract — it can be told what it did and try again.
+/// A timeout is not: the script ran, it just never finished, and a second
+/// one will do the same. A clean 0 or 1 is a verdict and needs nothing.
+pub(crate) fn proof_script_is_fixable(exit_code: i32) -> bool {
+    matches!(exit_code, CRASHED_EXIT_CODE | NO_VERDICT_EXIT_CODE | 2)
+}
+
 // ---------------------------------------------------------------------------
 // Proof scripts
 // ---------------------------------------------------------------------------

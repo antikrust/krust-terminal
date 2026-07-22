@@ -75,35 +75,60 @@ pub(crate) struct HarnessModelCaps {
 }
 
 /// Probes `model`'s capabilities via `/api/show`. Fails closed (all false)
-/// when the server can't be asked.
+/// when the server can't be asked — see [`probe_model_caps_checked`] for the
+/// callers that need to tell "chat-only" from "couldn't ask".
 ///
 /// Uses `curl` rather than the reqwest client in
 /// [`crate::ai::ollama::service::fetch_capabilities`] so it works from the
 /// harness's non-Tokio executor (the settings page, which is on Tokio, uses
 /// the reqwest path).
 pub(crate) async fn probe_model_caps(model: &str, path: &str) -> HarnessModelCaps {
+    probe_model_caps_checked(model, path)
+        .await
+        .unwrap_or_default()
+}
+
+/// The same probe, distinguishing an answer from a failure. A model that
+/// advertises tools and one the server wouldn't talk about are worlds apart:
+/// the first is chat-only by design, the second is a tool-capable model about
+/// to be quietly downgraded because a 5-second curl lost a race with a busy
+/// machine. One retry, then the caller gets to say so out loud.
+pub(crate) async fn probe_model_caps_checked(model: &str, path: &str) -> Option<HarnessModelCaps> {
+    if let Some(caps) = probe_model_caps_once(model, path, 5).await {
+        return Some(caps);
+    }
+    // A loaded 32B can make the server slow to answer anything at all.
+    probe_model_caps_once(model, path, 15).await
+}
+
+async fn probe_model_caps_once(
+    model: &str,
+    path: &str,
+    timeout_secs: u64,
+) -> Option<HarnessModelCaps> {
     // Model tags are validated to letters/digits/`.-_:/` before reaching the
     // harness, so inlining the body via `-d` can't inject shell/JSON.
-    let body = json!({ "model": model }).to_string();
+    let body = json!({ "model": wire_name(model) }).to_string();
+    let show_url = format!("{}/api/show", base_url_of(model));
     let mut command = Command::new("/usr/bin/curl");
     command.args([
         "--silent",
         "--fail",
         "--max-time",
-        "5",
+        &timeout_secs.to_string(),
         "--header",
         "Content-Type: application/json",
         "-d",
         &body,
-        "http://127.0.0.1:11434/api/show",
+        &show_url,
     ]);
     command.env("PATH", path);
 
     let Ok(output) = command.output().await else {
-        return HarnessModelCaps::default();
+        return None;
     };
     if !output.status.success() {
-        return HarnessModelCaps::default();
+        return None;
     }
     let has = |value: &Value, name: &str| {
         value
@@ -112,11 +137,11 @@ pub(crate) async fn probe_model_caps(model: &str, path: &str) -> HarnessModelCap
             .is_some_and(|caps| caps.iter().any(|cap| cap.as_str() == Some(name)))
     };
     serde_json::from_slice::<Value>(&output.stdout)
+        .ok()
         .map(|value| HarnessModelCaps {
             tools: has(&value, "tools"),
             thinking: has(&value, "thinking"),
         })
-        .unwrap_or_default()
 }
 
 /// Runs a web search via DuckDuckGo's HTML endpoint (curl, to stay off the
@@ -1063,7 +1088,18 @@ async fn run_ollama_stream_inner(
     //    protocol). Defaults to `native_tools`, but the user can override per
     //    model — e.g. force codellama/deepseek-coder (coding models that
     //    predate the tool flag) into agent mode to use the shell protocol.
-    let caps = probe_model_caps(model, path).await;
+    let probed = probe_model_caps_checked(model, path).await;
+    // Say it rather than silently answering as a model with no hands. The
+    // symptom of a lost probe is the model apologising that it cannot read
+    // files — indistinguishable, from the outside, from a chat-only model.
+    if probed.is_none() && agent_override.is_none() {
+        on_event(TurnEvent::Text {
+            text: format!(
+                "_Couldn't ask Ollama what `{model}` supports, so this turn runs chat-only —                  no tools. If it should have them, Settings → Ollama can force Agent mode                  for this model._"
+            ),
+        });
+    }
+    let caps = probed.unwrap_or_default();
     let native_tools = caps.tools;
     let is_agent = agent_override.unwrap_or(native_tools);
 

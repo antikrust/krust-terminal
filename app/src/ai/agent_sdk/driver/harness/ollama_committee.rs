@@ -24,8 +24,8 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
-    classify_proof, detect_suite, run_behavior_probe, run_proof_script, run_suite,
-    strip_code_fences, ProofOutcome, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
+    classify_proof, detect_suite, proof_script_is_fixable, run_behavior_probe, run_proof_script,
+    run_suite, strip_code_fences, ProofOutcome, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -1382,7 +1382,7 @@ fn review_continuations(
 /// Parses `recheck <n> [why it was wrong]` — the in-chat way to overrule a
 /// proof you watched go wrong. `redo` and `reprove` are accepted too.
 /// Returns the 1-based finding number and the user's note.
-pub fn parse_recheck_command(prompt: &str) -> Option<(usize, Option<String>)> {
+pub fn parse_recheck_command(prompt: &str) -> Option<RecheckCommand> {
     let trimmed = prompt.trim().trim_start_matches('/');
     let mut words = trimmed.split_whitespace();
     let verb = words.next()?.to_ascii_lowercase();
@@ -1399,18 +1399,74 @@ pub fn parse_recheck_command(prompt: &str) -> Option<(usize, Option<String>)> {
     }) {
         rest.next();
     }
-    let index: usize = rest
-        .next()?
-        .trim_start_matches('#')
-        .trim_end_matches(['.', ':', ','])
-        .parse()
-        .ok()?;
-    if index == 0 {
-        return None;
-    }
+    // "recheck all — the scripts imported packages that don't exist" is the
+    // shape a user reaches for after watching every proof misfire the same
+    // way, so it has to mean something. Anything else after the verb is a
+    // recheck the harness can't act on — which is still a recheck, and gets
+    // told so rather than being answered by a panel of models with no idea
+    // what the user is looking at.
+    let target = match rest.peek() {
+        None => RecheckTarget::Unclear,
+        Some(word) => {
+            let word = word.to_ascii_lowercase();
+            let word = word.trim_end_matches(['.', ':', ',']);
+            if matches!(word, "all" | "everything" | "them" | "every") {
+                rest.next();
+                // "recheck all of them", "recheck every one".
+                if rest
+                    .peek()
+                    .is_some_and(|word| matches!(word.to_ascii_lowercase().as_str(), "of" | "one"))
+                {
+                    rest.next();
+                    if rest
+                        .peek()
+                        .is_some_and(|word| word.eq_ignore_ascii_case("them"))
+                    {
+                        rest.next();
+                    }
+                }
+                RecheckTarget::All
+            } else {
+                match word
+                    .trim_start_matches('#')
+                    .parse::<usize>()
+                    .ok()
+                    .filter(|index| *index > 0)
+                {
+                    Some(index) => {
+                        rest.next();
+                        RecheckTarget::One(index)
+                    }
+                    None => RecheckTarget::Unclear,
+                }
+            }
+        }
+    };
     let note = rest.collect::<Vec<_>>().join(" ");
-    let note = note.trim();
-    Some((index, (!note.is_empty()).then(|| note.to_string())))
+    let note = note.trim().trim_start_matches(['—', '-', ':']).trim();
+    Some(RecheckCommand {
+        target,
+        note: (!note.is_empty()).then(|| note.to_string()),
+    })
+}
+
+/// A `recheck` the user typed, and what it asked for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecheckCommand {
+    pub target: RecheckTarget,
+    /// The user's objection, handed to the prover along with the script that
+    /// earned it.
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecheckTarget {
+    /// One finding, by its number in the verdict.
+    One(usize),
+    /// Every finding the review produced, in order.
+    All,
+    /// Recognisably a recheck, but not one that names anything provable.
+    Unclear,
 }
 
 fn panel_continuations(
@@ -1620,6 +1676,10 @@ purpose against what the code actually computes: wrong sort direction (sorted() 
 ascending — a name implying \"best\" or \"top\" needs the other end), taking the wrong end \
 of a list, inverted conditions, integer vs float arithmetic, off-by-ones, crashes on empty \
 input. \
+Report defects in what the code DOES with the arguments it is written for. \"It raises \
+TypeError if you pass an int instead of a list\" is not a defect — every function in every \
+language does that, and reporting it buries the real bug. Wrong values of the right type are \
+different and do count: empty collections, zero, negatives, duplicates, one element. \
 Respond with STRICT JSON only — an array of findings, each shaped like \
 {\"file\":\"path/as/in/diff\",\"line\":123,\"severity\":\"high\",\"title\":\"one sentence naming \
 the defect\",\"detail\":\"why it is wrong and what breaks\"} with severity one of \
@@ -1745,7 +1805,14 @@ and never install anything — an import that fails proves nothing and wastes th
 Exercise exactly the suspected defect, print one short line stating what you observed, then \
 exit 0 if the DEFECT IS REAL and exit 1 if the code actually behaves correctly. You MUST end by \
 calling exit(0) or exit(1) on every path — a script that raises or falls off the end is thrown \
-away, not counted as a verdict. Judge only the suspected defect — not style, not other code. No \
+away, not counted as a verdict. NEVER use assert: an AssertionError is a crash, so it throws \
+your work away. Wrap what you are testing in try/except, decide what you saw, and exit. \
+CALL THE CODE THE WAY THE PROGRAM CALLS IT: use the argument types the function is written \
+for. Passing a string where a list belongs, or an int where a sequence belongs, raises a \
+TypeError in any language and proves nothing — if the only way to trigger the defect is to \
+pass a type the caller never passes, exit 1. Wrong VALUES of the right type (empty list, zero, \
+negatives, duplicates) are fair game and are often where the real defect is. \
+Judge only the suspected defect — not style, not other code. No \
 user input, no network, no infinite loops: finish in under ten seconds. Output ONLY the python3 \
 script — no commentary, no code fences.";
 
@@ -2741,73 +2808,110 @@ async fn prove_finding(
     total_usage: &mut TurnUsage,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<()> {
-    on_event(TurnEvent::Text {
-        text: format!(
-            "**Proving #{} — `{}`** writes a reproduction…",
-            index + 1,
-            prover.name
-        ),
-    });
-    let prover_prompt = prover_user_prompt(diff, finding, steer);
-    // The judge stage reassigns the run's exit status afterwards, so the
-    // prover's own status isn't tracked.
-    let (_, outcome) = chat_once(
-        &prover.name,
-        PROVER_SYSTEM_PROMPT,
-        &prover_prompt,
-        prover.thinking,
-        keep_alive,
-        working_dir,
-        path,
-        on_event,
-    )
-    .await?;
-    let proof = match outcome {
-        Ok(stage) => {
-            add_usage(total_usage, &stage.usage);
-            let script = strip_code_fences(&stage.content);
-            if script.trim().is_empty() {
-                ProofOutcome::Inconclusive("the prover produced no script".to_string())
-            } else {
-                on_event(TurnEvent::Text {
-                    text: format!("```python\n{script}\n```"),
-                });
-                let call_id = format!("committee-proof-{}", Uuid::new_v4());
-                on_event(TurnEvent::ToolCallStarted {
-                    call_id: call_id.clone(),
-                    name: "Shell".to_string(),
-                    input: json!({
-                        "command": format!("python3 committee-proof-{}.py", index + 1),
-                    }),
-                });
-                let execution = run_proof_script(&script, timeout_secs, working_dir, path).await;
-                on_event(TurnEvent::ToolCallResult {
-                    call_id,
-                    // 0 and 1 are the contract's two verdicts; everything
-                    // else is a script that failed to decide.
-                    outcome: if execution.exit_code == 0 || execution.exit_code == 1 {
-                        ToolCallOutcome::Success(json!({
-                            "stdout": execution.stdout,
-                            "stderr": execution.stderr,
-                            "exit": execution.exit_code,
-                        }))
-                    } else {
-                        ToolCallOutcome::Error(format!(
-                            "exit {}\n{}",
-                            execution.exit_code, execution.stderr
-                        ))
-                    },
-                });
-                finding.proof_script = Some(script);
-                classify_proof(&execution)
+    // A script that crashes or forgets to decide is the commonest way a
+    // proof round is wasted — models reach for `assert` when the contract
+    // asks for exit(0)/exit(1). One retry, with the interpreter's own
+    // complaint quoted back, costs one call and rescues most of them.
+    let mut steer = steer.map(str::to_string);
+    for attempt in 0..2 {
+        on_event(TurnEvent::Text {
+            text: match attempt {
+                0 => format!(
+                    "**Proving #{} — `{}`** writes a reproduction…",
+                    index + 1,
+                    prover.name
+                ),
+                _ => format!(
+                    "**#{} again — `{}`** is told what the interpreter said and tries once \
+                     more…",
+                    index + 1,
+                    prover.name
+                ),
+            },
+        });
+        let prover_prompt = prover_user_prompt(diff, finding, steer.as_deref());
+        // The judge stage reassigns the run's exit status afterwards, so the
+        // prover's own status isn't tracked.
+        let (_, outcome) = chat_once(
+            &prover.name,
+            PROVER_SYSTEM_PROMPT,
+            &prover_prompt,
+            prover.thinking,
+            keep_alive,
+            working_dir,
+            path,
+            on_event,
+        )
+        .await?;
+        let (proof, exit_code) = match outcome {
+            Ok(stage) => {
+                add_usage(total_usage, &stage.usage);
+                let script = strip_code_fences(&stage.content);
+                if script.trim().is_empty() {
+                    (
+                        ProofOutcome::Inconclusive("the prover produced no script".to_string()),
+                        None,
+                    )
+                } else {
+                    on_event(TurnEvent::Text {
+                        text: format!("```python\n{script}\n```"),
+                    });
+                    let call_id = format!("committee-proof-{}", Uuid::new_v4());
+                    on_event(TurnEvent::ToolCallStarted {
+                        call_id: call_id.clone(),
+                        name: "Shell".to_string(),
+                        input: json!({
+                            "command": format!("python3 committee-proof-{}.py", index + 1),
+                        }),
+                    });
+                    let execution =
+                        run_proof_script(&script, timeout_secs, working_dir, path).await;
+                    on_event(TurnEvent::ToolCallResult {
+                        call_id,
+                        // 0 and 1 are the contract's two verdicts; everything
+                        // else is a script that failed to decide.
+                        outcome: if execution.exit_code == 0 || execution.exit_code == 1 {
+                            ToolCallOutcome::Success(json!({
+                                "stdout": execution.stdout,
+                                "stderr": execution.stderr,
+                                "exit": execution.exit_code,
+                            }))
+                        } else {
+                            ToolCallOutcome::Error(format!(
+                                "exit {}\n{}",
+                                execution.exit_code, execution.stderr
+                            ))
+                        },
+                    });
+                    finding.proof_script = Some(script);
+                    let code = execution.exit_code;
+                    (classify_proof(&execution), Some(code))
+                }
             }
+            Err(error) => (
+                ProofOutcome::Inconclusive(format!("the prover failed: {error}")),
+                None,
+            ),
+        };
+        on_event(TurnEvent::Text {
+            text: format!("#{}: {}", index + 1, proof.label()),
+        });
+        let retry = attempt == 0 && exit_code.is_some_and(proof_script_is_fixable);
+        finding.proof = Some(proof);
+        if !retry {
+            break;
         }
-        Err(error) => ProofOutcome::Inconclusive(format!("the prover failed: {error}")),
-    };
-    on_event(TurnEvent::Text {
-        text: format!("#{}: {}", index + 1, proof.label()),
-    });
-    finding.proof = Some(proof);
+        // The prover sees its own script and the traceback, not a scolding —
+        // the contract it broke is the one thing it needs restated.
+        steer = Some(
+            "That script never returned a verdict — it raised, or it ended without calling \
+             exit(). Do not use assert: an AssertionError is a crash, not an answer. Decide \
+             for yourself whether the behaviour you observed is the defect, then call \
+             exit(0) if the defect is real or exit(1) if the code behaves correctly, on \
+             every path."
+                .to_string(),
+        );
+    }
     Ok(())
 }
 
@@ -2920,7 +3024,7 @@ pub async fn run_ollama_committee(
     // A `recheck <n>` follow-up re-proves one finding from this
     // conversation's last review — the user overruling a proof they watched
     // go wrong, which is the only steering the machine can't do for itself.
-    if let Some((number, note)) = parse_recheck_command(prompt) {
+    if let Some(command) = parse_recheck_command(prompt) {
         let continuation = review_continuations()
             .lock()
             .ok()
@@ -2938,69 +3042,119 @@ pub async fn run_ollama_committee(
             });
             return Ok(success_status());
         };
-        let Some(finding) = continuation.merged.get_mut(number - 1) else {
+        // Which findings this recheck covers. An unclear one asks rather than
+        // guessing — and never falls through to the panel, which would put
+        // the user's complaint about proof scripts to three models that
+        // cannot see a proof script.
+        let targets: Vec<usize> = match command.target {
+            RecheckTarget::One(number) => {
+                if number > continuation.merged.len() {
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "That review only had {} finding{}.",
+                            continuation.merged.len(),
+                            if continuation.merged.len() == 1 {
+                                ""
+                            } else {
+                                "s"
+                            }
+                        ),
+                    });
+                    on_event(TurnEvent::TurnCompleted {
+                        usage: Some(committee_usage()),
+                        is_error: false,
+                        error_message: None,
+                    });
+                    return Ok(success_status());
+                }
+                vec![number - 1]
+            }
+            RecheckTarget::All => (0..continuation.merged.len().min(MAX_PROOFS)).collect(),
+            RecheckTarget::Unclear => {
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "Recheck which one? `recheck 2` re-proves finding 2, `recheck 2 \
+                         <what was wrong>` hands the prover your objection, and `recheck \
+                         all <what was wrong>` redoes every proof. That review had {} \
+                         finding{}.",
+                        continuation.merged.len(),
+                        if continuation.merged.len() == 1 {
+                            ""
+                        } else {
+                            "s"
+                        }
+                    ),
+                });
+                on_event(TurnEvent::TurnCompleted {
+                    usage: Some(committee_usage()),
+                    is_error: false,
+                    error_message: None,
+                });
+                return Ok(success_status());
+            }
+        };
+        let note = command.note;
+        let mut total_usage = committee_usage();
+        if targets.len() > 1 {
             on_event(TurnEvent::Text {
                 text: format!(
-                    "That review only had {} finding{}.",
-                    continuation.merged.len(),
-                    if continuation.merged.len() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    }
+                    "**Rechecking all {} findings**{}",
+                    targets.len(),
+                    note.as_deref()
+                        .map(|note| format!(" — your note: _{note}_"))
+                        .unwrap_or_default()
                 ),
             });
-            on_event(TurnEvent::TurnCompleted {
-                usage: Some(committee_usage()),
-                is_error: false,
-                error_message: None,
+        }
+        for index in targets {
+            let Some(finding) = continuation.merged.get_mut(index) else {
+                continue;
+            };
+            let prover = finding
+                .raised_by
+                .first()
+                .and_then(|name| {
+                    continuation
+                        .plan
+                        .reviewers
+                        .iter()
+                        .find(|member| &member.name == name)
+                })
+                .unwrap_or(&continuation.plan.reviewers[0])
+                .clone();
+            on_event(TurnEvent::Text {
+                text: format!(
+                    "**Rechecking #{}** — {}{}",
+                    index + 1,
+                    finding.title,
+                    note.as_deref()
+                        .map(|note| format!(" (your note: {note})"))
+                        .unwrap_or_default()
+                ),
             });
-            return Ok(success_status());
-        };
-        let mut total_usage = committee_usage();
-        let prover = finding
-            .raised_by
-            .first()
-            .and_then(|name| {
-                continuation
-                    .plan
-                    .reviewers
-                    .iter()
-                    .find(|member| &member.name == name)
-            })
-            .unwrap_or(&continuation.plan.reviewers[0])
-            .clone();
-        on_event(TurnEvent::Text {
-            text: format!(
-                "**Rechecking #{number}** — {}{}",
-                finding.title,
-                note.as_deref()
-                    .map(|note| format!(" (your note: {note})"))
-                    .unwrap_or_default()
-            ),
-        });
-        prove_finding(
-            number - 1,
-            finding,
-            &prover,
-            &continuation.diff,
-            note.as_deref(),
-            config.proof_timeout_secs,
-            config.keep_alive(),
-            working_dir,
-            path,
-            &mut total_usage,
-            &mut on_event,
-        )
-        .await?;
-        let tier = match &finding.proof {
-            Some(ProofOutcome::Demonstrated(_)) => "**Definite** — execution demonstrated it",
-            Some(ProofOutcome::Refuted(_)) => "**Rejected** — execution refuted it",
-            _ => "**Might be** — still unproven",
-        };
-        on_event(TurnEvent::Text {
-            text: format!("#{number} is now {tier}."),
-        });
+            prove_finding(
+                index,
+                finding,
+                &prover,
+                &continuation.diff,
+                note.as_deref(),
+                config.proof_timeout_secs,
+                config.keep_alive(),
+                working_dir,
+                path,
+                &mut total_usage,
+                &mut on_event,
+            )
+            .await?;
+            let tier = match &finding.proof {
+                Some(ProofOutcome::Demonstrated(_)) => "**Definite** — execution demonstrated it",
+                Some(ProofOutcome::Refuted(_)) => "**Rejected** — execution refuted it",
+                _ => "**Might be** — still unproven",
+            };
+            on_event(TurnEvent::Text {
+                text: format!("#{} is now {tier}.", index + 1),
+            });
+        }
         if let Ok(mut map) = review_continuations().lock() {
             map.insert(*session_id, continuation);
         }
