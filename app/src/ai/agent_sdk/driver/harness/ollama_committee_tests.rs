@@ -847,6 +847,38 @@ fn round_commands_parse_and_ordinary_prompts_do_not() {
     assert_eq!(parse_round_command(""), None);
 }
 
+#[test]
+fn inline_rounds_directives_parse_and_ordinary_prompts_pass_through() {
+    // The canonical form: kinds, a dash, the question.
+    let (kinds, question) =
+        parse_inline_rounds("rounds: notes rewrite — write me a matrix rain script").unwrap();
+    assert_eq!(kinds, vec![PanelRoundKind::Notes, PanelRoundKind::Exemplar]);
+    assert_eq!(question, "write me a matrix rain script");
+
+    // Commas, slash prefix, singular keyword, case.
+    let (kinds, question) =
+        parse_inline_rounds("/Round: peers, converge explain rust lifetimes").unwrap();
+    assert_eq!(kinds, vec![PanelRoundKind::Peers, PanelRoundKind::Converge]);
+    assert_eq!(question, "explain rust lifetimes");
+
+    // A directive with no question still parses — the runner explains usage.
+    let (kinds, question) = parse_inline_rounds("rounds: notes").unwrap();
+    assert_eq!(kinds, vec![PanelRoundKind::Notes]);
+    assert_eq!(question, "");
+
+    // The plan is capped even when the user asks for a marathon.
+    let (kinds, _) = parse_inline_rounds("rounds: notes notes notes notes notes go").unwrap();
+    assert_eq!(kinds.len(), MAX_INLINE_ROUNDS);
+
+    // Not directives: no colon, no known kind, or plain questions.
+    assert_eq!(parse_inline_rounds("round notes"), None);
+    assert_eq!(parse_inline_rounds("rounds: tomorrow we ride"), None);
+    assert_eq!(
+        parse_inline_rounds("how many rounds does boxing have"),
+        None
+    );
+}
+
 // --- proofs ---------------------------------------------------------------
 
 fn shell_result(exit_code: i32, stdout: &str, stderr: &str) -> ShellExecution {

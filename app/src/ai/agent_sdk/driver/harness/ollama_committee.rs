@@ -1006,6 +1006,69 @@ fn save_panel_continuation(
     }
 }
 
+/// The most planned rounds an inline `rounds:` directive accepts — an
+/// explicit opt-in gets more headroom than the settings knobs, but still a
+/// bound.
+pub const MAX_INLINE_ROUNDS: usize = 4;
+
+fn round_kind_word(word: &str) -> Option<PanelRoundKind> {
+    match word {
+        "notes" => Some(PanelRoundKind::Notes),
+        "rewrite" | "exemplar" => Some(PanelRoundKind::Exemplar),
+        "peers" | "peer" | "critique" => Some(PanelRoundKind::Peers),
+        "converge" => Some(PanelRoundKind::Converge),
+        _ => None,
+    }
+}
+
+/// Parses a leading `rounds: <kinds…> <question>` directive — the in-chat
+/// way to plan a panel's rounds up front, overriding the settings plan for
+/// this run only. Kind words are consumed until the first non-kind token;
+/// everything after them is the actual question. `None` when the prompt
+/// doesn't start with the directive (ordinary prompts pass through).
+pub fn parse_inline_rounds(prompt: &str) -> Option<(Vec<PanelRoundKind>, String)> {
+    let trimmed = prompt.trim();
+    let trimmed = trimmed.strip_prefix('/').unwrap_or(trimmed);
+    // ASCII lowercasing preserves byte offsets, so indices found on the
+    // lowered copy slice the original safely.
+    let lower = trimmed.to_ascii_lowercase();
+    let mut cursor = if lower.starts_with("rounds:") {
+        "rounds:".len()
+    } else if lower.starts_with("round:") {
+        "round:".len()
+    } else {
+        return None;
+    };
+
+    let mut kinds: Vec<PanelRoundKind> = Vec::new();
+    loop {
+        cursor += trimmed[cursor..]
+            .find(|c: char| !matches!(c, ' ' | '\t' | ',' | '+'))
+            .unwrap_or(trimmed.len() - cursor);
+        let word_end = trimmed[cursor..]
+            .find(|c: char| !c.is_ascii_alphabetic())
+            .map(|at| cursor + at)
+            .unwrap_or(trimmed.len());
+        match round_kind_word(&lower[cursor..word_end]) {
+            Some(kind) => {
+                if kinds.len() < MAX_INLINE_ROUNDS {
+                    kinds.push(kind);
+                }
+                cursor = word_end;
+            }
+            None => break,
+        }
+    }
+    if kinds.is_empty() {
+        return None;
+    }
+    let question = trimmed[cursor..]
+        .trim_start_matches([' ', '\t', ',', '-', '—', ':', '.'])
+        .trim()
+        .to_string();
+    Some((kinds, question))
+}
+
 /// Parses the in-chat continuation command: `round notes|rewrite|peers|
 /// converge`, tolerating a leading `/`, "another", and "of". `None` for
 /// anything else — ordinary prompts must never be eaten by this.
@@ -1026,13 +1089,7 @@ pub fn parse_round_command(prompt: &str) -> Option<PanelRoundKind> {
     if words.next().is_some() {
         return None;
     }
-    match kind {
-        "notes" => Some(PanelRoundKind::Notes),
-        "rewrite" | "exemplar" => Some(PanelRoundKind::Exemplar),
-        "peers" | "peer" | "critique" => Some(PanelRoundKind::Peers),
-        "converge" => Some(PanelRoundKind::Converge),
-        _ => None,
-    }
+    round_kind_word(kind)
 }
 
 // ---------------------------------------------------------------------------
@@ -2174,6 +2231,43 @@ pub async fn run_ollama_committee(
         return Ok(last_status);
     }
 
+    // A leading `rounds: …` directive plans this run's panel rounds inline
+    // — set at the start, in the chat, overriding the settings plan for
+    // this run only.
+    let inline_question: String;
+    let mut prompt = prompt;
+    let mut panel_plan = config.panel_plan.clone();
+    let mut inline_rounds = false;
+    if let Some((kinds, question)) = parse_inline_rounds(prompt) {
+        if question.is_empty() {
+            on_event(TurnEvent::Text {
+                text: "Add the question after the rounds — e.g. `rounds: notes rewrite — \
+                       write me a matrix rain script`."
+                    .to_string(),
+            });
+            on_event(TurnEvent::TurnCompleted {
+                usage: Some(committee_usage()),
+                is_error: false,
+                error_message: None,
+            });
+            return Ok(success_status());
+        }
+        on_event(TurnEvent::Text {
+            text: format!(
+                "**Rounds for this run:** {}.",
+                kinds
+                    .iter()
+                    .map(|kind| kind.display_name())
+                    .collect::<Vec<_>>()
+                    .join(" → ")
+            ),
+        });
+        panel_plan = kinds;
+        inline_rounds = true;
+        inline_question = question;
+        prompt = &inline_question;
+    }
+
     // Assemble: everything the live server offers (it just answered the
     // service check), falling back to a disk read if /api/tags fails —
     // except the committee itself.
@@ -2288,6 +2382,13 @@ pub async fn run_ollama_committee(
         CommitteeMode::Review => "reviewing the working tree's diff",
         _ => "answering as a panel",
     };
+    if inline_rounds && mode == CommitteeMode::Review {
+        on_event(TurnEvent::Text {
+            text: "(rounds directives apply to panel questions — a review has its own \
+                   pipeline, so they're ignored here)"
+                .to_string(),
+        });
+    }
     let mut assembly = format!("**Committee assembled** — {mode_name}.\n");
     for (index, reviewer) in plan.reviewers.iter().enumerate() {
         assembly.push_str(&format!(
@@ -2307,6 +2408,16 @@ pub async fn run_ollama_committee(
             ""
         },
     ));
+    if mode == CommitteeMode::Panel && !panel_plan.is_empty() {
+        assembly.push_str(&format!(
+            "- Planned rounds: {}\n",
+            panel_plan
+                .iter()
+                .map(|kind| kind.display_name())
+                .collect::<Vec<_>>()
+                .join(" → ")
+        ));
+    }
     assembly.push_str(&format!(
         "\nModels load one at a time (keep at most {} resident) — a full run takes a few \
          minutes. That's the point.",
@@ -2776,7 +2887,7 @@ pub async fn run_ollama_committee(
 
             // Intermediate rounds, as planned up front in the settings: each
             // kind is a different way of turning judgment into a next draft.
-            for (round_index, kind) in config.panel_plan.iter().enumerate() {
+            for (round_index, kind) in panel_plan.iter().enumerate() {
                 run_panel_round(
                     *kind,
                     round_index + 2,
@@ -2806,7 +2917,7 @@ pub async fn run_ollama_committee(
                 &mut on_event,
             )
             .await?;
-            save_panel_continuation(session_id, prompt, &plan, &answers, config.panel_plan.len());
+            save_panel_continuation(session_id, prompt, &plan, &answers, panel_plan.len());
         }
     }
 
