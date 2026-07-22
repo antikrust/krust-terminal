@@ -94,6 +94,7 @@ fn config_roundtrips_through_its_settings_json() {
         proof_timeout_secs: 60,
         findings_cap: 24,
         second_opinion: true,
+        audit: false,
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -117,6 +118,9 @@ fn a_config_saved_before_the_stage_toggles_reads_as_the_full_pipeline() {
     // it stays off until asked for. A knob that doubles the run must never
     // switch itself on.
     assert!(!vintage.second_opinion);
+    // The audit is one call by a model with no stake in the argument, so it
+    // comes on for runs saved before it existed too.
+    assert!(vintage.audit);
 }
 
 #[test]
@@ -1573,4 +1577,85 @@ fn a_second_opinion_that_repeats_everything_changes_no_counts() {
     let warm = vec![finding("a.py", Some(1), "high", "Off by one")];
     let (folded, repeated, fresh) = fold_second_opinion(cold, warm);
     assert_eq!((folded.len(), repeated, fresh), (1, 1, 0));
+}
+
+// --- the run as an artefact -----------------------------------------------
+
+#[test]
+fn asking_for_the_output_saves_the_run_not_the_answer() {
+    // The user's own phrasings for "keep what I just watched".
+    assert_eq!(parse_save_transcript_command("save transcript"), Some(None));
+    assert_eq!(
+        parse_save_transcript_command("write that output to a file"),
+        Some(None)
+    );
+    assert_eq!(parse_save_transcript_command("dump everything"), Some(None));
+    assert_eq!(
+        parse_save_transcript_command("save the output as review.md"),
+        Some(Some("review.md".to_string()))
+    );
+
+    // The panel's `save` is a different command and must stay that way — a
+    // file that happens to be called output.py is not a transcript request.
+    assert_eq!(parse_save_transcript_command("save rain.py"), None);
+    assert_eq!(parse_save_transcript_command("save output.py"), None);
+    assert_eq!(parse_save_transcript_command("save"), None);
+    assert_eq!(parse_save_transcript_command("review my changes"), None);
+}
+
+#[test]
+fn the_panel_prefix_is_the_way_back_to_a_fresh_committee() {
+    assert_eq!(
+        strip_panel_prefix("panel write me a matrix rain script"),
+        Some("write me a matrix rain script")
+    );
+    assert_eq!(
+        strip_panel_prefix("/panel what is a monad"),
+        Some("what is a monad")
+    );
+    // Not a prefix — a question that merely mentions panels.
+    assert_eq!(strip_panel_prefix("what did the panel decide"), None);
+    assert_eq!(strip_panel_prefix("panel"), None);
+}
+
+#[test]
+fn the_auditor_is_someone_who_sat_the_run_out() {
+    let bench = vec![
+        member("qwen2.5-coder:14b", false),
+        member("codellama:13b", false),
+        member("deepseek-r1:14b", true),
+        member("devstral:latest", false),
+    ];
+    let plan = CommitteePlan {
+        reviewers: vec![bench[0].clone(), bench[1].clone()],
+        judge: bench[2].clone(),
+        judge_is_reviewer: false,
+    };
+    let (auditor, is_fresh) = pick_auditor(&bench, &plan).expect("an auditor");
+    assert_eq!(auditor.name, "devstral:latest");
+    assert!(is_fresh, "it took no part in the argument it is auditing");
+
+    // With everyone seated, the judge checks its own work — weaker, and the
+    // caller is told which one it got.
+    let all_seated = CommitteePlan {
+        reviewers: vec![bench[0].clone(), bench[1].clone(), bench[3].clone()],
+        judge: bench[2].clone(),
+        judge_is_reviewer: false,
+    };
+    let (auditor, is_fresh) = pick_auditor(&bench, &all_seated).expect("an auditor");
+    assert_eq!(auditor.name, "deepseek-r1:14b");
+    assert!(!is_fresh);
+}
+
+#[test]
+fn asking_for_tests_is_an_order_not_a_question() {
+    assert!(parse_tests_command("tests"));
+    assert!(parse_tests_command("write tests"));
+    assert!(parse_tests_command("write me some tests for those bugs"));
+    assert!(parse_tests_command("/generate tests"));
+
+    // Questions about the run are answered from the run, not acted on.
+    assert!(!parse_tests_command("did the tests pass"));
+    assert!(!parse_tests_command("why did the test suite fail"));
+    assert!(!parse_tests_command("review my changes"));
 }

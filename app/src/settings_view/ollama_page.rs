@@ -106,6 +106,8 @@ pub enum OllamaPageAction {
     CycleCommitteeFindingsCap,
     /// Turn the committee's second-opinion pass on or off.
     ToggleCommitteeSecondOpinion,
+    /// Turn the committee's closing audit on or off.
+    ToggleCommitteeAudit,
     /// Cycle a model's committee casting: auto → reviewer → judge → never.
     CycleCommitteeRole {
         tag: String,
@@ -218,6 +220,7 @@ struct StateHandles {
     committee_proof_link: MouseStateHandle,
     committee_findings_cap_link: MouseStateHandle,
     committee_second_opinion_link: MouseStateHandle,
+    committee_audit_link: MouseStateHandle,
 }
 
 impl OllamaPageView {
@@ -784,6 +787,11 @@ impl TypedActionView for OllamaPageView {
             OllamaPageAction::ToggleCommitteeSecondOpinion => {
                 self.update_committee_config(ctx, |config| {
                     config.second_opinion = !config.second_opinion;
+                });
+            }
+            OllamaPageAction::ToggleCommitteeAudit => {
+                self.update_committee_config(ctx, |config| {
+                    config.audit = !config.audit;
                 });
             }
             OllamaPageAction::CycleCommitteeRole { tag } => {
@@ -1773,6 +1781,38 @@ impl SettingsWidget for CommitteeWidget {
                  Nothing is thrown away for being said once. This doubles the reviewing \
                  half of a run, so it is off by default. Reviews only — panel answers \
                  already differ, they come from different models.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!("Audit pass: {}", if config.audit { "on" } else { "off" }),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::ToggleCommitteeAudit);
+                        })),
+                        handles.committee_audit_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "When the verdict is in, a model that sat the run out reads the diff and \
+                 the committee's conclusions cold, and says which rulings look wrong and \
+                 what nobody reported. Everything before it was written by models arguing \
+                 with each other; this is the first opinion in the run with nothing \
+                 invested in it. One extra call — and if every model was seated, the judge \
+                 checks its own work and the run says so.",
                 appearance,
             ))
             .with_margin_top(2.)

@@ -441,10 +441,15 @@ impl View for AgentViewZeroStateBlock {
                      and the verdict says which model won out."
                         .into(),
                     review_line,
+                    "After a review, just ask: follow-up questions are answered from that \
+                     run, `tests` turns its findings into a test file that fails until \
+                     they're fixed, `recheck <n> <why>` re-proves one, and `save \
+                     transcript` keeps the whole thing."
+                        .into(),
                     "Ask anything else and the models answer as a panel — the judge names \
                      the winning answer. Start with `rounds: notes rewrite` to plan \
-                     iteration rounds up front, or type `round <kind>` after a verdict \
-                     for one more."
+                     iteration rounds up front, `round <kind>` after a verdict for one \
+                     more, or `panel <question>` to force a fresh committee."
                         .into(),
                     "Models load one at a time, so a run takes minutes by design. Settings → \
                      Ollama holds the bench and memory knobs, and switches off the stages \

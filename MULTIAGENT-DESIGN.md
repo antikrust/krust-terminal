@@ -29,6 +29,8 @@ User prompt (model picker: "Committee")
        Stage 5  Proof       the raiser writes a repro; the harness runs it
        Stage 6  Judge       one model rules on survivors, narrates the argument
        Stage 7  Verdict     Definite / Might be / Rejected + leaderboard update
+       Stage 8  Audit       a model that sat the run out checks the verdict cold
+       Stage 9  Transcript  the whole run written to disk, kept only if asked
   -> TurnEvents (SessionInit / Text / ToolCall* / Thinking / TurnCompleted)
   -> LocalHarnessStream -> conversation blocks
 ```
@@ -40,9 +42,11 @@ Stages 2a, 2b and 5 are the machine's own turns, and each can be switched off
 (Settings → Ollama). Stage 5 is what separates *Definite* from *Might be*: with the
 proof round off, nothing is executed and no finding can be better than an opinion.
 
-After the verdict, the conversation stays live: `recheck <n> [why]` re-proves one
-finding with the user's objection in hand, `round <kind>` runs another panel round,
-and `save [name]` writes the winning answer to disk.
+After the verdict the conversation stays live, and that is where most of the value
+is: **any question is answered from the run** by a model holding it, `tests` turns
+the findings into a regression file, `recheck <n> [why]` re-proves one finding with
+the user's objection in hand, `round <kind>` runs another panel round, and `save`
+keeps whichever artefact you mean.
 
 ## Why a committee works on small hardware
 
@@ -186,6 +190,21 @@ Stage details (Review):
    even if the judge liked it. Only definite findings feed the leaderboard's
    confirmed count. `TurnCompleted` carries summed token usage across every stage.
 
+8. **Audit.** A model that took no part — largest idle model, thinking models
+   first — reads the diff and the committee's conclusions cold and answers three
+   questions: which rulings are wrong, what did everyone miss, what did they get
+   right. Everything before this stage was written by models arguing with each
+   other, and a committee that has spent six stages agreeing with itself is exactly
+   where a fresh reader earns its keep. With every model seated it falls back to the
+   judge marking its own homework, and says so. One call; on by default.
+9. **Transcript.** The run writes itself down as it happens — narration, tool
+   commands, their output — and lands in `state_dir()/committee_runs/`, newest
+   twenty kept. Nothing is written to the user's repository unless they ask:
+   `save transcript` is a rename, ignoring it is free, and the sweep handles the
+   rest. It exists so the run can be re-read, handed to another model, or attached
+   to a bug report — a review that only ever existed in the scrollback is a review
+   you cannot act on twice.
+
 Error policy: a reviewer that fails (service died, model evicted) is noted and
 skipped; the run continues with whoever is left. If every reviewer fails, the turn
 fails. A failed judge degrades to consensus-only output — findings still shown,
@@ -280,6 +299,7 @@ hiding.
 | `Proof round` | off → 5s → 15s → 30s → 60s → off | Stage 5 and its per-script limit |
 | `Findings kept per reviewer` | 6 → 12 → 24 → 48 | Stage 3a's cap |
 | `Second opinion` | off → on | Stage 3b (doubles the fan-out) |
+| `Audit pass` | on → off | Stage 8 (one call, by a model with no stake) |
 | `Round 2` / `Round 3` | Off → notes → rewrite → peers → converge → Off | Panel plan |
 
 Two design notes on those. The evidence stages are one control rather than two
@@ -301,9 +321,13 @@ turn cannot pause to ask:
 
 | Typed after a run | Does |
 | --- | --- |
-| `recheck <n> [why]` | Re-proves finding *n*, handing the prover the user's objection **and** the script that failed last time — the steering wheel for "that repro was nonsense" |
+| *anything else* | Answered **from the last review** by a model holding the diff, the findings and the proofs — a follow-up question is a question about the run, and putting it to a fresh panel asks three models to speculate about something they never saw |
+| `tests` | Writes one python test file pinning the findings, runs it, and reports which fail. A failure is the good outcome: it pins a defect that is still there and turns green when it's fixed |
+| `recheck <n> [why]`, `recheck all [why]` | Re-proves one finding or every finding, handing the prover the user's objection **and** the script that failed last time — the steering wheel for "that repro was nonsense" |
 | `round notes\|rewrite\|peers\|converge` | Runs one more panel round on the saved answers and re-judges |
 | `save [name]` | Writes the winning answer's first code block under the working directory |
+| `save transcript`, `save tests <name>` | Moves the run's write-up, or the generated test file, out of the scratch directory and into the working one |
+| `panel <question>` | Forces a fresh committee instead of an answer about the last review |
 
 And one typed *before*: a prompt starting `rounds: notes rewrite — <question>` plans
 that run's panel rounds inline, overriding the settings plan for that run only.
@@ -379,3 +403,7 @@ runner.
 | Sampler artefacts mistaken for defects | Optional second opinion marks what one model says at both temperatures |
 | A model too heavy for the machine | Cast it off the bench, or switch it off entirely — the weights stay, the model stops being offered |
 | A bad proof the user can see is bad | `recheck <n> <why>` re-proves it with the objection and the failed script in the prompt |
+| A proof script that crashes instead of deciding | One automatic retry with the interpreter's complaint quoted back; `assert` is banned in the prompt because an AssertionError is a crash |
+| Six stages of models agreeing with each other | The closing audit is read by a model that sat the run out |
+| A verdict that scrolls away | Every run is written down; `save transcript` keeps it |
+| A recognisable command that isn't understood | Asks what it needs — it never silently becomes a panel question |

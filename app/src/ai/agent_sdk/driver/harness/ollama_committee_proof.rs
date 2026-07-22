@@ -216,6 +216,130 @@ pub(crate) async fn run_proof_script(
 }
 
 // ---------------------------------------------------------------------------
+// Generated regression tests
+// ---------------------------------------------------------------------------
+
+/// What running a generated test file established.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TestRun {
+    /// Test functions that passed — the behaviour is already correct.
+    pub(crate) passed: Vec<String>,
+    /// Test functions that failed, with the assertion's own message. On a
+    /// regression test written against a real defect, this is the good
+    /// outcome: it fails now and passes once the bug is fixed.
+    pub(crate) failed: Vec<(String, String)>,
+    /// The file didn't run at all — a syntax error, a bad import. Nothing
+    /// was learned, and the model gets told exactly this.
+    pub(crate) broken: Option<String>,
+}
+
+impl TestRun {
+    pub(crate) fn total(&self) -> usize {
+        self.passed.len() + self.failed.len()
+    }
+}
+
+/// Runs a generated pytest-style file without needing pytest: the shim
+/// imports it with the repository on `sys.path` and calls every `test_*`
+/// function, recording pass or failure per test.
+///
+/// Deliberately not `python3 -m pytest`: the file is meant to be keepable as
+/// a pytest file, but a machine that hasn't installed pytest must still get
+/// an answer, and "pytest isn't installed" is not a fact about the user's
+/// code.
+pub(crate) async fn run_python_tests(
+    source: &str,
+    timeout_secs: u64,
+    working_dir: &Path,
+    path: &str,
+) -> TestRun {
+    let stage_dir = std::env::temp_dir();
+    let id = Uuid::new_v4();
+    let tests = stage_dir.join(format!("derp-committee-tests-{id}.py"));
+    let runner = stage_dir.join(format!("derp-committee-runner-{id}.py"));
+    // Each result is one machine-readable line, so the Rust side never has
+    // to parse a traceback to know what happened.
+    let runner_source = format!(
+        "import subprocess, sys\n\
+         SHIM = '''\n\
+         import runpy, sys, traceback\n\
+         sys.path.insert(0, sys.argv[2])\n\
+         try:\n\
+         \x20   module = runpy.run_path(sys.argv[1])\n\
+         except BaseException:\n\
+         \x20   traceback.print_exc()\n\
+         \x20   raise SystemExit({CRASHED_EXIT_CODE})\n\
+         tests = sorted(k for k, v in module.items() if k.startswith(\"test_\") and callable(v))\n\
+         if not tests:\n\
+         \x20   raise SystemExit({NO_VERDICT_EXIT_CODE})\n\
+         for name in tests:\n\
+         \x20   try:\n\
+         \x20       module[name]()\n\
+         \x20       print(\"PASS\\t\" + name)\n\
+         \x20   except AssertionError as error:\n\
+         \x20       print(\"FAIL\\t\" + name + \"\\t\" + (str(error) or \"assertion failed\"))\n\
+         \x20   except BaseException as error:\n\
+         \x20       print(\"FAIL\\t\" + name + \"\\t\" + type(error).__name__ + \": \" + str(error))\n\
+         '''\n\
+         try:\n\
+         \x20   completed = subprocess.run(\n\
+         \x20       [sys.executable, '-c', SHIM, sys.argv[1], sys.argv[2]],\n\
+         \x20       timeout={timeout_secs},\n\
+         \x20   )\n\
+         \x20   sys.exit(completed.returncode)\n\
+         except subprocess.TimeoutExpired:\n\
+         \x20   sys.exit({TIMEOUT_EXIT_CODE})\n"
+    );
+    if std::fs::write(&tests, source).is_err() || std::fs::write(&runner, runner_source).is_err() {
+        return TestRun {
+            passed: Vec::new(),
+            failed: Vec::new(),
+            broken: Some("could not stage the test file".to_string()),
+        };
+    }
+    let command = format!(
+        "python3 {} {} {}",
+        shell_quote(&runner),
+        shell_quote(&tests),
+        shell_quote(working_dir)
+    );
+    let execution = execute_shell(&command, working_dir, path).await;
+    let _ = std::fs::remove_file(&tests);
+    let _ = std::fs::remove_file(&runner);
+    parse_test_output(&execution)
+}
+
+/// Turns the runner's PASS/FAIL lines into a [`TestRun`].
+pub(crate) fn parse_test_output(execution: &ShellExecution) -> TestRun {
+    let mut run = TestRun {
+        passed: Vec::new(),
+        failed: Vec::new(),
+        broken: None,
+    };
+    for line in execution.stdout.lines() {
+        match line.split('\t').collect::<Vec<_>>().as_slice() {
+            ["PASS", name] => run.passed.push((*name).to_string()),
+            ["FAIL", name, reason] => run
+                .failed
+                .push(((*name).to_string(), (*reason).to_string())),
+            ["FAIL", name] => run.failed.push(((*name).to_string(), String::new())),
+            _ => {}
+        }
+    }
+    if run.total() == 0 {
+        run.broken = Some(match execution.exit_code {
+            NO_VERDICT_EXIT_CODE => "the file defined no test_ functions".to_string(),
+            TIMEOUT_EXIT_CODE => "the tests timed out".to_string(),
+            _ => last_line(&execution.stderr, 300),
+        });
+        if run.broken.as_deref().is_some_and(str::is_empty) {
+            run.broken = Some("the test file produced no results".to_string());
+        }
+    }
+    run
+}
+
+// ---------------------------------------------------------------------------
 // The project's own suite
 // ---------------------------------------------------------------------------
 

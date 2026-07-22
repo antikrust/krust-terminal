@@ -388,3 +388,74 @@ fn an_assertion_failure_is_a_crash_not_a_refutation() {
         "and the prover is asked to try again"
     );
 }
+
+// --- generated regression tests -------------------------------------------
+
+#[test]
+fn a_failing_generated_test_is_the_point_of_a_generated_test() {
+    use futures_lite::future::block_on;
+
+    // A test file written against the planted bug: it asserts the CORRECT
+    // behaviour, so it fails while the bug is there. That failure is the
+    // deliverable, not an error.
+    let dir = std::env::temp_dir().join(format!("committee-tests-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("payday.py"),
+        "def top_scores(scores, n):\n    return sorted(scores)[:n]\n",
+    )
+    .unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let run = block_on(run_python_tests(
+        "import payday\n\
+         \n\
+         def test_top_scores_returns_the_highest():\n\
+         \x20   assert payday.top_scores([3, 1, 2], 2) == [3, 2], 'top scores must be the highest'\n\
+         \n\
+         def test_top_scores_handles_an_empty_list():\n\
+         \x20   assert payday.top_scores([], 2) == []\n",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(run.broken, None, "the file ran");
+    assert_eq!(run.total(), 2);
+    assert_eq!(run.passed, vec!["test_top_scores_handles_an_empty_list"]);
+    assert_eq!(run.failed.len(), 1);
+    assert_eq!(run.failed[0].0, "test_top_scores_returns_the_highest");
+    assert!(run.failed[0].1.contains("must be the highest"));
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_test_file_that_cannot_run_says_so_instead_of_reporting_zero_failures() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    // A bad import must never read as "nothing failed" — that would be a
+    // green light drawn from a file that never ran.
+    let broken = block_on(run_python_tests(
+        "import nonexistent_package_xyz\n\ndef test_x():\n    assert True\n",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(broken.total(), 0);
+    assert!(broken.broken.is_some());
+
+    // A file with no tests in it is also not a pass.
+    let empty = block_on(run_python_tests(
+        "value = 1 + 1\n",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert!(empty
+        .broken
+        .as_deref()
+        .is_some_and(|reason| reason.contains("no test_")));
+}
