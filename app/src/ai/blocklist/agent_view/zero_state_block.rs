@@ -442,7 +442,9 @@ impl View for AgentViewZeroStateBlock {
                         .into(),
                     review_line,
                     "Ask anything else and the models answer as a panel — the judge names \
-                     the winning answer."
+                     the winning answer. Start with `rounds: notes rewrite` to plan \
+                     iteration rounds up front, or type `round <kind>` after a verdict \
+                     for one more."
                         .into(),
                     "Models load one at a time, so a run takes minutes by design. Bench size \
                      and memory knobs live in Settings → Ollama."
