@@ -733,44 +733,73 @@ fn sanitize_findings(
         }
     }
 
-    // One title, over and over, is a model stuck in a loop.
+    // One title, over and over, is a model stuck in a loop. Remember what
+    // it got stuck on so the report can quote it back.
     let mut seen: Vec<(String, String)> = Vec::new();
+    let mut repeats_by_title: BTreeMap<String, usize> = BTreeMap::new();
     findings.retain(|finding| {
-        let key = (
-            normalized_path(&finding.file),
-            finding.title.trim().to_ascii_lowercase(),
-        );
+        let title = finding.title.trim().to_string();
+        let key = (normalized_path(&finding.file), title.to_ascii_lowercase());
         if seen.contains(&key) {
+            *repeats_by_title.entry(title).or_insert(0) += 1;
             return false;
         }
         seen.push(key);
         true
     });
     let repeated = raw_count - findings.len();
+    let worst_loop = repeats_by_title
+        .into_iter()
+        .max_by_key(|(_, count)| *count)
+        .filter(|(_, count)| *count > 1);
 
     findings.truncate(MAX_FINDINGS_PER_REVIEWER);
     let over_cap = raw_count - repeated - findings.len();
+    let kept = findings.len();
 
-    let mut notes: Vec<String> = Vec::new();
-    if repeated > 0 {
-        notes.push(format!("{repeated} repeated"));
+    // Say plainly what the model DID, not just how many rows were binned —
+    // a reviewer that loops is misbehaving, and hiding that behind a count
+    // makes it read like ordinary filtering.
+    let mut reasons: Vec<String> = Vec::new();
+    if let Some((title, count)) = worst_loop {
+        reasons.push(format!(
+            "got stuck repeating \"{}\" {} times",
+            truncate_chars(&title, 60),
+            count + 1
+        ));
+    } else if repeated > 0 {
+        reasons.push(format!("sent {repeated} duplicate findings"));
     }
     if over_cap > 0 {
-        notes.push(format!(
-            "{over_cap} past the {MAX_FINDINGS_PER_REVIEWER}-finding cap"
+        reasons.push(format!(
+            "reported more than {MAX_FINDINGS_PER_REVIEWER} findings on a single diff"
         ));
     }
     if unmoored > 0 {
-        notes.push(format!("{unmoored} citing lines the diff doesn't have"));
+        reasons.push(format!(
+            "cited {unmoored} line{} the diff never reaches",
+            if unmoored == 1 { "" } else { "s" }
+        ));
     }
-    let note = (!notes.is_empty()).then(|| {
+    if reasons.is_empty() {
+        return (findings, None);
+    }
+
+    // A stray line number is sloppiness; looping or flooding is the model
+    // coming off the rails, and gets named as such.
+    let derped = repeated > 0 || over_cap > 0;
+    let note = if derped {
         format!(
-            "dropped {} of {raw_count} findings ({})",
-            raw_count - findings.len(),
-            notes.join(", ")
+            "went derp — {}. Kept {kept} of {raw_count}.",
+            reasons.join(", and ")
         )
-    });
-    (findings, note)
+    } else {
+        format!(
+            "{} — those citations were dropped, the findings kept.",
+            reasons.join(", and ")
+        )
+    };
+    (findings, Some(note))
 }
 
 /// Recovers the findings array from a reviewer's output, tolerating code
@@ -3130,7 +3159,7 @@ pub async fn run_ollama_committee(
                         // only what survived.
                         if let Some(note) = sanitation_note {
                             on_event(TurnEvent::Text {
-                                text: format!("⚠️ `{}` {note}.", reviewer.name),
+                                text: format!("⚠️ `{}` {note}", reviewer.name),
                             });
                         }
                         let summary = if let Some(commentary) = &report.commentary {

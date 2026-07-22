@@ -532,9 +532,16 @@ fn a_repetition_loop_collapses_to_one_finding() {
     assert_eq!(kept.len(), 1, "a repeated title is one finding");
     // The surviving citation is the one the diff can actually support.
     assert_eq!(kept[0].line, Some(1));
-    let note = note.expect("the transcript must say what was dropped");
-    assert!(note.contains("99 repeated"), "note: {note}");
-    assert!(note.contains("lines the diff doesn't have"), "note: {note}");
+    // The message has to name the misbehaviour and quote what it looped
+    // on, not just report a count.
+    let note = note.expect("the transcript must say what the model did");
+    assert!(note.contains("went derp"), "note: {note}");
+    assert!(
+        note.contains("got stuck repeating \"Incorrect calculation of share amounts\" 100 times"),
+        "note: {note}"
+    );
+    assert!(note.contains("never reaches"), "note: {note}");
+    assert!(note.contains("Kept 1 of 100"), "note: {note}");
 }
 
 #[test]
@@ -552,7 +559,9 @@ fn distinct_findings_survive_but_the_cap_holds() {
         .collect();
     let (kept, note) = sanitize_findings(varied, &bounds);
     assert_eq!(kept.len(), MAX_FINDINGS_PER_REVIEWER);
-    assert!(note.unwrap().contains("past the"));
+    let note = note.unwrap();
+    assert!(note.contains("went derp"), "note: {note}");
+    assert!(note.contains("more than 12 findings"), "note: {note}");
 
     // An honest small report passes through untouched.
     let honest = vec![
@@ -583,7 +592,13 @@ fn out_of_range_lines_are_cleared_without_losing_the_finding() {
     );
     assert_eq!(kept.len(), 1, "the finding survives");
     assert_eq!(kept[0].line, None, "the false citation does not");
-    assert!(note.unwrap().contains("citing lines"));
+    // One bad line number is sloppiness, not derping — no accusation.
+    let note = note.unwrap();
+    assert!(!note.contains("went derp"), "note: {note}");
+    assert!(
+        note.contains("cited 1 line the diff never reaches"),
+        "note: {note}"
+    );
 }
 
 // --- consensus ------------------------------------------------------------
