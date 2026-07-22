@@ -496,6 +496,96 @@ fn untitled_findings_are_dropped() {
     assert_eq!(findings[0].title, "Real");
 }
 
+// --- reviewer sanitation --------------------------------------------------
+
+const BOUNDED_DIFF: &str = "\
+diff --git a/payday.py b/payday.py
+--- a/payday.py
++++ b/payday.py
+@@ -1,2 +1,9 @@
+ def split_pot(total_cents, players):
+";
+
+#[test]
+fn line_bounds_come_from_the_hunk_headers() {
+    let bounds = diff_line_bounds(BOUNDED_DIFF);
+    assert_eq!(bounds.get("payday.py"), Some(&10));
+}
+
+#[test]
+fn a_repetition_loop_collapses_to_one_finding() {
+    // The real failure: one model reported the same defect 100 times, on
+    // lines 1..100 of a nine-line file.
+    let runaway: Vec<Finding> = (1..=100)
+        .map(|line| {
+            finding(
+                "payday.py",
+                Some(line),
+                "high",
+                "Incorrect calculation of share amounts",
+            )
+        })
+        .collect();
+    let bounds = diff_line_bounds(BOUNDED_DIFF);
+    let (kept, note) = sanitize_findings(runaway, &bounds);
+
+    assert_eq!(kept.len(), 1, "a repeated title is one finding");
+    // The surviving citation is the one the diff can actually support.
+    assert_eq!(kept[0].line, Some(1));
+    let note = note.expect("the transcript must say what was dropped");
+    assert!(note.contains("99 repeated"), "note: {note}");
+    assert!(note.contains("lines the diff doesn't have"), "note: {note}");
+}
+
+#[test]
+fn distinct_findings_survive_but_the_cap_holds() {
+    let bounds = diff_line_bounds(BOUNDED_DIFF);
+    let varied: Vec<Finding> = (1..=20)
+        .map(|n| {
+            finding(
+                "payday.py",
+                Some(1),
+                "high",
+                &format!("Distinct defect {n}"),
+            )
+        })
+        .collect();
+    let (kept, note) = sanitize_findings(varied, &bounds);
+    assert_eq!(kept.len(), MAX_FINDINGS_PER_REVIEWER);
+    assert!(note.unwrap().contains("past the"));
+
+    // An honest small report passes through untouched.
+    let honest = vec![
+        finding("payday.py", Some(2), "high", "Float division of cents"),
+        finding(
+            "payday.py",
+            Some(8),
+            "high",
+            "top_scores returns the lowest scores",
+        ),
+    ];
+    let (kept, note) = sanitize_findings(honest, &bounds);
+    assert_eq!(kept.len(), 2);
+    assert_eq!(note, None);
+}
+
+#[test]
+fn out_of_range_lines_are_cleared_without_losing_the_finding() {
+    let bounds = diff_line_bounds(BOUNDED_DIFF);
+    let (kept, note) = sanitize_findings(
+        vec![finding(
+            "payday.py",
+            Some(87),
+            "high",
+            "Real defect, invented line",
+        )],
+        &bounds,
+    );
+    assert_eq!(kept.len(), 1, "the finding survives");
+    assert_eq!(kept[0].line, None, "the false citation does not");
+    assert!(note.unwrap().contains("citing lines"));
+}
+
 // --- consensus ------------------------------------------------------------
 
 fn finding(file: &str, line: Option<u64>, severity: &str, title: &str) -> Finding {
@@ -712,6 +802,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
             proof: None,
+            proof_script: None,
         },
         MergedFinding {
             file: "src/diff_only.rs".to_string(),
@@ -722,6 +813,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
             proof: None,
+            proof_script: None,
         },
         MergedFinding {
             file: "src/invented.rs".to_string(),
@@ -732,6 +824,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
             proof: None,
+            proof_script: None,
         },
     ];
     verify_locations(
@@ -1054,6 +1147,29 @@ fn run_hints_follow_the_extension() {
     assert_eq!(run_hint("rain.py"), Some("python3 rain.py".to_string()));
     assert_eq!(run_hint("go.sh"), Some("bash go.sh".to_string()));
     assert_eq!(run_hint("notes.txt"), None);
+}
+
+#[test]
+fn recheck_commands_parse_with_and_without_a_note() {
+    assert_eq!(parse_recheck_command("recheck 2"), Some((2, None)));
+    assert_eq!(parse_recheck_command("/redo 1"), Some((1, None)));
+    assert_eq!(parse_recheck_command("recheck finding 3"), Some((3, None)));
+    assert_eq!(
+        parse_recheck_command("recheck 2 the script imported a package that doesn't exist"),
+        Some((
+            2,
+            Some("the script imported a package that doesn't exist".to_string())
+        ))
+    );
+    assert_eq!(
+        parse_recheck_command("reprove #4: bad import"),
+        Some((4, Some("bad import".to_string())))
+    );
+    // Not rechecks.
+    assert_eq!(parse_recheck_command("recheck"), None);
+    assert_eq!(parse_recheck_command("recheck everything"), None);
+    assert_eq!(parse_recheck_command("recheck 0"), None);
+    assert_eq!(parse_recheck_command("review my changes"), None);
 }
 
 // --- misc -----------------------------------------------------------------

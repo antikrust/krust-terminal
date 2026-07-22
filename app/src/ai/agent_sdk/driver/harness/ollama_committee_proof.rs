@@ -40,6 +40,20 @@ pub(crate) const SUITE_TIMEOUT_SECS: u64 = 180;
 /// mistaken for the script's own verdict.
 const TIMEOUT_EXIT_CODE: i32 = 124;
 
+/// Exit code the shim reports when the proof script raised instead of
+/// deciding.
+///
+/// This distinction is load-bearing. An uncaught Python exception exits 1 —
+/// the same code the contract uses for "I checked, the code is fine" — so
+/// without the shim a script that merely failed to import silently read as
+/// a refutation, and the committee dismissed a real defect with false
+/// confidence. A crash must never be a verdict.
+const CRASHED_EXIT_CODE: i32 = 125;
+
+/// Exit code the shim reports when the script ran to the end without ever
+/// stating a verdict. Also not a verdict.
+const NO_VERDICT_EXIT_CODE: i32 = 126;
+
 // ---------------------------------------------------------------------------
 // Proof scripts
 // ---------------------------------------------------------------------------
@@ -100,8 +114,15 @@ pub(crate) fn classify_proof(execution: &ShellExecution) -> ProofOutcome {
             observation
         }),
         TIMEOUT_EXIT_CODE => ProofOutcome::Inconclusive("the proof script timed out".to_string()),
+        CRASHED_EXIT_CODE => ProofOutcome::Inconclusive(format!(
+            "the proof script raised instead of deciding: {}",
+            last_line(&execution.stderr, 200)
+        )),
+        NO_VERDICT_EXIT_CODE => {
+            ProofOutcome::Inconclusive("the proof script ended without exiting 0 or 1".to_string())
+        }
         code => ProofOutcome::Inconclusive(format!(
-            "the proof script crashed (exit {code}): {}",
+            "the proof script exited {code}: {}",
             last_line(&execution.stderr, 200)
         )),
     }
@@ -137,10 +158,31 @@ pub(crate) async fn run_proof_script(
     let id = Uuid::new_v4();
     let proof = stage_dir.join(format!("derp-committee-proof-{id}.py"));
     let wrapper = stage_dir.join(format!("derp-committee-wrap-{id}.py"));
+    // The shim runs the proof with the repository first on `sys.path` — the
+    // script is staged in the temp dir, so without this a perfectly sensible
+    // `import payday` looks for the module next to the temp file and dies —
+    // and maps a raise or a fall-off-the-end to codes the contract can tell
+    // apart from a real verdict.
     let wrapper_source = format!(
         "import subprocess, sys\n\
+         SHIM = '''\n\
+         import runpy, sys, traceback\n\
+         sys.path.insert(0, sys.argv[2])\n\
          try:\n\
-         \x20   sys.exit(subprocess.run([sys.executable, sys.argv[1]], timeout={timeout_secs}).returncode)\n\
+         \x20   runpy.run_path(sys.argv[1], run_name=\"__main__\")\n\
+         except SystemExit:\n\
+         \x20   raise\n\
+         except BaseException:\n\
+         \x20   traceback.print_exc()\n\
+         \x20   raise SystemExit({CRASHED_EXIT_CODE})\n\
+         raise SystemExit({NO_VERDICT_EXIT_CODE})\n\
+         '''\n\
+         try:\n\
+         \x20   completed = subprocess.run(\n\
+         \x20       [sys.executable, '-c', SHIM, sys.argv[1], sys.argv[2]],\n\
+         \x20       timeout={timeout_secs},\n\
+         \x20   )\n\
+         \x20   sys.exit(completed.returncode)\n\
          except subprocess.TimeoutExpired:\n\
          \x20   print('proof timed out')\n\
          \x20   sys.exit({TIMEOUT_EXIT_CODE})\n"
@@ -152,7 +194,12 @@ pub(crate) async fn run_proof_script(
             exit_code: 70,
         };
     }
-    let command = format!("python3 {} {}", shell_quote(&wrapper), shell_quote(&proof));
+    let command = format!(
+        "python3 {} {} {}",
+        shell_quote(&wrapper),
+        shell_quote(&proof),
+        shell_quote(working_dir)
+    );
     let execution = execute_shell(&command, working_dir, path).await;
     let _ = std::fs::remove_file(&proof);
     let _ = std::fs::remove_file(&wrapper);

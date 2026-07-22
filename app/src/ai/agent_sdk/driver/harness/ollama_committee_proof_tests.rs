@@ -169,6 +169,90 @@ fn a_green_suite_reads_as_evidence_and_a_missing_tool_never_does() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+#[test]
+fn a_crashing_proof_script_is_never_a_refutation() {
+    use futures_lite::future::block_on;
+
+    // The exact shape that misfired: qwen wrote `import payday`, the script
+    // was staged in the temp dir so the import failed, Python exited 1, and
+    // exit 1 means "refuted" — a real defect dismissed by a broken script.
+    let dir = std::env::temp_dir().join(format!("committee-crash-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let missing_import = block_on(run_proof_script(
+        "import nonexistent_package_xyz\nexit(0)",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(missing_import.exit_code, 125, "crash must not exit 1");
+    assert!(
+        matches!(
+            classify_proof(&missing_import),
+            ProofOutcome::Inconclusive(_)
+        ),
+        "a failed import must never refute a finding"
+    );
+
+    // A script that forgets to decide is also not a verdict.
+    let no_verdict = block_on(run_proof_script(
+        "print('I looked at it')",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert!(matches!(
+        classify_proof(&no_verdict),
+        ProofOutcome::Inconclusive(_)
+    ));
+
+    // A deliberate exit(1) still refutes — the contract survives the fix.
+    let refuted = block_on(run_proof_script(
+        "print('behaves correctly')\nexit(1)",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(
+        classify_proof(&refuted),
+        ProofOutcome::Refuted("behaves correctly".to_string())
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_proof_script_can_import_the_repository_module_by_name() {
+    use futures_lite::future::block_on;
+
+    // The prover's natural instinct — `import payday` — must work, since
+    // the script is staged in the temp dir but runs against the repo.
+    let dir = std::env::temp_dir().join(format!("committee-import-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("payday.py"),
+        "def split_pot(total_cents, players):\n    return total_cents / len(players)\n",
+    )
+    .unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let execution = block_on(run_proof_script(
+        "import payday\nshare = payday.split_pot(101, ['a', 'b'])\nprint(f'share={share!r}')\nexit(0) if isinstance(share, float) else exit(1)",
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path,
+    ));
+    assert_eq!(
+        classify_proof(&execution),
+        ProofOutcome::Demonstrated("share=50.5".to_string()),
+        "stderr: {}",
+        execution.stderr
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // --- behavior report ------------------------------------------------------
 
 const DEMO_DIFF: &str = "\
