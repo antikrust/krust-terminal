@@ -1780,6 +1780,23 @@ define_settings_group!(AISettings, settings: [
         description: "Per-model agent/chat overrides for Ollama, as a JSON map of model tag to \"agent\" or \"chat\".",
     },
 
+    // Fork: Ollama models the user switched off, as a JSON array of model
+    // tags. A switched-off model stays on disk but is offered nowhere: not
+    // in the model menu, not to the committee. The escape hatch for a model
+    // too heavy for this machine that the user isn't ready to delete.
+    // Read/written by the Ollama settings page; consumed by
+    // `harness_availability` and the committee dispatch in `terminal::view`.
+    ollama_disabled_models: OllamaDisabledModels {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_disabled_models",
+        description: "Ollama models switched off on this machine, as a JSON array of model tags.",
+    },
+
     // Fork: MCP server templates the user opted in to exposing to local
     // (Ollama) models, as a JSON array of template UUIDs. Warp's built-in
     // Ollama-safe servers are always exposed; everything else is hidden

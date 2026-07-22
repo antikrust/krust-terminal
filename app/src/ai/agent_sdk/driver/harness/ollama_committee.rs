@@ -56,6 +56,13 @@ pub const MAX_LOADED_MODELS: usize = 4;
 /// judge's taste rather than improving.
 pub const MAX_PANEL_EXTRA_ROUNDS: usize = 2;
 
+/// Every stage samples at 0 — a review is not a place for invention.
+const COLD_TEMPERATURE: f64 = 0.0;
+/// The second-opinion pass re-reads the same diff hot enough to take a
+/// different path through the model. High enough to genuinely diverge, low
+/// enough to still be reading the code.
+const WARM_TEMPERATURE: f64 = 0.8;
+
 /// How long one proof script may run, in the order the settings link offers.
 /// Short is right for a one-line repro; a slow suite-heavy import sometimes
 /// needs the long end.
@@ -250,6 +257,9 @@ pub struct OllamaCommitteeConfig {
     pub proof_timeout_secs: u64,
     /// Findings kept from one reviewer before the rest read as degeneration.
     pub findings_cap: usize,
+    /// Whether each reviewer reads the diff twice — once cold, once warm —
+    /// and the run records what it said both times. Doubles the fan-out.
+    pub second_opinion: bool,
 }
 
 impl Default for OllamaCommitteeConfig {
@@ -264,6 +274,9 @@ impl Default for OllamaCommitteeConfig {
             proof_round: true,
             proof_timeout_secs: PROOF_TIMEOUT_SECS,
             findings_cap: DEFAULT_FINDINGS_CAP,
+            // Off by default: it is the one knob here that costs a whole
+            // extra pass per reviewer, and the run is already slow.
+            second_opinion: false,
         }
     }
 }
@@ -342,6 +355,7 @@ impl OllamaCommitteeConfig {
                 .map(|secs| secs.clamp(1, 600))
                 .unwrap_or(defaults.proof_timeout_secs),
             findings_cap: field("findings_cap", defaults.findings_cap, 200),
+            second_opinion: flag("second_opinion", defaults.second_opinion),
         }
     }
 
@@ -354,6 +368,7 @@ impl OllamaCommitteeConfig {
             "proof_round": self.proof_round,
             "proof_timeout_secs": self.proof_timeout_secs,
             "findings_cap": self.findings_cap,
+            "second_opinion": self.second_opinion,
             "panel_plan": self
                 .panel_plan
                 .iter()
@@ -767,6 +782,11 @@ struct Finding {
     title: String,
     #[serde(default)]
     detail: Option<String>,
+    /// Set by the harness when the reviewer's warm pass raised this same
+    /// issue too. Never read from the model's JSON — a model does not get
+    /// to award itself corroboration.
+    #[serde(skip)]
+    repeated: bool,
 }
 
 /// What one reviewer produced: parsed findings, or their raw prose when the
@@ -968,6 +988,9 @@ struct MergedFinding {
     /// The last proof script written for this finding, so a `recheck` can
     /// show the prover what it tried before and why that attempt failed.
     proof_script: Option<String>,
+    /// A reviewer raised this at both temperatures — weaker than two models
+    /// agreeing, stronger than one model saying it once.
+    self_confirmed: bool,
 }
 
 fn severity_rank(severity: &str) -> u8 {
@@ -999,22 +1022,73 @@ fn title_words(title: &str) -> Vec<String> {
 /// small file's findings chain-merged into one blob with a fake agreement
 /// count. Proximity now only lowers the overlap bar, never replaces it.
 fn same_issue(a: &Finding, b: &MergedFinding) -> bool {
-    if normalized_path(&a.file) != normalized_path(&b.file) {
+    issues_match((&a.file, a.line, &a.title), (&b.file, b.line, &b.title))
+}
+
+/// Whether one reviewer said the same thing twice — the second-opinion
+/// pass's question, decided by exactly the rule consensus uses, so "the
+/// same issue" never means two different things in one run.
+fn same_issue_as(a: &Finding, b: &Finding) -> bool {
+    issues_match((&a.file, a.line, &a.title), (&b.file, b.line, &b.title))
+}
+
+/// The shared rule, over (file, line, title).
+fn issues_match(a: (&str, Option<u64>, &str), b: (&str, Option<u64>, &str)) -> bool {
+    let (a_file, a_line, a_title) = a;
+    let (b_file, b_line, b_title) = b;
+    if normalized_path(a_file) != normalized_path(b_file) {
         return false;
     }
-    let a_words = title_words(&a.title);
-    let b_words = title_words(&b.title);
+    let a_words = title_words(a_title);
+    let b_words = title_words(b_title);
     let overlap = a_words.iter().filter(|word| b_words.contains(word)).count();
     let union = a_words.len() + b_words.len() - overlap;
     if union == 0 {
         return false;
     }
     let titles_similar = overlap * 2 >= union;
-    let lines_adjacent = match (a.line, b.line) {
+    let lines_adjacent = match (a_line, b_line) {
         (Some(a_line), Some(b_line)) => a_line.abs_diff(b_line) <= 2,
         _ => false,
     };
     titles_similar || (lines_adjacent && overlap >= 2)
+}
+
+/// Folds a reviewer's warm second pass into its cold one. The union is kept,
+/// never the intersection: a real defect spotted only once is still a real
+/// defect, and dropping it would trade a hallucination for a miss. What the
+/// model said *both* times is marked, so consensus and the judge can weigh
+/// it — the whole value of the second read is knowing which is which.
+fn fold_second_opinion(cold: Vec<Finding>, warm: Vec<Finding>) -> (Vec<Finding>, usize, usize) {
+    let mut folded = cold;
+    let mut repeated = 0;
+    let mut fresh = 0;
+    for finding in warm {
+        match folded
+            .iter_mut()
+            .find(|existing| same_issue_as(&finding, existing))
+        {
+            Some(existing) => {
+                if !existing.repeated {
+                    existing.repeated = true;
+                    repeated += 1;
+                }
+                // The warmer pass often writes the fuller explanation.
+                let detail = finding.detail.unwrap_or_default();
+                if detail.len() > existing.detail.as_deref().unwrap_or_default().len() {
+                    existing.detail = Some(detail);
+                }
+                if existing.line.is_none() {
+                    existing.line = finding.line;
+                }
+            }
+            None => {
+                folded.push(finding);
+                fresh += 1;
+            }
+        }
+    }
+    (folded, repeated, fresh)
 }
 
 /// Mechanical consensus: fold every reviewer's findings together, counting
@@ -1028,6 +1102,7 @@ fn merge_findings(reports: &[ReviewerReport]) -> Vec<MergedFinding> {
                 if !existing.raised_by.contains(&report.model) {
                     existing.raised_by.push(report.model.clone());
                 }
+                existing.self_confirmed |= finding.repeated;
                 let severity = finding.severity.as_deref().unwrap_or("low");
                 if severity_rank(severity) > severity_rank(&existing.severity) {
                     existing.severity = severity.to_lowercase();
@@ -1047,6 +1122,7 @@ fn merge_findings(reports: &[ReviewerReport]) -> Vec<MergedFinding> {
                     location_verified: false,
                     proof: None,
                     proof_script: None,
+                    self_confirmed: finding.repeated,
                 });
             }
         }
@@ -1055,6 +1131,9 @@ fn merge_findings(reports: &[ReviewerReport]) -> Vec<MergedFinding> {
         b.raised_by
             .len()
             .cmp(&a.raised_by.len())
+            // Two models agreeing beats one model agreeing with itself, so
+            // this only breaks ties inside an agreement count.
+            .then(b.self_confirmed.cmp(&a.self_confirmed))
             .then(severity_rank(&b.severity).cmp(&severity_rank(&a.severity)))
             .then(a.file.cmp(&b.file))
     });
@@ -1621,6 +1700,12 @@ fn judge_user_prompt(
             },
             finding.detail,
         ));
+        // A reviewer that raised the same issue at both temperatures is
+        // saying it isn't a sampling artefact. Worth telling the judge; not
+        // worth confusing with two reviewers agreeing.
+        if finding.self_confirmed && finding.raised_by.len() == 1 {
+            findings_block.push_str("   the reviewer raised this on both of its two reads\n");
+        }
         // Execution results outrank opinion — the judge rules with them in
         // hand, not against them.
         if let Some(proof) = &finding.proof {
@@ -1847,6 +1932,35 @@ async fn chat_once(
     path: &str,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<(ExitStatus, Result<StageOutput, String>)> {
+    chat_once_at(
+        model,
+        system,
+        user,
+        think,
+        COLD_TEMPERATURE,
+        keep_alive,
+        working_dir,
+        path,
+        on_event,
+    )
+    .await
+}
+
+/// The same stage at a chosen sampling temperature. Only the second-opinion
+/// pass uses anything but cold: the judge, the prover and every panel stage
+/// want the model's most likely answer, not a creative one.
+#[allow(clippy::too_many_arguments)]
+async fn chat_once_at(
+    model: &str,
+    system: &str,
+    user: &str,
+    think: bool,
+    temperature: f64,
+    keep_alive: &str,
+    working_dir: &Path,
+    path: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<(ExitStatus, Result<StageOutput, String>)> {
     let mut request = json!({
         "model": wire_name(model),
         "messages": [
@@ -1855,7 +1969,7 @@ async fn chat_once(
         ],
         "stream": true,
         "keep_alive": keep_alive,
-        "options": { "temperature": 0, "num_ctx": 8192 },
+        "options": { "temperature": temperature, "num_ctx": 8192 },
     });
     // `think:true` errors on models that don't advertise the capability.
     if think {
@@ -2040,8 +2154,15 @@ fn render_finding_line(index: usize, finding: &MergedFinding) -> String {
     } else {
         " — location unverified"
     };
+    // Only worth saying when one model is the whole story; alongside a
+    // cross-model agreement it adds nothing.
+    let twice = if finding.self_confirmed && finding.raised_by.len() == 1 {
+        " — said twice"
+    } else {
+        ""
+    };
     format!(
-        "{}. **[{}]** {location} — {}{agreement}{verified}\n   raised by {}",
+        "{}. **[{}]** {location} — {}{agreement}{twice}{verified}\n   raised by {}",
         index + 1,
         finding.severity,
         finding.title,
@@ -3142,6 +3263,11 @@ pub async fn run_ollama_committee(
             ""
         },
     ));
+    if mode == CommitteeMode::Review && config.second_opinion {
+        assembly.push_str(
+            "- Second opinion: on — every reviewer reads the diff twice, cold then warm\n",
+        );
+    }
     if mode == CommitteeMode::Panel && !panel_plan.is_empty() {
         assembly.push_str(&format!(
             "- Planned rounds: {}\n",
@@ -3268,7 +3394,7 @@ pub async fn run_ollama_committee(
                 match outcome {
                     Ok(stage) => {
                         add_usage(&mut total_usage, &stage.usage);
-                        let (report, sanitation_note) = match parse_findings(&stage.content) {
+                        let (mut report, sanitation_note) = match parse_findings(&stage.content) {
                             Some(findings) => {
                                 let (findings, note) =
                                     sanitize_findings(findings, &line_bounds, config.findings_cap);
@@ -3297,6 +3423,76 @@ pub async fn run_ollama_committee(
                             on_event(TurnEvent::Text {
                                 text: format!("⚠️ `{}` {note}", reviewer.name),
                             });
+                        }
+                        // Second opinion: the same model, the same diff, a
+                        // warmer sampler. What it says both ways is more
+                        // likely to be in the code; what it says once may be
+                        // the sampler talking.
+                        if config.second_opinion {
+                            on_event(TurnEvent::Text {
+                                text: format!(
+                                    "**Second opinion — `{}`** re-reads the diff at temperature \
+                                     {WARM_TEMPERATURE}…",
+                                    reviewer.name
+                                ),
+                            });
+                            let (status, outcome) = chat_once_at(
+                                &reviewer.name,
+                                REVIEWER_SYSTEM_PROMPT,
+                                &review_prompt,
+                                reviewer.thinking,
+                                WARM_TEMPERATURE,
+                                keep_alive,
+                                working_dir,
+                                path,
+                                &mut on_event,
+                            )
+                            .await?;
+                            last_status = status;
+                            match outcome {
+                                Ok(stage) => {
+                                    add_usage(&mut total_usage, &stage.usage);
+                                    match parse_findings(&stage.content) {
+                                        Some(warm) => {
+                                            let (warm, _) = sanitize_findings(
+                                                warm,
+                                                &line_bounds,
+                                                config.findings_cap,
+                                            );
+                                            let cold_count = report.findings.len();
+                                            let (folded, repeated, fresh) = fold_second_opinion(
+                                                std::mem::take(&mut report.findings),
+                                                warm,
+                                            );
+                                            report.findings = folded;
+                                            report.findings.truncate(config.findings_cap.max(1));
+                                            on_event(TurnEvent::Text {
+                                                text: format!(
+                                                    "`{}` repeated {repeated} of its {cold_count} \
+                                                     finding{}, and raised {fresh} the cold read \
+                                                     missed.",
+                                                    reviewer.name,
+                                                    if cold_count == 1 { "" } else { "s" }
+                                                ),
+                                            });
+                                        }
+                                        None => on_event(TurnEvent::Text {
+                                            text: format!(
+                                                "`{}` answered the second read in prose — nothing \
+                                                 to corroborate against.",
+                                                reviewer.name
+                                            ),
+                                        }),
+                                    }
+                                }
+                                Err(error) => on_event(TurnEvent::Text {
+                                    text: format!(
+                                        "`{}`'s second read failed ({error}) — the first read \
+                                         stands on its own.",
+                                        reviewer.name
+                                    ),
+                                }),
+                            }
                         }
                         let summary = if let Some(commentary) = &report.commentary {
                             format!(

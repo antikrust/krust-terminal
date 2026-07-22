@@ -1,6 +1,7 @@
 # Multi-agent committee design (Ollama)
 
-Written: 2026-07-21
+Written: 2026-07-21. Current as of 2026-07-22 (v1 shipped: review + panel, the
+verification layer, casting, the stage knobs).
 
 This is the design for 0term's local multi-model "committee" mode: one prompt fans out
 across several installed Ollama models, machines referee everything they can, an LLM
@@ -20,16 +21,28 @@ User prompt (model picker: "Committee")
   -> run_ollama_committee              (harness/ollama_committee.rs)
        Stage 0  Assemble    enumerate installed models, probe caps, assign roles
        Stage 1  Evidence    git diff HEAD (Review mode) — or none (Panel mode)
-       Stage 2  Fan-out     each reviewer model runs once, sequentially
-       Stage 3  Consensus   merge findings mechanically; verify file locations
-       Stage 4  Judge       one model rules on survivors, narrates the argument
-       Stage 5  Verdict     markdown verdict block + leaderboard update
+       Stage 2a Suite gate  the project's own tests, before anyone reviews
+       Stage 2b Behavior    call the changed functions, record what they do
+       Stage 3  Fan-out     each reviewer model runs once, sequentially
+                            (twice — cold then warm — with second opinion on)
+       Stage 4  Consensus   merge findings mechanically; verify file locations
+       Stage 5  Proof       the raiser writes a repro; the harness runs it
+       Stage 6  Judge       one model rules on survivors, narrates the argument
+       Stage 7  Verdict     Definite / Might be / Rejected + leaderboard update
   -> TurnEvents (SessionInit / Text / ToolCall* / Thinking / TurnCompleted)
   -> LocalHarnessStream -> conversation blocks
 ```
 
 Every stage is one model loaded at a time. Concurrency is a config knob, not an
 architectural assumption.
+
+Stages 2a, 2b and 5 are the machine's own turns, and each can be switched off
+(Settings → Ollama). Stage 5 is what separates *Definite* from *Might be*: with the
+proof round off, nothing is executed and no finding can be better than an opinion.
+
+After the verdict, the conversation stays live: `recheck <n> [why]` re-proves one
+finding with the user's objection in hand, `round <kind>` runs another panel round,
+and `save [name]` writes the winning answer to disk.
 
 ## Why a committee works on small hardware
 
@@ -131,6 +144,24 @@ Stage details (Review):
    problems to look useful. Parsing tolerates fences and surrounding prose (same
    recovery philosophy as the qwen tool-call recovery); unparseable output is kept
    as commentary for the judge but excluded from consensus.
+3a. **Sanitation** (mechanical, before anyone reads a report). Small models come off
+   the rails in three shapes and all three are detectable without a model: a
+   repetition loop (one model reported the same finding 100 times) collapses to one
+   finding, line numbers past the diff's own hunk extent are cleared — the finding
+   survives, the invented citation doesn't — and a report longer than the findings
+   cap is truncated. What was dropped is announced (`went derp — got stuck repeating
+   "…" 100 times. Kept 1 of 100.`) rather than silently swallowed: a reviewer that
+   loops is exactly what the user needs to see. The leaderboard counts only what
+   survived.
+3b. **Second opinion** (optional). The same reviewer re-reads the same diff at
+   temperature 0.8, and the two reports are folded: what it raised both times is
+   marked, what it raised once is kept anyway. A model asked once can report a
+   defect the sampler suggested; asked again down a different path, it mostly
+   repeats what is actually in the code. The union is kept rather than the
+   intersection, because trading a hallucination for a miss is not an improvement —
+   corroboration is a *ranking* signal, and the proof round remains the arbiter.
+   Self-corroboration ranks below two models agreeing, which is decorrelated
+   evidence rather than one model twice.
 4. **Consensus.** Pure-mechanical merge: same file + (similar titles or nearby
    lines) ⇒ one finding with an agreement count. Each finding's file is checked
    against the working tree and the diff — `location verified` is machine truth,
@@ -165,8 +196,18 @@ same conversation). Cross-turn memory is future work.
 
 ## Model roles
 
-Auto-picked, no manual casting in v1 ("the app chooses the best models for the job").
-Heuristics seed the choice; the leaderboard refines it over time.
+Auto-picked by default ("the app chooses the best models for the job"): heuristics
+seed the choice, the leaderboard refines it over time, and the user can overrule
+either. Each installed model's row carries a casting link — `auto` → *always
+reviewer* → *always judge* → *never use* — and casting beats every heuristic below.
+A forced judge doesn't consume a reviewer seat; casting everything off leaves no
+committee, and the run says so instead of half-running.
+
+Above casting sits the model's own switch (also on the Installed row): a model
+turned **off** is offered nowhere — not in the model menu, not to the committee —
+while its weights stay on disk. That is the answer to a model too heavy for the
+machine that the user isn't ready to delete; `Remove` is still there for when they
+are.
 
 - **Reviewers** (count = "reviewers" setting, default 2, capped by what's installed):
   coder-family models first (name contains a code marker: `coder`, `codellama`,
@@ -211,9 +252,14 @@ following the `ollama_model_mode_overrides` string-JSON pattern:
   "behavior_report": true,
   "proof_round": true,
   "proof_timeout_secs": 15,
-  "findings_cap": 12
+  "findings_cap": 12,
+  "second_opinion": false
 }
 ```
+
+Plus one sibling setting, `ollama_disabled_models` — a JSON array of tags the user
+switched off. It lives outside the committee config because it governs the whole
+Ollama surface (the model menu reads it too), not just the bench.
 
 Every field is optional and every absent field reads as the full pipeline, so a
 config written before a knob existed keeps behaving the way it did. Values are
@@ -232,7 +278,8 @@ hiding.
 | `Models kept loaded` | 1–4 | `keep_alive` (1 = unload after every stage) |
 | `Machine evidence` | suite + probe → probe only → suite only → none | Stages 2a/2b |
 | `Proof round` | off → 5s → 15s → 30s → 60s → off | Stage 5 and its per-script limit |
-| `Findings kept per reviewer` | 6 → 12 → 24 → 48 | Degeneration cap |
+| `Findings kept per reviewer` | 6 → 12 → 24 → 48 | Stage 3a's cap |
+| `Second opinion` | off → on | Stage 3b (doubles the fan-out) |
 | `Round 2` / `Round 3` | Off → notes → rewrite → peers → converge → Off | Panel plan |
 
 Two design notes on those. The evidence stages are one control rather than two
@@ -244,10 +291,22 @@ either off is announced in the run itself: with no proof round, no finding can r
 **Definite**, and the transcript says so instead of quietly demoting everything to
 *might be*.
 
-Per-model casting (`auto` → always reviewer → always judge → never use) lives on the
-Installed rows, next to each model, rather than in this section — the decision is
-about *that* model, and keeping a heavy model off the bench is the fastest way to
-make runs bearable on a small machine.
+Per-model controls (the on/off switch, agent/chat mode, casting, Open terminal,
+Remove) live on the Installed rows, next to the model they act on, rather than in
+this section. A switched-off row hides the rest of its controls: none of them apply
+to a model that isn't offered anywhere, and showing them would imply otherwise.
+
+Three chat commands cover the moments a settings page can't reach, since a harness
+turn cannot pause to ask:
+
+| Typed after a run | Does |
+| --- | --- |
+| `recheck <n> [why]` | Re-proves finding *n*, handing the prover the user's objection **and** the script that failed last time — the steering wheel for "that repro was nonsense" |
+| `round notes\|rewrite\|peers\|converge` | Runs one more panel round on the saved answers and re-judges |
+| `save [name]` | Writes the winning answer's first code block under the working directory |
+
+And one typed *before*: a prompt starting `rounds: notes rewrite — <question>` plans
+that run's panel rounds inline, overriding the settings plan for that run only.
 
 Gating mirrors the rest of Ollama: the global "Use local models" switch governs the
 committee too (the id is `ollama/…`, so the existing enforcement in
@@ -260,11 +319,13 @@ committee too (the id is `ollama/…`, so the existing enforcement in
 | Committee runner, roles, consensus, prompts, leaderboard | `app/src/ai/agent_sdk/driver/harness/ollama_committee.rs` (new) |
 | Verification layer: proof scripts, suite gate, behavior report | `harness/ollama_committee_proof.rs` (new) |
 | Reused plumbing (chat command, accumulator, service start, caps probe, shell) | `ollama_stream_exec.rs`, loosened to `pub(crate)` where needed |
-| Picker entry (`ollama/committee` when ≥ 2 models) | `ai/harness_availability.rs` |
-| Dispatch (committee id → committee runner) | `terminal/view.rs` pump match |
-| Config setting | `settings/ai.rs` (`ollama_committee_config`) |
-| Settings UI section | `settings_view/ollama_page.rs` (new widget) |
-| Unit tests (roles, parsing, consensus, mode heuristic, config) | `harness/ollama_committee_tests.rs` |
+| Picker entry (`ollama/committee` when ≥ 2 models), switched-off filter | `ai/harness_availability.rs` |
+| Dispatch (committee id → committee runner; switched-off models benched) | `terminal/view.rs` pump match |
+| Config settings | `settings/ai.rs` (`ollama_committee_config`, `ollama_disabled_models`) |
+| On/off + casting storage helpers | `ai/ollama/service.rs` (`is_model_disabled`, `with_model_disabled`) |
+| Settings UI section + per-model row controls | `settings_view/ollama_page.rs` |
+| Unit tests (roles, parsing, consensus, sanitation, second opinion, config) | `harness/ollama_committee_tests.rs` |
+| Verification-layer tests (exit contract, suite detection, probes) | `harness/ollama_committee_proof_tests.rs` |
 
 ## Why the verification layer is not an MCP server
 
@@ -312,3 +373,9 @@ runner.
 | One model on disk | Committee entry not offered below 2 models |
 | Model swap thrash | keep_alive follows the max-loaded setting; review is latency-tolerant by design |
 | Mid-run model failure | Skip and note; degrade to consensus-only if the judge dies; fail only when no reviewer survives |
+| Model degenerates into a loop | Repeated titles collapse mechanically, the report is capped, and the run names what it did |
+| Invented line numbers | Cleared against the diff's own hunk extents — the finding survives, the citation doesn't |
+| A broken repro read as a refutation | The proof shim separates crash (125) and no-verdict (126) from a real exit 1; neither refutes |
+| Sampler artefacts mistaken for defects | Optional second opinion marks what one model says at both temperatures |
+| A model too heavy for the machine | Cast it off the bench, or switch it off entirely — the weights stay, the model stops being offered |
+| A bad proof the user can see is bad | `recheck <n> <why>` re-proves it with the objection and the failed script in the prompt |

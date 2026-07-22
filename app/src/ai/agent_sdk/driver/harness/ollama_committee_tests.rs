@@ -93,6 +93,7 @@ fn config_roundtrips_through_its_settings_json() {
         proof_round: false,
         proof_timeout_secs: 60,
         findings_cap: 24,
+        second_opinion: true,
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -112,6 +113,10 @@ fn a_config_saved_before_the_stage_toggles_reads_as_the_full_pipeline() {
     assert!(vintage.proof_round);
     assert_eq!(vintage.proof_timeout_secs, PROOF_TIMEOUT_SECS);
     assert_eq!(vintage.findings_cap, DEFAULT_FINDINGS_CAP);
+    // The one exception: second opinion costs an extra pass per reviewer, so
+    // it stays off until asked for. A knob that doubles the run must never
+    // switch itself on.
+    assert!(!vintage.second_opinion);
 }
 
 #[test]
@@ -746,6 +751,7 @@ fn finding(file: &str, line: Option<u64>, severity: &str, title: &str) -> Findin
         severity: Some(severity.to_string()),
         title: title.to_string(),
         detail: None,
+        repeated: false,
     }
 }
 
@@ -954,6 +960,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             location_verified: false,
             proof: None,
             proof_script: None,
+            self_confirmed: false,
         },
         MergedFinding {
             file: "src/diff_only.rs".to_string(),
@@ -965,6 +972,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             location_verified: false,
             proof: None,
             proof_script: None,
+            self_confirmed: false,
         },
         MergedFinding {
             file: "src/invented.rs".to_string(),
@@ -976,6 +984,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             location_verified: false,
             proof: None,
             proof_script: None,
+            self_confirmed: false,
         },
     ];
     verify_locations(
@@ -1428,4 +1437,71 @@ fn committee_reviews_a_planted_bug_against_live_ollama() {
     );
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// --- second opinion -------------------------------------------------------
+
+#[test]
+fn the_warm_pass_marks_what_the_model_said_twice_and_keeps_what_it_said_once() {
+    let cold = vec![
+        finding("payday.py", Some(2), "high", "Float division of cents"),
+        finding("payday.py", Some(8), "high", "top_scores returns lowest scores"),
+    ];
+    let warm = vec![
+        // Same defect, differently worded and one line off — the consensus
+        // rule already treats this as one issue.
+        Finding {
+            file: "payday.py".to_string(),
+            line: Some(3),
+            severity: Some("high".to_string()),
+            title: "Division of cents produces floats".to_string(),
+            detail: Some("A much fuller explanation than the cold pass gave".to_string()),
+            repeated: false,
+        },
+        finding("payday.py", Some(4), "medium", "Remainder is dropped entirely"),
+    ];
+
+    let (folded, repeated, fresh) = fold_second_opinion(cold, warm);
+    assert_eq!(repeated, 1, "one issue was raised on both reads");
+    assert_eq!(fresh, 1, "one issue only the warm read found");
+    assert_eq!(folded.len(), 3, "the union survives — nothing is discarded");
+    assert!(folded[0].repeated, "the corroborated finding is marked");
+    assert!(
+        !folded[1].repeated && !folded[2].repeated,
+        "a single sighting is not corroboration"
+    );
+    // The warmer pass usually writes the fuller detail; the merge keeps it.
+    assert!(folded[0].detail.as_deref().unwrap().contains("fuller"));
+}
+
+#[test]
+fn corroboration_reaches_consensus_but_never_outranks_two_models() {
+    let mut said_twice = finding("payday.py", Some(2), "high", "Float division of cents");
+    said_twice.repeated = true;
+    let agreed_once = finding("payday.py", Some(8), "high", "top_scores returns lowest scores");
+
+    let merged = merge_findings(&[
+        report("qwen2.5-coder:14b", vec![said_twice, agreed_once.clone()]),
+        report("codellama:13b", vec![agreed_once]),
+    ]);
+
+    // Two models agreeing ranks first even though the other was self-confirmed.
+    assert_eq!(merged[0].raised_by.len(), 2);
+    assert!(!merged[0].self_confirmed);
+    assert!(merged[1].self_confirmed);
+
+    // And it shows in the line the user reads, but only where it is the
+    // whole story.
+    assert!(render_finding_line(1, &merged[1]).contains("said twice"));
+    assert!(!render_finding_line(0, &merged[0]).contains("said twice"));
+}
+
+#[test]
+fn a_second_opinion_that_repeats_everything_changes_no_counts() {
+    // The degenerate-but-honest case: an identical second read corroborates
+    // every finding and adds none.
+    let cold = vec![finding("a.py", Some(1), "high", "Off by one")];
+    let warm = vec![finding("a.py", Some(1), "high", "Off by one")];
+    let (folded, repeated, fresh) = fold_second_opinion(cold, warm);
+    assert_eq!((folded.len(), repeated, fresh), (1, 1, 0));
 }

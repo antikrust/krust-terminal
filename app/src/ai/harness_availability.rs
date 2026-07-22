@@ -54,7 +54,7 @@ pub struct HarnessAvailability {
 /// runner exists for them. Model lists are curated, version-stable aliases
 /// the CLIs resolve themselves; nothing here is overwritten by a server
 /// (see [`HarnessAvailabilityModel::refresh`]).
-fn default_harnesses() -> Vec<HarnessAvailability> {
+fn default_harnesses(disabled: &[String]) -> Vec<HarnessAvailability> {
     let claude_model = |id: &str, display_name: &str| HarnessModelInfo {
         id: id.to_string(),
         display_name: display_name.to_string(),
@@ -76,7 +76,10 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
             harness: Harness::Codex,
             display_name: harness_display::display_name(Harness::Codex).to_string(),
             enabled: local_cli_on_path("codex"),
-            available_models: append_available_ollama_models(codex_models_from_local_state()),
+            available_models: append_available_ollama_models(
+                codex_models_from_local_state(),
+                disabled,
+            ),
         },
     ]
 }
@@ -90,7 +93,10 @@ fn default_harnesses() -> Vec<HarnessAvailability> {
 /// model and it shows up here (and thus in the picker); remove one and it
 /// leaves. A model too big for this machine carries its fit badge in the
 /// display name so the warning follows it into the menu.
-fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<HarnessModelInfo> {
+fn append_available_ollama_models(
+    mut models: Vec<HarnessModelInfo>,
+    disabled: &[String],
+) -> Vec<HarnessModelInfo> {
     if !local_cli_on_path("ollama") {
         return models;
     }
@@ -102,6 +108,10 @@ fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<Harn
         // would be the committee pseudo-entry's id, which the harness routes
         // to the committee runner, never to the model.
         if installed.name == COMMITTEE_MODEL_NAME {
+            continue;
+        }
+        // Switched off on the Ollama page: still on disk, offered nowhere.
+        if disabled.iter().any(|off| off == &installed.name) {
             continue;
         }
         let badge = total_memory
@@ -413,7 +423,7 @@ impl HarnessAvailabilityModel {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
         // Availability is derived locally from PATH detection on every
         // launch; the old server-list cache could only serve stale data.
-        let harnesses = default_harnesses();
+        let harnesses = default_harnesses(&crate::ai::ollama::service::disabled_models_for(ctx));
 
         ctx.subscribe_to_model(&NetworkStatus::handle(ctx), |me, _, event, ctx| {
             if let NetworkStatusEvent::NetworkStatusChanged {
@@ -473,7 +483,9 @@ impl HarnessAvailabilityModel {
                         return;
                     }
                 };
-                let models = append_available_ollama_models(parse_codex_catalog(&output));
+                let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
+                let models =
+                    append_available_ollama_models(parse_codex_catalog(&output), &disabled);
                 if models.is_empty() {
                     return;
                 }
@@ -513,7 +525,8 @@ impl HarnessAvailabilityModel {
             .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
             .cloned()
             .collect();
-        let rebuilt = append_available_ollama_models(codex_only);
+        let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
+        let rebuilt = append_available_ollama_models(codex_only, &disabled);
         if row.available_models != rebuilt {
             row.available_models = rebuilt;
             ctx.emit(HarnessAvailabilityEvent::Changed);

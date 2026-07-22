@@ -179,3 +179,37 @@ fn nothing_running_yields_no_names() {
     // And a totally empty capture.
     assert!(running_model_names("").is_empty());
 }
+
+// --- switching a model off ------------------------------------------------
+
+#[test]
+fn a_switched_off_model_round_trips_through_the_setting() {
+    let off = with_model_disabled(None, "qwen2.5-coder:32b", true);
+    assert!(is_model_disabled(Some(&off), "qwen2.5-coder:32b"));
+    assert!(!is_model_disabled(Some(&off), "qwen2.5-coder:14b"));
+
+    // Switching a second one off keeps the first.
+    let both = with_model_disabled(Some(&off), "llama3:70b", true);
+    assert_eq!(disabled_models(Some(&both)).len(), 2);
+
+    // Back on removes only that tag, and switching on an already-on model
+    // is a no-op rather than an error.
+    let one = with_model_disabled(Some(&both), "qwen2.5-coder:32b", false);
+    assert_eq!(disabled_models(Some(&one)), vec!["llama3:70b".to_string()]);
+    let same = with_model_disabled(Some(&one), "qwen2.5-coder:32b", false);
+    assert_eq!(disabled_models(Some(&same)), vec!["llama3:70b".to_string()]);
+
+    // Switching the same model off twice must not list it twice.
+    let twice = with_model_disabled(Some(&off), "qwen2.5-coder:32b", true);
+    assert_eq!(disabled_models(Some(&twice)).len(), 1);
+}
+
+#[test]
+fn a_broken_disabled_setting_hides_nothing() {
+    // Failing open matters here: a parse error that hid every model would
+    // look like the models had vanished.
+    assert!(disabled_models(None).is_empty());
+    assert!(disabled_models(Some("not json")).is_empty());
+    assert!(disabled_models(Some("{}")).is_empty());
+    assert!(!is_model_disabled(Some("[42]"), "qwen2.5-coder:32b"));
+}

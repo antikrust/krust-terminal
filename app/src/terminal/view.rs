@@ -225,7 +225,7 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
-    run_ollama_committee, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
+    run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream,
@@ -23586,14 +23586,21 @@ impl TerminalView {
         // The committee pseudo-model routes to the multi-model runner, with
         // its knobs snapshotted here for the same no-`ctx`-in-the-pump
         // reason as the override above.
-        let ollama_committee_config = (ollama_model.as_deref() == Some(COMMITTEE_MODEL_NAME))
-            .then(|| {
-                OllamaCommitteeConfig::from_settings_json(
+        let ollama_committee_config =
+            (ollama_model.as_deref() == Some(COMMITTEE_MODEL_NAME)).then(|| {
+                let mut config = OllamaCommitteeConfig::from_settings_json(
                     AISettings::as_ref(ctx)
                         .ollama_committee_config
                         .value()
                         .as_deref(),
-                )
+                );
+                // A model switched off on the Ollama page is off here too:
+                // the committee reads the live server, so it would otherwise
+                // seat a model the user has taken out of every menu.
+                for tag in crate::ai::ollama::service::disabled_models_for(ctx) {
+                    config.roles.insert(tag, CommitteeRole::Benched);
+                }
+                config
             });
         let mut command = match harness {
             LocalHarnessKind::Claude => {

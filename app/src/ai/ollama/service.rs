@@ -98,6 +98,55 @@ pub fn with_mode_override(overrides_json: Option<&str>, model: &str, mode: Optio
     serde_json::Value::Object(map).to_string()
 }
 
+/// Whether the user switched this model off, read from the
+/// `ollama_disabled_models` JSON array. A switched-off model stays on disk
+/// but is offered nowhere — not in the model menu, not to the committee.
+pub fn is_model_disabled(disabled_json: Option<&str>, model: &str) -> bool {
+    disabled_models(disabled_json)
+        .iter()
+        .any(|off| off == model)
+}
+
+/// Every switched-off tag, tolerating absence and junk (a broken setting
+/// must never silently hide a model the user can still see listed).
+pub fn disabled_models(disabled_json: Option<&str>) -> Vec<String> {
+    disabled_json
+        .and_then(|json| serde_json::from_str::<serde_json::Value>(json).ok())
+        .and_then(|value| value.as_array().cloned())
+        .map(|tags| {
+            tags.iter()
+                .filter_map(|tag| tag.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The switched-off list as the settings currently hold it, for callers that
+/// have an app context rather than the raw JSON.
+pub fn disabled_models_for(app: &warpui::AppContext) -> Vec<String> {
+    use crate::settings::ai::AISettings;
+    use settings::Setting as _;
+    use warpui::SingletonEntity as _;
+    disabled_models(
+        AISettings::as_ref(app)
+            .ollama_disabled_models
+            .value()
+            .as_deref(),
+    )
+}
+
+/// Returns the disabled list with `model` switched off or back on. Pure —
+/// the caller persists the result.
+pub fn with_model_disabled(disabled_json: Option<&str>, model: &str, disabled: bool) -> String {
+    let mut tags = disabled_models(disabled_json);
+    tags.retain(|tag| tag != model);
+    if disabled {
+        tags.push(model.to_string());
+    }
+    tags.sort();
+    serde_json::Value::from(tags).to_string()
+}
+
 /// Queries `/api/show` for a model's capabilities. `None` if the server is
 /// unreachable or the response can't be read — callers should degrade to
 /// "unknown / chat-only" rather than block.

@@ -104,8 +104,14 @@ pub enum OllamaPageAction {
     CycleCommitteeProof,
     /// Cycle how many findings one reviewer may contribute.
     CycleCommitteeFindingsCap,
+    /// Turn the committee's second-opinion pass on or off.
+    ToggleCommitteeSecondOpinion,
     /// Cycle a model's committee casting: auto → reviewer → judge → never.
     CycleCommitteeRole {
+        tag: String,
+    },
+    /// Switch a model off (or back on) everywhere it would be offered.
+    ToggleModelEnabled {
         tag: String,
     },
 }
@@ -202,6 +208,8 @@ struct StateHandles {
     remove_links: HashMap<String, MouseStateHandle>,
     /// Per-installed-model committee-casting links, keyed by tag.
     committee_role_links: HashMap<String, MouseStateHandle>,
+    /// Per-installed-model on/off links, keyed by tag.
+    enabled_links: HashMap<String, MouseStateHandle>,
     /// The committee section's cycling links.
     committee_reviewers_link: MouseStateHandle,
     committee_max_loaded_link: MouseStateHandle,
@@ -209,6 +217,7 @@ struct StateHandles {
     committee_evidence_link: MouseStateHandle,
     committee_proof_link: MouseStateHandle,
     committee_findings_cap_link: MouseStateHandle,
+    committee_second_opinion_link: MouseStateHandle,
 }
 
 impl OllamaPageView {
@@ -388,6 +397,28 @@ impl OllamaPageView {
                 me.refresh(ctx);
             },
         );
+    }
+
+    /// Switches a model off, or back on. Off is not uninstall: the weights
+    /// stay on disk, the model simply stops being offered — in the model
+    /// menu, and to the committee. The picker is rebuilt immediately so the
+    /// menu agrees with this page without a restart.
+    fn toggle_model_enabled(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
+        let disabled_json = AISettings::as_ref(ctx)
+            .ollama_disabled_models
+            .value()
+            .clone();
+        let turning_off = !service::is_model_disabled(disabled_json.as_deref(), &tag);
+        let updated = service::with_model_disabled(disabled_json.as_deref(), &tag, turning_off);
+        report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            settings
+                .ollama_disabled_models
+                .set_value(Some(updated), ctx)
+        }));
+        HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
+            availability.refresh_ollama_models(ctx)
+        });
+        ctx.notify();
     }
 
     /// Reads the committee config, applies one change, and persists it —
@@ -750,11 +781,19 @@ impl TypedActionView for OllamaPageView {
             OllamaPageAction::CycleCommitteeFindingsCap => {
                 self.update_committee_config(ctx, cycle_findings_cap);
             }
+            OllamaPageAction::ToggleCommitteeSecondOpinion => {
+                self.update_committee_config(ctx, |config| {
+                    config.second_opinion = !config.second_opinion;
+                });
+            }
             OllamaPageAction::CycleCommitteeRole { tag } => {
                 let tag = tag.clone();
                 self.update_committee_config(ctx, |config| {
                     cycle_committee_role(&mut config.roles, &tag);
                 });
+            }
+            OllamaPageAction::ToggleModelEnabled { tag } => {
+                self.toggle_model_enabled(tag.clone(), ctx);
             }
         }
     }
@@ -966,6 +1005,10 @@ impl SettingsWidget for InstalledWidget {
             .ollama_model_mode_overrides
             .value()
             .clone();
+        let disabled_json = AISettings::as_ref(app)
+            .ollama_disabled_models
+            .value()
+            .clone();
         if let Some(models) = view.installed.as_ref() {
             let mut handles = view.state_handles.borrow_mut();
             for model in models {
@@ -979,6 +1022,7 @@ impl SettingsWidget for InstalledWidget {
                     .committee_role_links
                     .entry(model.name.clone())
                     .or_default();
+                handles.enabled_links.entry(model.name.clone()).or_default();
             }
         }
 
@@ -1021,118 +1065,48 @@ impl SettingsWidget for InstalledWidget {
                     );
                     // Role + capability, reflecting any override: what the
                     // harness will actually do with this model, plus its
-                    // context window.
+                    // context window. A model switched off says only that —
+                    // its context window is beside the point.
+                    let off = service::is_model_disabled(disabled_json.as_deref(), &model.name);
                     let override_mode =
                         service::model_mode_override(overrides_json.as_deref(), &model.name);
                     let caps = view.capabilities.get(&model.name);
-                    row.add_child(
-                        Container::new(sub_text(
-                            &role_summary(caps, override_mode),
-                            appearance,
-                        ))
-                        .with_margin_left(12.)
-                        .finish(),
-                    );
-                    // The mode override control: cycles Auto → Agent → Chat.
-                    let mode_state = view
-                        .state_handles
-                        .borrow()
-                        .mode_links
-                        .get(&model.name)
-                        .cloned()
-                        .unwrap_or_default();
-                    let cycle_tag = model.name.clone();
-                    row.add_child(
-                        Container::new(
-                            appearance
-                                .ui_builder()
-                                .link(
-                                    override_link_label(override_mode).into(),
-                                    None,
-                                    Some(Box::new(move |ctx| {
-                                        ctx.dispatch_typed_action(
-                                            OllamaPageAction::CycleModelMode {
-                                                tag: cycle_tag.clone(),
-                                            },
-                                        );
-                                    })),
-                                    mode_state,
-                                )
-                                .soft_wrap(false)
-                                .build()
-                                .finish(),
-                        )
-                        .with_margin_left(12.)
-                        .finish(),
-                    );
-                    // Open a terminal already set to use this model.
-                    let terminal_state = view
-                        .state_handles
-                        .borrow()
-                        .terminal_links
-                        .get(&model.name)
-                        .cloned()
-                        .unwrap_or_default();
-                    let terminal_tag = model.name.clone();
-                    row.add_child(
-                        Container::new(
-                            appearance
-                                .ui_builder()
-                                .link(
-                                    "Open terminal".into(),
-                                    None,
-                                    Some(Box::new(move |ctx| {
-                                        ctx.dispatch_typed_action(
-                                            OllamaPageAction::OpenTerminalWithModel {
-                                                tag: terminal_tag.clone(),
-                                            },
-                                        );
-                                    })),
-                                    terminal_state,
-                                )
-                                .soft_wrap(false)
-                                .build()
-                                .finish(),
-                        )
-                        .with_margin_left(12.)
-                        .finish(),
-                    );
-                    // Committee casting: force this model into (or out of)
-                    // the bench. "never" is the escape hatch for a model
-                    // too heavy to sit through a run on this machine.
-                    let committee_config = OllamaCommitteeConfig::from_settings_json(
-                        AISettings::as_ref(app)
-                            .ollama_committee_config
-                            .value()
-                            .as_deref(),
-                    );
-                    let role_state = view
-                        .state_handles
-                        .borrow()
-                        .committee_role_links
-                        .get(&model.name)
-                        .cloned()
-                        .unwrap_or_default();
-                    let role_label = match committee_config.roles.get(&model.name) {
-                        Some(role) => format!("Committee: {}", role.display_name()),
-                        None => "Committee: auto".to_string(),
+                    let summary = if off {
+                        "Off — hidden from the model menu and the committee".to_string()
+                    } else {
+                        role_summary(caps, override_mode)
                     };
-                    let role_tag = model.name.clone();
+                    row.add_child(
+                        Container::new(sub_text(&summary, appearance))
+                            .with_margin_left(12.)
+                            .finish(),
+                    );
+                    // The master switch. Off keeps the model on disk but takes
+                    // it out of every menu — the answer to a model too heavy
+                    // for this machine that the user isn't ready to delete.
+                    let enabled_state = view
+                        .state_handles
+                        .borrow()
+                        .enabled_links
+                        .get(&model.name)
+                        .cloned()
+                        .unwrap_or_default();
+                    let enabled_tag = model.name.clone();
                     row.add_child(
                         Container::new(
                             appearance
                                 .ui_builder()
                                 .link(
-                                    role_label,
+                                    if off { "Turn on" } else { "Turn off" }.into(),
                                     None,
                                     Some(Box::new(move |ctx| {
                                         ctx.dispatch_typed_action(
-                                            OllamaPageAction::CycleCommitteeRole {
-                                                tag: role_tag.clone(),
+                                            OllamaPageAction::ToggleModelEnabled {
+                                                tag: enabled_tag.clone(),
                                             },
                                         );
                                     })),
-                                    role_state,
+                                    enabled_state,
                                 )
                                 .soft_wrap(false)
                                 .build()
@@ -1141,6 +1115,118 @@ impl SettingsWidget for InstalledWidget {
                         .with_margin_left(12.)
                         .finish(),
                     );
+                    // Everything below acts on a model that runs. Switched
+                    // off, none of it applies, so none of it is offered.
+                    if !off {
+                        // The mode override control: cycles Auto → Agent → Chat.
+                        let mode_state = view
+                            .state_handles
+                            .borrow()
+                            .mode_links
+                            .get(&model.name)
+                            .cloned()
+                            .unwrap_or_default();
+                        let cycle_tag = model.name.clone();
+                        row.add_child(
+                            Container::new(
+                                appearance
+                                    .ui_builder()
+                                    .link(
+                                        override_link_label(override_mode).into(),
+                                        None,
+                                        Some(Box::new(move |ctx| {
+                                            ctx.dispatch_typed_action(
+                                                OllamaPageAction::CycleModelMode {
+                                                    tag: cycle_tag.clone(),
+                                                },
+                                            );
+                                        })),
+                                        mode_state,
+                                    )
+                                    .soft_wrap(false)
+                                    .build()
+                                    .finish(),
+                            )
+                            .with_margin_left(12.)
+                            .finish(),
+                        );
+                        // Open a terminal already set to use this model.
+                        let terminal_state = view
+                            .state_handles
+                            .borrow()
+                            .terminal_links
+                            .get(&model.name)
+                            .cloned()
+                            .unwrap_or_default();
+                        let terminal_tag = model.name.clone();
+                        row.add_child(
+                            Container::new(
+                                appearance
+                                    .ui_builder()
+                                    .link(
+                                        "Open terminal".into(),
+                                        None,
+                                        Some(Box::new(move |ctx| {
+                                            ctx.dispatch_typed_action(
+                                                OllamaPageAction::OpenTerminalWithModel {
+                                                    tag: terminal_tag.clone(),
+                                                },
+                                            );
+                                        })),
+                                        terminal_state,
+                                    )
+                                    .soft_wrap(false)
+                                    .build()
+                                    .finish(),
+                            )
+                            .with_margin_left(12.)
+                            .finish(),
+                        );
+                        // Committee casting: force this model into (or out of)
+                        // the bench. "never" is the escape hatch for a model
+                        // too heavy to sit through a run on this machine.
+                        let committee_config = OllamaCommitteeConfig::from_settings_json(
+                            AISettings::as_ref(app)
+                                .ollama_committee_config
+                                .value()
+                                .as_deref(),
+                        );
+                        let role_state = view
+                            .state_handles
+                            .borrow()
+                            .committee_role_links
+                            .get(&model.name)
+                            .cloned()
+                            .unwrap_or_default();
+                        let role_label = match committee_config.roles.get(&model.name) {
+                            Some(role) => format!("Committee: {}", role.display_name()),
+                            None => "Committee: auto".to_string(),
+                        };
+                        let role_tag = model.name.clone();
+                        row.add_child(
+                            Container::new(
+                                appearance
+                                    .ui_builder()
+                                    .link(
+                                        role_label,
+                                        None,
+                                        Some(Box::new(move |ctx| {
+                                            ctx.dispatch_typed_action(
+                                                OllamaPageAction::CycleCommitteeRole {
+                                                    tag: role_tag.clone(),
+                                                },
+                                            );
+                                        })),
+                                        role_state,
+                                    )
+                                    .soft_wrap(false)
+                                    .build()
+                                    .finish(),
+                            )
+                            .with_margin_left(12.)
+                            .finish(),
+                        );
+                    }
                     // Removal, with an in-row confirmation step — deleting
                     // gigabytes deserves a second click, not a first-click
                     // surprise.
@@ -1290,8 +1376,8 @@ impl SettingsWidget for CatalogWidget {
                         fraction: Some(fraction),
                         ..
                     } => {
-                        let mut labelled = Flex::row()
-                            .with_cross_axis_alignment(CrossAxisAlignment::Center);
+                        let mut labelled =
+                            Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
                         labelled.add_child(sub_text(tag, appearance));
                         labelled.add_child(
                             Container::new(progress_row(*fraction, 200., appearance))
@@ -1654,6 +1740,44 @@ impl SettingsWidget for CommitteeWidget {
             .with_margin_top(2.)
             .finish(),
         );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!(
+                            "Second opinion: {}",
+                            if config.second_opinion { "on" } else { "off" }
+                        ),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(
+                                OllamaPageAction::ToggleCommitteeSecondOpinion,
+                            );
+                        })),
+                        handles.committee_second_opinion_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "Each reviewer reads the diff twice — once at temperature 0, once at \
+                 0.8 — and what it reports both times is marked \"said twice\". A model \
+                 asked once can invent a defect the sampler suggested; asked again down \
+                 a different path, it mostly repeats what is actually in the code. \
+                 Nothing is thrown away for being said once. This doubles the reviewing \
+                 half of a run, so it is off by default. Reviews only — panel answers \
+                 already differ, they come from different models.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
         for slot in 0..MAX_PANEL_EXTRA_ROUNDS {
             let label = match config.panel_plan.get(slot) {
                 Some(kind) => format!("Round {}: {}", slot + 2, kind.display_name()),
@@ -1918,10 +2042,7 @@ fn install_progress(fraction: f32, appearance: &Appearance) -> Box<dyn Element> 
 /// A one-line role + capability summary for an installed model, reflecting
 /// any override. Examples: "Agent — runs tools · 128K context",
 /// "Chat only · 2K context", "Agent (forced) · 16K context".
-fn role_summary(
-    caps: Option<&service::ModelCapabilities>,
-    override_mode: Option<bool>,
-) -> String {
+fn role_summary(caps: Option<&service::ModelCapabilities>, override_mode: Option<bool>) -> String {
     let native_tools = caps.is_some_and(|caps| caps.tools);
     let mut summary = match override_mode {
         Some(true) => "Agent (forced)".to_string(),
