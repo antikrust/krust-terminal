@@ -879,6 +879,59 @@ fn inline_rounds_directives_parse_and_ordinary_prompts_pass_through() {
     );
 }
 
+#[test]
+fn save_commands_parse_and_ordinary_prompts_pass_through() {
+    // Bare save: infer the name from the question later.
+    assert_eq!(parse_save_command("save"), Some(None));
+    assert_eq!(parse_save_command("/save"), Some(None));
+    // Named, with conversational padding tolerated.
+    assert_eq!(
+        parse_save_command("save rain.py"),
+        Some(Some("rain.py".to_string()))
+    );
+    assert_eq!(
+        parse_save_command("save it as `rain.py`"),
+        Some(Some("rain.py".to_string()))
+    );
+    // Not saves: no filename among the words, or a different verb entirely.
+    assert_eq!(parse_save_command("save me some time"), None);
+    assert_eq!(parse_save_command("saved by the bell"), None);
+    assert_eq!(parse_save_command("write me a script"), None);
+}
+
+#[test]
+fn filenames_are_plain_and_relative_or_rejected() {
+    assert!(looks_like_filename("rain.py"));
+    assert!(looks_like_filename("scripts/rain.py"));
+    assert!(!looks_like_filename("/etc/passwd"));
+    assert!(!looks_like_filename("../up.py"));
+    assert!(!looks_like_filename("noext"));
+    assert!(!looks_like_filename(".hidden"));
+}
+
+#[test]
+fn artifact_filenames_infer_from_the_question() {
+    assert_eq!(
+        infer_artifact_filename("write a script called rain.py that draws rain"),
+        Some("rain.py".to_string())
+    );
+    assert_eq!(infer_artifact_filename("explain rust lifetimes"), None);
+}
+
+#[test]
+fn code_blocks_extract_from_final_versions() {
+    let text = "Here you go:\n```python\nprint('rain')\n```\nEnjoy!";
+    assert_eq!(extract_code_block(text), Some("print('rain')".to_string()));
+    assert_eq!(extract_code_block("no fences here"), None);
+}
+
+#[test]
+fn run_hints_follow_the_extension() {
+    assert_eq!(run_hint("rain.py"), Some("python3 rain.py".to_string()));
+    assert_eq!(run_hint("go.sh"), Some("bash go.sh".to_string()));
+    assert_eq!(run_hint("notes.txt"), None);
+}
+
 // --- proofs ---------------------------------------------------------------
 
 fn shell_result(exit_code: i32, stdout: &str, stderr: &str) -> ShellExecution {

@@ -973,6 +973,9 @@ struct PanelContinuation {
     plan: CommitteePlan,
     answers: Vec<(String, String)>,
     rounds_done: usize,
+    /// The run's final deliverable — the winner's revised answer (or the
+    /// winning answer when the revision failed). What `save` writes out.
+    artifact: Option<String>,
 }
 
 fn panel_continuations(
@@ -989,6 +992,7 @@ fn save_panel_continuation(
     plan: &CommitteePlan,
     answers: &[(String, String)],
     rounds_done: usize,
+    artifact: Option<String>,
 ) {
     if answers.is_empty() {
         return;
@@ -1001,9 +1005,83 @@ fn save_panel_continuation(
                 plan: plan.clone(),
                 answers: answers.to_vec(),
                 rounds_done,
+                artifact,
             },
         );
     }
+}
+
+/// Whether `token` reads as a plain relative filename with an extension —
+/// what `save` accepts and what artifact-name inference looks for.
+fn looks_like_filename(token: &str) -> bool {
+    let token = token.trim_matches(|c: char| matches!(c, '`' | '"' | '\'' | ',' | ';' | ')'));
+    let Some((stem, extension)) = token.rsplit_once('.') else {
+        return false;
+    };
+    !stem.is_empty()
+        && !extension.is_empty()
+        && extension.len() <= 4
+        && extension.chars().all(|c| c.is_ascii_alphanumeric())
+        && std::path::Path::new(token)
+            .components()
+            .all(|part| matches!(part, std::path::Component::Normal(_)))
+}
+
+fn trim_filename(token: &str) -> String {
+    token
+        .trim_matches(|c: char| matches!(c, '`' | '"' | '\'' | ',' | ';' | ')'))
+        .to_string()
+}
+
+/// Parses the in-chat `save [filename]` command. `Some(None)` means "save,
+/// infer the name from the question"; a given filename is whichever token
+/// carries an extension. Anything else → `None`, untouched.
+pub fn parse_save_command(prompt: &str) -> Option<Option<String>> {
+    let trimmed = prompt.trim().trim_start_matches('/');
+    let mut words = trimmed.split_whitespace();
+    if !words.next()?.eq_ignore_ascii_case("save") {
+        return None;
+    }
+    let rest: Vec<&str> = words.collect();
+    if rest.is_empty() {
+        return Some(None);
+    }
+    let file = rest.iter().rev().find(|token| looks_like_filename(token))?;
+    Some(Some(trim_filename(file)))
+}
+
+/// The filename the question itself suggests ("a script called rain.py").
+fn infer_artifact_filename(question: &str) -> Option<String> {
+    question
+        .split_whitespace()
+        .rev()
+        .find(|token| looks_like_filename(token))
+        .map(trim_filename)
+}
+
+/// The first fenced code block's contents — the part `save` writes to disk.
+/// `None` when the text has no fence (callers fall back to the whole text).
+fn extract_code_block(text: &str) -> Option<String> {
+    let start = text.find("```")?;
+    let after = &text[start + 3..];
+    let body_at = after.find('\n')? + 1;
+    let body = &after[body_at..];
+    let end = body.find("```")?;
+    Some(body[..end].trim_end().to_string())
+}
+
+/// The obvious way to run a saved artifact, by extension — shown after
+/// saving, because this is a terminal and the run is one command away.
+fn run_hint(filename: &str) -> Option<String> {
+    let extension = filename.rsplit_once('.')?.1.to_ascii_lowercase();
+    let runner = match extension.as_str() {
+        "py" => "python3",
+        "sh" => "bash",
+        "js" | "mjs" => "node",
+        "rb" => "ruby",
+        _ => return None,
+    };
+    Some(format!("{runner} {filename}"))
 }
 
 /// The most planned rounds an inline `rounds:` directive accepts — an
@@ -1988,7 +2066,7 @@ async fn run_panel_verdict(
     last_status: &mut ExitStatus,
     leaderboard: &mut CommitteeLeaderboard,
     on_event: &mut impl FnMut(TurnEvent),
-) -> std::io::Result<()> {
+) -> std::io::Result<Option<String>> {
     on_event(TurnEvent::Text {
         text: format!(
             "**Judge — `{}`** is comparing the answers…",
@@ -2054,13 +2132,16 @@ async fn run_panel_verdict(
 
     // Revision round: the judge's notes become instructions. The
     // winner improves its own answer instead of the user re-asking
-    // from scratch — the committee's first feedback loop.
+    // from scratch — the committee's first feedback loop. Whatever
+    // version stands at the end is the artifact `save` writes out.
+    let mut artifact: Option<String> = None;
     if let Some(winner_name) = &winner {
         if let Some((_, winning_answer)) = answers
             .iter()
             .find(|(model, _)| model == winner_name)
             .filter(|_| !judge_notes.is_empty())
         {
+            artifact = Some(winning_answer.clone());
             on_event(TurnEvent::Text {
                 text: format!("**Revision — `{winner_name}`** is addressing the judge's notes…"),
             });
@@ -2085,11 +2166,12 @@ async fn run_panel_verdict(
             match outcome {
                 Ok(stage) => {
                     add_usage(total_usage, &stage.usage);
+                    let revised = stage.content.trim().to_string();
+                    if !revised.is_empty() {
+                        artifact = Some(revised.clone());
+                    }
                     on_event(TurnEvent::Text {
-                        text: format!(
-                            "**Final version (judge's notes addressed):**\n\n{}",
-                            stage.content.trim()
-                        ),
+                        text: format!("**Final version (judge's notes addressed):**\n\n{revised}"),
                     });
                 }
                 Err(error) => {
@@ -2123,12 +2205,19 @@ async fn run_panel_verdict(
 
     // The in-chat iteration controls the user asked for: offered where the
     // decision actually gets made — right under the verdict.
+    let save_offer = if artifact.is_some() {
+        " Or `save` (optionally `save <filename>`) writes the final version into the \
+         working directory."
+    } else {
+        ""
+    };
     on_event(TurnEvent::Text {
-        text: "**Another round?** Type `round notes`, `round rewrite`, `round peers`, or \
-               `round converge` to run one more round on these answers."
-            .to_string(),
+        text: format!(
+            "**Another round?** Type `round notes`, `round rewrite`, `round peers`, or \
+             `round converge` to run one more round on these answers.{save_offer}"
+        ),
     });
-    Ok(())
+    Ok(artifact)
 }
 
 // ---------------------------------------------------------------------------
@@ -2151,6 +2240,83 @@ pub async fn run_ollama_committee(
         model: Some(OLLAMA_COMMITTEE_MODEL_ID.to_string()),
         cwd: Some(working_dir.to_string_lossy().into_owned()),
     });
+
+    // `save [filename]` writes the last panel's final version into the
+    // working directory — no models involved, so it runs before the service
+    // is even poked.
+    if let Some(named) = parse_save_command(prompt) {
+        let saved = panel_continuations().lock().ok().and_then(|map| {
+            map.get(session_id).and_then(|continuation| {
+                continuation
+                    .artifact
+                    .clone()
+                    .map(|artifact| (continuation.prompt.clone(), artifact))
+            })
+        });
+        let complete = |on_event: &mut dyn FnMut(TurnEvent)| {
+            on_event(TurnEvent::TurnCompleted {
+                usage: Some(committee_usage()),
+                is_error: false,
+                error_message: None,
+            });
+        };
+        let Some((question, artifact)) = saved else {
+            on_event(TurnEvent::Text {
+                text: "Nothing to save yet — run a panel to a verdict first, then `save`."
+                    .to_string(),
+            });
+            complete(&mut on_event);
+            return Ok(success_status());
+        };
+        let Some(filename) = named.or_else(|| infer_artifact_filename(&question)) else {
+            on_event(TurnEvent::Text {
+                text: "Tell me the filename — e.g. `save rain.py`.".to_string(),
+            });
+            complete(&mut on_event);
+            return Ok(success_status());
+        };
+        if !looks_like_filename(&filename) {
+            on_event(TurnEvent::Text {
+                text: format!(
+                    "`{filename}` isn't a plain relative filename — e.g. `save rain.py`."
+                ),
+            });
+            complete(&mut on_event);
+            return Ok(success_status());
+        }
+        let code = extract_code_block(&artifact).unwrap_or_else(|| artifact.clone());
+        let call_id = format!("committee-save-{}", Uuid::new_v4());
+        on_event(TurnEvent::ToolCallStarted {
+            call_id: call_id.clone(),
+            name: "WriteFile".to_string(),
+            input: json!({ "path": filename, "content": code }),
+        });
+        match std::fs::write(working_dir.join(&filename), &code) {
+            Ok(()) => {
+                on_event(TurnEvent::ToolCallResult {
+                    call_id,
+                    outcome: ToolCallOutcome::Success(json!({ "bytes_written": code.len() })),
+                });
+                let hint = run_hint(&filename)
+                    .map(|command| format!(" Run it: `{command}`"))
+                    .unwrap_or_default();
+                on_event(TurnEvent::Text {
+                    text: format!("Saved `{filename}` ({} bytes).{hint}", code.len()),
+                });
+            }
+            Err(error) => {
+                on_event(TurnEvent::ToolCallResult {
+                    call_id,
+                    outcome: ToolCallOutcome::Error(error.to_string()),
+                });
+                on_event(TurnEvent::Text {
+                    text: format!("⚠️ Couldn't save `{filename}`: {error}"),
+                });
+            }
+        }
+        complete(&mut on_event);
+        return Ok(success_status());
+    }
 
     if let Err(error) = ensure_ollama_service(path).await {
         emit_failed_turn(
@@ -2206,7 +2372,7 @@ pub async fn run_ollama_committee(
             &mut on_event,
         )
         .await?;
-        run_panel_verdict(
+        let artifact = run_panel_verdict(
             &continuation.prompt,
             &continuation.answers,
             &continuation.plan,
@@ -2220,6 +2386,9 @@ pub async fn run_ollama_committee(
         )
         .await?;
         continuation.rounds_done += 1;
+        if artifact.is_some() {
+            continuation.artifact = artifact;
+        }
         if let Ok(mut map) = panel_continuations().lock() {
             map.insert(*session_id, continuation);
         }
@@ -2904,7 +3073,7 @@ pub async fn run_ollama_committee(
                 .await?;
             }
 
-            run_panel_verdict(
+            let artifact = run_panel_verdict(
                 prompt,
                 &answers,
                 &plan,
@@ -2917,7 +3086,14 @@ pub async fn run_ollama_committee(
                 &mut on_event,
             )
             .await?;
-            save_panel_continuation(session_id, prompt, &plan, &answers, panel_plan.len());
+            save_panel_continuation(
+                session_id,
+                prompt,
+                &plan,
+                &answers,
+                panel_plan.len(),
+                artifact,
+            );
         }
     }
 
