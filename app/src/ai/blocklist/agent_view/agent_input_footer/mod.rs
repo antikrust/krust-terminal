@@ -1,4 +1,5 @@
 pub(super) mod chips;
+mod committee_rounds_selector;
 pub mod editor;
 mod environment_selector;
 pub mod toolbar_item;
@@ -51,6 +52,7 @@ pub(crate) use self::environment_selector::sort_environments_by_recency;
 pub(crate) use self::environment_selector::{
     EnvironmentSelector, EnvironmentSelectorEvent, EnvironmentSelectorTarget,
 };
+use crate::ai::agent_sdk::driver::harness::ollama_committee::OLLAMA_COMMITTEE_MODEL_ID;
 use crate::ai::blocklist::agent_view::is_in_cloud_context;
 use crate::ai::blocklist::history_model::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};
 use crate::ai::blocklist::prompt::prompt_alert::{PromptAlertEvent, PromptAlertView};
@@ -114,6 +116,7 @@ use crate::workspace::ToastStack;
 #[cfg(not(target_family = "wasm"))]
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
+use committee_rounds_selector::{CommitteeRoundsSelector, CommitteeRoundsSelectorEvent};
 
 const ENABLE_NLD_TOOLTIP: &str = "Enable terminal command autodetection";
 const DISABLE_NLD_TOOLTIP: &str = "Disable terminal command autodetection";
@@ -214,6 +217,8 @@ pub struct AgentInputFooter {
     model_selector: ViewHandle<ProfileModelSelector>,
     environment_selector: Option<ViewHandle<EnvironmentSelector>>,
     handoff_environment_selector: ViewHandle<EnvironmentSelector>,
+    /// The committee's round plan, beside the model picker it applies to.
+    committee_rounds_selector: ViewHandle<CommitteeRoundsSelector>,
     prompt_alert: ViewHandle<PromptAlertView>,
     ambient_agent_view_model: Option<ModelHandle<AmbientAgentViewModel>>,
     handoff_compose_state: ModelHandle<HandoffComposeState>,
@@ -739,6 +744,18 @@ impl AgentInputFooter {
             )
         });
 
+        // Shown only while the local committee is the selected model, where
+        // "how many rounds" is a live decision rather than a setting.
+        let committee_rounds_selector = ctx.add_typed_action_view(|ctx| {
+            CommitteeRoundsSelector::new(menu_positioning_provider.clone(), ctx)
+        });
+
+        ctx.subscribe_to_view(&committee_rounds_selector, |_, _, event, ctx| match event {
+            CommitteeRoundsSelectorEvent::MenuVisibilityChanged { open } => {
+                ctx.emit(AgentInputFooterEvent::ToggledChipMenu { open: *open });
+            }
+        });
+
         ctx.subscribe_to_view(
             &handoff_environment_selector,
             |_, _, event, ctx| match event {
@@ -921,6 +938,7 @@ impl AgentInputFooter {
             model_selector: profile_model_selector_full,
             environment_selector,
             handoff_environment_selector,
+            committee_rounds_selector,
             prompt_alert,
             terminal_model,
             handoff_compose_state,
@@ -1690,6 +1708,14 @@ impl AgentInputFooter {
         Container::new(content).with_vertical_padding(4.).finish()
     }
 
+    /// Whether the local multi-model committee is the selected model.
+    fn committee_is_selected(&self, app: &AppContext) -> bool {
+        self.ambient_agent_view_model
+            .as_ref()
+            .and_then(|model| model.as_ref(app).selected_harness_model_id())
+            == Some(OLLAMA_COMMITTEE_MODEL_ID)
+    }
+
     pub fn has_open_chip_menu(&self, app: &AppContext) -> bool {
         let has_open_display_chip = self
             .all_display_chips()
@@ -1701,8 +1727,12 @@ impl AgentInputFooter {
             .is_some_and(|selector| selector.as_ref(app).is_menu_open());
         let has_open_handoff_env_selector =
             self.handoff_environment_selector.as_ref(app).is_menu_open();
+        let has_open_rounds_selector = self.committee_rounds_selector.as_ref(app).is_menu_open();
 
-        has_open_display_chip || has_open_env_selector || has_open_handoff_env_selector
+        has_open_display_chip
+            || has_open_env_selector
+            || has_open_handoff_env_selector
+            || has_open_rounds_selector
     }
 
     pub fn is_model_selector_open(&self, app: &AppContext) -> bool {
@@ -2361,6 +2391,13 @@ impl View for AgentInputFooter {
             ) {
                 left_buttons.add_child(element);
             }
+        }
+
+        // The committee's round plan belongs beside the model that uses it,
+        // and nowhere else — for every other model it would be a control
+        // with nothing to control.
+        if self.committee_is_selected(app) {
+            left_buttons.add_child(ChildView::new(&self.committee_rounds_selector).finish());
         }
 
         let mut right_buttons = Flex::row()

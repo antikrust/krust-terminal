@@ -213,6 +213,25 @@ rulings marked unavailable.
 Follow-up turns in a committee conversation are independent runs (fresh committee,
 same conversation). Cross-turn memory is future work.
 
+## The cast
+
+Every seated model is introduced by a name — Penelope Crustacean, Furgeront Bastille,
+Ron Caramel — drawn deterministically from its tag, so the same model is the same
+person every run and the name becomes shorthand the way a tag never does. Whoever
+holds the gavel is addressed as Judge, on the surname.
+
+This is **display only**, and the distinction is load-bearing. Prompts, leaderboard
+keys, casting, settings and the `roles` map all use the tag, because the machinery
+must never have to work out which model "Furgeront Bastille" was. Two places bridge
+the gap: the bench block prints name *and* tag together (the tag is what costs RAM,
+so it stays visible where it matters), and model-written prose — the judge's
+argument, its per-finding reasons, the audit — is rewritten through the same cast
+before rendering, longest tag first so `qwen2.5-coder:14b` can't eat
+`qwen2.5-coder:14b-instruct`. A model the judge names that never sat keeps its tag.
+
+`Committee is introduced by: name / model tag` on the Ollama page for anyone who
+wants serial numbers back.
+
 ## Model roles
 
 Auto-picked by default ("the app chooses the best models for the job"): heuristics
@@ -301,6 +320,15 @@ hiding.
 | `Second opinion` | off → on | Stage 3b (doubles the fan-out) |
 | `Audit pass` | on → off | Stage 8 (one call, by a model with no stake) |
 | `Round 2` / `Round 3` | Off → notes → rewrite → peers → converge → Off | Panel plan |
+| `Committee is introduced by` | name → model tag | The cast (display only) |
+
+The round plan also has a **menu in the input bar**, beside the model picker and
+shown only while the committee is the selected model
+(`agent_input_footer/committee_rounds_selector.rs`). It offers whole plans —
+"Judge notes", "Notes → rewrite", "Peers → converge" — rather than per-slot
+controls, because "notes then rewrite" is the decision a user actually makes, and
+composing it out of two dropdowns is the settings page's job. It writes the same
+`panel_plan` the settings page writes, so the two can never disagree.
 
 Two design notes on those. The evidence stages are one control rather than two
 switches because they answer one question — *how much does the machine check before

@@ -263,6 +263,10 @@ pub struct OllamaCommitteeConfig {
     pub second_opinion: bool,
     /// Whether a model that sat out the run re-checks the verdict at the end.
     pub audit: bool,
+    /// Whether the committee's members are introduced by name rather than by
+    /// model tag. Display only — every prompt and every stored key still uses
+    /// the tag.
+    pub personas: bool,
 }
 
 impl Default for OllamaCommitteeConfig {
@@ -283,6 +287,7 @@ impl Default for OllamaCommitteeConfig {
             // On: one call, by a model with no stake in the argument it is
             // reading. The cheapest check in the pipeline.
             audit: true,
+            personas: true,
         }
     }
 }
@@ -363,6 +368,7 @@ impl OllamaCommitteeConfig {
             findings_cap: field("findings_cap", defaults.findings_cap, 200),
             second_opinion: flag("second_opinion", defaults.second_opinion),
             audit: flag("audit", defaults.audit),
+            personas: flag("personas", defaults.personas),
         }
     }
 
@@ -377,6 +383,7 @@ impl OllamaCommitteeConfig {
             "findings_cap": self.findings_cap,
             "second_opinion": self.second_opinion,
             "audit": self.audit,
+            "personas": self.personas,
             "panel_plan": self
                 .panel_plan
                 .iter()
@@ -468,10 +475,132 @@ pub fn cycle_findings_cap(config: &mut OllamaCommitteeConfig) {
 // Roles
 // ---------------------------------------------------------------------------
 
+/// The committee's cast list. A model tag is a serial number; a committee is
+/// a room full of people arguing, and reads far better as one. Assigned
+/// deterministically from the tag, so `codellama:13b` is Ron Caramel today
+/// and Ron Caramel next week — the point is to build the same intuition a
+/// name does, not to be random.
+///
+/// Display only. Every prompt, every leaderboard key and every setting still
+/// uses the real tag, because the machinery must never have to guess which
+/// model "Furgeront Bastille" was.
+const PERSONA_NAMES: [&str; 32] = [
+    "Penelope Crustacean",
+    "Furgeront Bastille",
+    "Felicity Quackenbush",
+    "Ron Caramel",
+    "Wilhelmina Wifflebut",
+    "Barnaby Trouserpress",
+    "Cornelia Fandangle",
+    "Mortimer Sprocket",
+    "Beatrix Wumbleforth",
+    "Cedric Pantsworthy",
+    "Ermintrude Glockenspiel",
+    "Rupert Flangecrumb",
+    "Dorothea Pinwhistle",
+    "Alastair Grumblenook",
+    "Perpetua Snodgrass",
+    "Bartholomew Fussington",
+    "Winifred Clangbottom",
+    "Percival Wobblecraft",
+    "Hyacinth Dumpling",
+    "Ignatius Braggadocio",
+    "Gwendoline Puddifoot",
+    "Horatio Trundlewick",
+    "Prudence Scattergood",
+    "Montgomery Cheeseright",
+    "Araminta Fizzlewhip",
+    "Lysander Boondoggle",
+    "Octavia Wrenchmuffin",
+    "Fitzgerald Nubbins",
+    "Clementine Thwackery",
+    "Rufus Marmalade",
+    "Seraphina Bunthorpe",
+    "Ambrose Kerfuffle",
+];
+
+/// The persona for a model tag: the same tag always draws the same name.
+fn persona_for(tag: &str) -> &'static str {
+    // A tiny FNV-1a over the tag — any stable hash would do; this one is
+    // three lines and doesn't drag in a dependency whose hashing could
+    // change between releases and rename everyone.
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in tag.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    PERSONA_NAMES[(hash % PERSONA_NAMES.len() as u64) as usize]
+}
+
+/// What this run has been calling the model behind `tag`. Falls back to the
+/// tag itself for a model that isn't seated — the judge occasionally names
+/// one that never sat.
+fn spoken(tag: &str, plan: &CommitteePlan) -> String {
+    let tag = tag.trim().trim_matches('`');
+    plan.reviewers
+        .iter()
+        .chain(std::iter::once(&plan.judge))
+        .find(|member| member.name == tag)
+        .map(|member| member.display.clone())
+        .unwrap_or_else(|| format!("`{tag}`"))
+}
+
+/// Rewrites model tags inside model-written prose into the same names. The
+/// judge writes "qwen2.5-coder:14b" because that is what its prompt calls
+/// the reviewer; the reader has spent five minutes watching Ron Caramel.
+fn cast_prose(text: &str, plan: &CommitteePlan) -> String {
+    let mut seats: Vec<&Member> = plan
+        .reviewers
+        .iter()
+        .chain(std::iter::once(&plan.judge))
+        .collect();
+    // Longest tag first: `qwen2.5-coder:14b` must be replaced before any
+    // shorter tag that happens to be a prefix of it.
+    seats.sort_by_key(|member| std::cmp::Reverse(member.name.len()));
+    let mut spoken = text.to_string();
+    for member in seats {
+        if member.display.trim_matches('`') == member.name {
+            continue;
+        }
+        spoken = spoken.replace(&format!("`{}`", member.name), &member.display);
+        spoken = spoken.replace(&member.name, &member.display);
+    }
+    spoken
+}
+
+/// What the run calls a model: its persona, or its tag in backticks for
+/// anyone who would rather read serial numbers.
+fn stage_name(tag: &str, personas: bool) -> String {
+    match personas {
+        true => persona_for(tag).to_string(),
+        false => format!("`{tag}`"),
+    }
+}
+
+/// The same, for whoever ends up holding the gavel.
+fn judge_stage_name(tag: &str, personas: bool) -> String {
+    match personas {
+        true => judge_persona_for(tag),
+        false => format!("`{tag}`"),
+    }
+}
+
+/// The judge's name — the honorific goes on the surname, as it does in a
+/// courtroom: Penelope Crustacean presiding becomes Judge Crustacean.
+fn judge_persona_for(tag: &str) -> String {
+    let persona = persona_for(tag);
+    let surname = persona.rsplit(' ').next().unwrap_or(persona);
+    format!("Judge {surname}")
+}
+
 /// One installed model, annotated with what role assignment needs to know.
 #[derive(Debug, Clone, PartialEq)]
 struct Member {
     name: String,
+    /// What the run calls this model out loud — a persona, or the tag in
+    /// backticks when the user would rather have serial numbers. Set once at
+    /// assembly; nothing but rendering ever reads it.
+    display: String,
     /// Leading alphabetic run of the tag: `qwen2.5-coder:7b` → `qwen`. Family
     /// diversity is what buys decorrelated blind spots.
     family: String,
@@ -2557,7 +2686,7 @@ fn finding_location(file: &str, line: Option<u64>) -> String {
     }
 }
 
-fn render_finding_line(index: usize, finding: &MergedFinding) -> String {
+fn render_finding_line(index: usize, finding: &MergedFinding, plan: &CommitteePlan) -> String {
     let location = finding_location(&finding.file, finding.line);
     let agreement = if finding.raised_by.len() > 1 {
         format!(" — agreed ×{}", finding.raised_by.len())
@@ -2581,7 +2710,12 @@ fn render_finding_line(index: usize, finding: &MergedFinding) -> String {
         index + 1,
         finding.severity,
         finding.title,
-        finding.raised_by.join(", "),
+        finding
+            .raised_by
+            .iter()
+            .map(|tag| spoken(tag, plan))
+            .collect::<Vec<_>>()
+            .join(", "),
     )
 }
 
@@ -2610,9 +2744,9 @@ async fn run_panel_round(
         PanelRoundKind::Notes => {
             on_event(TurnEvent::Text {
                 text: format!(
-                    "**Round {round} (judge notes) — `{}`** is writing notes for \
+                    "**Round {round} (judge notes) — {}** is writing notes for \
                      every panelist…",
-                    plan.judge.name
+                    plan.judge.display
                 ),
             });
             let coach_prompt = panel_coach_user_prompt(prompt, answers);
@@ -2696,9 +2830,9 @@ async fn run_panel_round(
         PanelRoundKind::Exemplar => {
             on_event(TurnEvent::Text {
                 text: format!(
-                    "**Round {round} (judge's rewrite) — `{}`** is rewriting the \
+                    "**Round {round} (judge's rewrite) — {}** is rewriting the \
                      best answer itself…",
-                    plan.judge.name
+                    plan.judge.display
                 ),
             });
             let exemplar_prompt = panel_exemplar_user_prompt(prompt, answers);
@@ -2882,9 +3016,9 @@ async fn run_panel_round(
         PanelRoundKind::Converge => {
             on_event(TurnEvent::Text {
                 text: format!(
-                    "**Round {round} (converge) — `{}`** is picking the current \
+                    "**Round {round} (converge) — {}** is picking the current \
                      leader…",
-                    plan.judge.name
+                    plan.judge.display
                 ),
             });
             let judge_prompt = panel_judge_user_prompt(prompt, answers);
@@ -2987,8 +3121,8 @@ async fn run_panel_verdict(
 ) -> std::io::Result<Option<String>> {
     on_event(TurnEvent::Text {
         text: format!(
-            "**Judge — `{}`** is comparing the answers…",
-            plan.judge.name
+            "**Judge — {}** is comparing the answers…",
+            plan.judge.display
         ),
     });
     let judge_prompt = panel_judge_user_prompt(prompt, answers);
@@ -3165,15 +3299,15 @@ async fn prove_finding(
         on_event(TurnEvent::Text {
             text: match attempt {
                 0 => format!(
-                    "**Proving #{} — `{}`** writes a reproduction…",
+                    "**Proving #{} — {}** writes a reproduction…",
                     index + 1,
-                    prover.name
+                    prover.display
                 ),
                 _ => format!(
-                    "**#{} again — `{}`** is told what the interpreter said and tries once \
+                    "**#{} again — {}** is told what the interpreter said and tries once \
                      more…",
                     index + 1,
-                    prover.name
+                    prover.display
                 ),
             },
         });
@@ -3696,10 +3830,10 @@ pub async fn run_ollama_committee(
             on_event(TurnEvent::Text {
                 text: match attempt {
                     0 => format!(
-                        "**`{}`** is writing tests that pin what the review found…",
-                        author.name
+                        "**{}** is writing tests that pin what the review found…",
+                        author.display
                     ),
-                    _ => format!("**`{}`** is fixing the test file…", author.name),
+                    _ => format!("**{}** is fixing the test file…", author.display),
                 },
             });
             let user_prompt = format!(
@@ -3836,8 +3970,8 @@ pub async fn run_ollama_committee(
                 .unwrap_or_else(|| (continuation.plan.judge.clone(), false));
             on_event(TurnEvent::Text {
                 text: format!(
-                    "**`{}`** is answering from the last review{}…",
-                    responder.name,
+                    "**{}** is answering from the last review{}…",
+                    responder.display,
                     if is_fresh {
                         " (it sat that one out)"
                     } else {
@@ -3951,6 +4085,7 @@ pub async fn run_ollama_committee(
     for name in &installed {
         let caps = probe_model_caps(name, path).await;
         members.push(Member {
+            display: stage_name(name, config.personas),
             family: model_family(name),
             coder: is_coder_model(name),
             thinking: caps.thinking,
@@ -3961,10 +4096,13 @@ pub async fn run_ollama_committee(
 
     let mut leaderboard = load_leaderboard();
     let bench = members.clone();
-    let Some(plan) = assign_roles(members, config.reviewers, &leaderboard, &config.roles) else {
+    let Some(mut plan) = assign_roles(members, config.reviewers, &leaderboard, &config.roles)
+    else {
         emit_failed_turn(&mut on_event, "The committee could not be assembled.");
         return Ok(success_status());
     };
+    // Whoever ended up with the gavel is addressed as such from here on.
+    plan.judge.display = judge_stage_name(&plan.judge.name, config.personas);
     let keep_alive = config.keep_alive();
 
     // Evidence: the working tree's diff, surfaced as a read-only shell card
@@ -4049,14 +4187,16 @@ pub async fn run_ollama_committee(
     let mut assembly = format!("**Committee assembled** — {mode_name}.\n");
     for (index, reviewer) in plan.reviewers.iter().enumerate() {
         assembly.push_str(&format!(
-            "- Reviewer {}: `{}`{}\n",
+            "- Reviewer {}: **{}** — `{}`{}\n",
             index + 1,
+            reviewer.display,
             reviewer.name,
             member_credentials(reviewer),
         ));
     }
     assembly.push_str(&format!(
-        "- Judge: `{}`{}{}\n",
+        "- Judge: **{}** — `{}`{}{}\n",
+        plan.judge.display,
         plan.judge.name,
         member_credentials(&plan.judge),
         if plan.judge_is_reviewer {
@@ -4175,10 +4315,10 @@ pub async fn run_ollama_committee(
             for (index, reviewer) in plan.reviewers.iter().enumerate() {
                 on_event(TurnEvent::Text {
                     text: format!(
-                        "**Reviewer {}/{} — `{}`** is reading the diff…",
+                        "**Reviewer {}/{} — {}** is reading the diff…",
                         index + 1,
                         plan.reviewers.len(),
-                        reviewer.name
+                        reviewer.display
                     ),
                 });
                 let (status, outcome) = chat_once(
@@ -4223,7 +4363,7 @@ pub async fn run_ollama_committee(
                         // only what survived.
                         if let Some(note) = sanitation_note {
                             on_event(TurnEvent::Text {
-                                text: format!("⚠️ `{}` {note}", reviewer.name),
+                                text: format!("⚠️ {} {note}", reviewer.display),
                             });
                         }
                         // Second opinion: the same model, the same diff, a
@@ -4233,9 +4373,9 @@ pub async fn run_ollama_committee(
                         if config.second_opinion {
                             on_event(TurnEvent::Text {
                                 text: format!(
-                                    "**Second opinion — `{}`** re-reads the diff at temperature \
+                                    "**Second opinion — {}** re-reads the diff at temperature \
                                      {WARM_TEMPERATURE}…",
-                                    reviewer.name
+                                    reviewer.display
                                 ),
                             });
                             let (status, outcome) = chat_once_at(
@@ -4270,45 +4410,45 @@ pub async fn run_ollama_committee(
                                             report.findings.truncate(config.findings_cap.max(1));
                                             on_event(TurnEvent::Text {
                                                 text: format!(
-                                                    "`{}` repeated {repeated} of its {cold_count} \
+                                                    "{} repeated {repeated} of its {cold_count} \
                                                      finding{}, and raised {fresh} the cold read \
                                                      missed.",
-                                                    reviewer.name,
+                                                    reviewer.display,
                                                     if cold_count == 1 { "" } else { "s" }
                                                 ),
                                             });
                                         }
                                         None => on_event(TurnEvent::Text {
                                             text: format!(
-                                                "`{}` answered the second read in prose — nothing \
+                                                "{} answered the second read in prose — nothing \
                                                  to corroborate against.",
-                                                reviewer.name
+                                                reviewer.display
                                             ),
                                         }),
                                     }
                                 }
                                 Err(error) => on_event(TurnEvent::Text {
                                     text: format!(
-                                        "`{}`'s second read failed ({error}) — the first read \
+                                        "{}'s second read failed ({error}) — the first read \
                                          stands on its own.",
-                                        reviewer.name
+                                        reviewer.display
                                     ),
                                 }),
                             }
                         }
                         let summary = if let Some(commentary) = &report.commentary {
                             format!(
-                                "`{}` answered in prose instead of findings (kept for the \
+                                "{} answered in prose instead of findings (kept for the \
                                  judge): _{}_",
-                                report.model,
+                                reviewer.display,
                                 truncate_chars(commentary, 300)
                             )
                         } else if report.findings.is_empty() {
-                            format!("`{}` reports **no findings**.", report.model)
+                            format!("{} reports **no findings**.", reviewer.display)
                         } else {
                             let mut lines = format!(
-                                "`{}` reports {} finding{}:\n",
-                                report.model,
+                                "{} reports {} finding{}:\n",
+                                reviewer.display,
                                 report.findings.len(),
                                 if report.findings.len() == 1 { "" } else { "s" }
                             );
@@ -4392,7 +4532,7 @@ pub async fn run_ollama_committee(
                 if verified == 1 { "" } else { "s" },
             );
             for (index, finding) in merged.iter().enumerate() {
-                consensus.push_str(&render_finding_line(index, finding));
+                consensus.push_str(&render_finding_line(index, finding, &plan));
                 consensus.push('\n');
             }
             on_event(TurnEvent::Text { text: consensus });
@@ -4450,7 +4590,7 @@ pub async fn run_ollama_committee(
 
             // Judge: rules only on what the machines couldn't settle.
             on_event(TurnEvent::Text {
-                text: format!("**Judge — `{}`** is deliberating…", plan.judge.name),
+                text: format!("**Judge — {}** is deliberating…", plan.judge.display),
             });
             let judge_prompt = judge_user_prompt(
                 prompt,
@@ -4531,7 +4671,10 @@ pub async fn run_ollama_committee(
                 text.push_str(&format!("**{title} ({}):**\n", indices.len()));
                 for &index in indices {
                     let finding = &merged[index];
-                    text.push_str(&format!("{icon} {}\n", render_finding_line(index, finding)));
+                    text.push_str(&format!(
+                        "{icon} {}\n",
+                        render_finding_line(index, finding, &plan)
+                    ));
                     if let Some(proof) = &finding.proof {
                         text.push_str(&format!("   {}\n", proof.label()));
                     }
@@ -4540,7 +4683,7 @@ pub async fn run_ollama_committee(
                             text.push_str(&format!(
                                 "   judge: {} — {}\n",
                                 ruling.verdict.to_ascii_lowercase(),
-                                ruling.reason
+                                cast_prose(&ruling.reason, &plan)
                             ));
                         }
                     }
@@ -4585,14 +4728,20 @@ pub async fn run_ollama_committee(
                     }
                 }
                 if !verdict.summary.trim().is_empty() {
-                    text.push_str(&format!("\n**The argument:** {}\n", verdict.summary.trim()));
+                    text.push_str(&format!(
+                        "\n**The argument:** {}\n",
+                        cast_prose(verdict.summary.trim(), &plan)
+                    ));
                 }
                 if let Some(best) = verdict
                     .best_reviewer
                     .as_deref()
                     .filter(|best| !best.trim().is_empty() && *best != "null")
                 {
-                    text.push_str(&format!("\n🏆 Most valuable reviewer: `{best}`\n"));
+                    text.push_str(&format!(
+                        "\n🏆 Most valuable reviewer: {}\n",
+                        spoken(best, &plan)
+                    ));
                 }
             }
 
@@ -4624,8 +4773,8 @@ pub async fn run_ollama_committee(
                 if let Some((auditor, is_fresh)) = pick_auditor(&bench, &plan) {
                     on_event(TurnEvent::Text {
                         text: format!(
-                            "**Audit — `{}`** {}…",
-                            auditor.name,
+                            "**Audit — {}** {}…",
+                            auditor.display,
                             if is_fresh {
                                 "sat this one out and is checking the committee's work"
                             } else {
@@ -4648,7 +4797,7 @@ pub async fn run_ollama_committee(
                     match outcome {
                         Ok(stage) => {
                             add_usage(&mut total_usage, &stage.usage);
-                            let audit = stage.content.trim();
+                            let audit = cast_prose(stage.content.trim(), &plan);
                             if !audit.is_empty() {
                                 on_event(TurnEvent::Text {
                                     text: format!("**The audit:**\n\n{audit}"),
@@ -4707,10 +4856,10 @@ pub async fn run_ollama_committee(
             for (index, panelist) in plan.reviewers.iter().enumerate() {
                 on_event(TurnEvent::Text {
                     text: format!(
-                        "**Panelist {}/{} — `{}`** is answering…",
+                        "**Panelist {}/{} — {}** is answering…",
                         index + 1,
                         plan.reviewers.len(),
-                        panelist.name
+                        panelist.display
                     ),
                 });
                 let (status, outcome) = chat_once(
@@ -4740,7 +4889,7 @@ pub async fn run_ollama_committee(
                             });
                         } else {
                             on_event(TurnEvent::Text {
-                                text: format!("**`{}` answers:**\n\n{answer}", panelist.name),
+                                text: format!("**{} answers:**\n\n{answer}", panelist.display),
                             });
                             answers.push((panelist.name.clone(), answer));
                         }

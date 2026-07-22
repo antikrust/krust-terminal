@@ -108,6 +108,8 @@ pub enum OllamaPageAction {
     ToggleCommitteeSecondOpinion,
     /// Turn the committee's closing audit on or off.
     ToggleCommitteeAudit,
+    /// Switch between committee personas and plain model tags.
+    ToggleCommitteePersonas,
     /// Cycle a model's committee casting: auto → reviewer → judge → never.
     CycleCommitteeRole {
         tag: String,
@@ -221,6 +223,7 @@ struct StateHandles {
     committee_findings_cap_link: MouseStateHandle,
     committee_second_opinion_link: MouseStateHandle,
     committee_audit_link: MouseStateHandle,
+    committee_personas_link: MouseStateHandle,
 }
 
 impl OllamaPageView {
@@ -792,6 +795,11 @@ impl TypedActionView for OllamaPageView {
             OllamaPageAction::ToggleCommitteeAudit => {
                 self.update_committee_config(ctx, |config| {
                     config.audit = !config.audit;
+                });
+            }
+            OllamaPageAction::ToggleCommitteePersonas => {
+                self.update_committee_config(ctx, |config| {
+                    config.personas = !config.personas;
                 });
             }
             OllamaPageAction::CycleCommitteeRole { tag } => {
@@ -1813,6 +1821,40 @@ impl SettingsWidget for CommitteeWidget {
                  with each other; this is the first opinion in the run with nothing \
                  invested in it. One extra call — and if every model was seated, the judge \
                  checks its own work and the run says so.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!(
+                            "Committee is introduced by: {}",
+                            if config.personas { "name" } else { "model tag" }
+                        ),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::ToggleCommitteePersonas);
+                        })),
+                        handles.committee_personas_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "A model tag is a serial number; a committee is a room full of people \
+                 arguing, and reads like one. Each model draws the same name every time, \
+                 and the bench block prints both, so you always know which tag is which \
+                 person. Names are display only — settings, prompts and standings still \
+                 use the tag.",
                 appearance,
             ))
             .with_margin_top(2.)

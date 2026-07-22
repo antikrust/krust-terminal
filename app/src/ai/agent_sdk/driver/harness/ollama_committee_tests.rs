@@ -3,6 +3,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::OLLAMA_MODEL_ID_P
 
 fn member(name: &str, thinking: bool) -> Member {
     Member {
+        display: stage_name(name, true),
         name: name.to_string(),
         family: model_family(name),
         coder: is_coder_model(name),
@@ -95,6 +96,7 @@ fn config_roundtrips_through_its_settings_json() {
         findings_cap: 24,
         second_opinion: true,
         audit: false,
+        personas: false,
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -121,6 +123,8 @@ fn a_config_saved_before_the_stage_toggles_reads_as_the_full_pipeline() {
     // The audit is one call by a model with no stake in the argument, so it
     // comes on for runs saved before it existed too.
     assert!(vintage.audit);
+    // Names too: a committee that introduces itself is the default.
+    assert!(vintage.personas);
 }
 
 #[test]
@@ -1565,8 +1569,13 @@ fn corroboration_reaches_consensus_but_never_outranks_two_models() {
 
     // And it shows in the line the user reads, but only where it is the
     // whole story.
-    assert!(render_finding_line(1, &merged[1]).contains("said twice"));
-    assert!(!render_finding_line(0, &merged[0]).contains("said twice"));
+    let plan = CommitteePlan {
+        reviewers: vec![member("qwen2.5-coder:14b", false)],
+        judge: member("codellama:13b", false),
+        judge_is_reviewer: false,
+    };
+    assert!(render_finding_line(1, &merged[1], &plan).contains("said twice"));
+    assert!(!render_finding_line(0, &merged[0], &plan).contains("said twice"));
 }
 
 #[test]
@@ -1658,4 +1667,54 @@ fn asking_for_tests_is_an_order_not_a_question() {
     assert!(!parse_tests_command("did the tests pass"));
     assert!(!parse_tests_command("why did the test suite fail"));
     assert!(!parse_tests_command("review my changes"));
+}
+
+// --- the cast -------------------------------------------------------------
+
+#[test]
+fn a_model_always_draws_the_same_name() {
+    // The point of a stable name is that it becomes shorthand: if the 14B is
+    // Penelope on Tuesday it has to be Penelope on Friday.
+    let first = persona_for("qwen2.5-coder:14b");
+    assert_eq!(first, persona_for("qwen2.5-coder:14b"));
+    assert_ne!(first, persona_for("codellama:13b"));
+    assert!(PERSONA_NAMES.contains(&first));
+
+    // The gavel gets the honorific, on the surname.
+    let judge = judge_persona_for("deepseek-r1:14b");
+    assert!(judge.starts_with("Judge "));
+    assert!(persona_for("deepseek-r1:14b").ends_with(judge.trim_start_matches("Judge ")));
+
+    // Switched off, everyone is a serial number again.
+    assert_eq!(stage_name("codellama:13b", false), "`codellama:13b`");
+    assert_eq!(judge_stage_name("codellama:13b", false), "`codellama:13b`");
+}
+
+#[test]
+fn the_judges_prose_is_spoken_in_the_names_the_run_used() {
+    let plan = CommitteePlan {
+        reviewers: vec![
+            member("qwen2.5-coder:14b", false),
+            member("qwen2.5-coder:14b-instruct", false),
+        ],
+        judge: member("deepseek-r1:14b", true),
+        judge_is_reviewer: false,
+    };
+    let reviewer = plan.reviewers[0].display.clone();
+    let longer = plan.reviewers[1].display.clone();
+
+    // A tag inside the judge's sentence becomes the name the user watched,
+    // with or without backticks.
+    let spoken_text = cast_prose(
+        "qwen2.5-coder:14b found it first, though `qwen2.5-coder:14b-instruct` disagreed.",
+        &plan,
+    );
+    assert!(spoken_text.starts_with(&reviewer), "{spoken_text}");
+    assert!(spoken_text.contains(&longer), "{spoken_text}");
+    // The longer tag must not be mangled by the shorter one that prefixes it.
+    assert!(!spoken_text.contains("-instruct"), "{spoken_text}");
+
+    // A model that never sat keeps its tag rather than borrowing a name.
+    assert_eq!(spoken("llama3:70b", &plan), "`llama3:70b`");
+    assert_eq!(spoken("qwen2.5-coder:14b", &plan), reviewer);
 }
