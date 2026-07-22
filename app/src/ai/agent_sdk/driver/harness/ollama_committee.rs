@@ -484,7 +484,7 @@ pub fn cycle_findings_cap(config: &mut OllamaCommitteeConfig) {
 /// Display only. Every prompt, every leaderboard key and every setting still
 /// uses the real tag, because the machinery must never have to guess which
 /// model "Furgeront Bastille" was.
-const PERSONA_NAMES: [&str; 32] = [
+const PERSONA_NAMES: [&str; 33] = [
     "Penelope Crustacean",
     "Furgeront Bastille",
     "Felicity Quackenbush",
@@ -517,6 +517,7 @@ const PERSONA_NAMES: [&str; 32] = [
     "Rufus Marmalade",
     "Seraphina Bunthorpe",
     "Ambrose Kerfuffle",
+    "Guybrush Threepwood",
 ];
 
 /// The persona for a model tag: the same tag always draws the same name.
