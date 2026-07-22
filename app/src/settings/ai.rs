@@ -1799,12 +1799,13 @@ define_settings_group!(AISettings, settings: [
     },
 
     // Fork: the Ollama multi-model committee's knobs, as a JSON object of
-    // `{ "reviewers": N, "max_loaded": N }`. One string setting rather than
-    // two numeric ones so later versions can add fields without a settings
-    // migration — the same pattern as `ollama_model_mode_overrides`. Parsed
-    // tolerantly by `ollama_committee::OllamaCommitteeConfig`; absent or
-    // malformed values fall back to defaults. Machine-specific (it encodes
-    // how many models this machine can hold), so never synced.
+    // `{ "reviewers": N, "max_loaded": N, "panel_plan": ["notes", ...] }`.
+    // One string setting rather than several so later versions can add
+    // fields without a settings migration — the same pattern as
+    // `ollama_model_mode_overrides`. Parsed tolerantly by
+    // `ollama_committee::OllamaCommitteeConfig`; absent or malformed values
+    // fall back to defaults. Machine-specific (it encodes how many models
+    // this machine can hold), so never synced.
     ollama_committee_config: OllamaCommitteeConfig {
         type: Option<String>,
         default: None,
@@ -1813,7 +1814,7 @@ define_settings_group!(AISettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "agents.warp_agent.other.ollama_committee_config",
-        description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts.",
+        description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts and a \"panel_plan\" round list.",
     },
 
     // Fork: misery mode — an escalation of swear mode in which the terminal

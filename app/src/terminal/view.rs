@@ -224,6 +224,9 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
+use crate::ai::agent_sdk::driver::harness::ollama_committee::{
+    run_ollama_committee, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
+};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream,
 };
@@ -23580,6 +23583,18 @@ impl TerminalView {
                 model,
             )
         });
+        // The committee pseudo-model routes to the multi-model runner, with
+        // its knobs snapshotted here for the same no-`ctx`-in-the-pump
+        // reason as the override above.
+        let ollama_committee_config = (ollama_model.as_deref() == Some(COMMITTEE_MODEL_NAME))
+            .then(|| {
+                OllamaCommitteeConfig::from_settings_json(
+                    AISettings::as_ref(ctx)
+                        .ollama_committee_config
+                        .value()
+                        .as_deref(),
+                )
+            });
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
@@ -23900,20 +23915,33 @@ impl TerminalView {
                         run_codex_stream(command, &pump_prompt, on_event).await
                     }
                     LocalHarnessKind::Ollama => {
-                        let model = ollama_model.unwrap_or_else(|| "codellama:13b".to_string());
-                        run_ollama_stream(
-                            command,
-                            &pump_prompt,
-                            &model,
-                            &session_id,
-                            &pump_working_dir,
-                            &pump_path,
-                            &pump_mcp_tools,
-                            pump_tool_caller,
-                            pump_agent_override,
-                            on_event,
-                        )
-                        .await
+                        if let Some(config) = ollama_committee_config {
+                            run_ollama_committee(
+                                &pump_prompt,
+                                &session_id,
+                                &pump_working_dir,
+                                &pump_path,
+                                config,
+                                on_event,
+                            )
+                            .await
+                        } else {
+                            let model =
+                                ollama_model.unwrap_or_else(|| "codellama:13b".to_string());
+                            run_ollama_stream(
+                                command,
+                                &pump_prompt,
+                                &model,
+                                &session_id,
+                                &pump_working_dir,
+                                &pump_path,
+                                &pump_mcp_tools,
+                                pump_tool_caller,
+                                pump_agent_override,
+                                on_event,
+                            )
+                            .await
+                        }
                     }
                 };
                 if let Err(error) = result {

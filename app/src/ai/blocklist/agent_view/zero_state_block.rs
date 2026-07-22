@@ -363,6 +363,14 @@ impl AgentViewZeroStateBlock {
     }
 }
 
+/// Whether the local-harness picker currently points at the Ollama committee
+/// — the zero state swaps its copy for committee instructions when it does.
+fn committee_is_selected(app: &AppContext) -> bool {
+    let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness(app);
+    model_id.as_deref()
+        == Some(crate::ai::agent_sdk::driver::harness::ollama_committee::OLLAMA_COMMITTEE_MODEL_ID)
+}
+
 fn format_session_location(session: &Session, working_directory: Option<&str>) -> Option<String> {
     let display_path = display_working_directory(working_directory, session.home_dir())?;
     let session_type = session.session_type();
@@ -401,11 +409,46 @@ impl View for AgentViewZeroStateBlock {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
 
+        let committee_selected = committee_is_selected(app);
         let header_props = if self.origin.is_cloud_agent() {
             HeaderProps {
                 title: "New Oz cloud agent conversation".into(),
                 description: AgentViewDescription::CloudModeWithDocsLink,
                 icon: Icon::OzCloud,
+            }
+        } else if committee_selected {
+            // The committee has its own front door: what it is and how to
+            // convene it, instead of the generic agent copy — the flows it
+            // supports (review vs panel) aren't discoverable otherwise.
+            let location = self.active_session(app).as_deref().and_then(|session| {
+                format_session_location(session, self.current_working_directory.as_deref())
+            });
+            let review_line: Cow<'static, str> = match &location {
+                Some(location) => format!(
+                    "Type `review my changes` to put the uncommitted diff in `{location}` \
+                     in front of the committee."
+                )
+                .into(),
+                None => "Type `review my changes` in a repo with uncommitted changes to put \
+                         the diff in front of the committee."
+                    .into(),
+            };
+            HeaderProps {
+                title: "New committee session".into(),
+                description: AgentViewDescription::PlainText(vec![
+                    "Your installed local models take seats: reviewers examine the evidence \
+                     independently, machines verify what they can, a judge rules on the rest, \
+                     and the verdict says which model won out."
+                        .into(),
+                    review_line,
+                    "Ask anything else and the models answer as a panel — the judge names \
+                     the winning answer."
+                        .into(),
+                    "Models load one at a time, so a run takes minutes by design. Bench size \
+                     and memory knobs live in Settings → Ollama."
+                        .into(),
+                ]),
+                icon: Icon::Users,
             }
         } else {
             let mut local_description =
@@ -429,7 +472,8 @@ impl View for AgentViewZeroStateBlock {
             .with_main_axis_size(MainAxisSize::Min)
             .with_children(render_title_and_description(header_props, app));
 
-        if !self.origin.is_cloud_agent() {
+        // The Oz-updates teaser is off-topic in a committee zero state.
+        if !self.origin.is_cloud_agent() && !committee_selected {
             if let Some(oz_updates_section) = render_oz_updates(
                 OzUpdatesProps {
                     is_expanded: self.is_oz_updates_expanded,

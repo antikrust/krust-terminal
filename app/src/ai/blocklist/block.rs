@@ -742,6 +742,9 @@ pub enum CollapsibleExpansionState {
 /// State for collapsible elements with scroll support.
 pub struct CollapsibleElementState {
     pub expansion_toggle_mouse_state: MouseStateHandle,
+    /// The header's copy-trace button. Stable across frames so the click
+    /// registers (same requirement as every other block button).
+    pub copy_mouse_state: MouseStateHandle,
     pub expansion_state: CollapsibleExpansionState,
     pub scroll_state: ClippedScrollStateHandle,
     last_known_is_finished: bool,
@@ -752,6 +755,7 @@ impl Default for CollapsibleElementState {
     fn default() -> Self {
         Self {
             expansion_toggle_mouse_state: MouseStateHandle::new(Default::default()),
+            copy_mouse_state: MouseStateHandle::new(Default::default()),
             expansion_state: CollapsibleExpansionState::Expanded {
                 is_finished: false,
                 scroll_pinned_to_bottom: true,

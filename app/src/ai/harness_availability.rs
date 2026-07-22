@@ -12,6 +12,9 @@ use warp_managed_secrets::client::SecretOwner;
 use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
 use warpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
 
+use crate::ai::agent_sdk::driver::harness::ollama_committee::{
+    COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, OLLAMA_COMMITTEE_MODEL_ID,
+};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
@@ -93,7 +96,14 @@ fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<Harn
     }
 
     let total_memory = crate::ai::ollama::capability::total_system_memory_bytes();
+    let mut ollama_model_count = 0_usize;
     for installed in crate::ai::ollama::service::installed_models_from_disk() {
+        // A user model literally named "committee" can't be listed: its id
+        // would be the committee pseudo-entry's id, which the harness routes
+        // to the committee runner, never to the model.
+        if installed.name == COMMITTEE_MODEL_NAME {
+            continue;
+        }
         let badge = total_memory
             .and_then(|total| crate::ai::ollama::capability::assess_tag(&installed.name, total))
             .filter(|verdict| verdict.fit.is_warning())
@@ -105,6 +115,16 @@ fn append_available_ollama_models(mut models: Vec<HarnessModelInfo>) -> Vec<Harn
         models.push(HarnessModelInfo {
             id: format!("{OLLAMA_MODEL_ID_PREFIX}{}", installed.name),
             display_name,
+            reasoning_level: None,
+        });
+        ollama_model_count += 1;
+    }
+    // The multi-model committee needs someone to argue with: offered only
+    // when at least two real models are installed. See MULTIAGENT-DESIGN.md.
+    if ollama_model_count >= 2 {
+        models.push(HarnessModelInfo {
+            id: OLLAMA_COMMITTEE_MODEL_ID.to_string(),
+            display_name: COMMITTEE_DISPLAY_NAME.to_string(),
             reasoning_level: None,
         });
     }

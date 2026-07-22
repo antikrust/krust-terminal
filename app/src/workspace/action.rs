@@ -270,6 +270,9 @@ pub enum WorkspaceAction {
     AddAmbientAgentTab,
     /// Add a new tab that immediately enters agent view with a new conversation.
     AddAgentTab,
+    /// Add a new agent tab with the Ollama multi-model committee preselected
+    /// as the model (see `harness::ollama_committee`).
+    AddCommitteeAgentTab,
     /// Add a new tab running a local Docker sandbox via `sbx`.
     AddDockerSandboxTab,
     OpenNewSessionMenu {
@@ -983,6 +986,7 @@ impl WorkspaceAction {
             | AddTabWithShell { .. }
             | AddGetStartedTab
             | AddAgentTab
+            | AddCommitteeAgentTab
             | AddAmbientAgentTab
             | AddDockerSandboxTab
             | AddWindow

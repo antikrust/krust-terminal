@@ -533,6 +533,18 @@ fn model_ref_from_manifest_path(rel: &std::path::Path) -> Option<String> {
     Some(format!("{}:{}", name_parts.join("/"), tag))
 }
 
+/// Deletes an installed model (its manifest and any now-unreferenced blobs)
+/// via `/api/delete`. `true` on success — the server is the authority on
+/// what actually got freed.
+pub async fn remove_model(client: &reqwest::Client, tag: &str) -> bool {
+    client
+        .delete(format!("{API_BASE}/api/delete"))
+        .json(&serde_json::json!({ "model": tag }))
+        .send()
+        .await
+        .is_ok_and(|response| response.status().is_success())
+}
+
 /// Whether the background service is answering.
 pub async fn is_running(client: &reqwest::Client) -> bool {
     client

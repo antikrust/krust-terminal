@@ -178,6 +178,8 @@ use crate::ai::agent_management::notifications::NotificationFilter;
 use crate::ai::agent_management::telemetry::AgentManagementTelemetryEvent;
 use crate::ai::agent_management::view::{AgentManagementView, AgentManagementViewEvent};
 use crate::ai::agent_management::AgentManagementEvent;
+use crate::ai::agent_sdk::driver::harness::ollama_committee::OLLAMA_COMMITTEE_MODEL_ID;
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::OLLAMA_HARNESS_CONFIG_NAME;
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent_sdk::driver::harness::{claude_transcript, codex_transcript};
 use crate::ai::ambient_agents::telemetry::{CloudAgentTelemetryEvent, CloudModeEntryPoint};
@@ -215,6 +217,7 @@ use crate::ai::execution_profiles::editor::ExecutionProfileEditorManager;
 use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientProfileId};
 use crate::ai::facts::view::AIFactPage;
 use crate::ai::facts::{AIFactManager, AIFactView, AIFactViewEvent};
+use crate::ai::harness_availability::HarnessAvailabilityModel;
 use crate::ai::llms::LLMPreferences;
 use crate::ai::persisted_workspace::PersistedWorkspace;
 use crate::ai_assistant::execution_context::WarpAiExecutionContext;
@@ -4674,6 +4677,30 @@ impl Workspace {
     }
 
     /// Add a new terminal tab and enter the agent view with a new conversation.
+    /// Persists the Ollama committee as the local-harness selection, then
+    /// opens a fresh agent tab — the one-click "convene the committee" path
+    /// from the new-session menu. Selection first: the new tab reads the
+    /// persisted model when its harness initializes (the same order the
+    /// Ollama settings page's "Open terminal" link relies on).
+    fn add_committee_agent_tab(&mut self, ctx: &mut ViewContext<Self>) {
+        CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+            let _ = settings
+                .last_selected_harness
+                .set_value(Some(OLLAMA_HARNESS_CONFIG_NAME.to_string()), ctx);
+            settings.persist_harness_model_selection_for_key(
+                OLLAMA_HARNESS_CONFIG_NAME,
+                OLLAMA_COMMITTEE_MODEL_ID,
+                None,
+                ctx,
+            );
+        });
+        // Keep the picker in sync with the selection this just made.
+        HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
+            availability.refresh_ollama_models(ctx);
+        });
+        self.add_terminal_tab_with_new_agent_view(ctx);
+    }
+
     fn add_terminal_tab_with_new_agent_view(&mut self, ctx: &mut ViewContext<Self>) {
         let was_left_panel_open = self.active_tab_pane_group().as_ref(ctx).left_panel_open;
         self.add_new_session_tab_internal_with_default_session_mode_behavior(
@@ -6552,6 +6579,28 @@ impl Workspace {
                 cloud_item = cloud_item.with_key_shortcut_label(shortcut_label.clone());
             }
             menu_items.push(cloud_item.into_item());
+        }
+
+        // 3c. Committee — every installed local model reviewing or answering
+        // together (see MULTIAGENT-DESIGN.md). Offered under exactly the
+        // conditions the picker offers its committee row: local models on,
+        // and the committee pseudo-model present (2+ models installed).
+        let committee_available = is_any_ai_enabled
+            && *AISettings::as_ref(ctx).ollama_enabled.value()
+            && HarnessAvailabilityModel::as_ref(ctx)
+                .models_for(Harness::Codex)
+                .is_some_and(|models| {
+                    models
+                        .iter()
+                        .any(|model| model.id == OLLAMA_COMMITTEE_MODEL_ID)
+                });
+        if committee_available {
+            menu_items.push(
+                MenuItemFields::new("Committee")
+                    .with_on_select_action(WorkspaceAction::AddCommitteeAgentTab)
+                    .with_icon(icons::Icon::Users)
+                    .into_item(),
+            );
         }
 
         // 3b. Local Docker Sandbox
@@ -23827,6 +23876,7 @@ impl TypedActionView for Workspace {
             AddGetStartedTab => self.add_get_started_tab(ctx),
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
+            AddCommitteeAgentTab => self.add_committee_agent_tab(ctx),
             AddDockerSandboxTab => self.add_docker_sandbox_tab(ctx),
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)

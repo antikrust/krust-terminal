@@ -65,13 +65,13 @@ Otherwise answer from your own knowledge; if you genuinely don't know, or it nee
 
 /// The harness-relevant capabilities of a model, probed from `/api/show`.
 #[derive(Clone, Copy, Default)]
-struct HarnessModelCaps {
+pub(crate) struct HarnessModelCaps {
     /// Native tool-calling — drives MCP tools over /api/chat, and the
     /// agent-vs-chat default.
-    tools: bool,
+    pub(crate) tools: bool,
     /// Chain-of-thought reasoning (deepseek-r1, qwen3, …) — lets us ask for
     /// `think:true` and surface the reasoning trace.
-    thinking: bool,
+    pub(crate) thinking: bool,
 }
 
 /// Probes `model`'s capabilities via `/api/show`. Fails closed (all false)
@@ -81,7 +81,7 @@ struct HarnessModelCaps {
 /// [`crate::ai::ollama::service::fetch_capabilities`] so it works from the
 /// harness's non-Tokio executor (the settings page, which is on Tokio, uses
 /// the reqwest path).
-async fn probe_model_caps(model: &str, path: &str) -> HarnessModelCaps {
+pub(crate) async fn probe_model_caps(model: &str, path: &str) -> HarnessModelCaps {
     // Model tags are validated to letters/digits/`.-_:/` before reaching the
     // harness, so inlining the body via `-d` can't inject shell/JSON.
     let body = json!({ "model": model }).to_string();
@@ -513,7 +513,7 @@ async fn ollama_service_is_ready(path: &str) -> bool {
 /// Ensures the API exists as a headless background process. Dropping the child
 /// handle does not kill it (`kill_on_drop` defaults to false), so it continues
 /// serving subsequent Warp turns without exposing the commercial Ollama UI.
-async fn ensure_ollama_service(path: &str) -> std::io::Result<()> {
+pub(crate) async fn ensure_ollama_service(path: &str) -> std::io::Result<()> {
     static STARTING: AtomicBool = AtomicBool::new(false);
 
     if ollama_service_is_ready(path).await {
@@ -711,10 +711,10 @@ struct OllamaCallResult {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct ShellExecution {
-    stdout: String,
-    stderr: String,
-    exit_code: i32,
+pub(crate) struct ShellExecution {
+    pub(crate) stdout: String,
+    pub(crate) stderr: String,
+    pub(crate) exit_code: i32,
 }
 
 impl ShellExecution {
@@ -764,7 +764,7 @@ fn new_ollama_command(working_dir: &Path, path: &str) -> Command {
 }
 
 /// A curl command targeting `/api/chat`, for the native tool-calling loop.
-fn new_ollama_chat_command(working_dir: &Path, path: &str) -> Command {
+pub(crate) fn new_ollama_chat_command(working_dir: &Path, path: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
     command.args(ollama_chat_curl_args());
     command.current_dir(working_dir);
@@ -799,7 +799,11 @@ async fn run_ollama_call(
     Ok((status, result))
 }
 
-async fn execute_shell(command_text: &str, working_dir: &Path, path: &str) -> ShellExecution {
+pub(crate) async fn execute_shell(
+    command_text: &str,
+    working_dir: &Path,
+    path: &str,
+) -> ShellExecution {
     let mut command = Command::new("/bin/zsh");
     command.args(["-lc", command_text]);
     command.current_dir(working_dir);
@@ -949,7 +953,7 @@ fn shell_result_prompt(command: &str, execution: &ShellExecution) -> String {
     )
 }
 
-fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: impl Into<String>) {
+pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: impl Into<String>) {
     on_event(TurnEvent::TurnCompleted {
         usage: None,
         is_error: true,
@@ -1791,14 +1795,14 @@ fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaTo
     })
 }
 
-struct OllamaChatResult {
-    content: String,
+pub(crate) struct OllamaChatResult {
+    pub(crate) content: String,
     tool_calls: Vec<OllamaToolCall>,
-    usage: TurnUsage,
+    pub(crate) usage: TurnUsage,
 }
 
 #[derive(Clone, Default)]
-struct OllamaChatAccumulator {
+pub(crate) struct OllamaChatAccumulator {
     content: String,
     tool_calls: Vec<OllamaToolCall>,
     error: Option<String>,
@@ -1809,7 +1813,7 @@ struct OllamaChatAccumulator {
 }
 
 impl OllamaChatAccumulator {
-    fn push_line(&mut self, line: &str) -> Vec<TurnEvent> {
+    pub(crate) fn push_line(&mut self, line: &str) -> Vec<TurnEvent> {
         let chunk: OllamaChatChunk = match serde_json::from_str(line) {
             Ok(chunk) => chunk,
             Err(error) => {
@@ -1864,7 +1868,7 @@ impl OllamaChatAccumulator {
         events
     }
 
-    fn finish(self, model: &str) -> Result<OllamaChatResult, String> {
+    pub(crate) fn finish(self, model: &str) -> Result<OllamaChatResult, String> {
         if let Some(error) = self.error {
             return Err(error);
         }

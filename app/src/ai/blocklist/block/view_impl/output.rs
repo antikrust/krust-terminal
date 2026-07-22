@@ -3557,6 +3557,7 @@ fn render_collapsible_header(
     message_id: &MessageId,
     element_state: &CollapsibleElementState,
     header_text: String,
+    copy_text: Option<String>,
     text_color: ColorU,
     app: &AppContext,
 ) -> Box<dyn Element> {
@@ -3607,9 +3608,60 @@ fn render_collapsible_header(
         ));
     });
 
-    Container::new(Flex::row().with_child(expandable.finish()).finish())
+    let mut header_row = Flex::row()
+        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_child(expandable.finish());
+    // Copy-the-trace button: the body text is deliberately unselectable
+    // (see render_collapsible_text_block_section), so without this there is
+    // no way to get a reasoning trace out of the app.
+    if let Some(copy_text) = copy_text.filter(|text| !text.trim().is_empty()) {
+        let hover_color = appearance
+            .theme()
+            .main_text_color(appearance.theme().surface_2())
+            .into_solid();
+        let copy_button = Hoverable::new(element_state.copy_mouse_state.clone(), move |state| {
+            let color = if state.is_hovered() {
+                hover_color
+            } else {
+                text_color
+            };
+            ConstrainedBox::new(Icon::Copy.to_warpui_icon(color.into()).finish())
+                .with_width(icon_size - 2.)
+                .with_height(icon_size - 2.)
+                .finish()
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(move |ctx, _, _| {
+            ctx.dispatch_typed_action(AIBlockAction::CopyAIBlockCodeSnippet(copy_text.clone()));
+        });
+        header_row.add_child(
+            Container::new(copy_button.finish())
+                .with_margin_left(8.)
+                .finish(),
+        );
+    }
+
+    Container::new(header_row.finish())
         .with_horizontal_margin(CONTENT_HORIZONTAL_PADDING + icon_size + 16.)
         .finish()
+}
+
+/// The plain text of a collapsible block's sections, for its copy button —
+/// reasoning traces are prose with the occasional fenced snippet, so a plain
+/// join preserves what the user actually read.
+fn collapsible_sections_plain_text(sections: &[AIAgentTextSection]) -> String {
+    sections
+        .iter()
+        .filter_map(|section| match section {
+            AIAgentTextSection::PlainText { text } => Some(text.text().to_string()),
+            AIAgentTextSection::Code { code, .. } => Some(code.clone()),
+            AIAgentTextSection::Table { table } => Some(table.markdown_source.clone()),
+            AIAgentTextSection::Image { image } => Some(image.markdown_source.clone()),
+            AIAgentTextSection::MermaidDiagram { diagram } => Some(diagram.markdown_source.clone()),
+        })
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n")
 }
 
 pub fn are_all_text_sections_empty(text_sections: &[AIAgentTextSection]) -> bool {
@@ -3676,6 +3728,7 @@ fn render_collapsible_text_block_section(
                 message_id,
                 element_state,
                 header_text,
+                Some(collapsible_sections_plain_text(sections)),
                 text_color,
                 app,
             ))

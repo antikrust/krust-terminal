@@ -26,19 +26,23 @@ use super::settings_page::{
     SettingsPageViewHandle, SettingsWidget,
 };
 use super::SettingsSection;
-use crate::ai::ollama::capability::{self, Fit, MemoryVerdict};
-use crate::ai::ollama::catalog::{CatalogEntry, ModelSize};
-use crate::ai::ollama::service::{self, CatalogSource, InstalledModel};
+use crate::ai::agent_sdk::driver::harness::ollama_committee::{
+    self, cycle_panel_round, CommitteeLeaderboard, OllamaCommitteeConfig, COMMITTEE_DISPLAY_NAME,
+    COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS, MAX_REVIEWERS,
+};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_availability::HarnessAvailabilityModel;
-use crate::util::bindings::CustomAction;
-use warpui::windowing::WindowManager;
+use crate::ai::ollama::capability::{self, Fit, MemoryVerdict};
+use crate::ai::ollama::catalog::{CatalogEntry, ModelSize};
+use crate::ai::ollama::service::{self, CatalogSource, InstalledModel};
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, SingleLineEditorOptions};
 use crate::settings::ai::AISettings;
+use crate::util::bindings::CustomAction;
+use warpui::windowing::WindowManager;
 
 const VERTICAL_MARGIN: f32 = 16.;
 const OLLAMA_DOWNLOAD_URL: &str = "https://ollama.com/download";
@@ -78,6 +82,20 @@ pub enum OllamaPageAction {
     },
     /// Install exactly what's in the free-text field.
     InstallTyped,
+    /// Remove an installed model. Two-step: the first click arms the row's
+    /// link into a "Really remove?" confirmation, the second deletes.
+    Remove {
+        tag: String,
+    },
+    /// Cycle how many reviewer models a committee run fans out to.
+    CycleCommitteeReviewers,
+    /// Cycle how many models a committee run may keep resident at once.
+    CycleCommitteeMaxLoaded,
+    /// Cycle one committee panel-round slot through its kinds (Off → judge
+    /// notes → judge's rewrite → peer critique → converge → Off).
+    CycleCommitteePanelRound {
+        slot: usize,
+    },
 }
 
 /// Where a models-folder move is headed.
@@ -138,6 +156,17 @@ pub struct OllamaPageView {
     /// Set if the last move failed, so the page can say why instead of
     /// silently reverting to the old folder.
     migration_error: Option<String>,
+    /// The committee's per-model record on this machine, re-read on every
+    /// refresh so a run's outcome shows up next time the page is opened.
+    committee_leaderboard: CommitteeLeaderboard,
+    /// The model whose Remove link is armed ("Really remove?") — cleared by
+    /// refresh, by arming another row, or by the second click going through.
+    pending_removal: Option<String>,
+    /// The removal currently running against the server, if any. One at a
+    /// time; the link says "Removing…" meanwhile.
+    removing: Option<String>,
+    /// Why the last removal failed, shown as a notice above the list.
+    removal_error: Option<String>,
     state_handles: RefCell<StateHandles>,
 }
 
@@ -157,6 +186,12 @@ struct StateHandles {
     /// Per-installed-model "open terminal" links, keyed by tag. Stable for the
     /// same reason as `mode_links`.
     terminal_links: HashMap<String, MouseStateHandle>,
+    /// Per-installed-model remove links, keyed by tag. Stable likewise.
+    remove_links: HashMap<String, MouseStateHandle>,
+    /// The committee section's cycling links.
+    committee_reviewers_link: MouseStateHandle,
+    committee_max_loaded_link: MouseStateHandle,
+    committee_round_links: [MouseStateHandle; MAX_PANEL_EXTRA_ROUNDS],
 }
 
 impl OllamaPageView {
@@ -168,6 +203,7 @@ impl OllamaPageView {
             Box::new(StatusWidget),
             Box::new(InstalledWidget),
             Box::new(CatalogWidget),
+            Box::new(CommitteeWidget),
         ];
 
         let model_input = ctx.add_typed_action_view(|ctx| {
@@ -197,6 +233,10 @@ impl OllamaPageView {
             catalog_loading: false,
             installs: HashMap::new(),
             total_memory_bytes: capability::total_system_memory_bytes(),
+            committee_leaderboard: CommitteeLeaderboard::default(),
+            pending_removal: None,
+            removing: None,
+            removal_error: None,
             state_handles: RefCell::new(StateHandles::default()),
         };
         view.refresh(ctx);
@@ -288,14 +328,71 @@ impl OllamaPageView {
             );
         });
         // Keep the harness picker in sync with the new selection.
-        HarnessAvailabilityModel::handle(ctx)
-            .update(ctx, |availability, ctx| availability.refresh_ollama_models(ctx));
+        HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
+            availability.refresh_ollama_models(ctx)
+        });
         // Open a new tab in the active window; it reads the selection above
         // when its local harness initializes.
         let active_window = WindowManager::handle(ctx).as_ref(ctx).active_window();
         if let Some(window_id) = active_window {
             ctx.dispatch_custom_action(CustomAction::NewTab, window_id);
         }
+    }
+
+    /// Two-step model removal: the first click arms the row ("Really
+    /// remove?"), the second deletes via the server and refreshes. Arming a
+    /// different row moves the confirmation there instead.
+    fn remove_model(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
+        if self.removing.is_some() {
+            return;
+        }
+        if self.pending_removal.as_deref() != Some(tag.as_str()) {
+            self.pending_removal = Some(tag);
+            self.removal_error = None;
+            ctx.notify();
+            return;
+        }
+        self.pending_removal = None;
+        self.removing = Some(tag.clone());
+        ctx.notify();
+        let client = reqwest::Client::new();
+        let failed_tag = tag.clone();
+        ctx.spawn(
+            async move { service::remove_model(&client, &tag).await },
+            move |me, removed, ctx| {
+                me.removing = None;
+                if !removed {
+                    me.removal_error = Some(format!(
+                        "Couldn't remove {failed_tag} — is the Ollama service running?"
+                    ));
+                }
+                // Re-list from the server and sync the picker (the committee
+                // row may also need to appear or vanish with the count).
+                me.refresh(ctx);
+            },
+        );
+    }
+
+    /// Reads the committee config, applies one change, and persists it —
+    /// both cycling links go through here.
+    fn update_committee_config(
+        &mut self,
+        ctx: &mut ViewContext<Self>,
+        mutate: impl FnOnce(&mut OllamaCommitteeConfig),
+    ) {
+        let mut config = OllamaCommitteeConfig::from_settings_json(
+            AISettings::as_ref(ctx)
+                .ollama_committee_config
+                .value()
+                .as_deref(),
+        );
+        mutate(&mut config);
+        report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            settings
+                .ollama_committee_config
+                .set_value(Some(config.to_settings_json()), ctx)
+        }));
+        ctx.notify();
     }
 
     /// Moves models back to `~/.ollama/models` and clears the custom-folder
@@ -381,6 +478,9 @@ impl OllamaPageView {
             return;
         }
         self.catalog_loading = true;
+        // A refresh redraws the world — an armed "Really remove?" from
+        // before it is stale.
+        self.pending_removal = None;
         ctx.notify();
 
         let client = reqwest::Client::new();
@@ -405,22 +505,33 @@ impl OllamaPageView {
                         }
                     }
                 }
-                (running, installed, catalog, source, capabilities)
+                let leaderboard = ollama_committee::load_leaderboard();
+                (
+                    running,
+                    installed,
+                    catalog,
+                    source,
+                    capabilities,
+                    leaderboard,
+                )
             },
-            |me, (running, installed, catalog, source, capabilities), ctx| {
+            |me, (running, installed, catalog, source, capabilities, leaderboard), ctx| {
                 me.service_running = running;
                 me.installed = installed;
                 me.catalog = catalog;
                 me.catalog_source = source;
                 me.capabilities = capabilities;
+                me.committee_leaderboard = leaderboard;
                 me.catalog_loading = false;
                 // Sync the model picker to what's actually on disk — this
                 // catches models pulled outside Warp (e.g. `ollama pull` in a
                 // terminal), which wouldn't otherwise appear until restart.
-                crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx)
-                    .update(ctx, |availability, ctx| {
+                crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx).update(
+                    ctx,
+                    |availability, ctx| {
                         availability.refresh_ollama_models(ctx);
-                    });
+                    },
+                );
                 ctx.notify();
             },
         );
@@ -596,6 +707,23 @@ impl TypedActionView for OllamaPageView {
             }
             OllamaPageAction::Install { tag } => self.install(tag.clone(), ctx),
             OllamaPageAction::InstallTyped => self.install_typed(ctx),
+            OllamaPageAction::Remove { tag } => self.remove_model(tag.clone(), ctx),
+            OllamaPageAction::CycleCommitteeReviewers => {
+                self.update_committee_config(ctx, |config| {
+                    config.reviewers = config.reviewers % MAX_REVIEWERS + 1;
+                });
+            }
+            OllamaPageAction::CycleCommitteeMaxLoaded => {
+                self.update_committee_config(ctx, |config| {
+                    config.max_loaded = config.max_loaded % MAX_LOADED_MODELS + 1;
+                });
+            }
+            OllamaPageAction::CycleCommitteePanelRound { slot } => {
+                let slot = *slot;
+                self.update_committee_config(ctx, |config| {
+                    cycle_panel_round(&mut config.panel_plan, slot);
+                });
+            }
         }
     }
 }
@@ -810,8 +938,20 @@ impl SettingsWidget for InstalledWidget {
             let mut handles = view.state_handles.borrow_mut();
             for model in models {
                 handles.mode_links.entry(model.name.clone()).or_default();
-                handles.terminal_links.entry(model.name.clone()).or_default();
+                handles
+                    .terminal_links
+                    .entry(model.name.clone())
+                    .or_default();
+                handles.remove_links.entry(model.name.clone()).or_default();
             }
+        }
+
+        if let Some(error) = &view.removal_error {
+            column.add_child(
+                Container::new(notice(error, ThemeFill::error(), appearance))
+                    .with_margin_top(8.)
+                    .finish(),
+            );
         }
 
         match view.installed.as_ref() {
@@ -913,6 +1053,45 @@ impl SettingsWidget for InstalledWidget {
                                         );
                                     })),
                                     terminal_state,
+                                )
+                                .soft_wrap(false)
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                    // Removal, with an in-row confirmation step — deleting
+                    // gigabytes deserves a second click, not a first-click
+                    // surprise.
+                    let remove_state = view
+                        .state_handles
+                        .borrow()
+                        .remove_links
+                        .get(&model.name)
+                        .cloned()
+                        .unwrap_or_default();
+                    let remove_label = if view.removing.as_deref() == Some(model.name.as_str()) {
+                        "Removing…".to_string()
+                    } else if view.pending_removal.as_deref() == Some(model.name.as_str()) {
+                        format!("Really remove {}?", capability::format_gb(model.size_bytes))
+                    } else {
+                        "Remove".to_string()
+                    };
+                    let remove_tag = model.name.clone();
+                    row.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .link(
+                                    remove_label,
+                                    None,
+                                    Some(Box::new(move |ctx| {
+                                        ctx.dispatch_typed_action(OllamaPageAction::Remove {
+                                            tag: remove_tag.clone(),
+                                        });
+                                    })),
+                                    remove_state,
                                 )
                                 .soft_wrap(false)
                                 .build()
@@ -1145,6 +1324,199 @@ impl SettingsWidget for CatalogWidget {
         );
 
         Container::new(column.finish()).finish()
+    }
+}
+
+/// The multi-model committee: its two knobs and this machine's standings.
+/// See MULTIAGENT-DESIGN.md for the pipeline this configures.
+#[derive(Default)]
+struct CommitteeWidget;
+
+impl SettingsWidget for CommitteeWidget {
+    type View = OllamaPageView;
+
+    fn search_terms(&self) -> &str {
+        "ollama committee multi model reviewers judge panel leaderboard multi-agent"
+    }
+
+    fn should_render(&self, _app: &AppContext) -> bool {
+        service::is_installed()
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let config = OllamaCommitteeConfig::from_settings_json(
+            AISettings::as_ref(app)
+                .ollama_committee_config
+                .value()
+                .as_deref(),
+        );
+
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        column.add_child(section_break(appearance));
+        column.add_child(
+            Container::new(render_sub_header(appearance, "Committee", None))
+                .with_margin_top(VERTICAL_MARGIN)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(body_text(
+                "Fan one prompt across several installed models: reviewers examine your \
+                 diff independently, machines verify what they can, a judge rules on the \
+                 rest, and the verdict says which model won out. Models load one at a \
+                 time, so a full run takes minutes — that's the point.",
+                appearance,
+            ))
+            .with_margin_top(8.)
+            .finish(),
+        );
+
+        // The pseudo-model only appears in the picker with 2+ real models
+        // installed (one model has no one to argue with) — say which state
+        // this machine is in rather than leaving the entry to be hunted for.
+        let installed_count = view
+            .installed
+            .as_ref()
+            .map(|models| {
+                models
+                    .iter()
+                    .filter(|model| model.name != COMMITTEE_MODEL_NAME)
+                    .count()
+            })
+            .unwrap_or(0);
+        let hint = if installed_count < 2 {
+            "The committee joins the model menu once at least two models are installed.".to_string()
+        } else {
+            format!("Pick \"{COMMITTEE_DISPLAY_NAME}\" in the model menu to run it.")
+        };
+        column.add_child(
+            Container::new(sub_text(&hint, appearance))
+                .with_margin_top(6.)
+                .finish(),
+        );
+
+        let handles = view.state_handles.borrow();
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!("Reviewers per run: {}", config.reviewers),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleCommitteeReviewers);
+                        })),
+                        handles.committee_reviewers_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(VERTICAL_MARGIN)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "How many models independently examine the evidence before the judge \
+                 rules. More reviewers, more minutes.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!("Models kept loaded: {}", config.max_loaded),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleCommitteeMaxLoaded);
+                        })),
+                        handles.committee_max_loaded_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "At 1, each model unloads as its turn ends — right for a machine that \
+                 fits one model. Raise it only if this machine has memory to keep \
+                 several resident.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        for slot in 0..MAX_PANEL_EXTRA_ROUNDS {
+            let label = match config.panel_plan.get(slot) {
+                Some(kind) => format!("Round {}: {}", slot + 2, kind.display_name()),
+                None => format!("Round {}: Off", slot + 2),
+            };
+            column.add_child(
+                Container::new(
+                    appearance
+                        .ui_builder()
+                        .link(
+                            label,
+                            None,
+                            Some(Box::new(move |ctx| {
+                                ctx.dispatch_typed_action(
+                                    OllamaPageAction::CycleCommitteePanelRound { slot },
+                                );
+                            })),
+                            handles.committee_round_links[slot].clone(),
+                        )
+                        .soft_wrap(false)
+                        .build()
+                        .finish(),
+                )
+                .with_margin_top(12.)
+                .finish(),
+            );
+        }
+        column.add_child(
+            Container::new(sub_text(
+                "Extra panel rounds before the final verdict, in order. Judge notes: \
+                 everyone revises with the judge's right/wrong notes. Judge's rewrite: \
+                 the judge rewrites the best answer itself and everyone responds to it. \
+                 Peer critique: panelists critique each other round-robin. Converge: \
+                 everyone builds on the current leader's answer. Each round is a full \
+                 extra pass.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+
+        let standings = ollama_committee::leaderboard_lines(&view.committee_leaderboard);
+        if !standings.is_empty() {
+            column.add_child(
+                Container::new(body_text("Standings on this machine:", appearance))
+                    .with_margin_top(VERTICAL_MARGIN)
+                    .finish(),
+            );
+            for line in standings.iter().take(6) {
+                column.add_child(
+                    Container::new(sub_text(line, appearance))
+                        .with_margin_top(2.)
+                        .finish(),
+                );
+            }
+        }
+
+        Container::new(column.finish())
+            .with_margin_top(VERTICAL_MARGIN)
+            .finish()
     }
 }
 
