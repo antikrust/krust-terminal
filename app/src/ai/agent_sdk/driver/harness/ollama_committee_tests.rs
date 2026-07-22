@@ -587,6 +587,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             detail: String::new(),
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
+            proof: None,
         },
         MergedFinding {
             file: "src/diff_only.rs".to_string(),
@@ -596,6 +597,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             detail: String::new(),
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
+            proof: None,
         },
         MergedFinding {
             file: "src/invented.rs".to_string(),
@@ -605,6 +607,7 @@ fn location_verification_checks_the_tree_and_the_diff() {
             detail: String::new(),
             raised_by: vec!["qwen".to_string()],
             location_verified: false,
+            proof: None,
         },
     ];
     verify_locations(
@@ -815,6 +818,114 @@ fn diff_truncation_backs_off_to_a_char_boundary() {
     let mut short = String::from("tiny");
     truncate_bytes_on_char_boundary(&mut short, 100);
     assert_eq!(short, "tiny");
+}
+
+// --- round commands -------------------------------------------------------
+
+#[test]
+fn round_commands_parse_and_ordinary_prompts_do_not() {
+    assert_eq!(
+        parse_round_command("round notes"),
+        Some(PanelRoundKind::Notes)
+    );
+    assert_eq!(
+        parse_round_command("/round rewrite"),
+        Some(PanelRoundKind::Exemplar)
+    );
+    assert_eq!(
+        parse_round_command("Another round of peers"),
+        Some(PanelRoundKind::Peers)
+    );
+    assert_eq!(
+        parse_round_command("  round converge  "),
+        Some(PanelRoundKind::Converge)
+    );
+    // Ordinary prompts must never be eaten.
+    assert_eq!(parse_round_command("round up the usual suspects"), None);
+    assert_eq!(parse_round_command("what is a round robin"), None);
+    assert_eq!(parse_round_command("review my changes"), None);
+    assert_eq!(parse_round_command(""), None);
+}
+
+// --- proofs ---------------------------------------------------------------
+
+fn shell_result(exit_code: i32, stdout: &str, stderr: &str) -> ShellExecution {
+    ShellExecution {
+        stdout: stdout.to_string(),
+        stderr: stderr.to_string(),
+        exit_code,
+    }
+}
+
+#[test]
+fn proof_classification_follows_the_exit_contract() {
+    assert_eq!(
+        classify_proof(&shell_result(0, "shares are floats\n", "")),
+        ProofOutcome::Demonstrated("shares are floats".to_string())
+    );
+    assert_eq!(
+        classify_proof(&shell_result(1, "cents stay integers\n", "")),
+        ProofOutcome::Refuted("cents stay integers".to_string())
+    );
+    assert_eq!(
+        classify_proof(&shell_result(124, "proof timed out\n", "")),
+        ProofOutcome::Inconclusive("the proof script timed out".to_string())
+    );
+    assert!(matches!(
+        classify_proof(&shell_result(2, "", "SyntaxError: invalid syntax")),
+        ProofOutcome::Inconclusive(reason) if reason.contains("SyntaxError")
+    ));
+}
+
+#[test]
+fn code_fences_strip_cleanly_and_bare_scripts_pass_through() {
+    assert_eq!(
+        strip_code_fences("```python\nprint('hi')\n```"),
+        "print('hi')"
+    );
+    assert_eq!(strip_code_fences("```\nprint('hi')\n```"), "print('hi')");
+    assert_eq!(strip_code_fences("print('hi')"), "print('hi')");
+}
+
+#[test]
+fn proof_scripts_run_with_real_exits_and_timeouts() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let demonstrated = block_on(run_proof_script(
+        "print('bug observed')\nraise SystemExit(0)",
+        15,
+        &dir,
+        &path,
+    ));
+    assert_eq!(
+        classify_proof(&demonstrated),
+        ProofOutcome::Demonstrated("bug observed".to_string())
+    );
+
+    let refuted = block_on(run_proof_script(
+        "print('code is fine')\nraise SystemExit(1)",
+        15,
+        &dir,
+        &path,
+    ));
+    assert_eq!(
+        classify_proof(&refuted),
+        ProofOutcome::Refuted("code is fine".to_string())
+    );
+
+    let timed_out = block_on(run_proof_script(
+        "import time\ntime.sleep(5)",
+        1,
+        &dir,
+        &path,
+    ));
+    assert_eq!(
+        classify_proof(&timed_out),
+        ProofOutcome::Inconclusive("the proof script timed out".to_string())
+    );
 }
 
 // --- misc -----------------------------------------------------------------

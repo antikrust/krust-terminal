@@ -94,7 +94,10 @@ Two modes, auto-selected per turn (`committee_mode`):
   other round-robin, no judge), or **Converge** (the judge picks the current
   leader and everyone else builds on that answer — deliberate style collapse,
   use late). After the final verdict the winner revises once more with the
-  judge's critique.
+  judge's critique — and the verdict block offers **in-chat continuation**: typing
+  `round notes|rewrite|peers|converge` as the next message runs one more round on
+  the saved answers (per-conversation, in-memory) and re-judges, so iteration is
+  decided where the results are read, not only planned in settings beforehand.
 
 Stage details (Review):
 
@@ -117,13 +120,24 @@ Stage details (Review):
    against the working tree and the diff — `location verified` is machine truth,
    not model opinion. Findings two reviewers raised independently outrank
    singletons.
-5. **Judge.** Preferably a thinking-capable model that was NOT a reviewer. It rules
-   confirm / reject / unsure per finding with a reason, names the most valuable
-   reviewer, and narrates where the committee agreed, disagreed, and what won out.
-   Reasoning models stream their deliberation as Thinking events — visible theatre.
-6. **Verdict.** One markdown block: findings table (severity, location, raised-by,
-   agreement, ruling), the judge's narrative, and the leaderboard standings after
-   this run. `TurnCompleted` carries summed token usage across every stage.
+5. **Proof round.** The machine gets the deciding vote where it can: for each
+   finding (up to a budget), the reviewer who raised it writes a minimal python3
+   script that runs in the working tree, prints one observation line, and exits 0
+   if the defect is real / 1 if the code is actually fine. The harness executes it
+   under a hard timeout (a wrapper maps timeouts to exit 124 so they can't read as
+   refutations). Execution beats opinion in everything downstream.
+6. **Judge.** Preferably a thinking-capable model that was NOT a reviewer. With the
+   proof outcomes in hand it rules confirm / reject / unsure per finding, adds its
+   own `additions` for defects in functions no finding covered (backstop reviewer;
+   mechanically deduped against the committee, never self-credited), names the most
+   valuable reviewer, and narrates the argument. Reasoning models stream their
+   deliberation as Thinking events — visible theatre.
+7. **Verdict, tiered by certainty.** Findings render in three groups: **Definite**
+   (execution-demonstrated, or judge-confirmed when unproven), **Might be**
+   (unsure/unproven), **Rejected** (execution-refuted or judge-rejected) — a
+   demonstrated finding is definite even if the judge waffles, a refuted one is out
+   even if the judge liked it. Only definite findings feed the leaderboard's
+   confirmed count. `TurnCompleted` carries summed token usage across every stage.
 
 Error policy: a reviewer that fails (service died, model evicted) is noted and
 skipped; the run continues with whoever is left. If every reviewer fails, the turn
