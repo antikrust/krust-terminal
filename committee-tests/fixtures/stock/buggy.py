@@ -1,13 +1,6 @@
 """Tiny stock-keeping helpers.
 
-Three planted defects, one per function, and deliberately of three different
-kinds — a committee that finds all three has genuinely decorrelated blind
-spots rather than one shared instinct. They are listed in ../../README.md;
-don't read that first if you want an honest run.
-
-Every one of them is a *wrong value of the right type*, which is the class
-the reviewer prompt is aimed at, and every one can be demonstrated by two
-lines of python.
+Prices are whole pence. A stock level is a count of items on the shelf.
 """
 
 

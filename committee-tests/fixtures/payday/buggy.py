@@ -1,4 +1,4 @@
-"""The original demo's three planted defects (see ../../README.md)."""
+"""Paying out a pot and reading a leaderboard."""
 
 
 def split_pot(total_cents, players):

@@ -1,4 +1,4 @@
-"""The original demo, kept so /tmp getting swept never loses it."""
+"""Paying out a pot and reading a leaderboard."""
 
 
 def split_pot(total_cents, players):

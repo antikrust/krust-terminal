@@ -1,7 +1,6 @@
 """Tiny stock-keeping helpers.
 
-This is the committed, correct version. `setup.sh` commits it, then
-overwrites it with `buggy.py` so the working tree has a diff to review.
+Prices are whole pence. A stock level is a count of items on the shelf.
 """
 
 
