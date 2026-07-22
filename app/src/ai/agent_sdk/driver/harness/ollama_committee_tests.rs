@@ -48,6 +48,7 @@ fn config_parses_and_clamps_out_of_range_values() {
             reviewers: 3,
             max_loaded: 2,
             panel_plan: vec![PanelRoundKind::Notes, PanelRoundKind::Exemplar],
+            roles: BTreeMap::new(),
         }
     );
 
@@ -84,6 +85,7 @@ fn config_roundtrips_through_its_settings_json() {
         reviewers: 3,
         max_loaded: 2,
         panel_plan: vec![PanelRoundKind::Exemplar, PanelRoundKind::Converge],
+        roles: BTreeMap::new(),
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -98,6 +100,7 @@ fn keep_alive_unloads_immediately_only_at_one_resident_model() {
         reviewers: 2,
         max_loaded: 2,
         panel_plan: Vec::new(),
+        roles: BTreeMap::new(),
     };
     assert_eq!(warm.keep_alive(), "5m");
 }
@@ -173,7 +176,13 @@ fn reviewers_prefer_coder_models_and_the_judge_prefers_thinking() {
         member("deepseek-r1:8b", true),
         member("codellama:13b", false),
     ];
-    let plan = assign_roles(members, 2, &CommitteeLeaderboard::default()).unwrap();
+    let plan = assign_roles(
+        members,
+        2,
+        &CommitteeLeaderboard::default(),
+        &BTreeMap::new(),
+    )
+    .unwrap();
 
     // Both reviewer seats go to coder models (13B codellama outranks 7B qwen).
     assert_eq!(plan.reviewers.len(), 2);
@@ -192,7 +201,13 @@ fn reviewer_seats_favour_distinct_families_before_second_helpings() {
         member("deepseek-coder:6.7b", false),
         member("llama3.1:8b", false),
     ];
-    let plan = assign_roles(members, 2, &CommitteeLeaderboard::default()).unwrap();
+    let plan = assign_roles(
+        members,
+        2,
+        &CommitteeLeaderboard::default(),
+        &BTreeMap::new(),
+    )
+    .unwrap();
     let families: Vec<&str> = plan
         .reviewers
         .iter()
@@ -207,6 +222,7 @@ fn a_single_installed_model_plays_every_role_and_discloses_it() {
         vec![member("qwen2.5-coder:7b", false)],
         2,
         &CommitteeLeaderboard::default(),
+        &BTreeMap::new(),
     )
     .unwrap();
     assert_eq!(plan.reviewers.len(), 1);
@@ -217,7 +233,12 @@ fn a_single_installed_model_plays_every_role_and_discloses_it() {
 #[test]
 fn no_models_means_no_plan() {
     assert_eq!(
-        assign_roles(Vec::new(), 2, &CommitteeLeaderboard::default()),
+        assign_roles(
+            Vec::new(),
+            2,
+            &CommitteeLeaderboard::default(),
+            &BTreeMap::new()
+        ),
         None
     );
 }
@@ -247,7 +268,7 @@ fn a_proven_confirm_rate_outranks_size_within_coder_models() {
         member("codellama:13b", false),
         member("deepseek-coder:6.7b", false),
     ];
-    let plan = assign_roles(members, 1, &leaderboard).unwrap();
+    let plan = assign_roles(members, 1, &leaderboard, &BTreeMap::new()).unwrap();
     // The smaller model earned the seat: 90% of its findings survive the
     // judge, against 10% for the bigger one.
     assert_eq!(plan.reviewers[0].name, "deepseek-coder:6.7b");
@@ -270,8 +291,111 @@ fn a_thin_leaderboard_record_does_not_influence_ranking() {
         member("codellama:13b", false),
         member("deepseek-coder:6.7b", false),
     ];
-    let plan = assign_roles(members, 1, &leaderboard).unwrap();
+    let plan = assign_roles(members, 1, &leaderboard, &BTreeMap::new()).unwrap();
     assert_eq!(plan.reviewers[0].name, "codellama:13b");
+}
+
+#[test]
+fn casting_a_model_off_keeps_it_out_of_every_seat() {
+    let mut roles = BTreeMap::new();
+    roles.insert("qwen2.5-coder:32b".to_string(), CommitteeRole::Benched);
+    let members = vec![
+        member("qwen2.5-coder:32b", false),
+        member("qwen2.5-coder:14b", false),
+        member("deepseek-r1:14b", true),
+    ];
+    let plan = assign_roles(members, 2, &CommitteeLeaderboard::default(), &roles).unwrap();
+    assert!(plan
+        .reviewers
+        .iter()
+        .all(|reviewer| reviewer.name != "qwen2.5-coder:32b"));
+    assert_ne!(plan.judge.name, "qwen2.5-coder:32b");
+}
+
+#[test]
+fn a_forced_judge_takes_the_gavel_and_keeps_its_reviewer_seat_free() {
+    let mut roles = BTreeMap::new();
+    roles.insert("llama3.1:8b".to_string(), CommitteeRole::Judge);
+    let members = vec![
+        member("llama3.1:8b", false),
+        member("qwen2.5-coder:14b", false),
+        member("deepseek-r1:14b", true),
+    ];
+    let plan = assign_roles(members, 2, &CommitteeLeaderboard::default(), &roles).unwrap();
+    // Chosen over the thinking model the heuristics would have preferred.
+    assert_eq!(plan.judge.name, "llama3.1:8b");
+    assert!(!plan.judge_is_reviewer);
+    assert!(plan
+        .reviewers
+        .iter()
+        .all(|reviewer| reviewer.name != "llama3.1:8b"));
+}
+
+#[test]
+fn a_forced_reviewer_is_seated_ahead_of_the_heuristics() {
+    let mut roles = BTreeMap::new();
+    // A non-coder model the ranking would never seat on its own.
+    roles.insert("llama3.1:8b".to_string(), CommitteeRole::Reviewer);
+    let members = vec![
+        member("llama3.1:8b", false),
+        member("qwen2.5-coder:14b", false),
+        member("codellama:13b", false),
+        member("deepseek-r1:14b", true),
+    ];
+    let plan = assign_roles(members, 1, &CommitteeLeaderboard::default(), &roles).unwrap();
+    assert_eq!(plan.reviewers.len(), 1);
+    assert_eq!(plan.reviewers[0].name, "llama3.1:8b");
+}
+
+#[test]
+fn casting_everything_off_leaves_no_committee() {
+    let mut roles = BTreeMap::new();
+    roles.insert("solo:7b".to_string(), CommitteeRole::Benched);
+    assert_eq!(
+        assign_roles(
+            vec![member("solo:7b", false)],
+            2,
+            &CommitteeLeaderboard::default(),
+            &roles
+        ),
+        None
+    );
+}
+
+#[test]
+fn casting_cycles_auto_reviewer_judge_off_and_back() {
+    let mut roles = BTreeMap::new();
+    cycle_committee_role(&mut roles, "qwen2.5-coder:14b");
+    assert_eq!(
+        roles.get("qwen2.5-coder:14b"),
+        Some(&CommitteeRole::Reviewer)
+    );
+    cycle_committee_role(&mut roles, "qwen2.5-coder:14b");
+    assert_eq!(roles.get("qwen2.5-coder:14b"), Some(&CommitteeRole::Judge));
+    cycle_committee_role(&mut roles, "qwen2.5-coder:14b");
+    assert_eq!(
+        roles.get("qwen2.5-coder:14b"),
+        Some(&CommitteeRole::Benched)
+    );
+    cycle_committee_role(&mut roles, "qwen2.5-coder:14b");
+    assert_eq!(roles.get("qwen2.5-coder:14b"), None);
+}
+
+#[test]
+fn casting_survives_the_settings_roundtrip() {
+    let mut roles = BTreeMap::new();
+    roles.insert("qwen2.5-coder:32b".to_string(), CommitteeRole::Benched);
+    roles.insert("deepseek-r1:14b".to_string(), CommitteeRole::Judge);
+    let config = OllamaCommitteeConfig {
+        reviewers: 2,
+        max_loaded: 1,
+        panel_plan: Vec::new(),
+        roles,
+    };
+    assert_eq!(
+        OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
+        config
+    );
 }
 
 // --- mode selection -------------------------------------------------------
@@ -930,87 +1054,6 @@ fn run_hints_follow_the_extension() {
     assert_eq!(run_hint("rain.py"), Some("python3 rain.py".to_string()));
     assert_eq!(run_hint("go.sh"), Some("bash go.sh".to_string()));
     assert_eq!(run_hint("notes.txt"), None);
-}
-
-// --- proofs ---------------------------------------------------------------
-
-fn shell_result(exit_code: i32, stdout: &str, stderr: &str) -> ShellExecution {
-    ShellExecution {
-        stdout: stdout.to_string(),
-        stderr: stderr.to_string(),
-        exit_code,
-    }
-}
-
-#[test]
-fn proof_classification_follows_the_exit_contract() {
-    assert_eq!(
-        classify_proof(&shell_result(0, "shares are floats\n", "")),
-        ProofOutcome::Demonstrated("shares are floats".to_string())
-    );
-    assert_eq!(
-        classify_proof(&shell_result(1, "cents stay integers\n", "")),
-        ProofOutcome::Refuted("cents stay integers".to_string())
-    );
-    assert_eq!(
-        classify_proof(&shell_result(124, "proof timed out\n", "")),
-        ProofOutcome::Inconclusive("the proof script timed out".to_string())
-    );
-    assert!(matches!(
-        classify_proof(&shell_result(2, "", "SyntaxError: invalid syntax")),
-        ProofOutcome::Inconclusive(reason) if reason.contains("SyntaxError")
-    ));
-}
-
-#[test]
-fn code_fences_strip_cleanly_and_bare_scripts_pass_through() {
-    assert_eq!(
-        strip_code_fences("```python\nprint('hi')\n```"),
-        "print('hi')"
-    );
-    assert_eq!(strip_code_fences("```\nprint('hi')\n```"), "print('hi')");
-    assert_eq!(strip_code_fences("print('hi')"), "print('hi')");
-}
-
-#[test]
-fn proof_scripts_run_with_real_exits_and_timeouts() {
-    use futures_lite::future::block_on;
-
-    let dir = std::env::temp_dir();
-    let path = std::env::var("PATH").unwrap_or_default();
-
-    let demonstrated = block_on(run_proof_script(
-        "print('bug observed')\nraise SystemExit(0)",
-        15,
-        &dir,
-        &path,
-    ));
-    assert_eq!(
-        classify_proof(&demonstrated),
-        ProofOutcome::Demonstrated("bug observed".to_string())
-    );
-
-    let refuted = block_on(run_proof_script(
-        "print('code is fine')\nraise SystemExit(1)",
-        15,
-        &dir,
-        &path,
-    ));
-    assert_eq!(
-        classify_proof(&refuted),
-        ProofOutcome::Refuted("code is fine".to_string())
-    );
-
-    let timed_out = block_on(run_proof_script(
-        "import time\ntime.sleep(5)",
-        1,
-        &dir,
-        &path,
-    ));
-    assert_eq!(
-        classify_proof(&timed_out),
-        ProofOutcome::Inconclusive("the proof script timed out".to_string())
-    );
 }
 
 // --- misc -----------------------------------------------------------------

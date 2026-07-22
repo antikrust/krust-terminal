@@ -27,8 +27,9 @@ use super::settings_page::{
 };
 use super::SettingsSection;
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
-    self, cycle_panel_round, CommitteeLeaderboard, OllamaCommitteeConfig, COMMITTEE_DISPLAY_NAME,
-    COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS, MAX_REVIEWERS,
+    self, cycle_committee_role, cycle_panel_round, CommitteeLeaderboard, OllamaCommitteeConfig,
+    COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS,
+    MAX_REVIEWERS,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
@@ -95,6 +96,10 @@ pub enum OllamaPageAction {
     /// notes → judge's rewrite → peer critique → converge → Off).
     CycleCommitteePanelRound {
         slot: usize,
+    },
+    /// Cycle a model's committee casting: auto → reviewer → judge → never.
+    CycleCommitteeRole {
+        tag: String,
     },
 }
 
@@ -188,6 +193,8 @@ struct StateHandles {
     terminal_links: HashMap<String, MouseStateHandle>,
     /// Per-installed-model remove links, keyed by tag. Stable likewise.
     remove_links: HashMap<String, MouseStateHandle>,
+    /// Per-installed-model committee-casting links, keyed by tag.
+    committee_role_links: HashMap<String, MouseStateHandle>,
     /// The committee section's cycling links.
     committee_reviewers_link: MouseStateHandle,
     committee_max_loaded_link: MouseStateHandle,
@@ -724,6 +731,12 @@ impl TypedActionView for OllamaPageView {
                     cycle_panel_round(&mut config.panel_plan, slot);
                 });
             }
+            OllamaPageAction::CycleCommitteeRole { tag } => {
+                let tag = tag.clone();
+                self.update_committee_config(ctx, |config| {
+                    cycle_committee_role(&mut config.roles, &tag);
+                });
+            }
         }
     }
 }
@@ -943,6 +956,10 @@ impl SettingsWidget for InstalledWidget {
                     .entry(model.name.clone())
                     .or_default();
                 handles.remove_links.entry(model.name.clone()).or_default();
+                handles
+                    .committee_role_links
+                    .entry(model.name.clone())
+                    .or_default();
             }
         }
 
@@ -1053,6 +1070,50 @@ impl SettingsWidget for InstalledWidget {
                                         );
                                     })),
                                     terminal_state,
+                                )
+                                .soft_wrap(false)
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                    // Committee casting: force this model into (or out of)
+                    // the bench. "never" is the escape hatch for a model
+                    // too heavy to sit through a run on this machine.
+                    let committee_config = OllamaCommitteeConfig::from_settings_json(
+                        AISettings::as_ref(app)
+                            .ollama_committee_config
+                            .value()
+                            .as_deref(),
+                    );
+                    let role_state = view
+                        .state_handles
+                        .borrow()
+                        .committee_role_links
+                        .get(&model.name)
+                        .cloned()
+                        .unwrap_or_default();
+                    let role_label = match committee_config.roles.get(&model.name) {
+                        Some(role) => format!("Committee: {}", role.display_name()),
+                        None => "Committee: auto".to_string(),
+                    };
+                    let role_tag = model.name.clone();
+                    row.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .link(
+                                    role_label,
+                                    None,
+                                    Some(Box::new(move |ctx| {
+                                        ctx.dispatch_typed_action(
+                                            OllamaPageAction::CycleCommitteeRole {
+                                                tag: role_tag.clone(),
+                                            },
+                                        );
+                                    })),
+                                    role_state,
                                 )
                                 .soft_wrap(false)
                                 .build()
@@ -1395,6 +1456,25 @@ impl SettingsWidget for CommitteeWidget {
         };
         column.add_child(
             Container::new(sub_text(&hint, appearance))
+                .with_margin_top(6.)
+                .finish(),
+        );
+        // Casting lives on the model rows above, where the models are.
+        let cast: Vec<String> = config
+            .roles
+            .iter()
+            .map(|(tag, role)| format!("{tag}: {}", role.display_name()))
+            .collect();
+        let cast_line = if cast.is_empty() {
+            "The bench is picked automatically. Use each model's \"Committee\" link in \
+             Installed above to force one in as reviewer or judge, or keep a heavy model \
+             out entirely."
+                .to_string()
+        } else {
+            format!("Your casting — {}.", cast.join("; "))
+        };
+        column.add_child(
+            Container::new(sub_text(&cast_line, appearance))
                 .with_margin_top(6.)
                 .finish(),
         );

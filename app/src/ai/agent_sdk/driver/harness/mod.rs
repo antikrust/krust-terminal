@@ -48,6 +48,7 @@ pub(crate) mod codex_transcript;
 mod gemini;
 mod json_utils;
 pub(crate) mod ollama_committee;
+pub(crate) mod ollama_committee_proof;
 pub(crate) mod ollama_stream_exec;
 mod telemetry;
 pub(crate) mod turn_events_to_conversation;

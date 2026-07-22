@@ -108,8 +108,24 @@ Stage details (Review):
 2. **Evidence.** `git diff HEAD` in the turn's working directory, surfaced as a
    read-only Shell tool card (same rendering path as agent shell calls), truncated
    to a byte budget that fits an 8K-token context.
-3. **Fan-out.** Each reviewer gets ONLY the diff and the task — never another
-   reviewer's output, so it cannot anchor. The prompt demands strict JSON findings
+2a. **Suite gate.** If the repo declares a suite (`Cargo.toml`, `go.mod`,
+   `pytest.ini`/`pyproject.toml`, a real `package.json` test script), run it under a
+   timeout before anyone reviews. Green or red is evidence handed to every later
+   stage; a suite that *can't* run (no toolchain, timeout) is `Unavailable` and
+   contributes nothing — a missing `cargo` must never read as a claim about the
+   user's code.
+2b. **Behavior report.** Reviewers cannot call tools, so the harness exercises the
+   changed code *for* them: every top-level function the diff adds is called against
+   a deliberately broad generic battery (empty collections, zero, negatives, small
+   lists, strings, `None`) and every return value and exception is recorded. Broad on
+   purpose — nothing here knows how the code is really called. The report goes into
+   the reviewers' prompt as established fact, so a model that has already seen
+   `split_pot(0, []) !! ZeroDivisionError` and `top_scores([3,1,2], 2) -> [1, 2]`
+   argues from observation instead of guessing. Python only for now (import-and-call
+   is trivial there); other languages need a compile step and wait for v2.
+3. **Fan-out.** Each reviewer gets the diff, the task, and the machine evidence from
+   2a/2b — but never another reviewer's output, so it cannot anchor. The prompt
+   demands strict JSON findings
    (`file`, `line`, `severity`, `title`, `detail`), says style nits don't count, and
    says an empty array is a good answer — without that clause small models invent
    problems to look useful. Parsing tolerates fences and surrounding prose (same
@@ -204,12 +220,33 @@ committee too (the id is `ollama/…`, so the existing enforcement in
 | Piece | Where |
 | --- | --- |
 | Committee runner, roles, consensus, prompts, leaderboard | `app/src/ai/agent_sdk/driver/harness/ollama_committee.rs` (new) |
+| Verification layer: proof scripts, suite gate, behavior report | `harness/ollama_committee_proof.rs` (new) |
 | Reused plumbing (chat command, accumulator, service start, caps probe, shell) | `ollama_stream_exec.rs`, loosened to `pub(crate)` where needed |
 | Picker entry (`ollama/committee` when ≥ 2 models) | `ai/harness_availability.rs` |
 | Dispatch (committee id → committee runner) | `terminal/view.rs` pump match |
 | Config setting | `settings/ai.rs` (`ollama_committee_config`) |
 | Settings UI section | `settings_view/ollama_page.rs` (new widget) |
 | Unit tests (roles, parsing, consensus, mode heuristic, config) | `harness/ollama_committee_tests.rs` |
+
+## Why the verification layer is not an MCP server
+
+MCP is a transport for *a model choosing to call a tool mid-conversation*. Every
+property that makes it right for that makes it wrong here:
+
+- **The model must not get a vote.** The proof round's whole value is that the
+  harness checks a claim whether or not the model wants it checked. A tool the model
+  invokes is a tool the model can skip.
+- **These local models are deliberately kept away from tools.**
+  `is_exposed_to_local_models` already hides third-party MCP servers from them
+  because weak models misuse general-purpose tooling. Routing verification through
+  the same door reopens that.
+- **It buys nothing.** A subprocess, a JSON-RPC transport, and lifecycle/reconnect
+  handling, in exchange for calls that are three in-process `await`s today.
+
+The argument *for* MCP would be exposing this verification to **other** agents
+(claude/codex harnesses, external tools) — a real future case, and the reason the
+layer lives in its own module with a narrow surface rather than tangled into the
+runner.
 
 ## Roadmap
 
