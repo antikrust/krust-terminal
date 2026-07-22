@@ -446,8 +446,10 @@ impl View for AgentViewZeroStateBlock {
                      iteration rounds up front, or type `round <kind>` after a verdict \
                      for one more."
                         .into(),
-                    "Models load one at a time, so a run takes minutes by design. Bench size \
-                     and memory knobs live in Settings → Ollama."
+                    "Models load one at a time, so a run takes minutes by design. Settings → \
+                     Ollama holds the bench and memory knobs, and switches off the stages \
+                     you don't want to wait for — the test suite, the behavior probe, the \
+                     proof round."
                         .into(),
                 ]),
                 icon: Icon::Users,

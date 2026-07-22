@@ -28,8 +28,8 @@ use super::ollama_committee_proof::{
     strip_code_fences, ProofOutcome, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
-    emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
-    probe_model_caps, OllamaChatAccumulator,
+    base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
+    probe_model_caps, wire_name, OllamaChatAccumulator,
 };
 use crate::ai::ollama::capability::ParameterSize;
 use crate::ai::ollama::service::installed_models_from_disk;
@@ -55,6 +55,15 @@ pub const MAX_LOADED_MODELS: usize = 4;
 /// Extra panel rounds beyond this cost a full pass each and converge on the
 /// judge's taste rather than improving.
 pub const MAX_PANEL_EXTRA_ROUNDS: usize = 2;
+
+/// How long one proof script may run, in the order the settings link offers.
+/// Short is right for a one-line repro; a slow suite-heavy import sometimes
+/// needs the long end.
+pub const PROOF_TIMEOUT_CHOICES: [u64; 4] = [5, 15, 30, 60];
+/// Findings kept from one reviewer, in the order the settings link offers.
+/// The low end is a tight leash on a rambling model; the high end is for a
+/// genuinely large diff where a dozen distinct defects is plausible.
+pub const FINDINGS_CAP_CHOICES: [usize; 4] = [6, 12, 24, 48];
 
 /// One planned intermediate panel round — a way of turning judgment into a
 /// next draft before the final verdict. Planned up front in the settings;
@@ -225,6 +234,22 @@ pub struct OllamaCommitteeConfig {
     /// Manual casting by model tag. Empty (the default) leaves every seat to
     /// the automatic bench selection.
     pub roles: BTreeMap<String, CommitteeRole>,
+    /// Whether a review runs the project's own test suite before any model
+    /// reads the diff. The most trustworthy witness available, and on a big
+    /// repo the slowest stage in the run.
+    pub suite_gate: bool,
+    /// Whether the harness calls the changed functions itself and hands the
+    /// observations to the reviewers. The models can't run anything, so this
+    /// is the only way real behavior reaches them.
+    pub behavior_report: bool,
+    /// Whether findings go in front of the interpreter to be proved or
+    /// refuted. Off means every finding is the judge's opinion — no
+    /// "Definite" tier, because nothing was executed.
+    pub proof_round: bool,
+    /// Seconds one proof script may run before it's killed as a timeout.
+    pub proof_timeout_secs: u64,
+    /// Findings kept from one reviewer before the rest read as degeneration.
+    pub findings_cap: usize,
 }
 
 impl Default for OllamaCommitteeConfig {
@@ -234,6 +259,11 @@ impl Default for OllamaCommitteeConfig {
             max_loaded: 1,
             panel_plan: Vec::new(),
             roles: BTreeMap::new(),
+            suite_gate: true,
+            behavior_report: true,
+            proof_round: true,
+            proof_timeout_secs: PROOF_TIMEOUT_SECS,
+            findings_cap: DEFAULT_FINDINGS_CAP,
         }
     }
 }
@@ -253,6 +283,14 @@ impl OllamaCommitteeConfig {
                 .get(name)
                 .and_then(serde_json::Value::as_u64)
                 .map(|n| (n as usize).clamp(1, max))
+                .unwrap_or(fallback)
+        };
+        // Stages default to on: a config written before they existed should
+        // read as the full pipeline, which is what those runs actually did.
+        let flag = |name: &str, fallback: bool| {
+            value
+                .get(name)
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(fallback)
         };
         let panel_plan = value
@@ -292,6 +330,18 @@ impl OllamaCommitteeConfig {
             max_loaded: field("max_loaded", defaults.max_loaded, MAX_LOADED_MODELS),
             panel_plan,
             roles,
+            suite_gate: flag("suite_gate", defaults.suite_gate),
+            behavior_report: flag("behavior_report", defaults.behavior_report),
+            proof_round: flag("proof_round", defaults.proof_round),
+            // Any positive value a hand-edited config names is honoured, not
+            // just the four the link offers — but never zero (a proof that
+            // can't run isn't a proof) and never long enough to hang the run.
+            proof_timeout_secs: value
+                .get("proof_timeout_secs")
+                .and_then(serde_json::Value::as_u64)
+                .map(|secs| secs.clamp(1, 600))
+                .unwrap_or(defaults.proof_timeout_secs),
+            findings_cap: field("findings_cap", defaults.findings_cap, 200),
         }
     }
 
@@ -299,6 +349,11 @@ impl OllamaCommitteeConfig {
         json!({
             "reviewers": self.reviewers,
             "max_loaded": self.max_loaded,
+            "suite_gate": self.suite_gate,
+            "behavior_report": self.behavior_report,
+            "proof_round": self.proof_round,
+            "proof_timeout_secs": self.proof_timeout_secs,
+            "findings_cap": self.findings_cap,
             "panel_plan": self
                 .panel_plan
                 .iter()
@@ -322,6 +377,68 @@ impl OllamaCommitteeConfig {
             "5m"
         }
     }
+}
+
+/// Advances the two machine-evidence stages as one control: both → behavior
+/// probe only → test suite only → neither → both. Dropping the suite comes
+/// first because on a real repo that's the stage spending the minutes, and
+/// it's the one a user turns off to iterate quickly.
+pub fn cycle_evidence_stages(config: &mut OllamaCommitteeConfig) {
+    (config.suite_gate, config.behavior_report) = match (config.suite_gate, config.behavior_report)
+    {
+        (true, true) => (false, true),
+        (false, true) => (true, false),
+        (true, false) => (false, false),
+        (false, false) => (true, true),
+    };
+}
+
+/// The label for that control, kept beside the cycle so the two can't drift.
+pub fn evidence_label(config: &OllamaCommitteeConfig) -> &'static str {
+    match (config.suite_gate, config.behavior_report) {
+        (true, true) => "Machine evidence: test suite + behavior probe",
+        (false, true) => "Machine evidence: behavior probe only",
+        (true, false) => "Machine evidence: test suite only",
+        (false, false) => "Machine evidence: none",
+    }
+}
+
+/// Advances the proof round through off → each timeout on the ladder → off.
+/// One control for both questions, because "how long may a proof run" only
+/// means anything while proofs run at all.
+pub fn cycle_proof_round(config: &mut OllamaCommitteeConfig) {
+    if !config.proof_round {
+        config.proof_round = true;
+        config.proof_timeout_secs = PROOF_TIMEOUT_CHOICES[0];
+        return;
+    }
+    // The next rung strictly above the current value, so a hand-edited 20s
+    // advances to 30 rather than restarting the ladder.
+    match PROOF_TIMEOUT_CHOICES
+        .iter()
+        .find(|secs| **secs > config.proof_timeout_secs)
+    {
+        Some(secs) => config.proof_timeout_secs = *secs,
+        None => config.proof_round = false,
+    }
+}
+
+pub fn proof_label(config: &OllamaCommitteeConfig) -> String {
+    if config.proof_round {
+        format!("Proof round: on, {}s per script", config.proof_timeout_secs)
+    } else {
+        "Proof round: off".to_string()
+    }
+}
+
+/// Advances the per-reviewer findings cap around its ladder, wrapping past
+/// the top rung — and rejoining the ladder from any hand-edited value.
+pub fn cycle_findings_cap(config: &mut OllamaCommitteeConfig) {
+    config.findings_cap = FINDINGS_CAP_CHOICES
+        .iter()
+        .find(|cap| **cap > config.findings_cap)
+        .copied()
+        .unwrap_or(FINDINGS_CAP_CHOICES[0]);
 }
 
 // ---------------------------------------------------------------------------
@@ -664,8 +781,9 @@ struct ReviewerReport {
 
 /// A single reviewer's findings past this count are a degenerate model, not
 /// a thorough review — no honest review of one diff finds a dozen distinct
-/// defects, and the runaway case repeats one finding a hundred times.
-const MAX_FINDINGS_PER_REVIEWER: usize = 12;
+/// defects, and the runaway case repeats one finding a hundred times. The
+/// user can move it (Settings → Ollama) for a diff big enough to earn more.
+const DEFAULT_FINDINGS_CAP: usize = 12;
 
 /// The highest line number each file legitimately has, read from the diff's
 /// hunk headers (`@@ -a,b +c,d @@` ⇒ the new side covers c..c+d).
@@ -714,6 +832,7 @@ fn diff_line_bounds(diff: &str) -> BTreeMap<String, u64> {
 fn sanitize_findings(
     mut findings: Vec<Finding>,
     bounds: &BTreeMap<String, u64>,
+    cap: usize,
 ) -> (Vec<Finding>, Option<String>) {
     let raw_count = findings.len();
 
@@ -753,7 +872,7 @@ fn sanitize_findings(
         .max_by_key(|(_, count)| *count)
         .filter(|(_, count)| *count > 1);
 
-    findings.truncate(MAX_FINDINGS_PER_REVIEWER);
+    findings.truncate(cap.max(1));
     let over_cap = raw_count - repeated - findings.len();
     let kept = findings.len();
 
@@ -772,7 +891,7 @@ fn sanitize_findings(
     }
     if over_cap > 0 {
         reasons.push(format!(
-            "reported more than {MAX_FINDINGS_PER_REVIEWER} findings on a single diff"
+            "reported more than {cap} findings on a single diff"
         ));
     }
     if unmoored > 0 {
@@ -1729,7 +1848,7 @@ async fn chat_once(
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<(ExitStatus, Result<StageOutput, String>)> {
     let mut request = json!({
-        "model": model,
+        "model": wire_name(model),
         "messages": [
             { "role": "system", "content": system },
             { "role": "user", "content": user },
@@ -1747,7 +1866,7 @@ async fn chat_once(
     let accumulator = std::sync::Arc::new(std::sync::Mutex::new(OllamaChatAccumulator::default()));
     let parser_accumulator = std::sync::Arc::clone(&accumulator);
     let status = run_jsonl_stream(
-        new_ollama_chat_command(working_dir, path),
+        new_ollama_chat_command(working_dir, path, base_url_of(model)),
         &request,
         move |line| {
             parser_accumulator
@@ -2494,6 +2613,7 @@ async fn prove_finding(
     prover: &Member,
     diff: &str,
     steer: Option<&str>,
+    timeout_secs: u64,
     keep_alive: &str,
     working_dir: &Path,
     path: &str,
@@ -2539,8 +2659,7 @@ async fn prove_finding(
                         "command": format!("python3 committee-proof-{}.py", index + 1),
                     }),
                 });
-                let execution =
-                    run_proof_script(&script, PROOF_TIMEOUT_SECS, working_dir, path).await;
+                let execution = run_proof_script(&script, timeout_secs, working_dir, path).await;
                 on_event(TurnEvent::ToolCallResult {
                     call_id,
                     // 0 and 1 are the contract's two verdicts; everything
@@ -2745,6 +2864,7 @@ pub async fn run_ollama_committee(
             &prover,
             &continuation.diff,
             note.as_deref(),
+            config.proof_timeout_secs,
             config.keep_alive(),
             working_dir,
             path,
@@ -3045,7 +3165,11 @@ pub async fn run_ollama_committee(
             // the room — run them first so every later stage argues against
             // real evidence instead of vibes.
             let mut suite_line: Option<String> = None;
-            if let Some(suite) = detect_suite(working_dir) {
+            if let Some(suite) = config
+                .suite_gate
+                .then(|| detect_suite(working_dir))
+                .flatten()
+            {
                 on_event(TurnEvent::Text {
                     text: format!("**Suite gate** — running `{}` first…", suite.display_name()),
                 });
@@ -3084,7 +3208,11 @@ pub async fn run_ollama_committee(
             // battery, because nothing here knows how the code is really
             // called — and pushes the observations in as evidence.
             let mut behavior_report: Option<String> = None;
-            if let Some(report) = run_behavior_probe(&diff, working_dir, path).await {
+            let probe = match config.behavior_report {
+                true => run_behavior_probe(&diff, working_dir, path).await,
+                false => None,
+            };
+            if let Some(report) = probe {
                 on_event(TurnEvent::Text {
                     text: format!(
                         "**Behavior report** — the changed functions, run against a generic \
@@ -3092,6 +3220,13 @@ pub async fn run_ollama_committee(
                     ),
                 });
                 behavior_report = Some(report);
+            }
+            if !config.suite_gate && !config.behavior_report {
+                on_event(TurnEvent::Text {
+                    text: "**Machine evidence** is off in Settings → Ollama — the reviewers get \
+                           the diff and nothing else."
+                        .to_string(),
+                });
             }
             let mut evidence_lines: Vec<String> = Vec::new();
             if let Some(line) = &suite_line {
@@ -3135,7 +3270,8 @@ pub async fn run_ollama_committee(
                         add_usage(&mut total_usage, &stage.usage);
                         let (report, sanitation_note) = match parse_findings(&stage.content) {
                             Some(findings) => {
-                                let (findings, note) = sanitize_findings(findings, &line_bounds);
+                                let (findings, note) =
+                                    sanitize_findings(findings, &line_bounds, config.findings_cap);
                                 (
                                     ReviewerReport {
                                         model: reviewer.name.clone(),
@@ -3267,39 +3403,50 @@ pub async fn run_ollama_committee(
             // For each finding, the reviewer who raised it writes a minimal
             // script that exits 0 if the defect is real; the harness runs it
             // in the working tree under a timeout. Execution beats opinion.
-            on_event(TurnEvent::Text {
-                text: "**Proof round** — putting each claim in front of the interpreter…"
-                    .to_string(),
-            });
-            let proof_budget = merged.len().min(MAX_PROOFS);
-            let merged_total = merged.len();
-            for (index, finding) in merged.iter_mut().take(proof_budget).enumerate() {
-                let prover = finding
-                    .raised_by
-                    .first()
-                    .and_then(|name| plan.reviewers.iter().find(|member| &member.name == name))
-                    .unwrap_or(&plan.reviewers[0])
-                    .clone();
-                prove_finding(
-                    index,
-                    finding,
-                    &prover,
-                    &diff,
-                    None,
-                    keep_alive,
-                    working_dir,
-                    path,
-                    &mut total_usage,
-                    &mut on_event,
-                )
-                .await?;
-            }
-            if merged_total > proof_budget {
+            if config.proof_round {
                 on_event(TurnEvent::Text {
-                    text: format!(
-                        "(proof budget reached — finding {} onward goes to the judge unproven)",
-                        proof_budget + 1
-                    ),
+                    text: "**Proof round** — putting each claim in front of the interpreter…"
+                        .to_string(),
+                });
+                let proof_budget = merged.len().min(MAX_PROOFS);
+                let merged_total = merged.len();
+                for (index, finding) in merged.iter_mut().take(proof_budget).enumerate() {
+                    let prover = finding
+                        .raised_by
+                        .first()
+                        .and_then(|name| plan.reviewers.iter().find(|member| &member.name == name))
+                        .unwrap_or(&plan.reviewers[0])
+                        .clone();
+                    prove_finding(
+                        index,
+                        finding,
+                        &prover,
+                        &diff,
+                        None,
+                        config.proof_timeout_secs,
+                        keep_alive,
+                        working_dir,
+                        path,
+                        &mut total_usage,
+                        &mut on_event,
+                    )
+                    .await?;
+                }
+                if merged_total > proof_budget {
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "(proof budget reached — finding {} onward goes to the judge unproven)",
+                            proof_budget + 1
+                        ),
+                    });
+                }
+            } else {
+                // Worth saying out loud: without execution nothing can reach
+                // Definite, so every finding below is somebody's opinion.
+                on_event(TurnEvent::Text {
+                    text: "**Proof round** is off in Settings → Ollama — nothing gets executed, \
+                           so no finding can be better than \"might be\"."
+                        .to_string(),
                 });
             }
 

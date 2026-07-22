@@ -27,7 +27,8 @@ use super::settings_page::{
 };
 use super::SettingsSection;
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
-    self, cycle_committee_role, cycle_panel_round, CommitteeLeaderboard, OllamaCommitteeConfig,
+    self, cycle_committee_role, cycle_evidence_stages, cycle_findings_cap, cycle_panel_round,
+    cycle_proof_round, evidence_label, proof_label, CommitteeLeaderboard, OllamaCommitteeConfig,
     COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS,
     MAX_REVIEWERS,
 };
@@ -97,6 +98,12 @@ pub enum OllamaPageAction {
     CycleCommitteePanelRound {
         slot: usize,
     },
+    /// Cycle which machine-evidence stages run before a review.
+    CycleCommitteeEvidence,
+    /// Cycle the proof round off, or on with a per-script time limit.
+    CycleCommitteeProof,
+    /// Cycle how many findings one reviewer may contribute.
+    CycleCommitteeFindingsCap,
     /// Cycle a model's committee casting: auto → reviewer → judge → never.
     CycleCommitteeRole {
         tag: String,
@@ -199,6 +206,9 @@ struct StateHandles {
     committee_reviewers_link: MouseStateHandle,
     committee_max_loaded_link: MouseStateHandle,
     committee_round_links: [MouseStateHandle; MAX_PANEL_EXTRA_ROUNDS],
+    committee_evidence_link: MouseStateHandle,
+    committee_proof_link: MouseStateHandle,
+    committee_findings_cap_link: MouseStateHandle,
 }
 
 impl OllamaPageView {
@@ -730,6 +740,15 @@ impl TypedActionView for OllamaPageView {
                 self.update_committee_config(ctx, |config| {
                     cycle_panel_round(&mut config.panel_plan, slot);
                 });
+            }
+            OllamaPageAction::CycleCommitteeEvidence => {
+                self.update_committee_config(ctx, cycle_evidence_stages);
+            }
+            OllamaPageAction::CycleCommitteeProof => {
+                self.update_committee_config(ctx, cycle_proof_round);
+            }
+            OllamaPageAction::CycleCommitteeFindingsCap => {
+                self.update_committee_config(ctx, cycle_findings_cap);
             }
             OllamaPageAction::CycleCommitteeRole { tag } => {
                 let tag = tag.clone();
@@ -1532,6 +1551,104 @@ impl SettingsWidget for CommitteeWidget {
                 "At 1, each model unloads as its turn ends — right for a machine that \
                  fits one model. Raise it only if this machine has memory to keep \
                  several resident.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        // The review-mode stages: what the machine checks for itself, before
+        // and after the models have their say.
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        evidence_label(&config).to_string(),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleCommitteeEvidence);
+                        })),
+                        handles.committee_evidence_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "What a review runs before any model reads the diff. The test suite is \
+                 this project's own (cargo, pytest, npm or go) and is the slow one on a \
+                 large repo. The behavior probe calls the changed functions against a \
+                 generic input battery and hands the models what actually happened — \
+                 they can't run anything themselves, so with both off they see the diff \
+                 alone.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        proof_label(&config),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleCommitteeProof);
+                        })),
+                        handles.committee_proof_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "After the reviewers agree, each finding goes to the interpreter: the \
+                 model that raised it writes a script that exits 0 if the defect is \
+                 real, and the harness runs it here. It costs one more model call per \
+                 finding and it's what separates \"definite\" from \"might be\" — with \
+                 the round off, nothing is executed and every finding stays an opinion. \
+                 The time limit is per script; raise it if proofs time out on a slow \
+                 import.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        format!("Findings kept per reviewer: {}", config.findings_cap),
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleCommitteeFindingsCap);
+                        })),
+                        handles.committee_findings_cap_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "A small model that loses the plot repeats one finding hundreds of \
+                 times, so anything past this count is dropped and the transcript says \
+                 which model went derp. Repeats are always collapsed regardless — raise \
+                 this only for a diff big enough to honestly hold that many distinct \
+                 defects.",
                 appearance,
             ))
             .with_margin_top(2.)

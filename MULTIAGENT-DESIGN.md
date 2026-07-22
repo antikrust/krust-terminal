@@ -202,14 +202,52 @@ One JSON setting (`agents.warp_agent.other.ollama_committee_config`, never synce
 following the `ollama_model_mode_overrides` string-JSON pattern:
 
 ```json
-{ "reviewers": 2, "max_loaded": 1 }
+{
+  "reviewers": 2,
+  "max_loaded": 1,
+  "panel_plan": ["notes"],
+  "roles": { "qwen2.5-coder:32b": "benched" },
+  "suite_gate": true,
+  "behavior_report": true,
+  "proof_round": true,
+  "proof_timeout_secs": 15,
+  "findings_cap": 12
+}
 ```
 
+Every field is optional and every absent field reads as the full pipeline, so a
+config written before a knob existed keeps behaving the way it did. Values are
+clamped, not rejected: a hand-edited `proof_timeout_secs` off the UI's ladder is
+honoured (1–600s), a zero is not, and junk falls back to defaults.
+
 UI: a **Committee** section at the bottom of the Ollama settings page — description,
-two cycling links in the page's existing link idiom (`Reviewers: 2`,
-`Models kept loaded: 1`), the "takes minutes, that's the point" expectation, and the
-current standings when the leaderboard has data. The committee only functions with
-2+ installed models; the section says so rather than hiding.
+cycling links in the page's existing link idiom, the "takes minutes, that's the
+point" expectation, and the current standings when the leaderboard has data. The
+committee only functions with 2+ installed models; the section says so rather than
+hiding.
+
+| Link | Cycles | Governs |
+| --- | --- | --- |
+| `Reviewers per run` | 1–4 | Fan-out width |
+| `Models kept loaded` | 1–4 | `keep_alive` (1 = unload after every stage) |
+| `Machine evidence` | suite + probe → probe only → suite only → none | Stages 2a/2b |
+| `Proof round` | off → 5s → 15s → 30s → 60s → off | Stage 5 and its per-script limit |
+| `Findings kept per reviewer` | 6 → 12 → 24 → 48 | Degeneration cap |
+| `Round 2` / `Round 3` | Off → notes → rewrite → peers → converge → Off | Panel plan |
+
+Two design notes on those. The evidence stages are one control rather than two
+switches because they answer one question — *how much does the machine check before
+the models speak* — and the first click drops the test suite, the stage that costs
+the minutes on a real repo. The proof round folds its on/off into the same ladder as
+its timeout, since "how long may a proof run" is meaningless when none do. Turning
+either off is announced in the run itself: with no proof round, no finding can reach
+**Definite**, and the transcript says so instead of quietly demoting everything to
+*might be*.
+
+Per-model casting (`auto` → always reviewer → always judge → never use) lives on the
+Installed rows, next to each model, rather than in this section — the decision is
+about *that* model, and keeping a heavy model off the bench is the fastest way to
+make runs bearable on a small machine.
 
 Gating mirrors the rest of Ollama: the global "Use local models" switch governs the
 committee too (the id is `ollama/…`, so the existing enforcement in

@@ -48,7 +48,7 @@ fn config_parses_and_clamps_out_of_range_values() {
             reviewers: 3,
             max_loaded: 2,
             panel_plan: vec![PanelRoundKind::Notes, PanelRoundKind::Exemplar],
-            roles: BTreeMap::new(),
+            ..OllamaCommitteeConfig::default()
         }
     );
 
@@ -81,11 +81,18 @@ fn a_vintage_round_count_maps_to_notes_rounds() {
 
 #[test]
 fn config_roundtrips_through_its_settings_json() {
+    // Every knob set away from its default, so a field that forgets to
+    // serialize is caught here rather than by a user losing a setting.
     let config = OllamaCommitteeConfig {
         reviewers: 3,
         max_loaded: 2,
         panel_plan: vec![PanelRoundKind::Exemplar, PanelRoundKind::Converge],
         roles: BTreeMap::new(),
+        suite_gate: false,
+        behavior_report: false,
+        proof_round: false,
+        proof_timeout_secs: 60,
+        findings_cap: 24,
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -94,15 +101,129 @@ fn config_roundtrips_through_its_settings_json() {
 }
 
 #[test]
+fn a_config_saved_before_the_stage_toggles_reads_as_the_full_pipeline() {
+    // Those runs did execute the suite, the probe and the proofs, so the
+    // absent fields have to read as on — defaulting to off would silently
+    // downgrade every existing install.
+    let vintage =
+        OllamaCommitteeConfig::from_settings_json(Some(r#"{"reviewers": 2, "max_loaded": 1}"#));
+    assert!(vintage.suite_gate);
+    assert!(vintage.behavior_report);
+    assert!(vintage.proof_round);
+    assert_eq!(vintage.proof_timeout_secs, PROOF_TIMEOUT_SECS);
+    assert_eq!(vintage.findings_cap, DEFAULT_FINDINGS_CAP);
+}
+
+#[test]
+fn hand_edited_stage_values_are_honoured_within_sane_bounds() {
+    // A value off the link's ladder is fine — the ladder is a convenience,
+    // not the contract. Zero and absurd are not.
+    let odd = OllamaCommitteeConfig::from_settings_json(Some(
+        r#"{"proof_timeout_secs": 20, "findings_cap": 7}"#,
+    ));
+    assert_eq!(odd.proof_timeout_secs, 20);
+    assert_eq!(odd.findings_cap, 7);
+
+    let broken = OllamaCommitteeConfig::from_settings_json(Some(
+        r#"{"proof_timeout_secs": 0, "findings_cap": 0}"#,
+    ));
+    assert_eq!(broken.proof_timeout_secs, 1, "a 0s proof can never pass");
+    assert_eq!(broken.findings_cap, 1, "a 0 cap would drop every finding");
+
+    let absurd = OllamaCommitteeConfig::from_settings_json(Some(
+        r#"{"proof_timeout_secs": 99999, "findings_cap": 99999}"#,
+    ));
+    assert_eq!(absurd.proof_timeout_secs, 600);
+    assert_eq!(absurd.findings_cap, 200);
+}
+
+#[test]
 fn keep_alive_unloads_immediately_only_at_one_resident_model() {
     assert_eq!(OllamaCommitteeConfig::default().keep_alive(), "0");
     let warm = OllamaCommitteeConfig {
-        reviewers: 2,
         max_loaded: 2,
-        panel_plan: Vec::new(),
-        roles: BTreeMap::new(),
+        ..OllamaCommitteeConfig::default()
     };
     assert_eq!(warm.keep_alive(), "5m");
+}
+
+#[test]
+fn cycling_the_evidence_stages_drops_the_slow_one_first() {
+    let mut config = OllamaCommitteeConfig::default();
+    assert_eq!(
+        evidence_label(&config),
+        "Machine evidence: test suite + behavior probe"
+    );
+
+    // One click gets rid of the suite — the stage that costs the minutes on
+    // a real repo, and so the one worth reaching in a single click.
+    cycle_evidence_stages(&mut config);
+    assert!(!config.suite_gate && config.behavior_report);
+    assert_eq!(
+        evidence_label(&config),
+        "Machine evidence: behavior probe only"
+    );
+
+    cycle_evidence_stages(&mut config);
+    assert!(config.suite_gate && !config.behavior_report);
+    assert_eq!(evidence_label(&config), "Machine evidence: test suite only");
+
+    cycle_evidence_stages(&mut config);
+    assert!(!config.suite_gate && !config.behavior_report);
+    assert_eq!(evidence_label(&config), "Machine evidence: none");
+
+    cycle_evidence_stages(&mut config);
+    assert_eq!(config, OllamaCommitteeConfig::default(), "the cycle closes");
+}
+
+#[test]
+fn cycling_the_proof_round_walks_the_limits_then_turns_it_off() {
+    let mut config = OllamaCommitteeConfig {
+        proof_round: false,
+        ..OllamaCommitteeConfig::default()
+    };
+    assert_eq!(proof_label(&config), "Proof round: off");
+
+    for expected in PROOF_TIMEOUT_CHOICES {
+        cycle_proof_round(&mut config);
+        assert!(config.proof_round);
+        assert_eq!(config.proof_timeout_secs, expected);
+        assert_eq!(
+            proof_label(&config),
+            format!("Proof round: on, {expected}s per script")
+        );
+    }
+    cycle_proof_round(&mut config);
+    assert!(!config.proof_round, "past the last rung the round goes off");
+
+    // A hand-edited value between rungs climbs to the next one up rather
+    // than restarting the ladder.
+    let mut odd = OllamaCommitteeConfig {
+        proof_timeout_secs: 20,
+        ..OllamaCommitteeConfig::default()
+    };
+    cycle_proof_round(&mut odd);
+    assert_eq!(odd.proof_timeout_secs, 30);
+}
+
+#[test]
+fn cycling_the_findings_cap_wraps_around_its_ladder() {
+    let mut config = OllamaCommitteeConfig::default();
+    assert_eq!(config.findings_cap, DEFAULT_FINDINGS_CAP);
+    cycle_findings_cap(&mut config);
+    assert_eq!(config.findings_cap, 24);
+    cycle_findings_cap(&mut config);
+    assert_eq!(config.findings_cap, 48);
+    cycle_findings_cap(&mut config);
+    assert_eq!(config.findings_cap, 6, "the last rung wraps to the first");
+
+    // Anything off the ladder rejoins it rather than sticking.
+    let mut odd = OllamaCommitteeConfig {
+        findings_cap: 99,
+        ..OllamaCommitteeConfig::default()
+    };
+    cycle_findings_cap(&mut odd);
+    assert_eq!(odd.findings_cap, 6);
 }
 
 #[test]
@@ -387,10 +508,8 @@ fn casting_survives_the_settings_roundtrip() {
     roles.insert("qwen2.5-coder:32b".to_string(), CommitteeRole::Benched);
     roles.insert("deepseek-r1:14b".to_string(), CommitteeRole::Judge);
     let config = OllamaCommitteeConfig {
-        reviewers: 2,
-        max_loaded: 1,
-        panel_plan: Vec::new(),
         roles,
+        ..OllamaCommitteeConfig::default()
     };
     assert_eq!(
         OllamaCommitteeConfig::from_settings_json(Some(&config.to_settings_json())),
@@ -527,7 +646,7 @@ fn a_repetition_loop_collapses_to_one_finding() {
         })
         .collect();
     let bounds = diff_line_bounds(BOUNDED_DIFF);
-    let (kept, note) = sanitize_findings(runaway, &bounds);
+    let (kept, note) = sanitize_findings(runaway, &bounds, DEFAULT_FINDINGS_CAP);
 
     assert_eq!(kept.len(), 1, "a repeated title is one finding");
     // The surviving citation is the one the diff can actually support.
@@ -557,11 +676,27 @@ fn distinct_findings_survive_but_the_cap_holds() {
             )
         })
         .collect();
-    let (kept, note) = sanitize_findings(varied, &bounds);
-    assert_eq!(kept.len(), MAX_FINDINGS_PER_REVIEWER);
+    let (kept, note) = sanitize_findings(varied, &bounds, DEFAULT_FINDINGS_CAP);
+    assert_eq!(kept.len(), DEFAULT_FINDINGS_CAP);
     let note = note.unwrap();
     assert!(note.contains("went derp"), "note: {note}");
     assert!(note.contains("more than 12 findings"), "note: {note}");
+
+    // The note quotes the cap that actually applied, so a user who raised
+    // it isn't told about a number they no longer use.
+    let tight: Vec<Finding> = (1..=8)
+        .map(|n| {
+            finding(
+                "payday.py",
+                Some(1),
+                "high",
+                &format!("Distinct defect {n}"),
+            )
+        })
+        .collect();
+    let (kept, note) = sanitize_findings(tight, &bounds, 6);
+    assert_eq!(kept.len(), 6);
+    assert!(note.unwrap().contains("more than 6 findings"));
 
     // An honest small report passes through untouched.
     let honest = vec![
@@ -573,7 +708,7 @@ fn distinct_findings_survive_but_the_cap_holds() {
             "top_scores returns the lowest scores",
         ),
     ];
-    let (kept, note) = sanitize_findings(honest, &bounds);
+    let (kept, note) = sanitize_findings(honest, &bounds, DEFAULT_FINDINGS_CAP);
     assert_eq!(kept.len(), 2);
     assert_eq!(note, None);
 }
@@ -589,6 +724,7 @@ fn out_of_range_lines_are_cleared_without_losing_the_finding() {
             "Real defect, invented line",
         )],
         &bounds,
+        DEFAULT_FINDINGS_CAP,
     );
     assert_eq!(kept.len(), 1, "the finding survives");
     assert_eq!(kept[0].line, None, "the false citation does not");
