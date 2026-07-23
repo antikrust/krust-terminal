@@ -23,6 +23,9 @@ User prompt (model picker: "Committee")
        Stage 1  Evidence    git diff HEAD (Review mode) — or none (Panel mode)
        Stage 2a Suite gate  the project's own tests, before anyone reviews
        Stage 2b Behavior    call the changed functions, record what they do
+       Stage 2c Contracts   the unchanged files the diff imports, for their promises
+       Stage 2d Oracle      one model says what those calls SHOULD have returned,
+                            never shown what they did; the harness compares
        Stage 3  Fan-out     each reviewer model runs once, sequentially
                             (twice — cold then warm — with second opinion on)
        Stage 4  Consensus   merge findings mechanically; verify file locations
@@ -41,6 +44,19 @@ architectural assumption.
 Stages 2a, 2b and 5 are the machine's own turns, and each can be switched off
 (Settings → Ollama). Stage 5 is what separates *Definite* from *Might be*: with the
 proof round off, nothing is executed and no finding can be better than an opinion.
+
+Stage 2d is the newest and, per measured runs, the most valuable, because of how
+little it asks. A prover has to pick an input, decide what correct would be, call
+the code, compare, and encode the answer as an exit code — five steps, and small
+models fail the middle one relentlessly, writing the observed value into
+`expected` and refuting a real defect with a comparison between a value and
+itself. The oracle asks only *what should this have returned?*, withholds what it
+did return so there is nothing to copy, and leaves the comparing to the harness.
+What comes out is a located defect with no model holding the casting vote:
+
+```text
+needs_reorder(3, 3) returned False, but its docstring says it should return True
+```
 
 After the verdict the conversation stays live, and that is where most of the value
 is: **any question is answered from the run** by a model holding it, `tests` turns
