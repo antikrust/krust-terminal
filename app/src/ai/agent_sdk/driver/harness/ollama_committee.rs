@@ -2122,6 +2122,11 @@ gap between those two. Rule \"confirm\" when the evidence shows the defect, \"re
 the finding misreads it or is a style nit, \"unsure\" when nothing available settles it. \
 Rejecting a finding the interpreter DEMONSTRATED means claiming the observation itself is \
 wrong — only do that when you can say what the script did wrong, and say it in the reason. \
+AN UNCAUGHT EXCEPTION IS NOT ERROR HANDLING. A function that raises where it used to return \
+a value has lost behaviour, and \"the runtime reports it\" is not a defence — every crash in \
+every language is reported by the runtime. When the diff REMOVES a guard, an early return or \
+a bounds check and the code now blows up in the case that guard covered, that is a defect and \
+you confirm it; the fact that python names the exception is not the code handling anything. \
 A defect is something the code does wrong with the arguments it is written for. \
 \"It returns the wrong thing when you pass a string where a list of prices goes\" is not a \
 defect and must be rejected however convincingly it is argued — every function in every \
