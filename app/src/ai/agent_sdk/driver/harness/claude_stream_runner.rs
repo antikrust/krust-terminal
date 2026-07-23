@@ -256,8 +256,8 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                                     if let TurnEvent::Thinking { text } = &event {
                                         stream.apply_thinking(text, app);
                                     } else {
-                                        let messages = stream
-                                            .messages_for_event(&event, &mut shell_commands);
+                                        let messages =
+                                            stream.messages_for_event(&event, &mut shell_commands);
                                         stream.apply_messages(messages, app);
                                     }
                                     (stream, shell_commands)

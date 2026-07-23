@@ -121,12 +121,33 @@ fn last_line(text: &str, max_chars: usize) -> String {
 /// interpreter never reads comments. That script certified a defect it had
 /// not touched. So the contract asks for the comparison in the output, where
 /// it can be checked without asking a model anything.
+/// And once the comparison is in the output, it is worth more than the exit
+/// code — because the two values were *computed* (one by running the code,
+/// one from reading what it is for) while the exit code is the model's
+/// reasoning **about** them, and that is the part it keeps getting backwards:
+///
+/// ```text
+/// result = stock.needs_reorder(3, 3)
+/// print('expected:', True)
+/// print('actual:', result)          # False
+/// if result == True: exit(0)
+/// else: exit(1)                     # ← says "the code is fine"
+/// ```
+///
+/// True is not False, and no opinion is required to see it. So when a script
+/// prints both lines, the comparison decides and the exit code is noted and
+/// ignored.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SelfCheck {
-    /// Said what it expected and what it got, and its exit code agrees.
-    Consistent,
-    /// Said both, and its exit code says the opposite of what they say.
-    Contradicted(String),
+    /// Printed both lines. This is the verdict.
+    Compared {
+        expected: String,
+        actual: String,
+        /// Whether the two values disagree — which is the defect.
+        differ: bool,
+        /// Whether the script's own exit code agreed with them.
+        agreed: bool,
+    },
     /// Never said, so the exit code is the only thing to go on.
     Unstated,
 }
@@ -144,25 +165,21 @@ fn reported(stdout: &str, label: &str) -> Option<String> {
     })
 }
 
-/// Checks a script's exit code against the comparison it printed. Only an
-/// outright contradiction is called one — a script that printed neither line
-/// is [`SelfCheck::Unstated`], which the caller weighs by what it claimed.
+/// Reads a script's own comparison off its output, and notes whether its
+/// exit code agreed. A script that printed neither line is
+/// [`SelfCheck::Unstated`], which the caller weighs by what it claimed.
 pub(crate) fn self_check(stdout: &str, exit_code: i32) -> SelfCheck {
     let (Some(expected), Some(actual)) = (reported(stdout, "expected"), reported(stdout, "actual"))
     else {
         return SelfCheck::Unstated;
     };
-    let same = expected.eq_ignore_ascii_case(&actual);
-    match (exit_code, same) {
-        (0, true) => SelfCheck::Contradicted(format!(
-            "the script claimed the defect is real but reported the same value twice \
-             (expected {expected}, actual {actual}) — that is the code behaving correctly"
-        )),
-        (1, false) => SelfCheck::Contradicted(format!(
-            "the script claimed the code is fine but reported expected {expected} and actual \
-             {actual} — those differ, which is the defect"
-        )),
-        _ => SelfCheck::Consistent,
+    let differ = !expected.eq_ignore_ascii_case(&actual);
+    SelfCheck::Compared {
+        expected,
+        actual,
+        differ,
+        // The contract is exit 0 when they differ, exit 1 when they match.
+        agreed: (exit_code == 0) == differ,
     }
 }
 
@@ -636,7 +653,12 @@ pub(crate) fn imported_context(diff: &str, working_dir: &Path) -> Option<String>
         let module = content
             .strip_prefix("import ")
             .or_else(|| content.strip_prefix("from "))
-            .map(|rest| rest.split_whitespace().next().unwrap_or("").trim_end_matches(','))
+            .map(|rest| {
+                rest.split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .trim_end_matches(',')
+            })
             .filter(|module| !module.is_empty() && !module.contains('.'));
         let Some(module) = module else { continue };
         let file = format!("{module}.py");
@@ -663,8 +685,14 @@ pub(crate) fn imported_context(diff: &str, working_dir: &Path) -> Option<String>
             // The docstring's first line is the contract, when there is one.
             if let Some(doc) = lines.peek() {
                 let doc = doc.trim();
-                if let Some(text) = doc.strip_prefix("\"\"\"").or_else(|| doc.strip_prefix('\'')) {
-                    let text = text.trim_end_matches("\"\"\"").trim_end_matches('\'').trim();
+                if let Some(text) = doc
+                    .strip_prefix("\"\"\"")
+                    .or_else(|| doc.strip_prefix('\''))
+                {
+                    let text = text
+                        .trim_end_matches("\"\"\"")
+                        .trim_end_matches('\'')
+                        .trim();
                     if !text.is_empty() {
                         block.push_str(&format!("    {text}\n"));
                     }

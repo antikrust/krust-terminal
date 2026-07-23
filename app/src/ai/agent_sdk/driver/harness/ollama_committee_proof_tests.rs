@@ -468,41 +468,70 @@ fn a_proof_that_compared_nothing_is_not_a_proof() {
     // Definite.
     assert_eq!(self_check("Observed: None\n", 0), SelfCheck::Unstated);
 
-    // Also real: the prover wrote down the buggy value as the expected one,
-    // then exited 0. Two identical values cannot demonstrate a defect, and
-    // that is decidable without asking anyone.
-    assert!(matches!(
-        self_check("expected: False\nactual: False\n", 0),
-        SelfCheck::Contradicted(_)
-    ));
-
-    // The other way round: it saw a difference and called the code fine.
-    assert!(matches!(
-        self_check("expected: 0\nactual: 5\n", 1),
-        SelfCheck::Contradicted(_)
-    ));
-
-    // What the contract asks for, both ways round.
-    assert_eq!(
-        self_check("expected: 0\nactual: 5\n", 0),
-        SelfCheck::Consistent
-    );
-    assert_eq!(
-        self_check("expected: 90\nactual: 90\n", 1),
-        SelfCheck::Consistent
-    );
-
-    // Models capitalise as the mood takes them, and print things first.
-    assert_eq!(
-        self_check("Loaded stock.py\nEXPECTED: 0\nActual:  5\n", 0),
-        SelfCheck::Consistent
-    );
-
     // A stray word beginning with the label is not the label.
     assert_eq!(
         self_check("expectedly slow\nactually fine\n", 0),
         SelfCheck::Unstated
     );
+
+    // Models capitalise as the mood takes them, and print things first.
+    assert_eq!(
+        self_check("Loaded stock.py\nEXPECTED: 0\nActual:  5\n", 0),
+        SelfCheck::Compared {
+            expected: "0".to_string(),
+            actual: "5".to_string(),
+            differ: true,
+            agreed: true,
+        }
+    );
+}
+
+#[test]
+fn the_values_a_proof_printed_outrank_the_exit_code_it_chose() {
+    // Verbatim from a real run. It ran the code, wrote down what the
+    // docstring promises, printed both — and then exited "the code is
+    // fine". True is not False, and seeing that takes no opinion.
+    let inverted = self_check("expected: True\nactual: False\n", 1);
+    assert_eq!(
+        inverted,
+        SelfCheck::Compared {
+            expected: "True".to_string(),
+            actual: "False".to_string(),
+            differ: true,
+            agreed: false,
+        }
+    );
+
+    // Also real: the prover wrote the buggy value down as the expected one
+    // and exited 0 on the strength of it. Two identical values cannot
+    // demonstrate a defect however the script feels about it.
+    assert_eq!(
+        self_check("expected: False\nactual: False\n", 0),
+        SelfCheck::Compared {
+            expected: "False".to_string(),
+            actual: "False".to_string(),
+            differ: false,
+            agreed: false,
+        }
+    );
+
+    // The contract, both ways round, with the exit code agreeing.
+    assert!(matches!(
+        self_check("expected: 0\nactual: 5\n", 0),
+        SelfCheck::Compared {
+            differ: true,
+            agreed: true,
+            ..
+        }
+    ));
+    assert!(matches!(
+        self_check("expected: 90\nactual: 90\n", 1),
+        SelfCheck::Compared {
+            differ: false,
+            agreed: true,
+            ..
+        }
+    ));
 }
 
 /// The stock fixture's diff, as `git diff HEAD` really prints it — hunk
@@ -652,11 +681,20 @@ fn the_contract_a_diff_breaks_can_be_in_a_file_the_diff_never_touches() {
 
     // The units contract, which is the only thing that makes the changed
     // line wrong, and which `git diff HEAD` will never show.
-    assert!(context.contains("def line_total(unit_pence, quantity)"), "{context}");
+    assert!(
+        context.contains("def line_total(unit_pence, quantity)"),
+        "{context}"
+    );
     assert!(context.contains("in pence"), "{context}");
-    assert!(context.contains("def apply_discount(total_pence, fraction)"), "{context}");
+    assert!(
+        context.contains("def apply_discount(total_pence, fraction)"),
+        "{context}"
+    );
     // Signatures and contracts, not bodies — the diff has to stay readable.
-    assert!(!context.contains("return unit_pence * quantity"), "{context}");
+    assert!(
+        !context.contains("return unit_pence * quantity"),
+        "{context}"
+    );
 
     // A module that isn't in the repository contributes nothing, and neither
     // does one the diff already shows.
