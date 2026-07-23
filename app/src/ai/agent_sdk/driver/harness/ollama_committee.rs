@@ -1574,6 +1574,9 @@ struct PanelContinuation {
     /// The run's final deliverable — the winner's revised answer (or the
     /// winning answer when the revision failed). What `save` writes out.
     artifact: Option<String>,
+    /// Where the whole round was written, so `save transcript` works after a
+    /// panel and not only after a review.
+    transcript: Option<std::path::PathBuf>,
 }
 
 /// A finished review, kept so `recheck <n>` can re-prove one finding with
@@ -1810,6 +1813,7 @@ fn save_panel_continuation(
     answers: &[(String, String)],
     rounds_done: usize,
     artifact: Option<String>,
+    transcript: Option<std::path::PathBuf>,
 ) {
     if answers.is_empty() {
         return;
@@ -1823,6 +1827,7 @@ fn save_panel_continuation(
                 answers: answers.to_vec(),
                 rounds_done,
                 artifact,
+                transcript,
             },
         );
     }
@@ -3701,13 +3706,24 @@ pub async fn run_ollama_committee(
     // so keeping it is a rename and discarding it is doing nothing.
     if let Some(named) = parse_save_transcript_command(prompt) {
         let wants_tests = prompt.to_ascii_lowercase().contains("test");
-        let saved = review_continuations().lock().ok().and_then(|map| {
-            map.get(session_id)
-                .and_then(|continuation| match wants_tests {
-                    true => continuation.tests.clone(),
-                    false => continuation.transcript.clone(),
+        let saved = review_continuations()
+            .lock()
+            .ok()
+            .and_then(|map| {
+                map.get(session_id)
+                    .and_then(|continuation| match wants_tests {
+                        true => continuation.tests.clone(),
+                        false => continuation.transcript.clone(),
+                    })
+            })
+            // A panel leaves no findings and so no generated tests, but it
+            // does leave a transcript, and asking for it must work there too.
+            .or_else(|| {
+                panel_continuations().lock().ok().and_then(|map| {
+                    map.get(session_id)
+                        .and_then(|continuation| continuation.transcript.clone())
                 })
-        });
+            });
         let complete = |on_event: &mut dyn FnMut(TurnEvent)| {
             on_event(TurnEvent::TurnCompleted {
                 usage: Some(committee_usage()),
@@ -5321,6 +5337,22 @@ pub async fn run_ollama_committee(
                 &mut on_event,
             )
             .await?;
+            // A panel run is worth writing down for exactly the reasons a
+            // review is, and wasn't: asked how a creation run had gone,
+            // there was nothing to look at, because only reviews were ever
+            // kept. Several models each wrote a program and a judge picked
+            // between them and said why — that is the part worth reading
+            // back, and it scrolled away like anything else.
+            let panel_transcript = write_transcript(session_id, &transcript_text(&transcript));
+            if let Some(path) = &panel_transcript {
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "_The whole round is written down at `{}` — `save transcript` moves it \
+                         into this directory._",
+                        path.display()
+                    ),
+                });
+            }
             save_panel_continuation(
                 session_id,
                 prompt,
@@ -5328,6 +5360,7 @@ pub async fn run_ollama_committee(
                 &answers,
                 panel_plan.len(),
                 artifact,
+                panel_transcript,
             );
         }
     }
