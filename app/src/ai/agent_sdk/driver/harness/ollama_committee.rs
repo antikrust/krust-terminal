@@ -1192,6 +1192,41 @@ fn issues_match(a: (&str, Option<u64>, &str), b: (&str, Option<u64>, &str)) -> b
     titles_similar || (lines_adjacent && overlap >= 2)
 }
 
+/// Where a finding ends up in the verdict.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Bucket {
+    /// Shown as **Definite**.
+    Definite,
+    /// Shown as **Might be**. `disputed` when it got there because the
+    /// interpreter and the judge said opposite things.
+    Possible { disputed: bool },
+    /// Shown as **Rejected**.
+    Dismissed,
+}
+
+/// Certainty first: execution beats opinion, and the judge settles what the
+/// interpreter couldn't.
+///
+/// Except when the two flatly disagree. A run put a finding under
+/// **Definite** with `judge: reject` printed beneath it, which is not a
+/// verdict so much as a shrug written twice. One of the two is wrong and the
+/// run has no way to tell which, so it goes to "Might be" and says so —
+/// overclaiming is the thing this whole pipeline exists to stop.
+fn bucket_for(proof: Option<&ProofOutcome>, judged: Option<&str>) -> Bucket {
+    let judged = judged.map(str::to_ascii_lowercase);
+    let confirmed = matches!(judged.as_deref(), Some("confirm" | "confirmed"));
+    let rejected = matches!(judged.as_deref(), Some("reject" | "rejected"));
+    match proof {
+        Some(ProofOutcome::Demonstrated(_)) if rejected => Bucket::Possible { disputed: true },
+        Some(ProofOutcome::Demonstrated(_)) => Bucket::Definite,
+        Some(ProofOutcome::Refuted(_)) if confirmed => Bucket::Possible { disputed: true },
+        Some(ProofOutcome::Refuted(_)) => Bucket::Dismissed,
+        _ if confirmed => Bucket::Definite,
+        _ if rejected => Bucket::Dismissed,
+        _ => Bucket::Possible { disputed: false },
+    }
+}
+
 /// Folds a reviewer's warm second pass into its cold one. The union is kept,
 /// never the intersection: a real defect spotted only once is still a real
 /// defect, and dropping it would trade a hallucination for a miss. What the
@@ -4725,10 +4760,6 @@ pub async fn run_ollama_committee(
                 }
             };
 
-            // Verdict, certainty first: execution beats opinion. A
-            // demonstrated finding is definite even if the judge waffles; a
-            // refuted one is out even if the judge liked it; the judge only
-            // settles what the interpreter couldn't.
             let ruling_for = |index: usize| {
                 verdict.as_ref().and_then(|verdict| {
                     verdict
@@ -4740,18 +4771,18 @@ pub async fn run_ollama_committee(
             let mut definite: Vec<usize> = Vec::new();
             let mut possible: Vec<usize> = Vec::new();
             let mut dismissed: Vec<usize> = Vec::new();
+            let mut disputed: Vec<usize> = Vec::new();
             for (index, finding) in merged.iter().enumerate() {
-                let judged = ruling_for(index).map(|r| r.verdict.to_ascii_lowercase());
-                match &finding.proof {
-                    Some(ProofOutcome::Demonstrated(_)) => definite.push(index),
-                    Some(ProofOutcome::Refuted(_)) => dismissed.push(index),
-                    _ if matches!(judged.as_deref(), Some("confirm" | "confirmed")) => {
-                        definite.push(index)
+                let judged = ruling_for(index).map(|ruling| ruling.verdict.as_str());
+                match bucket_for(finding.proof.as_ref(), judged) {
+                    Bucket::Definite => definite.push(index),
+                    Bucket::Possible { disputed: conflict } => {
+                        if conflict {
+                            disputed.push(index);
+                        }
+                        possible.push(index);
                     }
-                    _ if matches!(judged.as_deref(), Some("reject" | "rejected")) => {
-                        dismissed.push(index)
-                    }
-                    _ => possible.push(index),
+                    Bucket::Dismissed => dismissed.push(index),
                 }
             }
 
@@ -4778,6 +4809,12 @@ pub async fn run_ollama_committee(
                                 cast_prose(&ruling.reason, &plan)
                             ));
                         }
+                    }
+                    if disputed.contains(&index) {
+                        text.push_str(
+                            "   ⚖️ the interpreter and the judge disagree — one of them is \
+                             wrong and this run can't say which\n",
+                        );
                     }
                 }
                 text.push('\n');

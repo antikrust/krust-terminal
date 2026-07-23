@@ -1455,6 +1455,9 @@ fn committee_reviews_a_planted_bug_against_live_ollama() {
         &dir,
         &format!("/opt/homebrew/bin:/usr/local/bin:{path}"),
         OllamaCommitteeConfig::default(),
+        // Local models only: the smoke test must not depend on another
+        // machine being awake.
+        Vec::new(),
         |event| events.push(event),
     ))
     .unwrap();
@@ -1717,4 +1720,88 @@ fn the_judges_prose_is_spoken_in_the_names_the_run_used() {
     // A model that never sat keeps its tag rather than borrowing a name.
     assert_eq!(spoken("llama3:70b", &plan), "`llama3:70b`");
     assert_eq!(spoken("qwen2.5-coder:14b", &plan), reviewer);
+}
+
+// --- models on other machines ---------------------------------------------
+
+#[test]
+fn a_model_on_another_machine_is_read_as_the_model_not_the_address() {
+    // Built with the same helper the picker uses, so the separator is
+    // whatever `remote` says it is rather than what this test assumes.
+    let qualified =
+        crate::ai::ollama::remote::qualify("qwen2.5-coder:32b", "http://192.168.1.150:11434");
+    let qualified = qualified.as_str();
+    let (bare, host) = crate::ai::ollama::remote::split(qualified);
+    assert_eq!(bare, "qwen2.5-coder:32b");
+    assert_eq!(host, Some("http://192.168.1.150:11434"));
+
+    // The address must never be parsed as part of the tag: a remote 32B that
+    // reads as a 0B model of no family would be seated last on every bench.
+    assert_eq!(model_size_billions(bare), 32.0);
+    assert_eq!(model_family(bare), "qwen");
+    assert!(is_coder_model(bare));
+    assert_eq!(
+        model_size_billions(qualified),
+        0.0,
+        "which is exactly what happens if the tag isn't split first"
+    );
+
+    // And the bench says which box it runs on, without the scheme and port
+    // nobody reads.
+    let remote = Member {
+        display: stage_name(qualified, true),
+        name: qualified.to_string(),
+        family: model_family(bare),
+        coder: true,
+        thinking: false,
+        size_billions: 32.0,
+    };
+    assert_eq!(member_tag(&remote), "qwen2.5-coder:32b on 192.168.1.150");
+    assert_eq!(member_tag(&member("codellama:13b", false)), "codellama:13b");
+
+    // A borrowed model still draws a stable name, keyed on the whole thing —
+    // the same model on two machines is two seats, and should look like it.
+    assert_eq!(stage_name(qualified, true), stage_name(qualified, true));
+    assert_ne!(stage_name(qualified, true), stage_name(bare, true));
+}
+
+#[test]
+fn a_demonstration_the_judge_rejects_is_not_definite() {
+    let shown = ProofOutcome::Demonstrated("expected 0, actual 5".to_string());
+    let refuted = ProofOutcome::Refuted("expected 90, actual 90".to_string());
+
+    // Execution beats opinion when the judge has nothing to add.
+    assert_eq!(bucket_for(Some(&shown), None), Bucket::Definite);
+    assert_eq!(bucket_for(Some(&shown), Some("confirm")), Bucket::Definite);
+    assert_eq!(bucket_for(Some(&shown), Some("unsure")), Bucket::Definite);
+    assert_eq!(bucket_for(Some(&refuted), None), Bucket::Dismissed);
+
+    // A real run printed a finding under **Definite** with `judge: reject`
+    // underneath it. One of the two is wrong; the run can't say which, and
+    // saying "definite" anyway is the overclaiming this pipeline is for.
+    assert_eq!(
+        bucket_for(Some(&shown), Some("reject")),
+        Bucket::Possible { disputed: true }
+    );
+    assert_eq!(
+        bucket_for(Some(&refuted), Some("confirmed")),
+        Bucket::Possible { disputed: true }
+    );
+
+    // With no proof at all the judge is all there is.
+    assert_eq!(bucket_for(None, Some("Confirm")), Bucket::Definite);
+    assert_eq!(bucket_for(None, Some("REJECTED")), Bucket::Dismissed);
+    assert_eq!(bucket_for(None, None), Bucket::Possible { disputed: false });
+
+    // An inconclusive proof is not evidence either way — the self-check
+    // sends contradictory scripts here, and they must not carry a finding.
+    let nothing = ProofOutcome::Inconclusive("compared nothing".to_string());
+    assert_eq!(
+        bucket_for(Some(&nothing), None),
+        Bucket::Possible { disputed: false }
+    );
+    assert_eq!(
+        bucket_for(Some(&nothing), Some("reject")),
+        Bucket::Dismissed
+    );
 }
