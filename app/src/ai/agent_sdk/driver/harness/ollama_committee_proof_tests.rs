@@ -1144,3 +1144,25 @@ fn a_claim_that_holds_against_the_committed_code_is_not_about_the_change() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_round_that_moved_nothing_has_finished() {
+    let one = vec![
+        ("a".to_string(), "x".to_string()),
+        ("b".to_string(), "y".to_string()),
+    ];
+    // Three paired runs produced a different program of exactly equal
+    // quality, deterministically, while doubling the run. Where a round
+    // genuinely hands back what it was given, there is nothing left to do.
+    assert!(round_changed_nothing(&one, &one.clone()));
+
+    let moved = vec![
+        ("a".to_string(), "x".to_string()),
+        ("b".to_string(), "z".to_string()),
+    ];
+    assert!(!round_changed_nothing(&one, &moved));
+
+    // Nothing to compare is not the same as nothing having happened.
+    assert!(!round_changed_nothing(&[], &[]));
+    assert!(!round_changed_nothing(&one, &one[..1].to_vec()));
+}

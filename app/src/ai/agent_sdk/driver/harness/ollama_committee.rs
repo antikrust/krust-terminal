@@ -26,9 +26,10 @@ use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
     calls_only, classify_proof, contract_for, contracts_in, demonstrates, detect_suite,
     imported_context, lost_ground, mismatch_call, observations, oracle_mismatches, parse_oracle,
-    parse_proposed_calls, probe_source, proof_script_is_fixable, run_against_head,
-    run_behavior_probe, run_proof_script, run_python_tests, run_suite, self_check,
-    strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
+    parse_proposed_calls, probe_source, proof_script_is_fixable, round_changed_nothing,
+    run_against_head, run_behavior_probe, run_proof_script, run_python_tests, run_suite,
+    self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
+    PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -5731,6 +5732,7 @@ pub async fn run_ollama_committee(
             // Intermediate rounds, as planned up front in the settings: each
             // kind is a different way of turning judgment into a next draft.
             for (round_index, kind) in panel_plan.iter().enumerate() {
+                let before = answers.clone();
                 run_panel_round(
                     *kind,
                     round_index + 2,
@@ -5745,6 +5747,22 @@ pub async fn run_ollama_committee(
                     &mut on_event,
                 )
                 .await?;
+                // A committee that has run out of things to say should say
+                // so. Three paired runs of a notes round rewrote the answer
+                // into a different program that scored exactly the same,
+                // deterministically, while more than doubling the run — and
+                // nothing in the loop compared where it started with where
+                // it got to, so nothing could notice.
+                if round_changed_nothing(&before, &answers) {
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "**Nothing changed in round {}** — every panelist handed back what \
+                             they already had, so the remaining rounds are skipped.",
+                            round_index + 2
+                        ),
+                    });
+                    break;
+                }
             }
 
             let artifact = run_panel_verdict(

@@ -888,6 +888,29 @@ pub(crate) fn lost_ground(before: &str, after: &str) -> Option<String> {
     None
 }
 
+/// Whether a round moved anything at all.
+///
+/// Measured over three paired runs, a notes round rewrote the panel's answer
+/// into a *different program that scored exactly the same* — same failing
+/// case, nothing else broken — and did it deterministically, three times,
+/// while more than doubling the run. The loop had no way to notice, because
+/// nothing in it ever compared where it started with where it got to.
+///
+/// A round that changed no observable behaviour has finished, whatever it
+/// did to the text. Saying so is worth more than another round of it.
+pub(crate) fn round_changed_nothing(
+    before: &[(String, String)],
+    after: &[(String, String)],
+) -> bool {
+    if before.len() != after.len() || before.is_empty() {
+        return false;
+    }
+    before
+        .iter()
+        .zip(after)
+        .all(|((_, was), (_, is))| was == is)
+}
+
 /// Whether an execution amounts to "the defect is real", by the same rule
 /// the proof round uses: the comparison it printed decides, and a bare
 /// exit 0 with nothing compared decides nothing.
