@@ -434,4 +434,48 @@ runner.
 | A proof script that crashes instead of deciding | One automatic retry with the interpreter's complaint quoted back; `assert` is banned in the prompt because an AssertionError is a crash |
 | Six stages of models agreeing with each other | The closing audit is read by a model that sat the run out |
 | A verdict that scrolls away | Every run is written down; `save transcript` keeps it |
+| A proof whose exit code owes nothing to what it saw | `expected:`/`actual:` lines are checked against the exit code; a claim of "defect real" with nothing compared is inconclusive |
+| A retry that regenerates the same broken script | The second attempt is sampled warm; at temperature 0 it was returning the identical script, traceback and all |
+| A defect under an unchanged signature | Probe targets come from hunk headers and context lines, not only added `def`s |
+| A defect only the caller can see | The unchanged files the diff imports go in as evidence, signatures and contracts only |
+| The interpreter and the judge flatly disagreeing | Neither wins: it goes to "Might be" and says which two things conflict |
+| A fixture that tells the models the answer | Found the hard way — see below |
+
+## What the runs actually showed
+
+Every entry above the line was designed in. The ones below were found by
+running it, which is what `committee-tests/` and the `a_real_committee`
+bench exist for.
+
+**The fixture was the first bug.** `stock.py`'s module docstring explained
+that it held three planted defects, one per function. That docstring is part
+of the diff. Across two runs, all six reviewers reported exactly three
+findings. Nothing measured until that came out.
+
+**A green proof round is not evidence of anything by itself.** Both runs
+certified defects on scripts that never touched them. One printed the result
+of `cheapest([])` — not the defect — and called `exit(0)` under a comment
+saying "defect is real if it returns a non-None value"; the comparison was in
+the comment, and the interpreter doesn't read comments. Another wrote
+`assert result == False` for `needs_reorder(5, 5)`, asserting the buggy
+answer as the expected one, then reported the defect it had just certified as
+correct. Both reached **Definite**.
+
+**The behaviour report was probing the wrong function.** It only ran
+functions whose `def` line was an added line — which in the stock diff meant
+`restock` and nothing else, while the two defects that kept being missed were
+in the two functions whose bodies changed under untouched signatures.
+
+**And its noise was manufacturing findings.** Its second line was
+`restock(1, 2, 3) !! AttributeError: 'int' object has no attribute 'append'`
+— the probe passing an int where a list goes. A reviewer copied it out as a
+finding, a prover reproduced it exactly, the judge confirmed it, and the run
+reported a defect that was entirely the probe's own doing.
+
+**The scoreboard flattered itself.** A verdict reading "Definite (5)" was, on
+inspection, two real defects, one of them counted twice under two line
+numbers, one invention from the paragraph above, and one finding the judge
+had rejected in the same breath. Which is why `committee-tests/README.md`
+scores runs as found / missed / invented / doubled rather than by the
+verdict's own headline.
 | A recognisable command that isn't understood | Asks what it needs — it never silently becomes a panel question |
