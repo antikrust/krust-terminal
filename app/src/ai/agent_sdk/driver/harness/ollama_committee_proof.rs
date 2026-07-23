@@ -693,13 +693,20 @@ pub(crate) fn oracle_mismatches(
         let Some(observation) = observed.iter().find(|entry| &entry.call == call) else {
             continue;
         };
-        // Python prints True/False and 1/0 for the same values in some
-        // positions; only flag a difference that survives the obvious
-        // spellings.
+        // Only flag a difference that survives the obvious spellings. An
+        // oracle writing a literal from prose picks a notation as much as a
+        // value: it answered `[[0, []]]` where the code returned
+        // `[(0, [])]`, which is the same shape in different brackets and
+        // absolutely not a defect. Manufacturing findings out of notation is
+        // the mistake the behaviour probe already had to have taken out of
+        // it.
         let normalise = |value: &str| match value.trim() {
             "1" => "True".to_string(),
             "0" => "False".to_string(),
-            other => other.to_string(),
+            other => other
+                .replace(['(', '['], "[")
+                .replace([')', ']'], "]")
+                .replace(' ', ""),
         };
         if normalise(expected).eq_ignore_ascii_case(&normalise(&observation.result)) {
             continue;

@@ -840,4 +840,10 @@ fn the_oracle_is_asked_what_should_have_happened_and_the_harness_does_the_compar
         .len(),
         1
     );
+
+    // Real, from a live run: the oracle answered `[[0, []]]` where the code
+    // returned `[(0, [])]` — the same shape in different brackets, which is
+    // a notation it picked and not a defect it found.
+    let brackets = vec![("restock(0, [])".to_string(), "[[0, []]]".to_string())];
+    assert!(oracle_mismatches(&brackets, &observed).is_empty());
 }
