@@ -622,6 +622,96 @@ fn parse_def(source: &str) -> Option<(String, usize)> {
 /// How much of the surrounding code the reviewers are shown.
 const MAX_IMPORTED_CHARS: usize = 1_600;
 
+/// One call the probe made, with what the code returned.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Observation {
+    pub(crate) call: String,
+    pub(crate) result: String,
+}
+
+/// Splits a behaviour report back into its observations.
+pub(crate) fn observations(report: &str) -> Vec<Observation> {
+    report
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            // The repeat marker describes a pair of calls rather than one,
+            // so there is no single value to hold it to.
+            if line.contains(" a second time") {
+                return None;
+            }
+            let (call, result) = line.split_once(" -> ")?;
+            call.contains('(').then(|| Observation {
+                call: call.trim().to_string(),
+                result: result.trim().to_string(),
+            })
+        })
+        .collect()
+}
+
+/// Reads an oracle's `call -> literal` reply, keeping only the calls that
+/// were actually asked about. A model that invents a call, answers in prose,
+/// or says UNKNOWN contributes nothing rather than something wrong.
+pub(crate) fn parse_oracle(reply: &str, asked: &[Observation]) -> Vec<(String, String)> {
+    let mut answers: Vec<(String, String)> = Vec::new();
+    for line in reply.lines() {
+        let line = line.trim().trim_start_matches(['-', '*', '•']).trim();
+        let Some((call, expected)) = line.split_once("->") else {
+            continue;
+        };
+        let call = call.trim().trim_matches('`').trim();
+        let expected = expected.trim().trim_matches('`').trim();
+        if expected.is_empty() || expected.eq_ignore_ascii_case("unknown") {
+            continue;
+        }
+        // Long answers are prose, not literals, and prose can't be compared.
+        if expected.len() > 80 {
+            continue;
+        }
+        if !asked.iter().any(|observation| observation.call == call) {
+            continue;
+        }
+        if answers.iter().any(|(known, _)| known == call) {
+            continue;
+        }
+        answers.push((call.to_string(), expected.to_string()));
+    }
+    answers
+}
+
+/// Where a docstring and the code disagree about one call: the strongest
+/// evidence this pipeline can produce, and the cheapest.
+///
+/// Only the calls whose answers differ, and only as text — the caller turns
+/// them into a report.
+pub(crate) fn oracle_mismatches(
+    answers: &[(String, String)],
+    observed: &[Observation],
+) -> Vec<String> {
+    let mut mismatches = Vec::new();
+    for (call, expected) in answers {
+        let Some(observation) = observed.iter().find(|entry| &entry.call == call) else {
+            continue;
+        };
+        // Python prints True/False and 1/0 for the same values in some
+        // positions; only flag a difference that survives the obvious
+        // spellings.
+        let normalise = |value: &str| match value.trim() {
+            "1" => "True".to_string(),
+            "0" => "False".to_string(),
+            other => other.to_string(),
+        };
+        if normalise(expected).eq_ignore_ascii_case(&normalise(&observation.result)) {
+            continue;
+        }
+        mismatches.push(format!(
+            "{call} returned {}, but its docstring says it should return {expected}",
+            observation.result
+        ));
+    }
+    mismatches
+}
+
 /// The behaviour report with every result cut off, leaving only the calls.
 ///
 /// The report is the right thing to show a prover and the wrong thing to
@@ -677,6 +767,22 @@ pub(crate) fn calls_only(report: &str) -> String {
 /// lines above the change and went unread, so now it arrives on its own.
 pub(crate) fn contract_for(diff: &str, subject: &str) -> Option<String> {
     let subject = subject.to_ascii_lowercase();
+    contracts_in(diff)
+        .into_iter()
+        // The claim has to actually be about this function. Word-bounded, so
+        // a title saying "restock" doesn't match a `stock` function.
+        .find(|(name, _)| {
+            subject
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .any(|word| word == name)
+        })
+        .map(|(_, block)| block)
+}
+
+/// Every changed function's signature and docstring, by name. Lowercased
+/// names, because everything that matches against them is a model's prose.
+pub(crate) fn contracts_in(diff: &str) -> Vec<(String, String)> {
+    let mut contracts: Vec<(String, String)> = Vec::new();
     let mut lines = diff.lines().peekable();
     while let Some(line) = lines.next() {
         // A signature reaches the diff two ways: as a line of its own, or —
@@ -695,13 +801,8 @@ pub(crate) fn contract_for(diff: &str, subject: &str) -> Option<String> {
         let Some((name, _)) = parse_def(content) else {
             continue;
         };
-        // The claim has to actually be about this function. Word-bounded, so
-        // a title saying "restock" doesn't match a `stock` function.
         let name = name.to_ascii_lowercase();
-        if !subject
-            .split(|c: char| !c.is_alphanumeric() && c != '_')
-            .any(|word| word == name)
-        {
+        if contracts.iter().any(|(known, _)| known == &name) {
             continue;
         }
         let mut block = content.to_string();
@@ -716,9 +817,9 @@ pub(crate) fn contract_for(diff: &str, subject: &str) -> Option<String> {
                 block.push_str(doc);
             }
         }
-        return Some(block);
+        contracts.push((name, block));
     }
-    None
+    contracts
 }
 
 /// The python files the diff imports but does not change, summarised.

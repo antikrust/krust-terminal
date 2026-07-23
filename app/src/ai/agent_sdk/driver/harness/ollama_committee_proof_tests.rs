@@ -778,3 +778,66 @@ fn a_prover_sees_which_inputs_were_tried_and_not_what_they_returned() {
     // The file heading isn't a call.
     assert!(!calls.contains("stock.py:"), "{calls}");
 }
+
+#[test]
+fn the_oracle_is_asked_what_should_have_happened_and_the_harness_does_the_comparing() {
+    let report = "stock.py:\n\
+                  cheapest([0, 5]) -> 5\n\
+                  needs_reorder(3, 3) -> False\n\
+                  needs_reorder(7, 0) -> False\n\
+                  restock(0, []) -> [(0, [])]\n\
+                  restock(0, []) a second time -> [(0, []), (0, [])]\n";
+    let observed = observations(report);
+    assert_eq!(observed.len(), 4, "the repeat marker is not one call");
+    assert_eq!(observed[0].call, "cheapest([0, 5])");
+    assert_eq!(observed[0].result, "5");
+
+    // A plausible reply, with everything models actually do to it: bullets,
+    // backticks, an UNKNOWN, prose instead of a literal, and a call nobody
+    // asked about.
+    let reply = "- `cheapest([0, 5])` -> 0\n\
+                 needs_reorder(3, 3) -> True\n\
+                 needs_reorder(7, 0) -> False\n\
+                 restock(0, []) -> UNKNOWN\n\
+                 cheapest([9]) -> 9\n\
+                 split_pot(1, []) -> it depends on whether the roster is empty, which the \
+                 docstring does not say, so this is hard to answer definitively\n";
+    let answers = parse_oracle(reply, &observed);
+    assert_eq!(
+        answers,
+        vec![
+            ("cheapest([0, 5])".to_string(), "0".to_string()),
+            ("needs_reorder(3, 3)".to_string(), "True".to_string()),
+            ("needs_reorder(7, 0)".to_string(), "False".to_string()),
+        ]
+    );
+
+    // And the comparison, which no model gets a vote on. Two defects, each
+    // stated as a contradiction between the code and its own documentation —
+    // and `needs_reorder(7, 0)`, which agrees, stays quiet.
+    let mismatches = oracle_mismatches(&answers, &observed);
+    assert_eq!(
+        mismatches,
+        vec![
+            "cheapest([0, 5]) returned 5, but its docstring says it should return 0".to_string(),
+            "needs_reorder(3, 3) returned False, but its docstring says it should return True"
+                .to_string(),
+        ]
+    );
+
+    // 0 and False are the same value wearing different hats, and an oracle
+    // that answers in the other spelling has not found a defect.
+    let spelling = vec![("needs_reorder(7, 0)".to_string(), "0".to_string())];
+    assert!(oracle_mismatches(&spelling, &observed).is_empty());
+
+    // But the same spelling against a genuinely different value still is
+    // one: `1` where the code said `False` is True against False.
+    assert_eq!(
+        oracle_mismatches(
+            &[("needs_reorder(3, 3)".to_string(), "1".to_string())],
+            &observed
+        )
+        .len(),
+        1
+    );
+}

@@ -24,10 +24,10 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
-    calls_only, classify_proof, contract_for, detect_suite, imported_context,
-    proof_script_is_fixable, run_behavior_probe, run_proof_script, run_python_tests, run_suite,
-    self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
-    PROOF_TIMEOUT_SECS,
+    calls_only, classify_proof, contract_for, contracts_in, detect_suite, imported_context,
+    observations, oracle_mismatches, parse_oracle, proof_script_is_fixable, run_behavior_probe,
+    run_proof_script, run_python_tests, run_suite, self_check, strip_code_fences, ProofOutcome,
+    SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -2214,6 +2214,36 @@ negatives, duplicates) are fair game and are often where the real defect is. \
 Judge only the suspected defect — not style, not other code. No \
 user input, no network, no infinite loops: finish in under ten seconds. Output ONLY the python3 \
 script — no commentary, no code fences.";
+
+const ORACLE_SYSTEM_PROMPT: &str = "You are given some python functions with their docstrings, \
+and a list of calls that were made to them. For each call, say what it SHOULD return if the \
+function does exactly what its docstring and its name say it does. \
+You have NOT been told what any of them actually returned, and you must not guess at it: \
+work only from the documented promise. \
+Answer one line per call, in the form `call -> value`, where value is a single python literal \
+(a number, True, False, None, a string, a list) and nothing else — no explanation, no working, \
+no code fences. If a docstring genuinely doesn't determine the answer for a call, write \
+`call -> UNKNOWN` and move on. Answer every call, in the order given.";
+
+/// The oracle stage exists because writing a correct proof script turned out
+/// to be the hardest thing asked of these models, and the least necessary.
+///
+/// A prover has to choose an input, work out what correct would be, call the
+/// code, compare the two, and map that to an exit code — and across measured
+/// runs it failed at the middle step every time, filling in `expected` from
+/// what it had just observed and refuting three real defects in a row.
+///
+/// So the harness does everything except the one part a model is actually
+/// good at. It has already made the calls. It asks only: *what should this
+/// have returned?* — without showing what it did return, so there is nothing
+/// to copy — and does the comparing itself.
+fn oracle_user_prompt(contracts: &str, calls: &[String]) -> String {
+    format!(
+        "The functions and what they promise:\n{contracts}\n\
+         The calls:\n{}\n\nGive one `call -> value` line for each.",
+        calls.join("\n")
+    )
+}
 
 fn prover_user_prompt(
     diff: &str,
@@ -4548,6 +4578,56 @@ pub async fn run_ollama_committee(
                         .to_string(),
                 });
             }
+
+            // The oracle. One call, before anyone has an opinion: what should
+            // these calls have returned? Asked of a model that is not shown
+            // what they did return, so there is nothing for it to copy, and
+            // compared by the harness rather than by anybody's exit code.
+            let mut oracle_lines: Vec<String> = Vec::new();
+            if let Some(report) = &behavior_report {
+                let observed = observations(report);
+                let contracts = contracts_in(&diff)
+                    .into_iter()
+                    .map(|(_, block)| block)
+                    .collect::<Vec<_>>()
+                    .join("\n\n");
+                if !observed.is_empty() && !contracts.is_empty() {
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "**{}** is being asked what those calls should have returned…",
+                            judge_stage_name(&plan.judge.name, config.personas)
+                        ),
+                    });
+                    let calls: Vec<String> =
+                        observed.iter().map(|entry| entry.call.clone()).collect();
+                    let (_, outcome) = chat_once(
+                        &plan.judge.name,
+                        ORACLE_SYSTEM_PROMPT,
+                        &oracle_user_prompt(&contracts, &calls),
+                        plan.judge.thinking,
+                        keep_alive,
+                        working_dir,
+                        path,
+                        &mut on_event,
+                    )
+                    .await?;
+                    if let Ok(stage) = outcome {
+                        add_usage(&mut total_usage, &stage.usage);
+                        let answers = parse_oracle(&stage.content, &observed);
+                        oracle_lines = oracle_mismatches(&answers, &observed);
+                    }
+                }
+                on_event(TurnEvent::Text {
+                    text: if oracle_lines.is_empty() {
+                        "No call disagreed with its own docstring.".to_string()
+                    } else {
+                        format!(
+                            "**Where the code and its documentation disagree:**\n```text\n{}\n```",
+                            oracle_lines.join("\n")
+                        )
+                    },
+                });
+            }
             // The unchanged files the diff calls into. Without these a
             // reviewer cannot see that `line_total` returns pence, and so
             // cannot see that the changed line prints it with a pound sign —
@@ -4571,6 +4651,18 @@ pub async fn run_ollama_committee(
                 evidence_lines.push(format!(
                     "Observed behavior of the changed functions (generic probe):\n{report}"
                 ));
+            }
+            // Put first among equals in the reviewers' heads: a call whose
+            // own docstring contradicts it is a defect already located.
+            if !oracle_lines.is_empty() {
+                evidence_lines.insert(
+                    0,
+                    format!(
+                        "These calls contradict their own documentation — each one is a defect \
+                         unless the documentation is what's wrong:\n{}",
+                        oracle_lines.join("\n")
+                    ),
+                );
             }
             if let Some(context) = &imported {
                 evidence_lines.push(format!(
