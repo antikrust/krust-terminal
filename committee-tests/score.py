@@ -43,7 +43,18 @@ PLANTED = {
         (
             "restock",
             "`log=[]` is one list shared by every call",
-            ["state between", "mutable default", "shared", "same list", "accumulat"],
+            [
+                "between call",
+                "mutable default",
+                "shared",
+                "same list",
+                "accumulat",
+                "does not clear",
+                "not cleared",
+                "previous call",
+                "instead of none",
+                "log=[]",
+            ],
         ),
     ],
     "payday": [
