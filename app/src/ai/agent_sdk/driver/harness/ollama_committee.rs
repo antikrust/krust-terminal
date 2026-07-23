@@ -2097,10 +2097,15 @@ TO the threshold is a defect. A function that answers differently the second tim
 called with the same arguments is keeping state between calls, which is a defect unless it \
 is meant to. \
 READ THE DIFF THE RIGHT WAY ROUND. A line starting with `-` is the OLD code and is GONE; a \
-line starting with `+` or a space is what the file says NOW. Never report a defect in a `-` \
-line, and never describe removed code as though it were still there — \"unnecessary \
-initialization of log\" about an initialization the diff deleted is a finding about a file \
-that no longer exists. \
+line starting with `+` or a space is what the file says NOW. Never describe removed code as \
+though it were still there — \"unnecessary initialization of log\" about an initialization \
+the diff deleted is a finding about a file that no longer exists. \
+BUT A DELETION CAN ITSELF BE THE DEFECT, and it is one of the easiest to miss because there \
+is no new line to look at. When the diff removes a guard, an early return, a bounds check, a \
+None check or an empty-collection check, ask what now happens in the case it used to cover — \
+`if not players: return {}` taken out means an empty roster now divides by zero — and report \
+that as a defect in the code as it stands. The docstring will usually not mention the case at \
+all, which is exactly why the deleted line is the only evidence there is. \
 Respond with STRICT JSON only — an array of findings, each shaped like \
 {\"file\":\"path/as/in/diff\",\"line\":123,\"severity\":\"high\",\"title\":\"one sentence naming \
 the defect\",\"detail\":\"why it is wrong and what breaks\"} with severity one of \
