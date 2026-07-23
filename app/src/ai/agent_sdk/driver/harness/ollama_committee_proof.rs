@@ -107,6 +107,65 @@ fn last_line(text: &str, max_chars: usize) -> String {
     format!("{}…", line.chars().take(max_chars).collect::<String>())
 }
 
+/// What a proof script said about its own verdict, read back off stdout.
+///
+/// The exit code alone is worth very little. A prover that writes
+///
+/// ```text
+/// result = stock.cheapest([])
+/// print(f"Observed: {result}")
+/// exit(0)  # Defect is real if it returns a non-None value
+/// ```
+///
+/// exits 0 whatever it saw: the comment does the comparing and the
+/// interpreter never reads comments. That script certified a defect it had
+/// not touched. So the contract asks for the comparison in the output, where
+/// it can be checked without asking a model anything.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum SelfCheck {
+    /// Said what it expected and what it got, and its exit code agrees.
+    Consistent,
+    /// Said both, and its exit code says the opposite of what they say.
+    Contradicted(String),
+    /// Never said, so the exit code is the only thing to go on.
+    Unstated,
+}
+
+/// The `expected:`/`actual:` value a script reported, if it reported one.
+/// The colon is required — "expectedly slow" is prose, not a verdict.
+fn reported(stdout: &str, label: &str) -> Option<String> {
+    stdout.lines().rev().find_map(|line| {
+        let line = line.trim();
+        if !line.get(..label.len())?.eq_ignore_ascii_case(label) {
+            return None;
+        }
+        let value = line[label.len()..].trim_start().strip_prefix(':')?;
+        Some(value.trim().to_string())
+    })
+}
+
+/// Checks a script's exit code against the comparison it printed. Only an
+/// outright contradiction is called one — a script that printed neither line
+/// is [`SelfCheck::Unstated`], which the caller weighs by what it claimed.
+pub(crate) fn self_check(stdout: &str, exit_code: i32) -> SelfCheck {
+    let (Some(expected), Some(actual)) = (reported(stdout, "expected"), reported(stdout, "actual"))
+    else {
+        return SelfCheck::Unstated;
+    };
+    let same = expected.eq_ignore_ascii_case(&actual);
+    match (exit_code, same) {
+        (0, true) => SelfCheck::Contradicted(format!(
+            "the script claimed the defect is real but reported the same value twice \
+             (expected {expected}, actual {actual}) — that is the code behaving correctly"
+        )),
+        (1, false) => SelfCheck::Contradicted(format!(
+            "the script claimed the code is fine but reported expected {expected} and actual \
+             {actual} — those differ, which is the defect"
+        )),
+        _ => SelfCheck::Consistent,
+    }
+}
+
 /// Maps a proof script's exit to its meaning. 0 and 1 are the contract;
 /// [`TIMEOUT_EXIT_CODE`] is the wrapper's marker; anything else is a crash.
 pub(crate) fn classify_proof(execution: &ShellExecution) -> ProofOutcome {

@@ -25,8 +25,8 @@ use uuid::Uuid;
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
     classify_proof, detect_suite, proof_script_is_fixable, run_behavior_probe, run_proof_script,
-    run_python_tests, run_suite, strip_code_fences, ProofOutcome, SuiteOutcome, MAX_PROOFS,
-    PROOF_TIMEOUT_SECS,
+    run_python_tests, run_suite, self_check, strip_code_fences, ProofOutcome, SelfCheck,
+    SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -2091,8 +2091,14 @@ first on sys.path, so `import <modulename>` works for files in the repository ro
 changed file by its module name (no .py) and call the function directly. \
 STDLIB ONLY: never import a third-party package, never import a module the diff does not show, \
 and never install anything — an import that fails proves nothing and wastes the round. \
-Exercise exactly the suspected defect, print one short line stating what you observed, then \
-exit 0 if the DEFECT IS REAL and exit 1 if the code actually behaves correctly. You MUST end by \
+Exercise exactly the suspected defect, then print EXACTLY these two lines and nothing else:\n\
+print('expected:', <what correct code would have produced>)\n\
+print('actual:', <what this code actually produced>)\n\
+EXPECTED comes from what the function is FOR — read its docstring and its name. NEVER copy it \
+from what the code does: if you fill in expected from the observed value they will always match \
+and you will have proved nothing. Then exit 0 if the two lines DIFFER (the defect is real) and \
+exit 1 if they are THE SAME (the code behaves correctly). Those two lines are checked against \
+your exit code, so exit(0) after printing the same value twice is thrown away. You MUST end by \
 calling exit(0) or exit(1) on every path — a script that raises or falls off the end is thrown \
 away, not counted as a verdict. NEVER use assert: an AssertionError is a crash, so it throws \
 your work away. Wrap what you are testing in try/except, decide what you saw, and exit. \
@@ -2658,6 +2664,24 @@ fn committee_usage() -> TurnUsage {
 fn success_status() -> ExitStatus {
     use std::os::unix::process::ExitStatusExt;
     ExitStatus::from_raw(0)
+}
+
+/// How a member's tag reads on the bench: the model, and the machine it
+/// runs on when that isn't this one. The address is stripped back to what a
+/// person recognises — nobody needs to read `http://` and Ollama's port to
+/// know which box they mean.
+fn member_tag(member: &Member) -> String {
+    let (bare, host) = crate::ai::ollama::remote::split(&member.name);
+    match host {
+        Some(host) => {
+            let host = host
+                .trim_start_matches("http://")
+                .trim_start_matches("https://")
+                .trim_end_matches(":11434");
+            format!("{bare} on {host}")
+        }
+        None => bare.to_string(),
+    }
 }
 
 fn member_credentials(member: &Member) -> String {
@@ -3315,25 +3339,40 @@ async fn prove_finding(
         let prover_prompt = prover_user_prompt(diff, finding, steer.as_deref());
         // The judge stage reassigns the run's exit status afterwards, so the
         // prover's own status isn't tracked.
-        let (_, outcome) = chat_once(
+        //
+        // The retry is warm on purpose. At temperature 0 a model handed
+        // nearly the same prompt writes the same script: one run put the
+        // identical `NameError` script in twice, traceback and all, and
+        // burned the retry proving the same nothing. Enough sampling noise to
+        // make a different choice is the whole value of a second attempt.
+        let (_, outcome) = chat_once_at(
             &prover.name,
             PROVER_SYSTEM_PROMPT,
             &prover_prompt,
             prover.thinking,
+            if attempt == 0 {
+                COLD_TEMPERATURE
+            } else {
+                WARM_TEMPERATURE
+            },
             keep_alive,
             working_dir,
             path,
             on_event,
         )
         .await?;
-        let (proof, exit_code) = match outcome {
+        let (proof, retry_note) = match outcome {
             Ok(stage) => {
                 add_usage(total_usage, &stage.usage);
                 let script = strip_code_fences(&stage.content);
                 if script.trim().is_empty() {
                     (
                         ProofOutcome::Inconclusive("the prover produced no script".to_string()),
-                        None,
+                        Some(
+                            "You returned no script at all. Reply with python3 source and \
+                             nothing else — no explanation, no code fences."
+                                .to_string(),
+                        ),
                     )
                 } else {
                     on_event(TurnEvent::Text {
@@ -3368,7 +3407,47 @@ async fn prove_finding(
                     });
                     finding.proof_script = Some(script);
                     let code = execution.exit_code;
-                    (classify_proof(&execution), Some(code))
+                    // Nothing reaches Definite on an exit code alone. A
+                    // script that says the defect is real has to have said
+                    // what correct behaviour would be and shown something
+                    // else; one that contradicts its own output is no
+                    // verdict at all.
+                    match self_check(&execution.stdout, code) {
+                        SelfCheck::Contradicted(reason) => (
+                            ProofOutcome::Inconclusive(reason.clone()),
+                            Some(format!(
+                                "Your script and its own output disagree: {reason}. Work out \
+                                 which one is right, then make the exit code follow the two \
+                                 lines you printed."
+                            )),
+                        ),
+                        SelfCheck::Unstated if code == 0 => (
+                            ProofOutcome::Inconclusive(
+                                "the script claimed the defect is real without ever saying what \
+                                 it expected, so it compared nothing"
+                                    .to_string(),
+                            ),
+                            Some(
+                                "Your script exited 0 — the defect is real — without printing \
+                                 an `expected:` line and an `actual:` line, so nothing was \
+                                 compared and a comment saying what it means is not a \
+                                 comparison. Print both lines with real values in them and \
+                                 exit 0 only if they differ."
+                                    .to_string(),
+                            ),
+                        ),
+                        _ => (
+                            classify_proof(&execution),
+                            proof_script_is_fixable(code).then(|| {
+                                "That script never returned a verdict — it raised, or it ended \
+                                 without calling exit(). Do not use assert: an AssertionError \
+                                 is a crash, not an answer. Print the `expected:` and `actual:` \
+                                 lines, then call exit(0) if they differ or exit(1) if they are \
+                                 the same, on every path."
+                                    .to_string()
+                            }),
+                        ),
+                    }
                 }
             }
             Err(error) => (
@@ -3379,21 +3458,14 @@ async fn prove_finding(
         on_event(TurnEvent::Text {
             text: format!("#{}: {}", index + 1, proof.label()),
         });
-        let retry = attempt == 0 && exit_code.is_some_and(proof_script_is_fixable);
         finding.proof = Some(proof);
-        if !retry {
-            break;
+        // The prover sees its own script and what went wrong with it, not a
+        // scolding — the contract it broke is the one thing it needs
+        // restated.
+        match retry_note.filter(|_| attempt == 0) {
+            Some(note) => steer = Some(note),
+            None => break,
         }
-        // The prover sees its own script and the traceback, not a scolding —
-        // the contract it broke is the one thing it needs restated.
-        steer = Some(
-            "That script never returned a verdict — it raised, or it ended without calling \
-             exit(). Do not use assert: an AssertionError is a crash, not an answer. Decide \
-             for yourself whether the behaviour you observed is the defect, then call \
-             exit(0) if the defect is real or exit(1) if the code behaves correctly, on \
-             every path."
-                .to_string(),
-        );
     }
     Ok(())
 }
@@ -3411,6 +3483,10 @@ pub async fn run_ollama_committee(
     working_dir: &Path,
     path: &str,
     config: OllamaCommitteeConfig,
+    // Models on other machines, host-qualified, snapshotted where `ctx` was
+    // available. The bench draws from these as readily as from local ones —
+    // a 32B on the box across the room costs this machine nothing.
+    remote_models: Vec<String>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     // Everything the run says is kept as it is said, so the end of the run
@@ -4062,7 +4138,7 @@ pub async fn run_ollama_committee(
     // Assemble: everything the live server offers (it just answered the
     // service check), falling back to a disk read if /api/tags fails —
     // except the committee itself.
-    let installed: Vec<String> = fetch_installed_model_names(path)
+    let mut installed: Vec<String> = fetch_installed_model_names(path)
         .await
         .unwrap_or_else(|| {
             installed_models_from_disk()
@@ -4073,6 +4149,17 @@ pub async fn run_ollama_committee(
         .into_iter()
         .filter(|name| name != COMMITTEE_MODEL_NAME)
         .collect();
+    // Remote models come from the host list's cache rather than a live
+    // request: a committee run must not stall while a machine that may be
+    // asleep decides whether to answer. Checking a host on the Ollama page
+    // is what refreshes it.
+    for model in remote_models {
+        let (bare, _) = crate::ai::ollama::remote::split(&model);
+        if bare == COMMITTEE_MODEL_NAME || installed.contains(&model) {
+            continue;
+        }
+        installed.push(model);
+    }
     if installed.is_empty() {
         emit_failed_turn(
             &mut on_event,
@@ -4085,12 +4172,16 @@ pub async fn run_ollama_committee(
     let mut members: Vec<Member> = Vec::with_capacity(installed.len());
     for name in &installed {
         let caps = probe_model_caps(name, path).await;
+        // `qwen2.5-coder:32b@http://192.168.1.150:11434` is one model with an
+        // address stuck on the end; everything that reads the tag has to
+        // read the tag, or a remote 32B parses as a 0B model of no family.
+        let (bare, _) = crate::ai::ollama::remote::split(name);
         members.push(Member {
             display: stage_name(name, config.personas),
-            family: model_family(name),
-            coder: is_coder_model(name),
+            family: model_family(bare),
+            coder: is_coder_model(bare),
             thinking: caps.thinking,
-            size_billions: model_size_billions(name),
+            size_billions: model_size_billions(bare),
             name: name.clone(),
         });
     }
@@ -4191,14 +4282,14 @@ pub async fn run_ollama_committee(
             "- Reviewer {}: **{}** — `{}`{}\n",
             index + 1,
             reviewer.display,
-            reviewer.name,
+            member_tag(reviewer),
             member_credentials(reviewer),
         ));
     }
     assembly.push_str(&format!(
         "- Judge: **{}** — `{}`{}{}\n",
         plan.judge.display,
-        plan.judge.name,
+        member_tag(&plan.judge),
         member_credentials(&plan.judge),
         if plan.judge_is_reviewer {
             " — also sat as a reviewer; no other model is installed"

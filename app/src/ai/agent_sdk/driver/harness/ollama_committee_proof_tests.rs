@@ -459,3 +459,48 @@ fn a_test_file_that_cannot_run_says_so_instead_of_reporting_zero_failures() {
         .as_deref()
         .is_some_and(|reason| reason.contains("no test_")));
 }
+
+#[test]
+fn a_proof_that_compared_nothing_is_not_a_proof() {
+    // Verbatim from a real run: the comparison lived in a comment, and the
+    // interpreter does not read comments. It exited 0 having looked at the
+    // empty list, which is not the defect, and the committee filed it under
+    // Definite.
+    assert_eq!(self_check("Observed: None\n", 0), SelfCheck::Unstated);
+
+    // Also real: the prover wrote down the buggy value as the expected one,
+    // then exited 0. Two identical values cannot demonstrate a defect, and
+    // that is decidable without asking anyone.
+    assert!(matches!(
+        self_check("expected: False\nactual: False\n", 0),
+        SelfCheck::Contradicted(_)
+    ));
+
+    // The other way round: it saw a difference and called the code fine.
+    assert!(matches!(
+        self_check("expected: 0\nactual: 5\n", 1),
+        SelfCheck::Contradicted(_)
+    ));
+
+    // What the contract asks for, both ways round.
+    assert_eq!(
+        self_check("expected: 0\nactual: 5\n", 0),
+        SelfCheck::Consistent
+    );
+    assert_eq!(
+        self_check("expected: 90\nactual: 90\n", 1),
+        SelfCheck::Consistent
+    );
+
+    // Models capitalise as the mood takes them, and print things first.
+    assert_eq!(
+        self_check("Loaded stock.py\nEXPECTED: 0\nActual:  5\n", 0),
+        SelfCheck::Consistent
+    );
+
+    // A stray word beginning with the label is not the label.
+    assert_eq!(
+        self_check("expectedly slow\nactually fine\n", 0),
+        SelfCheck::Unstated
+    );
+}
