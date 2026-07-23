@@ -101,9 +101,26 @@ notes and everyone revises. Measured against the same graders:
 `durations` (edit) stayed 12 / 12 through every one of those, and cost
 6½ extra minutes to do it.
 
-Nothing here has ever made a result better. Three configurations made it
-worse, one made it less worse, and the last one merely failed to do damage —
-with no revert logged, so the guard was never tested, only unexercised.
+Measured properly afterwards — three paired runs, alternating so any drift
+hit both arms — the current pipeline gives:
+
+| Pair | No round | One round | Reverts |
+| --- | --- | --- | --- |
+| 1 | 7 / 8 | 7 / 8 | 0 |
+| 2 | 7 / 8 | 7 / 8 | 0 |
+| 3 | 7 / 8 | 7 / 8 | 0 |
+
+Both arms are deterministic: the three no-round winners are byte-identical
+to each other, and so are the three round winners — and the two groups
+differ from each other. **The round reliably rewrites the answer into a
+different program that scores exactly the same**, fails the same case it was
+told to fix, and breaks nothing. It costs 284s → 632s to do it.
+
+So the earlier numbers were not noise, which is what a first reading of the
+variance suggested. They were real measurements of the pipelines that
+existed at the time, and they tell a coherent story: the rounds genuinely
+were harmful, and the three fixes repaired them, 3/8 → 5/8 → 7/8, landing at
+neutral. Nothing has ever made a result better.
 
 The middle row is the one to look at. Told exactly which call was wrong, a
 7B fixed exactly that call and broke five others doing it: **making the
