@@ -56,10 +56,7 @@ fn modal_lays_out_with_pinned_tiles_and_across_sections() {
         });
         for section in ["fun-emoji", "personas", "rings", "bottts"] {
             view.update(&mut app, |modal, ctx| {
-                modal.handle_action(
-                    &AvatarPickerAction::SelectSection(section.to_string()),
-                    ctx,
-                );
+                modal.handle_action(&AvatarPickerAction::SelectSection(section.to_string()), ctx);
             });
         }
 

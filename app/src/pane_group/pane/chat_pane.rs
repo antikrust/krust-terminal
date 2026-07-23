@@ -81,7 +81,9 @@ impl ChatPaneView {
                             disabled_color: ThemeFill::Solid(internal_colors::text_disabled(
                                 theme, bg_solid,
                             )),
-                            hint_color: ThemeFill::Solid(internal_colors::text_sub(theme, bg_solid)),
+                            hint_color: ThemeFill::Solid(internal_colors::text_sub(
+                                theme, bg_solid,
+                            )),
                         }),
                         ..Default::default()
                     },

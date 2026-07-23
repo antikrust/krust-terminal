@@ -66,7 +66,11 @@ impl Input {
                 Flex::row()
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
                     .with_child(Expanded::new(1., input_box).finish())
-                    .with_child(Container::new(prompt_elements).with_margin_right(8.).finish())
+                    .with_child(
+                        Container::new(prompt_elements)
+                            .with_margin_right(8.)
+                            .finish(),
+                    )
                     .finish(),
             );
         } else {

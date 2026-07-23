@@ -3557,7 +3557,7 @@ impl AgentDriver {
                     "slow bootstrap"
                 );
                 eprintln!(
-                    "Warning: Terminal session is slow to bootstrap. See https://docs.warp.dev/support-and-community/troubleshooting-and-support/known-issues#shells to troubleshoot."
+                    "Warning: Terminal session is slow to bootstrap. See https://therob.lol/derp-terminal/help/support-and-community/troubleshooting-and-support/known-issues#shells to troubleshoot."
                 );
             }
             TerminalDriverEvent::EstablishedSharedSession {

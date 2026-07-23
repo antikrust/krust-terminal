@@ -162,7 +162,7 @@ impl FirstTimeCloudAgentSetupView {
             ),
             FormattedTextFragment::hyperlink(
                 "Visit docs",
-                "https://docs.warp.dev/agent-platform/cloud-agents/overview",
+                "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/overview",
             ),
         ];
         column.add_child(

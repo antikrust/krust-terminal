@@ -531,7 +531,7 @@ impl LaunchConfigSaveModal {
                     .link(
                         "Link to Documentation".to_string(),
                         Some(
-                            "https://docs.warp.dev/terminal/sessions/launch-configurations"
+                            "https://therob.lol/derp-terminal/help/terminal/sessions/launch-configurations"
                                 .to_string(),
                         ),
                         None,

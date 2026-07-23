@@ -15,7 +15,13 @@ fn submit_p(input: &str, history: History) -> f32 {
 fn the_verdict_always_fires() {
     // Fork: the terminal always passes comment at the end, whatever the command.
     for input in ["ls", "cargo build", "git push", "clear"] {
-        let p = probability(&cmd(input), Phase::Complete, History::default(), Some(0), None);
+        let p = probability(
+            &cmd(input),
+            Phase::Complete,
+            History::default(),
+            Some(0),
+            None,
+        );
         assert_eq!(p, 1.0, "{input} should always get a verdict");
     }
 }
@@ -28,7 +34,10 @@ fn the_anticipation_fires_most_of_the_time() {
         (SUBMIT_MIN_PROBABILITY..=SUBMIT_MAX_PROBABILITY).contains(&p),
         "submit {p} should sit within [{SUBMIT_MIN_PROBABILITY}, {SUBMIT_MAX_PROBABILITY}]"
     );
-    assert!(p >= 0.5, "the anticipation should fire most of the time, got {p}");
+    assert!(
+        p >= 0.5,
+        "the anticipation should fire most of the time, got {p}"
+    );
 }
 
 #[test]
@@ -41,7 +50,10 @@ fn repetition_escalates_the_anticipation() {
             ..Default::default()
         },
     );
-    assert!(thrice >= once, "repeats should not lower it: {once} -> {thrice}");
+    assert!(
+        thrice >= once,
+        "repeats should not lower it: {once} -> {thrice}"
+    );
     assert!(
         thrice > SUBMIT_MIN_PROBABILITY,
         "a third `ls` should lift the anticipation above the floor, got {thrice}"
@@ -51,7 +63,13 @@ fn repetition_escalates_the_anticipation() {
 #[test]
 fn the_anticipation_is_rarer_than_the_verdict() {
     let submit = submit_p("ls", History::default());
-    let complete = probability(&cmd("ls"), Phase::Complete, History::default(), Some(0), None);
+    let complete = probability(
+        &cmd("ls"),
+        Phase::Complete,
+        History::default(),
+        Some(0),
+        None,
+    );
     assert!(
         submit < complete,
         "anticipation ({submit}) should be rarer than the certain verdict ({complete})"

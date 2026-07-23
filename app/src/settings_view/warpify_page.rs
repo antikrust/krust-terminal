@@ -487,7 +487,7 @@ impl TitleWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.warp.dev/terminal/warpify/subshells",
+                "https://therob.lol/derp-terminal/help/terminal/warpify/subshells",
             ),
         ];
 

@@ -1548,7 +1548,9 @@ impl TypedActionView for CLISubagentView {
                     .write(ClipboardContent::plain_text(debug_id.clone()));
             }
             CLISubagentAction::OpenFeedbackDocs => {
-                ctx.open_url("https://docs.warp.dev/support-and-billing/sending-us-feedback");
+                ctx.open_url(
+                    "https://therob.lol/derp-terminal/help/support-and-billing/sending-us-feedback",
+                );
             }
         }
     }

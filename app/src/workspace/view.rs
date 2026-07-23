@@ -6766,7 +6766,7 @@ impl Workspace {
             .map(|position| position.lower_left())
             .unwrap_or_else(Vector2F::zero);
         self.open_tab_configs_menu(
-            NewSessionMenuAnchor::AddTabButton(position),
+            NewSessionMenuAnchor::TopBarAddTabButton(position),
             TabConfigsMenuOpenSource::KeyboardShortcut,
             ctx,
         );
@@ -6799,9 +6799,9 @@ impl Workspace {
                     open_in_active_window: false,
                 },
             ),
-            NewSessionMenuItem::OpenLaunchConfigDocs => {
-                ctx.open_url("https://docs.warp.dev/terminal/sessions/launch-configurations")
-            }
+            NewSessionMenuItem::OpenLaunchConfigDocs => ctx.open_url(
+                "https://therob.lol/derp-terminal/help/terminal/sessions/launch-configurations",
+            ),
             #[cfg(feature = "local_fs")]
             NewSessionMenuItem::CreateNewTabConfig => {
                 self.create_and_open_new_tab_config(ctx);
@@ -8853,7 +8853,7 @@ impl Workspace {
             let message = format!("Installed the Oz CLI globally. You can now run '{command_name}' from any terminal outside of Warp.");
             let toast = DismissibleToast::success(message).with_link(
                 ToastLink::new("Learn more".to_string())
-                    .with_href("https://docs.warp.dev/reference/cli".to_string()),
+                    .with_href("https://therob.lol/derp-terminal/help/reference/cli".to_string()),
             );
             view.handle_cli_command_result(result, toast, "Failed to install Oz command", ctx);
         });
@@ -12185,7 +12185,7 @@ impl Workspace {
 
     pub fn open_autoupdate_failure_link(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.open_url(
-            "https://docs.warp.dev/support-and-community/troubleshooting-and-support/updating-warp",
+            "https://therob.lol/derp-terminal/help/support-and-community/troubleshooting-and-support/updating-warp",
         );
     }
 
@@ -21246,7 +21246,7 @@ impl Workspace {
                 )
                 .on_right_click(move |ctx, _, position| {
                     ctx.dispatch_typed_action(WorkspaceAction::ToggleNewSessionMenu {
-                        anchor: NewSessionMenuAnchor::AddTabButton(position),
+                        anchor: NewSessionMenuAnchor::TopBarAddTabButton(position),
                     });
                 })
                 .finish();
@@ -21265,7 +21265,10 @@ impl Workspace {
 
         Hoverable::new(self.mouse_states.new_tab.clone(), |state| {
             let window_id = self.window_id;
-            let is_active = self.show_new_session_dropdown_menu.is_some();
+            let is_active = matches!(
+                self.show_new_session_dropdown_menu,
+                Some(NewSessionMenuAnchor::TopBarAddTabButton(_))
+            );
 
             let new_tab_button = combo_inner_button(
                 appearance,
@@ -21316,7 +21319,7 @@ impl Workspace {
                     app.element_position_by_id_at_last_frame(window_id, NEW_TAB_BUTTON_POSITION_ID)
                 {
                     ctx.dispatch_typed_action(WorkspaceAction::ToggleNewSessionMenu {
-                        anchor: NewSessionMenuAnchor::AddTabButton(position.lower_left()),
+                        anchor: NewSessionMenuAnchor::TopBarAddTabButton(position.lower_left()),
                     });
                 }
             })
@@ -25116,7 +25119,7 @@ impl TypedActionView for Workspace {
             #[cfg(all(enable_crash_recovery, target_os = "linux"))]
             DismissWaylandCrashRecoveryBannerAndOpenLink => {
                 self.dismiss_workspace_banner(ctx, &WorkspaceBanner::WaylandCrashRecovery);
-                ctx.open_url("https://docs.warp.dev/terminal/more-features/linux#native-wayland");
+                ctx.open_url("https://therob.lol/derp-terminal/help/terminal/more-features/linux#native-wayland");
             }
             FixInAgentMode { query } => {
                 self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
@@ -26721,7 +26724,8 @@ impl View for Workspace {
                         ),
                     );
                 }
-                (true, NewSessionMenuAnchor::Pointer(_))
+                (_, NewSessionMenuAnchor::TopBarAddTabButton(_))
+                | (true, NewSessionMenuAnchor::Pointer(_))
                 | (false, NewSessionMenuAnchor::AddTabButton(_))
                 | (false, NewSessionMenuAnchor::Pointer(_)) => {
                     // TODO(CORE-2300): In the new version of the shell selector, this is not a

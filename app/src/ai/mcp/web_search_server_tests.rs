@@ -47,7 +47,11 @@ const AD_HTML: &str = r#"
 #[test]
 fn drops_duckduckgo_sponsored_results() {
     let results = parse_duckduckgo_html(AD_HTML, 5);
-    assert_eq!(results.len(), 1, "the sponsored y.js result should be filtered");
+    assert_eq!(
+        results.len(),
+        1,
+        "the sponsored y.js result should be filtered"
+    );
     assert_eq!(results[0].url, "https://doc.rust-lang.org/");
 }
 
@@ -57,7 +61,10 @@ fn parses_titles_snippets_and_unwraps_ddg_redirect_urls() {
     assert_eq!(results.len(), 2);
 
     assert_eq!(results[0].title, "Set up Ollama | Warp");
-    assert_eq!(results[0].url, "https://docs.warp.dev/guides/ollama");
+    assert_eq!(
+        results[0].url,
+        "https://therob.lol/derp-terminal/help/guides/ollama"
+    );
     assert_eq!(
         results[0].snippet,
         "Install Ollama, run LLMs locally, and integrate them into Warp."

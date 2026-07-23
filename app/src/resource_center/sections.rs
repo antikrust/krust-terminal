@@ -63,13 +63,13 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
             ContentItem {
                 title: "Use your custom prompt",
                 description: "Set up Warp to honor your PS1 setting",
-                url: "https://docs.warp.dev/terminal/appearance/prompt",
+                url: "https://therob.lol/derp-terminal/help/terminal/appearance/prompt",
                 button_label: "View documentation",
             },
             ContentItem {
                 title: "Integrate Warp with your IDE",
                 description: "Configure Warp to launch from your most used development tools",
-                url: "https://docs.warp.dev/terminal/integrations-and-plugins",
+                url: "https://therob.lol/derp-terminal/help/terminal/integrations-and-plugins",
                 button_label: "View documentation",
             },
             ContentItem {

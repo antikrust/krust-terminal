@@ -424,8 +424,7 @@ fn failed_turn_error_that_repeats_shown_text_is_dropped() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // The harness surfaces a session limit as normal text first...
@@ -457,8 +456,7 @@ fn failed_turn_error_with_no_prior_output_still_renders() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // A run that fails before producing any output must still show its
@@ -481,8 +479,7 @@ fn thinking_deltas_grow_one_reasoning_section() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // qwen3-style word-by-word reasoning deltas…

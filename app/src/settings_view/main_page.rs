@@ -40,11 +40,11 @@ use super::teams_page::{TeamsPageView, TeamsPageViewEvent};
 use super::{flags, SettingsAction, SettingsSection, ToggleSettingActionPair};
 use crate::appearance::Appearance;
 use crate::auth::auth_manager::{AuthManager, LoginGatedFeature};
-use crate::modal::{Modal, ModalEvent, ModalViewState};
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::auth::{AuthStateProvider, UserUid};
 use crate::autoupdate::{self, AutoupdateStage, AutoupdateState};
+use crate::modal::{Modal, ModalEvent, ModalViewState};
 use crate::server::ids::ServerId;
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
 use crate::settings::identity::IdentitySettings;
@@ -372,7 +372,6 @@ impl MainSettingsPageView {
         if ChannelState::app_version().is_some() {
             widgets.push(Box::new(VersionInfoWidget::default()));
         }
-
 
         // Teams and Billing & usage are merged in as the final sections of the
         // Account page, in that order.
@@ -1049,7 +1048,7 @@ impl SettingsWidget for SettingsSyncWidget {
         let label_info = AdditionalInfo {
             mouse_state: self.tooltip_state.clone(),
             on_click_action: Some(MainPageAction::OpenUrl(
-                "https://docs.warp.dev/terminal/more-features/settings-sync".into(),
+                "https://therob.lol/derp-terminal/help/terminal/more-features/settings-sync".into(),
             )),
             secondary_text: None,
             tooltip_override_text: None,

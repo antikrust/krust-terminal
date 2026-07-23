@@ -2283,6 +2283,14 @@ impl<A: Action + Clone> Menu<A> {
         self
     }
 
+    /// Caps how tall the menu may grow. Only meaningful together with
+    /// [`MenuVariant::scrollable`], which is what turns the overflow into a
+    /// scrollbar rather than a menu that runs off the screen.
+    pub fn with_height(mut self, height: f32) -> Self {
+        self.menu.with_height(height);
+        self
+    }
+
     /// Prevents interactions with any other elements outside of the [`Menu`]. All events are
     /// handled by this element and are _not_ propagated further down the element hierarchy.
     pub fn prevent_interaction_with_other_elements(mut self) -> Self {

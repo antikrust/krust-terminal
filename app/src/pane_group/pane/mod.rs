@@ -10,6 +10,7 @@
 //! used to render a [`PaneView`] which internally renders the pane, including the [`BackingView`].
 pub(super) mod ai_document_pane;
 pub(super) mod ai_fact_pane;
+pub(super) mod chat_pane;
 pub(super) mod code_diff_pane;
 pub(super) mod code_diff_pane_model;
 pub(super) mod code_pane;
@@ -22,7 +23,6 @@ pub(super) mod get_started_pane;
 pub(super) mod get_started_view;
 #[cfg(not(target_family = "wasm"))]
 pub(super) mod local_harness_launch;
-pub(super) mod chat_pane;
 pub(super) mod mcp_servers_pane;
 pub(super) mod network_log_pane;
 pub(super) mod notebook_pane;
@@ -539,7 +539,8 @@ impl PaneId {
                 .finish()
             }
             IPaneType::Chat => {
-                ChildView::<PaneView<chat_pane::ChatPaneView>>::with_id(self.0.pane_view_id).finish()
+                ChildView::<PaneView<chat_pane::ChatPaneView>>::with_id(self.0.pane_view_id)
+                    .finish()
             }
             IPaneType::DeferredPlaceholder => warpui::elements::Empty::new().finish(),
             #[cfg(test)]

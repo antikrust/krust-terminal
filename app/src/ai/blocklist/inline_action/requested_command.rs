@@ -274,9 +274,11 @@ fn tool_card_fill(theme: &WarpTheme) -> Fill {
         b: 246,
         a: 255,
     };
-    theme.surface_2().blend(&Fill::Solid(
-        warp_core::ui::color::coloru_with_opacity(TOOL_BLUE, 50),
-    ))
+    theme
+        .surface_2()
+        .blend(&Fill::Solid(warp_core::ui::color::coloru_with_opacity(
+            TOOL_BLUE, 50,
+        )))
 }
 
 /// The plain text inside a renderable result, when it is just text: a JSON

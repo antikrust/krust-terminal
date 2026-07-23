@@ -165,8 +165,16 @@ impl SingletonEntity for ChatModel {}
 pub fn init(app: &mut AppContext) {
     use warpui::keymap::macros::*;
     app.register_fixed_bindings([
-        FixedBinding::new("escape", ChatModalAction::Cancel, id!(ChatModalView::ui_name())),
-        FixedBinding::new("enter", ChatModalAction::Send, id!(ChatModalView::ui_name())),
+        FixedBinding::new(
+            "escape",
+            ChatModalAction::Cancel,
+            id!(ChatModalView::ui_name()),
+        ),
+        FixedBinding::new(
+            "enter",
+            ChatModalAction::Send,
+            id!(ChatModalView::ui_name()),
+        ),
     ]);
 }
 
@@ -204,7 +212,9 @@ impl ChatModalView {
                             disabled_color: ThemeFill::Solid(internal_colors::text_disabled(
                                 theme, bg_solid,
                             )),
-                            hint_color: ThemeFill::Solid(internal_colors::text_sub(theme, bg_solid)),
+                            hint_color: ThemeFill::Solid(internal_colors::text_sub(
+                                theme, bg_solid,
+                            )),
                         }),
                         ..Default::default()
                     },
@@ -329,7 +339,9 @@ impl View for ChatModalView {
             .finish();
             list = list.with_child(Container::new(line).with_margin_top(4.).finish());
         }
-        let list = ConstrainedBox::new(list.finish()).with_height(320.).finish();
+        let list = ConstrainedBox::new(list.finish())
+            .with_height(320.)
+            .finish();
 
         let input = ui_builder
             .text_input(self.input.clone())

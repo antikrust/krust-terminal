@@ -82,7 +82,7 @@ const TELEMETRY_DESCRIPTION: &str =
     "App analytics help us make the product better for you. We may collect \
     certain console interactions to improve Warp's AI capabilities.";
 const TELEMETRY_DOCS_URL: &str =
-    "https://docs.warp.dev/support-and-community/privacy-and-security/privacy#what-telemetry-data-does-warp-collect-and-why";
+    "https://therob.lol/derp-terminal/help/support-and-community/privacy-and-security/privacy#what-telemetry-data-does-warp-collect-and-why";
 
 const DATA_MANAGEMENT_TITLE: &str = "Manage your data";
 const DATA_MANAGEMENT_DESCRIPTION: &str =

@@ -16,7 +16,7 @@ Use the Oz REST API and CLI to:
 
 The Oz CLI is installed as `{{warp_cli_binary_name}}`. To get help output, use `{{warp_cli_binary_name}} help` or `{{warp_cli_binary_name}} help <subcommand>`.
 Prefer `--output-format text` to review the response, or `--output-format json` to parse fields with `jq`.
-You can find more information at https://docs.warp.dev/reference/cli.
+You can find more information at https://therob.lol/derp-terminal/help/reference/cli.
 
 The most important commands are:
 * `{{warp_cli_binary_name}} agent run-cloud`: Spawn a new cloud agent. You can configure the prompt, model, environment, and other settings.
@@ -69,7 +69,7 @@ Oz has a REST API for starting and inspecting cloud agents.
 
 All API requests require authentication using an API key. The user can generate API keys in their Warp settings, on the `Platform` page (accessible via `{{warp_url_scheme}}://settings/platform`).
 
-You can find the full OpenAPI specification here: https://docs.warp.dev/reference/api-and-sdk
+You can find the full OpenAPI specification here: https://therob.lol/derp-terminal/help/reference/api-and-sdk
 
 ### TypeScript / JavaScript SDK
 

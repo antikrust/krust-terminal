@@ -39,6 +39,7 @@ use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 use crate::ai::ollama::capability::{self, Fit, MemoryVerdict};
 use crate::ai::ollama::catalog::{CatalogEntry, ModelSize};
+use crate::ai::ollama::remote;
 use crate::ai::ollama::service::{self, CatalogSource, InstalledModel};
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, SingleLineEditorOptions};
@@ -110,6 +111,16 @@ pub enum OllamaPageAction {
     ToggleCommitteeAudit,
     /// Switch between committee personas and plain model tags.
     ToggleCommitteePersonas,
+    /// Add whatever address is in the remote-host field, then check it.
+    AddRemoteHost,
+    /// Re-ask a known host what models it has.
+    CheckRemoteHost {
+        url: String,
+    },
+    /// Forget a remote host and its models.
+    ForgetRemoteHost {
+        url: String,
+    },
     /// Cycle a model's committee casting: auto → reviewer → judge → never.
     CycleCommitteeRole {
         tag: String,
@@ -189,6 +200,15 @@ pub struct OllamaPageView {
     removing: Option<String>,
     /// Why the last removal failed, shown as a notice above the list.
     removal_error: Option<String>,
+    /// Free-text "another machine's Ollama" address field.
+    remote_input: ViewHandle<EditorView>,
+    /// Validation error for the typed address, shown beneath the field.
+    remote_error: Option<String>,
+    /// Per-host outcome of the last check, keyed by base URL — what was found
+    /// there, or why it could not be reached.
+    remote_status: HashMap<String, String>,
+    /// The host currently being probed, if any.
+    remote_checking: Option<String>,
     state_handles: RefCell<StateHandles>,
 }
 
@@ -224,6 +244,12 @@ struct StateHandles {
     committee_second_opinion_link: MouseStateHandle,
     committee_audit_link: MouseStateHandle,
     committee_personas_link: MouseStateHandle,
+    add_remote_link: MouseStateHandle,
+    /// Per-remote-host check links, keyed by base URL. Stable handles so the
+    /// click registers (see the install-button note).
+    remote_check_links: HashMap<String, MouseStateHandle>,
+    /// Per-remote-host forget links, keyed by base URL.
+    remote_forget_links: HashMap<String, MouseStateHandle>,
 }
 
 impl OllamaPageView {
@@ -235,12 +261,19 @@ impl OllamaPageView {
             Box::new(StatusWidget),
             Box::new(InstalledWidget),
             Box::new(CatalogWidget),
+            Box::new(RemoteHostsWidget),
             Box::new(CommitteeWidget),
         ];
 
         let model_input = ctx.add_typed_action_view(|ctx| {
             let mut editor = EditorView::single_line(SingleLineEditorOptions::default(), ctx);
             editor.set_placeholder_text("Install by name, e.g. qwen2.5-coder:14b", ctx);
+            editor
+        });
+
+        let remote_input = ctx.add_typed_action_view(|ctx| {
+            let mut editor = EditorView::single_line(SingleLineEditorOptions::default(), ctx);
+            editor.set_placeholder_text("Address, e.g. 192.168.1.150", ctx);
             editor
         });
 
@@ -269,6 +302,10 @@ impl OllamaPageView {
             pending_removal: None,
             removing: None,
             removal_error: None,
+            remote_input,
+            remote_error: None,
+            remote_status: HashMap::new(),
+            remote_checking: None,
             state_handles: RefCell::new(StateHandles::default()),
         };
         view.refresh(ctx);
@@ -686,6 +723,97 @@ impl OllamaPageView {
         }
     }
 
+    /// Adds whatever address is in the field and immediately asks that
+    /// machine what it has — a host with no models is useless, so there is no
+    /// point separating "add" from "check".
+    fn add_remote_host(&mut self, ctx: &mut ViewContext<Self>) {
+        let raw: String = self.remote_input.as_ref(ctx).buffer_text(ctx);
+        let url = match remote::normalize_host_input(&raw) {
+            Ok(url) => url,
+            Err(error) => {
+                self.remote_error = Some(error);
+                ctx.notify();
+                return;
+            }
+        };
+        self.remote_error = None;
+        self.remote_input.update(ctx, |editor, ctx| {
+            editor.set_buffer_text("", ctx);
+        });
+
+        let mut hosts = remote::configured(ctx);
+        if !hosts.iter().any(|host| host.url == url) {
+            hosts.push(remote::RemoteHost {
+                url: url.clone(),
+                models: Vec::new(),
+                label: None,
+            });
+            remote::save(&hosts, ctx);
+        }
+        self.check_remote_host(url, ctx);
+    }
+
+    /// Asks a host what models it has and records the answer. The stored list
+    /// is what the model menu reads, so this is also how a model pulled on
+    /// that machine becomes selectable here.
+    fn check_remote_host(&mut self, url: String, ctx: &mut ViewContext<Self>) {
+        if self.remote_checking.is_some() {
+            return;
+        }
+        self.remote_checking = Some(url.clone());
+        self.remote_status
+            .insert(url.clone(), "Checking…".to_owned());
+        ctx.notify();
+
+        let client = reqwest::Client::new();
+        let probe_url = url.clone();
+        ctx.spawn(
+            async move { service::probe_host(&client, &probe_url).await },
+            move |me, result, ctx| {
+                me.remote_checking = None;
+                let found = match result {
+                    service::ProbeResult::Reachable { models } => models,
+                    service::ProbeResult::Unreachable { reason } => {
+                        me.remote_status
+                            .insert(url.clone(), format!("Couldn't reach it — {reason}"));
+                        ctx.notify();
+                        return;
+                    }
+                };
+                me.remote_status.insert(
+                    url.clone(),
+                    match found.len() {
+                        0 => "Reached it, but it has no models pulled yet.".to_owned(),
+                        1 => "1 model available.".to_owned(),
+                        count => format!("{count} models available."),
+                    },
+                );
+
+                let mut hosts = remote::configured(ctx);
+                if let Some(host) = hosts.iter_mut().find(|host| host.url == url) {
+                    host.models = found.into_iter().map(|model| model.name).collect();
+                }
+                remote::save(&hosts, ctx);
+                // The picker's Ollama list is rebuilt from the saved hosts.
+                HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
+                    availability.refresh_ollama_models(ctx)
+                });
+                ctx.notify();
+            },
+        );
+    }
+
+    fn forget_remote_host(&mut self, url: String, ctx: &mut ViewContext<Self>) {
+        let mut hosts = remote::configured(ctx);
+        hosts.retain(|host| host.url != url);
+        remote::save(&hosts, ctx);
+        self.remote_status.remove(&url);
+        HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
+            availability.refresh_ollama_models(ctx)
+        });
+        ctx.notify();
+    }
+
     fn is_enabled(&self, app: &AppContext) -> bool {
         *AISettings::as_ref(app).ollama_enabled.value()
     }
@@ -802,6 +930,9 @@ impl TypedActionView for OllamaPageView {
                     config.personas = !config.personas;
                 });
             }
+            OllamaPageAction::AddRemoteHost => self.add_remote_host(ctx),
+            OllamaPageAction::CheckRemoteHost { url } => self.check_remote_host(url.clone(), ctx),
+            OllamaPageAction::ForgetRemoteHost { url } => self.forget_remote_host(url.clone(), ctx),
             OllamaPageAction::CycleCommitteeRole { tag } => {
                 let tag = tag.clone();
                 self.update_committee_config(ctx, |config| {
@@ -1511,6 +1642,187 @@ impl SettingsWidget for CatalogWidget {
 
 /// The multi-model committee: its two knobs and this machine's standings.
 /// See MULTIAGENT-DESIGN.md for the pipeline this configures.
+/// Ollama instances on other machines.
+///
+/// The models a laptop can hold are limited by its memory; a desktop with
+/// more of it can run larger ones, or several at once. Ollama speaks the same
+/// HTTP API wherever it runs, so an address is all that is needed to use that
+/// machine's models here — they appear in the model picker and are eligible
+/// for the committee exactly like local ones.
+#[derive(Default)]
+struct RemoteHostsWidget;
+
+impl SettingsWidget for RemoteHostsWidget {
+    type View = OllamaPageView;
+
+    fn search_terms(&self) -> &str {
+        "ollama remote host lan network another machine server pc address ip"
+    }
+
+    fn should_render(&self, _app: &AppContext) -> bool {
+        // Deliberately not gated on a local Ollama install: borrowing another
+        // machine's models is exactly what someone without one would want.
+        true
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let hosts = remote::configured(app);
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+
+        column.add_child(section_break(appearance));
+        column.add_child(
+            Container::new(render_sub_header(appearance, "Other machines", None))
+                .with_margin_top(VERTICAL_MARGIN)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(body_text(
+                "Use the models on another computer running Ollama. Give it the machine's \
+                 address and Warp will ask what it has; those models then appear in the \
+                 model picker, and can serve on the committee, like models installed here. \
+                 Ollama only listens to its own machine by default, so set \
+                 OLLAMA_HOST=0.0.0.0 there first.",
+                appearance,
+            ))
+            .with_margin_top(8.)
+            .finish(),
+        );
+
+        {
+            let handles = view.state_handles.borrow();
+            column.add_child(
+                Container::new(
+                    Flex::row()
+                        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                        .with_child(
+                            warpui::elements::Expanded::new(
+                                1.,
+                                ChildView::new(&view.remote_input).finish(),
+                            )
+                            .finish(),
+                        )
+                        .with_child(
+                            Container::new(
+                                appearance
+                                    .ui_builder()
+                                    .link(
+                                        "Add".into(),
+                                        None,
+                                        Some(Box::new(|ctx| {
+                                            ctx.dispatch_typed_action(
+                                                OllamaPageAction::AddRemoteHost,
+                                            );
+                                        })),
+                                        handles.add_remote_link.clone(),
+                                    )
+                                    .soft_wrap(false)
+                                    .build()
+                                    .finish(),
+                            )
+                            .with_margin_left(12.)
+                            .finish(),
+                        )
+                        .finish(),
+                )
+                .with_margin_top(8.)
+                .finish(),
+            );
+        }
+        if let Some(error) = &view.remote_error {
+            column.add_child(notice(error, ThemeFill::error(), appearance));
+        }
+
+        for host in &hosts {
+            let mut handles = view.state_handles.borrow_mut();
+            let check_handle = handles
+                .remote_check_links
+                .entry(host.url.clone())
+                .or_default()
+                .clone();
+            let forget_handle = handles
+                .remote_forget_links
+                .entry(host.url.clone())
+                .or_default()
+                .clone();
+            drop(handles);
+
+            let checking = view.remote_checking.as_deref() == Some(host.url.as_str());
+            let check_url = host.url.clone();
+            let forget_url = host.url.clone();
+
+            let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
+            row.add_child(
+                warpui::elements::Expanded::new(1., body_text(&host.display(), appearance))
+                    .finish(),
+            );
+            row.add_child(
+                Container::new(
+                    appearance
+                        .ui_builder()
+                        .link(
+                            if checking { "Checking…" } else { "Check" }.into(),
+                            None,
+                            // Always clickable: a second click while one is
+                            // in flight is ignored by the handler rather than
+                            // by making this link's type conditional.
+                            Some(Box::new(move |ctx| {
+                                ctx.dispatch_typed_action(OllamaPageAction::CheckRemoteHost {
+                                    url: check_url.clone(),
+                                });
+                            })),
+                            check_handle,
+                        )
+                        .soft_wrap(false)
+                        .build()
+                        .finish(),
+                )
+                .with_margin_left(12.)
+                .finish(),
+            );
+            row.add_child(
+                Container::new(
+                    appearance
+                        .ui_builder()
+                        .link(
+                            "Forget".into(),
+                            None,
+                            Some(Box::new(move |ctx| {
+                                ctx.dispatch_typed_action(OllamaPageAction::ForgetRemoteHost {
+                                    url: forget_url.clone(),
+                                });
+                            })),
+                            forget_handle,
+                        )
+                        .soft_wrap(false)
+                        .build()
+                        .finish(),
+                )
+                .with_margin_left(12.)
+                .finish(),
+            );
+            column.add_child(Container::new(row.finish()).with_margin_top(10.).finish());
+
+            if let Some(status) = view.remote_status.get(&host.url) {
+                column.add_child(Container::new(sub_text(status, appearance)).finish());
+            }
+            if !host.models.is_empty() {
+                column.add_child(
+                    Container::new(sub_text(&host.models.join(", "), appearance))
+                        .with_margin_top(4.)
+                        .finish(),
+                );
+            }
+        }
+
+        column.finish()
+    }
+}
+
 #[derive(Default)]
 struct CommitteeWidget;
 

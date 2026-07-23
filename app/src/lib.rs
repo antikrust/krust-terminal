@@ -49,6 +49,9 @@ mod local_control;
 mod login_item;
 mod menu;
 mod modal;
+/// Client configuration pointing this app at our MOLOCH server (the fork's
+/// replacement for Warp's cloud agent backend). See docs/moloch.md.
+pub mod moloch;
 mod network;
 mod notebooks;
 mod notification;
@@ -710,6 +713,12 @@ pub fn run() -> Result<()> {
     // ignore `--server-root-url` / `--ws-server-url` / `--session-sharing-server-url` (and their
     // `WARP_*` env-var equivalents) so shipped builds can't be redirected away from their
     // baked-in server URLs. See `Channel::allows_server_url_overrides`.
+    // Point this build at our MOLOCH server, if one is configured. Applied
+    // before the CLI overrides below so an explicit `--server-root-url` still
+    // wins for a one-off run. Unlike those overrides this is not gated on the
+    // channel: in this fork, redirecting off Warp's servers is the point.
+    moloch::apply_server_url_override();
+
     if ChannelState::channel().allows_server_url_overrides() {
         if let Some(url) = args.server_root_url() {
             if let Err(e) = ChannelState::override_server_root_url(url.to_owned()) {
@@ -1339,6 +1348,14 @@ pub(crate) fn initialize_app(
     } else {
         None
     };
+
+    // When a MOLOCH token is configured, it is the credential for every
+    // authenticated request — the server root already points at Moloch, and
+    // it authenticates by bearer token. An explicit `--api-key` still wins,
+    // and the channel/feature gating above does not apply: those guard
+    // Warp's own API keys, not our server's. Moloch accepts the token with
+    // or without the `wk-` prefix this path adds.
+    let api_key = api_key.or_else(moloch::api_key);
 
     // A key supplied to an App launch but dropped here means Warp will start logged out
     // (non-dogfood channel or feature disabled). Surface this loudly so it isn't silent.

@@ -103,6 +103,7 @@ pub enum SettingsPageViewHandle {
     About(ViewHandle<AboutPageView>),
     Code(ViewHandle<CodeSettingsPageView>),
     Teams(ViewHandle<TeamsPageView>),
+    MolochStatus(ViewHandle<super::moloch_page::MolochPageView>),
     OzCloudAPIKeys(ViewHandle<super::platform_page::PlatformPageView>),
     Privacy(ViewHandle<PrivacyPageView>),
     Warpify(ViewHandle<WarpifyPageView>),
@@ -118,6 +119,7 @@ impl SettingsPageViewHandle {
         use SettingsPageViewHandle::*;
         match self {
             Main(view_handle) => ChildView::new(view_handle).finish(),
+            MolochStatus(view_handle) => ChildView::new(view_handle).finish(),
             Appearance(view_handle) => ChildView::new(view_handle).finish(),
             Features(view_handle) => ChildView::new(view_handle).finish(),
             Keybindings(view_handle) => ChildView::new(view_handle).finish(),

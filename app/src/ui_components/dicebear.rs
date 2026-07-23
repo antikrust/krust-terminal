@@ -300,7 +300,12 @@ fn substitute(
         {
             out.push_str(&render_group(group, data, picked, colors, depth));
         } else if let Some(color) = marker.strip_prefix("color:") {
-            out.push_str(colors.get(color).map(String::as_str).unwrap_or("transparent"));
+            out.push_str(
+                colors
+                    .get(color)
+                    .map(String::as_str)
+                    .unwrap_or("transparent"),
+            );
         } else if let Some(group) = marker.strip_prefix("compname:") {
             out.push_str(picked.get(group).and_then(|v| *v).unwrap_or(""));
         }

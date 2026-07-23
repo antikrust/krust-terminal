@@ -742,7 +742,12 @@ impl BlocklistAIStatusBar {
     /// messages — one line, updating in place — because a buffered local turn
     /// otherwise sits on a single static label for its entire generation.
     /// Other harnesses keep the plain Sending/Thinking split.
-    fn rotating_warping_text(&self, has_output: bool, swear_mode: bool, app: &AppContext) -> String {
+    fn rotating_warping_text(
+        &self,
+        has_output: bool,
+        swear_mode: bool,
+        app: &AppContext,
+    ) -> String {
         let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness(app);
         let ollama_model = model_id.as_deref().and_then(ollama_model_name);
         let Some(model) = ollama_model else {

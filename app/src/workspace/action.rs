@@ -87,10 +87,13 @@ pub enum TabContextMenuAnchor {
 /// can pick the right anchor strategy.
 #[derive(Debug, Clone, Copy)]
 pub enum NewSessionMenuAnchor {
-    /// Menu was opened from the `+` add-tab button. When vertical tabs are
-    /// active, the renderer anchors below the button's save position;
-    /// otherwise the contained position is used directly.
+    /// Menu was opened from the vertical-tabs panel `+` button. The renderer
+    /// anchors it below that button's save position, mirroring the panel side.
     AddTabButton(Vector2F),
+    /// Menu was opened from the top tab bar's `+` button. Always anchored at the
+    /// contained position (the top button) so it stays with the top bar even
+    /// when the vertical tabs panel is also open.
+    TopBarAddTabButton(Vector2F),
     /// Menu was opened by right-clicking the vertical tabs panel.
     /// Always anchored at the contained pointer position.
     Pointer(Vector2F),
@@ -99,7 +102,9 @@ pub enum NewSessionMenuAnchor {
 impl NewSessionMenuAnchor {
     pub fn position(&self) -> Vector2F {
         match self {
-            Self::AddTabButton(position) | Self::Pointer(position) => *position,
+            Self::AddTabButton(position)
+            | Self::TopBarAddTabButton(position)
+            | Self::Pointer(position) => *position,
         }
     }
 }

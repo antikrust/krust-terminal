@@ -102,20 +102,21 @@ impl AuthState {
     }
 
     /// Creates and initializes auth state. Checks, in order:
-    /// 1. Test user (test/integration/skip_login builds)
-    /// 2. Provided API key
+    /// 1. Provided API key
+    /// 2. Test user (test/integration/skip_login builds)
     /// 3. WARP_USER_SECRET environment variable
     /// 4. Persisted user from secure storage
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
     pub fn initialize(ctx: &AppContext, api_key: Option<String>) -> Self {
         let state = Self::new(ctx);
 
-        if Self::should_use_test_user() {
-            state.set_user(Some(User::test()));
-            state.set_credentials(Some(Self::test_credentials()));
-            return state;
-        }
-
+        // An explicitly supplied key is checked *before* the synthetic test
+        // user. This fork pins `should_use_test_user()` to true so the app
+        // works with no account, but those test credentials are
+        // `SessionCookie`, which sends no `Authorization` header at all — so
+        // with the test user first, a configured MOLOCH token could never
+        // reach the server and every request 401'd. A real credential must
+        // win over a stand-in one.
         if let Some(api_key_value) = api_key {
             log::info!("Authenticating via API key");
             let formatted = if api_key_value.starts_with(API_KEY_PREFIX) {
@@ -127,6 +128,16 @@ impl AuthState {
                 key: formatted,
                 owner_type: None,
             }));
+            // Keep the stand-in user identity so this fork's many
+            // user-dependent gates behave exactly as they do without a key;
+            // only the credential (and thus the wire auth) changes here.
+            state.set_user(Some(User::test()));
+            return state;
+        }
+
+        if Self::should_use_test_user() {
+            state.set_user(Some(User::test()));
+            state.set_credentials(Some(Self::test_credentials()));
             return state;
         }
 

@@ -4,8 +4,8 @@ use super::*;
 fn every_style_generates_valid_svg() {
     for style in styles() {
         for seed in ["", "01", "alice", "hello world", "\u{1f600}", "123"] {
-            let svg = generate(&style.id, seed)
-                .unwrap_or_else(|| panic!("{} should generate", style.id));
+            let svg =
+                generate(&style.id, seed).unwrap_or_else(|| panic!("{} should generate", style.id));
             assert!(svg.starts_with("<svg "), "{}: bad start", style.id);
             assert!(svg.ends_with("</svg>"), "{}: bad end", style.id);
             assert!(svg.contains("viewBox="), "{}: no viewBox", style.id);
@@ -22,7 +22,11 @@ fn every_style_generates_valid_svg() {
                 style.id
             );
             // More than just the wrapper: some picked component rendered.
-            assert!(svg.len() > 120, "{} seed {seed:?}: suspiciously empty", style.id);
+            assert!(
+                svg.len() > 120,
+                "{} seed {seed:?}: suspiciously empty",
+                style.id
+            );
         }
     }
 }
@@ -93,8 +97,7 @@ fn dump_all_styles_for_audit() {
     for style in styles() {
         for seed in ["1", "2", "3", "4", "5", "6"] {
             let svg = generate(&style.id, seed).expect("generates");
-            std::fs::write(dir.join(format!("{}_{seed}.svg", style.id)), svg)
-                .expect("write dump");
+            std::fs::write(dir.join(format!("{}_{seed}.svg", style.id)), svg).expect("write dump");
         }
     }
 }

@@ -130,7 +130,6 @@ pub const TEMPLATES: &[Template] = &[
         5,
     ),
     t("'{QUOTE}'. mate. {COMPLAINT}.", Quote, &[], 5),
-
     // ── Submit, universal ────────────────────────────────────────────────
     t("{EXCLAIM}. {COMPLAINT}.", Submit, &[], 6),
     t("{EXCLAIM}, {AGAIN}.", Submit, &[], 6),

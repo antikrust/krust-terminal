@@ -125,6 +125,10 @@ pub enum AISubpage {
     /// Grok (xAI) subscription — its own page rather than a row buried in the
     /// Warp Agent page's API-keys section.
     Grok,
+    /// Personal provider keys and custom endpoints. Split off the AI Manager
+    /// page: your own keys are for providers this app calls directly, which is
+    /// a separate concern from managing the agent.
+    BringYourOwnKey,
 }
 
 impl AISubpage {
@@ -135,6 +139,7 @@ impl AISubpage {
             SettingsSection::Knowledge => Some(Self::Knowledge),
             SettingsSection::ThirdPartyCLIAgents => Some(Self::ThirdPartyCLIAgents),
             SettingsSection::Grok => Some(Self::Grok),
+            SettingsSection::BringYourOwnKey => Some(Self::BringYourOwnKey),
             // AgentMCPServers renders the standalone MCPServers page, not an AI subpage.
             _ => None,
         }
@@ -184,7 +189,7 @@ const GIT_OPERATIONS_AUTOGEN_DESCRIPTION: &str =
     "Let AI generate commit messages and pull request titles and descriptions.";
 const WISPR_FLOW_URL: &str = "https://wisprflow.ai/";
 const CUSTOM_INFERENCE_LEARN_MORE_URL: &str =
-    "https://docs.warp.dev/agent-platform/inference/custom-inference-endpoint/";
+    "https://therob.lol/derp-terminal/help/agent-platform/inference/custom-inference-endpoint/";
 const CUSTOM_INFERENCE_TERMS_URL: &str = "https://www.warp.dev/legal/terms-of-service";
 const CUSTOM_INFERENCE_INFO_TOOLTIP_MAX_WIDTH: f32 = 320.;
 const CUSTOM_ENDPOINT_MODAL_MAX_HEIGHT_PERCENTAGE: f32 = 0.8;
@@ -2783,6 +2788,7 @@ impl AISettingsPageView {
                     widgets.push(Box::new(ActiveAIWidget::default()));
                 }
                 widgets.push(Box::new(AgentsWidget::default()));
+                widgets.push(Box::new(InputWidget::default()));
                 widgets.push(Box::new(AIInputWidget::default()));
                 if MCPServersWidget::should_show_mcp() {
                     widgets.push(Box::new(MCPServersWidget::default()));
@@ -2836,7 +2842,9 @@ impl AISettingsPageView {
                     widgets.push(Box::new(VoiceWidget::default()));
                 }
                 widgets.push(Box::new(CloudHandoffWidget::default()));
-                widgets.push(Box::new(ApiKeysWidget::new(ctx)));
+                // Personal provider keys have their own page now (see
+                // `AISubpage::BringYourOwnKey`); this page keeps only the
+                // workspace-managed and routing controls.
                 widgets.push(Box::new(AwsBedrockWidget::new(ctx)));
                 if FeatureFlag::CustomModelRouters.is_enabled() {
                     widgets.push(Box::new(CustomModelRoutersWidget));
@@ -2870,6 +2878,9 @@ impl AISettingsPageView {
                 // below have no leading separator, so the title draws one).
                 widgets.push(Box::new(PageTitleWidget::new("General", true)));
                 widgets.push(Box::new(CLIAgentWidget::default()));
+                // Natural-language detection and the input hint are general
+                // input behaviours, not AI Manager settings, so they live here.
+                widgets.push(Box::new(InputWidget::default()));
                 if FeatureFlag::AIRules.is_enabled() {
                     widgets.push(Box::new(AIFactWidget::default()));
                 }
@@ -2885,6 +2896,13 @@ impl AISettingsPageView {
                 // leads with the standard large title; the widget's own
                 // leading separator becomes the line underneath it.
                 widgets.push(Box::new(PageTitleWidget::new("Grok (xAI)", false)));
+                widgets.push(Box::new(ApiKeysWidget::new(ctx)));
+            }
+            Some(AISubpage::BringYourOwnKey) => {
+                // Your own provider keys and custom endpoints, off the AI
+                // Manager page. ApiKeysWidget draws its own leading separator,
+                // so the title doesn't add a second one.
+                widgets.push(Box::new(PageTitleWidget::new("Bring your own key", false)));
                 widgets.push(Box::new(ApiKeysWidget::new(ctx)));
             }
         }
@@ -6097,7 +6115,7 @@ impl AgentsWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.warp.dev/agent-platform/capabilities/codebase-context",
+                "https://therob.lol/derp-terminal/help/agent-platform/capabilities/codebase-context",
             ),
         ];
         let description = Container::new(
@@ -6175,7 +6193,7 @@ impl AgentsWidget {
                 FormattedTextFragment::plain_text(" or "),
                 FormattedTextFragment::hyperlink(
                     "learn more about MCPs.",
-                    "https://docs.warp.dev/agent-platform/capabilities/mcp",
+                    "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp",
                 ),
             ];
 
@@ -6346,24 +6364,22 @@ impl AgentsWidget {
     }
 }
 
+/// The "Input" section: natural-language detection and the input hint text
+/// toggle. These are general input behaviours rather than AI Manager settings,
+/// so the section renders on the General page (see `AISubpage`).
 #[derive(Default)]
-struct AIInputWidget {
+struct InputWidget {
     incorrect_autodetection_highlight_index: HighlightedHyperlink,
     autodetection_toggle: SwitchStateHandle,
     nld_in_terminal_toggle: SwitchStateHandle,
     show_input_hint_toggle: SwitchStateHandle,
-    show_agent_tips_toggle: SwitchStateHandle,
-    include_agent_commands_in_history_toggle: SwitchStateHandle,
-    swear_mode_toggle: SwitchStateHandle,
-    misery_mode_toggle: SwitchStateHandle,
-    subscribe_link: MouseStateHandle,
 }
 
-impl SettingsWidget for AIInputWidget {
+impl SettingsWidget for InputWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "oz agent ai input natural language detection autodetection prompt terminal command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc swear swear mode sweary profanity misery misery mode insults contempt"
+        "input natural language detection autodetection nld prompt terminal denylist hint hint text"
     }
 
     fn render(
@@ -6403,12 +6419,51 @@ impl SettingsWidget for AIInputWidget {
             app,
         );
 
-        let mut widget_children = vec![
-            render_separator(appearance),
-            input_header,
-            natural_language_detection_section,
-            show_input_hint_text,
-        ];
+        Flex::column()
+            .with_children(vec![
+                render_separator(appearance),
+                input_header,
+                natural_language_detection_section,
+                show_input_hint_text,
+            ])
+            .finish()
+    }
+}
+
+#[derive(Default)]
+struct AIInputWidget {
+    show_agent_tips_toggle: SwitchStateHandle,
+    include_agent_commands_in_history_toggle: SwitchStateHandle,
+    swear_mode_toggle: SwitchStateHandle,
+    misery_mode_toggle: SwitchStateHandle,
+    subscribe_link: MouseStateHandle,
+}
+
+impl SettingsWidget for AIInputWidget {
+    type View = AISettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "oz agent ai behaviour tips command commands history shell executed execution queue interrupt submission submit auto-queue response while responding default long-running long running lrc swear swear mode sweary profanity misery misery mode insults contempt"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let ai_settings = AISettings::as_ref(app);
+        let is_any_ai_enabled = ai_settings.is_any_ai_enabled(app);
+
+        let agent_header = build_sub_header(
+            appearance,
+            "Agent behaviour",
+            Some(styles::header_font_color(is_any_ai_enabled, app)),
+        )
+        .with_padding_bottom(HEADER_PADDING)
+        .finish();
+
+        let mut widget_children = vec![render_separator(appearance), agent_header];
 
         if FeatureFlag::AgentTips.is_enabled() {
             let agent_tips_toggle = render_ai_setting_toggle::<ShowAgentTips>(
@@ -6535,7 +6590,7 @@ impl SettingsWidget for AIInputWidget {
     }
 }
 
-impl AIInputWidget {
+impl InputWidget {
     fn render_natural_language_detection_section(
         incorrect_autodetection_highlight_index: HighlightedHyperlink,
         autodetection_toggle: SwitchStateHandle,
@@ -6742,7 +6797,7 @@ impl SettingsWidget for MCPServersWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.warp.dev/agent-platform/capabilities/mcp",
+                "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp",
             ),
         ];
 
@@ -6788,7 +6843,7 @@ impl SettingsWidget for MCPServersWidget {
                                 ),
                                 FormattedTextFragment::hyperlink(
                                     "See supported providers.",
-                                    "https://docs.warp.dev/agent-platform/capabilities/mcp#file-based-mcp-servers",
+                                    "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
                                 ),
                             ]
                         });
@@ -6873,7 +6928,7 @@ impl AIFactWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.warp.dev/agent-platform/capabilities/rules",
+                "https://therob.lol/derp-terminal/help/agent-platform/capabilities/rules",
             ),
         ];
         let description = Container::new(
@@ -9080,16 +9135,22 @@ impl SettingsWidget for ApiKeysWidget {
                 app,
             ));
         } else {
-            // Fallback: old "API Keys" header only
             column.add_child(
                 build_sub_header(
                     appearance,
-                    "API Keys",
+                    "Bring your own key",
                     Some(styles::header_font_color(is_any_ai_enabled, app)),
                 )
                 .with_padding_bottom(HEADER_PADDING)
                 .finish(),
             );
+            column.add_child(render_ai_setting_description(
+                "Your own provider keys, used to talk to that provider directly. They are \
+                 unrelated to the AI manager — a Moloch server holds its own keys, so a \
+                 key here is only needed for providers this app calls itself.",
+                is_any_ai_enabled,
+                app,
+            ));
         }
 
         if show_provider_keys {

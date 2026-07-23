@@ -294,15 +294,19 @@ impl LocalHarnessStream {
         } = event
         {
             let needle = message.trim();
-            let duplicate = !needle.is_empty()
-                && self.shown_texts.iter().any(|shown| shown.contains(needle));
+            let duplicate =
+                !needle.is_empty() && self.shown_texts.iter().any(|shown| shown.contains(needle));
             if duplicate {
                 self.shown_texts.clear();
                 return Vec::new();
             }
         }
-        let messages =
-            turn_event_to_messages(self.root_task_id(), self.request_id(), event, shell_commands);
+        let messages = turn_event_to_messages(
+            self.root_task_id(),
+            self.request_id(),
+            event,
+            shell_commands,
+        );
         // A completed turn (success or error) closes the dedup window.
         if matches!(event, TurnEvent::TurnCompleted { .. }) {
             self.shown_texts.clear();

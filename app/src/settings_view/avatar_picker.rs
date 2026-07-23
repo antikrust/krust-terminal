@@ -430,9 +430,7 @@ impl View for AvatarPickerModal {
         if !favorites.is_empty() {
             content.add_child(Self::small_label("Saved", appearance));
             let mut shelf = Wrap::row().with_run_spacing(TILE_GAP);
-            for (index, (style, seed)) in
-                favorites.iter().take(MAX_AVATAR_FAVORITES).enumerate()
-            {
+            for (index, (style, seed)) in favorites.iter().take(MAX_AVATAR_FAVORITES).enumerate() {
                 let selected = !has_photo && *style == chosen_style && *seed == chosen_seed;
                 shelf.add_child(
                     Container::new(Self::tile(

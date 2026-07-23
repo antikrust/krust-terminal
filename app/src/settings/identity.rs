@@ -147,9 +147,7 @@ impl IdentitySettings {
     pub fn toggle_favorite_avatar(style: &str, seed: &str, ctx: &mut warpui::AppContext) {
         use warpui::SingletonEntity as _;
         let mut favorites = Self::favorite_avatars(ctx);
-        let existing = favorites
-            .iter()
-            .position(|(s, d)| s == style && d == seed);
+        let existing = favorites.iter().position(|(s, d)| s == style && d == seed);
         match existing {
             Some(index) => {
                 favorites.remove(index);

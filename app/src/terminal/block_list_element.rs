@@ -21,9 +21,8 @@ use warpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
 use warpui::elements::{
     Axis, Border, ChildAnchor, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning, ParentAnchor,
-    ParentElement,
-    ParentOffsetBounds, Point, Radius, SavePosition, ScrollData, ScrollableElement, Stack, Text,
-    ZIndex,
+    ParentElement, ParentOffsetBounds, Point, Radius, SavePosition, ScrollData, ScrollableElement,
+    Stack, Text, ZIndex,
 };
 use warpui::event::{DispatchedEvent, KeyState, ModifiersState};
 use warpui::fonts::{FamilyId, Properties, Style, Weight};
@@ -67,9 +66,7 @@ use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::Appearance;
 use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
-use crate::settings::{
-    AISettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing,
-};
+use crate::settings::{AISettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing};
 use crate::terminal::alt_screen::{should_intercept_mouse, should_intercept_scroll};
 use crate::terminal::block_list_viewport::AutoscrollBehavior;
 use crate::terminal::blockgrid_renderer::BlockGridParams;

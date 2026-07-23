@@ -93,6 +93,7 @@ mod main_page;
 pub mod mcp_servers;
 pub mod mcp_servers_page;
 mod nav;
+mod moloch_page;
 mod ollama_page;
 pub mod pane_manager;
 mod platform;
@@ -252,8 +253,9 @@ pub enum SettingsSection {
     Teams,
     Warpify,
     /// Internal backing-page identifier for AISettingsPageView. Multiple subpages
-    /// (WarpAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents) share this single
-    /// backing page, so this variant is needed as the key in `settings_pages`.
+    /// (WarpAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents, BringYourOwnKey)
+    /// share this single backing page, so this variant is needed as the key in
+    /// `settings_pages`.
     /// External callers should navigate to a specific subpage (e.g. `WarpAgent`) instead.
     AI,
     // ── Agents umbrella subpages ──
@@ -264,6 +266,9 @@ pub enum SettingsSection {
     ThirdPartyCLIAgents,
     Ollama,
     Grok,
+    /// Personal provider keys and custom endpoints — their own page rather than
+    /// a section at the bottom of the AI Manager page.
+    BringYourOwnKey,
     /// Internal backing-page identifier for CodeSettingsPageView. Multiple subpages
     /// (CodeIndexing, EditorAndCodeReview) share this single backing page,
     /// so this variant is needed as the key in `settings_pages`.
@@ -277,7 +282,10 @@ pub enum SettingsSection {
     AppearanceInput,
     AppearanceTxtFx,
     AppearanceBlocks,
-    // ── Cloud platform umbrella subpages ──
+    // ── Moloch umbrella subpages (was "Cloud platform") ──
+    /// What the Moloch server is doing: reachability, where it gets its
+    /// intelligence, and the tail of its log.
+    MolochStatus,
     CloudEnvironments,
     OzCloudAPIKeys,
 }
@@ -301,14 +309,16 @@ impl Display for SettingsSection {
             // of the CLI-agent settings (the internal variant name is kept to avoid
             // churning ~20 test references and the deep-link map).
             SettingsSection::ThirdPartyCLIAgents => write!(f, "General"),
+            SettingsSection::BringYourOwnKey => write!(f, "Bring your own key"),
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
             SettingsSection::AppearanceGeneral => write!(f, "General"),
             SettingsSection::AppearanceInput => write!(f, "Input"),
             SettingsSection::AppearanceTxtFx => write!(f, "Text"),
             SettingsSection::AppearanceBlocks => write!(f, "Blocks"),
+            SettingsSection::MolochStatus => write!(f, "Status"),
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
-            SettingsSection::OzCloudAPIKeys => write!(f, "Oz Cloud API Keys"),
+            SettingsSection::OzCloudAPIKeys => write!(f, "Moloch API keys"),
             _ => write!(f, "{self:?}"),
         }
     }
@@ -343,6 +353,7 @@ impl SettingsSection {
                 | Self::AgentMCPServers
                 | Self::Knowledge
                 | Self::ThirdPartyCLIAgents
+                | Self::BringYourOwnKey
                 | Self::Ollama
                 | Self::Grok
         )
@@ -353,9 +364,12 @@ impl SettingsSection {
         matches!(self, Self::CodeIndexing | Self::EditorAndCodeReview)
     }
 
-    /// Returns true if this section is a subpage under the "Cloud platform" umbrella.
+    /// Returns true if this section is a subpage under the "Moloch" umbrella.
     pub fn is_cloud_platform_subpage(&self) -> bool {
-        matches!(self, Self::CloudEnvironments | Self::OzCloudAPIKeys)
+        matches!(
+            self,
+            Self::MolochStatus | Self::CloudEnvironments | Self::OzCloudAPIKeys
+        )
     }
 
     /// Maps subpage sections back to their parent page section for page lookup.
@@ -386,6 +400,7 @@ impl SettingsSection {
         &[
             Self::ThirdPartyCLIAgents,
             Self::WarpAgent,
+            Self::BringYourOwnKey,
             Self::AgentMCPServers,
             Self::Ollama,
             Self::Grok,
@@ -397,9 +412,13 @@ impl SettingsSection {
         &[Self::CodeIndexing, Self::EditorAndCodeReview]
     }
 
-    /// The ordered list of Cloud platform subpage sections.
+    /// The ordered list of Moloch subpage sections.
     pub fn cloud_platform_subpages() -> &'static [Self] {
-        &[Self::CloudEnvironments, Self::OzCloudAPIKeys]
+        &[
+            Self::MolochStatus,
+            Self::CloudEnvironments,
+            Self::OzCloudAPIKeys,
+        ]
     }
 
     /// The ordered list of Appearance subpage sections shown under the
@@ -438,6 +457,7 @@ impl FromStr for SettingsSection {
             "MCP servers" | "AgentMCPServers" => Ok(Self::AgentMCPServers),
             "Knowledge" => Ok(Self::Knowledge),
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
+            "Bring your own key" | "BringYourOwnKey" => Ok(Self::BringYourOwnKey),
             "Ollama" => Ok(Self::Ollama),
             "Grok" => Ok(Self::Grok),
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),
@@ -447,8 +467,13 @@ impl FromStr for SettingsSection {
             // "txtFX" kept for backward compatibility with older deeplinks.
             "Text" | "txtFX" | "AppearanceTxtFx" => Ok(Self::AppearanceTxtFx),
             "Blocks" | "AppearanceBlocks" => Ok(Self::AppearanceBlocks),
+            "MolochStatus" => Ok(Self::MolochStatus),
             "CloudEnvironments" => Ok(Self::CloudEnvironments),
-            "Oz Cloud API Keys" | "OzCloudAPIKeys" => Ok(Self::OzCloudAPIKeys),
+            // The old names stay parseable so existing deep links and any
+            // persisted section string keep resolving after the rename.
+            "Moloch API keys" | "Server and keys" | "Oz Cloud API Keys" | "OzCloudAPIKeys" => {
+                Ok(Self::OzCloudAPIKeys)
+            }
             _ => Err(()),
         }
     }
@@ -1132,6 +1157,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Teams(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Warpify(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::MolochStatus(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::OzCloudAPIKeys(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Privacy(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Scripting(handle) => $ctx.update_view(handle, $update),
@@ -1262,6 +1288,9 @@ impl SettingsView {
         // Ollama page (local models)
         let ollama_page_handle = ctx.add_typed_action_view(ollama_page::OllamaPageView::new);
 
+        // Moloch page (what the broker is doing)
+        let moloch_page_handle = ctx.add_typed_action_view(moloch_page::MolochPageView::new);
+
         // MCP Servers page
         let mcp_servers_page_handle = ctx.add_typed_action_view(MCPServersSettingsPageView::new);
         ctx.subscribe_to_view(&mcp_servers_page_handle, |me, _, event, ctx| {
@@ -1303,6 +1332,7 @@ impl SettingsView {
             SettingsPage::new(appearance_page_handle),
             SettingsPage::new(features_page_handle),
             SettingsPage::new(keybindings_handle),
+            SettingsPage::new(moloch_page_handle),
             SettingsPage::new(platform_page_handle),
             SettingsPage::new(warpify_page_handle),
         ];
@@ -1335,8 +1365,9 @@ impl SettingsView {
                 ],
             )),
             SettingsNavItem::Umbrella(SettingsUmbrella::new(
-                "Cloud platform",
+                "Moloch",
                 vec![
+                    SettingsSection::MolochStatus,
                     SettingsSection::CloudEnvironments,
                     SettingsSection::OzCloudAPIKeys,
                 ],
@@ -2170,6 +2201,7 @@ impl SettingsView {
             SettingsPageViewHandle::Features(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::MolochStatus(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::OzCloudAPIKeys(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Privacy(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Warpify(v) => v.as_ref(app).should_render(app),
@@ -2386,9 +2418,7 @@ impl SettingsView {
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
         match page_handle {
-            SettingsPageViewHandle::Main(view) => {
-                view.read(app, |view, _| view.modal_content(app))
-            }
+            SettingsPageViewHandle::Main(view) => view.read(app, |view, _| view.modal_content(app)),
             SettingsPageViewHandle::Privacy(view) => {
                 view.read(app, |view, _| view.get_modal_content())
             }

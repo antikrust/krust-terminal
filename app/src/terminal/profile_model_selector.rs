@@ -21,6 +21,11 @@ use warpui::{
     View, ViewContext, ViewHandle,
 };
 
+/// How tall the model menu may grow before it scrolls. Roughly a dozen rows —
+/// enough to see a machine's models at a glance without the menu reaching the
+/// edge of a laptop screen.
+const MODEL_MENU_MAX_HEIGHT: f32 = 420.;
+
 const SIDECAR_HORIZONTAL_GAP: f32 = 8.;
 const SIDECAR_POSITION_ID: &str = "model_sidecar_panel";
 
@@ -58,7 +63,7 @@ use crate::appearance::Appearance;
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::context_chips::display_chip::{udi_font_size, udi_icon_size};
 use crate::context_chips::spacing;
-use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields};
+use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields, MenuVariant};
 use crate::settings::ai::{AISettings, AISettingsChangedEvent};
 use crate::settings_view::SettingsSection;
 use crate::terminal::input::{MenuPositioning, MenuPositioningProvider};
@@ -349,6 +354,11 @@ impl ProfileModelSelector {
                 .with_safe_triangle()
                 .prevent_interaction_with_other_elements()
                 .with_drop_shadow()
+                // Every connected machine contributes its models to this one
+                // menu, so it has no fixed upper length — scroll rather than
+                // run off the bottom of the screen.
+                .with_menu_variant(MenuVariant::scrollable())
+                .with_height(MODEL_MENU_MAX_HEIGHT)
         });
 
         let sidecar_dropdown = ctx.add_typed_action_view(|_ctx| Menu::new());
@@ -971,6 +981,56 @@ impl ProfileModelSelector {
         )
     }
 
+    /// Groups Ollama models by the machine they live on: this computer first,
+    /// then one group per remote host, each headed by that machine's name.
+    ///
+    /// The per-item "(the PC)" suffix the picker would otherwise carry is
+    /// dropped inside a machine's group — the heading already says where you
+    /// are, and repeating it on every row makes the longest names unreadable.
+    fn group_ollama_models_by_machine(
+        models: &[HarnessModelInfo],
+        app: &AppContext,
+    ) -> Vec<(String, Vec<HarnessModelInfo>)> {
+        use crate::ai::ollama::remote;
+
+        let hosts = remote::configured(app);
+        let mut local: Vec<HarnessModelInfo> = Vec::new();
+        let mut remote_groups: Vec<(String, Vec<HarnessModelInfo>)> = Vec::new();
+
+        for model in models {
+            let bare_id = ollama_model_name(&model.id).unwrap_or(model.id.as_str());
+            let Some(url) = remote::split(bare_id).1 else {
+                local.push(model.clone());
+                continue;
+            };
+            let machine = hosts
+                .iter()
+                .find(|host| host.url == url)
+                .map(remote::RemoteHost::display)
+                .unwrap_or_else(|| url.trim_start_matches("http://").to_owned());
+            let mut entry = model.clone();
+            entry.display_name = remote::split(bare_id).0.to_owned();
+            match remote_groups
+                .iter_mut()
+                .find(|(label, _)| *label == machine)
+            {
+                Some((_, group)) => group.push(entry),
+                None => remote_groups.push((machine, vec![entry])),
+            }
+        }
+
+        let mut groups = Vec::new();
+        if !local.is_empty() {
+            groups.push(("Ollama".to_owned(), local));
+        }
+        groups.extend(
+            remote_groups
+                .into_iter()
+                .map(|(machine, models)| (format!("Ollama · {machine}"), models)),
+        );
+        groups
+    }
+
     fn refresh_harness_model_menu(&mut self, ctx: &mut ViewContext<Self>) {
         // Cloud composer panes carry an ambient model that owns the
         // selection and pick their harness elsewhere; plain terminal panes
@@ -1016,12 +1076,14 @@ impl ProfileModelSelector {
                             false,
                         ));
                         if ollama_enabled && !ollama_models.is_empty() {
-                            groups.push((
-                                available.harness,
-                                "Ollama".to_string(),
-                                ollama_models,
-                                true,
-                            ));
+                            // One heading per machine. Pooled into a single
+                            // "Ollama" list, a second computer's models run
+                            // the menu off the bottom of the screen.
+                            for (label, models) in
+                                Self::group_ollama_models_by_machine(&ollama_models, ctx)
+                            {
+                                groups.push((available.harness, label, models, true));
+                            }
                         }
                     } else {
                         groups.push((

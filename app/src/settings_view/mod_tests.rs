@@ -192,7 +192,7 @@ fn subpage_display_names_are_correct() {
     );
     assert_eq!(
         SettingsSection::OzCloudAPIKeys.to_string(),
-        "Oz Cloud API Keys"
+        "Moloch API keys"
     );
 }
 
@@ -227,7 +227,17 @@ fn subpage_from_str_parses_display_names() {
         Ok(SettingsSection::EditorAndCodeReview)
     );
     assert_eq!(
+        SettingsSection::from_str("Moloch API keys"),
+        Ok(SettingsSection::OzCloudAPIKeys)
+    );
+    // Superseded display names still parse, so a deep link written against an
+    // older build does not land on nothing.
+    assert_eq!(
         SettingsSection::from_str("Oz Cloud API Keys"),
+        Ok(SettingsSection::OzCloudAPIKeys)
+    );
+    assert_eq!(
+        SettingsSection::from_str("Server and keys"),
         Ok(SettingsSection::OzCloudAPIKeys)
     );
 }
@@ -651,7 +661,7 @@ fn collapsed_umbrella_is_a_single_nav_stop() {
     let stops = build_nav_stops(&nav_items, |_| true);
 
     // Expect: Account, <Agents umbrella>, BillingAndUsage, <Code umbrella>,
-    // <Cloud platform umbrella>, Teams.
+    // <Moloch umbrella>, Teams.
     assert_eq!(stops.len(), 6);
     assert!(matches!(
         stops[0],
@@ -681,7 +691,7 @@ fn collapsed_umbrella_is_a_single_nav_stop() {
         stops[4],
         NavStop::CollapsedUmbrella {
             nav_index: 4,
-            first_subpage: SettingsSection::CloudEnvironments,
+            first_subpage: SettingsSection::MolochStatus,
             last_subpage: SettingsSection::OzCloudAPIKeys,
         }
     ));
@@ -697,9 +707,9 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
     let stops = build_nav_stops(&nav_items, |_| true);
 
     // Expect: Account, ThirdPartyCLIAgents (General), WarpAgent,
-    // AgentMCPServers, Ollama, Grok, BillingAndUsage, <Code umbrella>,
-    // <Cloud platform umbrella>, Teams. (Knowledge/Profiles are now sections
-    // within General.)
+    // BringYourOwnKey, AgentMCPServers, Ollama, Grok, BillingAndUsage,
+    // <Code umbrella>, <Cloud platform umbrella>, Teams. (Knowledge/Profiles
+    // are now sections within General.)
     let sections: Vec<_> = stops
         .iter()
         .map(|s| match s {
@@ -713,6 +723,7 @@ fn expanded_umbrella_produces_section_stop_per_subpage() {
             "Account",
             "ThirdPartyCLIAgents",
             "WarpAgent",
+            "BringYourOwnKey",
             "AgentMCPServers",
             "Ollama",
             "Grok",
@@ -968,7 +979,7 @@ fn arrow_down_from_expanded_last_subpage_leaves_umbrella() {
 #[test]
 fn arrow_down_across_adjacent_collapsed_umbrellas() {
     let nav_items = realistic_nav_items();
-    // Both Code and Cloud platform umbrellas are collapsed.
+    // Both Code and Moloch umbrellas are collapsed.
     let stops = build_nav_stops(&nav_items, |_| true);
 
     // From BillingAndUsage, Down should land on the first Code subpage
@@ -983,32 +994,34 @@ fn arrow_down_across_adjacent_collapsed_umbrellas() {
 
     // From the Code umbrella stop (i.e. the user is "on" CodeIndexing which
     // maps back to the collapsed umbrella), pressing Down again should land
-    // on the Cloud platform umbrella's first subpage.
+    // on the Moloch umbrella's first subpage.
     let next_after_code = simulate_cycle(
         &nav_items,
         &stops,
         SettingsSection::CodeIndexing,
         CycleDirection::Down,
     );
-    assert_eq!(next_after_code, SettingsSection::CloudEnvironments);
+    assert_eq!(next_after_code, SettingsSection::MolochStatus);
 }
 
 #[test]
 fn arrow_down_collapsed_umbrella_respects_search_filter() {
     let nav_items = realistic_nav_items();
-    // Search filter hides General and WarpAgent so the first visible AI
-    // subpage is AgentMCPServers.
+    // Search filter hides General, WarpAgent and BringYourOwnKey so the first
+    // visible AI subpage is AgentMCPServers.
     let is_visible = |section: SettingsSection| {
         !matches!(
             section,
-            SettingsSection::ThirdPartyCLIAgents | SettingsSection::WarpAgent
+            SettingsSection::ThirdPartyCLIAgents
+                | SettingsSection::WarpAgent
+                | SettingsSection::BringYourOwnKey
         )
     };
     let stops = build_nav_stops(&nav_items, is_visible);
 
     // From Account, Down should land on AgentMCPServers (first visible
     // subpage of the still-collapsed Agents umbrella), not on General /
-    // WarpAgent.
+    // WarpAgent / BringYourOwnKey.
     let next = simulate_cycle(
         &nav_items,
         &stops,
