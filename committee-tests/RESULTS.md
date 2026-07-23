@@ -78,6 +78,34 @@ that has to be *watched* cannot be marked by a machine, so the creation test
 now asks for `wrap(text, width)` and is graded by a held-out file like the
 edit test.
 
+## The rewrite rounds
+
+`COMMITTEE_ROUNDS=notes` runs a round where the judge writes each panelist
+notes and everyone revises. Measured against the same graders:
+
+| Fixture | No rounds | One notes round | Cost |
+| --- | --- | --- | --- |
+| arcade (creation) | 7 / 8 | **6 / 8** | +4½ min |
+| durations (edit) | 12 / 12 | 12 / 12 | +6½ min |
+
+One made it worse and one changed nothing, for eleven minutes between them.
+The regression is the interesting half: the revision took the draft's single
+bug — a word too long to break flushed after an empty accumulator — and
+spread it into a second case.
+
+The cause was that panel rounds had no evidence at all. Review mode probes
+the code, asks an oracle what each call should have returned, and executes a
+proof per claim; a rewrite round was the judge reading code, forming an
+opinion, and three small models revising on the strength of it, with nothing
+ever run. Churn on a nearly-right answer breaks it more often than it mends
+it — the same coin-flip as the 41% below, pointed at a draft that was
+already almost correct.
+
+Drafts are now run before the judge writes notes, and what they did goes in
+as measurement rather than opinion. **Both numbers above predate that**, so
+they are a baseline and not a verdict on rounds as such. Re-measuring them
+is the obvious next thing to do.
+
 ## Two green results that weren't
 
 Both were caught by reading what the run wrote rather than the number it
