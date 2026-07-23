@@ -856,3 +856,25 @@ fn the_oracle_is_asked_what_should_have_happened_and_the_harness_does_the_compar
     let brackets = vec![("restock(0, [])".to_string(), "[[0, []]]".to_string())];
     assert!(oracle_mismatches(&brackets, &observed).is_empty());
 }
+
+#[test]
+fn a_prover_can_be_pointed_at_the_call_that_already_disagreed() {
+    // Across the stock runs, `cheapest` was proved with the empty list 13
+    // times and with `[0, 5]` — the actual defect — 11 times, and every
+    // empty-list attempt refuted something real. When the oracle has
+    // already found the call that contradicts the documentation, the
+    // prover can be handed it instead of guessing.
+    assert_eq!(
+        mismatch_call("cheapest([0, 5]) returned 5, but its docstring says it should return 0"),
+        Some("cheapest([0, 5])")
+    );
+    assert_eq!(
+        mismatch_call(
+            "needs_reorder(3, 3) returned False, but its docstring says it should return True"
+        ),
+        Some("needs_reorder(3, 3)")
+    );
+    // Prose that isn't a mismatch line contributes no call to point at.
+    assert_eq!(mismatch_call("everything looked fine"), None);
+    assert_eq!(mismatch_call("returned 5, but nothing called it"), None);
+}

@@ -719,6 +719,12 @@ pub(crate) fn oracle_mismatches(
     mismatches
 }
 
+/// The call an oracle mismatch is about, so a prover can be pointed at it.
+pub(crate) fn mismatch_call(line: &str) -> Option<&str> {
+    let call = line.split(" returned ").next()?;
+    call.contains('(').then_some(call)
+}
+
 /// The behaviour report with every result cut off, leaving only the calls.
 ///
 /// The report is the right thing to show a prover and the wrong thing to
