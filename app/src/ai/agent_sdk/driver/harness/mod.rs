@@ -48,6 +48,8 @@ pub(crate) mod codex_transcript;
 mod gemini;
 mod json_utils;
 pub(crate) mod ollama_committee;
+#[cfg(test)]
+mod ollama_committee_bench;
 pub(crate) mod ollama_committee_proof;
 pub(crate) mod ollama_stream_exec;
 mod telemetry;
