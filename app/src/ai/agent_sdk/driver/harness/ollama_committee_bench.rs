@@ -1,25 +1,30 @@
 //! The committee's own test bench: a whole run, on real models, against a
-//! fixture whose defects are known in advance, scored automatically.
+//! fixture whose right answer is known, scored automatically.
 //!
 //! Every stage of the pipeline has unit tests. None of them can answer the
 //! only question that matters — *does a bench of small local models actually
 //! find the bugs?* — because that question is about model behaviour, and
-//! model behaviour is exactly what a unit test stubs out. So this runs the
-//! real thing and counts.
+//! model behaviour is exactly what a unit test stubs out. Two runs of the
+//! stock fixture went by before anyone noticed the fixture was telling the
+//! models the answer.
 //!
 //! It is `#[ignore]`d: it needs an Ollama serving it and takes minutes.
 //!
 //! ```text
 //! COMMITTEE_HOST=http://192.168.1.150:11434 \
-//! COMMITTEE_REVIEWERS=qwen2.5-coder:32b,deepseek-coder-v2:16b,qwen2.5-coder:14b \
+//! COMMITTEE_REVIEWERS=qwen2.5-coder:7b,deepseek-coder-v2:16b,qwen2.5-coder:14b \
 //! COMMITTEE_JUDGE=phi4:14b \
 //! COMMITTEE_FIXTURE=stock \
+//! COMMITTEE_ROUNDS=notes \
 //! cargo test -p warp --lib -- --ignored --nocapture a_real_committee
 //! ```
 //!
 //! `COMMITTEE_HOST` is the load-bearing one. Everything it names runs over
-//! there; this machine only marshals the run, which is the difference
-//! between iterating on the pipeline and not being able to use the laptop.
+//! there and every model on this machine is benched, so a run can't quietly
+//! seat a laptop model and measure the laptop.
+//!
+//! Every run ends with one `BENCH ...` line holding its numbers, so a
+//! session's worth of them can be read back with `grep BENCH`.
 
 use ai::agent::TurnEvent;
 
@@ -35,10 +40,25 @@ struct Planted {
     defect: &'static str,
 }
 
-/// What each fixture in `committee-tests/` has planted in it.
-fn planted(fixture: &str) -> &'static [Planted] {
+/// What the bench asks of a fixture, and how it marks the answer.
+enum Task {
+    /// Review the working tree's diff. Marked against what was planted.
+    Review(&'static [Planted]),
+    /// Ask for a program, save the winner, run something over it. Marked by
+    /// that command's exit code, which is why every `Make` fixture ships a
+    /// grader the committee never sees.
+    Make {
+        /// `None` reads the fixture's `PROMPT.txt` — the panel can't open
+        /// files, so a file it must work on has to travel in the prompt.
+        ask: Option<&'static str>,
+        save_as: &'static str,
+        grade: &'static [&'static str],
+    },
+}
+
+fn task(fixture: &str) -> Task {
     match fixture {
-        "stock" => &[
+        "stock" => Task::Review(&[
             Planted {
                 function: "cheapest",
                 defect: "`if not best` treats a price of 0 as no price yet",
@@ -51,8 +71,8 @@ fn planted(fixture: &str) -> &'static [Planted] {
                 function: "restock",
                 defect: "`log=[]` is one list shared by every call",
             },
-        ],
-        "payday" => &[
+        ]),
+        "payday" => Task::Review(&[
             Planted {
                 function: "split_pot",
                 defect: "`/` makes whole cents into floats",
@@ -65,8 +85,8 @@ fn planted(fixture: &str) -> &'static [Planted] {
                 function: "top_scores",
                 defect: "sorted ascending, so the *lowest* scores come back",
             },
-        ],
-        "orders" => &[
+        ]),
+        "orders" => Task::Review(&[
             Planted {
                 function: "render_line",
                 defect: "pence printed as pounds — £1250.00 for £12.50",
@@ -75,8 +95,31 @@ fn planted(fixture: &str) -> &'static [Planted] {
                 function: "checkout",
                 defect: "a percentage handed to something wanting a fraction",
             },
-        ],
-        _ => &[],
+        ]),
+        // Graded by a file the committee never sees: three of twelve cases
+        // fail before it starts and none should after, however it gets there.
+        "durations" => Task::Make {
+            ask: None,
+            save_as: "durations.py",
+            grade: &["python3", "test_durations.py"],
+        },
+        // Nothing is planted, so the grade is the lowest bar there is: does
+        // the thing it wrote actually run? A panel that produces a traceback
+        // has failed regardless of how the prose read.
+        "arcade" => Task::Make {
+            ask: Some(
+                "write a python3 script that draws a fireworks animation in the terminal using \
+                 only the standard library — no pip installs. It must run for 30 seconds and \
+                 then exit cleanly, and ctrl-c must also quit cleanly.",
+            ),
+            save_as: "fireworks.py",
+            grade: &[
+                "python3",
+                "-c",
+                "import ast; ast.parse(open('fireworks.py').read())",
+            ],
+        },
+        other => panic!("no bench task for fixture {other}"),
     }
 }
 
@@ -99,7 +142,8 @@ fn local_models() -> Vec<String> {
         .collect()
 }
 
-/// The section of a verdict a finding landed in.
+/// The **Definite** section of a verdict — the only claim a run makes, and
+/// so the only part worth marking.
 fn definite_block(transcript: &str) -> String {
     let Some(start) = transcript.find("**Definite (") else {
         return String::new();
@@ -112,21 +156,64 @@ fn definite_block(transcript: &str) -> String {
     rest[..end].to_string()
 }
 
+/// A run, and everything it collected.
+struct Run {
+    working_dir: std::path::PathBuf,
+    transcript: std::sync::Arc<std::sync::Mutex<String>>,
+    session: uuid::Uuid,
+    config: OllamaCommitteeConfig,
+    remote_models: Vec<String>,
+    path: String,
+}
+
+impl Run {
+    fn say(&self, prompt: &str) {
+        use futures_lite::future::block_on;
+
+        let sink = std::sync::Arc::clone(&self.transcript);
+        block_on(run_ollama_committee(
+            prompt,
+            &self.session,
+            &self.working_dir,
+            &self.path,
+            self.config.clone(),
+            self.remote_models.clone(),
+            move |event| {
+                if let TurnEvent::Text { text } = &event {
+                    if let Ok(mut sink) = sink.lock() {
+                        sink.push_str(text);
+                        sink.push_str("\n\n");
+                    }
+                    println!("{text}");
+                }
+            },
+        ))
+        .expect("the committee runs");
+    }
+
+    fn transcript(&self) -> String {
+        self.transcript.lock().expect("the transcript").clone()
+    }
+}
+
 #[test]
 #[ignore = "needs an Ollama and several minutes; run it by hand"]
 fn a_real_committee() {
-    use futures_lite::future::block_on;
-
     let fixture = std::env::var("COMMITTEE_FIXTURE").unwrap_or_else(|_| "stock".to_string());
     let host = std::env::var("COMMITTEE_HOST")
         .unwrap_or_else(|_| "http://192.168.1.150:11434".to_string());
     let reviewers: Vec<String> = std::env::var("COMMITTEE_REVIEWERS")
-        .unwrap_or_else(|_| "qwen2.5-coder:32b,deepseek-coder-v2:16b,qwen2.5-coder:14b".to_string())
+        .unwrap_or_else(|_| "qwen2.5-coder:7b,deepseek-coder-v2:16b,qwen2.5-coder:14b".to_string())
         .split(',')
         .map(|tag| tag.trim().to_string())
         .filter(|tag| !tag.is_empty())
         .collect();
     let judge = std::env::var("COMMITTEE_JUDGE").unwrap_or_else(|_| "phi4:14b".to_string());
+    let rounds: Vec<PanelRoundKind> = std::env::var("COMMITTEE_ROUNDS")
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|name| PanelRoundKind::from_str(name.trim()))
+        .collect();
 
     // A fresh copy of the fixture, built by the same script the user runs.
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -169,61 +256,102 @@ fn a_real_committee() {
         );
     }
 
-    let config = OllamaCommitteeConfig {
-        reviewers: reviewers.len(),
-        roles,
-        ..OllamaCommitteeConfig::default()
+    let run = Run {
+        working_dir: working_dir.clone(),
+        transcript: std::sync::Arc::new(std::sync::Mutex::new(String::new())),
+        session: uuid::Uuid::new_v4(),
+        config: OllamaCommitteeConfig {
+            reviewers: reviewers.len(),
+            roles,
+            panel_plan: rounds.clone(),
+            ..OllamaCommitteeConfig::default()
+        },
+        remote_models,
+        path: std::env::var("PATH").unwrap_or_default(),
     };
 
-    let transcript = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-    let sink = std::sync::Arc::clone(&transcript);
     let started = std::time::Instant::now();
-    let status = block_on(run_ollama_committee(
-        "review my changes",
-        &uuid::Uuid::new_v4(),
-        &working_dir,
-        &std::env::var("PATH").unwrap_or_default(),
-        config,
-        remote_models,
-        move |event| {
-            if let TurnEvent::Text { text } = &event {
-                let mut sink = sink.lock().expect("the sink");
-                sink.push_str(text);
-                sink.push_str("\n\n");
-                println!("{text}");
+    let task = task(&fixture);
+    let (found, wanted, extra) = match &task {
+        Task::Review(planted) => {
+            run.say("review my changes");
+            let definite = definite_block(&run.transcript());
+            println!("\n\n=== {fixture} ===");
+            let mut found = 0;
+            for defect in *planted {
+                let hit = definite.contains(defect.function);
+                found += usize::from(hit);
+                println!(
+                    "{}  {} — {}",
+                    if hit { "FOUND " } else { "MISSED" },
+                    defect.function,
+                    defect.defect
+                );
             }
-        },
-    ))
-    .expect("the committee runs");
-    let elapsed = started.elapsed();
-    let transcript = transcript.lock().expect("the transcript").clone();
+            // Everything else in Definite is an invention or a double, and
+            // the verdict's own headline counts both as findings.
+            let claims = definite.lines().filter(|line| line.contains("**[")).count();
+            (found, planted.len(), claims.saturating_sub(found))
+        }
+        Task::Make {
+            ask,
+            save_as,
+            grade,
+        } => {
+            let prompt = match ask {
+                Some(literal) => literal.to_string(),
+                None => std::fs::read_to_string(working_dir.join("PROMPT.txt"))
+                    .expect("the fixture's PROMPT.txt"),
+            };
+            run.say(&prompt);
+            // Exactly what the user types: the panel's winner written out
+            // under a name, through the same `save` path.
+            run.say(&format!("save {save_as}"));
 
-    // Score it. The Definite section is the only claim the run makes, so it
-    // is the only one worth grading.
-    let definite = definite_block(&transcript);
-    let expected = planted(&fixture);
-    let mut found = 0;
-    println!("\n\n=== {fixture} — {:?}, exit {status:?} ===", elapsed);
-    for defect in expected {
-        let hit = definite.contains(defect.function);
-        found += usize::from(hit);
-        println!(
-            "{}  {} — {}",
-            if hit { "FOUND " } else { "MISSED" },
-            defect.function,
-            defect.defect
-        );
-    }
-    // Anything in Definite that isn't about a planted function is either an
-    // invention or a duplicate, and both are worth seeing.
-    let claims = definite.lines().filter(|line| line.contains("**[")).count();
+            println!("\n\n=== {fixture} ===");
+            let written = working_dir.join(save_as);
+            if !written.exists() {
+                println!("FAILED  nothing was saved as {save_as}");
+                (0, 1, 0)
+            } else {
+                let marked = std::process::Command::new(grade[0])
+                    .args(&grade[1..])
+                    .current_dir(&working_dir)
+                    .output()
+                    .expect("the grader runs");
+                let report = String::from_utf8_lossy(&marked.stdout);
+                let complaint = String::from_utf8_lossy(&marked.stderr);
+                println!("{report}");
+                if !complaint.trim().is_empty() {
+                    println!("{complaint}");
+                }
+                let passed = marked.status.success();
+                println!(
+                    "{}  {save_as} — {}",
+                    if passed { "PASSED" } else { "FAILED" },
+                    grade.join(" ")
+                );
+                (usize::from(passed), 1, 0)
+            }
+        }
+    };
+
+    let seconds = started.elapsed().as_secs();
+    let rounds: Vec<&str> = rounds.iter().map(|round| round.as_str()).collect();
+    // One line per run, so a session's worth greps back into a table.
     println!(
-        "\n{found}/{} planted defects in Definite, from {claims} claims there",
-        expected.len()
+        "\nBENCH fixture={fixture} reviewers={} judge={judge} rounds={} found={found}/{wanted} \
+         extra={extra} seconds={seconds}",
+        reviewers.join("+"),
+        if rounds.is_empty() {
+            "none".to_string()
+        } else {
+            rounds.join("+")
+        },
     );
 
     if let Ok(out) = std::env::var("COMMITTEE_OUT") {
-        std::fs::write(&out, &transcript).expect("the transcript is written");
+        std::fs::write(&out, run.transcript()).expect("the transcript is written");
         println!("transcript: {out}");
     }
     let _ = std::fs::remove_dir_all(&target);
