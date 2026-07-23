@@ -719,6 +719,55 @@ pub(crate) fn oracle_mismatches(
     mismatches
 }
 
+/// Calls a model proposed for the changed functions, kept only where they
+/// are plainly calls to those functions and nothing else.
+///
+/// A generic battery cannot invent a structured argument. The `orders`
+/// fixture has `checkout(items, percent_off)` whose docstring says "`items`
+/// are (name, unit_pence, quantity) triples", and no combination of zeros,
+/// empty lists and short integers will ever produce one — so the defect,
+/// which needs a real basket to show itself, was never exercised and was
+/// duly missed. A model reading that docstring writes the argument without
+/// difficulty. Proposing inputs is the thing models are best at here; it is
+/// deciding what came back that they cannot do.
+pub(crate) fn parse_proposed_calls(reply: &str, known: &[String]) -> Vec<String> {
+    let mut calls: Vec<String> = Vec::new();
+    for line in reply.lines() {
+        let line = line
+            .trim()
+            .trim_start_matches(['-', '*', '•', '>'])
+            .trim()
+            .trim_matches('`')
+            .trim();
+        let Some(name) = line.split('(').next() else {
+            continue;
+        };
+        if !known.iter().any(|function| function == name.trim()) {
+            continue;
+        }
+        // It is evaluated, so it has to be a call and nothing else. Proof
+        // scripts are already model-written and run, so the trust boundary
+        // is unchanged — but a line that reaches outside the module is a
+        // line the model misunderstood, not an input worth trying.
+        if !line.ends_with(')') || line.len() > 200 {
+            continue;
+        }
+        if [
+            "import", "__", "open(", "exec(", "eval(", "os.", "sys.", ";", "=",
+        ]
+        .iter()
+        .any(|banned| line.contains(banned))
+        {
+            continue;
+        }
+        if !calls.iter().any(|known| known == line) {
+            calls.push(line.to_string());
+        }
+    }
+    calls.truncate(MAX_PROBE_FUNCTIONS);
+    calls
+}
+
 /// The call an oracle mismatch is about, so a prover can be pointed at it.
 pub(crate) fn mismatch_call(line: &str) -> Option<&str> {
     let call = line.split(" returned ").next()?;
@@ -1071,7 +1120,11 @@ pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
 /// its later answers describe the state it has accumulated rather than the
 /// arguments it was given, and they crowd out everything else in a report
 /// that has to fit in the models' context.
-pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]) -> String {
+pub(crate) fn behavior_probe_script(
+    absolute_file: &str,
+    targets: &[ProbeTarget],
+    proposed: &[String],
+) -> String {
     // TypeError and AttributeError are almost always the battery's own
     // fault — it deliberately passes an int where a list goes — and showing
     // them costs more than it pays. One run printed
@@ -1116,6 +1169,21 @@ pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]
          \x20       repeats.add(name)\n\
          \x20       print(f'{{name}}({{shown}}) a second time -> {{again}}'[:200])\n"
     );
+    // A whole call as written, for the ones a model proposed: the generic
+    // battery cannot build `[('Tea', 250, 5)]` and a docstring saying so
+    // makes it obvious.
+    script.push_str(
+        "def probe_call(text):\n\
+         \x20   try:\n\
+         \x20       result = eval(text, vars(module))\n\
+         \x20   except MISCALLED:\n\
+         \x20       return\n\
+         \x20   except Exception as error:\n\
+         \x20       print(f'{text} !! {type(error).__name__}: {error}'[:200])\n\
+         \x20       return\n\
+         \x20   first = repr(result)\n\
+         \x20   print(f'{text} -> {first}'[:200])\n",
+    );
     for target in targets {
         for combo in probe_combos(target.arity) {
             if combo.is_empty() {
@@ -1124,6 +1192,9 @@ pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]
                 script.push_str(&format!("probe('{}', {combo})\n", target.function));
             }
         }
+    }
+    for call in proposed {
+        script.push_str(&format!("probe_call({call:?})\n"));
     }
     script.push_str("raise SystemExit(0)\n");
     script
@@ -1134,6 +1205,7 @@ pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]
 /// proof timeout — a module whose import hangs is skipped, not fatal.
 pub(crate) async fn run_behavior_probe(
     diff: &str,
+    proposed: &[String],
     working_dir: &Path,
     path: &str,
 ) -> Option<String> {
@@ -1157,7 +1229,17 @@ pub(crate) async fn run_behavior_probe(
             .cloned()
             .collect();
         let absolute = working_dir.join(file);
-        let script = behavior_probe_script(&absolute.to_string_lossy(), &file_targets);
+        // A proposed call only belongs with the file that defines it.
+        let mine: Vec<String> = proposed
+            .iter()
+            .filter(|call| {
+                call.split('(')
+                    .next()
+                    .is_some_and(|name| file_targets.iter().any(|target| target.function == name))
+            })
+            .cloned()
+            .collect();
+        let script = behavior_probe_script(&absolute.to_string_lossy(), &file_targets, &mine);
         let execution = run_proof_script(&script, PROOF_TIMEOUT_SECS, working_dir, path).await;
         let observations = execution.stdout.trim();
         if observations.is_empty() {

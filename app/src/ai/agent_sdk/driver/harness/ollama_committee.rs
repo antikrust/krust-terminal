@@ -25,9 +25,10 @@ use uuid::Uuid;
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
     calls_only, classify_proof, contract_for, contracts_in, detect_suite, imported_context,
-    mismatch_call, observations, oracle_mismatches, parse_oracle, proof_script_is_fixable,
-    run_behavior_probe, run_proof_script, run_python_tests, run_suite, self_check,
-    strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
+    mismatch_call, observations, oracle_mismatches, parse_oracle, parse_proposed_calls,
+    proof_script_is_fixable, run_behavior_probe, run_proof_script, run_python_tests, run_suite,
+    self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
+    PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -2225,6 +2226,25 @@ negatives, duplicates) are fair game and are often where the real defect is. \
 Judge only the suspected defect — not style, not other code. No \
 user input, no network, no infinite loops: finish in under ten seconds. Output ONLY the python3 \
 script — no commentary, no code fences.";
+
+const PROPOSE_SYSTEM_PROMPT: &str = "You are given some python functions with their \
+signatures and docstrings. For each one, write ONE realistic call to it — the way the program \
+that uses it would call it, with arguments of the shapes the docstring describes. \
+Prefer the values that most often go wrong: zero, an empty collection, two equal numbers, a \
+single-element list, a boundary. Build structured arguments properly — if a docstring says a \
+parameter is a list of (name, price, quantity) triples, write one. \
+Answer one call per line and nothing else: no explanation, no assignment, no print, no code \
+fences, no imports. Just `function(arguments)`.";
+
+/// Proposing an input is the one part of this a small model is reliably good
+/// at, and the generic battery cannot do it at all. `checkout(items,
+/// percent_off)` whose docstring says "`items` are (name, unit_pence,
+/// quantity) triples" will never be exercised by zeros and empty lists, and
+/// its defect went unfound for exactly that reason while the sibling defect
+/// next door — which the battery *did* happen to exercise — was caught.
+fn propose_user_prompt(contracts: &str) -> String {
+    format!("The functions:\n{contracts}\n\nOne realistic call to each, one per line.")
+}
 
 const ORACLE_SYSTEM_PROMPT: &str = "You are given some python functions with their docstrings, \
 and a list of calls that were made to them. For each call, say what it SHOULD return if the \
@@ -4616,8 +4636,43 @@ pub async fn run_ollama_committee(
             // battery, because nothing here knows how the code is really
             // called — and pushes the observations in as evidence.
             let mut behavior_report: Option<String> = None;
+            // Ask for realistic inputs before running anything. The model
+            // that proposes them never sees a result, so this cannot become
+            // a claim — it only widens what gets tried.
+            let contracts = contracts_in(&diff);
+            let mut proposed: Vec<String> = Vec::new();
+            if config.behavior_report && !contracts.is_empty() {
+                let asker = plan.reviewers.first().unwrap_or(&plan.judge).clone();
+                let blocks: Vec<String> =
+                    contracts.iter().map(|(_, block)| block.clone()).collect();
+                let names: Vec<String> = contracts.iter().map(|(name, _)| name.clone()).collect();
+                let (_, outcome) = chat_once(
+                    &asker.name,
+                    PROPOSE_SYSTEM_PROMPT,
+                    &propose_user_prompt(&blocks.join("\n\n")),
+                    asker.thinking,
+                    keep_alive,
+                    working_dir,
+                    path,
+                    &mut on_event,
+                )
+                .await?;
+                if let Ok(stage) = outcome {
+                    add_usage(&mut total_usage, &stage.usage);
+                    proposed = parse_proposed_calls(&stage.content, &names);
+                }
+                if !proposed.is_empty() {
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "**{}** suggested calls worth trying: `{}`",
+                            stage_name(&asker.name, config.personas),
+                            proposed.join("`, `")
+                        ),
+                    });
+                }
+            }
             let probe = match config.behavior_report {
-                true => run_behavior_probe(&diff, working_dir, path).await,
+                true => run_behavior_probe(&diff, &proposed, working_dir, path).await,
                 false => None,
             };
             if let Some(report) = probe {
@@ -4644,9 +4699,9 @@ pub async fn run_ollama_committee(
             let mut oracle_lines: Vec<String> = Vec::new();
             if let Some(report) = &behavior_report {
                 let observed = observations(report);
-                let contracts = contracts_in(&diff)
-                    .into_iter()
-                    .map(|(_, block)| block)
+                let contracts = contracts
+                    .iter()
+                    .map(|(_, block)| block.clone())
                     .collect::<Vec<_>>()
                     .join("\n\n");
                 if !observed.is_empty() && !contracts.is_empty() {

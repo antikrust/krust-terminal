@@ -318,7 +318,7 @@ fn the_behavior_report_exposes_the_demo_repo_bugs_without_any_model() {
         "+++ b/payday.py\n+def split_pot(total_cents, players):\n+def top_scores(scores, n):\n";
     let path = std::env::var("PATH").unwrap_or_default();
 
-    let report = block_on(run_behavior_probe(diff, &dir, &path)).expect("a report");
+    let report = block_on(run_behavior_probe(diff, &[], &dir, &path)).expect("a report");
 
     // Bug 2's crash half: empty players divides by zero.
     assert!(report.contains("ZeroDivisionError"), "report: {report}");
@@ -622,7 +622,7 @@ fn the_behavior_report_exposes_the_stock_defects_without_any_model() {
     .unwrap();
     let path = std::env::var("PATH").unwrap_or_default();
 
-    let report = block_on(run_behavior_probe(STOCK_DIFF, &dir, &path)).expect("a report");
+    let report = block_on(run_behavior_probe(STOCK_DIFF, &[], &dir, &path)).expect("a report");
 
     // All three defects, stated by the interpreter, before any model has
     // been asked anything. Every run so far missed the first two.
@@ -877,4 +877,80 @@ fn a_prover_can_be_pointed_at_the_call_that_already_disagreed() {
     // Prose that isn't a mismatch line contributes no call to point at.
     assert_eq!(mismatch_call("everything looked fine"), None);
     assert_eq!(mismatch_call("returned 5, but nothing called it"), None);
+}
+
+#[test]
+fn a_model_can_propose_the_structured_input_a_battery_never_will() {
+    let known = vec!["checkout".to_string(), "render_line".to_string()];
+    // The reply shape models actually produce: bullets, backticks, prose,
+    // a call to something that isn't under review, and one genuinely
+    // useful line the generic battery could never have built.
+    let reply = "Here are some calls:\n\
+                 - `checkout([('Tea', 250, 5)], 20)`\n\
+                 * render_line('Tea', 250, 5)\n\
+                 checkout([], 0)\n\
+                 pricing.line_total(250, 5)\n\
+                 total = checkout([], 0)\n\
+                 import os; os.system('rm -rf /')\n\
+                 checkout(__import__('os').getcwd(), 1)\n";
+    assert_eq!(
+        parse_proposed_calls(reply, &known),
+        vec![
+            "checkout([('Tea', 250, 5)], 20)".to_string(),
+            "render_line('Tea', 250, 5)".to_string(),
+            "checkout([], 0)".to_string(),
+        ]
+    );
+
+    // Anything that isn't plainly a call to a function under review is
+    // dropped rather than evaluated.
+    assert!(parse_proposed_calls("checkout([], 0", &known).is_empty());
+    assert!(parse_proposed_calls("nothing here", &known).is_empty());
+    assert!(parse_proposed_calls("open('/etc/passwd')", &known).is_empty());
+}
+
+#[test]
+fn a_proposed_call_reaches_the_report_and_shows_what_a_battery_could_not() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir().join(format!("committee-basket-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("pricing.py"),
+        "def line_total(unit_pence, quantity):\n    return unit_pence * quantity\n\n\
+         def apply_discount(total_pence, fraction):\n    return round(total_pence * (1 - fraction))\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("cart.py"),
+        "import pricing\n\n\
+         def checkout(items, percent_off):\n\
+         \x20   \"\"\"The total for `items` less `percent_off` percent, in pence.\"\"\"\n\
+         \x20   total = sum(pricing.line_total(unit, quantity) for _, unit, quantity in items)\n\
+         \x20   return pricing.apply_discount(total, percent_off)\n",
+    )
+    .unwrap();
+    let diff = r#"+++ b/cart.py
+@@ -9,4 +9,4 @@ def checkout(items, percent_off):
+     total = sum(pricing.line_total(unit, quantity) for _, unit, quantity in items)
+-    return pricing.apply_discount(total, percent_off / 100)
++    return pricing.apply_discount(total, percent_off)
+"#;
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    // The generic battery on its own: nothing it can build from zeros and
+    // empty lists says anything about a basket.
+    let plain = block_on(run_behavior_probe(diff, &[], &dir, &path)).expect("a report");
+    assert!(!plain.contains("-23750"), "{plain}");
+
+    // One call a model would write straight off the docstring, and the
+    // defect states itself: a fifth off £12.50 is not minus £237.
+    let basket = vec!["checkout([('Tea', 250, 5)], 20)".to_string()];
+    let widened = block_on(run_behavior_probe(diff, &basket, &dir, &path)).expect("a report");
+    assert!(
+        widened.contains("checkout([('Tea', 250, 5)], 20) -> -23750"),
+        "{widened}"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
