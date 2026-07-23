@@ -837,6 +837,46 @@ pub(crate) async fn probe_source(source: &str, working_dir: &Path, path: &str) -
     (!observations.is_empty()).then(|| observations.to_string())
 }
 
+/// Whether a revised draft lost ground against the one it replaced.
+///
+/// A rewrite round asked a 7B to fix one named defect. It fixed exactly that
+/// defect and broke five other cases doing it: a draft scoring 7 of 8 came
+/// back scoring 3, with `wrap('hello world', 5)` — which had worked —
+/// returning nothing at all. Sharpening the note made the targeted fix land
+/// AND made the collateral damage worse, because a model this size rewrites
+/// the function around the case it was shown.
+///
+/// So a round may not lose ground. Same calls, same battery, compared by
+/// value: a call that answered before and raises now, or returned something
+/// and returns nothing now, is behaviour going backwards, and the revision
+/// is dropped rather than kept.
+pub(crate) fn lost_ground(before: &str, after: &str) -> Option<String> {
+    let answers = |report: &str| {
+        report
+            .lines()
+            .filter_map(|line| line.trim().split_once(" -> "))
+            .map(|(call, result)| (call.trim().to_string(), result.trim().to_string()))
+            .collect::<Vec<_>>()
+    };
+    let now = answers(after);
+    for (call, was) in answers(before) {
+        // Nothing to compare if the call has stopped being made at all,
+        // which happens when the revision renamed or dropped a function —
+        // itself a loss, and caught by the same rule.
+        let Some((_, is)) = now.iter().find(|(again, _)| again == &call) else {
+            return Some(format!(
+                "{call} used to answer {was} and is not there any more"
+            ));
+        };
+        let emptied = matches!(is.as_str(), "[]" | "{}" | "''" | "\"\"" | "None" | "0")
+            && !matches!(was.as_str(), "[]" | "{}" | "''" | "\"\"" | "None" | "0");
+        if emptied {
+            return Some(format!("{call} used to answer {was} and now answers {is}"));
+        }
+    }
+    None
+}
+
 /// The call an oracle mismatch is about, so a prover can be pointed at it.
 pub(crate) fn mismatch_call(line: &str) -> Option<&str> {
     let call = line.split(" returned ").next()?;

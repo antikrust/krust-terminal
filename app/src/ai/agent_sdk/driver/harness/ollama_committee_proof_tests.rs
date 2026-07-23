@@ -1042,3 +1042,33 @@ fn a_draft_is_run_before_anybody_gives_notes_on_it() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_revision_that_goes_backwards_is_not_kept() {
+    // The measured regression, in the values the probe printed: told to fix
+    // the over-long word, a 7B fixed exactly that and broke five other
+    // cases, taking a draft from 7 of 8 to 3 of 8.
+    let before = "wrap('hello world', 5) -> ['hello', 'world']\n\
+                  wrap('ab', 1) -> ['', 'ab']\n";
+    let after = "wrap('hello world', 5) -> []\n\
+                 wrap('ab', 1) -> ['ab']\n";
+    assert!(
+        lost_ground(before, after).is_some_and(|loss| loss.contains("wrap('hello world', 5)")),
+        "losing a working case is going backwards"
+    );
+
+    // Fixing the one case without touching the other is kept.
+    let mended = "wrap('hello world', 5) -> ['hello', 'world']\n\
+                  wrap('ab', 1) -> ['ab']\n";
+    assert_eq!(lost_ground(before, mended), None);
+
+    // A function that stops being called at all — renamed, or dropped — is
+    // the same loss wearing a different hat.
+    assert!(lost_ground(before, "wrap('ab', 1) -> ['ab']\n").is_some());
+
+    // Something that was already empty staying empty is not a regression.
+    assert_eq!(
+        lost_ground("wrap('', 10) -> []\n", "wrap('', 10) -> []\n"),
+        None
+    );
+}

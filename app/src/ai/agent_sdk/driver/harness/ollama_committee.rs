@@ -25,10 +25,10 @@ use uuid::Uuid;
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
     calls_only, classify_proof, contract_for, contracts_in, detect_suite, imported_context,
-    mismatch_call, observations, oracle_mismatches, parse_oracle, parse_proposed_calls,
-    probe_source, proof_script_is_fixable, run_behavior_probe, run_proof_script, run_python_tests,
-    run_suite, self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
-    PROOF_TIMEOUT_SECS,
+    lost_ground, mismatch_call, observations, oracle_mismatches, parse_oracle,
+    parse_proposed_calls, probe_source, proof_script_is_fixable, run_behavior_probe,
+    run_proof_script, run_python_tests, run_suite, self_check, strip_code_fences, ProofOutcome,
+    SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -2916,7 +2916,37 @@ async fn rework_answers(
                 on_event(TurnEvent::Text {
                     text: format!("**`{model}` (round {round}):**\n\n{reworked}"),
                 });
-                revised.push((model.clone(), reworked));
+                // A round may not lose ground. Told to fix one named defect,
+                // a 7B fixed exactly that defect and broke five other cases
+                // doing it — a draft scoring 7 of 8 came back scoring 3,
+                // with `wrap('hello world', 5)` returning nothing at all.
+                // Sharpening the note made the targeted fix land AND made
+                // the collateral damage worse, because a model this size
+                // rewrites the function around the case it was shown.
+                let regression = match (extract_code_block(answer), extract_code_block(&reworked)) {
+                    (Some(before), Some(after)) => {
+                        match (
+                            probe_source(&before, working_dir, path).await,
+                            probe_source(&after, working_dir, path).await,
+                        ) {
+                            (Some(before), Some(after)) => lost_ground(&before, &after),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                };
+                match regression {
+                    Some(loss) => {
+                        on_event(TurnEvent::Text {
+                            text: format!(
+                                "↩️ `{model}`'s revision went backwards — {loss} — so their \
+                                 previous answer stands."
+                            ),
+                        });
+                        revised.push((model.clone(), answer.clone()));
+                    }
+                    None => revised.push((model.clone(), reworked)),
+                }
             }
             Err(error) => {
                 on_event(TurnEvent::Text {
