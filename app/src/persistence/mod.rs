@@ -37,11 +37,11 @@ pub use sqlite::database_file_path_for_scope;
 #[cfg(any(feature = "local_fs", feature = "integration_tests"))]
 pub use sqlite::establish_ro_connection;
 use uuid::Uuid;
-use warp_core::command::ExitCode;
-use warp_errors::report_error;
-use warp_graphql::scalars::time::ServerTimestamp;
-use warp_multi_agent_api as api;
-use warpui::{AppContext, Entity, SingletonEntity};
+use derp_core::command::ExitCode;
+use derp_errors::report_error;
+use derp_graphql::scalars::time::ServerTimestamp;
+use derp_multi_agent_api as api;
+use derpui::{AppContext, Entity, SingletonEntity};
 
 use self::model::{AgentConversation, AgentConversationData, Project};
 use crate::ai::blocklist::PersistedAIInput;
@@ -70,7 +70,7 @@ use crate::workspaces::workspace::{Workspace as WorkspaceMetadata, WorkspaceUid}
 pub enum PersistenceScope {
     /// The GUI app (and other launch modes that share its database).
     App,
-    /// The `warp-tui` front-end, which keeps its own database so GUI/TUI
+    /// The `derp-tui` front-end, which keeps its own database so GUI/TUI
     /// version skew can never migrate a shared database out from under the
     /// older binary. Cloud sync is the cross-front-end sharing mechanism.
     Tui,
@@ -108,7 +108,7 @@ pub enum PersistedDataScope {
     /// The GUI app: everything, including window/tab/block session
     /// restoration and command history.
     Full,
-    /// The `warp-tui` front-end: cloud objects and agent/conversation state,
+    /// The `derp-tui` front-end: cloud objects and agent/conversation state,
     /// but no GUI session restoration, command history, user profiles, or
     /// pending object actions.
     TuiFrontend,

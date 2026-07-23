@@ -1,14 +1,14 @@
 //! A reusable warning callout component with optional action button.
 use markdown_parser::{FormattedText, FormattedTextInline, FormattedTextLine};
-use warp_core::ui::color::blend::Blend;
-use warpui::color::ColorU;
-use warpui::elements::{
+use derp_core::ui::color::blend::Blend;
+use derpui::color::ColorU;
+use derpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Expanded, Flex,
     FormattedTextElement, Hoverable, HyperlinkLens, MainAxisSize, MouseStateHandle, ParentElement,
     Radius, Text,
 };
-use warpui::platform::Cursor;
-use warpui::EventContext;
+use derpui::platform::Cursor;
+use derpui::EventContext;
 
 use crate::appearance::Appearance;
 use crate::themes::theme::Fill as ThemeFill;
@@ -161,7 +161,7 @@ pub fn render_warning_box(config: WarningBoxConfig, appearance: &Appearance) -> 
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
             .with_spacing(12.)
             .with_child(
-                ConstrainedBox::new(config.icon.to_warpui_icon(icon_fill).finish())
+                ConstrainedBox::new(config.icon.to_derpui_icon(icon_fill).finish())
                     .with_width(icon_size)
                     .with_height(icon_size)
                     .finish(),
@@ -173,7 +173,7 @@ pub fn render_warning_box(config: WarningBoxConfig, appearance: &Appearance) -> 
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
             .with_spacing(12.)
             .with_child(
-                ConstrainedBox::new(config.icon.to_warpui_icon(icon_fill).finish())
+                ConstrainedBox::new(config.icon.to_derpui_icon(icon_fill).finish())
                     .with_width(icon_size)
                     .with_height(icon_size)
                     .finish(),

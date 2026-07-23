@@ -1,6 +1,6 @@
-use warp_core::send_telemetry_from_ctx;
-use warpui::elements::{ChildView, Flex, ParentElement as _};
-use warpui::{
+use derp_core::send_telemetry_from_ctx;
+use derpui::elements::{ChildView, Flex, ParentElement as _};
+use derpui::{
     AppContext, Element, Entity, FocusContext, TypedActionView, View, ViewContext, ViewHandle,
 };
 

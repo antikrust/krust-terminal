@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 
 use settings::Setting as _;
-use warp::integration_testing::step::new_step_with_default_assertions;
-use warp::integration_testing::subshell::util::ssh_command;
-use warp::integration_testing::subshell::{
+use derp::integration_testing::step::new_step_with_default_assertions;
+use derp::integration_testing::subshell::util::ssh_command;
+use derp::integration_testing::subshell::{
     assert_subshell_banner_is_showing, assert_subshell_is_bootstrapped,
     enter_local_subshell_command, enter_remote_subshell_command, enter_ssh_password,
     setup_gcloud_sdk, trigger_subshell_bootstrap, wait_for_password_prompt,
 };
-use warp::integration_testing::terminal::util::current_shell_starter_and_version;
-use warp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use warp::integration_testing::view_getters::single_input_view_for_tab;
-use warp::root_view::SubshellCommandArg;
-use warp::terminal::shell::ShellType;
-use warp::terminal::warpify::settings::AddedSubshellCommands;
-use warpui_core::integration::{AssertionOutcome, TestStep};
-use warpui_core::windowing::state::ApplicationStage;
-use warpui_core::windowing::WindowManager;
-use warpui_core::{async_assert, UpdateModel};
+use derp::integration_testing::terminal::util::current_shell_starter_and_version;
+use derp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use derp::integration_testing::view_getters::single_input_view_for_tab;
+use derp::root_view::SubshellCommandArg;
+use derp::terminal::shell::ShellType;
+use derp::terminal::derpify::settings::AddedSubshellCommands;
+use derpui_core::integration::{AssertionOutcome, TestStep};
+use derpui_core::windowing::state::ApplicationStage;
+use derpui_core::windowing::WindowManager;
+use derpui_core::{async_assert, UpdateModel};
 
 use super::{new_builder, Builder};
 use crate::util::skip_if_powershell_core_2303;
@@ -83,7 +83,7 @@ generate_can_bootstrap_remote_subshell_for_shell!(test_can_bootstrap_remote_bash
 // generate_can_bootstrap_remote_subshell_for_shell!(test_can_bootstrap_remote_fish_subshell, "fish");
 
 // Test the flow of creating a new window and running a command that should create a subshell and
-//  automaticall bootstrapping AKA "warpifying" that subshell.
+//  automaticall bootstrapping AKA "derpifying" that subshell.
 pub fn test_can_auto_bootstrap() -> Builder {
     const SUBSHELL_COMMAND: &str = "zsh";
 

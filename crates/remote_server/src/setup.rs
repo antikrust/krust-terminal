@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 pub use glibc::{GlibcVersion, RemoteLibc};
-use warp_core::channel::{Channel, ChannelState};
+use derp_core::channel::{Channel, ChannelState};
 pub const REMOTE_SERVER_ARTIFACT_VERSION_UNPINNED: &str = "unversioned";
 
 /// State machine for the remote server install → launch → initialize flow.
@@ -334,25 +334,25 @@ pub fn parse_uname_output(
 
 /// Returns the remote directory where the binary is installed, keyed by channel.
 ///
-/// - stable:      `~/.warp/remote-server`
-/// - preview:     `~/.warp-preview/remote-server`
-/// - dev:         `~/.warp-dev/remote-server`
-/// - local:       `~/.warp-local/remote-server`
-/// - integration: `~/.warp-dev/remote-server`
-/// - warp-oss:    `~/.warp-oss/remote-server`
+/// - stable:      `~/.derp/remote-server`
+/// - preview:     `~/.derp-preview/remote-server`
+/// - dev:         `~/.derp-dev/remote-server`
+/// - local:       `~/.derp-local/remote-server`
+/// - integration: `~/.derp-dev/remote-server`
+/// - derp-oss:    `~/.derp-oss/remote-server`
 pub fn remote_server_dir() -> String {
-    let warp_dir = match ChannelState::channel() {
-        Channel::Stable => ".warp",
-        Channel::Preview => ".warp-preview",
-        Channel::Dev | Channel::Integration => ".warp-dev",
-        Channel::Local => ".warp-local",
+    let derp_dir = match ChannelState::channel() {
+        Channel::Stable => ".derp",
+        Channel::Preview => ".derp-preview",
+        Channel::Dev | Channel::Integration => ".derp-dev",
+        Channel::Local => ".derp-local",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with warp-oss
+            // TODO(alokedesai): need to figure out how remote server works with derp-oss
             // For now, return what Dev returns.
-            ".warp-dev"
+            ".derp-dev"
         }
     };
-    format!("~/{warp_dir}/remote-server")
+    format!("~/{derp_dir}/remote-server")
 }
 
 /// Returns a short, deterministic directory name for a remote-server
@@ -600,8 +600,8 @@ pub fn install_script(staging_tarball_path: Option<&str>) -> String {
 
 /// Construct the download URL from the server root URL.
 ///
-/// For example, given `https://app.warp.dev`, returns
-/// `https://app.warp.dev/download/cli`.
+/// For example, given `https://app.derp.baby`, returns
+/// `https://app.derp.baby/download/cli`.
 fn download_url() -> String {
     let base = ChannelState::server_root_url();
     let base = base.trim_end_matches('/');
@@ -618,7 +618,7 @@ fn download_channel() -> &'static str {
         Channel::Preview => "preview",
         Channel::Dev | Channel::Local | Channel::Integration => "dev",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with warp-oss
+            // TODO(alokedesai): need to figure out how remote server works with derp-oss
             // For now, return what Dev returns.
             "dev"
         }

@@ -1,20 +1,20 @@
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::Icon;
-use warpui_core::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_core::ui::Icon;
+use derpui_core::elements::{
     Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius,
 };
-use warpui_core::fonts::Weight;
-use warpui_core::keymap::Keystroke;
-use warpui_core::platform::Cursor;
-use warpui_core::prelude::Align;
-use warpui_core::text_layout::TextAlignment;
-use warpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui_core::{
+use derpui_core::fonts::Weight;
+use derpui_core::keymap::Keystroke;
+use derpui_core::platform::Cursor;
+use derpui_core::prelude::Align;
+use derpui_core::text_layout::TextAlignment;
+use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -23,8 +23,8 @@ use super::OnboardingSlide;
 use crate::model::{AiSetupChoice, OnboardingStateModel};
 use crate::slides::{bottom_nav, layout, slide_content};
 
-/// Checklist shown on the "Use Warp agent" card.
-const WARP_AGENT_FEATURES: &[&str] = &[
+/// Checklist shown on the "Use Derp agent" card.
+const DERP_AGENT_FEATURES: &[&str] = &[
     "Best harness for terminal tasks and agentic coding",
     "Frontier models from OpenAI, Anthropic, and Google",
     "Model routing across frontier and open-weight models",
@@ -33,18 +33,18 @@ const WARP_AGENT_FEATURES: &[&str] = &[
 
 #[derive(Debug, Clone)]
 pub enum AiSetupSlideAction {
-    SelectWarpAgent,
+    SelectDerpAgent,
     SelectThirdParty,
     BackClicked,
     NextClicked,
 }
 
 /// The "Choose your AI setup" slide (DES-816 V3), shown on the AI-first path for
-/// users enrolled in the FREE_AI_REMOVAL experiment arm. Forks between the Warp
+/// users enrolled in the FREE_AI_REMOVAL experiment arm. Forks between the Derp
 /// agent (paid-plan path) and third-party agents (works on Free).
 pub struct AiSetupSlide {
     onboarding_state: ModelHandle<OnboardingStateModel>,
-    warp_agent_mouse_state: MouseStateHandle,
+    derp_agent_mouse_state: MouseStateHandle,
     third_party_mouse_state: MouseStateHandle,
     back_button: button::Button,
     next_button: button::Button,
@@ -55,7 +55,7 @@ impl AiSetupSlide {
     pub(crate) fn new(onboarding_state: ModelHandle<OnboardingStateModel>) -> Self {
         Self {
             onboarding_state,
-            warp_agent_mouse_state: MouseStateHandle::default(),
+            derp_agent_mouse_state: MouseStateHandle::default(),
             third_party_mouse_state: MouseStateHandle::default(),
             back_button: button::Button::default(),
             next_button: button::Button::default(),
@@ -65,7 +65,7 @@ impl AiSetupSlide {
 
     // The final DES-816 visual exports have not landed yet, so the right panel
     // reuses existing bundled assets that match each choice: the agent
-    // experience for "Use Warp agent" and the CLI-agent toolbar for
+    // experience for "Use Derp agent" and the CLI-agent toolbar for
     // "Use third party agents".
     pub(crate) const VISUAL_IMAGE_PATHS: &'static [&'static str] = &[
         "async/png/onboarding/welcome_agent.png",
@@ -99,7 +99,7 @@ impl AiSetupSlide {
         let theme = appearance.theme();
 
         let logo_fill = internal_colors::fg_overlay_4(theme);
-        let logo = ConstrainedBox::new(Icon::WarpLogoLight.to_warpui_icon(logo_fill).finish())
+        let logo = ConstrainedBox::new(Icon::DerpLogoLight.to_derpui_icon(logo_fill).finish())
             .with_width(64.)
             .with_height(64.)
             .finish();
@@ -116,7 +116,7 @@ impl AiSetupSlide {
             .finish();
 
         let subtitle = FormattedTextElement::from_str(
-            "Choose if you'd like to use Warp Agent or third party agents.",
+            "Choose if you'd like to use Derp Agent or third party agents.",
             appearance.ui_font_family(),
             16.,
         )
@@ -140,10 +140,10 @@ impl AiSetupSlide {
     }
 
     fn render_options(&self, appearance: &Appearance, choice: AiSetupChoice) -> Box<dyn Element> {
-        let warp_agent_card = self.render_warp_agent_card(
+        let derp_agent_card = self.render_derp_agent_card(
             appearance,
-            matches!(choice, AiSetupChoice::WarpAgent),
-            self.warp_agent_mouse_state.clone(),
+            matches!(choice, AiSetupChoice::DerpAgent),
+            self.derp_agent_mouse_state.clone(),
         );
 
         let third_party_card = self.render_third_party_card(
@@ -157,7 +157,7 @@ impl AiSetupSlide {
                 .with_main_axis_size(MainAxisSize::Min)
                 .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .with_child(
-                    Container::new(warp_agent_card)
+                    Container::new(derp_agent_card)
                         .with_margin_bottom(12.)
                         .finish(),
                 )
@@ -209,7 +209,7 @@ impl AiSetupSlide {
         .finish()
     }
 
-    fn render_warp_agent_card(
+    fn render_derp_agent_card(
         &self,
         appearance: &Appearance,
         is_selected: bool,
@@ -227,7 +227,7 @@ impl AiSetupSlide {
         let header_row = {
             let label = appearance
                 .ui_builder()
-                .paragraph("Use Warp Agent")
+                .paragraph("Use Derp Agent")
                 .with_style(UiComponentStyles {
                     font_size: Some(16.),
                     font_weight: Some(Weight::Semibold),
@@ -289,8 +289,8 @@ impl AiSetupSlide {
             let mut col = Flex::column()
                 .with_main_axis_size(MainAxisSize::Min)
                 .with_cross_axis_alignment(CrossAxisAlignment::Start);
-            for &item in WARP_AGENT_FEATURES {
-                let icon_el = ConstrainedBox::new(Icon::Check.to_warpui_icon(check_fill).finish())
+            for &item in DERP_AGENT_FEATURES {
+                let icon_el = ConstrainedBox::new(Icon::Check.to_derpui_icon(check_fill).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish();
@@ -333,7 +333,7 @@ impl AiSetupSlide {
             appearance,
             is_selected,
             mouse_state,
-            AiSetupSlideAction::SelectWarpAgent,
+            AiSetupSlideAction::SelectDerpAgent,
             content,
         )
     }
@@ -434,7 +434,7 @@ impl AiSetupSlide {
 
     fn render_visual(&self, choice: AiSetupChoice) -> Box<dyn Element> {
         match choice {
-            AiSetupChoice::WarpAgent => layout::onboarding_right_panel_with_bg(
+            AiSetupChoice::DerpAgent => layout::onboarding_right_panel_with_bg(
                 Self::VISUAL_IMAGE_PATHS[0],
                 layout::FOREGROUND_LAYOUT_DEFAULT,
             ),
@@ -484,7 +484,7 @@ impl AiSetupSlide {
 
 impl OnboardingSlide for AiSetupSlide {
     fn on_up(&mut self, ctx: &mut ViewContext<Self>) {
-        self.select_choice(AiSetupChoice::WarpAgent, ctx);
+        self.select_choice(AiSetupChoice::DerpAgent, ctx);
     }
 
     fn on_down(&mut self, ctx: &mut ViewContext<Self>) {
@@ -501,8 +501,8 @@ impl TypedActionView for AiSetupSlide {
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            AiSetupSlideAction::SelectWarpAgent => {
-                self.select_choice(AiSetupChoice::WarpAgent, ctx);
+            AiSetupSlideAction::SelectDerpAgent => {
+                self.select_choice(AiSetupChoice::DerpAgent, ctx);
             }
             AiSetupSlideAction::SelectThirdParty => {
                 self.select_choice(AiSetupChoice::ThirdParty, ctx);

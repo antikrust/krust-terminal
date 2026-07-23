@@ -17,8 +17,8 @@ use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventHandler, DebounceEventResult, DebouncedEvent, Debouncer,
     NoCache,
 };
-use warp_errors::report_error;
-use warpui_core::{Entity, ModelContext};
+use derp_errors::report_error;
+use derpui_core::{Entity, ModelContext};
 
 #[derive(Debug)]
 enum BackgroundFileWatcherCommand {

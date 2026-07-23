@@ -1,6 +1,6 @@
 # Queue terminal commands alongside prompts
 
-GitHub: [warpdotdev/warp#11912](https://github.com/warpdotdev/warp/issues/11912). Builds on the v2 queued-prompts panel from [`specs/REMOTE-1543/PRODUCT.md`](../REMOTE-1543/PRODUCT.md) and [`specs/APP-4562/PRODUCT.md`](../APP-4562/PRODUCT.md).
+GitHub: [derpdotdev/derp#11912](https://github.com/derpdotdev/derp/issues/11912). Builds on the v2 queued-prompts panel from [`specs/REMOTE-1543/PRODUCT.md`](../REMOTE-1543/PRODUCT.md) and [`specs/APP-4562/PRODUCT.md`](../APP-4562/PRODUCT.md).
 
 Figma: none provided (the only new visual is a shell-mode `!` prefix on command rows).
 

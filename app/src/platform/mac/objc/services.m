@@ -2,7 +2,7 @@
 
 #import "services.h"
 
-@implementation WarpServicesProvider
+@implementation DerpServicesProvider
 
 // Opens a new tab for each file URL in the pasteboard, with the initial
 // directory set to the provided path (or parent directory, if the path
@@ -32,30 +32,30 @@
             [filePaths addObject:url.path];
         }
 
-        NSMutableArray<NSURL *> *warpUrls = [NSMutableArray array];
+        NSMutableArray<NSURL *> *derpUrls = [NSMutableArray array];
         for (NSString *path in filePaths) {
             NSURLComponents *components = [[[NSURLComponents alloc] init] autorelease];
-            NSString *scheme = warp_services_provider_custom_url_scheme();
+            NSString *scheme = derp_services_provider_custom_url_scheme();
             [components setScheme:scheme];
             [components setHost:@"action"];
             [components setPath:action];
             NSMutableArray *queryItems = [NSMutableArray array];
             [queryItems addObject:[NSURLQueryItem queryItemWithName:@"path" value:path]];
             [components setQueryItems:queryItems];
-            [warpUrls addObject:components.URL];
+            [derpUrls addObject:components.URL];
         };
 
         NSApplication *app = [NSApplication sharedApplication];
-        warp_app_open_urls(app, warpUrls);
+        derp_app_open_urls(app, derpUrls);
     }
 }
 
 @end
 
-// Creates a new WarpServicesProvider and registers it as the global services
+// Creates a new DerpServicesProvider and registers it as the global services
 // provider for the application
-void warp_register_services_provider() {
-    WarpServicesProvider *provider = [[WarpServicesProvider alloc] init];
+void derp_register_services_provider() {
+    DerpServicesProvider *provider = [[DerpServicesProvider alloc] init];
 
     // Set the global NSServices provider for the application.  This holds a
     // strong reference to the provider, so we don't have to worry about it

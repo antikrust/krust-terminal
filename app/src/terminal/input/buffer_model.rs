@@ -1,4 +1,4 @@
-use warpui::{Entity, ModelContext, ViewHandle};
+use derpui::{Entity, ModelContext, ViewHandle};
 
 use crate::editor::{self, EditorView, Point};
 

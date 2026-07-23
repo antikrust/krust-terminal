@@ -2,21 +2,21 @@ use std::default::Default;
 use std::fs;
 use std::fs::remove_file;
 
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::{
     Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, SavePosition, Shrinkable, Text,
 };
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::fonts::Weight;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::{active_theme_kind, ThemeSettings};
-use crate::themes::theme::{ThemeKind, WarpTheme};
+use crate::themes::theme::{ThemeKind, DerpTheme};
 use crate::user_config::util::from_yaml;
 use crate::{send_telemetry_from_ctx, user_config};
 
@@ -76,10 +76,10 @@ impl ThemeDeletionBody {
         // Check if the theme directory exists
         if fs::metadata(&dir).is_ok() {
             if let Some(ThemeKind::Custom(custom_theme)) = &self.theme_kind {
-                if let Ok(theme_from_yaml) = from_yaml::<WarpTheme>(custom_theme.path()) {
+                if let Ok(theme_from_yaml) = from_yaml::<DerpTheme>(custom_theme.path()) {
                     // If theme has an image
                     if let Some(image) = theme_from_yaml.background_image() {
-                        // Only delete the image if it is in the ./warp/themes directory.
+                        // Only delete the image if it is in the ./derp/themes directory.
                         // We don't want to delete images from other parts of the user's filesystem.
                         if let AssetSource::LocalFile { path, .. } = image.source() {
                             let image_path_in_themes_dir = dir.join(path.as_str());

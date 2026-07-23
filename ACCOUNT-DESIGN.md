@@ -22,7 +22,7 @@ The fork has **already cut the cord on real authentication**, but has *not* cut
 the cord on the account *model*. Every launch is a hard-coded fake user:
 
 ```rust
-// crates/warp_server_auth/src/auth_state.rs:165
+// crates/derp_server_auth/src/auth_state.rs:165
 /// Always true in this fork: there's no account system to authenticate
 /// against, so every launch logs in as a permanent local fake user.
 fn should_use_test_user() -> bool {
@@ -31,13 +31,13 @@ fn should_use_test_user() -> bool {
 ```
 
 That single line short-circuits `AuthState::initialize`, so the API-key path,
-the `WARP_USER_SECRET` path and the secure-storage path are all dead code in
+the `DERP_USER_SECRET` path and the secure-storage path are all dead code in
 practice. The app boots as `User::test()`:
 
 | Field | Value |
 |---|---|
 | `local_id` | `TEST_USER_UID` = `"test_user_uid"` |
-| `metadata.email` | `TEST_USER_EMAIL` = `"test_user@warp.dev"` |
+| `metadata.email` | `TEST_USER_EMAIL` = `"test_user@derp.baby"` |
 | `display_name` / `photo_url` | `None` |
 | `is_onboarded` | `true` |
 | `anonymous_user_type` | `None` (so `is_user_anonymous()` is false) |
@@ -64,7 +64,7 @@ is mostly a *deletion* exercise with a small local-identity core to build.
 
 ## 2. Module map
 
-### 2.1 `crates/warp_server_auth` — the identity core (~1,300 LOC)
+### 2.1 `crates/derp_server_auth` — the identity core (~1,300 LOC)
 
 Platform-agnostic, no UI. This is the piece worth keeping (in reduced form).
 
@@ -85,7 +85,7 @@ AuthStateProvider::as_ref(ctx).get()   // -> &Arc<AuthState>
 ```
 
 **Notable coupling:** `AuthState` implements
-`warp_managed_secrets::ActorProvider`, so the managed-secrets crate depends on
+`derp_managed_secrets::ActorProvider`, so the managed-secrets crate depends on
 the user id. Any replacement must keep supplying an actor uid.
 
 ### 2.2 `app/src/auth` — the login UI and orchestration (~6,400 LOC)
@@ -161,7 +161,7 @@ are_member_byo_keys_allowed      is_custom_inference_enabled
 are_member_byo_endpoints_allowed is_aws_bedrock_*  (5 fns)
 is_gemini_enterprise_*  (4 fns)  is_ai_autonomy_allowed
 ai_autonomy_settings             sandboxed_agent_settings
-is_at_tier_limit_for_object_type is_at_tier_limit_for_some_warp_drive_objects
+is_at_tier_limit_for_object_type is_at_tier_limit_for_some_derp_drive_objects
 has_capacity_for_shared_notebooks has_capacity_for_shared_workflows
 ```
 
@@ -187,7 +187,7 @@ settings page. `BillingAndUsageDispatchView` dropped its `PageType`,
 now renders its active child directly as the final widget of the Account page.
 `SettingsSection::BillingAndUsage` survives as a **navigation alias**: callers
 that still ask for it (there are 8 — buy-credits banner, prompt alerts, slash
-command, `warp://` URI handler, workspace action) are redirected to
+command, `derp://` URI handler, workspace action) are redirected to
 `SettingsSection::Account` and scrolled to `BILLING_AND_USAGE_WIDGET_ID`.
 
 ---
@@ -250,7 +250,7 @@ Everything in §2.3's gate list, plus:
 variant. Routing keys off `auth_state.is_logged_in()` (line 1689) — which is now
 permanently true, so the login slide is effectively unreachable in the main app.
 `crates/onboarding` is a standalone preview binary for the slides; the fork
-already patched its `main.rs` to call `warp_core::features::mark_initialized()`
+already patched its `main.rs` to call `derp_core::features::mark_initialized()`
 so slide rendering doesn't panic on flag access.
 
 ---
@@ -264,8 +264,8 @@ Code that still compiles and ships but cannot execute given
 stated end goal (an optional, in-app account backed by our own cloud later), and
 should be *kept*:
 
-- **Firebase** is Warp's identity *provider*, not a Warp-specific concept. What
-  is Warp-specific is only the two token-exchange URLs
+- **Firebase** is Derp's identity *provider*, not a Derp-specific concept. What
+  is Derp-specific is only the two token-exchange URLs
   (`securetoken.googleapis.com`, `identitytoolkit.googleapis.com`) and the
   `/proxy/*` fallbacks. The surrounding shape — long-lived `LoginToken`
   exchanged for a short-lived `AuthToken`, refresh-on-expiry, persist to
@@ -273,27 +273,27 @@ should be *kept*:
   `Credentials`/`AuthToken`/`LoginToken` and the refresh plumbing; swap the
   URLs when there's something to point them at.
 - **API-key auth** (`Credentials::ApiKey`, prefix `wk-`) is headless/service
-  authentication: `--api-key` / `WARP_API_KEY`, consumed by `crates/warp_cli`
-  and `crates/warp_tui`, backed by `PrincipalType::ServiceAccount` and the
+  authentication: `--api-key` / `DERP_API_KEY`, consumed by `crates/derp_cli`
+  and `crates/derp_tui`, backed by `PrincipalType::ServiceAccount` and the
   `api_keys` / `generate_api_key` / `expire_api_key` GraphQL ops plus the
   "Oz Cloud API Keys" settings page. It's how a CLI or CI agent authenticates
   without a browser. Keep it — it is the cheapest possible first cloud
   integration, and needs no login UI at all.
 
-Genuinely disposable (Warp-server-specific, no role in the target design):
+Genuinely disposable (Derp-server-specific, no role in the target design):
 
 1. **Anonymous-user machinery** — `AnonymousUserType`, `create_anonymous_user`,
    `initiate_anonymous_user_linking`, `mint_custom_token`, the renotification
    timer (`ANONYMOUS_USER_NOTIFICATION_BLOCK_TIMER`, 7 days), every
    `is_anonymous_*` accessor, and the upsell UI they drive. This exists so
-   logged-out users still get *Warp's* cloud features; under "the app just works
+   logged-out users still get *Derp's* cloud features; under "the app just works
    without an account" it has no purpose.
 2. **Billing / workspaces / teams** — §2.3 in full, plus the billing settings UI
    and the credit-exhaustion upsells.
 3. **The browser-handoff login UI** — `login_slide.rs`, `auth_view_body.rs`,
    `auth_view_shared_helpers.rs`, `paste_auth_token_modal.rs`,
    `auth_override_warning_*`, `needs_sso_link_view.rs`. These implement
-   *warp.dev's* OAuth redirect dance. In-app signup replaces them wholesale.
+   *derp.baby's* OAuth redirect dance. In-app signup replaces them wholesale.
 4. **Device authorization flow** — `authorize_device`,
    `ReceivedDeviceAuthorizationCode`.
 
@@ -309,7 +309,7 @@ Ambiguous, decide later:
 
 Realistic deletion budget once the disposable list is done: **~8–9k lines**
 (auth UI + anonymous + billing + workspaces), while the ~1,300-line
-`warp_server_auth` core mostly survives.
+`derp_server_auth` core mostly survives.
 
 ### 4.1 Reference: the old "everything unreachable" list
 
@@ -471,7 +471,7 @@ Everything above is subtraction; this is the only addition.
 Sign in"), and **settings sync** (`app/src/account/settings_sync.rs`) — a clean
 path built directly on `account_client`'s `get_settings`/`put_settings`, *not*
 the dead cloud-object syncer (which is inert now that Drive is local-only). No
-browser handoff, no `warp://` redirect, no Firebase URLs — the same
+browser handoff, no `derp://` redirect, no Firebase URLs — the same
 `Credentials` → `AuthToken` → request-header path the code already has.
 
 **Still to do:** move the token from the private store to the Keychain
@@ -484,7 +484,7 @@ fake-auth teardown, deferred to a runnable session).
 The Account page becomes: local identity (editable name/avatar), a signed-out
 "Create account" affordance, settings-sync toggle, version info. Billing & usage
 and teams go. `SettingsSection::BillingAndUsage` and `Teams` get removed from
-the enum along with their `FromStr` arms and `warp://` URI mappings — at which
+the enum along with their `FromStr` arms and `derp://` URI mappings — at which
 point the alias redirect added in this session can be deleted along with
 `BILLING_AND_USAGE_WIDGET_ID`.
 
@@ -515,7 +515,7 @@ point the alias redirect added in this session can be deleted along with
   upstream behaviour. Don't "restore" it by reading the field.
 - **Concurrent-edit hazard, 2026-07-19:** other Claude Code sessions were
   editing `app/src/settings_view/mod.rs` at the same time as this audit (a
-  Warp Drive settings-page removal). Re-read that file before trusting any line
+  Derp Drive settings-page removal). Re-read that file before trusting any line
   numbers quoted here for it.
 
 ---
@@ -524,7 +524,7 @@ point the alias redirect added in this session can be deleted along with
 
 | Area | LOC | Disposition |
 |---|---:|---|
-| `crates/warp_server_auth` | ~1,300 | shrink to ~200 (identity only) |
+| `crates/derp_server_auth` | ~1,300 | shrink to ~200 (identity only) |
 | `app/src/auth` | ~6,400 | delete ~6,000, keep a thin local-identity model |
 | `app/src/workspaces` | ~6,200 | delete nearly all |
 | billing settings UI | ~7,000 | delete |

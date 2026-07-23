@@ -14,14 +14,14 @@ use repo_metadata::file_tree_store::{
 use repo_metadata::local_model::IndexedRepoState;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::{FileTreeEntry, RepoMetadataModel};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_core::{send_telemetry_from_ctx, HostId};
-use warp_util::path::LineAndColumnArg;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_core::{send_telemetry_from_ctx, HostId};
+use derp_util::path::LineAndColumnArg;
+use derp_util::standardized_path::StandardizedPath;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     AcceptedByDropTarget, Align, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container,
     CrossAxisAlignment, Dismiss, Draggable, DraggableState, Empty, Flex, FormattedTextElement,
     Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
@@ -29,11 +29,11 @@ use warpui::elements::{
     Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList,
     UniformListState,
 };
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::text_layout::TextAlignment;
-use warpui::{
+use derpui::fonts::{Properties, Style, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::platform::Cursor;
+use derpui::text_layout::TextAlignment;
+use derpui::{
     id, AppContext, BlurContext, Element, Entity, EventContext, ModelHandle, SingletonEntity as _,
     TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -58,7 +58,7 @@ use crate::util::openable_file_type::{
 };
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::{
-    resolve_file_target_to_open_in_warp, resolve_file_target_with_editor_choice,
+    resolve_file_target_to_open_in_derp, resolve_file_target_with_editor_choice,
 };
 
 mod editing;
@@ -1018,8 +1018,8 @@ impl FileTreeView {
             .collect();
 
         // Ancestor-dedup only local inputs. Shared with `GlobalSearchView`
-        // via `warp_util::path::group_roots_by_common_ancestor`.
-        let grouping = warp_util::path::group_roots_by_common_ancestor(&local_inputs);
+        // via `derp_util::path::group_roots_by_common_ancestor`.
+        let grouping = derp_util::path::group_roots_by_common_ancestor(&local_inputs);
 
         // Final displayed order: local surviving roots (in input order),
         // followed by preserved remote roots (in their existing order).
@@ -1844,7 +1844,7 @@ impl FileTreeView {
         let expand_icon = match expand_icon {
             Some(icon) => {
                 let chevron_icon_color = item_highlight_state.text_and_icon_color(appearance);
-                icon.to_warpui_icon(chevron_icon_color.into()).finish()
+                icon.to_derpui_icon(chevron_icon_color.into()).finish()
             }
             None => Empty::new().finish(),
         };
@@ -1863,7 +1863,7 @@ impl FileTreeView {
         // Add the icon for the item.
         let icon_color = item_highlight_state.text_and_icon_color(appearance);
         let icon = match render_state.icon {
-            ImageOrIcon::Icon(icon) => icon.to_warpui_icon(icon_color.into()).finish(),
+            ImageOrIcon::Icon(icon) => icon.to_derpui_icon(icon_color.into()).finish(),
             ImageOrIcon::Image(image) => image,
         };
         header_row.add_child(
@@ -2220,7 +2220,7 @@ impl FileTreeView {
     ) {
         let settings = EditorSettings::as_ref(ctx);
         let target = if editor_layout.is_some() {
-            resolve_file_target_to_open_in_warp(path, settings, editor_layout)
+            resolve_file_target_to_open_in_derp(path, settings, editor_layout)
         } else {
             resolve_file_target_with_editor_choice(
                 path,
@@ -2265,7 +2265,7 @@ impl FileTreeView {
                 if is_remote {
                     // Emit a remote open event if we have a host ID.
                     if let Some(host_id) = &root_dir.remote_host_id {
-                        let remote_path = warp_util::remote_path::RemotePath::new(
+                        let remote_path = derp_util::remote_path::RemotePath::new(
                             host_id.clone(),
                             (*metadata.path).clone(),
                         );
@@ -2704,7 +2704,7 @@ impl FileTreeView {
                         ScrollbarWidth::Auto,
                         theme.nonactive_ui_detail().into(),
                         theme.active_ui_detail().into(),
-                        warpui::elements::Fill::None,
+                        derpui::elements::Fill::None,
                     )
                     .with_overlayed_scrollbar()
                     .finish(),
@@ -2751,7 +2751,7 @@ impl FileTreeView {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::AlertTriangle
-                            .to_warpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+                            .to_derpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
                             .finish(),
                     )
                     .with_width(24.)
@@ -2816,7 +2816,7 @@ impl FileTreeView {
 
         // Create loading icon
         let loading_icon = Icon::Loading
-            .to_warpui_icon(warp_core::ui::theme::Fill::Solid(
+            .to_derpui_icon(derp_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -2838,7 +2838,7 @@ impl FileTreeView {
         header_row.add_child(loading_icon);
 
         let folder_icon = Icon::Folder
-            .to_warpui_icon(warp_core::ui::theme::Fill::Solid(
+            .to_derpui_icon(derp_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -2970,7 +2970,7 @@ impl View for FileTreeView {
             if let CodingPanelEnablementState::RemoteSession { has_remote_server } = self.enablement
             {
                 // When the session has a remote server connection (Auto SSH
-                // Warpification / mode 1), show a loading state — the server
+                // Derpification / mode 1), show a loading state — the server
                 // may push repo metadata momentarily. For other SSH modes
                 // (tmux, subshell) no data will arrive, so show the disabled
                 // error instead.

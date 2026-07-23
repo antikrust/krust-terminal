@@ -1,6 +1,6 @@
 use serde_yaml::{Mapping, Value};
-use warp_editor::content::markdown::MarkdownStyle;
-use warpui::{EntityId, WindowId};
+use derp_editor::content::markdown::MarkdownStyle;
+use derpui::{EntityId, WindowId};
 
 use super::{
     comment_embedded_item_conversion, EmbeddedCommentSpace, EmbeddedItem as _,

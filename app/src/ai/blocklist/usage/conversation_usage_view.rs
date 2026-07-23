@@ -3,18 +3,18 @@ use std::collections::HashMap;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::Icon;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::Icon;
+use derpui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow,
     Empty, Flex, Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::fonts::{Properties, Weight};
+use derpui::platform::Cursor;
+use derpui::text_layout::ClipConfig;
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::orchestration_pill_bar::{
@@ -245,7 +245,7 @@ impl ConversationUsageView {
 
         // Collect from category-based fields
         for model in &self.usage_info.models {
-            for (category, &tokens) in &model.warp_token_usage_by_category {
+            for (category, &tokens) in &model.derp_token_usage_by_category {
                 if tokens > 0 {
                     entries_by_category
                         .entry(category.clone())
@@ -274,7 +274,7 @@ impl ConversationUsageView {
         // Fallback to legacy fields for backwards compatibility
         if entries_by_category.is_empty() {
             for model in &self.usage_info.models {
-                if model.warp_tokens > 0 {
+                if model.derp_tokens > 0 {
                     entries_by_category
                         .entry(PRIMARY_AGENT_CATEGORY.to_string())
                         .or_default()
@@ -434,7 +434,7 @@ impl ConversationUsageView {
 
                 if *is_byok {
                     model_elements.push(
-                        ConstrainedBox::new(Icon::Key.to_warpui_icon(text_color.into()).finish())
+                        ConstrainedBox::new(Icon::Key.to_derpui_icon(text_color.into()).finish())
                             .with_width(font_size)
                             .with_height(font_size)
                             .finish(),
@@ -1029,7 +1029,7 @@ fn render_toggle_link(
             .with_color(link_color)
             .with_selectable(false)
             .finish();
-        let icon_element = ConstrainedBox::new(icon.to_warpui_icon(link_color.into()).finish())
+        let icon_element = ConstrainedBox::new(icon.to_derpui_icon(link_color.into()).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();
@@ -1098,7 +1098,7 @@ fn render_context_window_other_info_icon(
         let icon_color = appearance
             .theme()
             .sub_text_color(appearance.theme().surface_2());
-        let icon = ConstrainedBox::new(Icon::Info.to_warpui_icon(icon_color).finish())
+        let icon = ConstrainedBox::new(Icon::Info.to_derpui_icon(icon_color).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();

@@ -1,7 +1,7 @@
 //! This module should houses all horizontal/cross-cutting AI functionality throughout
-//! Warp (including Agent Mode).
+//! Derp (including Agent Mode).
 //!
-//! The side panel Warp AI implementation lives in `super::ai_assistant`.
+//! The side panel Derp AI implementation lives in `super::ai_assistant`.
 pub(crate) mod active_agent_views_model;
 pub(crate) mod agent;
 pub(crate) mod agent_conversations_model;
@@ -54,7 +54,7 @@ pub(crate) mod skills;
 pub(crate) mod voice;
 pub use agent_tips::*;
 pub use request_usage_model::*;
-use warpui::AppContext;
+use derpui::AppContext;
 #[cfg(not(target_family = "wasm"))]
 pub mod agent_sdk;
 pub mod cloud_agent_config;

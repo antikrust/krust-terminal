@@ -27,41 +27,41 @@ use vim::{
     vim_a_quote, vim_a_word, vim_find_char_on_line, vim_find_matching_bracket, vim_inner_block,
     vim_inner_paragraph, vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use warp_core::platform::SessionPlatform;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::ui::theme::Fill;
-use warp_editor::content::anchor::Anchor;
-use warp_editor::content::buffer::{
+use derp_core::platform::SessionPlatform;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_core::ui::theme::Fill;
+use derp_editor::content::anchor::Anchor;
+use derp_editor::content::buffer::{
     AutoScrollBehavior, Buffer, BufferEditAction, BufferEvent, BufferSelectAction, EditOrigin,
     InitialBufferState, SelectionOffsets, ShouldAutoscroll, ToBufferCharOffset, ToBufferPoint,
     VimInsertPoint,
 };
-use warp_editor::content::edit::EditDelta;
-use warp_editor::content::find::{SearchConfig, SearchResults};
-use warp_editor::content::hidden_lines_model::HiddenLinesModel;
-use warp_editor::content::selection_model::BufferSelectionModel;
-use warp_editor::content::text::{BufferBlockStyle, IndentBehavior, IndentUnit};
-use warp_editor::content::version::BufferVersion;
-use warp_editor::decoration::DecorationLayer;
-use warp_editor::editor::TextDecoration;
-use warp_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use warp_editor::multiline::{AnyMultilineString, MultilineString, LF};
-use warp_editor::render::model::{
+use derp_editor::content::edit::EditDelta;
+use derp_editor::content::find::{SearchConfig, SearchResults};
+use derp_editor::content::hidden_lines_model::HiddenLinesModel;
+use derp_editor::content::selection_model::BufferSelectionModel;
+use derp_editor::content::text::{BufferBlockStyle, IndentBehavior, IndentUnit};
+use derp_editor::content::version::BufferVersion;
+use derp_editor::decoration::DecorationLayer;
+use derp_editor::editor::TextDecoration;
+use derp_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use derp_editor::multiline::{AnyMultilineString, MultilineString, LF};
+use derp_editor::render::model::{
     AutoScrollMode, BlockItem, BlockSpacings, BrokenLinkStyle, CheckBoxStyle, ColumnUnit,
     Decoration, HorizontalRuleStyle, InlineCodeStyle, LineCount, LineDecoration, ParagraphStyles,
     RenderEvent, RenderLineLocation, RenderState, RichTextStyles, StyleUpdateAction, TableStyle,
     UpdateDecorationAfterLayout, WidthSetting,
 };
-use warp_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
-use warp_util::standardized_path::StandardizedPath;
-use warpui::elements::{
+use derp_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
+use derp_util::standardized_path::StandardizedPath;
+use derpui::elements::{
     AnchorPair, OffsetPositioning, OffsetType, PositionedElementOffsetBounds, PositioningAxis,
     XAxisAnchor, YAxisAnchor,
 };
-use warpui::text::point::Point;
-use warpui::text::TextBuffer;
-use warpui::units::{IntoPixels, Pixels};
-use warpui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use derpui::text::point::Point;
+use derpui::text::TextBuffer;
+use derpui::units::{IntoPixels, Pixels};
+use derpui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 use super::super::DiffResult;
 use super::comments::{EditorCommentsModel, PendingComment, PendingCommentEvent};
@@ -356,7 +356,7 @@ impl CodeEditorModel {
     /// Identical to `new` but creates the `RenderState` with
     /// [`LayoutMode::CharCell`] so all soft-wrap positions use monospace
     /// character-count arithmetic rather than font-aware pixel layout.
-    /// `TuiEditorModel` (in `warp_tui`) is a type alias for this type;
+    /// `TuiEditorModel` (in `derp_tui`) is a type alias for this type;
     /// constructing via this method is what gives the TUI editor all of
     /// `CodeEditorModel`'s features (vim, syntax, diff, hidden lines) for free
     /// while sharing no GUI-rendering infrastructure.
@@ -479,10 +479,10 @@ impl CodeEditorModel {
     /// lives here (the caller of `RenderState::new_tui`) rather than in the core
     /// editor crate so the editor API doesn't carry a TUI-specific stub.
     fn tui_stub_text_styles() -> RichTextStyles {
-        use warpui::elements::{Border, Fill};
-        use warpui::fonts::{FamilyId, Weight};
+        use derpui::elements::{Border, Fill};
+        use derpui::fonts::{FamilyId, Weight};
 
-        const TRANSPARENT: warpui::color::ColorU = warpui::color::ColorU {
+        const TRANSPARENT: derpui::color::ColorU = derpui::color::ColorU {
             r: 0,
             g: 0,
             b: 0,
@@ -716,7 +716,7 @@ impl CodeEditorModel {
     // Set the following line ranges to be hidden in the editor.
     pub fn set_hidden_lines(
         &mut self,
-        ranges: RangeSet<warp_editor::content::text::LineCount>,
+        ranges: RangeSet<derp_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         self.hidden_lines.update(ctx, |model, ctx| {
@@ -731,7 +731,7 @@ impl CodeEditorModel {
     // Set the following hidden line ranges to be visible. This is no-op if the lines are already visible.
     pub fn set_visible_line_range(
         &mut self,
-        range: Range<warp_editor::content::text::LineCount>,
+        range: Range<derp_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         let version = self.content().as_ref(ctx).buffer_version();
@@ -1465,7 +1465,7 @@ impl CodeEditorModel {
             let line_count = self.line_count(ctx);
 
             // Calculate the visible line ranges (with context)
-            let mut visible_ranges: RangeSet<warp_editor::content::text::LineCount> =
+            let mut visible_ranges: RangeSet<derp_editor::content::text::LineCount> =
                 RangeSet::new();
 
             // Add ranges for diffs. `modified_lines` yields 0-based line
@@ -1480,14 +1480,14 @@ impl CodeEditorModel {
             }
 
             // Calculate hidden ranges as the complement of visible ranges
-            let all_lines: Range<warp_editor::content::text::LineCount> =
-                warp_editor::content::text::LineCount::from(0)
-                    ..warp_editor::content::text::LineCount::from(line_count);
+            let all_lines: Range<derp_editor::content::text::LineCount> =
+                derp_editor::content::text::LineCount::from(0)
+                    ..derp_editor::content::text::LineCount::from(line_count);
 
             // Find gaps in the visible ranges
             let hidden_ranges = visible_ranges
                 .gaps(&all_lines)
-                .collect::<RangeSet<warp_editor::content::text::LineCount>>();
+                .collect::<RangeSet<derp_editor::content::text::LineCount>>();
 
             self.set_hidden_lines(hidden_ranges, ctx);
         }
@@ -2333,10 +2333,10 @@ impl CodeEditorModel {
                 self.update_content(
                     |mut content, ctx| {
                         content.apply_edit(
-                        warp_editor::content::buffer::BufferEditAction::InsertForEachSelection {
+                        derp_editor::content::buffer::BufferEditAction::InsertForEachSelection {
                             texts: &texts,
                         },
-                        warp_editor::content::buffer::EditOrigin::UserTyped,
+                        derp_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -2367,10 +2367,10 @@ impl CodeEditorModel {
             self.update_content(
                 |mut content, ctx| {
                     content.apply_edit(
-                        warp_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
+                        derp_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
                             edits: &edits,
                         },
-                        warp_editor::content::buffer::EditOrigin::UserTyped,
+                        derp_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -3978,10 +3978,10 @@ impl CoreEditorModel for CodeEditorModel {
     }
 
     // TODO(kevin): Add validation to the content model.
-    fn validate(&self, _ctx: &impl warpui::ModelAsRef) {}
+    fn validate(&self, _ctx: &impl derpui::ModelAsRef) {}
 
     // Since this is a plain text editor, there is no text styles.
-    fn active_text_style(&self) -> warp_editor::content::text::TextStyles {
+    fn active_text_style(&self) -> derp_editor::content::text::TextStyles {
         Default::default()
     }
 

@@ -3,14 +3,14 @@
 #![cfg_attr(feature = "release_bundle", windows_subsystem = "windows")]
 
 use anyhow::Result;
-use warp_core::channel::{Channel, ChannelState};
+use derp_core::channel::{Channel, ChannelState};
 
-// Simple wrapper around warp::run() for stable channel builds.
+// Simple wrapper around derp::run() for stable channel builds.
 fn main() -> Result<()> {
     ChannelState::set(ChannelState::new(
         Channel::Stable,
-        warp_channel_config::load_config!("stable"),
+        derp_channel_config::load_config!("stable"),
     ));
 
-    warp::run()
+    derp::run()
 }

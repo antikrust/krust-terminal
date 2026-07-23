@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use warp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 /// Telemetry events for the onboarding flow.
 #[derive(Clone, Debug, Serialize, Deserialize, EnumDiscriminants)]
@@ -21,7 +21,7 @@ pub enum OnboardingEvent {
         autonomy: Option<String>,
         has_project_path: bool,
         /// How the user is accessing AI when intention is agent_driven:
-        /// "warp_agent" or "third_party". None when intention is not agent_driven.
+        /// "derp_agent" or "third_party". None when intention is not agent_driven.
         ai_access: Option<String>,
     },
     /// The user clicked the "Get Started" button.
@@ -159,7 +159,7 @@ impl TelemetryEvent for OnboardingEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        warp_core::telemetry::enum_events::<Self>()
+        derp_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -239,4 +239,4 @@ impl TelemetryEventDesc for OnboardingEventDiscriminant {
     }
 }
 
-warp_core::register_telemetry_event!(OnboardingEvent);
+derp_core::register_telemetry_event!(OnboardingEvent);

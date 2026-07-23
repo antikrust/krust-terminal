@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use warp_core::features::FeatureFlag;
-use warpui::units::Pixels;
-use warpui::{AppContext, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derpui::units::Pixels;
+use derpui::{AppContext, SingletonEntity};
 
 use crate::settings::{AISettings, InputSettings, TerminalSpacing};
 

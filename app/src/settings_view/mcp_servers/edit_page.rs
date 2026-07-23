@@ -11,20 +11,20 @@ use parking_lot::Mutex;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
 use uuid::Uuid;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_editor::content::buffer::InitialBufferState;
+use derp_editor::render::element::VerticalExpansionBehavior;
+use derp_errors::report_error;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack, Text,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::platform::Cursor;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -169,8 +169,8 @@ impl MCPServersEditPageView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                warpui::elements::new_scrollable::ScrollableAppearance::new(
-                    warpui::elements::ScrollbarWidth::Auto,
+                derpui::elements::new_scrollable::ScrollableAppearance::new(
+                    derpui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             );

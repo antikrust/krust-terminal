@@ -5,19 +5,19 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use string_offset::CharOffset;
 use vec1::vec1;
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::theme::color::internal_colors::{
+use derp_core::ui::color::blend::Blend;
+use derp_core::ui::theme::color::internal_colors::{
     accent_overlay_2, accent_overlay_3, neutral_1, neutral_3, neutral_4, neutral_6, text_main,
     text_sub,
 };
-use warp_core::ui::theme::Fill;
-use warp_editor::model::CoreEditorModel;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
-use warpui::elements::resizable::{
+use derp_core::ui::theme::Fill;
+use derp_editor::model::CoreEditorModel;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
+use derpui::elements::resizable::{
     resizable_state_handle, DragBarSide, Resizable, ResizableStateHandle,
 };
-use warpui::elements::{
+use derpui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, Element, Empty, EventHandler,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
@@ -25,12 +25,12 @@ use warpui::elements::{
     Radius, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable, Stack,
     Text,
 };
-use warpui::keymap::Keystroke;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::units::Pixels;
-use warpui::{
+use derpui::keymap::Keystroke;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::UiComponent;
+use derpui::units::Pixels;
+use derpui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };
@@ -605,7 +605,7 @@ impl CommentListView {
             },
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
         .with_propagate_mousewheel_if_not_handled(true)
@@ -694,7 +694,7 @@ impl CommentListView {
                 };
 
                 let icon_element = icon
-                    .to_warpui_icon(warp_core::ui::theme::Fill::Solid(text_sub(
+                    .to_derpui_icon(derp_core::ui::theme::Fill::Solid(text_sub(
                         theme,
                         neutral_1(theme),
                     )))
@@ -776,7 +776,7 @@ impl CommentListView {
                         false, /* bottom */
                         true,  /* right */
                     )
-                    .with_border_fill(warp_core::ui::theme::Fill::Solid(neutral_4(theme))),
+                    .with_border_fill(derp_core::ui::theme::Fill::Solid(neutral_4(theme))),
             )
             .finish()
     }
@@ -838,7 +838,7 @@ impl CommentListView {
                 };
 
                 let icon_element = icon
-                    .to_warpui_icon(warp_core::ui::theme::Fill::Solid(text_sub(
+                    .to_derpui_icon(derp_core::ui::theme::Fill::Solid(text_sub(
                         theme,
                         neutral_3(theme),
                     )))
@@ -911,7 +911,7 @@ impl CommentListView {
             ReviewDestination::None => false,
             // CLI agents don't consume AI credits, so bypass the ai check.
             ReviewDestination::Cli(_) => has_sendable_comments,
-            ReviewDestination::Warp => {
+            ReviewDestination::Derp => {
                 AIRequestUsageModel::as_ref(ctx).has_any_ai_remaining(ctx) && has_sendable_comments
             }
         }
@@ -1127,8 +1127,8 @@ impl View for CommentListView {
 
             Resizable::new(self.view_state.resizable_state.clone(), panel)
                 .with_dragbar_side(DragBarSide::Top)
-                .with_dragbar_color(warpui::elements::Fill::Solid(
-                    warpui::color::ColorU::transparent_black(),
+                .with_dragbar_color(derpui::elements::Fill::Solid(
+                    derpui::color::ColorU::transparent_black(),
                 ))
                 .with_bounds_callback(Box::new(|window_size| (100.0, window_size.y() * 0.8)))
                 .on_resize(|ctx, _| {

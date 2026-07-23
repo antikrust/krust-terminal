@@ -1,7 +1,7 @@
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui_core::elements::Align;
-use warpui_core::Element;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derpui_core::elements::Align;
+use derpui_core::Element;
 
 use super::onboarding_visual::{OnboardingVisual, Pill, RectPct};
 

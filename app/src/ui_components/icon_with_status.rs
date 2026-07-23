@@ -1,9 +1,9 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::icons::Icon as WarpIcon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::{Fill as WarpThemeFill, WarpTheme};
-use warpui::elements::{
+use derp_core::ui::icons::Icon as DerpIcon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::{Fill as DerpThemeFill, DerpTheme};
+use derpui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, Element, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack,
 };
@@ -123,8 +123,8 @@ fn corner_overlay_offset(total: f32, overlay_extra_overhang_ratio: f32) -> f32 {
 pub(crate) enum IconWithStatusVariant {
     /// A generic icon with a given color on an overlay background.
     Neutral {
-        icon: WarpIcon,
-        icon_color: WarpThemeFill,
+        icon: DerpIcon,
+        icon_color: DerpThemeFill,
     },
     /// A pre-built icon element on an overlay background.
     NeutralElement { icon_element: Box<dyn Element> },
@@ -164,8 +164,8 @@ pub(crate) fn render_icon_with_status(
     variant: IconWithStatusVariant,
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
-    theme: &WarpTheme,
-    status_container_background: WarpThemeFill,
+    theme: &DerpTheme,
+    status_container_background: DerpThemeFill,
 ) -> Box<dyn Element> {
     render_icon_with_status_with_badge_style(
         variant,
@@ -184,14 +184,14 @@ pub(crate) fn render_icon_with_status_with_badge_style(
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
     badge_style: StatusBadgeStyle,
-    theme: &WarpTheme,
-    status_container_background: WarpThemeFill,
+    theme: &DerpTheme,
+    status_container_background: DerpThemeFill,
 ) -> Box<dyn Element> {
     let sub_text = theme.sub_text_color(theme.background());
 
     match variant {
         IconWithStatusVariant::Neutral { icon, icon_color } => render_neutral_circle(
-            icon.to_warpui_icon(icon_color).finish(),
+            icon.to_derpui_icon(icon_color).finish(),
             internal_colors::fg_overlay_2(theme),
             total_size,
         ),
@@ -210,19 +210,19 @@ pub(crate) fn render_icon_with_status_with_badge_style(
             // matching the treatment used in the agent view header. Non-ambient runs
             // continue to use the plain `Oz` glyph.
             let oz_glyph = if is_ambient {
-                WarpIcon::OzCloud
+                DerpIcon::OzCloud
             } else {
-                WarpIcon::Oz
+                DerpIcon::Oz
             };
             // Cloud (ambient) runs use a black glyph on the light-purple background
             // for consistency with the web app; local runs keep the theme text color.
             let glyph_color = if is_ambient {
-                WarpThemeFill::Solid(ColorU::black())
+                DerpThemeFill::Solid(ColorU::black())
             } else {
                 theme.main_text_color(theme.background())
             };
             let circle = render_circle(
-                oz_glyph.to_warpui_icon(glyph_color).finish(),
+                oz_glyph.to_derpui_icon(glyph_color).finish(),
                 circle_background,
                 total_size,
             );
@@ -249,10 +249,10 @@ pub(crate) fn render_icon_with_status_with_badge_style(
             let icon_element = agent
                 .icon()
                 .map(|icon| {
-                    icon.to_warpui_icon(WarpThemeFill::Solid(icon_color))
+                    icon.to_derpui_icon(DerpThemeFill::Solid(icon_color))
                         .finish()
                 })
-                .unwrap_or_else(|| WarpIcon::Terminal.to_warpui_icon(sub_text).finish());
+                .unwrap_or_else(|| DerpIcon::Terminal.to_derpui_icon(sub_text).finish());
             let circle = render_circle(icon_element, ThemeFill::Solid(brand_color), total_size);
             attach_status_overlay(
                 circle,
@@ -289,7 +289,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
 /// `attach_status_overlay` to occupy the full `total_size` footprint.
 fn render_circle(
     icon_element: Box<dyn Element>,
-    background: WarpThemeFill,
+    background: DerpThemeFill,
     total_size: f32,
 ) -> Box<dyn Element> {
     let icon = icon_size(total_size);
@@ -313,7 +313,7 @@ fn render_circle(
 /// requested bounding box rather than shrinking to `circle_size(total)`.
 fn render_neutral_circle(
     icon_element: Box<dyn Element>,
-    background: WarpThemeFill,
+    background: DerpThemeFill,
     total_size: f32,
 ) -> Box<dyn Element> {
     let glyph = total_size * NEUTRAL_GLYPH_RATIO;
@@ -339,8 +339,8 @@ fn attach_status_overlay(
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
     badge_style: StatusBadgeStyle,
-    theme: &WarpTheme,
-    status_container_background: WarpThemeFill,
+    theme: &DerpTheme,
+    status_container_background: DerpThemeFill,
 ) -> Box<dyn Element> {
     if is_ambient {
         render_with_cloud_status_badge(
@@ -370,12 +370,12 @@ fn render_with_cloud_status_badge(
     status: Option<&ConversationStatus>,
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
-    theme: &WarpTheme,
+    theme: &DerpTheme,
 ) -> Box<dyn Element> {
     let cloud_diameter = cloud_icon_size(total_size);
     let cloud = ConstrainedBox::new(
-        WarpIcon::CloudFilled
-            .to_warpui_icon(theme.foreground())
+        DerpIcon::CloudFilled
+            .to_derpui_icon(theme.foreground())
             .finish(),
     )
     .with_width(cloud_diameter)
@@ -387,7 +387,7 @@ fn render_with_cloud_status_badge(
             let (icon, color) = status.status_icon_and_color(theme, StatusColorStyle::Cloud);
             let inner = status_in_cloud_size(total_size);
             let status_icon =
-                ConstrainedBox::new(icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish())
+                ConstrainedBox::new(icon.to_derpui_icon(DerpThemeFill::Solid(color)).finish())
                     .with_width(inner)
                     .with_height(inner)
                     .finish();
@@ -439,8 +439,8 @@ fn render_with_optional_status_badge(
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
     badge_style: StatusBadgeStyle,
-    theme: &WarpTheme,
-    status_container_background: WarpThemeFill,
+    theme: &DerpTheme,
+    status_container_background: DerpThemeFill,
 ) -> Box<dyn Element> {
     let Some(status) = status else {
         // No status badge: still occupy the full `total_size` footprint so the agent
@@ -454,7 +454,7 @@ fn render_with_optional_status_badge(
     let (icon, color) = status.status_icon_and_color(theme, StatusColorStyle::Standard);
     let badge_icon_diameter = badge_icon_size(total_size, badge_style);
     let pad = badge_padding(total_size, badge_style);
-    let badge_icon = ConstrainedBox::new(icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish())
+    let badge_icon = ConstrainedBox::new(icon.to_derpui_icon(DerpThemeFill::Solid(color)).finish())
         .with_width(badge_icon_diameter)
         .with_height(badge_icon_diameter)
         .finish();

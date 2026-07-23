@@ -4,11 +4,11 @@ use std::sync::Arc;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::{DateTime, Local};
 use vec1::vec1;
-use warp_core::command::ExitCode;
-use warp_core::features::FeatureFlag;
-use warp_terminal::model::ansi::ClearMode;
-use warpui::r#async::executor::Background;
-use warpui::text::{str_to_byte_vec, SelectionType};
+use derp_core::command::ExitCode;
+use derp_core::features::FeatureFlag;
+use derp_terminal::model::ansi::ClearMode;
+use derpui::r#async::executor::Background;
+use derpui::text::{str_to_byte_vec, SelectionType};
 
 use super::*;
 use crate::terminal::color;
@@ -199,7 +199,7 @@ fn ignores_non_inline_iterm_file_payload_without_overwriting_cwd_file() {
     let temp_dir = tempfile::tempdir().unwrap();
     let target_path = temp_dir.path().join(".zshenv");
     let original_bytes = b"ORIGINAL=1\n";
-    let attacker_bytes = b"touch /tmp/warp-pwned\n";
+    let attacker_bytes = b"touch /tmp/derp-pwned\n";
     fs::write(&target_path, original_bytes).unwrap();
 
     let mut terminal = TerminalModel::mock(None, None);
@@ -220,7 +220,7 @@ fn ignores_multipart_non_inline_iterm_file_payload_without_overwriting_cwd_file(
     let temp_dir = tempfile::tempdir().unwrap();
     let target_path = temp_dir.path().join(".zshenv");
     let original_bytes = b"ORIGINAL=1\n";
-    let attacker_bytes = b"touch /tmp/warp-pwned\n";
+    let attacker_bytes = b"touch /tmp/derp-pwned\n";
     fs::write(&target_path, original_bytes).unwrap();
 
     let mut terminal = TerminalModel::mock(None, None);
@@ -386,7 +386,7 @@ pub fn test_restored_empty_command_block() {
         !restored_block.is_command_empty(),
         "The empty block should have nonzero length"
     );
-    // The mocked terminal model comes with a WarpInput block and the active block.
+    // The mocked terminal model comes with a DerpInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), 3);
 }
 
@@ -399,7 +399,7 @@ fn test_restored_blocks_on_different_host() {
         SerializedBlock {
             id: BlockId::new(),
             stylized_command: str_to_byte_vec("echo $TERM_PROGRAM"),
-            stylized_output: str_to_byte_vec("WarpTerminal"),
+            stylized_output: str_to_byte_vec("DerpTerminal"),
             pwd: Some("/".to_owned()),
             git_head: None,
             git_branch_name: None,
@@ -546,7 +546,7 @@ fn test_restored_blocks_on_different_host() {
         .into(),
     ];
     let model = TerminalModel::mock(Some(&restored_blocks), None);
-    // The mocked terminal model comes with a WarpInput block and the active block.
+    // The mocked terminal model comes with a DerpInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), restored_blocks.len() + 2);
     for restored_block in model
         .block_list()
@@ -561,7 +561,7 @@ fn test_restored_blocks_on_different_host() {
     }
     let blocks = model.block_list().blocks();
     assert_eq!(blocks[0].command_to_string(), "echo $TERM_PROGRAM",);
-    assert_eq!(blocks[0].output_to_string(), "WarpTerminal",);
+    assert_eq!(blocks[0].output_to_string(), "DerpTerminal",);
     assert_eq!(blocks[1].command_to_string(), "pwd",);
     assert_eq!(blocks[1].output_to_string(), "/",);
     assert_eq!(blocks[2].command_to_string(), "uname",);

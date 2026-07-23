@@ -8,27 +8,27 @@ use parking_lot::Mutex;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_editor::editor::EditorView;
-use warp_editor::render::element::lens_element::RichTextElementLens;
-use warp_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
-use warp_editor::render::model::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_editor::editor::EditorView;
+use derp_editor::render::element::lens_element::RichTextElementLens;
+use derp_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
+use derp_editor::render::model::{
     gutter_expansion_button_types, BlockLocation, ExpansionType, LineCount, RenderState,
 };
-use warpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use warpui::elements::{
+use derpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use derpui::elements::{
     Align, Axis, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Empty, F32Ext, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Point, Radius, ScrollData, Stack, Text, ZIndex,
 };
-use warpui::event::DispatchedEvent;
-use warpui::fonts::FamilyId;
-use warpui::ui_components::components::UiComponent;
-use warpui::units::{IntoPixels, Pixels};
-use warpui::{
+use derpui::event::DispatchedEvent;
+use derpui::fonts::FamilyId;
+use derpui::ui_components::components::UiComponent;
+use derpui::units::{IntoPixels, Pixels};
+use derpui::{
     AfterLayoutContext, AppContext, ClipBounds, Element, Event, EventContext, LayoutContext,
     ModelHandle, PaintContext, SingletonEntity, SizeConstraint,
 };
@@ -944,7 +944,7 @@ impl<V: EditorView> EditorWrapper<V> {
             line_number_config.text_color
         };
         let icon = ConstrainedBox::new(
-            warpui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
+            derpui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
         )
         .with_width(16.)
         .with_height(16.)
@@ -996,7 +996,7 @@ impl<V: EditorView> EditorWrapper<V> {
 
             let container = Container::new(
                 ConstrainedBox::new(
-                    warpui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
+                    derpui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
                 )
                 .with_width(icon_size)
                 .with_height(icon_size)
@@ -1036,7 +1036,7 @@ impl<V: EditorView> EditorWrapper<V> {
         });
 
         if enabled {
-            button = button.with_cursor(warpui::platform::Cursor::PointingHand);
+            button = button.with_cursor(derpui::platform::Cursor::PointingHand);
 
             if let Some(on_click_action) = on_click_action {
                 let action = on_click_action.clone();

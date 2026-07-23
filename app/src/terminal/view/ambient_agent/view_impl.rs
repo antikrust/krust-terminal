@@ -3,14 +3,14 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use warp_cli::agent::Harness;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_terminal::model::BlockId;
-use warpui::elements::Align;
-use warpui::prelude::{Empty, Vector2F};
-use warpui::{
+use derp_cli::agent::Harness;
+use derp_core::features::FeatureFlag;
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::appearance::Appearance;
+use derp_terminal::model::BlockId;
+use derpui::elements::Align;
+use derpui::prelude::{Empty, Vector2F};
+use derpui::{
     AppContext, Element, EntityId, ModelHandle, SingletonEntity, ViewContext, ViewHandle,
 };
 
@@ -954,7 +954,7 @@ impl TerminalView {
     /// Prefers cloud `AmbientAgentTask` data when this terminal view has an
     /// associated task ID. Otherwise falls back to populating the panel from
     /// the active local `AIConversation`, so the same panel can surface
-    /// conversation metadata for non-cloud Warp Agent runs (APP-3595).
+    /// conversation metadata for non-cloud Derp Agent runs (APP-3595).
     pub(in crate::terminal::view) fn fetch_and_update_conversation_details_panel(
         &mut self,
         ctx: &mut ViewContext<Self>,

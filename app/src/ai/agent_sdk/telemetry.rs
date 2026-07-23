@@ -1,13 +1,13 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use warp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::features::FeatureFlag;
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
 pub(super) enum CliTelemetryEvent {
-    /// Executing `warp agent run`
+    /// Executing `derp agent run`
     AgentRun {
         gui: bool,
         requested_mcp_servers: usize,
@@ -17,137 +17,137 @@ pub(super) enum CliTelemetryEvent {
         /// Which execution harness was selected (e.g. "oz", "claude").
         harness: String,
     },
-    /// Executing `warp agent run-ambient`
+    /// Executing `derp agent run-ambient`
     AgentRunAmbient,
-    /// Executing `warp agent profile list`
+    /// Executing `derp agent profile list`
     AgentProfileList,
-    /// Executing `warp agent list`
+    /// Executing `derp agent list`
     AgentList,
-    /// Executing `warp agent get`
+    /// Executing `derp agent get`
     AgentGet,
-    /// Executing `warp agent create`
+    /// Executing `derp agent create`
     AgentCreate,
-    /// Executing `warp agent update`
+    /// Executing `derp agent update`
     AgentUpdate,
-    /// Executing `warp agent delete`
+    /// Executing `derp agent delete`
     AgentDelete,
-    /// Executing `warp agent skills`
+    /// Executing `derp agent skills`
     AgentSkills,
-    /// Executing `warp environment list`
+    /// Executing `derp environment list`
     EnvironmentList,
-    /// Executing `warp environment create`
+    /// Executing `derp environment create`
     EnvironmentCreate,
-    /// Executing `warp environment delete`
+    /// Executing `derp environment delete`
     EnvironmentDelete,
-    /// Executing `warp environment update`
+    /// Executing `derp environment update`
     EnvironmentUpdate,
-    /// Executing `warp environment get`
+    /// Executing `derp environment get`
     EnvironmentGet,
-    /// Executing `warp environment image list`
+    /// Executing `derp environment image list`
     EnvironmentImageList,
-    /// Executing `warp mcp list`
+    /// Executing `derp mcp list`
     MCPList,
-    /// Executing `warp model list`
+    /// Executing `derp model list`
     ModelList,
-    /// Executing `warp memory-store list`
+    /// Executing `derp memory-store list`
     MemoryStoreList,
-    /// Executing `warp memory list`
+    /// Executing `derp memory list`
     MemoryStoreListMemories,
-    /// Executing `warp memory create`
+    /// Executing `derp memory create`
     MemoryStoreCreateMemory,
-    /// Executing `warp memory update`
+    /// Executing `derp memory update`
     MemoryStoreUpdateMemory,
-    /// Executing `warp memory delete`
+    /// Executing `derp memory delete`
     MemoryStoreDeleteMemory,
-    /// Executing `warp memory-store get`
+    /// Executing `derp memory-store get`
     MemoryStoreGetStore,
-    /// Executing `warp memory-store update`
+    /// Executing `derp memory-store update`
     MemoryStoreUpdateStore,
-    /// Executing `warp memory-store list-store-agents`
+    /// Executing `derp memory-store list-store-agents`
     MemoryStoreListStoreAgents,
-    /// Executing `warp memory versions`
+    /// Executing `derp memory versions`
     MemoryStoreListVersions,
-    /// Executing `warp task list`
+    /// Executing `derp task list`
     TaskList,
-    /// Executing `warp task get`
+    /// Executing `derp task get`
     TaskGet,
-    /// Executing `warp run conversation get`
+    /// Executing `derp run conversation get`
     ConversationGet,
-    /// Executing `warp run get <id> --conversation`
+    /// Executing `derp run get <id> --conversation`
     RunConversationGet,
-    /// Executing `warp run message watch`
+    /// Executing `derp run message watch`
     RunMessageWatch { harness: &'static str },
-    /// Executing `warp run message send`
+    /// Executing `derp run message send`
     RunMessageSend { harness: &'static str },
-    /// Executing `warp run message list`
+    /// Executing `derp run message list`
     RunMessageList { harness: &'static str },
-    /// Executing `warp run message read`
+    /// Executing `derp run message read`
     RunMessageRead { harness: &'static str },
-    /// Executing `warp run message mark-delivered`
+    /// Executing `derp run message mark-delivered`
     RunMessageMarkDelivered { harness: &'static str },
-    /// Executing `warp login`
+    /// Executing `derp login`
     Login,
-    /// Executing `warp logout`
+    /// Executing `derp logout`
     Logout,
-    /// Executing `warp whoami`
+    /// Executing `derp whoami`
     Whoami,
-    /// Executing `warp provider setup`
+    /// Executing `derp provider setup`
     ProviderSetup,
-    /// Executing `warp provider list`
+    /// Executing `derp provider list`
     ProviderList,
-    /// Executing `warp integration create`
+    /// Executing `derp integration create`
     IntegrationCreate,
-    /// Executing `warp integration update`
+    /// Executing `derp integration update`
     IntegrationUpdate,
-    /// Executing `warp integration list`
+    /// Executing `derp integration list`
     IntegrationList,
-    /// Executing `warp artifact upload`
+    /// Executing `derp artifact upload`
     ArtifactUpload,
-    /// Executing `warp artifact get`
+    /// Executing `derp artifact get`
     ArtifactGet,
-    /// Executing `warp artifact download`
+    /// Executing `derp artifact download`
     ArtifactDownload,
-    /// Executing `warp api-key list`
+    /// Executing `derp api-key list`
     ApiKeyList,
-    /// Executing `warp api-key create`
+    /// Executing `derp api-key create`
     ApiKeyCreate,
-    /// Executing `warp api-key expire`
+    /// Executing `derp api-key expire`
     ApiKeyExpire,
-    /// Executing `warp schedule create`
+    /// Executing `derp schedule create`
     ScheduleCreate,
-    /// Executing `warp schedule list`
+    /// Executing `derp schedule list`
     ScheduleList,
-    /// Executing `warp schedule get`
+    /// Executing `derp schedule get`
     ScheduleGet,
-    /// Executing `warp schedule pause`
+    /// Executing `derp schedule pause`
     SchedulePause,
-    /// Executing `warp schedule unpause`
+    /// Executing `derp schedule unpause`
     ScheduleUnpause,
-    /// Executing `warp schedule update`
+    /// Executing `derp schedule update`
     ScheduleUpdate,
-    /// Executing `warp schedule delete`
+    /// Executing `derp schedule delete`
     ScheduleDelete,
-    /// Executing `warp secret create`
+    /// Executing `derp secret create`
     SecretCreate,
-    /// Executing `warp secret delete`
+    /// Executing `derp secret delete`
     SecretDelete,
-    /// Executing `warp secret update`
+    /// Executing `derp secret update`
     SecretUpdate,
-    /// Executing `warp secret list`
+    /// Executing `derp secret list`
     SecretList,
-    /// Executing `warp federate issue-token`
+    /// Executing `derp federate issue-token`
     FederateIssueToken,
-    /// Executing `warp federate issue-gcp-token`
+    /// Executing `derp federate issue-gcp-token`
     FederateIssueGcpToken,
-    /// Executing `warp harness-support ping`
+    /// Executing `derp harness-support ping`
     HarnessSupportPing,
-    /// Executing `warp harness-support report-artifact`
+    /// Executing `derp harness-support report-artifact`
     HarnessSupportReportArtifact { artifact_type: &'static str },
-    /// Executing `warp harness-support notify-user`
+    /// Executing `derp harness-support notify-user`
     HarnessSupportNotifyUser,
-    /// Executing `warp harness-support finish-task`
+    /// Executing `derp harness-support finish-task`
     HarnessSupportFinishTask { success: bool },
-    /// Executing `warp harness-support report-shutdown`
+    /// Executing `derp harness-support report-shutdown`
     HarnessSupportReportShutdown,
 }
 
@@ -259,7 +259,7 @@ impl TelemetryEvent for CliTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        warp_core::telemetry::enum_events::<Self>()
+        derp_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -370,160 +370,160 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
 
     fn description(&self) -> &'static str {
         match self {
-            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Warp CLI",
+            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Derp CLI",
             CliTelemetryEventDiscriminants::AgentRunAmbient => {
-                "Ran an ambient agent from the Warp CLI"
+                "Ran an ambient agent from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::AgentProfileList => {
-                "Listed agent profiles from the Warp CLI"
+                "Listed agent profiles from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Warp CLI",
+            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Derp CLI",
             CliTelemetryEventDiscriminants::EnvironmentList => {
-                "Listed cloud environments from the Warp CLI"
+                "Listed cloud environments from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentCreate => {
-                "Created a cloud environment from the Warp CLI"
+                "Created a cloud environment from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentDelete => {
-                "Deleted a cloud environment from the Warp CLI"
+                "Deleted a cloud environment from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentUpdate => {
-                "Updated a cloud environment from the Warp CLI"
+                "Updated a cloud environment from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentGet => {
-                "Got cloud environment details from the Warp CLI"
+                "Got cloud environment details from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentImageList => {
-                "Listed available base images from the Warp CLI"
+                "Listed available base images from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Warp CLI",
-            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Warp CLI",
+            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Derp CLI",
+            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Derp CLI",
             CliTelemetryEventDiscriminants::MemoryStoreList => {
-                "Listed memory stores from the Warp CLI"
+                "Listed memory stores from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListMemories => {
-                "Listed memories in a memory store from the Warp CLI"
+                "Listed memories in a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreCreateMemory => {
-                "Created a manual memory in a memory store from the Warp CLI"
+                "Created a manual memory in a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateMemory => {
-                "Updated a memory in a memory store from the Warp CLI"
+                "Updated a memory in a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreDeleteMemory => {
-                "Deleted a memory from a memory store from the Warp CLI"
+                "Deleted a memory from a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreGetStore => {
-                "Got a memory store from the Warp CLI"
+                "Got a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateStore => {
-                "Updated a memory store from the Warp CLI"
+                "Updated a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListStoreAgents => {
-                "Listed agents attached to a memory store from the Warp CLI"
+                "Listed agents attached to a memory store from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListVersions => {
-                "Listed version history of a memory from the Warp CLI"
+                "Listed version history of a memory from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Warp CLI",
-            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Warp CLI",
+            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Derp CLI",
+            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Derp CLI",
             CliTelemetryEventDiscriminants::ConversationGet => {
-                "Got conversation by ID from the Warp CLI"
+                "Got conversation by ID from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunConversationGet => {
-                "Got run conversation from the Warp CLI"
+                "Got run conversation from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageWatch => {
-                "Watched run messages from the Warp CLI"
+                "Watched run messages from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageSend => {
-                "Sent a run message from the Warp CLI"
+                "Sent a run message from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageList => {
-                "Listed run messages from the Warp CLI"
+                "Listed run messages from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageRead => {
-                "Read a run message from the Warp CLI"
+                "Read a run message from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageMarkDelivered => {
-                "Marked a run message as delivered from the Warp CLI"
+                "Marked a run message as delivered from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::Login => "Logged in via the Warp CLI",
-            CliTelemetryEventDiscriminants::Logout => "Logged out via the Warp CLI",
-            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Warp CLI",
-            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Warp CLI",
-            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Warp CLI",
+            CliTelemetryEventDiscriminants::Login => "Logged in via the Derp CLI",
+            CliTelemetryEventDiscriminants::Logout => "Logged out via the Derp CLI",
+            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Derp CLI",
+            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Derp CLI",
+            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Derp CLI",
             CliTelemetryEventDiscriminants::IntegrationCreate => {
-                "Created an integration from the Warp CLI"
+                "Created an integration from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationUpdate => {
-                "Updated an integration from the Warp CLI"
+                "Updated an integration from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationList => {
-                "Listed integrations from the Warp CLI"
+                "Listed integrations from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactUpload => {
-                "Uploaded an artifact from the Warp CLI"
+                "Uploaded an artifact from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactGet => {
-                "Got artifact metadata from the Warp CLI"
+                "Got artifact metadata from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactDownload => {
-                "Downloaded an artifact from the Warp CLI"
+                "Downloaded an artifact from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Warp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Warp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Warp CLI",
+            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Derp CLI",
+            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Derp CLI",
+            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Derp CLI",
             CliTelemetryEventDiscriminants::ScheduleCreate => {
-                "Created a scheduled agent from the Warp CLI"
+                "Created a scheduled agent from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleList => {
-                "Listed scheduled agents from the Warp CLI"
+                "Listed scheduled agents from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleGet => {
-                "Got scheduled agent configuration from the Warp CLI"
+                "Got scheduled agent configuration from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::SchedulePause => {
-                "Paused a scheduled agent from the Warp CLI"
+                "Paused a scheduled agent from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUnpause => {
-                "Unpaused a scheduled agent from the Warp CLI"
+                "Unpaused a scheduled agent from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUpdate => {
-                "Updated a scheduled agent from the Warp CLI"
+                "Updated a scheduled agent from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleDelete => {
-                "Deleted a scheduled agent from the Warp CLI"
+                "Deleted a scheduled agent from the Derp CLI"
             }
-            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Warp CLI",
+            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Derp CLI",
+            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Derp CLI",
+            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Derp CLI",
+            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Derp CLI",
             CliTelemetryEventDiscriminants::FederateIssueToken => {
-                "Issued a federated identity token from the Warp CLI"
+                "Issued a federated identity token from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::FederateIssueGcpToken => {
-                "Issued a GCP federated identity token from the Warp CLI"
+                "Issued a GCP federated identity token from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportPing => {
-                "Pinged harness-support from the Warp CLI"
+                "Pinged harness-support from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportArtifact => {
-                "Reported an artifact via harness-support from the Warp CLI"
+                "Reported an artifact via harness-support from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportNotifyUser => {
-                "Sent a user notification via harness-support from the Warp CLI"
+                "Sent a user notification via harness-support from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportFinishTask => {
-                "Reported task completion via harness-support from the Warp CLI"
+                "Reported task completion via harness-support from the Derp CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportShutdown => {
-                "Reported agent shutdown via harness-support from the Warp CLI"
+                "Reported agent shutdown via harness-support from the Derp CLI"
             }
         }
     }
@@ -553,4 +553,4 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
     }
 }
 
-warp_core::register_telemetry_event!(CliTelemetryEvent);
+derp_core::register_telemetry_event!(CliTelemetryEvent);

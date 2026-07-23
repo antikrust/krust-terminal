@@ -1,8 +1,8 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use warp_errors::{report_error, report_if_error};
-use warpui::keymap::Keystroke;
-use warpui::{AppContext, DisplayIdx, ModelContext};
+use derp_errors::{report_error, report_if_error};
+use derpui::keymap::Keystroke;
+use derpui::{AppContext, DisplayIdx, ModelContext};
 
 use crate::root_view::{update_quake_window_bounds, QuakeModePinPosition};
 use crate::settings::{

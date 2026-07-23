@@ -3,20 +3,20 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::icons;
-use warp_core::ui::icons::ICON_DIMENSIONS;
-use warp_core::ui::theme::Fill as ThemeFill;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derp_core::ui::icons;
+use derp_core::ui::icons::ICON_DIMENSIONS;
+use derp_core::ui::theme::Fill as ThemeFill;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition, Stack,
 };
-use warpui::keymap::{EditableBinding, FixedBinding};
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::ButtonTooltipPosition;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::keymap::{EditableBinding, FixedBinding};
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::button::ButtonTooltipPosition;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     id, AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -29,7 +29,7 @@ use crate::ai::document::ai_document_model::{
 };
 use crate::ai::document::orchestration_config_block::OrchestrationConfigBlockView;
 use crate::appearance::Appearance;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::DerpDriveItemId;
 use crate::drive::sharing::ShareableObject;
 use crate::drive::CloudObjectTypeAndId;
 use crate::editor::InteractionState;
@@ -81,9 +81,9 @@ pub fn init(app: &mut AppContext) {
 
 #[cfg(feature = "local_fs")]
 use anyhow::Context as _;
-use warp_errors::report_error;
+use derp_errors::report_error;
 #[cfg(feature = "local_fs")]
-use warp_util::path::LineAndColumnArg;
+use derp_util::path::LineAndColumnArg;
 
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
@@ -102,12 +102,12 @@ pub enum AIDocumentAction {
     Export,
     CopyAsMarkdown,
     OpenVersionMenu,
-    CreateWarpDriveNotebook,
+    CreateDerpDriveNotebook,
     RevertToDocumentVersion,
     SendUpdatedPlan,
     CopyLink(String),
     CopyPlanId,
-    ShowInWarpDrive,
+    ShowInDerpDrive,
     AttachToActiveSession,
 }
 
@@ -115,9 +115,9 @@ pub enum AIDocumentAction {
 pub enum AIDocumentEvent {
     Pane(PaneEvent),
     CloseRequested,
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInDerpDrive(DerpDriveItemId),
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInDerp {
         source: CodeSource,
         layout: EditorLayout,
         line_col: Option<LineAndColumnArg>,
@@ -403,7 +403,7 @@ impl AIDocumentView {
             pane_config.refresh_pane_header_overflow_menu_items(ctx)
         });
 
-        // Create sync button mouse state (for Warp Drive syncing)
+        // Create sync button mouse state (for Derp Drive syncing)
         let sync_button_mouse_state = MouseStateHandle::default();
 
         // Create Update Agent button
@@ -609,7 +609,7 @@ impl AIDocumentView {
             .and_then(|sync_id| sync_id.into_server());
 
         self.pane_configuration.update(ctx, |pc, ctx| {
-            pc.set_shareable_object(server_id.map(ShareableObject::WarpDriveObject), ctx);
+            pc.set_shareable_object(server_id.map(ShareableObject::DerpDriveObject), ctx);
             pc.refresh_pane_header_overflow_menu_items(ctx);
         });
         ctx.notify();
@@ -685,7 +685,7 @@ impl AIDocumentView {
                 .on_click(|ctx, _, _| {
                     ctx.dispatch_typed_action(
                         PaneHeaderAction::<AIDocumentAction, AIDocumentAction>::CustomAction(
-                            AIDocumentAction::CreateWarpDriveNotebook,
+                            AIDocumentAction::CreateDerpDriveNotebook,
                         ),
                     )
                 })
@@ -700,7 +700,7 @@ impl AIDocumentView {
                         Container::new(
                             ConstrainedBox::new(
                                 Icon::RefreshCw04
-                                    .to_warpui_icon(ThemeFill::Solid(color))
+                                    .to_derpui_icon(ThemeFill::Solid(color))
                                     .finish(),
                             )
                             .with_width(16.)
@@ -731,7 +731,7 @@ impl AIDocumentView {
                             Hoverable::new(synced_status_mouse_state, move |state| {
                                 let icon = {
                                     let icon_elem = Icon::RefreshCw04
-                                        .to_warpui_icon(ThemeFill::Solid(color))
+                                        .to_derpui_icon(ThemeFill::Solid(color))
                                         .finish();
                                     ConstrainedBox::new(icon_elem)
                                         .with_width(16.)
@@ -747,8 +747,8 @@ impl AIDocumentView {
                                         tooltip,
                                         OffsetPositioning::offset_from_parent(
                                             vec2f(0., 4.),
-                                            warpui::elements::ParentOffsetBounds::WindowByPosition,
-                                            warpui::elements::ParentAnchor::BottomRight,
+                                            derpui::elements::ParentOffsetBounds::WindowByPosition,
+                                            derpui::elements::ParentAnchor::BottomRight,
                                             ChildAnchor::TopRight,
                                         ),
                                     );
@@ -954,21 +954,21 @@ impl AIDocumentView {
             EditorViewEvent::OpenFile {
                 path,
                 line_and_column_num,
-                force_open_in_warp,
+                force_open_in_derp,
             } => {
                 use crate::util::file::external_editor::EditorSettings;
                 use crate::util::openable_file_type::{
                     is_supported_image_file, resolve_file_target,
                 };
 
-                if *force_open_in_warp {
+                if *force_open_in_derp {
                     let layout = *EditorSettings::as_ref(ctx).open_file_layout;
                     let source = CodeSource::Link {
                         path: path.clone(),
                         range_start: *line_and_column_num,
                         range_end: None,
                     };
-                    ctx.emit(AIDocumentEvent::OpenCodeInWarp {
+                    ctx.emit(AIDocumentEvent::OpenCodeInDerp {
                         source,
                         layout,
                         line_col: *line_and_column_num,
@@ -997,7 +997,7 @@ impl AIDocumentView {
     }
 
     /// Bind the underlying editor model to the given window, enabling render/event processing.
-    pub fn bind_window(&self, window_id: warpui::WindowId, ctx: &mut ViewContext<Self>) {
+    pub fn bind_window(&self, window_id: derpui::WindowId, ctx: &mut ViewContext<Self>) {
         self.editor.update(ctx, |editor_view, ctx| {
             editor_view
                 .model()
@@ -1005,9 +1005,9 @@ impl AIDocumentView {
         });
     }
 
-    fn create_warp_drive_notebook(&self, ctx: &mut ViewContext<Self>) {
+    fn create_derp_drive_notebook(&self, ctx: &mut ViewContext<Self>) {
         let success = AIDocumentModel::handle(ctx).update(ctx, |model, ctx| {
-            model.sync_to_warp_drive(self.document_id, ctx)
+            model.sync_to_derp_drive(self.document_id, ctx)
         });
         if !success {
             report_error!("Failed to create Library notebook");
@@ -1017,7 +1017,7 @@ impl AIDocumentView {
     /// Export the current content as a markdown file.
     #[cfg(feature = "local_fs")]
     fn export(&self, ctx: &mut ViewContext<Self>) {
-        use warpui::platform::SaveFilePickerConfiguration;
+        use derpui::platform::SaveFilePickerConfiguration;
 
         use crate::drive::export::safe_filename;
         let markdown = self.editor.as_ref(ctx).markdown_unescaped(ctx);
@@ -1077,7 +1077,7 @@ impl View for AIDocumentView {
         "AIDocumentView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn derpui::Element> {
         let has_orchestration_config = AIDocumentModel::as_ref(app)
             .get_conversation_id_for_document_id(&self.document_id)
             .and_then(|cid| {
@@ -1109,7 +1109,7 @@ impl View for AIDocumentView {
             .with_padding_left(8.)
             .with_padding_right(8.)
             .finish();
-        content_column.add_child(warpui::elements::Expanded::new(1.0, editor).finish());
+        content_column.add_child(derpui::elements::Expanded::new(1.0, editor).finish());
 
         let mut stack = Stack::new().with_child(content_column.finish());
 
@@ -1157,7 +1157,7 @@ impl TypedActionView for AIDocumentView {
                     );
                 });
             }
-            AIDocumentAction::CreateWarpDriveNotebook => self.create_warp_drive_notebook(ctx),
+            AIDocumentAction::CreateDerpDriveNotebook => self.create_derp_drive_notebook(ctx),
             AIDocumentAction::CopyLink(link) => {
                 send_telemetry_from_ctx!(
                     TelemetryEvent::ObjectLinkCopied { link: link.clone() },
@@ -1274,12 +1274,12 @@ impl TypedActionView for AIDocumentView {
                 // Update UI to reflect the new query
                 self.update_header_buttons(ctx);
             }
-            AIDocumentAction::ShowInWarpDrive => {
+            AIDocumentAction::ShowInDerpDrive => {
                 if let Some(document) =
                     AIDocumentModel::as_ref(ctx).get_current_document(&self.document_id)
                 {
                     if let Some(sync_id) = document.sync_id {
-                        ctx.emit(AIDocumentEvent::ViewInWarpDrive(WarpDriveItemId::Object(
+                        ctx.emit(AIDocumentEvent::ViewInDerpDrive(DerpDriveItemId::Object(
                             CloudObjectTypeAndId::Notebook(sync_id),
                         )));
                     }
@@ -1327,9 +1327,9 @@ impl BackingView for AIDocumentView {
     ) -> Vec<MenuItem<Self::PaneHeaderOverflowMenuAction>> {
         let mut menu_items = vec![];
 
-        // Only show shareable link when the document is synced to Warp Drive
+        // Only show shareable link when the document is synced to Derp Drive
         if let Some(link) =
-            AIDocumentModel::as_ref(ctx).get_document_warp_drive_object_link(&self.document_id, ctx)
+            AIDocumentModel::as_ref(ctx).get_document_derp_drive_object_link(&self.document_id, ctx)
         {
             menu_items.push(
                 MenuItemFields::new("Copy link")
@@ -1339,8 +1339,8 @@ impl BackingView for AIDocumentView {
             );
             menu_items.push(
                 MenuItemFields::new("Show in Library")
-                    .with_on_select_action(AIDocumentAction::ShowInWarpDrive)
-                    .with_icon(Icon::WarpDrive)
+                    .with_on_select_action(AIDocumentAction::ShowInDerpDrive)
+                    .with_icon(Icon::DerpDrive)
                     .into_item(),
             );
         }

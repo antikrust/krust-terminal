@@ -1,6 +1,6 @@
-use warp_util::content_version::ContentVersion;
-// Re-export from warp_util so existing app-level imports continue to work.
-pub use warp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::content_version::ContentVersion;
+// Re-export from derp_util so existing app-level imports continue to work.
+pub use derp_util::local_or_remote_path::LocalOrRemotePath;
 
 /// Tracks sync state between client and server for a single remote buffer.
 ///

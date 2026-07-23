@@ -1,5 +1,5 @@
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warpui_core::ModelContext;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derpui_core::ModelContext;
 
 use super::model::{ProjectContextModel, ProjectRule};
 

@@ -2,7 +2,7 @@
 //! Repository metadata model singleton.
 //!
 //! This module provides a singleton model that manages repository metadata across
-//! all repositories tracked by Warp.
+//! all repositories tracked by Derp.
 
 use std::collections::HashMap;
 #[cfg(feature = "local_fs")]
@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use futures::future::{self, BoxFuture, FutureExt as _};
-use warp_core::{safe_warn, send_telemetry_from_ctx};
-use warp_util::sync::Condition;
-use warpui_core::ModelHandle;
+use derp_core::{safe_warn, send_telemetry_from_ctx};
+use derp_util::sync::Condition;
+use derpui_core::ModelHandle;
 
 /// Represents either a file or directory in a repository.
 #[derive(Debug, Clone)]
@@ -36,7 +36,7 @@ pub struct RepoContents<'a> {
     pub truncated: bool,
 }
 
-use warp_util::standardized_path::StandardizedPath;
+use derp_util::standardized_path::StandardizedPath;
 
 use crate::entry::{
     matches_force_included_path, BudgetExceededBehavior, BuildTreeError, BuildTreeOptions, Entry,
@@ -55,7 +55,7 @@ cfg_if::cfg_if! {
         use crate::repositories::{DetectedRepositories, DetectedRepositoriesEvent};
         use crate::watcher::DirectoryWatcher;
         use watcher::{BulkFilesystemWatcher, BulkFilesystemWatcherEvent};
-        use warpui_core::SingletonEntity as _;
+        use derpui_core::SingletonEntity as _;
 
         /// Duration between filesystem watch events in seconds
         const FILESYSTEM_WATCHER_DEBOUNCE_SECS: u64 = 1;
@@ -63,7 +63,7 @@ cfg_if::cfg_if! {
 }
 
 use ignore::gitignore::Gitignore;
-use warpui_core::ModelContext;
+use derpui_core::ModelContext;
 
 use crate::file_tree_store::{
     FileTreeDirectoryEntryState, FileTreeEntry, FileTreeEntryState, FileTreeFileMetadata,
@@ -1742,7 +1742,7 @@ impl LocalRepoMetadataModel {
     }
 }
 
-impl warpui_core::Entity for LocalRepoMetadataModel {
+impl derpui_core::Entity for LocalRepoMetadataModel {
     type Event = RepositoryMetadataEvent;
 }
 

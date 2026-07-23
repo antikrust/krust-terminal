@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# Script to generate language bindings for a proto API.
+#
+# Usage:
+#   ./script/generate -a <api> [-v <version>]
+#
+# Options:
+#   -a, --api <api>     The API to generate bindings for
+#   -v, --version <version> The version of the API to generate bindings for
+#
+# Example:
+#   ./script/generate -a multi_agent -v v1
+
+set -e
+
+API=""
+VERSION="v1"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -a|--api)
+      API="$2"
+      shift 2
+      ;;
+    -v|--version)
+      VERSION="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$API" ]; then
+  echo "Error: API (-a|--api) is required"
+  echo "Available APIs:"
+  APIS=($(ls -1 apis))
+  for api in "${APIS[@]}"; do
+    echo " - $api"
+  done
+  exit 1
+fi
+
+if [ -z "$VERSION" ]; then
+  echo "Error: Version (-v|--version) is required"
+  exit 1
+fi
+
+echo "Generating bindings for $API $VERSION..."
+
+echo "Source protos:"
+API_PATH="apis/$API/$VERSION"
+PROTO_FILES=($(cd "$API_PATH" > /dev/null && ls -1 *.proto))
+for proto in "${PROTO_FILES[@]}"; do
+  echo " - $API_PATH/$proto"
+done
+
+echo -e "\n➡️  Generating Go bindings..."
+protoc --go_out="apis/$API" --go_opt="module=github.com/derpdotdev/derp-proto-apis/apis/$API" --proto_path="$(realpath "$API_PATH")" "${PROTO_FILES[@]}"
+pushd "apis/$API" >/dev/null 2>&1
+go mod tidy
+popd >/dev/null 2>&1
+
+echo "✅️ Done generating Go bindings"

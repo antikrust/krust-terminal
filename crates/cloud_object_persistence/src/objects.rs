@@ -14,8 +14,8 @@ use persistence::model::{
     NewObjectPermissions, ObjectMetadata, ObjectPermissions,
 };
 use persistence::schema;
-use warp_core::features::FeatureFlag;
-use warp_graphql::scalars::time::ServerTimestamp;
+use derp_core::features::FeatureFlag;
+use derp_graphql::scalars::time::ServerTimestamp;
 
 use crate::{decode_guests, decode_link_sharing, encode_guests, encode_link_sharing};
 

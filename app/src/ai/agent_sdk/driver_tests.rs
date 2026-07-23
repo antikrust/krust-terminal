@@ -10,21 +10,21 @@ use futures::channel::oneshot;
 use futures::executor::block_on;
 use repo_metadata::{DirectoryWatcher, RepoMetadataEvent, RepoMetadataModel, RepositoryIdentifier};
 use tempfile::TempDir;
-use warp_cli::agent::Harness;
-use warp_cli::mcp::MCPSpec;
-use warp_cli::skill::SkillSpec;
-use warp_cli::{
+use derp_cli::agent::Harness;
+use derp_cli::mcp::MCPSpec;
+use derp_cli::skill::SkillSpec;
+use derp_cli::{
     OZ_CLI_ENV, OZ_HARNESS_ENV, OZ_PARENT_RUN_ID_ENV, OZ_RUN_ID_ENV, SERVER_ROOT_URL_OVERRIDE_ENV,
     SESSION_SHARING_SERVER_URL_OVERRIDE_ENV, WS_SERVER_URL_OVERRIDE_ENV,
 };
-use warp_core::channel::ChannelState;
-use warp_graphql::mutations::create_managed_mcp_client_config::{
+use derp_core::channel::ChannelState;
+use derp_graphql::mutations::create_managed_mcp_client_config::{
     CreateManagedMcpClientConfigOutput, ManagedMcpTransportKind,
 };
-use warp_graphql::response_context::ResponseContext;
-use warp_managed_secrets::ManagedSecretValue;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::{App, SingletonEntity as _};
+use derp_graphql::response_context::ResponseContext;
+use derp_managed_secrets::ManagedSecretValue;
+use derp_util::standardized_path::StandardizedPath;
+use derpui::{App, SingletonEntity as _};
 
 use super::{
     build_secret_env_vars, AgentDriver, AgentDriverError, IdleTimeoutSender,

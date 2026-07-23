@@ -1,11 +1,11 @@
 use itertools::Itertools;
-use warp_core::context_flag::ContextFlag;
-use warpui::elements::{Clipped, Container, Flex, MouseStateHandle, ParentElement};
-use warpui::fonts::Weight;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, SingletonEntity};
+use derp_core::context_flag::ContextFlag;
+use derpui::elements::{Clipped, Container, Flex, MouseStateHandle, ParentElement};
+use derpui::fonts::Weight;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, SingletonEntity};
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{DerpDriveItem, DerpDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::model::actions::{ObjectActionType, ObjectActions};
 use crate::cloud_object::CloudObjectMetadata;
@@ -15,12 +15,12 @@ use crate::env_vars::{CloudEnvVarCollection, EnvVarValue};
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct WarpDriveEnvVarCollection {
+pub struct DerpDriveEnvVarCollection {
     id: CloudObjectTypeAndId,
     env_var_collection: CloudEnvVarCollection,
 }
 
-impl WarpDriveEnvVarCollection {
+impl DerpDriveEnvVarCollection {
     pub fn new(id: CloudObjectTypeAndId, env_var_collection: CloudEnvVarCollection) -> Self {
         Self {
             id,
@@ -29,7 +29,7 @@ impl WarpDriveEnvVarCollection {
     }
 }
 
-impl WarpDriveItem for WarpDriveEnvVarCollection {
+impl DerpDriveItem for DerpDriveEnvVarCollection {
     fn display_name(&self) -> Option<String> {
         self.env_var_collection.model().string_model.title.clone()
     }
@@ -149,8 +149,8 @@ impl WarpDriveItem for WarpDriveEnvVarCollection {
         Some(text.finish())
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::Object(self.id)
+    fn derp_drive_id(&self) -> DerpDriveItemId {
+        DerpDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -170,7 +170,7 @@ impl WarpDriveItem for WarpDriveEnvVarCollection {
             .get_action_history_summary_for_action_type(&self.id.uid(), ObjectActionType::Execute)
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
         Box::new(self.clone())
     }
 }

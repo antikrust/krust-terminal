@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use warp_core::send_telemetry_from_ctx;
-use warpui::{
+use derp_core::send_telemetry_from_ctx;
+use derpui::{
     AppContext, Entity, EntityId, ModelContext, SingletonEntity, TypedActionView, ViewHandle,
     WindowId,
 };
@@ -50,7 +50,7 @@ pub(crate) struct AutoCloudHandoffEligibility {
     /// active local child agent. Handing such a session off to the cloud would
     /// fork only the parent and orphan its local children, so we skip it.
     pub(crate) has_local_orchestrated_children: bool,
-    /// True when the pane's active Agent Mode model can't run in a Warp cloud
+    /// True when the pane's active Agent Mode model can't run in a Derp cloud
     /// (Oz) agent (e.g. a custom-endpoint/BYOK model or local custom router).
     /// Handing off would silently swap the run onto a different model, so we
     /// skip instead.
@@ -437,7 +437,7 @@ pub(crate) fn init(app: &mut AppContext) {
 }
 
 /// Triggers an auto-handoff to the cloud. This is the entry point for the
-/// `warp://.../auto_handoff_to_cloud` URI action; the real macOS sleep path
+/// `derp://.../auto_handoff_to_cloud` URI action; the real macOS sleep path
 /// goes through the `SystemStats` subscription instead.
 ///
 /// Callers that dispatch from inside an in-progress workspace view update

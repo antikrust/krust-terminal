@@ -4,11 +4,11 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use ui_components::lightbox::{LightboxImage, LightboxImageSource};
-use warp_errors::report_error;
-use warp_multi_agent_api as api;
+use derp_errors::report_error;
+use derp_multi_agent_api as api;
 #[cfg(feature = "local_fs")]
-use warpui::platform::SaveFilePickerConfiguration;
-use warpui::SingletonEntity;
+use derpui::platform::SaveFilePickerConfiguration;
+use derpui::SingletonEntity;
 
 #[cfg(feature = "local_fs")]
 use crate::ai::artifact_download::default_download_filename;
@@ -32,7 +32,7 @@ pub enum Artifact {
     #[serde(rename = "PLAN")]
     Plan {
         document_uid: String,
-        /// None until the plan is synced to Warp Drive.
+        /// None until the plan is synced to Derp Drive.
         notebook_uid: Option<NotebookId>,
         title: Option<String>,
     },
@@ -209,19 +209,19 @@ impl From<api::message::artifact_event::PlanArtifact> for Artifact {
     }
 }
 
-impl TryFrom<warp_graphql::ai::AIConversationArtifact> for Artifact {
+impl TryFrom<derp_graphql::ai::AIConversationArtifact> for Artifact {
     type Error = ();
 
-    fn try_from(value: warp_graphql::ai::AIConversationArtifact) -> Result<Self, Self::Error> {
+    fn try_from(value: derp_graphql::ai::AIConversationArtifact) -> Result<Self, Self::Error> {
         match value {
-            warp_graphql::ai::AIConversationArtifact::PlanArtifact(plan) => Ok(Artifact::Plan {
+            derp_graphql::ai::AIConversationArtifact::PlanArtifact(plan) => Ok(Artifact::Plan {
                 document_uid: plan.document_uid.into_inner(),
                 notebook_uid: plan
                     .notebook_uid
                     .map(|id| NotebookId::from(id.into_inner())),
                 title: plan.title,
             }),
-            warp_graphql::ai::AIConversationArtifact::PullRequestArtifact(pr) => {
+            derp_graphql::ai::AIConversationArtifact::PullRequestArtifact(pr) => {
                 let (repo, number) = parse_github_pr_url(&pr.url).unzip();
                 Ok(Artifact::PullRequest {
                     url: pr.url,
@@ -230,14 +230,14 @@ impl TryFrom<warp_graphql::ai::AIConversationArtifact> for Artifact {
                     number,
                 })
             }
-            warp_graphql::ai::AIConversationArtifact::ScreenshotArtifact(screenshot) => {
+            derp_graphql::ai::AIConversationArtifact::ScreenshotArtifact(screenshot) => {
                 Ok(Artifact::Screenshot {
                     artifact_uid: screenshot.artifact_uid.into_inner(),
                     mime_type: screenshot.mime_type,
                     description: screenshot.description,
                 })
             }
-            warp_graphql::ai::AIConversationArtifact::FileArtifact(file) => Ok(Artifact::File {
+            derp_graphql::ai::AIConversationArtifact::FileArtifact(file) => Ok(Artifact::File {
                 artifact_uid: file.artifact_uid.into_inner(),
                 filepath: file.filepath.clone(),
                 filename: sanitized_basename(&file.filepath).unwrap_or(file.filepath),
@@ -245,7 +245,7 @@ impl TryFrom<warp_graphql::ai::AIConversationArtifact> for Artifact {
                 description: file.description,
                 size_bytes: file.size_bytes,
             }),
-            warp_graphql::ai::AIConversationArtifact::Unknown => Err(()),
+            derp_graphql::ai::AIConversationArtifact::Unknown => Err(()),
         }
     }
 }
@@ -297,9 +297,9 @@ pub fn file_button_label(filename: &str, filepath: &str) -> String {
     "File".to_string()
 }
 
-pub fn open_screenshot_lightbox<V: warpui::View>(
+pub fn open_screenshot_lightbox<V: derpui::View>(
     artifact_uids: &[String],
-    ctx: &mut warpui::ViewContext<V>,
+    ctx: &mut derpui::ViewContext<V>,
 ) {
     // Open lightbox immediately with Loading placeholders.
     let loading_images: Vec<LightboxImage> = artifact_uids
@@ -368,9 +368,9 @@ fn screenshot_lightbox_image_from_download_result(
     }
 }
 
-pub fn download_file_artifact<V: warpui::View>(
+pub fn download_file_artifact<V: derpui::View>(
     artifact_uid: &str,
-    ctx: &mut warpui::ViewContext<V>,
+    ctx: &mut derpui::ViewContext<V>,
 ) {
     let ai_client = ServerApiProvider::handle(ctx).as_ref(ctx).get_ai_client();
     let artifact_uid = artifact_uid.to_string();
@@ -396,10 +396,10 @@ pub fn download_file_artifact<V: warpui::View>(
     );
 }
 
-fn open_file_download_result<V: warpui::View>(
+fn open_file_download_result<V: derpui::View>(
     artifact_uid: &str,
     artifact: ArtifactDownloadResponse,
-    ctx: &mut warpui::ViewContext<V>,
+    ctx: &mut derpui::ViewContext<V>,
 ) {
     match artifact {
         ArtifactDownloadResponse::File { .. } => {
@@ -420,9 +420,9 @@ fn open_file_download_result<V: warpui::View>(
 }
 
 #[cfg(feature = "local_fs")]
-fn open_file_download_picker<V: warpui::View>(
+fn open_file_download_picker<V: derpui::View>(
     artifact: ArtifactDownloadResponse,
-    ctx: &mut warpui::ViewContext<V>,
+    ctx: &mut derpui::ViewContext<V>,
 ) {
     let mut config = SaveFilePickerConfiguration::new()
         .with_default_filename(default_download_filename(&artifact));
@@ -431,7 +431,7 @@ fn open_file_download_picker<V: warpui::View>(
     }
 
     ctx.open_save_file_picker(
-        move |path_opt: Option<String>, _me: &mut V, ctx: &mut warpui::ViewContext<V>| {
+        move |path_opt: Option<String>, _me: &mut V, ctx: &mut derpui::ViewContext<V>| {
             let Some(path) = path_opt else {
                 return;
             };
@@ -470,10 +470,10 @@ fn open_file_download_picker<V: warpui::View>(
     );
 }
 
-fn show_file_download_toast<V: warpui::View>(
+fn show_file_download_toast<V: derpui::View>(
     artifact_uid: &str,
     toast: DismissibleToast<WorkspaceAction>,
-    ctx: &mut warpui::ViewContext<V>,
+    ctx: &mut derpui::ViewContext<V>,
 ) {
     let toast_id = format!("artifact_download:{artifact_uid}");
     let window_id = ctx.window_id();

@@ -8,19 +8,19 @@ use std::ops::Range;
 use lazy_static::lazy_static;
 use rangemap::RangeSet;
 use string_offset::CharOffset;
-use warp_editor::content::version::BufferVersion;
-use warp_editor::editor::{EmbeddedItemModel, RunnableCommandModel, TextDecoration};
-use warp_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use warp_editor::render::element::RichTextAction;
-use warp_editor::render::model::{ExpansionType, LineCount, Location};
-use warp_editor::selection::{TextDirection, TextUnit};
-use warp_util::user_input::UserInput;
-use warpui::actions::StandardAction;
-use warpui::elements::Axis;
-use warpui::event::ModifiersState;
-use warpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
-use warpui::units::Pixels;
-use warpui::{AppContext, TypedActionView, ViewContext, WeakViewHandle};
+use derp_editor::content::version::BufferVersion;
+use derp_editor::editor::{EmbeddedItemModel, RunnableCommandModel, TextDecoration};
+use derp_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use derp_editor::render::element::RichTextAction;
+use derp_editor::render::model::{ExpansionType, LineCount, Location};
+use derp_editor::selection::{TextDirection, TextUnit};
+use derp_util::user_input::UserInput;
+use derpui::actions::StandardAction;
+use derpui::elements::Axis;
+use derpui::event::ModifiersState;
+use derpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
+use derpui::units::Pixels;
+use derpui::{AppContext, TypedActionView, ViewContext, WeakViewHandle};
 
 use crate::cmd_or_ctrl_shift;
 use crate::code::editor::line::EditorLineLocation;
@@ -42,7 +42,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     let text_entry = id!("CodeEditorView") & !id!("IMEOpen");
     // We use this to disable some keybindings that would conflict with the Agent Mode embedded editor.
@@ -1128,7 +1128,7 @@ impl TypedActionView for CodeEditorView {
     }
 }
 
-impl warp_editor::editor::EditorView for CodeEditorView {
+impl derp_editor::editor::EditorView for CodeEditorView {
     type RichTextAction = CodeEditorViewAction;
 
     fn runnable_command_at<'a>(
@@ -1205,7 +1205,7 @@ impl RichTextAction<CodeEditorView> for CodeEditorViewAction {
             modifiers.shift
         );
 
-        // The first mouse down to bring focus to a Warp window will not have a corresponding mouse up.
+        // The first mouse down to bring focus to a Derp window will not have a corresponding mouse up.
         // We ignore it, and they can click again.
         if is_first_mouse {
             return None;

@@ -1,9 +1,9 @@
-# Local harness lifecycle: how a CLI agent run flows through Warp
+# Local harness lifecycle: how a CLI agent run flows through Derp
 
 This fork routes every terminal agent prompt to a **local CLI harness**
-(`claude`, `codex`, or direct local `ollama`) instead of Warp's cloud "Oz" backend. This document is
+(`claude`, `codex`, or direct local `ollama`) instead of Derp's cloud "Oz" backend. This document is
 the map of that pipeline for anyone — human or AI — editing it. The flows
-below reuse Warp's own machinery deliberately; each section ends with the
+below reuse Derp's own machinery deliberately; each section ends with the
 traps that machinery hides. **Read the traps before changing anything.**
 
 The companion history/plan doc is [agent-flow-map.md](agent-flow-map.md);
@@ -44,7 +44,7 @@ new harness by writing a parser + exec module, not by touching the drain.
   the adapter uses a constrained structured response (`shell` or `text`)
   instead. Shell requests execute in the terminal working directory and emit
   the same `ToolCallStarted` / `ToolCallResult` events as the CLI harnesses, so
-  Warp renders its normal command cards and multiline output. The final
+  Derp renders its normal command cards and multiline output. The final
   `context` token array is retained per local session so follow-ups remain
   conversational.
   Requests deliberately do not override Ollama's context, generated-token,
@@ -82,9 +82,9 @@ Shell correlation: `turn_event_to_messages` takes a `shell_commands`
 registry (`call_id` → command) to pair the shell call and result while keeping
 both in the generic inline-card representation. It must never translate a
 local transcript into `RunShellCommand`, because that message type means
-"create/restore a terminal block" elsewhere in Warp.
+"create/restore a terminal block" elsewhere in Derp.
 
-Why `CallMcpTool`: it is Warp's **generic "named tool + JSON args"
+Why `CallMcpTool`: it is Derp's **generic "named tool + JSON args"
 representation** — exactly what a harness tool call is. The card
 (`RequestedCommandView`, type `McpTool`) is collapsed by default with a
 working chevron, and its detail renders as the interactive JSON tree behind
@@ -94,7 +94,7 @@ working chevron, and its detail renders as the interactive JSON tree behind
 ### Shell tools are inline transcripts (implemented 2026-07-18)
 
 Claude `Bash`, Codex `Shell`, and Ollama `Shell` events describe commands the
-harness already ran. They therefore use Warp's generic named-tool card
+harness already ran. They therefore use Derp's generic named-tool card
 (`CallMcpTool` / `CallMcpToolResult`) and a view-only action result. This is a
 representation choice, not an MCP transport claim. Using
 `RunShellCommand`/`RequestCommandOutput` here makes the command card expand
@@ -121,7 +121,7 @@ grey card for live and restored conversations.
 
 **Traps:**
 - Do **not** patch shared renderers (`requested_command.rs`, markdown, etc.)
-  to change how fork content displays. Presentation changes go through Warp's
+  to change how fork content displays. Presentation changes go through Derp's
   mechanisms: feature flags (enabled per-channel in `bin/oss.rs`), message
   types, or the proto. If the display is wrong, you are probably emitting the
   wrong representation.
@@ -179,7 +179,7 @@ every tool. Three pieces make the cards behave:
 ## The conversation status machine (the shimmer)
 
 `ConversationStatus` drives the "Sending…/Thinking…" status bar
-(`should_render_warping` in block/status_bar.rs keys off
+(`should_render_derping` in block/status_bar.rs keys off
 `conversation.status().is_in_progress()`). The local flow owns it end to end:
 
 - **Start:** `begin`/`begin_follow_up` mark InProgress.
@@ -220,7 +220,7 @@ the shared origin and reverted at the end of the arm.
 
 ## Golden rules for editing these paths
 
-1. **Use Warp's representation, don't invent one.** Tool calls are
+1. **Use Derp's representation, don't invent one.** Tool calls are
    `CallMcpTool` messages, presentation is feature flags/channel config,
    status is `ConversationStatus` — if you're patching a shared component to
    special-case fork content, stop and find the representation upstream
@@ -232,6 +232,6 @@ the shared origin and reverted at the end of the arm.
    else.
 4. **Provider differences stop at the parsers.** New CLI behavior belongs in
    `*_stream.rs`/`*_stream_exec.rs`, translated into `TurnEvent`.
-5. **Run the mapper tests** (`cargo test -p warp turn_events_to_conversation`)
+5. **Run the mapper tests** (`cargo test -p derp turn_events_to_conversation`)
    after touching message shapes — a bad message wedges conversations (see
    the AddMessagesToTask trap).

@@ -1,0 +1,28 @@
+/utils/gamma-lut/target
+.DS_Store
+target
+.cache
+/site/package-lock.json
+/site/dist
+node_modules
+/examples/c_canvas_minimal/build
+/examples/c_canvas_glfw_minimal/build
+/shaders/build
+/c/build
+/examples/macos_app/Pathfinder\ Example.xcodeproj/project.xcworkspace/xcuserdata/*
+.project
+.settings
+
+# Editors
+*.swp
+
+# IntelliJ
+.idea
+*.iws
+
+# VSCode
+.vscode
+*.code-workspace
+
+# Emacs
+*~

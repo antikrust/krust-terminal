@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::features::FeatureFlag;
-use warp_graphql::object_permissions::OwnerType;
-use warp_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_graphql::object_permissions::OwnerType;
+use derp_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
+use derpui::elements::{
     resizable_state_handle, Align, Border, ChildView, ConstrainedBox, Container,
     CrossAxisAlignment, DragBarSide, Element, Empty, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, Padding, ParentElement, Resizable,
     ResizableStateHandle, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use derpui::fonts::{Properties, Weight};
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::platform::{
     CreateApiKeyModal, CreateApiKeyModalEvent, CreateApiKeyModalViewState, ExpireApiKeyButton,
@@ -200,7 +200,7 @@ impl PlatformPageView {
                         right: 24.,
                     }),
                     font_size: Some(16.),
-                    font_weight: Some(warpui::fonts::Weight::Bold),
+                    font_weight: Some(derpui::fonts::Weight::Bold),
                     ..Default::default()
                 })
                 .with_body_style(UiComponentStyles {
@@ -847,7 +847,7 @@ impl PlatformPageWidget {
                     .with_child(
                         ConstrainedBox::new(
                             Icon::Key
-                                .to_warpui_icon(appearance.theme().nonactive_ui_text_color())
+                                .to_derpui_icon(appearance.theme().nonactive_ui_text_color())
                                 .finish(),
                         )
                         .with_width(48.)

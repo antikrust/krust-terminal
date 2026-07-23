@@ -15,15 +15,15 @@ use smol_str::SmolStr;
 use unindent::Unindent;
 #[cfg(feature = "voice_input")]
 use voice_input::VoiceInputToggledFrom;
-use warp_completer::completer::{
+use derp_completer::completer::{
     EngineFileType, Match, MatchStrategy, MatchedSuggestion, Priority, Suggestion,
     SuggestionResults, SuggestionType,
 };
-use warp_completer::meta::Span;
-use warp_util::user_input::UserInput;
-use warpui::platform::WindowStyle;
-use warpui::text::SelectionType;
-use warpui::{App, ReadModel, UpdateView, WindowId};
+use derp_completer::meta::Span;
+use derp_util::user_input::UserInput;
+use derpui::platform::WindowStyle;
+use derpui::text::SelectionType;
+use derpui::{App, ReadModel, UpdateView, WindowId};
 use watcher::HomeDirectoryWatcher;
 use workflows::workflow::{Argument, ArgumentType, Workflow};
 
@@ -103,7 +103,7 @@ use crate::terminal::writeable_pty::command_history::update_command_history;
 use crate::terminal::TerminalView;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::themes::theme::AnsiColorIdentifier;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
 use crate::workspace::{ActiveSession, OneTimeModalModel, ToastStack, WorkspaceRegistry};
 use crate::workspaces::team_tester::TeamTesterStatus;
 use crate::workspaces::update_manager::TeamUpdateManager;
@@ -285,7 +285,7 @@ pub fn initialize_app(app: &mut App) {
         crate::ai::document::ai_document_model::AIDocumentModel::new_for_test()
     });
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 
     // Add GlobalResourceHandlesProvider for persistence
@@ -2956,7 +2956,7 @@ fn test_tab_completion_with_spaces() {
 
         let history_file_commands = vec![
             "cd Documents/zed".to_string(),
-            "curl https://app.warp.dev".to_string(),
+            "curl https://app.derp.baby".to_string(),
             "cargo check\ncargo run".to_string(),
         ];
         let terminal =
@@ -3190,7 +3190,7 @@ fn test_tab_completion() {
 
         let history_file_commands = vec![
             "cd Documents/zed".to_string(),
-            "curl https://app.warp.dev".to_string(),
+            "curl https://app.derp.baby".to_string(),
             "cargo check\ncargo run".to_string(),
         ];
         let terminal =
@@ -3445,7 +3445,7 @@ fn test_tab_completion_with_selection() {
 
         let history_file_commands = vec![
             "cd Documents/zed".to_string(),
-            "curl https://app.warp.dev".to_string(),
+            "curl https://app.derp.baby".to_string(),
             "cargo check\ncargo run".to_string(),
         ];
         let terminal =
@@ -4078,7 +4078,7 @@ fn test_open_slash_command_expands_tilde() {
         initialize_app(&mut app);
 
         let home_dir = dirs::home_dir().expect("home directory must exist");
-        let file_path = home_dir.join("warp_tilde_test_file.txt");
+        let file_path = home_dir.join("derp_tilde_test_file.txt");
         std::fs::File::create(&file_path).unwrap();
 
         let session_id: SessionId = 1.into();
@@ -4103,7 +4103,7 @@ fn test_open_slash_command_expands_tilde() {
 
         input.update(&mut app, |input, ctx| {
             input.editor.update(ctx, |editor, ctx| {
-                editor.set_buffer_text("/open-file ~/warp_tilde_test_file.txt", ctx)
+                editor.set_buffer_text("/open-file ~/derp_tilde_test_file.txt", ctx)
             });
         });
 
@@ -5126,7 +5126,7 @@ fn test_cursor_movement() {
 
         let history_file_commands = vec![
             "cd Documents/zed".to_string(),
-            "curl https://app.warp.dev".to_string(),
+            "curl https://app.derp.baby".to_string(),
             "cargo check\ncargo run".to_string(),
         ];
         let terminal =
@@ -5873,7 +5873,7 @@ fn test_last_word_insertions() {
 
         // last word insertion looks for preceding whitespace character
         let history_file_commands = vec![
-            "https://app.warp.dev".to_string(),
+            "https://app.derp.baby".to_string(),
             "cargo check\ncargo run --features".to_string(),
         ];
         let terminal =
@@ -5910,7 +5910,7 @@ fn test_last_word_insertions() {
             input.insert_last_word_previous_command(ctx);
         });
         input.read(&app, |input, ctx| {
-            assert_eq!(input.buffer_text(ctx), "git https://app.warp.dev");
+            assert_eq!(input.buffer_text(ctx), "git https://app.derp.baby");
         });
 
         // Insert is temporary, undo goes back to initial state before first insertion
@@ -8547,7 +8547,7 @@ fn test_custom_terminal_page_scroll_binding_applies_when_prompt_is_focused() {
         app.update(|ctx| {
             ctx.set_custom_trigger(
                 "terminal:scroll_up_one_page".to_owned(),
-                warpui::keymap::Trigger::Keystrokes(
+                derpui::keymap::Trigger::Keystrokes(
                     vec![Keystroke::parse("shift-pageup").unwrap()],
                 ),
             );

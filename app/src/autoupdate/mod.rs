@@ -15,14 +15,14 @@ use ::channel_versions::{ParsedVersion, VersionInfo};
 use anyhow::{anyhow, Context as _, Result};
 use chrono::{DateTime, FixedOffset, NaiveDate};
 use rand::Rng as _;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_errors::report_if_error;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::platform::TerminationMode;
-use warpui::r#async::Timer;
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{self, WindowManager};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, ViewContext};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_errors::report_if_error;
+use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
+use derpui::platform::TerminationMode;
+use derpui::r#async::Timer;
+use derpui::windowing::state::ApplicationStage;
+use derpui::windowing::{self, WindowManager};
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity, ViewContext};
 
 pub use self::changelog::get_current_changelog;
 use self::channel_versions::fetch_channel_versions;
@@ -63,7 +63,7 @@ pub enum AutoupdateStage {
     },
     /// A relaunch was initiated to use the new version, but failed.
     UnableToLaunchNewVersion { new_version: VersionInfo },
-    /// A new version was installed, but Warp hasn't restarted yet.
+    /// A new version was installed, but Derp hasn't restarted yet.
     ///
     /// This state is only used on macOS, where the update isn't fully applied until right before
     /// restarting.
@@ -735,13 +735,13 @@ pub fn accessibility_content(
         // Found autoupdate
         (RequestType::ManualCheck, Ok(UpdateReady::Yes { .. })) => Some(AccessibilityContent::new(
             "Update available.",
-            "Use the command palette to install and relaunch Warp",
-            WarpA11yRole::HelpRole,
+            "Use the command palette to install and relaunch Derp",
+            DerpA11yRole::HelpRole,
         )),
         // Any non-successful autoupdate check
         (RequestType::ManualCheck, _) => Some(AccessibilityContent::new_without_help(
             "No updates available",
-            WarpA11yRole::HelpRole,
+            DerpA11yRole::HelpRole,
         )),
         _ => None,
     }
@@ -855,7 +855,7 @@ pub fn apply_update(
     }
 }
 
-/// Relaunch Warp to apply an update.
+/// Relaunch Derp to apply an update.
 ///
 /// This will:
 /// 1. Perform any last update steps.
@@ -981,7 +981,7 @@ where
                         autoupdate_state.relaunch_failed(ctx);
 
                         let err = anyhow!(err).context("Error applying installed update");
-                        warp_errors::report_error!(&err);
+                        derp_errors::report_error!(&err);
                         callback(Err(err), ctx);
                     }
                 }

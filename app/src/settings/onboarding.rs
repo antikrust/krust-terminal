@@ -1,9 +1,9 @@
 use onboarding::slides::{AgentAutonomy, AgentDevelopmentSettings};
 use onboarding::{SelectedSettings, SessionDefault, UICustomizationSettings};
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_if_error;
-use warpui::{AppContext, SingletonEntity as _};
+use derp_core::features::FeatureFlag;
+use derp_errors::report_if_error;
+use derpui::{AppContext, SingletonEntity as _};
 
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::{ActionPermission, WriteToPtyPermission};
@@ -14,8 +14,8 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// Applies onboarding settings based on the user's selected mode.
 ///
-/// `has_account` indicates whether the user has (or is creating) a real Warp
-/// account. Warp's AI features run on a Warp account, so agent intent only
+/// `has_account` indicates whether the user has (or is creating) a real Derp
+/// account. Derp's AI features run on a Derp account, so agent intent only
 /// enables AI when `has_account` is true; skipping login leaves AI off.
 pub fn apply_onboarding_settings(
     selected_settings: &SelectedSettings,
@@ -32,8 +32,8 @@ pub fn apply_onboarding_settings(
             if let Some(ui) = ui_customization {
                 apply_ui_customization_settings(ui, true, app);
             }
-            // Agent intent means the user wants AI, but Warp's AI features run
-            // on a Warp account, so AI is only enabled once they have one.
+            // Agent intent means the user wants AI, but Derp's AI features run
+            // on a Derp account, so AI is only enabled once they have one.
             // Skipping login leaves AI off even for agent intent (including the
             // bring-your-own-agents `disable_oz` path).
             has_account
@@ -44,7 +44,7 @@ pub fn apply_onboarding_settings(
             show_agent_notifications,
         } => {
             // In old onboarding, there's nothing to set for terminal intent.
-            if !FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+            if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
                 true
             } else {
                 if let Some(ui) = ui_customization {
@@ -63,7 +63,7 @@ pub fn apply_onboarding_settings(
         }
     };
 
-    if FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+    if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
         AISettings::handle(app).update(app, |settings, ctx| {
             report_if_error!(settings.is_any_ai_enabled.set_value(is_ai_enabled, ctx));
         });
@@ -78,7 +78,7 @@ fn apply_ui_customization_settings(
     app: &mut AppContext,
 ) {
     // Customize UI slide should only exist with this flag enabled.
-    if !FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+    if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
         return;
     }
     TabSettings::handle(app).update(app, |settings, ctx| {
@@ -90,7 +90,7 @@ fn apply_ui_customization_settings(
             .set_value(ui.show_code_review_button, ctx));
     });
 
-    // Fork: no enable_warp_drive setting to apply — Drive is always on.
+    // Fork: no enable_derp_drive setting to apply — Drive is always on.
 
     CodeSettings::handle(app).update(app, |settings, ctx| {
         report_if_error!(settings

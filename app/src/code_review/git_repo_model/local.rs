@@ -4,8 +4,8 @@ use std::time::Duration;
 use async_channel::Sender;
 use repo_metadata::repository::{RepositorySubscriber, SubscriberId};
 use repo_metadata::{Repository, RepositoryUpdate};
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{Entity, ModelContext, ModelHandle};
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::{Entity, ModelContext, ModelHandle};
 
 use super::{GitRepoStatusEvent, GitStatusMetadata};
 use crate::code_review::diff_state::diff_metadata_against_head;
@@ -180,7 +180,7 @@ impl LocalGitRepoStatusModel {
         repo_path: &Path,
         current_branch_name: &str,
     ) -> GitBranchTrackingStatus {
-        let upstream = warp_util::git::run_git_command(
+        let upstream = derp_util::git::run_git_command(
             repo_path,
             &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
         )
@@ -199,7 +199,7 @@ impl LocalGitRepoStatusModel {
             return GitBranchTrackingStatus::new(current_branch_name.to_string(), None, 0, 0);
         };
 
-        let counts = warp_util::git::run_git_command(
+        let counts = derp_util::git::run_git_command(
             repo_path,
             &[
                 "rev-list",

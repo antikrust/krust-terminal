@@ -1,5 +1,5 @@
 [package]
-authors = ["Warp Team <dev@warp.dev>"]
+authors = ["Derp Team <dev@derp.baby>"]
 name = "sum_tree"
 version = "0.1.0"
 edition = "2021"
@@ -7,7 +7,7 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-warp_errors.workspace = true
+derp_errors.workspace = true
 arrayvec.workspace = true
 log.workspace = true
 

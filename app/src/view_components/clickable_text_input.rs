@@ -1,9 +1,9 @@
-use warpui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
+use derpui::fonts::Weight;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

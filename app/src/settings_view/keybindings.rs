@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use warp_core::ui::theme::color::internal_colors;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors;
+use derp_errors::report_error;
+use derpui::elements::{
     Align, Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Fill, Flex,
     Hoverable, MouseState, MouseStateHandle, ParentElement, Radius, SavePosition, ScrollbarWidth,
     Shrinkable, Text, Wrap,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::{DescriptionContext, Keystroke, Trigger};
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::units::Pixels;
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::{DescriptionContext, Keystroke, Trigger};
+use derpui::presenter::ChildView;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::units::Pixels;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -364,7 +364,7 @@ impl KeybindingRow {
                                 .with_margin_right(CLEAR_CANCEL_BUTTONS_SPACING)
                                 .finish(),
                         )
-                        .with_cross_axis_alignment(warpui::elements::CrossAxisAlignment::Center)
+                        .with_cross_axis_alignment(derpui::elements::CrossAxisAlignment::Center)
                         .finish(),
                 )
                 .finish(),
@@ -596,7 +596,7 @@ impl KeybindingsView {
 
             self.conflict_map.update(&row.binding.trigger, None);
 
-            // Persist the keybinding into the `.warp` directory so that it will last beyond
+            // Persist the keybinding into the `.derp` directory so that it will last beyond
             // this session
             write_custom_keybinding(row.binding.name.clone(), UserDefinedKeybinding::Removed);
             update_binding_list(&row.binding.name, None, &mut self.bindings);

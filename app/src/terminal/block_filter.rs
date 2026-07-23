@@ -1,17 +1,17 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use regex_automata::hybrid::BuildError;
-use warp_editor::editor::NavigationKey;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::elements::{
+use derp_editor::editor::NavigationKey;
+use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
+use derpui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dash, Dismiss, DropShadow, Empty, Flex, Hoverable, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect, Shrinkable,
     Stack, Text,
 };
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::presenter::ChildView;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -473,7 +473,7 @@ impl BlockFilterEditor {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_derpui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -639,7 +639,7 @@ impl View for BlockFilterEditor {
             |state| {
                 let context_line_icon = ConstrainedBox::new(
                     Icon::DistributeSpacingVertical
-                        .to_warpui_icon(
+                        .to_derpui_icon(
                             blended_colors::text_main(
                                 appearance.theme(),
                                 appearance.theme().background(),
@@ -753,7 +753,7 @@ impl View for BlockFilterEditor {
         Some(AccessibilityContent::new(
             "Type searched phrase.",
             "Press escape to quit",
-            WarpA11yRole::TextareaRole,
+            DerpA11yRole::TextareaRole,
         ))
     }
 }

@@ -30,16 +30,16 @@ use futures_util::stream::AbortHandle;
 use http::header::{HeaderValue, AUTHORIZATION};
 use instant::Instant;
 use opentelemetry_http::{Bytes, HttpClient, HttpError, Request, Response};
-use warp_managed_secrets::client::{IdentityTokenOptions, ManagedSecretsClient, TaskIdentityToken};
-use warpui::r#async::{FutureExt as _, Timer};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use derp_managed_secrets::client::{IdentityTokenOptions, ManagedSecretsClient, TaskIdentityToken};
+use derpui::r#async::{FutureExt as _, Timer};
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 /// The environment variables form the immutable dispatch-time authentication bootstrap.
-const CLOUD_AGENT_OTLP_TOKEN: &str = "WARP_CLOUD_AGENT_OTLP_TOKEN";
-const CLOUD_AGENT_OTLP_TOKEN_EXPIRES_AT: &str = "WARP_CLOUD_AGENT_OTLP_TOKEN_EXPIRES_AT";
+const CLOUD_AGENT_OTLP_TOKEN: &str = "DERP_CLOUD_AGENT_OTLP_TOKEN";
+const CLOUD_AGENT_OTLP_TOKEN_EXPIRES_AT: &str = "DERP_CLOUD_AGENT_OTLP_TOKEN_EXPIRES_AT";
 const OZ_RUN_ID: &str = "OZ_RUN_ID";
 /// The collector audience and requested lifetime are fixed by the cloud-agent trace contract.
-const COLLECTOR_AUDIENCE: &str = "warp-cloud-agent-otel";
+const COLLECTOR_AUDIENCE: &str = "derp-cloud-agent-otel";
 const REFRESHED_TOKEN_DURATION: Duration = Duration::from_secs(60 * 60);
 /// Proactive refresh starts roughly twenty minutes before expiry, with jitter to spread load.
 const PROACTIVE_REFRESH_BUFFER: Duration = Duration::from_secs(20 * 60);

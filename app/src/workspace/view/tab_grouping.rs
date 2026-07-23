@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use itertools::{Either, Itertools};
-use warp_core::features::FeatureFlag;
-use warpui::{EntityId, UpdateView, ViewContext};
+use derp_core::features::FeatureFlag;
+use derpui::{EntityId, UpdateView, ViewContext};
 
 use super::{group_member_indices, Workspace};
 use crate::menu::{MenuItem, MenuItemFields};

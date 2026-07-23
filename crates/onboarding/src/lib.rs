@@ -28,7 +28,7 @@ pub use callout::{OnboardingCalloutView, OnboardingKeybindings};
 /// Shared by the intention slide's agent card checklist and the login slide's
 /// skip-login confirmation dialog so the two always stay in sync.
 pub const AI_FEATURES: &[&str] = &[
-    "Use frontier and open-weight models with Warp Agent",
+    "Use frontier and open-weight models with Derp Agent",
     "Hand off agent work to cloud agents",
     "Automatically diagnose and fix terminal errors",
     "Agentic control of long-running commands and TUIs",
@@ -36,11 +36,11 @@ pub const AI_FEATURES: &[&str] = &[
     "Remote control for Claude Code, Codex, and other agents",
 ];
 
-/// User-facing names of the Warp Drive features enabled when the terminal
-/// intention is selected with Warp Drive turned on. Shared by the login slide's
+/// User-facing names of the Derp Drive features enabled when the terminal
+/// intention is selected with Derp Drive turned on. Shared by the login slide's
 /// skip-login confirmation dialog so the list stays in sync with any future
 /// surfaces that need it.
-pub const WARP_DRIVE_FEATURES: &[&str] = &["Warp Drive", "Session Sharing"];
+pub const DERP_DRIVE_FEATURES: &[&str] = &["Derp Drive", "Session Sharing"];
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "bin")] {
@@ -75,7 +75,7 @@ pub use model::{OnboardingAuthState, SelectedSettings, UICustomizationSettings};
 pub use slides::ProjectOnboardingSettings;
 pub use telemetry::OnboardingEvent;
 
-pub fn init(app: &mut warpui_core::AppContext) {
+pub fn init(app: &mut derpui_core::AppContext) {
     agent_onboarding_view::init(app);
     callout::init(app);
 }

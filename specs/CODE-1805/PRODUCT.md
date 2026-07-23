@@ -1,6 +1,6 @@
 # TUI Shell Command Execution (`!` shell mode)
 
-Linear: [CODE-1805](https://linear.app/warpdotdev/issue/CODE-1805/shell-command-execution)
+Linear: [CODE-1805](https://linear.app/derpdotdev/issue/CODE-1805/shell-command-execution)
 
 ## Summary
 

@@ -1,10 +1,10 @@
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warpui::elements::{
+use derpui::elements::{
     Border, ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, Icon, MouseStateHandle, ParentElement, Shrinkable,
 };
-use warpui::ui_components::components::UiComponent;
-use warpui::{Action, AppContext, Element, SingletonEntity};
+use derpui::ui_components::components::UiComponent;
+use derpui::{Action, AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 
@@ -149,7 +149,7 @@ pub fn render<A: Action + Clone>(
 }
 
 mod styles {
-    use warpui::elements::{CornerRadius, Radius};
+    use derpui::elements::{CornerRadius, Radius};
 
     pub const NOTIFICATION_CONTAINER_PADDING: f32 = 8.;
     pub const NOTIFICATION_CONTAINER_CORNER_RADIUS: CornerRadius =

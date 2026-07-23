@@ -85,7 +85,7 @@ fn styles_present_and_default_known() {
 /// Audit tool, not an assertion: dumps every style x seed as SVG files so the
 /// native output can be eyeballed next to the official JS renders (see
 /// `script/generate-avatar-data.mjs`). Run with:
-/// `DICEBEAR_DUMP_DIR=/tmp/dump cargo test -p warp --lib dicebear -- --ignored`
+/// `DICEBEAR_DUMP_DIR=/tmp/dump cargo test -p derp --lib dicebear -- --ignored`
 #[test]
 #[ignore = "audit tool: writes SVGs to DICEBEAR_DUMP_DIR"]
 fn dump_all_styles_for_audit() {

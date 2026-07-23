@@ -8,14 +8,14 @@ use futures::channel::oneshot;
 use repo_metadata::RepoMetadataUpdate;
 use serde::Serialize;
 #[cfg(not(target_family = "wasm"))]
-use warp_core::channel::ChannelState;
-use warp_core::SessionId;
-use warp_errors::report_error;
-use warp_util::remote_path::{RemoteNavigationResult, RemotePath};
-use warp_util::standardized_path::StandardizedPath;
+use derp_core::channel::ChannelState;
+use derp_core::SessionId;
+use derp_errors::report_error;
+use derp_util::remote_path::{RemoteNavigationResult, RemotePath};
+use derp_util::standardized_path::StandardizedPath;
 #[cfg(not(target_family = "wasm"))]
-use warpui_core::r#async::FutureExt as _;
-use warpui_core::{Entity, ModelContext, ModelSpawner, SingletonEntity};
+use derpui_core::r#async::FutureExt as _;
+use derpui_core::{Entity, ModelContext, ModelSpawner, SingletonEntity};
 
 use crate::auth::RemoteServerAuthContext;
 #[cfg(not(target_family = "wasm"))]
@@ -321,7 +321,7 @@ pub struct RemoteCodebaseIndexStatusWithPath {
 /// They also carry a [`ControlPath`] identifying the SSH
 /// `ControlMaster` socket for this session and who owns the master. On
 /// explicit teardown (after the user's shell exits),
-/// `deregister_session` runs `ssh -O exit` against `WarpManaged`
+/// `deregister_session` runs `ssh -O exit` against `DerpManaged`
 /// masters, forcing them to terminate without waiting for half-closed
 /// multiplexed channels to finish cleanup on the remote side.
 /// `UserOwned` masters (the SSH wrapper attached to a master the user
@@ -1231,7 +1231,7 @@ impl HostRequestHandle {
     }
 
     /// Generates a commit message via AI on the remote host (the daemon
-    /// computes the diff locally and calls the Warp content endpoint).
+    /// computes the diff locally and calls the Derp content endpoint).
     pub async fn git_generate_commit_message(
         &self,
         repo_path: &StandardizedPath,
@@ -1345,7 +1345,7 @@ pub struct RemoteServerManager {
     /// Only used off-wasm (timers and detached tasks aren't available on
     /// wasm), so the field is allowed to be dead there.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
-    executor: Arc<warpui_core::r#async::executor::Background>,
+    executor: Arc<derpui_core::r#async::executor::Background>,
 }
 
 impl Entity for RemoteServerManager {
@@ -2243,7 +2243,7 @@ impl RemoteServerManager {
         auth_context: &RemoteServerAuthContext,
         codebase_index_limits: Option<CodebaseIndexLimits>,
         spawner: &ModelSpawner<Self>,
-        executor: &Arc<warpui_core::r#async::executor::Background>,
+        executor: &Arc<derpui_core::r#async::executor::Background>,
     ) -> Result<InitializeHandshake, ConnectAndHandshakeError> {
         // Phase 1: Connect (establish streams, create client).
         let Connection {
@@ -2375,7 +2375,7 @@ impl RemoteServerManager {
     /// 1. Remove the session entry. Dropping the `RemoteSessionState`
     ///    drops the transport's owned `Child`, which SIGKILLs the
     ///    `ssh … remote-server-proxy` subprocess via `kill_on_drop`.
-    /// 2. If the session's `control_path` is [`ControlPath::WarpManaged`],
+    /// 2. If the session's `control_path` is [`ControlPath::DerpManaged`],
     ///    spawn a background task that runs `ssh -O exit` against it.
     ///
     /// The `Child` is owned by the manager's state, *not* by
@@ -2410,7 +2410,7 @@ impl RemoteServerManager {
         let prev = self.sessions.remove(&session_id);
 
         // Extract the ControlMaster socket (if any) so we can force
-        // Warp-managed masters to exit below. Safe to do under the
+        // Derp-managed masters to exit below. Safe to do under the
         // "caller already observed ExitShell" assumption documented
         // above.
         #[cfg(not(target_family = "wasm"))]
@@ -2444,7 +2444,7 @@ impl RemoteServerManager {
         ctx.emit(RemoteServerManagerEvent::SessionDeregistered { session_id });
 
         // Force the local SSH ControlMaster to exit after teardown.
-        // `stop_control_master` only acts on Warp-managed masters and
+        // `stop_control_master` only acts on Derp-managed masters and
         // leaves user-owned masters running. Spawned detached because
         // the ssh subcommand may take a moment to complete and we don't
         // want to block the main thread on it.

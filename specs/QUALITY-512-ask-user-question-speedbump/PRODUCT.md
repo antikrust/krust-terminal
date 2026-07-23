@@ -1,6 +1,6 @@
 # Ask-User-Question Autonomy Speedbump
 
-Linear: [QUALITY-512](https://linear.app/warpdotdev/issue/QUALITY-512/add-ask-user-question-permission-speedbump)
+Linear: [QUALITY-512](https://linear.app/derpdotdev/issue/QUALITY-512/add-ask-user-question-permission-speedbump)
 
 ## 1. Summary
 When Agent Mode first uses the Ask Question tool on a local client, show a compact inline footer on the Ask-User-Question card that lets the user adjust the active execution profile's Ask Question permission. The footer uses a dropdown with the existing three permission values and links to the AI Autonomy settings page.
@@ -29,7 +29,7 @@ The speedbump is seeded when all of the following are true:
 
 The trigger intentionally includes auto-approve conversations. If Ask Question is skipped because auto-approve is active, the first skipped Ask Question card can still show the footer so the user can discover and adjust the setting.
 ### One-shot semantics
-The one-shot flag is local-only and is not synced through Warp Drive. The flag is consumed once the footer is successfully attached to an Ask-User-Question view. If the agent output is processed before the view exists, the flag remains `true` and is consumed later when the matching view is created and the footer can actually be installed.
+The one-shot flag is local-only and is not synced through Derp Drive. The flag is consumed once the footer is successfully attached to an Ask-User-Question view. If the agent output is processed before the view exists, the flag remains `true` and is consumed later when the matching view is created and the footer can actually be installed.
 
 The flag is consumed even if the user does not interact with the footer. This keeps the behavior to a single first-use display: if the user notices it and changes the setting, great; if they ignore it, the nudge is still considered displayed and will not reappear on future cards.
 ### Card placement and layout
@@ -63,9 +63,9 @@ The dropdown menu renders above surrounding block content. Its options are click
 - Collapsed and expanded cards with the footer render as one attached card with no double-rounded seam.
 ## 7. Validation
 Automated validation:
-- `cargo check -p warp`
-- `cargo check --all-targets -p warp`
-- `cargo nextest run --no-fail-fast -p warp ask_user_question`
+- `cargo check -p derp`
+- `cargo check --all-targets -p derp`
+- `cargo nextest run --no-fail-fast -p derp ask_user_question`
 - `cargo fmt --all`
 - `cargo clippy --workspace --all-targets --all-features --tests -- -D warnings`
 - `git --no-pager diff --check`

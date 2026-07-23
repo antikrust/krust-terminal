@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use cloud_object_client::MockObjectClient;
 use settings::manager::SettingsManager;
-use warpui::{App, SingletonEntity};
+use derpui::{App, SingletonEntity};
 
 use super::*;
 use crate::auth::AuthStateProvider;
@@ -122,7 +122,7 @@ fn test_drive_data_source_correctly_filters_drive_filter() {
         });
 
         let mixer = app.add_model(|_| CommandPaletteMixer::new());
-        let data_source_handle = app.add_model(warp_drive::DataSource::new);
+        let data_source_handle = app.add_model(derp_drive::DataSource::new);
         mixer.update(&mut app, |mixer, ctx| {
             // Add the drive data source with the relevant filters
             mixer.add_sync_source(
@@ -169,7 +169,7 @@ fn test_drive_data_source_correctly_filters_no_filter() {
             )
         });
         let mixer = app.add_model(|_| CommandPaletteMixer::new());
-        let data_source_handle = app.add_model(warp_drive::DataSource::new);
+        let data_source_handle = app.add_model(derp_drive::DataSource::new);
         mixer.update(&mut app, |mixer, ctx| {
             // Add the drive data source with the relevant filters
             mixer.add_sync_source(
@@ -216,7 +216,7 @@ fn test_drive_data_source_correctly_filters_workflow_filter() {
             )
         });
         let mixer = app.add_model(|_| CommandPaletteMixer::new());
-        let data_source_handle = app.add_model(warp_drive::DataSource::new);
+        let data_source_handle = app.add_model(derp_drive::DataSource::new);
         mixer.update(&mut app, |mixer, ctx| {
             // Add the drive data source with the relevant filters
             mixer.add_sync_source(
@@ -265,7 +265,7 @@ fn test_drive_data_source_correctly_filters_notebook_filter() {
             )
         });
         let mixer = app.add_model(|_| CommandPaletteMixer::new());
-        let data_source_handle = app.add_model(warp_drive::DataSource::new);
+        let data_source_handle = app.add_model(derp_drive::DataSource::new);
         mixer.update(&mut app, |mixer, ctx| {
             // Add the drive data source with the relevant filters
             mixer.add_sync_source(

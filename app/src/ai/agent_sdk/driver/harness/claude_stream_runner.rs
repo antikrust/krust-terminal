@@ -1,6 +1,6 @@
 //! Streaming Claude Code harness: runs `claude` headless in
 //! `--output-format stream-json` mode and renders its output as live inline AI
-//! blocks in Warp's own UI, instead of handing the terminal to Claude Code's
+//! blocks in Derp's own UI, instead of handing the terminal to Claude Code's
 //! full-screen interactive TUI (which is what [`super::claude_code`] does).
 //!
 //! Pipeline: [`super::claude_stream_exec::run_claude_stream`] pumps the CLI's
@@ -11,7 +11,7 @@
 //! This is the live target of `harness_kind(Harness::Claude)` (see `mod.rs`):
 //! within the `AgentDriver` path, `build_runner` + `start` spawn `claude`
 //! headless and render its output inline via [`LocalHarnessStream`]. This
-//! runner is reached through the `warp agent run` CLI subcommand; *terminal
+//! runner is reached through the `derp agent run` CLI subcommand; *terminal
 //! agent input* takes a parallel route (`TerminalView::run_local_claude_query`)
 //! that drives `run_claude_stream` + `LocalHarnessStream` directly, without an
 //! `AgentDriver`. See `docs/agent-flow-map.md` for the full routing map.
@@ -29,10 +29,10 @@ use futures::channel::{mpsc, oneshot};
 use futures::StreamExt as _;
 use parking_lot::Mutex;
 use uuid::Uuid;
-use warp_cli::agent::Harness;
-use warp_core::command::ExitCode;
-use warp_managed_secrets::ManagedSecretValue;
-use warpui::{AppContext, ModelContext, ModelHandle, ModelSpawner};
+use derp_cli::agent::Harness;
+use derp_core::command::ExitCode;
+use derp_managed_secrets::ManagedSecretValue;
+use derpui::{AppContext, ModelContext, ModelHandle, ModelSpawner};
 
 use super::super::terminal::{CommandHandle, TerminalDriver};
 use super::super::{AgentDriver, AgentDriverError};
@@ -173,9 +173,9 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
         // Spawning `claude` directly (not through a shell) means the subprocess
         // inherits the app's PATH — which is launchd's minimal PATH when the app
         // is launched from Finder/Dock, and may not contain `claude`. Build a
-        // robust PATH: the interactive-shell PATH Warp captured (if any), else
+        // robust PATH: the interactive-shell PATH Derp captured (if any), else
         // the process PATH, then ensure the common CLI install dirs are present.
-        let mut path = warp_util::path::warp_shell_path()
+        let mut path = derp_util::path::derp_shell_path()
             .or_else(|| std::env::var("PATH").ok())
             .unwrap_or_default();
         let mut extra_dirs = vec![

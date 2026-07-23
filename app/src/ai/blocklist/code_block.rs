@@ -1,14 +1,14 @@
 use std::iter;
 use std::path::Path;
 
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, HighlightedRange, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, Element, EventContext, SingletonEntity, ViewHandle};
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, Element, EventContext, SingletonEntity, ViewHandle};
 
 use crate::ai::agent::ProgrammingLanguage;
 use crate::ai::blocklist::inline_action::inline_action_header::{
@@ -101,7 +101,7 @@ pub struct CodeBlockOptions {
     pub file_path: Option<String>,
 }
 
-pub fn render_code_block_with_warp_text(
+pub fn render_code_block_with_derp_text(
     options: CodeBlockOptions,
     view: &ViewHandle<CodeEditorView>,
     app: &AppContext,
@@ -255,7 +255,7 @@ fn render_linked_code_block_internal(
             let open_button = render_button(
                 appearance,
                 Icon::LinkExternal,
-                "Open in Warp",
+                "Open in Derp",
                 mouse_handles.open_button,
                 code_clone.clone(),
                 on_open,

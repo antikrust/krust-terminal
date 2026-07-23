@@ -1,0 +1,36 @@
+[package]
+name = "tink-core"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+description = "Core crate for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+documentation = "https://docs.rs/tink-core"
+readme = "README.md"
+keywords = ["cryptography", "tink"]
+categories = ["cryptography"]
+rust-version = "1.78.0"
+
+[features]
+default = []
+# The `insecure` feature enables methods that expose unencrypted key material
+insecure = []
+# The `json` feature enables methods for serializing keysets to/from JSON.
+json = ["tink-proto/json", "serde", "serde_json"]
+
+[dependencies]
+digest = "^0.10.7"
+hkdf = "^0.12.4"
+lazy_static = "^1.5"
+rand = "^0.8"
+serde = { version = "^1.0.203", features = ["derive"], optional = true }
+serde_json = { version = "^1.0.147", optional = true }
+sha-1 = "^0.10.1"
+sha2 = "^0.10.9"
+subtle = "^2.4"
+tink-proto = "^0.3"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

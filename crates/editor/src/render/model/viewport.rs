@@ -1,10 +1,10 @@
 use float_cmp::ApproxEq;
 use string_offset::CharOffset;
 use sum_tree::{SeekBias, SumTree};
-use warpui_core::SizeConstraint;
-use warpui_core::geometry::rect::RectF;
-use warpui_core::geometry::vector::{Vector2F, vec2f};
-use warpui_core::units::{IntoPixels, Pixels};
+use derpui_core::SizeConstraint;
+use derpui_core::geometry::rect::RectF;
+use derpui_core::geometry::vector::{Vector2F, vec2f};
+use derpui_core::units::{IntoPixels, Pixels};
 
 use super::positioned::PositionedCursor;
 use super::{

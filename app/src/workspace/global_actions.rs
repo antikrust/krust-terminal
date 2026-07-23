@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use ::settings::ToggleableSetting;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_errors::report_error;
-use warp_graphql::mutations::create_anonymous_user::AnonymousUserType;
-use warpui::windowing::WindowManager;
-use warpui::{AppContext, SingletonEntity, TypedActionView};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_errors::report_error;
+use derp_graphql::mutations::create_anonymous_user::AnonymousUserType;
+use derpui::windowing::WindowManager;
+use derpui::{AppContext, SingletonEntity, TypedActionView};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentExchangeId;
@@ -187,7 +187,7 @@ fn create_anonymous_user(_: &(), ctx: &mut AppContext) {
     let auth_client =
         ServerApiProvider::handle(ctx).read(ctx, |provider, _ctx| provider.get_auth_client());
     let result =
-        warpui::r#async::block_on(auth_client.create_anonymous_user(None, anonymous_user_type));
+        derpui::r#async::block_on(auth_client.create_anonymous_user(None, anonymous_user_type));
     match result {
         Ok(user) => log::info!("Successfully created anonymous user {user:?}"),
         Err(err) => report_error!(err.context("Failed to create anonymous user")),

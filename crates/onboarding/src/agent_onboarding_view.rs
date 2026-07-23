@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use ai::LLMId;
 use instant::Instant;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warpui_core::assets::asset_cache::AssetSource;
-use warpui_core::image_cache::ImageType;
-use warpui_core::windowing::state::{ApplicationStage, StateEvent};
-use warpui_core::windowing::WindowManager;
+use derp_core::features::FeatureFlag;
+use derp_core::send_telemetry_from_ctx;
+use derpui_core::assets::asset_cache::AssetSource;
+use derpui_core::image_cache::ImageType;
+use derpui_core::windowing::state::{ApplicationStage, StateEvent};
+use derpui_core::windowing::WindowManager;
 
 use crate::components::feature_optout_dialog::{render_feature_optout_dialog, FeatureOptOutDialog};
 use crate::model::{
@@ -28,20 +28,20 @@ const PLAN_ACTIVATED_TOAST_DURATION: Duration = Duration::from_secs(5);
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warp_core::ui::Icon;
-use warpui_core::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::{Fill, DerpTheme};
+use derp_core::ui::Icon;
+use derpui_core::elements::{
     Align, CacheOption, ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Dismiss, Empty,
     Flex, Image, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Rect, Shrinkable, Stack,
 };
-use warpui_core::fonts::Weight;
-use warpui_core::keymap::macros::*;
-use warpui_core::keymap::{FixedBinding, Keystroke};
-use warpui_core::presenter::ChildView;
-use warpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui_core::{
+use derpui_core::fonts::Weight;
+use derpui_core::keymap::macros::*;
+use derpui_core::keymap::{FixedBinding, Keystroke};
+use derpui_core::presenter::ChildView;
+use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -135,7 +135,7 @@ impl AgentOnboardingView {
     /// Creates a new AgentOnboardingView.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        theme_picker_themes: [WarpTheme; 4],
+        theme_picker_themes: [DerpTheme; 4],
         skippable: bool,
         models: Vec<OnboardingModelInfo>,
         default_model_id: LLMId,
@@ -330,7 +330,7 @@ impl AgentOnboardingView {
         ctx.focus_self();
 
         // Preload customize-slide images so they're ready when the user reaches that slide.
-        if FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
             Self::preload_onboarding_images(ctx);
         }
 
@@ -346,7 +346,7 @@ impl AgentOnboardingView {
     /// Eagerly loads all onboarding slide images into the asset cache
     /// so they display instantly when the user navigates between slides.
     fn preload_onboarding_images(ctx: &mut ViewContext<Self>) {
-        let asset_cache = warpui_core::assets::asset_cache::AssetCache::as_ref(ctx);
+        let asset_cache = derpui_core::assets::asset_cache::AssetCache::as_ref(ctx);
         // Preload the shared background image used on all right panels.
         asset_cache.load_asset::<ImageType>(AssetSource::Bundled {
             path: crate::slides::layout::ONBOARDING_BG_PATH,
@@ -424,7 +424,7 @@ impl AgentOnboardingView {
             appearance,
             FeatureOptOutDialog {
                 title: "Are you sure you don't want AI?",
-                body: "Without AI, you'll still get Warp's terminal experience, but you'll miss \
+                body: "Without AI, you'll still get Derp's terminal experience, but you'll miss \
                        our agentic features like automatic fixes for terminal errors.",
                 features: &[],
                 close_button,
@@ -459,7 +459,7 @@ impl AgentOnboardingView {
 
         self.show_plan_activated_toast = true;
         let _ = ctx.spawn(
-            warpui_core::r#async::Timer::after(PLAN_ACTIVATED_TOAST_DURATION),
+            derpui_core::r#async::Timer::after(PLAN_ACTIVATED_TOAST_DURATION),
             |me: &mut Self, _, ctx| {
                 if me.show_plan_activated_toast {
                     me.show_plan_activated_toast = false;
@@ -483,7 +483,7 @@ impl AgentOnboardingView {
         let ui_builder = appearance.ui_builder();
 
         let check_icon = ConstrainedBox::new(Box::new(
-            Icon::CheckSkinny.to_warpui_icon(Fill::Solid(text_color)),
+            Icon::CheckSkinny.to_derpui_icon(Fill::Solid(text_color)),
         ))
         .with_width(ICON_SIZE)
         .with_height(ICON_SIZE)

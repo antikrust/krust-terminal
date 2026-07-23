@@ -1,15 +1,15 @@
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use settings::Setting as _;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_errors::report_if_error;
+use derpui::elements::{
     Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, Flex, FormattedTextElement,
     HighlightedHyperlink, Hoverable, HyperlinkUrl, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Text, Wrap,
 };
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::fonts::Weight;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::context_chips::prompt::Prompt;
@@ -28,7 +28,7 @@ const CONFIRM_MARGIN_TOP: f32 = 16.;
 pub struct OnboardingPromptBlock {
     learn_more_highlight_index: HighlightedHyperlink,
     mouse_state_handle_look_incorrect: MouseStateHandle,
-    mouse_state_handle_warp_prompt: MouseStateHandle,
+    mouse_state_handle_derp_prompt: MouseStateHandle,
     mouse_state_handle_existing_prompt: MouseStateHandle,
     mouse_state_handle_confirm: MouseStateHandle,
     ps1_grid_info: Option<(BlockGrid, SizeInfo)>,
@@ -41,7 +41,7 @@ impl OnboardingPromptBlock {
         Self {
             learn_more_highlight_index: Default::default(),
             mouse_state_handle_look_incorrect: Default::default(),
-            mouse_state_handle_warp_prompt: Default::default(),
+            mouse_state_handle_derp_prompt: Default::default(),
             mouse_state_handle_existing_prompt: Default::default(),
             mouse_state_handle_confirm: Default::default(),
             ps1_grid_info,
@@ -62,9 +62,9 @@ impl OnboardingPromptBlock {
         let font_color = current_theme.main_text_color(current_theme.background());
 
         // Copy - https://docs.google.com/document/d/1zttBLI5Mw07kUupvrMQoC5aTwTXSHIUOIFFnxZ8GQEU/edit
-        const LINE_ONE: &str = "Next, let’s set up your prompt. Warp has a custom prompt builder or you can select PS1 to honor your pre-existing prompt configuration.";
+        const LINE_ONE: &str = "Next, let’s set up your prompt. Derp has a custom prompt builder or you can select PS1 to honor your pre-existing prompt configuration.";
         const LINE_TWO: &str =
-            "Warp works with many custom prompts like oh-my-zsh, Starship, Powerlevel10K. ";
+            "Derp works with many custom prompts like oh-my-zsh, Starship, Powerlevel10K. ";
         const LINK_TEXT: &str = "Learn more";
         const LINK_DESTINATION: &str =
             "https://therob.lol/derp-terminal/help/terminal/appearance/prompt#custom-prompt-compatibility-table";
@@ -107,7 +107,7 @@ impl OnboardingPromptBlock {
         let mut confirm_button = appearance
             .ui_builder()
             .button(
-                warpui::ui_components::button::ButtonVariant::Accent,
+                derpui::ui_components::button::ButtonVariant::Accent,
                 self.mouse_state_handle_confirm.clone(),
             )
             .with_style(UiComponentStyles {
@@ -178,8 +178,8 @@ impl OnboardingPromptBlock {
                         };
 
                     ConstrainedBox::new(
-                        Container::new(if prompt_type == OnboardingPromptType::WarpDefault {
-                            self.render_warp_prompt_button_interior(appearance)
+                        Container::new(if prompt_type == OnboardingPromptType::DerpDefault {
+                            self.render_derp_prompt_button_interior(appearance)
                         } else {
                             self.render_existing_prompt_button_interior(appearance)
                         })
@@ -240,7 +240,7 @@ impl OnboardingPromptBlock {
         const NO_PS1_TEXT: &str = "No existing prompt.";
         const CORRECTION_TEXT: &str = "Look incorrect? ";
         const LINK_TEXT: &str = "Let us know.";
-        const LINK_DESTINATION: &str = "https://github.com/warpdotdev/Warp/issues/new?assignees=&labels=Bug&projects=&template=01_bug_report.yml";
+        const LINK_DESTINATION: &str = "https://github.com/derpdotdev/Derp/issues/new?assignees=&labels=Bug&projects=&template=01_bug_report.yml";
 
         const HEADER_MARGIN_LEFT: f32 = 4.;
         const PS1_PADDING_VERTICAL: f32 = 12.;
@@ -322,10 +322,10 @@ impl OnboardingPromptBlock {
             .finish()
     }
 
-    fn render_warp_prompt_button_interior(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_derp_prompt_button_interior(&self, appearance: &Appearance) -> Box<dyn Element> {
         // Pixel values pulled from Figma mocks
         // https://www.figma.com/file/y888viqzWBoMpFTxQqkQEN/Activation?node-id=568:1595&mode=dev
-        const HEADER_TEXT: &str = "Warp prompt";
+        const HEADER_TEXT: &str = "Derp prompt";
         const HEADER_MARGIN_LEFT: f32 = 4.;
         const SECTION_MARGIN_TOP: f32 = 8.;
         const OUTER_CORNER_RADIUS: f32 = 4.;
@@ -409,7 +409,7 @@ impl OnboardingPromptBlock {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum OnboardingPromptType {
     PS1,
-    WarpDefault,
+    DerpDefault,
 }
 
 impl Entity for OnboardingPromptBlock {
@@ -439,8 +439,8 @@ impl View for OnboardingPromptBlock {
                     .with_main_axis_alignment(MainAxisAlignment::Start)
                     .with_child(self.render_prompt_button(
                         appearance,
-                        self.mouse_state_handle_warp_prompt.clone(),
-                        OnboardingPromptType::WarpDefault,
+                        self.mouse_state_handle_derp_prompt.clone(),
+                        OnboardingPromptType::DerpDefault,
                     ))
                     .with_child(self.render_prompt_button(
                         appearance,
@@ -479,8 +479,8 @@ impl TypedActionView for OnboardingPromptBlock {
                 self.selected_prompt = Some(*prompt);
 
                 match prompt {
-                    OnboardingPromptType::WarpDefault => {
-                        self.selected_prompt = Some(OnboardingPromptType::WarpDefault);
+                    OnboardingPromptType::DerpDefault => {
+                        self.selected_prompt = Some(OnboardingPromptType::DerpDefault);
                         Prompt::handle(ctx).update(ctx, |prompt, ctx| {
                             report_if_error!(prompt.reset(ctx));
                         });

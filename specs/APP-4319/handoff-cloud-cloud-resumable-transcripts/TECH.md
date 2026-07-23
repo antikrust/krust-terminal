@@ -72,9 +72,9 @@ Map tests to `PRODUCT.md` behavior invariants instead of duplicating product req
 - Invariants 13-17 and 25: add tests that the view remains registered for the same ambient task, repeated `FollowupSessionReady` attaches through the deferred manager, and follow-up completion returns the pane to a between-executions Cloud Mode tombstone state.
 - Invariants 18-21: extend existing follow-up error tests to cover transcript-originated follow-ups, including prompt restoration before request acceptance and Cloud Mode error state after accepted-but-failed startup.
 Targeted checks:
-- `cargo nextest run -p warp terminal::view::shared_session::view_impl_test terminal::view_test`
-- `cargo nextest run -p warp pane_group::mod_tests ai::agent_conversations_model_tests`
-- `cargo check -p warp --features handoff_cloud_cloud`
+- `cargo nextest run -p derp terminal::view::shared_session::view_impl_test terminal::view_test`
+- `cargo nextest run -p derp pane_group::mod_tests ai::agent_conversations_model_tests`
+- `cargo check -p derp --features handoff_cloud_cloud`
 Use the repo-standard formatting command when preparing the PR; do not run `cargo fmt --all` or file-specific `cargo fmt`.
 ## Risks and mitigations
 ### Duplicate transcript restoration

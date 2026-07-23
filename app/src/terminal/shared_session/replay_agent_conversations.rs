@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use api::response_event::stream_finished as stream_finished_event;
 use api::{client_action as api_client_action, response_event as api_response_event};
-use warp_multi_agent_api::{self as api, ResponseEvent};
+use derp_multi_agent_api::{self as api, ResponseEvent};
 
 use crate::ai::agent::conversation::AIConversation;
 use crate::ai::agent::task::TaskId;
@@ -177,10 +177,10 @@ fn create_finished_event_from_conversation(conversation: &AIConversation) -> Res
                 .map(|u| u.to_proto_combined())
                 .collect(),
             tool_usage_metadata: Some(conversation.tool_usage_metadata().into()),
-            warp_token_usage: conversation
+            derp_token_usage: conversation
                 .token_usage()
                 .iter()
-                .filter_map(|u| u.to_proto_warp_usage())
+                .filter_map(|u| u.to_proto_derp_usage())
                 .collect(),
             byok_token_usage: conversation
                 .token_usage()

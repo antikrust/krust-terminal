@@ -1,15 +1,15 @@
 use std::time::Duration;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::{
     ChildView, Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::r#async::Timer;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::platform::Cursor;
+use derpui::r#async::Timer;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

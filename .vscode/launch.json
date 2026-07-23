@@ -14,11 +14,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'warp'",
+      "name": "Debug executable 'derp'",
       "cargo": {
-        "args": ["build", "--bin=warp"],
+        "args": ["build", "--bin=derp"],
         "filter": {
-          "name": "warp",
+          "name": "derp",
           "kind": "bin"
         }
       },
@@ -30,8 +30,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable",
-      "preLaunchTask": "build_warplocal",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/WarpLocal.app/Contents/MacOS/warp",
+      "preLaunchTask": "build_derplocal",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -39,11 +39,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'warp' with fast_dev",
+      "name": "Debug executable 'derp' with fast_dev",
       "cargo": {
-        "args": ["build", "--bin=warp", "--features=fast_dev"],
+        "args": ["build", "--bin=derp", "--features=fast_dev"],
         "filter": {
-          "name": "warp",
+          "name": "derp",
           "kind": "bin"
         }
       },
@@ -54,11 +54,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'warp' with with_local_server",
+      "name": "Debug executable 'derp' with with_local_server",
       "cargo": {
-        "args": ["build", "--bin=warp", "--features=with_local_server"],
+        "args": ["build", "--bin=derp", "--features=with_local_server"],
         "filter": {
-          "name": "warp",
+          "name": "derp",
           "kind": "bin"
         }
       },
@@ -70,8 +70,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable local session sharing server",
-      "preLaunchTask": "build_warplocal_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/WarpLocal.app/Contents/MacOS/warp",
+      "preLaunchTask": "build_derplocal_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -83,8 +83,8 @@
       "env": {
         "RUST_BACKTRACE": "1"
       },
-      "preLaunchTask": "build_warplocal_fastdev",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/WarpLocal.app/Contents/MacOS/warp",
+      "preLaunchTask": "build_derplocal_fastdev",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -93,8 +93,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable with fast_dev + local session sharing server",
-      "preLaunchTask": "build_warplocal_fastdev_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/WarpLocal.app/Contents/MacOS/warp",
+      "preLaunchTask": "build_derplocal_fastdev_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -102,11 +102,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'warp'",
+      "name": "Debug unit tests in executable 'derp'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=warp", "--package=warp"],
+        "args": ["test", "--no-run", "--bin=derp", "--package=derp"],
         "filter": {
-          "name": "warp",
+          "name": "derp",
           "kind": "bin"
         }
       },
@@ -119,9 +119,9 @@
       "request": "launch",
       "name": "Debug integration tests in executable 'integration'",
       "cargo": {
-        "args": ["build", "--bin=integration", "--package=warp"],
+        "args": ["build", "--bin=integration", "--package=derp"],
         "env": {
-          "WARPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
+          "DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
         },
         "filter": {
           "name": "integration",
@@ -135,11 +135,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in library 'warpui'",
+      "name": "Debug unit tests in library 'derpui'",
       "cargo": {
-        "args": ["test", "--no-run", "--lib", "--package=warpui"],
+        "args": ["test", "--no-run", "--lib", "--package=derpui"],
         "filter": {
-          "name": "warpui",
+          "name": "derpui",
           "kind": "lib"
         }
       },

@@ -38,11 +38,11 @@ pub use view::{
     Workspace, NEW_SESSION_MENU_BUTTON_POSITION_ID, NEW_TAB_BUTTON_POSITION_ID,
     PANEL_HEADER_HEIGHT, TAB_BAR_HEIGHT, TOTAL_TAB_BAR_HEIGHT, WORKSPACE_PADDING,
 };
-use warp_core::context_flag::ContextFlag;
-use warpui::accessibility::AccessibilityVerbosity;
-use warpui::elements::DropTargetData;
-use warpui::keymap::{BindingDescription, EditableBinding, FixedBinding};
-use warpui::AppContext;
+use derp_core::context_flag::ContextFlag;
+use derpui::accessibility::AccessibilityVerbosity;
+use derpui::elements::DropTargetData;
+use derpui::keymap::{BindingDescription, EditableBinding, FixedBinding};
+use derpui::AppContext;
 
 use crate::ai::blocklist::NEW_AGENT_PANE_LABEL;
 use crate::channel::{Channel, ChannelState};
@@ -55,8 +55,8 @@ use crate::util::bindings::{self, cmd_or_ctrl_shift, is_binding_pty_compliant, C
 use crate::{code, modal, notebooks, tab_configs};
 
 // Helper function to access panel header corner radius from other modules
-pub fn panel_header_corner_radius() -> warpui::elements::CornerRadius {
-    warpui::elements::CornerRadius::with_top(warpui::elements::Radius::Pixels(8.))
+pub fn panel_header_corner_radius() -> derpui::elements::CornerRadius {
+    derpui::elements::CornerRadius::with_top(derpui::elements::Radius::Pixels(8.))
 }
 
 pub use one_time_modal_model::OneTimeModalModel;
@@ -65,19 +65,19 @@ pub use toast_stack::ToastStack;
 
 use crate::workspace::view::{
     LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME,
-    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
+    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_DERP_DRIVE_BINDING_NAME,
     NEW_AGENT_TAB_BINDING_NAME, NEW_AMBIENT_AGENT_TAB_BINDING_NAME, NEW_FILE_BINDING_NAME,
     NEW_TAB_BINDING_NAME, NEW_TERMINAL_TAB_BINDING_NAME, OPEN_GLOBAL_SEARCH_BINDING_NAME,
     TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME, TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME,
     TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_RIGHT_PANEL_BINDING_NAME,
     TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME, TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME,
-    TOGGLE_WARP_DRIVE_BINDING_NAME,
+    TOGGLE_DERP_DRIVE_BINDING_NAME,
 };
 
 pub fn init(app: &mut AppContext) {
     app.add_singleton_model(|_| WorkspaceRegistry::new());
     app.add_singleton_model(|_| cross_window_tab_drag::CrossWindowTabDrag::new());
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
     app.register_binding_validator::<Workspace>(is_binding_pty_compliant);
 
     modal::init(app);
@@ -89,7 +89,7 @@ pub fn init(app: &mut AppContext) {
     hoa_onboarding::init(app);
     tab_configs::session_config_modal::init(app);
     view::launch_modal::oz_launch::init(app);
-    view::openwarp_launch_modal::init(app);
+    view::openderp_launch_modal::init(app);
     view::orchestration_launch_modal::init(app);
     view::feature_intro_modal::init(app);
     view::auto_handoff_sleep_modal::init(app);
@@ -203,15 +203,15 @@ pub fn init(app: &mut AppContext) {
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
-                    "workspace:open_openwarp_launch_modal",
-                    "[Debug] Open OpenWarp Launch Modal",
-                    WorkspaceAction::OpenOpenWarpLaunchModal,
+                    "workspace:open_openderp_launch_modal",
+                    "[Debug] Open OpenDerp Launch Modal",
+                    WorkspaceAction::OpenOpenDerpLaunchModal,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
-                    "workspace:reset_openwarp_launch_modal_state",
-                    "[Debug] Reset OpenWarp Launch Modal State",
-                    WorkspaceAction::ResetOpenWarpLaunchModalState,
+                    "workspace:reset_openderp_launch_modal_state",
+                    "[Debug] Reset OpenDerp Launch Modal State",
+                    WorkspaceAction::ResetOpenDerpLaunchModalState,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
@@ -269,15 +269,15 @@ pub fn init(app: &mut AppContext) {
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
-                    "workspace:install_opencode_warp_plugin",
-                    "[Debug] Install OpenCode Warp plugin",
-                    WorkspaceAction::InstallOpenCodeWarpPlugin,
+                    "workspace:install_opencode_derp_plugin",
+                    "[Debug] Install OpenCode Derp plugin",
+                    WorkspaceAction::InstallOpenCodeDerpPlugin,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
-                    "workspace:use_local_opencode_warp_plugin",
-                    "[Debug] Use local OpenCode Warp plugin (testing only)",
-                    WorkspaceAction::UseLocalOpenCodeWarpPlugin,
+                    "workspace:use_local_opencode_derp_plugin",
+                    "[Debug] Use local OpenCode Derp plugin (testing only)",
+                    WorkspaceAction::UseLocalOpenCodeDerpPlugin,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
@@ -644,7 +644,7 @@ pub fn init(app: &mut AppContext) {
             WorkspaceAction::CreateTeamNotebook,
         )
         .with_custom_action(CustomAction::NewTeamNotebook)
-        .with_context_predicate(id!("Workspace") & id!("WarpDrive_BelongsToTeam") & id!("IsOnline"))
+        .with_context_predicate(id!("Workspace") & id!("DerpDrive_BelongsToTeam") & id!("IsOnline"))
         .with_group(bindings::BindingGroup::Notebooks.as_str()),
         EditableBinding::new(
             "workspace:create_personal_notebook",
@@ -662,7 +662,7 @@ pub fn init(app: &mut AppContext) {
             WorkspaceAction::CreateTeamWorkflow,
         )
         .with_custom_action(CustomAction::NewTeamWorkflow)
-        .with_context_predicate(id!("Workspace") & id!("IsOnline") & id!("WarpDrive_BelongsToTeam"))
+        .with_context_predicate(id!("Workspace") & id!("IsOnline") & id!("DerpDrive_BelongsToTeam"))
         .with_group(bindings::BindingGroup::Workflow.as_str()),
         EditableBinding::new(
             "workspace:create_personal_workflow",
@@ -679,7 +679,7 @@ pub fn init(app: &mut AppContext) {
                 .with_custom_description(bindings::MAC_MENUS_CONTEXT, "New Team Folder"),
             WorkspaceAction::CreateTeamFolder,
         )
-        .with_context_predicate(id!("Workspace") & id!("IsOnline") & id!("WarpDrive_BelongsToTeam"))
+        .with_context_predicate(id!("Workspace") & id!("IsOnline") & id!("DerpDrive_BelongsToTeam"))
         .with_group(bindings::BindingGroup::Folders.as_str()),
         EditableBinding::new(
             "workspace:create_personal_folder",
@@ -713,7 +713,7 @@ pub fn init(app: &mut AppContext) {
             BindingDescription::new("New Agent Tab"),
             WorkspaceAction::AddAgentTab,
         )
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_custom_action(CustomAction::NewAgentTab)
         .with_context_predicate(
             id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED) & !id!("Workspace_PaneDragging"),
@@ -723,7 +723,7 @@ pub fn init(app: &mut AppContext) {
             BindingDescription::new("New Cloud Agent Tab"),
             WorkspaceAction::AddAmbientAgentTab,
         )
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_context_predicate(
             id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED) & !id!("Workspace_PaneDragging"),
         )
@@ -736,7 +736,7 @@ pub fn init(app: &mut AppContext) {
             WorkspaceAction::ToggleLeftPanel,
         )
         .with_context_predicate(id!("Workspace"))
-        .with_custom_action(CustomAction::ToggleWarpDrive),
+        .with_custom_action(CustomAction::ToggleDerpDrive),
         EditableBinding::new(
             TOGGLE_RIGHT_PANEL_BINDING_NAME,
             BindingDescription::new("Toggle code review")
@@ -793,9 +793,9 @@ pub fn init(app: &mut AppContext) {
         .with_mac_key_binding("cmd-shift->")
         .with_linux_or_windows_key_binding("ctrl-shift->"),
         EditableBinding::new(
-            LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
+            LEFT_PANEL_DERP_DRIVE_BINDING_NAME,
             BindingDescription::new("Left Panel: Library"),
-            WorkspaceAction::ToggleWarpDrive,
+            WorkspaceAction::ToggleDerpDrive,
         )
         .with_group(bindings::BindingGroup::Navigation.as_str())
         .with_context_predicate(id!("Workspace"))
@@ -819,10 +819,10 @@ pub fn init(app: &mut AppContext) {
         // we use alt because we use ctrl-shift-f for find because ctrl-f needs to be reserved for the shell
         .with_linux_or_windows_key_binding("alt-shift-F"),
         EditableBinding::new(
-            TOGGLE_WARP_DRIVE_BINDING_NAME,
+            TOGGLE_DERP_DRIVE_BINDING_NAME,
             BindingDescription::new("Toggle Library")
                 .with_custom_description(bindings::MAC_MENUS_CONTEXT, "Library"),
-            WorkspaceAction::ToggleWarpDrive,
+            WorkspaceAction::ToggleDerpDrive,
         )
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
@@ -837,7 +837,7 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(id!("Workspace") & id!(flags::SHOW_CONVERSATION_HISTORY))
         .with_mac_key_binding("cmd-shift-A")
         .with_linux_or_windows_key_binding("ctrl-shift-A")
-        .with_group(bindings::BindingGroup::WarpAi.as_str()),
+        .with_group(bindings::BindingGroup::DerpAi.as_str()),
         EditableBinding::new(
             "workspace:close_panel",
             BindingDescription::new("Close focused panel")
@@ -1052,7 +1052,7 @@ pub fn init(app: &mut AppContext) {
     app.register_editable_bindings([
         EditableBinding::new(
             "workspace:terminate_app",
-            "Quit Warp",
+            "Quit Derp",
             WorkspaceAction::TerminateApp,
         )
         .with_context_predicate(id!("Workspace"))
@@ -1159,7 +1159,7 @@ pub fn init(app: &mut AppContext) {
             "workspace:search_drive",
             "Search Library",
             WorkspaceAction::OpenPalette {
-                mode: PaletteMode::WarpDrive,
+                mode: PaletteMode::DerpDrive,
                 source: PaletteSource::Keybinding,
                 query: None,
             },
@@ -1211,46 +1211,46 @@ pub fn init(app: &mut AppContext) {
 
     if cfg!(not(target_family = "wasm")) {
         app.register_editable_bindings([EditableBinding::new(
-            "workspace:export_all_warp_drive_objects",
+            "workspace:export_all_derp_drive_objects",
             "Export all Library objects",
-            WorkspaceAction::ExportAllWarpDriveObjects,
+            WorkspaceAction::ExportAllDerpDriveObjects,
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace"))]);
     }
 
-    // Oz and Warp Control CLI install/uninstall actions (macOS only)
+    // Oz and Derp Control CLI install/uninstall actions (macOS only)
     #[cfg(target_os = "macos")]
     {
         app.register_editable_bindings([
             EditableBinding::new(
                 "workspace:install_cli",
-                "Install Oz CLI globally for use outside of Warp",
+                "Install Oz CLI globally for use outside of Derp",
                 WorkspaceAction::InstallOz,
             )
             .with_group(bindings::BindingGroup::Settings.as_str())
             .with_context_predicate(id!("Workspace")),
             EditableBinding::new(
                 "workspace:uninstall_cli",
-                "Undo global Oz CLI installation (oz will still work within Warp)",
+                "Undo global Oz CLI installation (oz will still work within Derp)",
                 WorkspaceAction::UninstallOz,
             )
             .with_group(bindings::BindingGroup::Settings.as_str())
             .with_context_predicate(id!("Workspace")),
         ]);
-        if FeatureFlag::WarpControlCli.is_enabled() {
+        if FeatureFlag::DerpControlCli.is_enabled() {
             app.register_editable_bindings([
                 EditableBinding::new(
-                    "workspace:install_warpctrl",
-                    "Install Warp Control CLI globally for use outside of Warp",
-                    WorkspaceAction::InstallWarpctrl,
+                    "workspace:install_derpctrl",
+                    "Install Derp Control CLI globally for use outside of Derp",
+                    WorkspaceAction::InstallDerpctrl,
                 )
                 .with_group(bindings::BindingGroup::Settings.as_str())
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
-                    "workspace:uninstall_warpctrl",
-                    "Undo global Warp Control CLI installation (warpctrl will still work within Warp)",
-                    WorkspaceAction::UninstallWarpctrl,
+                    "workspace:uninstall_derpctrl",
+                    "Undo global Derp Control CLI installation (derpctrl will still work within Derp)",
+                    WorkspaceAction::UninstallDerpctrl,
                 )
                 .with_group(bindings::BindingGroup::Settings.as_str())
                 .with_context_predicate(id!("Workspace")),
@@ -1271,18 +1271,18 @@ pub fn init(app: &mut AppContext) {
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
         .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_custom_action(CustomAction::NewAgentModePane),
         EditableBinding::new(
             "workspace:toggle_ai_assistant",
-            "Toggle Warp AI",
+            "Toggle Derp AI",
             WorkspaceAction::ToggleAIAssistant,
         )
         .with_enabled(|| !FeatureFlag::AgentMode.is_enabled())
         .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         // We use the same custom action as AM so that we don't have
-        // two mac menu items for AM vs Warp AI since they are mutually exclusive.
+        // two mac menu items for AM vs Derp AI since they are mutually exclusive.
         .with_custom_action(CustomAction::NewAgentModePane),
     ]);
 
@@ -1297,7 +1297,7 @@ pub fn init(app: &mut AppContext) {
             WorkspaceAction::CreateTeamEnvVarCollection,
         )
         .with_custom_action(CustomAction::NewTeamEnvVars)
-        .with_context_predicate(id!("Workspace") & id!("WarpDrive_BelongsToTeam") & id!("IsOnline"))
+        .with_context_predicate(id!("Workspace") & id!("DerpDrive_BelongsToTeam") & id!("IsOnline"))
         .with_group(bindings::BindingGroup::EnvVarCollection.as_str()),
         EditableBinding::new(
             "workspace:create_personal_env_vars",
@@ -1317,7 +1317,7 @@ pub fn init(app: &mut AppContext) {
                 .with_custom_description(bindings::MAC_MENUS_CONTEXT, "New Personal Prompt"),
             WorkspaceAction::CreatePersonalAIPrompt,
         )
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_custom_action(CustomAction::NewPersonalAIPrompt)
         .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED)),
         EditableBinding::new(
@@ -1326,11 +1326,11 @@ pub fn init(app: &mut AppContext) {
                 .with_custom_description(bindings::MAC_MENUS_CONTEXT, "New Team Prompt"),
             WorkspaceAction::CreateTeamAIPrompt,
         )
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_custom_action(CustomAction::NewTeamAIPrompt)
         .with_context_predicate(
             id!("Workspace")
-                & id!("WarpDrive_BelongsToTeam")
+                & id!("DerpDrive_BelongsToTeam")
                 & id!("IsOnline")
                 & id!(flags::IS_ANY_AI_ENABLED),
         ),
@@ -1365,7 +1365,7 @@ pub fn init(app: &mut AppContext) {
             "Import To Team Drive",
             WorkspaceAction::ImportToTeamDrive,
         )
-        .with_context_predicate(id!("Workspace") & id!("WarpDrive_BelongsToTeam")),
+        .with_context_predicate(id!("Workspace") & id!("DerpDrive_BelongsToTeam")),
     ]);
 
     // Register a debug-only action for writing the user's access token to the system clipboard
@@ -1406,7 +1406,7 @@ pub fn init(app: &mut AppContext) {
         .with_enabled(|| FeatureFlag::AIRules.is_enabled())
         .with_custom_action(CustomAction::OpenAIFactCollection)
         .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-        .with_group(bindings::BindingGroup::WarpAi.as_str()),
+        .with_group(bindings::BindingGroup::DerpAi.as_str()),
     ]);
 
     app.register_editable_bindings([EditableBinding::new(
@@ -1420,7 +1420,7 @@ pub fn init(app: &mut AppContext) {
     })
     .with_custom_action(CustomAction::OpenMCPServerCollection)
     .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+    .with_group(bindings::BindingGroup::DerpAi.as_str())]);
 
     // Fork: open the global chat pane (command palette "Chat").
     app.register_editable_bindings([EditableBinding::new(
@@ -1429,7 +1429,7 @@ pub fn init(app: &mut AppContext) {
         WorkspaceAction::OpenChat,
     )
     .with_context_predicate(id!("Workspace"))
-    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+    .with_group(bindings::BindingGroup::DerpAi.as_str())]);
 
     app.register_editable_bindings([EditableBinding::new(
         "workspace:jump_to_latest_toast",
@@ -1440,7 +1440,7 @@ pub fn init(app: &mut AppContext) {
     .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
     .with_mac_key_binding("cmd-shift-G")
     .with_linux_or_windows_key_binding("ctrl-shift-G")
-    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+    .with_group(bindings::BindingGroup::DerpAi.as_str())]);
 
     app.register_editable_bindings([EditableBinding::new(
         TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME,
@@ -1451,7 +1451,7 @@ pub fn init(app: &mut AppContext) {
     .with_context_predicate(id!("Workspace"))
     .with_mac_key_binding("cmd-shift-U")
     .with_linux_or_windows_key_binding("ctrl-shift-U")
-    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+    .with_group(bindings::BindingGroup::DerpAi.as_str())]);
 
     add_open_setting_pages_as_editable_binding(app);
     add_overflow_menu_items_as_editable_binding(app);
@@ -1465,11 +1465,11 @@ pub fn init(app: &mut AppContext) {
     .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
     .with_mac_key_binding("cmd-shift-M")
     .with_linux_or_windows_key_binding("ctrl-shift-M")
-    .with_group(bindings::BindingGroup::WarpAi.as_str())]);
+    .with_group(bindings::BindingGroup::DerpAi.as_str())]);
 }
 
 fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     // Add the ability to open setting modals to the command palette.
     app.register_editable_bindings([
@@ -1520,12 +1520,12 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
         EditableBinding::new(
             "workspace:show_settings_about_page",
             BindingDescription::new("Open Settings: About")
-                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "About Warp"),
+                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "About Derp"),
             WorkspaceAction::ShowSettingsPage(SettingsSection::About),
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace"))
-        .with_custom_action(CustomAction::ShowAboutWarp),
+        .with_custom_action(CustomAction::ShowAboutDerp),
         EditableBinding::new(
             "workspace:show_settings_teams_page",
             BindingDescription::new("Open Settings: Teams")
@@ -1543,17 +1543,17 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
-            "workspace:show_settings_warpify_page",
-            BindingDescription::new("Open Settings: Warpify")
-                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "Configure Warpify..."),
-            WorkspaceAction::ShowSettingsPage(SettingsSection::Warpify),
+            "workspace:show_settings_derpify_page",
+            BindingDescription::new("Open Settings: Derpify")
+                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "Configure Derpify..."),
+            WorkspaceAction::ShowSettingsPage(SettingsSection::Derpify),
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
             "workspace:show_ai_settings_page",
             BindingDescription::new("Open Settings: AI"),
-            WorkspaceAction::ShowSettingsPage(SettingsSection::WarpAgent),
+            WorkspaceAction::ShowSettingsPage(SettingsSection::DerpAgent),
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
         .with_group(bindings::BindingGroup::Settings.as_str())
@@ -1598,7 +1598,7 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
 }
 
 fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     // Add the ability to open all overflow menu items to the command palette.
     app.register_editable_bindings([
@@ -1611,7 +1611,7 @@ fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
         #[cfg(not(target_family = "wasm"))]
         EditableBinding::new(
             "workspace:view_logs",
-            "View Warp logs",
+            "View Derp logs",
             WorkspaceAction::ViewLogs,
         )
         .with_context_predicate(id!("Workspace")),

@@ -9,7 +9,7 @@
 //! Run it after touching templates or vocabulary:
 //!
 //! ```sh
-//! cargo test -p warp --lib misery::density -- --ignored --nocapture
+//! cargo test -p derp --lib misery::density -- --ignored --nocapture
 //! ```
 
 use super::session::{CompletedCommand, MiserySession};

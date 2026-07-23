@@ -9,10 +9,10 @@ use chrono::Utc;
 use command::r#async::Command;
 use parking_lot::FairMutex;
 use serde_json::json;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warpui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derpui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
+use derpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::static_prompt_suggestions::static_suggested_query;
 #[cfg(not(target_family = "wasm"))]
@@ -27,7 +27,7 @@ use crate::ai::paths::host_native_absolute_path;
 use crate::ai::predict::generate_am_query_suggestions::{
     GenerateAMQuerySuggestionsRequest, GenerateAMQuerySuggestionsResponse, Suggestion,
 };
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::DerpAiExecutionContext;
 use crate::network::NetworkStatus;
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::PromptSuggestionFallbackReason;
@@ -408,7 +408,7 @@ impl PassiveSuggestionsModel {
             .active_session
             .as_ref(ctx)
             .session_type(ctx)
-            .map(|session_type| matches!(session_type, SessionType::WarpifiedRemote { .. }))
+            .map(|session_type| matches!(session_type, SessionType::DerpifiedRemote { .. }))
             .unwrap_or(true);
         if !can_read_file || should_skip_for_remote {
             let reason = if !can_read_file {
@@ -609,7 +609,7 @@ fn fetch_static_prompt_suggestion(block: &UserBlockCompleted) -> Option<AgentMod
 
 fn build_prompt_suggestions_request(
     block: &UserBlockCompleted,
-    execution_context: WarpAiExecutionContext,
+    execution_context: DerpAiExecutionContext,
     terminal_model: &Arc<FairMutex<TerminalModel>>,
 ) -> Option<GenerateAMQuerySuggestionsRequest> {
     let exit_code = block.serialized_block.exit_code;

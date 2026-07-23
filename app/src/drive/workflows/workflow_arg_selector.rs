@@ -4,22 +4,22 @@ use std::rc::Rc;
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, IntoStaticStr};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warp_editor::editor::NavigationKey;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derp_editor::editor::NavigationKey;
+use derpui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Empty, EventHandler,
     Flex, Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, ScrollbarWidth, Shrinkable, Stack, Text,
 };
-use warpui::fonts::FamilyId;
-use warpui::geometry::vector::vec2f;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::text::Span;
-use warpui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
-use warpui::{
+use derpui::fonts::FamilyId;
+use derpui::geometry::vector::vec2f;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::ui_components::text::Span;
+use derpui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -599,7 +599,7 @@ impl WorkflowArgSelector {
     fn render_search_icon(&self, appearance: &Appearance) -> Box<dyn Element> {
         ConstrainedBox::new(
             icons::Icon::SearchSmall
-                .to_warpui_icon(appearance.theme().active_ui_text_color())
+                .to_derpui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_width(12.)
@@ -854,7 +854,7 @@ impl WorkflowArgSelector {
                         ScrollbarWidth::Auto,
                         theme.disabled_text_color(theme.background()).into(),
                         theme.main_text_color(theme.background()).into(),
-                        warpui::elements::Fill::None,
+                        derpui::elements::Fill::None,
                     )
                     .finish(),
                 )

@@ -1,6 +1,6 @@
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
-use warpui::ViewContext;
+use derp_core::context_flag::ContextFlag;
+use derp_core::features::FeatureFlag;
+use derpui::ViewContext;
 
 use super::{
     ContentItem, ContentSectionData, FeatureItem, FeatureSection, FeatureSectionData,
@@ -37,13 +37,13 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
             ),
             FeatureItem::new(
                 "Open command palette",
-                "Access all of Warp via the keyboard.",
+                "Access all of Derp via the keyboard.",
                 Tip::Action(TipAction::CommandPalette),
                 ctx,
             ),
             FeatureItem::new(
                 "Set your theme",
-                "Make Warp your own by choosing a theme.",
+                "Make Derp your own by choosing a theme.",
                 Tip::Action(TipAction::ThemePicker),
                 ctx,
             ),
@@ -51,31 +51,31 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
     };
     sections.push(Section::Feature(get_started));
 
-    let maximize_warp = FeatureSectionData {
-        section_name: FeatureSection::MaximizeWarp,
-        items: maximize_warp_items(ctx),
+    let maximize_derp = FeatureSectionData {
+        section_name: FeatureSection::MaximizeDerp,
+        items: maximize_derp_items(ctx),
     };
-    sections.push(Section::Feature(maximize_warp));
+    sections.push(Section::Feature(maximize_derp));
 
     let advanced_setup = ContentSectionData {
         section_name: FeatureSection::AdvancedSetup,
         items: vec![
             ContentItem {
                 title: "Use your custom prompt",
-                description: "Set up Warp to honor your PS1 setting",
+                description: "Set up Derp to honor your PS1 setting",
                 url: "https://therob.lol/derp-terminal/help/terminal/appearance/prompt",
                 button_label: "View documentation",
             },
             ContentItem {
-                title: "Integrate Warp with your IDE",
-                description: "Configure Warp to launch from your most used development tools",
+                title: "Integrate Derp with your IDE",
+                description: "Configure Derp to launch from your most used development tools",
                 url: "https://therob.lol/derp-terminal/help/terminal/integrations-and-plugins",
                 button_label: "View documentation",
             },
             ContentItem {
-                title: "How Warp uses Warp",
-                description: "Learn how Warp's engineering team uses their favorite features",
-                url: "https://www.warp.dev/blog/how-warp-uses-warp",
+                title: "How Derp uses Derp",
+                description: "Learn how Derp's engineering team uses their favorite features",
+                url: "https://www.derp.baby/blog/how-derp-uses-derp",
                 button_label: "Read article",
             },
         ],
@@ -85,17 +85,17 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
     sections
 }
 
-fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<FeatureItem> {
-    let mut maximize_warp_items = vec![];
+fn maximize_derp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<FeatureItem> {
+    let mut maximize_derp_items = vec![];
 
-    maximize_warp_items.push(FeatureItem::new(
+    maximize_derp_items.push(FeatureItem::new(
         "Command search",
         "Find and run previously executed commands, workflows, and more.",
         Tip::Action(TipAction::CommandSearch),
         ctx,
     ));
 
-    maximize_warp_items.push(FeatureItem::new(
+    maximize_derp_items.push(FeatureItem::new(
         "AI command search",
         "Generate shell commands with natural language.",
         Tip::Action(TipAction::AiCommandSearch),
@@ -103,7 +103,7 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
     ));
 
     if ContextFlag::CreateNewSession.is_enabled() {
-        maximize_warp_items.push(FeatureItem::new(
+        maximize_derp_items.push(FeatureItem::new(
             "Split panes",
             "Split tabs into multiple panes to make your ideal layout.",
             Tip::Action(TipAction::SplitPane),
@@ -112,7 +112,7 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
     }
 
     if ContextFlag::LaunchConfigurations.is_enabled() {
-        maximize_warp_items.push(FeatureItem::new(
+        maximize_derp_items.push(FeatureItem::new(
             "Launch configuration",
             "Save your current configuration of windows, tabs, and panes.",
             Tip::Action(TipAction::SaveNewLaunchConfig),
@@ -120,5 +120,5 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
         ));
     }
 
-    maximize_warp_items
+    maximize_derp_items
 }

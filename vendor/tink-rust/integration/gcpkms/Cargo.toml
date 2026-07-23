@@ -1,0 +1,28 @@
+[package]
+name = "tink-gcpkms"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+description = "AWS-KMS integration for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+documentation = "https://docs.rs/tink-gcpkms"
+readme = "README.md"
+keywords = ["cryptography", "tink", "kms", "gcp"]
+categories = ["cryptography"]
+rust-version = "1.78.0"
+
+[dependencies]
+base64 = "^0.22"
+chrono = "^0.4"
+futures = "^0.3"
+http = "^0.2"
+hyper = { version = "^0.14.20", features = ["client", "http1", "http2"] }
+hyper-rustls = "^0.22.1"
+lazy_static = "^1.5"
+percent-encoding = "^2.3"
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0.147"
+tink-core = "^0.3"
+tokio = "^1.48"
+yup-oauth2 = "^5.1"

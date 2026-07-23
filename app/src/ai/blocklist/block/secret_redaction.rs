@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use similar::DiffableStr;
-use warp_errors::report_error;
-use warpui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
-use warpui::platform::Cursor;
+use derp_errors::report_error;
+use derpui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
+use derpui::platform::Cursor;
 
 use super::{AIBlockAction, TextLocation};
 use crate::ai::agent::{AIAgentOutput, AIAgentTextSection, AgentOutputText};

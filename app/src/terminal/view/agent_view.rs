@@ -1,9 +1,9 @@
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_errors::report_error;
-use warpui::keymap::Keystroke;
-use warpui::{EntityId, SingletonEntity, ViewContext};
+use derp_core::features::FeatureFlag;
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::appearance::Appearance;
+use derp_errors::report_error;
+use derpui::keymap::Keystroke;
+use derpui::{EntityId, SingletonEntity, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::{

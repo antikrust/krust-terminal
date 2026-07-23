@@ -56,7 +56,7 @@ fn probe_rejects_mismatched_instance_identity() {
         instance_id: InstanceId("inst_expected".to_owned()),
         pid: std::process::id(),
         channel: "local".to_owned(),
-        app_id: "dev.warp.WarpLocal".to_owned(),
+        app_id: "baby.derp.DerpLocal".to_owned(),
         app_version: None,
         started_at: Utc::now(),
         executable_path: None,

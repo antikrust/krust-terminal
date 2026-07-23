@@ -6,10 +6,10 @@ use async_channel::{Receiver, Sender};
 use parking_lot::FairMutex;
 use thiserror::Error;
 #[cfg(feature = "local_fs")]
-use warp_errors::report_error;
-use warp_util::path::ShellFamily;
-use warpui::r#async::block_on;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use derp_errors::report_error;
+use derp_util::path::ShellFamily;
+use derpui::r#async::block_on;
+use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::Message;
 use crate::ai::agent::AIAgentPtyWriteMode;
@@ -32,11 +32,11 @@ use crate::SessionSettings;
 /// Byte sequence to emulate the user pressing ENTER, used to execute a command in the shell.
 const COMMAND_ENTER: &[u8] = &[escape_sequences::C0::CR, escape_sequences::C0::LF];
 /// Used to let the shell know we are switching to the PS1 prompt via a bindkey \ep. This will
-/// restore the PS1 from the saved PS1 value (we had unset the PS1 for Warp prompt).
+/// restore the PS1 from the saved PS1 value (we had unset the PS1 for Derp prompt).
 const SWITCH_TO_PS1_ESCAPE_SEQUENCE: &[u8] = &[escape_sequences::C0::ESC, b'p'];
-/// Used to let the shell know we are switching to the Warp prompt via a bindkey \ew. This will
-/// unset the PS1 to ensure we don't have a double prompt (PS1 and Warp prompt).
-const SWITCH_TO_WARP_PROMPT_ESCAPE_SEQUENCE: &[u8] = &[escape_sequences::C0::ESC, b'w'];
+/// Used to let the shell know we are switching to the Derp prompt via a bindkey \ew. This will
+/// unset the PS1 to ensure we don't have a double prompt (PS1 and Derp prompt).
+const SWITCH_TO_DERP_PROMPT_ESCAPE_SEQUENCE: &[u8] = &[escape_sequences::C0::ESC, b'w'];
 
 /// Represents a single call to write bytes to the PTY asynchronously.
 enum PtyWrite {
@@ -129,13 +129,13 @@ impl<T: EventLoopSender> PtyController<T> {
                 me.is_bracketed_paste_enabled = false;
             }
             ModelEvent::HonorPS1OutOfSync => {
-                // We force re-sync the PS1 state of Warp settings with the shell's environment variable, $WARP_HONOR_PS1, via
+                // We force re-sync the PS1 state of Derp settings with the shell's environment variable, $DERP_HONOR_PS1, via
                 // a bindkey (which triggers a shell function).
                 let honor_ps1 = *SessionSettings::as_ref(ctx).honor_ps1;
                 if honor_ps1 {
                     me.send_switch_to_ps1_bindkey(ctx);
                 } else {
-                    me.send_switch_to_warp_prompt_bindkey(ctx);
+                    me.send_switch_to_derp_prompt_bindkey(ctx);
                 }
             }
             ModelEvent::CompletionsFinished(data) => {
@@ -252,12 +252,12 @@ impl<T: EventLoopSender> PtyController<T> {
         }
     }
 
-    /// Sends bindkey to notify shell process to switch to Warp prompt logic for prompt
+    /// Sends bindkey to notify shell process to switch to Derp prompt logic for prompt
     /// with the combined prompt/command grid (we unset the PS1, but save the value for potential
     /// future restoration).
-    pub fn send_switch_to_warp_prompt_bindkey(&mut self, ctx: &mut ModelContext<Self>) {
+    pub fn send_switch_to_derp_prompt_bindkey(&mut self, ctx: &mut ModelContext<Self>) {
         self.pending_writes.push_back(PtyWrite::Bytes {
-            bytes: SWITCH_TO_WARP_PROMPT_ESCAPE_SEQUENCE.into(),
+            bytes: SWITCH_TO_DERP_PROMPT_ESCAPE_SEQUENCE.into(),
         });
         self.execute_next_queued_write(ctx);
 
@@ -449,7 +449,7 @@ impl<T: EventLoopSender> PtyController<T> {
             let chunks: Vec<Vec<u8>> = bytes.chunks(CHUNK_SIZE).map(|c| c.to_vec()).collect();
             for (i, chunk) in chunks.into_iter().enumerate() {
                 ctx.spawn(
-                    warpui::r#async::Timer::after(std::time::Duration::from_millis(i as u64 * 50)),
+                    derpui::r#async::Timer::after(std::time::Duration::from_millis(i as u64 * 50)),
                     move |me, _, ctx| me.write_bytes(chunk, ctx),
                 );
             }

@@ -5,15 +5,15 @@ use serde_json::{json, Value};
 use session_sharing_protocol::common::{ParticipantId, Role, SessionId as SharedSessionId};
 use session_sharing_protocol::sharer::{SessionEndedReason, SessionSourceType};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use warp_completer::completer::MatchType;
-use warp_core::command::ExitCode;
-use warp_core::interval_timer::TimingDataPoint;
-use warp_core::telemetry::{
+use derp_completer::completer::MatchType;
+use derp_core::command::ExitCode;
+use derp_core::interval_timer::TimingDataPoint;
+use derp_core::telemetry::{
     EnablementState, TelemetryEvent as TelemetryEventTrait, TelemetryEventDesc,
 };
-use warpui::keymap::Keystroke;
-use warpui::notification::{NotificationSendError, RequestPermissionsOutcome};
-use warpui::rendering::ThinStrokes;
+use derpui::keymap::Keystroke;
+use derpui::notification::{NotificationSendError, RequestPermissionsOutcome};
+use derpui::rendering::ThinStrokes;
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::AIConversationId;
@@ -102,7 +102,7 @@ pub struct BootstrappingInfo {
     /// time, which roughly equals the time cost of running our bootstrap
     /// script.  Will be None if `bootstrap_duration_seconds` or
     /// `rcfiles_duration_seconds` is None.
-    pub warp_attributed_bootstrap_duration_seconds: Option<f64>,
+    pub derp_attributed_bootstrap_duration_seconds: Option<f64>,
     pub shell_version: Option<String>,
     pub terminal_session_id: Option<SessionId>,
 }
@@ -187,7 +187,7 @@ impl From<Space> for TelemetrySpace {
     }
 }
 
-/// Common metadata to include in all Warp Drive telemetry events that act on a specific object.
+/// Common metadata to include in all Derp Drive telemetry events that act on a specific object.
 /// Events that only apply to a single object type may use specific metadata like [`WorkflowTelemetryMetadata`],
 /// [`NotebookTelemetryMetadata`], or [`EnvVarTelemetryMetadata`] instead.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -359,7 +359,7 @@ impl From<rmcp::RmcpError> for MCPServerTelemetryError {
 pub struct OpenedSharingDialogEvent {
     pub source: SharingDialogSource,
 
-    /// Metadata for the object being shared, if it's a Warp Drive object.
+    /// Metadata for the object being shared, if it's a Derp Drive object.
     #[serde(flatten)]
     pub object_metadata: Option<CloudObjectTelemetryMetadata>,
 
@@ -367,18 +367,18 @@ pub struct OpenedSharingDialogEvent {
     pub session_id: Option<SharedSessionId>,
 }
 
-/// How the user opened the Warp Drive sharing dialog.
+/// How the user opened the Derp Drive sharing dialog.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum SharingDialogSource {
     /// The sharing button in the pane header.
     PaneHeader,
     /// The per-pane command palette entry (includes keybindings).
     CommandPalette,
-    /// The Warp Drive index context menu.
+    /// The Derp Drive index context menu.
     DriveIndex,
     /// The sharing dialog was auto-opened from shared session creation.
     StartedSessionShare,
-    /// The user intented into Warp with an email address to invite.
+    /// The user intented into Derp with an email address to invite.
     InviteeRequest,
     /// The user jumped from an inherited ACL to its definition on a parent object.
     InheritedPermission,
@@ -431,7 +431,7 @@ pub enum PaletteSource {
     PrefixChange,
     Keybinding,
     CtrlTab { shift_pressed_initially: bool },
-    WarpDrive,
+    DerpDrive,
     QuitModal,
     LogOutModal,
     IntegrationTest,
@@ -494,7 +494,7 @@ pub enum PluginChipTelemetryKind {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationAgentVariant {
-    /// Warp's built-in agent (Oz).
+    /// Derp's built-in agent (Oz).
     Oz,
     /// A CLI agent (e.g., Claude Code, Gemini CLI, etc.).
     CLIAgent(CLIAgentType),
@@ -524,7 +524,7 @@ pub enum PluginChipTelemetryAction {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpDriveSource {
+pub enum DerpDriveSource {
     Legacy,
     LeftPanelToolbelt,
     ForceOpened,
@@ -554,11 +554,11 @@ pub enum CommandCorrectionEvent {
 pub enum CommandSearchResultType {
     History,
     Workflow,
-    OpenWarpAI,
-    TranslateUsingWarpAI,
+    OpenDerpAI,
+    TranslateUsingDerpAI,
     Notebook,
     EnvVarCollection,
-    ViewInWarpDrive,
+    ViewInDerpDrive,
     AIQuery,
     Project,
 }
@@ -571,8 +571,8 @@ impl From<&CommandSearchItemAction> for CommandSearchResultType {
             AcceptWorkflow(_) => Self::Workflow,
             AcceptNotebook(_) => Self::Notebook,
             AcceptEnvVarCollection(_) => Self::EnvVarCollection,
-            OpenWarpAI => Self::OpenWarpAI,
-            TranslateUsingWarpAI => Self::TranslateUsingWarpAI,
+            OpenDerpAI => Self::OpenDerpAI,
+            TranslateUsingDerpAI => Self::TranslateUsingDerpAI,
             AcceptAIQuery(_) | RunAIQuery(_) => Self::AIQuery,
         }
     }
@@ -600,7 +600,7 @@ pub enum PtySpawnMode {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum OpenedWarpAISource {
+pub enum OpenedDerpAISource {
     GlobalEntryButton,
     HelpWithBlock,
     HelpWithTextSelection,
@@ -609,14 +609,14 @@ pub enum OpenedWarpAISource {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpAIRequestResult {
+pub enum DerpAIRequestResult {
     Succeeded { latency_ms: i64, truncated: bool },
     OutOfRequests,
     Failed,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpAIActionType {
+pub enum DerpAIActionType {
     CopyTranscript,
     Restart,
     CopyAnswer,
@@ -628,8 +628,8 @@ pub enum WarpAIActionType {
 pub enum SaveAsWorkflowModalSource {
     Block,
     Input,
-    WarpAIWorkflowCard,
-    WarpAIPanel,
+    DerpAIWorkflowCard,
+    DerpAIPanel,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -699,8 +699,8 @@ pub enum KnowledgePaneEntrypoint {
     #[serde(rename = "settings")]
     Settings,
 
-    #[serde(rename = "warp_drive")]
-    WarpDrive,
+    #[serde(rename = "derp_drive")]
+    DerpDrive,
 
     #[serde(rename = "ai_blocklist")]
     AIBlocklist,
@@ -718,8 +718,8 @@ pub enum MCPServerCollectionPaneEntrypoint {
     #[serde(rename = "settings")]
     Settings,
 
-    #[serde(rename = "warp_drive")]
-    WarpDrive,
+    #[serde(rename = "derp_drive")]
+    DerpDrive,
 
     #[serde(rename = "slash_command")]
     SlashCommand,
@@ -860,12 +860,12 @@ pub enum PromptSuggestionFallbackReason {
 pub enum AgentModeSetupProjectScopedRulesActionType {
     #[serde(rename = "link_from_existing")]
     LinkFromExisting(String),
-    #[serde(rename = "generate_warp_md")]
-    GenerateWarpMd,
+    #[serde(rename = "generate_derp_md")]
+    GenerateDerpMd,
     #[serde(rename = "skip_rules")]
     SkipRules,
-    #[serde(rename = "regenerate_warp_md")]
-    RegenerateWarpMd,
+    #[serde(rename = "regenerate_derp_md")]
+    RegenerateDerpMd,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -976,11 +976,11 @@ pub enum CodeContextDestination {
 
 #[derive(Clone, Debug, Serialize)]
 pub enum AgentModeCitation {
-    WarpDriveObject {
+    DerpDriveObject {
         object_type: ObjectType,
         uid: ObjectUid,
     },
-    WarpDocs {
+    DerpDocs {
         page: String,
     },
     WebPage {
@@ -1388,7 +1388,7 @@ pub enum TelemetryEvent {
     DatabaseReadError(String),
     DatabaseWriteError(String),
     AppStartup(AppStartupInfo),
-    /// The native app was opened while logged out. Since Warp requires login,
+    /// The native app was opened while logged out. Since Derp requires login,
     /// this usually means a new user.
     LoggedOutStartup,
     /// The download source, if it can be determined. Will only be sent when
@@ -1645,25 +1645,25 @@ pub enum TelemetryEvent {
     InitialWorkingDirectoryConfigurationChanged {
         advanced_mode_enabled: bool,
     },
-    /// Opened legacy Warp AI.
-    OpenedWarpAI {
-        source: OpenedWarpAISource,
+    /// Opened legacy Derp AI.
+    OpenedDerpAI {
+        source: OpenedDerpAISource,
     },
-    /// Issued legacy Warp AI request.
-    WarpAIRequestIssued {
-        result: WarpAIRequestResult,
+    /// Issued legacy Derp AI request.
+    DerpAIRequestIssued {
+        result: DerpAIRequestResult,
     },
-    WarpAIAction {
-        action_type: WarpAIActionType,
+    DerpAIAction {
+        action_type: DerpAIActionType,
     },
     /// This is purely for static prompts! Do not send user-written prompts with this event.
-    UsedWarpAIPreparedPrompt {
+    UsedDerpAIPreparedPrompt {
         prompt: &'static str,
     },
     ToggleFocusPaneOnHover {
         enabled: bool,
     },
-    WarpAICharacterLimitExceeded,
+    DerpAICharacterLimitExceeded,
     OpenInputContextMenu,
     InputCutSelectedText,
     InputCopySelectedText,
@@ -1671,7 +1671,7 @@ pub enum TelemetryEvent {
     InputPaste,
     InputCommandSearch,
     InputAICommandSearch,
-    InputAskWarpAI,
+    InputAskDerpAI,
     SaveAsWorkflowModal {
         source: SaveAsWorkflowModalSource,
     },
@@ -1712,7 +1712,7 @@ pub enum TelemetryEvent {
     AddAddedSubshellCommand,
     RemoveAddedSubshellCommand,
     ReceivedSubshellRcFileDcs,
-    ToggleSshWarpification {
+    ToggleSshDerpification {
         enabled: bool,
     },
     /// User changed the SSH extension install mode.
@@ -1724,11 +1724,11 @@ pub enum TelemetryEvent {
     SshRemoteServerChoiceDoNotAskAgainToggled {
         checked: bool,
     },
-    WarpifyFooterShown {
+    DerpifyFooterShown {
         is_ssh: bool,
     },
     AgentToolbarDismissed,
-    WarpifyFooterAcceptedWarpify {
+    DerpifyFooterAcceptedDerpify {
         is_ssh: bool,
     },
     ShowAliasExpansionBanner,
@@ -1748,12 +1748,12 @@ pub enum TelemetryEvent {
     },
     AnonymousUserHitCloudObjectLimit,
     NeedsReauth,
-    WarpDriveOpened {
-        source: WarpDriveSource,
+    DerpDriveOpened {
+        source: DerpDriveSource,
         is_code_mode_v2: bool,
     },
-    // Toggled the legacy Warp AI side panel.
-    ToggleWarpAI {
+    // Toggled the legacy Derp AI side panel.
+    ToggleDerpAI {
         opened: bool,
     },
     ToggleSecretRedaction {
@@ -1775,7 +1775,7 @@ pub enum TelemetryEvent {
         item_type: UndoCloseItemType,
     },
     /// This event is used to measure PTY throughput.
-    /// NOTE: this event is only meant to be used for WarpDev.
+    /// NOTE: this event is only meant to be used for DerpDev.
     PtyThroughput {
         /// The maximum PTY throughput in bytes/sec, aggregated over a 10 minute period.
         max_bytes_per_second: usize,
@@ -1834,7 +1834,7 @@ pub enum TelemetryEvent {
         team_uid: ServerId,
     },
     CopyObjectToClipboard(TelemetryCloudObjectType),
-    OpenAndWarpifyDockerSubshell {
+    OpenAndDerpifyDockerSubshell {
         /// Some variant if we support this shell type, and None otherwise.
         shell_type: Option<ShellType>,
     },
@@ -2001,7 +2001,7 @@ pub enum TelemetryEvent {
     /// language auto-detection false-positive.
     AgentModePotentialAutoDetectionFalsePositive(AgentModeAutoDetectionFalsePositivePayload),
 
-    /// This is a telemetry event used to help track performance of Agent Predict in Warp,
+    /// This is a telemetry event used to help track performance of Agent Predict in Derp,
     /// by keeping track of the context given and the predictions generated.
     AgentModePrediction {
         was_suggestion_accepted: bool,
@@ -2369,7 +2369,7 @@ pub enum TelemetryEvent {
     AutoupdateMinidumpCleanupFailed {
         exit_code: i32,
     },
-    ExecutedWarpDrivePrompt {
+    ExecutedDerpDrivePrompt {
         id: Option<WorkflowId>,
         selection_source: WorkflowSelectionSource,
     },
@@ -2656,9 +2656,9 @@ pub enum TelemetryEvent {
     AgentManagementViewOpenedSession,
     /// Emitted when the user copies a session link from the Agent Management View.
     AgentManagementViewCopiedSessionLink,
-    /// Detected that Warp is running in an isolated sandbox.
+    /// Detected that Derp is running in an isolated sandbox.
     DetectedIsolationPlatform {
-        platform: warp_isolation_platform::IsolationPlatformType,
+        platform: derp_isolation_platform::IsolationPlatformType,
     },
 
     AgentTipShown {
@@ -2809,7 +2809,7 @@ pub enum TelemetryEvent {
         server_conversation_id: Option<String>,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
     },
-    /// Emitted when a warp://linear deeplink is opened.
+    /// Emitted when a derp://linear deeplink is opened.
     LinearIssueLinkOpened,
     /// Emitted when the remote server binary check completes.
     RemoteServerBinaryCheck {
@@ -2896,7 +2896,7 @@ pub enum TelemetryEvent {
     /// daemon process on the remote host.  Only emitted on success — if
     /// the daemon crashes before binding, no event is sent.
     RemoteServerDaemonStartup {
-        timing_data: Vec<warp_core::interval_timer::TimingDataPoint>,
+        timing_data: Vec<derp_core::interval_timer::TimingDataPoint>,
     },
     /// Emitted when all reconnection attempts are exhausted.
     RemoteServerReconnectExhausted {
@@ -2976,7 +2976,7 @@ impl TelemetryEventTrait for TelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        warp_core::telemetry::enum_events::<Self>()
+        derp_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -3281,9 +3281,9 @@ impl TelemetryEvent {
             TelemetryEvent::InitialWorkingDirectoryConfigurationChanged {
                 advanced_mode_enabled,
             } => Some(json!({ "advanced_mode_enabled": advanced_mode_enabled })),
-            TelemetryEvent::OpenedWarpAI { source } => Some(json!({ "source": source })),
-            TelemetryEvent::WarpAIRequestIssued { result } => Some(json!({ "result": result })),
-            TelemetryEvent::WarpAIAction { action_type } => {
+            TelemetryEvent::OpenedDerpAI { source } => Some(json!({ "source": source })),
+            TelemetryEvent::DerpAIRequestIssued { result } => Some(json!({ "result": result })),
+            TelemetryEvent::DerpAIAction { action_type } => {
                 Some(json!({ "action_type": action_type }))
             }
             TelemetryEvent::MCPServerCollectionPaneOpened { entrypoint } => {
@@ -3339,9 +3339,9 @@ impl TelemetryEvent {
             TelemetryEvent::CodePanelsFileOpened { entrypoint, target } => {
                 let (target, layout, editor) = match target {
                     FileTarget::MarkdownViewer(layout) => {
-                        ("warp_markdown_viewer", Some(*layout), None)
+                        ("derp_markdown_viewer", Some(*layout), None)
                     }
-                    FileTarget::CodeEditor(layout) => ("warp_code_editor", Some(*layout), None),
+                    FileTarget::CodeEditor(layout) => ("derp_code_editor", Some(*layout), None),
                     FileTarget::EnvEditor => ("env_editor", None, None),
                     FileTarget::SystemDefault => ("system_default", None, None),
                     FileTarget::SystemGeneric => ("system_generic", None, None),
@@ -3367,7 +3367,7 @@ impl TelemetryEvent {
             TelemetryEvent::AISuggestedRuleContentChanged { rule_id, is_saved } => {
                 Some(json!({ "rule_id": rule_id, "is_saved": is_saved }))
             }
-            TelemetryEvent::UsedWarpAIPreparedPrompt { prompt } => {
+            TelemetryEvent::UsedDerpAIPreparedPrompt { prompt } => {
                 Some(json!({ "prompt": prompt }))
             }
             TelemetryEvent::ExperimentTriggered {
@@ -3391,8 +3391,8 @@ impl TelemetryEvent {
                 Some(json!({ "remember": remember }))
             }
             TelemetryEvent::AgentToolbarDismissed => None,
-            TelemetryEvent::WarpifyFooterShown { is_ssh }
-            | TelemetryEvent::WarpifyFooterAcceptedWarpify { is_ssh } => {
+            TelemetryEvent::DerpifyFooterShown { is_ssh }
+            | TelemetryEvent::DerpifyFooterAcceptedDerpify { is_ssh } => {
                 Some(json!({ "is_ssh": is_ssh }))
             }
             TelemetryEvent::ToggleSameLinePrompt { enabled } => Some(json!({ "enabled": enabled })),
@@ -3407,7 +3407,7 @@ impl TelemetryEvent {
             } => Some(
                 json!({ "ui_location": ui_location, "open_in_active_window": open_in_active_window }),
             ),
-            TelemetryEvent::ToggleWarpAI { opened } => Some(json!({ "opened": opened })),
+            TelemetryEvent::ToggleDerpAI { opened } => Some(json!({ "opened": opened })),
             TelemetryEvent::ToggleSecretRedaction { enabled } => {
                 Some(json!({ "enabled": enabled }))
             }
@@ -3454,7 +3454,7 @@ impl TelemetryEvent {
             TelemetryEvent::CopyObjectToClipboard(object_type) => {
                 Some(json!({ "object_type": object_type }))
             }
-            TelemetryEvent::OpenAndWarpifyDockerSubshell { shell_type } => {
+            TelemetryEvent::OpenAndDerpifyDockerSubshell { shell_type } => {
                 Some(json!({ "shell_type": shell_type }))
             }
             TelemetryEvent::ToggleBlockFilterQuery { enabled, source } => {
@@ -3478,7 +3478,7 @@ impl TelemetryEvent {
             TelemetryEvent::ToggleNewWindowsAtCustomSize { enabled } => {
                 Some(json!({"enabled": enabled}))
             }
-            TelemetryEvent::ToggleSshWarpification { enabled } => Some(json!({"enabled": enabled})),
+            TelemetryEvent::ToggleSshDerpification { enabled } => Some(json!({"enabled": enabled})),
             TelemetryEvent::SetSshExtensionInstallMode { mode } => Some(json!({"mode": mode})),
             TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { checked } => {
                 Some(json!({"checked": checked}))
@@ -3937,7 +3937,7 @@ impl TelemetryEvent {
                 "conversation_id": conversation_id,
                 "rating": rating,
             })),
-            TelemetryEvent::ExecutedWarpDrivePrompt {
+            TelemetryEvent::ExecutedDerpDrivePrompt {
                 id,
                 selection_source,
             } => Some(json!({
@@ -4128,7 +4128,7 @@ impl TelemetryEvent {
             | TelemetryEvent::QuitModalDisabled
             | TelemetryEvent::UserInitiatedLogOut
             | TelemetryEvent::LogOutModalShown
-            | TelemetryEvent::WarpAICharacterLimitExceeded
+            | TelemetryEvent::DerpAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -4136,7 +4136,7 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskWarpAI
+            | TelemetryEvent::InputAskDerpAI
             | TelemetryEvent::SetNewWindowsAtCustomSize
             | TelemetryEvent::DisableInputSync
             | TelemetryEvent::ShowSubshellBanner
@@ -4536,7 +4536,7 @@ impl TelemetryEvent {
                 "banner_toggle_flag_enabled": banner_toggle_flag_enabled,
                 "post_purchase_modal_flag_enabled": post_purchase_modal_flag_enabled,
             })),
-            TelemetryEvent::WarpDriveOpened {
+            TelemetryEvent::DerpDriveOpened {
                 source,
                 is_code_mode_v2,
             } => Some(json!({
@@ -4938,12 +4938,12 @@ impl TelemetryEvent {
             | TelemetryEvent::InputModeChanged { .. }
             | TelemetryEvent::PtySpawned { .. }
             | TelemetryEvent::InitialWorkingDirectoryConfigurationChanged { .. }
-            | TelemetryEvent::OpenedWarpAI { .. }
-            | TelemetryEvent::WarpAIRequestIssued { .. }
-            | TelemetryEvent::WarpAIAction { .. }
-            | TelemetryEvent::UsedWarpAIPreparedPrompt { .. }
+            | TelemetryEvent::OpenedDerpAI { .. }
+            | TelemetryEvent::DerpAIRequestIssued { .. }
+            | TelemetryEvent::DerpAIAction { .. }
+            | TelemetryEvent::UsedDerpAIPreparedPrompt { .. }
             | TelemetryEvent::ToggleFocusPaneOnHover { .. }
-            | TelemetryEvent::WarpAICharacterLimitExceeded
+            | TelemetryEvent::DerpAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -4951,7 +4951,7 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskWarpAI
+            | TelemetryEvent::InputAskDerpAI
             | TelemetryEvent::SaveAsWorkflowModal { .. }
             | TelemetryEvent::ExperimentTriggered { .. }
             | TelemetryEvent::ToggleSyncAllPanesInAllTabs { .. }
@@ -4970,9 +4970,9 @@ impl TelemetryEvent {
             | TelemetryEvent::AddAddedSubshellCommand
             | TelemetryEvent::RemoveAddedSubshellCommand
             | TelemetryEvent::ReceivedSubshellRcFileDcs
-            | TelemetryEvent::WarpifyFooterShown { .. }
+            | TelemetryEvent::DerpifyFooterShown { .. }
             | TelemetryEvent::AgentToolbarDismissed
-            | TelemetryEvent::WarpifyFooterAcceptedWarpify { .. }
+            | TelemetryEvent::DerpifyFooterAcceptedDerpify { .. }
             | TelemetryEvent::ShowAliasExpansionBanner
             | TelemetryEvent::EnableAliasExpansionFromBanner
             | TelemetryEvent::DismissAliasExpansionBanner
@@ -4986,8 +4986,8 @@ impl TelemetryEvent {
             | TelemetryEvent::AnonymousUserAttemptLoginGatedFeature { .. }
             | TelemetryEvent::AnonymousUserHitCloudObjectLimit
             | TelemetryEvent::NeedsReauth
-            | TelemetryEvent::WarpDriveOpened { .. }
-            | TelemetryEvent::ToggleWarpAI { .. }
+            | TelemetryEvent::DerpDriveOpened { .. }
+            | TelemetryEvent::ToggleDerpAI { .. }
             | TelemetryEvent::ToggleSecretRedaction { .. }
             | TelemetryEvent::CustomSecretRegexAdded
             | TelemetryEvent::ToggleObfuscateSecret { .. }
@@ -5016,7 +5016,7 @@ impl TelemetryEvent {
             | TelemetryEvent::LogOut
             | TelemetryEvent::InviteTeammates { .. }
             | TelemetryEvent::CopyObjectToClipboard(_)
-            | TelemetryEvent::OpenAndWarpifyDockerSubshell { .. }
+            | TelemetryEvent::OpenAndDerpifyDockerSubshell { .. }
             | TelemetryEvent::UpdateBlockFilterQuery
             | TelemetryEvent::UpdateBlockFilterQueryContextLines { .. }
             | TelemetryEvent::ToggleBlockFilterQuery { .. }
@@ -5090,8 +5090,8 @@ impl TelemetryEvent {
             | TelemetryEvent::MCPTemplateShared
             | TelemetryEvent::MCPServerSpawned { .. }
             | TelemetryEvent::MCPToolCallAccepted { .. }
-            | TelemetryEvent::ExecutedWarpDrivePrompt { .. }
-            | TelemetryEvent::ToggleSshWarpification { .. }
+            | TelemetryEvent::ExecutedDerpDrivePrompt { .. }
+            | TelemetryEvent::ToggleSshDerpification { .. }
             | TelemetryEvent::SetSshExtensionInstallMode { .. }
             | TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { .. }
             | TelemetryEvent::SettingsImportInitiated
@@ -5231,7 +5231,7 @@ impl TelemetryEvent {
         // We initialize the feature flags so that we can determine which telemetry events to print.
         crate::features::init_feature_flags();
 
-        let events: serde_json::Map<String, Value> = warp_core::telemetry::all_events()
+        let events: serde_json::Map<String, Value> = derp_core::telemetry::all_events()
             .filter_map(|event| {
                 if !event.enablement_state().is_enabled() {
                     return None;
@@ -5482,11 +5482,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputModeChanged => EnablementState::Always,
             Self::PtySpawned => EnablementState::Always,
             Self::InitialWorkingDirectoryConfigurationChanged => EnablementState::Always,
-            Self::OpenedWarpAI => EnablementState::Always,
-            Self::WarpAIRequestIssued => EnablementState::Always,
-            Self::WarpAIAction => EnablementState::Always,
-            Self::UsedWarpAIPreparedPrompt => EnablementState::Always,
-            Self::WarpAICharacterLimitExceeded => EnablementState::Always,
+            Self::OpenedDerpAI => EnablementState::Always,
+            Self::DerpAIRequestIssued => EnablementState::Always,
+            Self::DerpAIAction => EnablementState::Always,
+            Self::UsedDerpAIPreparedPrompt => EnablementState::Always,
+            Self::DerpAICharacterLimitExceeded => EnablementState::Always,
             Self::OpenInputContextMenu => EnablementState::Always,
             Self::InputCutSelectedText => EnablementState::Always,
             Self::InputCopySelectedText => EnablementState::Always,
@@ -5494,7 +5494,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputPaste => EnablementState::Always,
             Self::InputCommandSearch => EnablementState::Always,
             Self::InputAICommandSearch => EnablementState::Always,
-            Self::InputAskWarpAI => EnablementState::Always,
+            Self::InputAskDerpAI => EnablementState::Always,
             Self::SaveAsWorkflowModal => EnablementState::Always,
             Self::ExperimentTriggered => EnablementState::Always,
             Self::ToggleSyncAllPanesInAllTabs => EnablementState::Always,
@@ -5510,12 +5510,12 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::TriggerSubshellBootstrap => EnablementState::Always,
             Self::AddDenylistedSubshellCommand => EnablementState::Always,
             Self::RemoveDenylistedSubshellCommand => EnablementState::Always,
-            Self::ToggleSshWarpification => EnablementState::Always,
+            Self::ToggleSshDerpification => EnablementState::Always,
             Self::SetSshExtensionInstallMode => EnablementState::Always,
             Self::SshRemoteServerChoiceDoNotAskAgainToggled => EnablementState::Always,
-            Self::WarpifyFooterShown
+            Self::DerpifyFooterShown
             | Self::AgentToolbarDismissed
-            | Self::WarpifyFooterAcceptedWarpify => EnablementState::Always,
+            | Self::DerpifyFooterAcceptedDerpify => EnablementState::Always,
             Self::AddAddedSubshellCommand => EnablementState::Always,
             Self::RemoveAddedSubshellCommand => EnablementState::Always,
             Self::ReceivedSubshellRcFileDcs => EnablementState::Always,
@@ -5527,8 +5527,8 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::DismissVimKeybindingsBanner => EnablementState::Always,
             Self::InitiateReauth => EnablementState::Always,
             Self::NeedsReauth => EnablementState::Always,
-            Self::WarpDriveOpened => EnablementState::Always,
-            Self::ToggleWarpAI => EnablementState::Always,
+            Self::DerpDriveOpened => EnablementState::Always,
+            Self::ToggleDerpAI => EnablementState::Always,
             Self::ToggleSecretRedaction => EnablementState::Always,
             Self::CustomSecretRegexAdded => EnablementState::Always,
             Self::ToggleObfuscateSecret => EnablementState::Always,
@@ -5546,7 +5546,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SettingsImportInitiated => EnablementState::Always,
             Self::InviteTeammates => EnablementState::Always,
             Self::CopyObjectToClipboard => EnablementState::Always,
-            Self::OpenAndWarpifyDockerSubshell => EnablementState::Always,
+            Self::OpenAndDerpifyDockerSubshell => EnablementState::Always,
             Self::UpdateBlockFilterQuery => EnablementState::Always,
             Self::UpdateBlockFilterQueryContextLines => EnablementState::Always,
             Self::ToggleBlockFilterQuery => EnablementState::Always,
@@ -5657,7 +5657,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AgentModeRatedResponse => {
                 EnablementState::Flag(FeatureFlag::GlobalAIAnalyticsBanner)
             }
-            Self::ExecutedWarpDrivePrompt => EnablementState::Flag(FeatureFlag::AgentModeWorkflows),
+            Self::ExecutedDerpDrivePrompt => EnablementState::Flag(FeatureFlag::AgentModeWorkflows),
             Self::FileExceededContextLimit => EnablementState::Always,
             Self::AgentModeError => EnablementState::Always,
             Self::AgentModeRequestRetrySucceeded => EnablementState::Always,
@@ -5972,11 +5972,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "InitialWorkingDirectoryConfigurationChanged"
             }
             Self::InputModeChanged => "Input Mode Changed",
-            Self::OpenedWarpAI => "Opened Warp AI",
-            Self::WarpAIRequestIssued => "Warp AI Request Issued",
-            Self::WarpAIAction => "Warp AI Action",
-            Self::UsedWarpAIPreparedPrompt => "Used Warp AI Prepared Prompt",
-            Self::WarpAICharacterLimitExceeded => "Warp AI Character Limit Exceeded",
+            Self::OpenedDerpAI => "Opened Derp AI",
+            Self::DerpAIRequestIssued => "Derp AI Request Issued",
+            Self::DerpAIAction => "Derp AI Action",
+            Self::UsedDerpAIPreparedPrompt => "Used Derp AI Prepared Prompt",
+            Self::DerpAICharacterLimitExceeded => "Derp AI Character Limit Exceeded",
             Self::OpenInputContextMenu => "OpenInputBoxContextMenu",
             Self::InputCutSelectedText => "InputBoxCutSelectedText",
             Self::InputCopySelectedText => "InputBoxCutSelectedText",
@@ -5984,7 +5984,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputPaste => "InputBoxPaste",
             Self::InputCommandSearch => "InputBoxCommandSearch",
             Self::InputAICommandSearch => "InputBoxAICommandSearch",
-            Self::InputAskWarpAI => "InputBoxAskWarpAI",
+            Self::InputAskDerpAI => "InputBoxAskDerpAI",
             Self::SaveAsWorkflowModal => "Opened Save As Workflow Modal",
             Self::ExperimentTriggered => "experiments.client.enroll_client",
             Self::ToggleSyncAllPanesInAllTabs => "Toggle Sync Inputs Across All Panes in All Tabs",
@@ -6001,21 +6001,21 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AddAddedSubshellCommand => "Add Added Subshell Command",
             Self::RemoveAddedSubshellCommand => "Remove Added Subshell Command",
             Self::ReceivedSubshellRcFileDcs => "Received Subshell RC File DCS",
-            Self::ToggleSshWarpification => "Toggle SSH Warpification",
+            Self::ToggleSshDerpification => "Toggle SSH Derpification",
             Self::SetSshExtensionInstallMode => "Set SSH Extension Install Mode",
             Self::SshRemoteServerChoiceDoNotAskAgainToggled => {
                 "SSH Remote Server Choice Do Not Ask Again Toggled"
             }
-            Self::WarpifyFooterShown => "Warpify Footer Shown",
+            Self::DerpifyFooterShown => "Derpify Footer Shown",
             Self::AgentToolbarDismissed => "Agent Toolbar Dismissed",
-            Self::WarpifyFooterAcceptedWarpify => "Warpify Footer Accepted Warpify",
+            Self::DerpifyFooterAcceptedDerpify => "Derpify Footer Accepted Derpify",
             Self::ShowAliasExpansionBanner => "Show Alias Expansion Banner",
             Self::DismissAliasExpansionBanner => "Dismiss Alias Expansion Banner",
             Self::EnableAliasExpansionFromBanner => "Enable Alias Expansion From Banner",
             Self::InitiateReauth => "Initiate Reauth",
             Self::NeedsReauth => "Needs Reauth",
-            Self::WarpDriveOpened => "Warp Drive Opened",
-            Self::ToggleWarpAI => "Toggle Warp AI",
+            Self::DerpDriveOpened => "Derp Drive Opened",
+            Self::ToggleDerpAI => "Toggle Derp AI",
             Self::ToggleSecretRedaction => "Toggle Secret Redaction",
             Self::CustomSecretRegexAdded => "Custom Secret Regex Added",
             Self::ToggleObfuscateSecret => "Toggle Obfuscate Secret",
@@ -6040,13 +6040,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::JumpToSharedSessionParticipant { .. } => "Jumped to Shared Session Participant",
             Self::CopiedSharedSessionLink { .. } => "Copied Shared Session Link",
             Self::WebSessionOpenedOnDesktop { .. } => "Web session opened on desktop",
-            Self::WebCloudObjectOpenedOnDesktop { .. } => "Warp Drive object opened on desktop",
-            Self::DriveSharingOnboardingBlockShown => "Warp Drive Sharing onboarding block shown",
+            Self::WebCloudObjectOpenedOnDesktop { .. } => "Derp Drive object opened on desktop",
+            Self::DriveSharingOnboardingBlockShown => "Derp Drive Sharing onboarding block shown",
             Self::UnsupportedShell => "Unsupported Shell",
             Self::SettingsImportInitiated => "Settings Import Initiated",
             Self::InviteTeammates => "Invited Teammates",
             Self::CopyObjectToClipboard => "Copy Object To Clipboard",
-            Self::OpenAndWarpifyDockerSubshell => "OpenAndWarpifyDockerSubshell",
+            Self::OpenAndDerpifyDockerSubshell => "OpenAndDerpifyDockerSubshell",
             Self::UpdateBlockFilterQuery => "Update Block Filter Query",
             Self::ToggleBlockFilterQuery => "Toggle Block Filter Query",
             Self::ToggleBlockFilterCaseSensitivity => "Toggle Block Filter Case Sensitivity",
@@ -6191,7 +6191,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleAutoIndexing => "Toggle Codebase Context Autoindexing",
             Self::AttachedImagesToAgentModeQuery => "AgentMode.AttachedImages",
             Self::AgentModeRatedResponse => "AgentMode.RatedResponse",
-            Self::ExecutedWarpDrivePrompt => "AgentMode.ExecutedWarpDrivePrompt",
+            Self::ExecutedDerpDrivePrompt => "AgentMode.ExecutedDerpDrivePrompt",
             Self::FileExceededContextLimit => "AgentMode.Code.FileExceededContextLimit",
             Self::AgentModeError => "AgentMode.Error",
             Self::AgentModeRequestRetrySucceeded => "AgentMode.RequestRetrySucceeded",
@@ -6340,7 +6340,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::InitiateAnonymousUserSignup => "An anonymous user initiated the sign up flow",
             Self::AnonymousUserExpirationLockout => {
-                "An anonymous user opened Warp after their conversion deadline and was locked out"
+                "An anonymous user opened Derp after their conversion deadline and was locked out"
             }
             Self::AnonymousUserLinkedFromBrowser => {
                 "Received an auth payload from anonymous user after linking in browser"
@@ -6352,7 +6352,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Anonymous user attempted to create a cloud object past their personal object limit"
             }
             Self::BackgroundBlockStarted => {
-                "Warp created a background-output Block (whenever a processes has been backgrounded and yields some output)"
+                "Derp created a background-output Block (whenever a processes has been backgrounded and yields some output)"
             }
             Self::BaselineCommandLatency => "Command execution time",
             Self::SessionCreation => "Created a tab",
@@ -6447,9 +6447,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Database write error when trying to write app state for session restoration"
             }
             Self::AppStartup => "App is launched",
-            Self::LoggedOutStartup => "Started Warp in the logged-out / signed-out state",
+            Self::LoggedOutStartup => "Started Derp in the logged-out / signed-out state",
             Self::DownloadSource => {
-                "Whether the Warp was installed from the home page or through homebrew"
+                "Whether the Derp was installed from the home page or through homebrew"
             }
             Self::SSHBootstrapAttempt => "Attempted bootstrapping for an SSH session",
             Self::SSHControlMasterError => {
@@ -6484,13 +6484,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::NotificationSent => "Sent desktop notification",
             Self::NotificationFailedToSend => "Failed to send desktop notification",
-            Self::NotificationClicked => "Clicked desktop notification sent from Warp",
+            Self::NotificationClicked => "Clicked desktop notification sent from Derp",
             Self::ToggleShowAgentTips => "Toggled the Show Agent Tips setting in AI settings",
             Self::ToggleFindOption => "Changed settings in Find Toggle",
             Self::SignUpButtonClicked => "Clicked \"Sign Up\" button",
             Self::LoginButtonClicked => "Clicked on \"Log in\" button",
             Self::OpenNewSessionFromFilePath => {
-                "Dragged a file, folder, etc. into Warp to start a session"
+                "Dragged a file, folder, etc. into Derp to start a session"
             }
             Self::OpenTeamFromURI => {
                 "Showed settings view of their newly joined team within the app"
@@ -6541,16 +6541,16 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Opened the launch config YAML file from modal once saved successfully"
             }
             Self::OpenLaunchConfig => "Opened launch config for a session",
-            Self::TeamCreated => "Created a Warp Drive team",
-            Self::TeamJoined => "Joined a Warp Drive team",
-            Self::TeamLeft => "Left a Warp Drive team",
-            Self::TeamLinkCopied => "Copied a Warp Drive team link",
-            Self::RemovedUserFromTeam => "Remove user from Warp Drive team",
-            Self::DeletedWorkflow => "Deleted workflow from Warp Drive team",
-            Self::DeletedNotebook => "Deleted notebook from Warp Drive team",
+            Self::TeamCreated => "Created a Derp Drive team",
+            Self::TeamJoined => "Joined a Derp Drive team",
+            Self::TeamLeft => "Left a Derp Drive team",
+            Self::TeamLinkCopied => "Copied a Derp Drive team link",
+            Self::RemovedUserFromTeam => "Remove user from Derp Drive team",
+            Self::DeletedWorkflow => "Deleted workflow from Derp Drive team",
+            Self::DeletedNotebook => "Deleted notebook from Derp Drive team",
             Self::ToggleApprovalsModal => "Opened or closed teams modal",
             Self::ChangedInviteViewOption => "Toggled between link and invite for invite",
-            Self::SendEmailInvites => "Sent email invites for Warp Drive team",
+            Self::SendEmailInvites => "Sent email invites for Derp Drive team",
             Self::CommandCorrection => "Accepted command correction",
             Self::SetLineHeight => "Set line height through Settings -> Appearance",
             Self::ResourceCenterOpened => "Opened Resource Center pane",
@@ -6578,7 +6578,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::QuitModalCancel => "`Cancel` button on the alert modal was pressed",
             Self::QuitModalDisabled => {
-                "The quit modal dialog has been disabled and will not popup when a user closes Warp while a session is running"
+                "The quit modal dialog has been disabled and will not popup when a user closes Derp while a session is running"
             }
             Self::UserInitiatedLogOut => {
                 "Confirms a user has explicitly logged out of the application"
@@ -6603,14 +6603,14 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InitialWorkingDirectoryConfigurationChanged => {
                 "Replaced the default working directory with a different path"
             }
-            Self::OpenedWarpAI => "Activated Warp AI",
-            Self::WarpAIRequestIssued => "Issued a question to Warp AI",
-            Self::WarpAIAction => "Executed a Warp AI action: Restart, Copy, Insert into terminal",
-            Self::UsedWarpAIPreparedPrompt => {
-                "Used one of the Warp-provided prompts, like \"Show examples\""
+            Self::OpenedDerpAI => "Activated Derp AI",
+            Self::DerpAIRequestIssued => "Issued a question to Derp AI",
+            Self::DerpAIAction => "Executed a Derp AI action: Restart, Copy, Insert into terminal",
+            Self::UsedDerpAIPreparedPrompt => {
+                "Used one of the Derp-provided prompts, like \"Show examples\""
             }
-            Self::WarpAICharacterLimitExceeded => {
-                "Attempted to ask a question longer than 1k chars to Warp AI"
+            Self::DerpAICharacterLimitExceeded => {
+                "Attempted to ask a question longer than 1k chars to Derp AI"
             }
             Self::OpenInputContextMenu => "Opened the Input Editor's context menu",
             Self::InputCutSelectedText => {
@@ -6629,7 +6629,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputAICommandSearch => {
                 "Opened AI Command Search via the Input Editor's context menu (right clicking the buffer)"
             }
-            Self::InputAskWarpAI => "Clicked \"Ask Warp AI\" from the Input Editor's context menu",
+            Self::InputAskDerpAI => "Clicked \"Ask Derp AI\" from the Input Editor's context menu",
             Self::SaveAsWorkflowModal => {
                 "Opened the modal to create a new workflow using a Block's context--command, etc."
             }
@@ -6660,28 +6660,28 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Enabled or disabled preserving the active tab color"
             }
             Self::ShowSubshellBanner => {
-                "Displayed the banner asking whether Warp should Warpify the current session via Warp's subshell wrapper"
+                "Displayed the banner asking whether Derp should Derpify the current session via Derp's subshell wrapper"
             }
             Self::DeclineSubshellBootstrap => {
-                "Developer declined the Warp banner to Warpify the current session"
+                "Developer declined the Derp banner to Derpify the current session"
             }
             Self::TriggerSubshellBootstrap => {
-                "Attempted to Warpify the current session via Warp's subshell wrapper"
+                "Attempted to Derpify the current session via Derp's subshell wrapper"
             }
             Self::AddDenylistedSubshellCommand => {
-                "Explicitly prevent a command from being Warpified via Warp's subshell wrapper"
+                "Explicitly prevent a command from being Derpified via Derp's subshell wrapper"
             }
             Self::RemoveDenylistedSubshellCommand => {
-                "Removed a command from the list of commands to IGNORE when trying to Warpify via Warp's subshell wrapper"
+                "Removed a command from the list of commands to IGNORE when trying to Derpify via Derp's subshell wrapper"
             }
             Self::AddAddedSubshellCommand => {
-                "Added a command to be automatically Warpified via Warp's subshell wrapper"
+                "Added a command to be automatically Derpified via Derp's subshell wrapper"
             }
             Self::RemoveAddedSubshellCommand => {
-                "Removed a command from the list of commands to automatically Warpify via Warp's subshell wrapper"
+                "Removed a command from the list of commands to automatically Derpify via Derp's subshell wrapper"
             }
-            Self::ReceivedSubshellRcFileDcs => "Spawned a subshell to be automatically Warpified",
-            Self::ToggleSshWarpification => "Changed the setting for SSH sessions to be warified",
+            Self::ReceivedSubshellRcFileDcs => "Spawned a subshell to be automatically Derpified",
+            Self::ToggleSshDerpification => "Changed the setting for SSH sessions to be warified",
             Self::SetSshExtensionInstallMode => {
                 "Changed the SSH extension install mode (always ask / always allow / always skip)"
             }
@@ -6689,13 +6689,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Toggled the 'Don't ask me this again' checkbox on the SSH remote-server choice block"
             }
             Self::AgentModeRatedResponse => "User rated an Agent Mode response",
-            Self::WarpifyFooterShown => {
-                "Displayed the warpify footer for a detected subshell or SSH session"
+            Self::DerpifyFooterShown => {
+                "Displayed the derpify footer for a detected subshell or SSH session"
             }
             Self::AgentToolbarDismissed => "User dismissed the use-agent toolbar",
-            Self::WarpifyFooterAcceptedWarpify => "User clicked Warpify in the warpify footer",
+            Self::DerpifyFooterAcceptedDerpify => "User clicked Derpify in the derpify footer",
             Self::ShowAliasExpansionBanner => {
-                "Displayed the banner asking whether Warp should automatically expand aliases within the Input Editor"
+                "Displayed the banner asking whether Derp should automatically expand aliases within the Input Editor"
             }
             Self::EnableAliasExpansionFromBanner => {
                 "Enabled automatic alias expansion within the Input Editor from the banner"
@@ -6704,7 +6704,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Dismissed the banner to enable automatic alias expansion within the Input Editor"
             }
             Self::ShowVimKeybindingsBanner => {
-                "Displayed the banner asking whether Warp should enable Vim keybindings in the Input Editor"
+                "Displayed the banner asking whether Derp should enable Vim keybindings in the Input Editor"
             }
             Self::EnableVimKeybindingsFromBanner => {
                 "Enabled Vim keybindings in the Input Editor from the banner"
@@ -6714,9 +6714,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::InitiateReauth => "Started the flow to re-authenticate the client",
             Self::NeedsReauth => "User needs to re-authenticate",
-            Self::WarpDriveOpened => "Opened Warp Drive panel",
-            Self::ToggleWarpAI => {
-                "Toggled Warp AI--an AI assistant to help you debug errors, look up forgotten commands and more"
+            Self::DerpDriveOpened => "Opened Derp Drive panel",
+            Self::ToggleDerpAI => {
+                "Toggled Derp AI--an AI assistant to help you debug errors, look up forgotten commands and more"
             }
             Self::ToggleSecretRedaction => {
                 "Toggled on/off the setting for Secret Redaction - attempts to redact secrets and sensitive information"
@@ -6725,18 +6725,18 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleObfuscateSecret => "Revealed or hid a secret",
             Self::CopySecret => "Copied a secret's obfuscated contents to clipboard",
             Self::AutoGenerateMetadataSuccess => {
-                "Successfully generated metadata for a workflow using Warp AI"
+                "Successfully generated metadata for a workflow using Derp AI"
             }
             Self::AutoGenerateMetadataError => {
-                "Failed to generate metadata for a workflow using Warp AI"
+                "Failed to generate metadata for a workflow using Derp AI"
             }
-            Self::UpdateSortingChoice => "Modified the sorting scheme for Warp Drive objects",
+            Self::UpdateSortingChoice => "Modified the sorting scheme for Derp Drive objects",
             Self::UndoClose => "Re-opened a closed tab or window (undo closing a tab or window)",
             Self::PtyThroughput => "A sample of the max PTY throughput in bytes/sec",
-            Self::DuplicateObject => "Cloned a Warp Drive object",
-            Self::ExportObject => "Exported a Warp Drive object",
+            Self::DuplicateObject => "Cloned a Derp Drive object",
+            Self::ExportObject => "Exported a Derp Drive object",
             Self::CommandFileRun => {
-                "Opened a .cmd or unix executable file and ran it directly in Warp"
+                "Opened a .cmd or unix executable file and ran it directly in Derp"
             }
             Self::PageUpDownInEditorPressed => {
                 "Pressed `PAGE-UP` or `PAGE-DOWN` within the Input Editor"
@@ -6744,7 +6744,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::StartedSharingCurrentSession => "Started sharing the current session",
             Self::StoppedSharingCurrentSession => "Halted sharing the current session",
             Self::JoinedSharedSession => {
-                "When you join another instance of Warp using shared sessions"
+                "When you join another instance of Derp using shared sessions"
             }
             Self::SharedSessionModalUpgradePressed => {
                 "Pressed upgrade after reaching max session sharing limit"
@@ -6763,18 +6763,18 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Shared session viewed on the web was opened on the desktop"
             }
             Self::WebCloudObjectOpenedOnDesktop => {
-                "Warp Drive object on the web was opened on the desktop"
+                "Derp Drive object on the web was opened on the desktop"
             }
             Self::DriveSharingOnboardingBlockShown => {
-                "Showed onboarding block for Warp Drive sharing"
+                "Showed onboarding block for Derp Drive sharing"
             }
-            Self::UnsupportedShell => "Booted Warp with a shell that isn't supported",
-            Self::LogOut => "Logged out of the Warp client",
+            Self::UnsupportedShell => "Booted Derp with a shell that isn't supported",
+            Self::LogOut => "Logged out of the Derp client",
             Self::SettingsImportInitiated => "Started the import settings flow for new users",
-            Self::InviteTeammates => "Sent emails to invite teammates to join Warp Drive team",
+            Self::InviteTeammates => "Sent emails to invite teammates to join Derp Drive team",
             Self::CopyObjectToClipboard => "Copied an object to the user's keyboard",
-            Self::OpenAndWarpifyDockerSubshell => {
-                "Warpifying a docker subshell from using the docker extension"
+            Self::OpenAndDerpifyDockerSubshell => {
+                "Derpifying a docker subshell from using the docker extension"
             }
             Self::UpdateBlockFilterQuery => "When a new filter is applied to a block",
             Self::UpdateBlockFilterQueryContextLines => {
@@ -6855,7 +6855,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ObjectLinkCopied => "The web link to an object has been copied.",
             Self::FileTreeToggled => "Opened the file tree/project explorer",
             Self::GlobalSearchOpened => "Opened the global search view",
-            Self::GlobalSearchQueryStarted => "Started a global search (warp_ripgrep) search",
+            Self::GlobalSearchQueryStarted => "Started a global search (derp_ripgrep) search",
             Self::GlobalSearchQueryCompleted => {
                 "Completed a global search across local and remote sources"
             }
@@ -6920,20 +6920,20 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::AgentModeOpenedCitation => "Opened a citation that was surfaced in agent mode",
             Self::OpenedSharingDialog => {
-                "Opened the sharing settings dialog for a session or Warp Drive object"
+                "Opened the sharing settings dialog for a session or Derp Drive object"
             }
 			Self::ToggleGlobalAI => "Toggled global AI enablement.",
 			Self::SuperGrokSubscriptionConnectInitiated => "User clicked Connect SuperGrok subscription; OAuth connection attempt initiated.",
             Self::SuperGrokSubscriptionConnectFinished => "SuperGrok subscription OAuth connection flow finished (success or failure).",
             Self::ToggleActiveAI => "Toggled active AI enablement.",
             Self::ToggleLigatureRendering => "Toggled ligature rendering",
-            Self::WorkflowAliasAdded => "Added an alias to a Warp Drive workflow",
-            Self::WorkflowAliasRemoved => "Removed an alias from a Warp Drive workflow",
+            Self::WorkflowAliasAdded => "Added an alias to a Derp Drive workflow",
+            Self::WorkflowAliasRemoved => "Removed an alias from a Derp Drive workflow",
             Self::WorkflowAliasArgumentEdited => {
-                "Edited an argument in a Warp Drive workflow alias"
+                "Edited an argument in a Derp Drive workflow alias"
             }
             Self::WorkflowAliasEnvVarsAttached => {
-                "Added or removed environment variables for a Warp Drive workflow alias"
+                "Added or removed environment variables for a Derp Drive workflow alias"
             }
             Self::ToggledAgentModeAutoexecuteReadonlyCommandsSetting => {
                 "Toggled setting to autoexecute readonly Agent Mode requested commands"
@@ -6962,11 +6962,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             #[cfg(windows)]
             Self::AutoupdateMutexTimeout => {
-                "The Windows auto-update installer timed out waiting for Warp to release its mutex; a force-kill was attempted"
+                "The Windows auto-update installer timed out waiting for Derp to release its mutex; a force-kill was attempted"
             }
             #[cfg(windows)]
             Self::AutoupdateForcekillFailed { .. } => {
-                "The Windows auto-update installer failed to force-kill Warp after the mutex timeout"
+                "The Windows auto-update installer failed to force-kill Derp after the mutex timeout"
             }
             #[cfg(windows)]
             Self::AutoupdateMinidumpCleanupFailed { .. } => {
@@ -6978,7 +6978,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleAutoIndexing => {
                 "Toggled on/off the enablement of autoindexing for codebase context."
             }
-            Self::ExecutedWarpDrivePrompt => "Executed a saved prompt.",
+            Self::ExecutedDerpDrivePrompt => "Executed a saved prompt.",
             Self::FileExceededContextLimit => "File from AI exceeded context limit",
             Self::AgentModeError => "Received an error when getting Agent Mode response",
             Self::AgentModeRequestRetrySucceeded => {
@@ -7084,7 +7084,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "User copied a session link from the Agent Management View"
             }
             Self::DetectedIsolationPlatform { .. } => {
-                "Detected that Warp is running in an isolated sandbox"
+                "Detected that Derp is running in an isolated sandbox"
             }
             Self::AgentTipShown => "Selected an Agent Tip to show in the Agent Mode status bar",
             Self::AgentTipClicked => "User clicked a link or action in an Agent Tip",
@@ -7130,7 +7130,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CodexModalOpened => "User opened the Codex modal",
             Self::CodexModalUseCodexClicked => "User clicked 'Use Codex' in the Codex modal",
             Self::LinearIssueLinkOpened => {
-                "User opened a warp://linear deeplink to work on an issue"
+                "User opened a derp://linear deeplink to work on an issue"
             }
             Self::CloudAgentCapacityModalOpened => "User opened the cloud agent capacity modal",
             Self::CloudAgentCapacityModalDismissed => {
@@ -7198,7 +7198,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
     }
 }
 
-warp_core::register_telemetry_event!(TelemetryEvent);
+derp_core::register_telemetry_event!(TelemetryEvent);
 
 #[cfg(test)]
 #[path = "events_tests.rs"]

@@ -1,6 +1,6 @@
 # Local-to-Cloud Handoff: `&` Entrypoint — Tech Spec
 Product spec: `specs/REMOTE-1558/PRODUCT.md`
-Linear: [REMOTE-1558](https://linear.app/warpdotdev/issue/REMOTE-1558)
+Linear: [REMOTE-1558](https://linear.app/derpdotdev/issue/REMOTE-1558)
 ## Context
 REMOTE-1558 adds a keyboard-first local-to-cloud launch path: local AgentView users type `& query`, optionally choose a cloud environment from the local footer, and press Enter once. The same auto-run path is also exposed through `/handoff query`; no-query `/handoff` and chip flows activate `&` handoff-compose mode.
 Current code paths this builds on:
@@ -86,7 +86,7 @@ If no environment was explicitly selected, rely on the existing selector/default
 Extend `PendingHandoff` with:
 - `auto_submit: Option<PendingCloudLaunch>` containing prompt and attachments;
 - `explicit_environment_id: Option<SyncId>` or an equivalent environment-source marker.
-- a submission phase that can distinguish idle manual compose, optimistically queued auto-submit, and active server dispatch. This can be a field on `PendingHandoff`, a small enum on `AmbientAgentViewModel`, or an equivalent representation, but callers need to know whether the user's prompt is hidden because Warp has queued it.
+- a submission phase that can distinguish idle manual compose, optimistically queued auto-submit, and active server dispatch. This can be a field on `PendingHandoff`, a small enum on `AmbientAgentViewModel`, or an equivalent representation, but callers need to know whether the user's prompt is hidden because Derp has queued it.
 `PendingCloudLaunch` should carry both:
 - the spawn-ready prompt and `AttachmentInput`s; and
 - a restoration draft containing the prompt plus pending image/file attachment display state for retry.

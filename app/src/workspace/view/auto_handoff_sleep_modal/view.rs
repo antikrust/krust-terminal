@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use derp_core::ui::theme::Fill;
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::{
     Align, CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, Image, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -24,7 +24,7 @@ const HERO_HEIGHT: f32 = 92.;
 const HERO_IMAGE_PATH: &str = "async/png/onboarding/auto_handoff_sleep_banner.png";
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -182,7 +182,7 @@ impl AutoHandoffSleepModal {
 
     fn render_description(appearance: &Appearance) -> Box<dyn Element> {
         Text::new(
-            "Give Warp the option to automatically move active local agents to the cloud when \
+            "Give Derp the option to automatically move active local agents to the cloud when \
              your computer sleeps.",
             appearance.ui_font_family(),
             14.,
@@ -237,7 +237,7 @@ impl View for AutoHandoffSleepModal {
         "AutoHandoffSleepModal"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &derpui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

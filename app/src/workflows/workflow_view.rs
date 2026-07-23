@@ -10,25 +10,25 @@ use pathfinder_geometry::vector::vec2f;
 use string_offset::CharOffset;
 use syntax_highlightable::SyntaxHighlightable;
 use url::Url;
-use warp_core::context_flag::ContextFlag;
-use warp_core::settings::Setting;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warp_editor::editor::NavigationKey;
-use warp_errors::report_error;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derp_core::context_flag::ContextFlag;
+use derp_core::settings::Setting;
+use derp_core::ui::theme::AnsiColorIdentifier;
+use derp_editor::editor::NavigationKey;
+use derp_errors::report_error;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Rect, ScrollbarWidth, Shrinkable, Stack,
 };
-use warpui::fonts::{FamilyId, Weight};
-use warpui::keymap::EditableBinding;
-use warpui::platform::Cursor;
-use warpui::text_layout::TextStyle;
-use warpui::ui_components::button::{Button, ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{FamilyId, Weight};
+use derpui::keymap::EditableBinding;
+use derpui::platform::Cursor;
+use derpui::text_layout::TextStyle;
+use derpui::ui_components::button::{Button, ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -47,9 +47,9 @@ use crate::cloud_object::model::view::CloudViewModel;
 use crate::cloud_object::{
     CloudObject, CloudObjectEventEntrypoint, ObjectType, Owner, Revision, Space,
 };
-use crate::drive::cloud_object_styling::warp_drive_icon_color;
+use crate::drive::cloud_object_styling::derp_drive_icon_color;
 use crate::drive::drive_helpers::has_feature_gated_anonymous_user_reached_workflow_limit;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::DerpDriveItemId;
 use crate::drive::sharing::{ContentEditability, ShareableObject, SharingAccessLevel};
 use crate::drive::workflows::ai_assist::GeneratedCommandMetadataError;
 use crate::drive::workflows::arguments::ArgumentsState;
@@ -60,7 +60,7 @@ use crate::drive::workflows::workflow_arg_selector::{
     WorkflowArgSelector, WorkflowArgSelectorEvent,
 };
 use crate::drive::workflows::workflow_arg_type_helpers::{self, ArgumentEditorRowIndex};
-use crate::drive::{CloudObjectTypeAndId, DriveObjectType, OpenWarpDriveObjectSettings};
+use crate::drive::{CloudObjectTypeAndId, DriveObjectType, OpenDerpDriveObjectSettings};
 use crate::editor::{
     EditorOptions, EditorView, EnterAction, EnterSettings, Event as EditorEvent, InteractionState,
     PlainTextEditorViewAction as EditorAction, PropagateAndNoOpNavigationKeys,
@@ -106,7 +106,7 @@ pub mod env_var_selector;
 mod syntax_highlightable;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::id;
+    use derpui::keymap::macros::id;
     app.register_editable_bindings([EditableBinding::new(
         "workflowview:save",
         "Save workflow",
@@ -170,7 +170,7 @@ const AI_ASSIST_LOADING_TEXT: &str = "Loading";
 
 const ALIAS_HELP_TEXT: &str = "Aliases allow you to create short strings to execute workflows. Each alias can have different argument values and environment variables, and aliases are personal to you.";
 
-const RUN_ON_DESKTOP_BUTTON_TEXT: &str = "Run in Warp";
+const RUN_ON_DESKTOP_BUTTON_TEXT: &str = "Run in Derp";
 const RUN_ON_DESKTOP_BUTTON_WIDTH: f32 = 108.;
 
 const UNSAVED_CHANGES_TEXT: &str = "You have unsaved changes.";
@@ -211,7 +211,7 @@ impl WorkflowEditorErrorState {
 
 #[derive(Debug, Clone)]
 pub enum WorkflowAction {
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInDerpDrive(DerpDriveItemId),
     AddArgument,
     ToggleViewMode,
     RunWorkflow,
@@ -235,7 +235,7 @@ pub enum WorkflowViewEvent {
     Pane(PaneEvent),
     CreatedWorkflow(SyncId),
     UpdatedWorkflow(SyncId),
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInDerpDrive(DerpDriveItemId),
     OpenDriveObjectShareDialog {
         cloud_object_type_and_id: CloudObjectTypeAndId,
         invitee_email: Option<String>,
@@ -577,7 +577,7 @@ impl WorkflowView {
                 {
                     self.load(
                         workflow.clone(),
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         self.workflow_view_mode,
                         ctx,
                     );
@@ -597,7 +597,7 @@ impl WorkflowView {
                 {
                     self.load(
                         workflow,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         self.workflow_view_mode,
                         ctx,
                     );
@@ -615,7 +615,7 @@ impl WorkflowView {
         if let Some(workflow) = cloud_workflow {
             self.load(
                 workflow,
-                &OpenWarpDriveObjectSettings::default(),
+                &OpenDerpDriveObjectSettings::default(),
                 self.workflow_view_mode,
                 ctx,
             );
@@ -625,7 +625,7 @@ impl WorkflowView {
     pub fn wait_for_initial_load_then_load(
         &mut self,
         workflow_id: SyncId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         mode: WorkflowViewMode,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
@@ -666,7 +666,7 @@ impl WorkflowView {
     fn fetch_and_load_workflow(
         &mut self,
         workflow_id: ServerId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         mode: WorkflowViewMode,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
@@ -704,7 +704,7 @@ impl WorkflowView {
     pub fn load(
         &mut self,
         workflow: CloudWorkflow,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         mode: WorkflowViewMode,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -749,7 +749,7 @@ impl WorkflowView {
                 pane_config.set_title(workflow_name, ctx);
                 if let Some(server_id) = workflow.id.into_server() {
                     pane_config.set_shareable_object(
-                        Some(ShareableObject::WarpDriveObject(server_id)),
+                        Some(ShareableObject::DerpDriveObject(server_id)),
                         ctx,
                     );
                 }
@@ -835,8 +835,8 @@ impl WorkflowView {
         self.refresh_pane_overflow_menu(ctx);
 
         if let Some(focused_folder_id) = settings.focused_folder_id.map(SyncId::ServerId) {
-            self.view_in_warp_drive(
-                WarpDriveItemId::Object(CloudObjectTypeAndId::Folder(focused_folder_id)),
+            self.view_in_derp_drive(
+                DerpDriveItemId::Object(CloudObjectTypeAndId::Folder(focused_folder_id)),
                 ctx,
             );
         }
@@ -1566,7 +1566,7 @@ impl WorkflowView {
     }
 
     /// Save the workflow and associated state. This makes a best-effort attempt to not
-    /// unnecessarily modify the backing Warp Drive object.
+    /// unnecessarily modify the backing Derp Drive object.
     fn save(&mut self, ctx: &mut ViewContext<Self>) {
         if FeatureFlag::WorkflowAliases.is_enabled() && self.are_aliases_dirty(ctx) {
             self.save_aliases(ctx);
@@ -2050,8 +2050,8 @@ impl WorkflowView {
                 } else {
                     Icon::Workflow
                 }
-                .to_warpui_icon(
-                    warp_drive_icon_color(
+                .to_derpui_icon(
+                    derp_drive_icon_color(
                         appearance,
                         if self.is_for_agent_mode {
                             DriveObjectType::AgentModeWorkflow
@@ -2205,7 +2205,7 @@ impl WorkflowView {
                 let mut stack = Stack::new().with_child(
                     ConstrainedBox::new(
                         Icon::HelpCircle
-                            .to_warpui_icon(
+                            .to_derpui_icon(
                                 appearance
                                     .theme()
                                     .sub_text_color(appearance.theme().background()),
@@ -2356,7 +2356,7 @@ impl WorkflowView {
                 let text_and_icon = TextAndIcon::new(
                     alignment,
                     label,
-                    icon.to_warpui_icon(appearance.theme().active_ui_text_color()),
+                    icon.to_derpui_icon(appearance.theme().active_ui_text_color()),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(10., 10.),
@@ -2451,7 +2451,7 @@ impl WorkflowView {
                     .finish();
 
                 let button_with_tool_tip = appearance.ui_builder().tool_tip_on_element(
-                    "Generate a title, descriptions, or parameters with Warp AI".to_string(),
+                    "Generate a title, descriptions, or parameters with Derp AI".to_string(),
                     self.ui_state_handles.ai_assist_tool_tip.clone(),
                     rendered_button,
                     ParentAnchor::TopMiddle,
@@ -2593,8 +2593,8 @@ impl WorkflowView {
         })
     }
 
-    fn view_in_warp_drive(&mut self, id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
-        ctx.emit(WorkflowViewEvent::ViewInWarpDrive(id));
+    fn view_in_derp_drive(&mut self, id: DerpDriveItemId, ctx: &mut ViewContext<Self>) {
+        ctx.emit(WorkflowViewEvent::ViewInDerpDrive(id));
     }
 
     fn issue_request(&mut self, ctx: &mut ViewContext<Self>) {
@@ -2829,7 +2829,7 @@ impl WorkflowView {
                     .with_children([
                         ConstrainedBox::new(
                             Icon::Trash
-                                .to_warpui_icon(appearance.theme().foreground())
+                                .to_derpui_icon(appearance.theme().foreground())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -2952,7 +2952,7 @@ impl View for WorkflowView {
                     self.breadcrumbs.clone(),
                     appearance,
                     |ctx, _, breadcrumb| {
-                        ctx.dispatch_typed_action(WorkflowAction::ViewInWarpDrive(
+                        ctx.dispatch_typed_action(WorkflowAction::ViewInDerpDrive(
                             breadcrumb.kind.into_item_id(),
                         ));
                     },
@@ -3045,7 +3045,7 @@ impl View for WorkflowView {
                 SCROLLBAR_WIDTH,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                derpui::elements::Fill::None,
             )
             .finish(),
         );
@@ -3116,7 +3116,7 @@ impl TypedActionView for WorkflowView {
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            WorkflowAction::ViewInWarpDrive(id) => self.view_in_warp_drive(*id, ctx),
+            WorkflowAction::ViewInDerpDrive(id) => self.view_in_derp_drive(*id, ctx),
             WorkflowAction::AddArgument => self.add_argument(ctx),
             WorkflowAction::ToggleViewMode => self.toggle_view_mode(ctx),
             WorkflowAction::CloseUnsavedDialog => self.hide_unsaved_changes_dialog(ctx),
@@ -3185,7 +3185,7 @@ impl BackingView for WorkflowView {
         let mut menu_items = Vec::new();
 
         // Fork: no "Copy link" — Drive objects are local-only, and object
-        // links point at Warp's servers. Sharing is file export.
+        // links point at Derp's servers. Sharing is file export.
 
         if self.can_open_on_desktop(ctx) {
             if let Some(link) = self.workflow_link(ctx) {

@@ -1,5 +1,5 @@
 # Handoff Environment Selection: PWD-Based Overlap at Activation
-Linear: [APP-4427](https://linear.app/warpdotdev/issue/APP-4427)
+Linear: [APP-4427](https://linear.app/derpdotdev/issue/APP-4427)
 
 ## Summary
 When a user enters `&` handoff compose mode or uses `/handoff`, auto-select the cloud environment that matches the repo they're currently working in — at activation time, not after pressing Enter. This replaces the current two-layer system where the environment visibly shifts after the handoff is dispatched.

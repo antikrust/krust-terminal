@@ -1,13 +1,13 @@
-use warpui::elements::{Container, Flex, MainAxisSize, MouseStateHandle, ParentElement};
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::elements::{Container, Flex, MainAxisSize, MouseStateHandle, ParentElement};
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::style::{self, MODAL_PADDING};
 use crate::appearance::Appearance;
 
-const SESSION_BUILD_FREE_PLAN_SUBHEADER: &str = "Warp's free and pro plans come with a limited number of shared sessions.\n\nFor increased access to session sharing upgrade to the Build plan.";
+const SESSION_BUILD_FREE_PLAN_SUBHEADER: &str = "Derp's free and pro plans come with a limited number of shared sessions.\n\nFor increased access to session sharing upgrade to the Build plan.";
 const VIEW_PLANS_TEXT: &str = "View plans";
 
 pub struct DeniedBody {

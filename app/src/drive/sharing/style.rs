@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::color::ColorU;
-use warpui::elements::{CornerRadius, Radius};
-use warpui::fonts::Weight;
-use warpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui::ui_components::text::Span;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui::color::ColorU;
+use derpui::elements::{CornerRadius, Radius};
+use derpui::fonts::Weight;
+use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui::ui_components::text::Span;
 
 /// The padding around ACL items in the sharing dialog.
 pub const ACL_ITEM_PADDING: f32 = 16.;

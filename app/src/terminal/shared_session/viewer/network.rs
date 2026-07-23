@@ -27,11 +27,11 @@ use session_sharing_protocol::viewer::{
     DownstreamMessage, InitPayload, RoleUpdatedReason, SessionEndedReason, UpstreamMessage,
     ViewerRemovedReason,
 };
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_server_client::iap::IapManager;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_server_client::iap::IapManager;
+use derpui::r#async::{SpawnedFutureHandle, Timer};
+use derpui::{
     Entity, ModelContext, ModelHandle, RequestState, RetryOption, SingletonEntity, WeakViewHandle,
 };
 use websocket::{Message, Sink, Stream, WebsocketMessage as _};
@@ -225,7 +225,7 @@ impl Network {
         let session_id = SessionId::new();
         let viewer_id = ParticipantId::new();
         let viewer_firebase_uid = UserUid::new("mock_firebase_uid");
-        let active_prompt = ActivePrompt::WarpPrompt("test warp prompt".to_owned());
+        let active_prompt = ActivePrompt::DerpPrompt("test derp prompt".to_owned());
 
         let model = Network {
             session_id,

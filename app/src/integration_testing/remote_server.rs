@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
-use warp_core::{HostId, SessionId};
-use warp_errors::report_error;
-use warpui::integration::{
+use derp_core::{HostId, SessionId};
+use derp_errors::report_error;
+use derpui::integration::{
     AssertionCallback, AssertionOutcome, AssertionWithDataCallback, StepDataMap, TestStep,
 };
-use warpui::{async_assert, async_assert_eq, App, SingletonEntity, WindowId};
+use derpui::{async_assert, async_assert_eq, App, SingletonEntity, WindowId};
 
 use crate::integration_testing::view_getters::single_terminal_view_for_tab;
 use crate::remote_server::manager::{

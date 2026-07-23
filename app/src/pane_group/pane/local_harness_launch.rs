@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use shell_words::quote as shell_quote;
 use uuid::Uuid;
-use warp_cli::agent::Harness;
+use derp_cli::agent::Harness;
 
 use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
 use crate::ai::agent_sdk::driver::harness::{
@@ -38,8 +38,8 @@ async fn ensure_local_claude_child_plugins(manager: &dyn CliAgentPluginManager) 
     // hidden local children retain the same notification support as regular
     // Claude sessions. The exception is local marketplace override testing:
     // installing/updating the notification plugin re-adds the public
-    // claude-code-warp marketplace, which clobbers a developer's local
-    // claude-code-warp-internal override used for oz-harness-support testing.
+    // claude-code-derp marketplace, which clobbers a developer's local
+    // claude-code-derp-internal override used for oz-harness-support testing.
     if !manager.has_local_marketplace_override() {
         let plugin_result = if manager.needs_update() {
             manager.update().await
@@ -83,7 +83,7 @@ pub(super) fn validate_local_harness_shell(shell_type: Option<ShellType>) -> Res
     }
 }
 
-const LOCAL_CLAUDE_CHILD_ORCHESTRATION_INSTRUCTIONS: &str = r#"You are a local Claude Code child agent launched by a lead agent in Warp.
+const LOCAL_CLAUDE_CHILD_ORCHESTRATION_INSTRUCTIONS: &str = r#"You are a local Claude Code child agent launched by a lead agent in Derp.
 
 Coordinate with the lead agent through the Oz CLI messaging environment:
 - Your run id is in OZ_RUN_ID.
@@ -206,7 +206,7 @@ pub(super) async fn prepare_local_harness_child_launch(
                 .map_err(|error: AgentDriverError| error.to_string())?;
             // Local child harness panes inherit the user's existing local
             // auth/session state. We still prepare harness config files here,
-            // but there are no Warp-managed secrets to materialize into the
+            // but there are no Derp-managed secrets to materialize into the
             // hidden child pane.
             prepare_claude_environment_config(&working_dir, &HashMap::new())
                 .map_err(|error| error.to_string())?;

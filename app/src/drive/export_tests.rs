@@ -6,8 +6,8 @@ use std::sync::Arc;
 use futures::channel::oneshot;
 use parking_lot::Mutex;
 use tempfile::TempDir;
-use warp_util::path::ShellFamily;
-use warpui::{AddSingletonModel, App, SingletonEntity, WindowId};
+use derp_util::path::ShellFamily;
+use derpui::{AddSingletonModel, App, SingletonEntity, WindowId};
 
 use super::{safe_filename, ExportEvent, ExportId, ExportManager};
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFact, CloudAIFactModel};
@@ -284,7 +284,7 @@ fn test_export_notebook_with_embeds() {
                 r#"
 # This is a notebook
 It has *text*.
-```warp-embedded-object
+```derp-embedded-object
 id: {}
 ```
 
@@ -321,7 +321,7 @@ print("hello")
             r#"
 # This is a notebook
 It has *text*\.
-```warp-embedded-object
+```derp-embedded-object
 ---
 name: Test workflow
 command: echo hello world
@@ -409,7 +409,7 @@ fn test_safe_filename() {
             "allowed $special %characters",
             "allowed $special %characters",
         ),
-        ("warp:drive", "warp_drive"),
+        ("derp:drive", "derp_drive"),
         ("a/b/c/d:e", "a_b_c_d_e"),
         ("the\0sneaky\0null", "the_sneaky_null"),
         ("ascii\x03control\x1bchars", "ascii_control_chars"),

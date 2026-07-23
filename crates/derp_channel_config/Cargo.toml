@@ -1,0 +1,12 @@
+[package]
+name = "derp_channel_config"
+edition = "2021"
+description = "Loads per-channel ChannelConfig for Derp's channel binaries"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+command.workspace = true
+serde_json.workspace = true
+derp_core.workspace = true

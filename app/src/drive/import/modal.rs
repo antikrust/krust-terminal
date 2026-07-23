@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Flex, Highlight, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, ScrollbarWidth,
     Shrinkable, Stack, Text,
 };
-use warpui::platform::{FilePickerConfiguration, FileType};
-use warpui::presenter::ChildView;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::platform::{FilePickerConfiguration, FileType};
+use derpui::presenter::ChildView;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -20,7 +20,7 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{CloudObject, Owner};
 use crate::server::ids::SyncId;
 use crate::server::sync_queue::SyncQueue;
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::DerpTheme;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 const CLOSE_BUTTON_SIZE: f32 = 24.;
@@ -182,7 +182,7 @@ impl ImportModal {
     fn render_breadcrumbs(
         &self,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &DerpTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let (breadcrumb_text, highlight_indices) = self.breadcrumb(app);
@@ -220,7 +220,7 @@ impl ImportModal {
     fn render_header(
         &self,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &DerpTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let top_row = Flex::row()
@@ -256,7 +256,7 @@ impl ImportModal {
             .finish()
     }
 
-    fn render_body(&self, theme: &WarpTheme) -> Box<dyn Element> {
+    fn render_body(&self, theme: &DerpTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 ClippedScrollable::vertical(

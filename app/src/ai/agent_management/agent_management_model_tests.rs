@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_if_error;
-use warpui::{App, EntityId, ModelHandle, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derp_errors::report_if_error;
+use derpui::{App, EntityId, ModelHandle, SingletonEntity};
 
 use super::AgentNotificationsModel;
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;

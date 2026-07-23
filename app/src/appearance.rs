@@ -1,6 +1,6 @@
 use settings::Setting as _;
-use warpui::fonts::FamilyId;
-use warpui::{AddSingletonModel, AppContext, AssetProvider, Entity, ModelContext, SingletonEntity};
+use derpui::fonts::FamilyId;
+use derpui::{AddSingletonModel, AppContext, AssetProvider, Entity, ModelContext, SingletonEntity};
 
 #[cfg(target_os = "macos")]
 mod macos_app_icon {
@@ -8,20 +8,20 @@ mod macos_app_icon {
     pub use objc2::{AnyThread, MainThreadMarker};
     pub use objc2_app_kit::{NSApplication, NSImage, NSWorkspace, NSWorkspaceIconCreationOptions};
     pub use objc2_foundation::{ns_string, NSBundle, NSString};
-    pub use warp_core::channel::{Channel, ChannelState};
+    pub use derp_core::channel::{Channel, ChannelState};
 
     pub use crate::settings::app_icon::{AppIcon, AppIconSettings, AppIconSettingsChangedEvent};
 }
 use anyhow::anyhow;
 #[cfg(target_os = "macos")]
 use macos_app_icon::*;
-pub use warp_core::ui::appearance::{Appearance, AppearanceEvent};
+pub use derp_core::ui::appearance::{Appearance, AppearanceEvent};
 
 use crate::settings::{
     active_theme_kind, FontSettings, FontSettingsChangedEvent, MonospaceFontSize, Settings,
     ThemeSettings,
 };
-use crate::themes::theme::{ThemeKind, WarpTheme};
+use crate::themes::theme::{ThemeKind, DerpTheme};
 use crate::ASSETS;
 
 /// Manages the state of the app-wide Appearance settings, it is responsible
@@ -31,7 +31,7 @@ use crate::ASSETS;
 pub struct AppearanceManager {
     // The transient theme is a theme that is set by the user but not saved
     // as a setting. It is used when the user is actively choosing a theme.
-    transient_theme: Option<WarpTheme>,
+    transient_theme: Option<DerpTheme>,
 
     #[cfg(target_os = "macos")]
     app_icon_at_startup: AppIcon,
@@ -232,7 +232,7 @@ impl AppearanceManager {
                 log::warn!("Failed to get dock tile plugin bundle");
                 return;
             };
-            let plugin_name = ns_string!("WarpDockTilePlugin.docktileplugin");
+            let plugin_name = ns_string!("DerpDockTilePlugin.docktileplugin");
             let plugin_path = plugins_path.stringByAppendingPathComponent(plugin_name);
             let Some(plugin_bundle) = NSBundle::bundleWithPath(&plugin_path) else {
                 log::warn!("Failed to get dock tile plugin bundle");
@@ -280,7 +280,7 @@ impl Entity for AppearanceManager {
 impl SingletonEntity for AppearanceManager {}
 
 fn load_default_monospace_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
-    warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
+    derpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
         let default_monospace_font_family = font_cache.load_family_from_bytes(
             "Hack",
             vec![
@@ -307,7 +307,7 @@ fn load_default_monospace_font_family(ctx: &mut AppContext) -> anyhow::Result<Fa
 }
 
 fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
-    warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
+    derpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
         let roboto = font_cache.load_family_from_bytes(
             "Roboto",
             vec![
@@ -344,7 +344,7 @@ fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId>
 }
 
 fn load_password_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
-    warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
+    derpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
         font_cache.load_family_from_bytes(
             "PasswordCircle",
             vec![ASSETS.get("bundled/fonts/password.ttf")?.to_vec()],
@@ -364,10 +364,10 @@ fn get_or_load_font_family(_font_name: &str, _ctx: &mut AppContext) -> Option<Fa
 /// the font cache in case we are using a pre-bundled font like Hack.
 /// Then we fall back to loading a system font.
 fn get_or_load_font_family(font_name: &str, ctx: &mut AppContext) -> Option<FamilyId> {
-    warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
+    derpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
         match font_cache.get_or_load_system_font(font_name) {
             Ok(family) => {
-                let font_id = font_cache.select_font(family, warpui::fonts::Properties::default());
+                let font_id = font_cache.select_font(family, derpui::fonts::Properties::default());
 
                 // Validate that the font contains the `m` glyph since this is assumed in
                 // various parts of the code. We already do this when surfacing fonts in the font
@@ -436,10 +436,10 @@ fn build_appearance(ctx: &mut AppContext) -> Appearance {
 }
 
 #[cfg(target_family = "wasm")]
-fn emit_theme_background_event(theme: &WarpTheme) {
+fn emit_theme_background_event(theme: &DerpTheme) {
     let bg = theme.background().into_solid();
     let color = format!("#{:02x}{:02x}{:02x}", bg.r, bg.g, bg.b);
-    crate::platform::wasm::emit_event(crate::platform::wasm::WarpEvent::ThemeBackgroundChanged {
+    crate::platform::wasm::emit_event(crate::platform::wasm::DerpEvent::ThemeBackgroundChanged {
         color,
     });
 }

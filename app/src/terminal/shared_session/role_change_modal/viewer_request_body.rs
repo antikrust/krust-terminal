@@ -1,12 +1,12 @@
 use session_sharing_protocol::common::Role;
-use warpui::elements::{
+use derpui::elements::{
     Container, CrossAxisAlignment, Flex, MainAxisAlignment, MouseStateHandle, ParentElement, Text,
 };
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::fonts::Weight;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::{BODY_PADDING, HEADER_FONT_SIZE, MODAL_PADDING, TEXT_FONT_SIZE};
 use crate::appearance::Appearance;

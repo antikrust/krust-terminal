@@ -3,14 +3,14 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use warp_completer::parsers::simple::{command_without_leading_env_vars, decompose_command};
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::settings::Setting;
-use warp_core::user_preferences::GetUserPreferences;
-use warp_errors::{report_error, report_if_error};
-use warp_util::path::EscapeChar;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use derp_completer::parsers::simple::{command_without_leading_env_vars, decompose_command};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::features::FeatureFlag;
+use derp_core::settings::Setting;
+use derp_core::user_preferences::GetUserPreferences;
+use derp_errors::{report_error, report_if_error};
+use derp_util::path::EscapeChar;
+use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::BlocklistAIHistoryModel;
 use crate::ai::agent::conversation::AIConversationId;
@@ -205,7 +205,7 @@ impl BlocklistAIPermissions {
             cli_agent_model: profile_data.cli_agent_model.clone(),
             computer_use_model: profile_data.computer_use_model.clone(),
             context_window_limit: profile_data.context_window_limit,
-            autosync_plans_to_warp_drive: profile_data.autosync_plans_to_warp_drive,
+            autosync_plans_to_derp_drive: profile_data.autosync_plans_to_derp_drive,
             web_search_enabled: profile_data.web_search_enabled,
         }
     }
@@ -675,7 +675,7 @@ impl BlocklistAIPermissions {
         self.can_read_files(Some(conversation_id), paths, terminal_view_id, ctx)
     }
 
-    /// Returns whether or not Warp can auto-read the given files (e.g. for codebase indexing).
+    /// Returns whether or not Derp can auto-read the given files (e.g. for codebase indexing).
     pub fn can_read_files(
         &self,
         conversation_id: Option<&AIConversationId>,

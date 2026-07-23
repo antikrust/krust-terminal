@@ -13,11 +13,11 @@
 
 use std::cell::RefCell;
 
-use warpui::elements::{
+use derpui::elements::{
     Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

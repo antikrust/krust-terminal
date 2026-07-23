@@ -7,18 +7,18 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use futures_lite::StreamExt;
 use pathfinder_color::ColorU;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_errors::report_error;
+use derpui::elements::{
     Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MouseStateHandle, ParentElement, Radius, Shrinkable,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::Element;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::Element;
 
 use super::modal_body::{ImportModalBodyAction, BASE_INDENT, IMPORT_FONT_SIZE, INDENT_MARGIN};
 use crate::appearance::Appearance;
-use crate::drive::cloud_object_styling::warp_drive_icon_color;
+use crate::drive::cloud_object_styling::derp_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::notebooks::file::is_markdown_file;
 use crate::server::ids::ClientId;
@@ -324,10 +324,10 @@ impl FolderNode {
             .render_status_icon(sync_queue_dequeueing, appearance);
 
         let icon_color =
-            override_color.unwrap_or(warp_drive_icon_color(appearance, DriveObjectType::Folder));
+            override_color.unwrap_or(derp_drive_icon_color(appearance, DriveObjectType::Folder));
         let icon = ConstrainedBox::new(
             Icon::Folder
-                .to_warpui_icon(Fill::Solid(icon_color))
+                .to_derpui_icon(Fill::Solid(icon_color))
                 .finish(),
         )
         .with_height(IMPORT_FONT_SIZE)
@@ -455,24 +455,24 @@ impl UploadStatus {
     ) -> Box<dyn Element> {
         let status_icon_element = match &self {
             UploadStatus::SavedLocally if !sync_queue_dequeueing => Icon::Laptop
-                .to_warpui_icon(
+                .to_derpui_icon(
                     appearance
                         .theme()
                         .sub_text_color(appearance.theme().surface_1()),
                 )
                 .finish(),
             UploadStatus::Loading | UploadStatus::SavedLocally => Icon::Refresh
-                .to_warpui_icon(
+                .to_derpui_icon(
                     appearance
                         .theme()
                         .sub_text_color(appearance.theme().surface_1()),
                 )
                 .finish(),
             UploadStatus::Loaded(_) => Icon::Check
-                .to_warpui_icon(Fill::Solid(ColorU::new(11, 142, 71, 255)))
+                .to_derpui_icon(Fill::Solid(ColorU::new(11, 142, 71, 255)))
                 .finish(),
             UploadStatus::Error(_) => Icon::AlertTriangle
-                .to_warpui_icon(Fill::Solid(appearance.theme().ui_error_color()))
+                .to_derpui_icon(Fill::Solid(appearance.theme().ui_error_color()))
                 .finish(),
         };
 
@@ -549,13 +549,13 @@ impl FileNode {
 
         let icon_element = match &self.file_type {
             FileType::Workflow => Icon::Workflow
-                .to_warpui_icon(Fill::Solid(override_color.unwrap_or(
-                    warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+                .to_derpui_icon(Fill::Solid(override_color.unwrap_or(
+                    derp_drive_icon_color(appearance, DriveObjectType::Workflow),
                 )))
                 .finish(),
             FileType::Notebook => Icon::Notebook
-                .to_warpui_icon(Fill::Solid(override_color.unwrap_or(
-                    warp_drive_icon_color(
+                .to_derpui_icon(Fill::Solid(override_color.unwrap_or(
+                    derp_drive_icon_color(
                         appearance,
                         DriveObjectType::Notebook {
                             is_ai_document: false,

@@ -1,28 +1,28 @@
-# REV-1599 — Local agent GEAP credentials via Warp OIDC + Workload Identity Federation (client)
+# REV-1599 — Local agent GEAP credentials via Derp OIDC + Workload Identity Federation (client)
 
-This spec covers the **Warp desktop client** half of GEAP (Gemini Enterprise Agent Platform) BYOLLM: minting the short-lived Google Cloud access token that local interactive agent requests carry. The server half (routing, redaction, billing) is specified in `warp-server/specs/REV-1599/TECH.md` and is merged on `develop`. This spec **supersedes the client-auth sections of that document**: the gcloud-ADC/`yup-oauth2` approach described there was prototyped and rejected in favor of Workload Identity Federation (WIF), so the client never reads local cloud credentials at all. That spec will be updated to point to this document for client credential logic.
+This spec covers the **Derp desktop client** half of GEAP (Gemini Enterprise Agent Platform) BYOLLM: minting the short-lived Google Cloud access token that local interactive agent requests carry. The server half (routing, redaction, billing) is specified in `derp-server/specs/REV-1599/TECH.md` and is merged on `develop`. This spec **supersedes the client-auth sections of that document**: the gcloud-ADC/`yup-oauth2` approach described there was prototyped and rejected in favor of Workload Identity Federation (WIF), so the client never reads local cloud credentials at all. That spec will be updated to point to this document for client credential logic.
 
 Scope: **local interactive agent requests only.** Cloud agents (Oz runners) are the next milestone and will reuse the same mint flow keyed off task identity. The lift from local interactive agents to cloud agents is lower than it would have been under the gcloud-ADC/`yup-oauth2` approach, since the cloud-agent implementation builds on the same WIF machine-to-machine protocol.
 
 ## Context
 
-The approach: the client uses the user's **existing Warp auth token** to call warp-server's `IssueTaskIdentityToken` mutation for a **Warp-signed OIDC JWT**, exchanges that JWT at GCP STS for a federated token (RFC 8693), then impersonates a customer service account via the IAM Credentials API, and attaches the resulting ~1h access token to agent requests. No gcloud, no ADC files, no OAuth consent screen, no long-lived credential anywhere — the enterprise grants access by configuring a trust bridge (workload identity pool) in *their* GCP project, and revokes it the same way. The same bridge later serves cloud agents.
+The approach: the client uses the user's **existing Derp auth token** to call derp-server's `IssueTaskIdentityToken` mutation for a **Derp-signed OIDC JWT**, exchanges that JWT at GCP STS for a federated token (RFC 8693), then impersonates a customer service account via the IAM Credentials API, and attaches the resulting ~1h access token to agent requests. No gcloud, no ADC files, no OAuth consent screen, no long-lived credential anywhere — the enterprise grants access by configuring a trust bridge (workload identity pool) in *their* GCP project, and revokes it the same way. The same bridge later serves cloud agents.
 
 Existing machinery this builds on:
 
-- [`crates/ai/src/aws_credentials.rs:38 @ a90be74`](https://github.com/warpdotdev/warp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/ai/src/aws_credentials.rs#L38) — `AwsCredentialsState`, the Bedrock credential state machine this feature mirrors 1:1.
-- [`app/src/ai/aws_credentials.rs:303 @ a90be74`](https://github.com/warpdotdev/warp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/app/src/ai/aws_credentials.rs#L303) — `refresh_aws_credentials_oidc`, the existing Warp-JWT → STS pattern (AWS flavor, cloud agents only). GEAP brings the same shape to local users.
-- [`crates/ai/src/api_keys.rs:292 @ a90be74`](https://github.com/warpdotdev/warp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/ai/src/api_keys.rs#L292) — `ApiKeyManager::api_keys_for_request`, the pure in-memory request-time read that credentials attach through.
-- [`crates/managed_secrets/src/manager.rs:215 @ a90be74`](https://github.com/warpdotdev/warp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/managed_secrets/src/manager.rs#L215) — `issue_task_identity_token`, the client API for minting Warp OIDC JWTs (registered unconditionally; works for local users).
-- [`crates/managed_secrets/src/gcp.rs:198 @ a90be74`](https://github.com/warpdotdev/warp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/managed_secrets/src/gcp.rs#L198) — the Oz cloud-task GCP WIF audience format this feature reuses verbatim.
+- [`crates/ai/src/aws_credentials.rs:38 @ a90be74`](https://github.com/derpdotdev/derp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/ai/src/aws_credentials.rs#L38) — `AwsCredentialsState`, the Bedrock credential state machine this feature mirrors 1:1.
+- [`app/src/ai/aws_credentials.rs:303 @ a90be74`](https://github.com/derpdotdev/derp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/app/src/ai/aws_credentials.rs#L303) — `refresh_aws_credentials_oidc`, the existing Derp-JWT → STS pattern (AWS flavor, cloud agents only). GEAP brings the same shape to local users.
+- [`crates/ai/src/api_keys.rs:292 @ a90be74`](https://github.com/derpdotdev/derp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/ai/src/api_keys.rs#L292) — `ApiKeyManager::api_keys_for_request`, the pure in-memory request-time read that credentials attach through.
+- [`crates/managed_secrets/src/manager.rs:215 @ a90be74`](https://github.com/derpdotdev/derp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/managed_secrets/src/manager.rs#L215) — `issue_task_identity_token`, the client API for minting Derp OIDC JWTs (registered unconditionally; works for local users).
+- [`crates/managed_secrets/src/gcp.rs:198 @ a90be74`](https://github.com/derpdotdev/derp/blob/a90be740b2416c91728a0d7bd172169e4b5ab5a0/crates/managed_secrets/src/gcp.rs#L198) — the Oz cloud-task GCP WIF audience format this feature reuses verbatim.
 
-Server-side facts the client design depends on (pinned to `warp-server @ 6a56987`):
+Server-side facts the client design depends on (pinned to `derp-server @ 6a56987`):
 
-- [`graphql/v2/resolvers/issue_task_identity_token.resolvers.go:18 @ 6a56987`](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/graphql/v2/resolvers/issue_task_identity_token.resolvers.go#L18) — `IssueTaskIdentityToken`, the GraphQL mutation the client calls. Authenticated by the user's **regular Warp auth token** (the session already on the GraphQL request); it derives the caller via `GetRequiredPrincipalFromContext` (`:26`), then hands off to `IssueToken` (`:31`). No GCP credential is involved in this hop — the Warp session is the root credential that bootstraps the whole chain.
-- [`logic/federated_token/issue_token.go:100 @ 6a56987`](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/federated_token/issue_token.go#L100) — `IssueToken` works for any authenticated principal (task claims optional); JWTs carry `sub`/`email`/`teams` ([claims @ 6a56987](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/federated_token/claims.go#L235)); lifetime 5m–3h; `warp.dev` audiences are rejected, so the JWT audience is the WIF provider resource path.
-- [`logic/ai/llm/model_fallback_chain.go:181 @ 6a56987`](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/ai/llm/model_fallback_chain.go#L181) — GEAP routes are filtered out when the request carries no token; priority `AWS_BEDROCK → GEMINI_ENTERPRISE → DIRECT_API`; `ENFORCE` removes Direct API fallback.
-- [`router/handlers/generate_multi_agent_output.go:1497 @ 6a56987`](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/router/handlers/generate_multi_agent_output.go#L1497) — the token rides the existing `ApiKeys` redaction boundary.
-- [`config/local.yaml:625 @ 6a56987`](https://github.com/warpdotdev/warp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/config/local.yaml#L625) — local dev servers sign OIDC tokens with **staging's KMS key and `iss: https://staging.warp.dev`**, so Google can validate locally-minted JWTs against staging's public JWKS. This is what makes full local E2E testing possible.
+- [`graphql/v2/resolvers/issue_task_identity_token.resolvers.go:18 @ 6a56987`](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/graphql/v2/resolvers/issue_task_identity_token.resolvers.go#L18) — `IssueTaskIdentityToken`, the GraphQL mutation the client calls. Authenticated by the user's **regular Derp auth token** (the session already on the GraphQL request); it derives the caller via `GetRequiredPrincipalFromContext` (`:26`), then hands off to `IssueToken` (`:31`). No GCP credential is involved in this hop — the Derp session is the root credential that bootstraps the whole chain.
+- [`logic/federated_token/issue_token.go:100 @ 6a56987`](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/federated_token/issue_token.go#L100) — `IssueToken` works for any authenticated principal (task claims optional); JWTs carry `sub`/`email`/`teams` ([claims @ 6a56987](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/federated_token/claims.go#L235)); lifetime 5m–3h; `derp.baby` audiences are rejected, so the JWT audience is the WIF provider resource path.
+- [`logic/ai/llm/model_fallback_chain.go:181 @ 6a56987`](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/logic/ai/llm/model_fallback_chain.go#L181) — GEAP routes are filtered out when the request carries no token; priority `AWS_BEDROCK → GEMINI_ENTERPRISE → DIRECT_API`; `ENFORCE` removes Direct API fallback.
+- [`router/handlers/generate_multi_agent_output.go:1497 @ 6a56987`](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/router/handlers/generate_multi_agent_output.go#L1497) — the token rides the existing `ApiKeys` redaction boundary.
+- [`config/local.yaml:625 @ 6a56987`](https://github.com/derpdotdev/derp-server/blob/6a5698727bf200d6dd1689a2c34c76813b60bdbc/config/local.yaml#L625) — local dev servers sign OIDC tokens with **staging's KMS key and `iss: https://staging.derp.baby`**, so Google can validate locally-minted JWTs against staging's public JWKS. This is what makes full local E2E testing possible.
 
 ## Data model
 
@@ -37,7 +37,7 @@ Three kinds of data:
 
 The federation *parameters* are **admin-only**: `gcpAudience`, `gcpSaEmail`, `gcpProjectId`, and `gcpLocation` are configured once by the admin and sync to every team member with zero per-machine setup. A member's *only* interaction is a single on/off toggle in Settings, and the client enablement gate mirrors Bedrock's `is_aws_bedrock_credentials_enabled` (`app/src/workspaces/user_workspaces.rs:545`): after the auth and admin-availability checks it reads `enablementSetting` — `ENFORCE` mints/attaches for everyone (toggle hidden, via the `is_*_toggleable` helper), while `RESPECT_USER_SETTING` defers to the member's local **`AISettings`** toggle (`gemini_enterprise_credentials_enabled`, the GEAP analog of `aws_bedrock_credentials_enabled`, `app/src/settings/ai.rs:1020`). The toggle **defaults to `false` (opt-in)**, matching Bedrock — under `RESPECT_USER_SETTING` a member must enable it to route requests through GEAP. `AISettings` is the client's per-user (cloud-synced) settings store, distinct from the admin org settings in `UserWorkspaces`. All parts of the gate are in scope: the logged-out auth guard, admin-availability check, `enablementSetting` branch, and the new `AISettings` toggle ship together.
 
-**2. Client in-memory credential state — never persisted.** `GeapCredentialsState` on the `ApiKeyManager` singleton, mirroring `AwsCredentialsState` in shape: `Missing | Disabled | Refreshing { previous } | Loaded { credentials, loaded_at, minted_for } | Failed { message }`. `GeapCredentials` holds `{ access_token, expires_at }` with private fields; the only egress is the conversion into the wire type, via `access_token_for_request()`. One deliberate divergence from Bedrock, taken from PR #12028's `grok_subscription`: `Refreshing` carries the previous credentials so requests keep authenticating during the ~1-3s re-mint — tokens stay until replaced. (Bedrock's `Refreshing` drops them, tolerable for its user-driven refreshes, not for a proactive re-mint firing mid-session every ~55 minutes.) `expires_at` is always known for GEAP and drives the three-layer expiry handling — proactive timer, request-time safety net, Google-401 backstop; tokens are **always sent, even past expiry**, never silently dropped — fully specified in "Token lifecycle: complete case enumeration" below. `minted_for` is the **mint binding**: the Warp user uid plus the `(audience, sa_email)` config the token was minted against. The attach-time read treats a binding mismatch as not-loaded, so a token minted for a different account (sign-out/account switch) or against a stale federation config (admin changed audience/SA) is never attached, and is replaced on the next trigger instead of surviving until expiry.
+**2. Client in-memory credential state — never persisted.** `GeapCredentialsState` on the `ApiKeyManager` singleton, mirroring `AwsCredentialsState` in shape: `Missing | Disabled | Refreshing { previous } | Loaded { credentials, loaded_at, minted_for } | Failed { message }`. `GeapCredentials` holds `{ access_token, expires_at }` with private fields; the only egress is the conversion into the wire type, via `access_token_for_request()`. One deliberate divergence from Bedrock, taken from PR #12028's `grok_subscription`: `Refreshing` carries the previous credentials so requests keep authenticating during the ~1-3s re-mint — tokens stay until replaced. (Bedrock's `Refreshing` drops them, tolerable for its user-driven refreshes, not for a proactive re-mint firing mid-session every ~55 minutes.) `expires_at` is always known for GEAP and drives the three-layer expiry handling — proactive timer, request-time safety net, Google-401 backstop; tokens are **always sent, even past expiry**, never silently dropped — fully specified in "Token lifecycle: complete case enumeration" below. `minted_for` is the **mint binding**: the Derp user uid plus the `(audience, sa_email)` config the token was minted against. The attach-time read treats a binding mismatch as not-loaded, so a token minted for a different account (sign-out/account switch) or against a stale federation config (admin changed audience/SA) is never attached, and is replaced on the next trigger instead of surviving until expiry.
 
 **3. The wire credential — request-scoped secret.** `Settings.ApiKeys.GoogleCloudCredentials { access_token }` on the multi-agent request proto. Intentionally the entire shape: no token type (bearer is the transport default), no expiry (the server cannot refresh; Google is the source of truth for staleness). Because it rides in `ApiKeys`, the server's existing extract-then-`ClearApiKeys` redaction covers it with no new logging surface.
 
@@ -49,9 +49,9 @@ Four flows — pseudocode is abbreviated and illustrative.
 
 The federation config rides the existing workspace-settings sync.
 
-- `crates/warp_graphql_schema/api/schema.graphql` — the client's schema copy adds `gcpAudience`/`gcpSaEmail` to `LlmHostSettings`; cynic validates query fragments against this at compile time.
+- `crates/derp_graphql_schema/api/schema.graphql` — the client's schema copy adds `gcpAudience`/`gcpSaEmail` to `LlmHostSettings`; cynic validates query fragments against this at compile time.
 - `crates/graphql/src/api/workspace.rs` — the `LlmHostSettings` `cynic::QueryFragment` adds `gcp_audience: Option<String>` / `gcp_sa_email: Option<String>`.
-- `app/src/workspaces/gql_convert.rs` → `app/src/workspaces/workspace.rs` — the `From<warp_graphql::workspace::LlmHostSettings>` impl copies them onto the app-side `LlmHostSettings`, which is serde-persisted in the local workspace cache (old caches deserialize the new fields to `None`).
+- `app/src/workspaces/gql_convert.rs` → `app/src/workspaces/workspace.rs` — the `From<derp_graphql::workspace::LlmHostSettings>` impl copies them onto the app-side `LlmHostSettings`, which is serde-persisted in the local workspace cache (old caches deserialize the new fields to `None`).
 - `app/src/workspaces/user_workspaces.rs` — the two derivations everything downstream consumes:
 
 ```rust
@@ -73,11 +73,11 @@ pub fn is_gemini_enterprise_credentials_enabled(&self, app: &AppContext) -> bool
 }
 ```
 
-### 2. Credential mint (client ↔ warp-server ↔ Google)
+### 2. Credential mint (client ↔ derp-server ↔ Google)
 
 The mint is a fixed sequence, each leg gating the next:
-- **Leg 0 — precondition:** the user is already signed into Warp. There is no GCP login step, so the existing Warp auth token is the *only* credential the client starts with.
-- **Leg 1 — Warp OIDC JWT:** a trigger calls `issue_task_identity_token`, which issues the `IssueTaskIdentityToken` GraphQL mutation to warp-server **authenticated by the regular Warp auth token**. The resolver derives the principal from that session and `IssueToken` returns a short-lived Warp-signed JWT (`aud` = `gcpAudience`; `sub`/`email`/`teams` from the principal). No GCP credential yet. **Every mint — initial or re-mint, timer/trigger/forced — starts here with a brand-new JWT:** the JWT is consumed exactly once by the immediately following STS exchange and then dropped, never cached or reused across mints, so an expired JWT can never be presented to Google (see "JWT expiry is a non-case" in the lifecycle section).
+- **Leg 0 — precondition:** the user is already signed into Derp. There is no GCP login step, so the existing Derp auth token is the *only* credential the client starts with.
+- **Leg 1 — Derp OIDC JWT:** a trigger calls `issue_task_identity_token`, which issues the `IssueTaskIdentityToken` GraphQL mutation to derp-server **authenticated by the regular Derp auth token**. The resolver derives the principal from that session and `IssueToken` returns a short-lived Derp-signed JWT (`aud` = `gcpAudience`; `sub`/`email`/`teams` from the principal). No GCP credential yet. **Every mint — initial or re-mint, timer/trigger/forced — starts here with a brand-new JWT:** the JWT is consumed exactly once by the immediately following STS exchange and then dropped, never cached or reused across mints, so an expired JWT can never be presented to Google (see "JWT expiry is a non-case" in the lifecycle section).
 - **Leg 2 — STS exchange:** the JWT is exchanged at Google STS for a federated token; Google validates the issuer signature (public JWKS) and the audience against the pool's allowed audiences.
 - **Leg 3 — SA impersonation:** if `gcpSaEmail` is set, the federated token mints an SA access token via IAM `generateAccessToken`; skipped entirely when empty.
 - **Leg 4 — store:** the resulting ~1h access token lands in `GeapCredentialsState::Loaded` in memory for flow #3 to attach.
@@ -159,7 +159,7 @@ let token_future = ManagedSecretManager::issue_task_identity_token(IdentityToken
     audience: config.audience,                          // JWT aud = the WIF provider resource name
     requested_duration: 1h,
     subject_template: vec1!["principal"],               // sub = "user:<uid>"; email/teams claims always included
-}); // -> IssueTaskIdentityToken GraphQL mutation (manager.rs), authed by the user's Warp session; resolver derives the principal
+}); // -> IssueTaskIdentityToken GraphQL mutation (manager.rs), authed by the user's Derp session; resolver derives the principal
 ctx.spawn(
     async move { exchange_identity_token_for_geap_credentials(token_future.await?, &config).await }, // background
     // Completion re-checks the gate (it may have flipped during the mint) and then:
@@ -171,14 +171,14 @@ ctx.spawn(
 );
 ```
 
-The exchange (same file) is two typed HTTP calls via `http_client::Client` (the repo's Compat-wrapped reqwest, required to run off-Tokio on the warpui executor):
+The exchange (same file) is two typed HTTP calls via `http_client::Client` (the repo's Compat-wrapped reqwest, required to run off-Tokio on the derpui executor):
 
 ```rust
 // app/src/ai/geap_credentials.rs — exchange_identity_token_for_geap_credentials
 // Leg 1: STS token exchange (RFC 8693).
 POST https://sts.googleapis.com/v1/token
   StsTokenExchangeRequest { grant_type: token-exchange, audience: config.audience,
-      subject_token: <Warp JWT>, subject_token_type: id_token,
+      subject_token: <Derp JWT>, subject_token_type: id_token,
       scope: cloud-platform, requested_token_type: access_token }
   -> StsTokenExchangeResponse { access_token, expires_in: Option<u64> }
      // Google validated issuer signature (public JWKS) + allowed audiences here.
@@ -193,7 +193,7 @@ POST https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{sa_ema
      // the customer's control point for who may become the SA.
 ```
 
-Failures map to `LoadGeapCredentialsError::{MintIdentityToken, ExchangeToken, ImpersonateServiceAccount}`, so the error pinpoints the broken leg with per-leg actionable copy; whether a failure lands as `Failed { message }` or quietly restores the previous token is decided by the failure policy in "Token lifecycle" below. Error bodies are capped at 512 chars and never contain the token. Each leg's outcome is also logged — leg name, audience, and sanitized error only, never token material — so a standard log bundle is enough for support to tell a Warp-session problem (leg 1) from a pool/provider misconfiguration (leg 2) from a missing IAM binding (leg 3); a future Settings status widget can surface the same per-leg copy in-app.
+Failures map to `LoadGeapCredentialsError::{MintIdentityToken, ExchangeToken, ImpersonateServiceAccount}`, so the error pinpoints the broken leg with per-leg actionable copy; whether a failure lands as `Failed { message }` or quietly restores the previous token is decided by the failure policy in "Token lifecycle" below. Error bodies are capped at 512 chars and never contain the token. Each leg's outcome is also logged — leg name, audience, and sanitized error only, never token material — so a standard log bundle is enough for support to tell a Derp-session problem (leg 1) from a pool/provider misconfiguration (leg 2) from a missing IAM binding (leg 3); a future Settings status widget can surface the same per-leg copy in-app.
 
 ### Token lifecycle: complete case enumeration
 
@@ -234,13 +234,13 @@ impl GeapCredentials {
 
 **`expires_at` is always known for GEAP**:
 - SA path (leg 3): `GenerateAccessTokenResponse.expire_time` is RFC 3339, always present.
-- No-SA path (leg 2 direct): `StsTokenExchangeResponse.expires_in` is relative seconds, converted to an absolute time via checked math (as in PR #12028's `grok_tokens_from_response`); when omitted, fall back to the Warp JWT's `expires_at` from `TaskIdentityToken` (always set by the server) as a conservative bound.
+- No-SA path (leg 2 direct): `StsTokenExchangeResponse.expires_in` is relative seconds, converted to an absolute time via checked math (as in PR #12028's `grok_tokens_from_response`); when omitted, fall back to the Derp JWT's `expires_at` from `TaskIdentityToken` (always set by the server) as a conservative bound.
 
 So `needs_refresh()`'s `None` arm is an unreachable safe default whose behavior (refresh: never; timer: none) is Grok-parity by construction; `access_token_for_request()` never consults expiry at all.
 
-**Nothing persists and there is no refresh token.** A GEAP mint is rooted in the live Warp session (leg 1), so there is no second long-lived credential to store, rotate, or carry over. Cold start rests at `Missing` until `TeamsChanged` fires the first mint — and if that event never arrives, the first agent request's safety net mints instead.
+**Nothing persists and there is no refresh token.** A GEAP mint is rooted in the live Derp session (leg 1), so there is no second long-lived credential to store, rotate, or carry over. Cold start rests at `Missing` until `TeamsChanged` fires the first mint — and if that event never arrives, the first agent request's safety net mints instead.
 
-**JWT expiry is a non-case by construction.** JWTs expire too — but the Warp OIDC JWT (and the intermediate STS federated token) are single-use credentials scoped to one mint, not managed credentials with their own lifecycle. Every re-mint of the access token — timer, trigger, or forced — re-runs the chain from leg 1 and **grabs a brand-new JWT first**; no JWT is ever held across mints. There is therefore no JWT cache, no JWT expiry tracking, no JWT refresh timer, and no way to present an expired JWT to STS. The JWT only has to outlive the leg 1 → leg 2 gap (seconds); even the server's 5-minute minimum lifetime exceeds that by orders of magnitude. Its expiry is consulted exactly once, as the conservative no-SA fallback bound above. In the pathological case where a mint stalls long enough for the JWT to lapse before the STS call, Google rejects it → `ExchangeToken` failure → the standard failure policy applies (previous token kept / `Failed`); no special handling needed.
+**JWT expiry is a non-case by construction.** JWTs expire too — but the Derp OIDC JWT (and the intermediate STS federated token) are single-use credentials scoped to one mint, not managed credentials with their own lifecycle. Every re-mint of the access token — timer, trigger, or forced — re-runs the chain from leg 1 and **grabs a brand-new JWT first**; no JWT is ever held across mints. There is therefore no JWT cache, no JWT expiry tracking, no JWT refresh timer, and no way to present an expired JWT to STS. The JWT only has to outlive the leg 1 → leg 2 gap (seconds); even the server's 5-minute minimum lifetime exceeds that by orders of magnitude. Its expiry is consulted exactly once, as the conservative no-SA fallback bound above. In the pathological case where a mint stalls long enough for the JWT to lapse before the STS call, Google rejects it → `ExchangeToken` failure → the standard failure policy applies (previous token kept / `Failed`); no special handling needed.
 
 ---
 
@@ -269,7 +269,7 @@ A healthy hour in table order: mint completes (5) → store `Loaded`, arm alarm 
 | `Loaded` | mismatch | `None` | Sign-out/account switch or admin config change; replaced by the next trigger |
 | `Loaded` | matches | `Some(token)` — **even if expired** | Google is the authority on validity; a stale token produces a *visible, recoverable* 401, never a silent downgrade |
 
-**What an omitted token means for that request** (server side, already on `develop`): the fallback chain drops the GEAP route when no token rides the request — under `RESPECT_USER_SETTING` that is a silent, policy-allowed Direct API fallback; under `ENFORCE`, a fast reauth error. That silence is exactly why omission is reserved for *configuration* states (gate off, binding mismatch, no token yet) and never used for expiry — that was the 10.5-hour Grok incident: the proactive loop never armed, the expiry skew then dropped the token from every request with no logs and no UI signal. The GEAP equivalent is worse: an enterprise that configured GEAP precisely so inference routes through *their* GCP project would silently route through Warp-managed inference instead. A stale-but-sent token instead yields `401 → InvalidGeminiEnterpriseCredentialsError → inline error view` — observable and self-healing in both modes.
+**What an omitted token means for that request** (server side, already on `develop`): the fallback chain drops the GEAP route when no token rides the request — under `RESPECT_USER_SETTING` that is a silent, policy-allowed Direct API fallback; under `ENFORCE`, a fast reauth error. That silence is exactly why omission is reserved for *configuration* states (gate off, binding mismatch, no token yet) and never used for expiry — that was the 10.5-hour Grok incident: the proactive loop never armed, the expiry skew then dropped the token from every request with no logs and no UI signal. The GEAP equivalent is worse: an enterprise that configured GEAP precisely so inference routes through *their* GCP project would silently route through Derp-managed inference instead. A stale-but-sent token instead yields `401 → InvalidGeminiEnterpriseCredentialsError → inline error view` — observable and self-healing in both modes.
 
 Attach stays a pure `&self` read: no mutation, no timer scheduling, no I/O on the request path. The mutation lives one step earlier, at the request-build call site, where the safety net (trigger 5) runs with full context.
 
@@ -327,7 +327,7 @@ Calls `refresh_geap_credentials` (non-force). The skip-if-valid guard re-evaluat
 | `Err`, no previous (first mint) | `Failed { per-leg message }` — surfaced by Settings and the inline error view |
 
 **Failure policy — a failed refresh never permanently kills the loop:** a failed proactive re-mint logs the failing leg, keeps any previous token, and parks the chain — but only until the next agent request, whose safety net re-attempts the mint in the background. What follows:
-- The kept token keeps riding requests — even past expiry (always-send). If Google rejects it, the 401 maps to `InvalidGeminiEnterpriseCredentialsError` → inline error view auto-remints + one-click Retry, under **both** enablement modes. There is no silent path: the skew-drop alternative would silently fall back to Direct API under `RESPECT_USER_SETTING` — routing an enterprise's inference through Warp-managed infrastructure with zero signal — which is exactly the 10.5-hour silent-downgrade incident described in the section intro (Grok's version silently fell back to Warp's org-wide xAI key).
+- The kept token keeps riding requests — even past expiry (always-send). If Google rejects it, the 401 maps to `InvalidGeminiEnterpriseCredentialsError` → inline error view auto-remints + one-click Retry, under **both** enablement modes. There is no silent path: the skew-drop alternative would silently fall back to Direct API under `RESPECT_USER_SETTING` — routing an enterprise's inference through Derp-managed infrastructure with zero signal — which is exactly the 10.5-hour silent-downgrade incident described in the section intro (Grok's version silently fell back to Derp's org-wide xAI key).
 - `Failed { message }` is reserved for mints with no previous token to keep (the first mint) and for forced refreshes, where the user explicitly asked and needs visible feedback.
 - There is still no background retry *loop* — retries are demand-driven (next request, next trigger), so a hard-down network cannot cause unbounded STS traffic.
 
@@ -403,14 +403,14 @@ Server-side (already on `develop`): extract + redact at the `ApiKeys` boundary, 
 
 ```mermaid
 sequenceDiagram
-  participant C as Warp client
-  participant S as warp-server
+  participant C as Derp client
+  participant S as derp-server
   participant G as GCP STS / IAM
   participant V as Vertex AI (customer project)
-  Note over C: trigger fires; client holds Warp auth token
-  C->>S: IssueTaskIdentityToken(aud=gcpAudience, 1h) authed by Warp session
+  Note over C: trigger fires; client holds Derp auth token
+  C->>S: IssueTaskIdentityToken(aud=gcpAudience, 1h) authed by Derp session
   Note over S: GetRequiredPrincipalFromContext - IssueToken
-  S-->>C: Warp OIDC JWT (sub, email, teams)
+  S-->>C: Derp OIDC JWT (sub, email, teams)
   C->>G: STS token exchange (RFC 8693)
   G-->>C: federated token
   C->>G: generateAccessToken(gcpSaEmail)
@@ -435,7 +435,7 @@ Tokens last ~1h, but plain expiry is normally invisible — the lifecycle layers
 - **Leg 2 / `ExchangeToken` failure (admin config):** *"Gemini Enterprise pool or provider configuration error — contact your workspace admin to verify the `gcpAudience` setting."* Retry button still present (the admin may have already pushed a fix), but copy directs admin action.
 - **Leg 3 / `ImpersonateServiceAccount` failure (admin IAM):** *"Missing IAM binding on your workspace's service account — contact your workspace admin."* Same retry pattern.
 - **Server 403 (IAM / API disabled):** *"Permission denied on your workspace's GCP project — contact your workspace admin to verify the Vertex AI API is enabled and the service account has the required role."*
-- **Leg 1 / `MintIdentityToken` failure (Warp session / network):** *"Failed to authenticate with Warp — tap Retry or restart Warp."* Force-refresh fires automatically.
+- **Leg 1 / `MintIdentityToken` failure (Derp session / network):** *"Failed to authenticate with Derp — tap Retry or restart Derp."* Force-refresh fires automatically.
 
 The view has no auto-login checkbox (the re-mint is always automatic) and no Configure button (there is nothing member-configurable in GEAP).
 
@@ -459,7 +459,7 @@ Add the variant to the `AIBlockEvent` enum. In `terminal/view.rs`, handle it the
 
 Two one-time setup surfaces (admin-owned) and one optional member toggle.
 
-**Warp side (admin Models page).** Admins enter the GEAP host fields — `enabled`, `enablementSetting`, `gcpProjectId`, `gcpLocation`, `gcpAudience`, `gcpSaEmail` — on the admin Models page (the Gemini Enterprise card, mirroring Bedrock's). Misconfiguration degrades safely on the client: an enabled host with an empty `gcpAudience` rests at `Missing`, and a wrong pool/provider/SA value surfaces as the corresponding per-leg `Failed` state rather than affecting requests.
+**Derp side (admin Models page).** Admins enter the GEAP host fields — `enabled`, `enablementSetting`, `gcpProjectId`, `gcpLocation`, `gcpAudience`, `gcpSaEmail` — on the admin Models page (the Gemini Enterprise card, mirroring Bedrock's). Misconfiguration degrades safely on the client: an enabled host with an empty `gcpAudience` rests at `Missing`, and a wrong pool/provider/SA value surfaces as the corresponding per-leg `Failed` state rather than affecting requests.
 
 **Customer GCP side (the trust bridge).** What the enterprise configures once in *their* project. All steps use the `gcloud` CLI; variables are listed at the top of each block.
 
@@ -474,7 +474,7 @@ gcloud services enable \
   --project="$PROJECT_ID"
 ```
 
-**Step 2 — Create the workload identity pool.** The pool is the top-level trust container. A single pool per Warp workspace is sufficient.
+**Step 2 — Create the workload identity pool.** The pool is the top-level trust container. A single pool per Derp workspace is sufficient.
 
 ```bash
 gcloud iam workload-identity-pools create "$POOL_ID" \
@@ -482,24 +482,24 @@ gcloud iam workload-identity-pools create "$POOL_ID" \
   --project="$PROJECT_ID"
 ```
 
-**Step 3 — Create the OIDC provider inside the pool.** This tells GCP to trust JWTs signed by Warp's identity service. The allowed audience is the provider's own resource name — this exact string is what the admin pastes into `gcpAudience` on the admin Models page.
+**Step 3 — Create the OIDC provider inside the pool.** This tells GCP to trust JWTs signed by Derp's identity service. The allowed audience is the provider's own resource name — this exact string is what the admin pastes into `gcpAudience` on the admin Models page.
 
-**Tenant isolation is mandatory here, not optional hardening.** Warp is a *shared* OIDC issuer: `IssueTaskIdentityToken` mints a validly-signed JWT for **any authenticated Warp user**, and the audience is a public identifier (synced to every member's client; its format is guessable). Issuer + audience alone would therefore admit every Warp user, not just this workspace's members. The provider must additionally pin trust to the customer's Warp team UID (`$TEAM_UID`), carried in the JWT's `teams` claim (a JSON array of team UIDs; warp-server omits the claim for team-less users, which fails the condition below and rejects them). Two controls, defense in depth:
+**Tenant isolation is mandatory here, not optional hardening.** Derp is a *shared* OIDC issuer: `IssueTaskIdentityToken` mints a validly-signed JWT for **any authenticated Derp user**, and the audience is a public identifier (synced to every member's client; its format is guessable). Issuer + audience alone would therefore admit every Derp user, not just this workspace's members. The provider must additionally pin trust to the customer's Derp team UID (`$TEAM_UID`), carried in the JWT's `teams` claim (a JSON array of team UIDs; derp-server omits the claim for team-less users, which fails the condition below and rejects them). Two controls, defense in depth:
 
 - `--attribute-condition="'$TEAM_UID' in assertion.teams"` — Google STS refuses the exchange for any JWT whose `teams` claim does not contain the workspace's team UID; identities outside the workspace never enter the pool at all.
 - `attribute.team` in `--attribute-mapping` — maps to `$TEAM_UID` iff the member belongs to the workspace (CEL ternary; WIF attribute values must be strings, so the list-valued `teams` claim cannot be mapped directly). Step 4's scoped IAM binding keys on this attribute.
 
 Remaining flags:
 
-- `--issuer-uri`: Warp's production OIDC issuer. Staging/local-dev tokens use `https://staging.warp.dev` instead (the E2E test pool is configured against staging).
+- `--issuer-uri`: Derp's production OIDC issuer. Staging/local-dev tokens use `https://staging.derp.baby` instead (the E2E test pool is configured against staging).
 - `--attribute-mapping`: `google.subject` maps to `assertion.sub` (stable `user:<uid>`) for the IAM binding; `attribute.user_email` maps to `assertion.email` for human-readable audit logs. Do not swap subject to email — emails can change and would invalidate bindings.
-- `$TEAM_UID`: the workspace's stable Warp team UID. The final setup docs / admin Models page must surface it beside the other GEAP fields so admins never have to decode a JWT to find it.
+- `$TEAM_UID`: the workspace's stable Derp team UID. The final setup docs / admin Models page must surface it beside the other GEAP fields so admins never have to decode a JWT to find it.
 
 ```bash
 gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_ID" \
   --location=global \
   --workload-identity-pool="$POOL_ID" \
-  --issuer-uri="https://auth.warp.dev" \
+  --issuer-uri="https://auth.derp.baby" \
   --allowed-audiences="//iam.googleapis.com/projects/$PROJECT_NUM/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID" \
   --attribute-mapping="google.subject=assertion.sub,attribute.user_email=assertion.email,attribute.team=('$TEAM_UID' in assertion.teams) ? '$TEAM_UID' : ''" \
   --attribute-condition="'$TEAM_UID' in assertion.teams" \
@@ -530,17 +530,17 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 To restrict impersonation to named individuals instead, bind exact subjects — one binding per user, using the stable `google.subject` from Step 3: `--member="principal://iam.googleapis.com/projects/$PROJECT_NUM/locations/global/workloadIdentityPools/$POOL_ID/subject/user:SPECIFIC_UID"`.
 
-> **Test pools only.** The pool-wide wildcard member (`principalSet://.../workloadIdentityPools/$POOL_ID/*`) lets **every identity the provider trusts** impersonate the SA — on a provider missing Step 3's attribute condition, that is any authenticated Warp user. Acceptable only for throwaway pools in isolated test projects (e.g. the E2E project below); never in a customer setup.
+> **Test pools only.** The pool-wide wildcard member (`principalSet://.../workloadIdentityPools/$POOL_ID/*`) lets **every identity the provider trusts** impersonate the SA — on a provider missing Step 3's attribute condition, that is any authenticated Derp user. Acceptable only for throwaway pools in isolated test projects (e.g. the E2E project below); never in a customer setup.
 
 **After running these steps,** the admin pastes the audience string (`//iam.googleapis.com/projects/$PROJECT_NUM/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID`) into `gcpAudience`, and `$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com` into `gcpSaEmail` on the admin Models page.
 
-**Egress note.** Member machines need HTTPS egress to `sts.googleapis.com` and `iamcredentials.googleapis.com` in addition to existing Warp endpoints — relevant for enterprises with allowlisting or TLS-inspecting proxies.
+**Egress note.** Member machines need HTTPS egress to `sts.googleapis.com` and `iamcredentials.googleapis.com` in addition to existing Derp endpoints — relevant for enterprises with allowlisting or TLS-inspecting proxies.
 
 Config-change propagation: the admin's own client re-mints on save; members pick up changed federation config via the existing workspace poll (~10 minutes) or on restart, at which point the mint binding (data model #2) forces the re-mint.
 
 **Member toggle in Settings.** Under `RESPECT_USER_SETTING`, members must be able to opt in. This requires a visible toggle in Settings — without it the default-`false` `AISettings` field is inaccessible and `RESPECT_USER_SETTING` is functionally "GEAP disabled for everyone" in MVP.
 
-Scope: add a `GeapCredentialsToggleRow` under **Settings > Warp Agent** (below the existing Bedrock section). The row is hidden when:
+Scope: add a `GeapCredentialsToggleRow` under **Settings > Derp Agent** (below the existing Bedrock section). The row is hidden when:
 - GEAP is not enabled in the workspace (`is_gemini_enterprise_available_from_workspace()` is false)
 - `enablementSetting` is `ENFORCE` (toggle replaced by an "Enabled by your workspace" note, via the same `is_*_toggleable` helper Bedrock uses at `user_workspaces.rs:538`)
 
@@ -548,16 +548,16 @@ When visible, the row shows:
 - A labeled toggle bound to `AISettings::gemini_enterprise_credentials_enabled`
 - A **"Refresh credentials"** button — calls `force_refresh_geap_credentials(manager, ctx)` directly, same path as the other triggers. This is the sixth, manual trigger, not a separate mechanism.
 
-The refresh button is in MVP scope (not a Follow-up) because the WIF flow has no CLI command for Warp to detect completing. Bedrock has `register_model_event_dispatcher` which auto-remints when the user runs `aws sso login`; GEAP has no equivalent shell command, so the Settings button is the only explicit user-controlled recovery path outside the inline error view. It covers cases like: a `Failed` first mint, a parked refresh chain after a failed background re-mint, or wanting to force a fresh token before a long session.
+The refresh button is in MVP scope (not a Follow-up) because the WIF flow has no CLI command for Derp to detect completing. Bedrock has `register_model_event_dispatcher` which auto-remints when the user runs `aws sso login`; GEAP has no equivalent shell command, so the Settings button is the only explicit user-controlled recovery path outside the inline error view. It covers cases like: a `Failed` first mint, a parked refresh chain after a failed background re-mint, or wanting to force a fresh token before a long session.
 
 The refresh button does not show credential status or expiry — that belongs to a future Settings status widget.
 
 ## Testing and validation
 
-Maps to `warp-server/specs/REV-1599/PRODUCT.md` Goal 3 (seamless member credentials) and the Data Handling constraints.
+Maps to `derp-server/specs/REV-1599/PRODUCT.md` Goal 3 (seamless member credentials) and the Data Handling constraints.
 
 - **Unit tests:** `crates/ai/src/api_keys_tests.rs` — token attached when gate+binding match, omitted when disabled, omitted when binding mismatches (uid/audience/sa_email), omitted when logged out, **expired token still attached** (mirroring Grok's `grok_access_token_near_expiry_still_sent` / `api_keys_for_request_includes_expired_grok_token`), previous token served during `Refreshing { previous: Some }` and omitted when `previous: None`; `app/src/ai/geap_credentials_tests.rs` — `GeapWifConfig` parsing/trimming/audience handling, STS response with/without `expires_in` (incl. the JWT-expiry fallback), impersonation response camelCase + RFC 3339 parsing, invalid-timestamp rejection, `needs_refresh` lead-time boundaries **including already-expired → true**, guard no-op while `Refreshing`, request-time safety net no-ops on a fresh token / gate off / mint in flight and re-mints on a parked chain, completion discards the result when the gate flipped off mid-mint, failed re-mint restores `Loaded { previous }` (never discards a working token), timer delay clamped to the 60s floor on a near-expired store; `app/src/workspaces/user_workspaces_tests.rs` — workspace gate on/off/absent-host, `ENFORCE` vs `RESPECT_USER_SETTING` crossed with the member toggle (default `false` → opt-in), logged-out user returns `false` regardless of workspace state.
-- **E2E (performed, repeatable):** local warp-server (signs as staging per `local.yaml`) + local client + real GCP project `warp-geap-test-2026`. Verified: mint succeeds from synced host settings alone; GCP Data Access audit log shows the full chain — `serviceAccountDelegationInfo` = `principal://.../warp-geap-pool/subject/<user email>`, `principalEmail` = the SA, `granted: true` on `aiplatform.endpoints.predict`, resource in the customer project; utility-model calls (suggestion/classifier roles) also route to the customer project under `ENFORCE`.
+- **E2E (performed, repeatable):** local derp-server (signs as staging per `local.yaml`) + local client + real GCP project `derp-geap-test-2026`. Verified: mint succeeds from synced host settings alone; GCP Data Access audit log shows the full chain — `serviceAccountDelegationInfo` = `principal://.../derp-geap-pool/subject/<user email>`, `principalEmail` = the SA, `granted: true` on `aiplatform.endpoints.predict`, resource in the customer project; utility-model calls (suggestion/classifier roles) also route to the customer project under `ENFORCE`.
 - **Negative cases:** GEAP host disabled → `Disabled`, token absent from requests; empty `gcpAudience` → `Missing`; wrong pool/provider → `ExchangeToken` failure with config hints; missing `workloadIdentityUser` binding → `ImpersonateServiceAccount` 403; expired token → still attached and sent (never silently dropped) → Google rejects it → `InvalidGeminiEnterpriseCredentialsError` → inline error view auto-remints, in both enablement modes.
 - **Pre-merge:** `./script/format` + presubmit clippy per repo rules; client release additionally gated on the server schema deploy (see Rollout and gating).
 
@@ -573,9 +573,9 @@ No client `FeatureFlag`, deliberately: the rollout switch is the server-side adm
 
 - **Mid-session token expiry.** Covered by the three lifecycle layers (one-shot timer at `expires_at − 5min`; request-time safety net on every agent request; always-send + Google 401 → inline recovery — see "Token lifecycle: complete case enumeration"). `Refreshing { previous }` keeps serving the old token during re-mints, so healthy sessions never see a Google 401 for plain expiry.
 - **Workspace saves and config drift.** `UpdateWorkspaceSettingsSuccess` does not distinguish GEAP fields, but the mint binding (data model #2) makes the refresh guard a no-op unless the audience/SA actually changed — unrelated admin saves cost no STS round-trip, while real federation-config changes re-mint immediately.
-- **Customer-side misconfiguration.** The trust bridge is only as tight as the customer's IAM, and Warp is a shared issuer — so the setup steps above bake the tenant-isolation controls into the default commands: the provider `--attribute-condition` pinning the pool to the workspace's team UID, the `workloadIdentityUser` binding scoped to `attribute.team` (the pool `/*` wildcard is explicitly test-only), and a stable `google.subject` mapping (`assertion.sub`) with `attribute.user_email` for human-readable audit logs. Final customer-facing docs must carry the same defaults verbatim, plus a least-privilege (ideally custom) role on the SA.
+- **Customer-side misconfiguration.** The trust bridge is only as tight as the customer's IAM, and Derp is a shared issuer — so the setup steps above bake the tenant-isolation controls into the default commands: the provider `--attribute-condition` pinning the pool to the workspace's team UID, the `workloadIdentityUser` binding scoped to `attribute.team` (the pool `/*` wildcard is explicitly test-only), and a stable `google.subject` mapping (`assertion.sub`) with `attribute.user_email` for human-readable audit logs. Final customer-facing docs must carry the same defaults verbatim, plus a least-privilege (ideally custom) role on the SA.
 
 ## Follow-ups
 
 - Cloud-agent (Oz runner) mint path: same exchange keyed off task identity, the GEAP analog of `AwsCredentialsRefreshStrategy::OidcManaged`.
-- `warp-terraform` PR to enable Vertex models on Warp staging (requested in PR review): once the client work lands and E2E validation against the personal/test GCP project passes, enable Vertex models on staging infra so GEAP can be exercised end-to-end there.
+- `derp-terraform` PR to enable Vertex models on Derp staging (requested in PR review): once the client work lands and E2E validation against the personal/test GCP project passes, enable Vertex models on staging infra so GEAP can be exercised end-to-end there.

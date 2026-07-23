@@ -9,18 +9,18 @@ use session_sharing_protocol::common::{
 use session_sharing_protocol::sharer::{RoleUpdateReason, SessionEndedReason, SessionSourceType};
 use session_sharing_protocol::viewer::RoleUpdatedReason;
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::ui::appearance::Appearance;
-use warp_errors::report_error;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::MouseStateHandle;
-use warpui::platform::Cursor;
-use warpui::r#async::Timer;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::units::IntoLines;
-use warpui::{AppContext, Element, ModelHandle, SingletonEntity, ViewContext};
+use derp_core::features::FeatureFlag;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_core::ui::appearance::Appearance;
+use derp_errors::report_error;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::MouseStateHandle;
+use derpui::platform::Cursor;
+use derpui::r#async::Timer;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::UiComponent;
+use derpui::units::IntoLines;
+use derpui::{AppContext, Element, ModelHandle, SingletonEntity, ViewContext};
 
 use super::adapter::{Adapter, Kind, Participant};
 use super::cloud_conversation_continuation::{
@@ -1195,7 +1195,7 @@ impl TerminalView {
                 for viewer in active_viewers {
                     if let Some(existing_viewer) = shared_session.viewers().get(viewer.id()) {
                         // A change to the viewer's ACL may have originated from
-                        // warp-server, so we need to update the avatar's role.
+                        // derp-server, so we need to update the avatar's role.
                         existing_viewer.avatar.update(ctx, |avatar, ctx| {
                             if avatar.role() != viewer.role {
                                 avatar.set_role(viewer.role);

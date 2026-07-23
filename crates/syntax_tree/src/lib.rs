@@ -12,14 +12,14 @@ pub use queries::highlight_query::{ColorMap, TextSlice};
 use queries::indent_query::{indentation_delta, IndentDelta};
 use rangemap::{RangeMap, RangeSet};
 use string_offset::{ByteOffset, CharOffset};
-use warp_editor::content::buffer::{Buffer, BufferSnapshot};
-use warp_editor::content::edit::PreciseDelta;
-use warp_editor::content::text::IndentUnit;
-use warp_editor::content::version::BufferVersion;
-use warp_editor::decoration::DecorationLayer;
-use warpui_core::color::ColorU;
-use warpui_core::text::point::Point;
-use warpui_core::{AppContext, Entity, ModelContext, WeakModelHandle};
+use derp_editor::content::buffer::{Buffer, BufferSnapshot};
+use derp_editor::content::edit::PreciseDelta;
+use derp_editor::content::text::IndentUnit;
+use derp_editor::content::version::BufferVersion;
+use derp_editor::decoration::DecorationLayer;
+use derpui_core::color::ColorU;
+use derpui_core::text::point::Point;
+use derpui_core::{AppContext, Entity, ModelContext, WeakModelHandle};
 
 const MAX_SYNTAX_TREES: usize = 3;
 

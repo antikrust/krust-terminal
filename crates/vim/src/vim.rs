@@ -1,6 +1,6 @@
-use warp_core::safe_info;
-use warpui_core::keymap::Keystroke;
-use warpui_core::{Entity, ModelContext, ModelHandle, ViewContext};
+use derp_core::safe_info;
+use derpui_core::keymap::Keystroke;
+use derpui_core::{Entity, ModelContext, ModelHandle, ViewContext};
 
 use crate::register::{valid_register_name, BLACK_HOLE_REGISTER};
 
@@ -1793,8 +1793,8 @@ pub struct VimState<'a> {
     pub showcmd: &'a str,
 }
 
-/// This struct is a wrapper around the VimFSA that turns it into a warpui_core::Entity. We want to keep
-/// the VimFSA independent of our UI framework, so anything involving warpui should live here
+/// This struct is a wrapper around the VimFSA that turns it into a derpui_core::Entity. We want to keep
+/// the VimFSA independent of our UI framework, so anything involving derpui should live here
 /// instead.
 #[derive(Default)]
 pub struct VimModel {

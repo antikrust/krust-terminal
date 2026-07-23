@@ -1,14 +1,14 @@
 /// Common functionality used across different AI Assistant components.
 use markdown_parser::{parse_markdown, CodeBlockText, FormattedText, FormattedTextLine};
 use pathfinder_color::ColorU;
-use warpui::elements::{
+use derpui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, HighlightedHyperlink, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, ModelHandle};
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, ModelHandle};
 
 use super::panel::AIAssistantAction;
 use super::requests::Requests;

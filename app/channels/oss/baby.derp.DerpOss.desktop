@@ -1,0 +1,23 @@
+[Desktop Entry]
+# The version of the desktop entry spec this conforms to.
+Version=1.0
+
+Type=Application
+
+Name=DerpOss
+GenericName=TerminalEmulator
+
+Exec=derp-terminal-oss %U
+StartupWMClass=baby.derp.DerpOss
+
+Keywords=shell;prompt;command;commandline;cmd;
+
+Icon=baby.derp.DerpOss
+
+Categories=System;TerminalEmulator;
+
+# Don't run this application within a terminal.
+Terminal=false
+
+# Register ourselves as the handler for derposs:// URLs.
+MimeType=x-scheme-handler/derposs;

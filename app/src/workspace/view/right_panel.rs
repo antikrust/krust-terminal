@@ -4,21 +4,21 @@ use std::sync::Arc;
 use dunce::canonicalize;
 use itertools::Itertools;
 use pathfinder_color::ColorU;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::Icon;
-use warp_errors::report_error;
-use warp_util::path::LineAndColumnArg;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::Icon;
+use derp_errors::report_error;
+use derp_util::path::LineAndColumnArg;
+use derpui::elements::{
     resizable_state_handle, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container,
     CrossAxisAlignment, DragBarSide, Element, Empty, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, PositionedElementAnchor, Resizable, ResizableStateHandle,
     Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::EditableBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::EditableBinding;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };
@@ -65,8 +65,8 @@ use crate::workspace::WorkspaceAction;
 pub enum ReviewDestination {
     /// No terminal is available to receive comments.
     None,
-    /// A Warp agent terminal is available (input box visible, not executing).
-    Warp,
+    /// A Derp agent terminal is available (input box visible, not executing).
+    Derp,
     /// A CLI agent (e.g. Claude Code, Gemini) is running in a terminal.
     Cli(CLIAgent),
 }
@@ -97,7 +97,7 @@ impl ReviewTerminalUnavailableReason {
             Self::NoSelectedRepo => "no repo is selected for code review",
             Self::SessionPathUnavailable => "session cwd is unavailable or not local",
             Self::SessionOutsideSelectedRepo => "session cwd is not inside selected repo",
-            Self::AIDisabled => "AI is disabled for Warp review destinations",
+            Self::AIDisabled => "AI is disabled for Derp review destinations",
             Self::TerminalExecuting => "terminal is currently executing a command",
             Self::InputBoxNotVisible => "terminal input box is not visible",
         }
@@ -225,7 +225,7 @@ impl CodeReviewState {
                 dropdown.set_font_color(font_color, ctx);
                 dropdown.set_font_size(ui_font_size, ctx);
                 dropdown.set_vertical_margin(0., ctx);
-                dropdown.set_top_bar_height(warp_core::ui::icons::ICON_DIMENSIONS, ctx);
+                dropdown.set_top_bar_height(derp_core::ui::icons::ICON_DIMENSIONS, ctx);
                 dropdown.set_padding(HEADER_BUTTON_PADDING, ctx);
 
                 // The font color above is derived from the active theme and
@@ -440,7 +440,7 @@ pub struct RightPanelView {
 
 impl RightPanelView {
     pub fn init(app: &mut AppContext) {
-        use warpui::keymap::macros::*;
+        use derpui::keymap::macros::*;
 
         app.register_editable_bindings([EditableBinding::new(
             "workspace:toggle_maximize_code_review_panel",
@@ -951,8 +951,8 @@ impl RightPanelView {
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     fn render_maximize_pane_button(&self) -> Box<dyn Element> {
         ConstrainedBox::new(ChildView::new(&self.maximize_button).finish())
-            .with_height(warp_core::ui::icons::ICON_DIMENSIONS)
-            .with_width(warp_core::ui::icons::ICON_DIMENSIONS)
+            .with_height(derp_core::ui::icons::ICON_DIMENSIONS)
+            .with_width(derp_core::ui::icons::ICON_DIMENSIONS)
             .finish()
     }
 
@@ -1589,7 +1589,7 @@ impl RightPanelView {
     /// (CLI agents are long-running commands that accept review input).
     ///
     /// When `ai_enabled` is `false`, only terminals with an active CLI agent are
-    /// considered available (non-CLI Warp terminals require AI to be on).
+    /// considered available (non-CLI Derp terminals require AI to be on).
     fn is_terminal_available_for_review(
         tv: &ViewHandle<TerminalView>,
         repo_path: &LocalOrRemotePath,
@@ -1692,7 +1692,7 @@ impl RightPanelView {
                 tv.read(ctx, |t, ctx| {
                     t.active_cli_agent(ctx)
                         .map(ReviewDestination::Cli)
-                        .unwrap_or(ReviewDestination::Warp)
+                        .unwrap_or(ReviewDestination::Derp)
                 })
             })
             .unwrap_or(ReviewDestination::None);

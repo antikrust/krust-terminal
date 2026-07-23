@@ -1,25 +1,25 @@
 use ai::LLMId;
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui_core::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui_core::elements::{
     AnchorPair, Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, Empty, Flex, FormattedTextElement, Hoverable,
-    Icon as WarpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
+    Icon as DerpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     OffsetType, ParentElement, ParentOffsetBounds, PositioningAxis, Radius, SavePosition,
     ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Stack, Text, XAxisAnchor, YAxisAnchor,
 };
-use warpui_core::fonts::{Properties, Weight};
-use warpui_core::keymap::Keystroke;
-use warpui_core::platform::Cursor;
-use warpui_core::scene::DropShadow;
-use warpui_core::text_layout::TextAlignment;
-use warpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui_core::{
+use derpui_core::fonts::{Properties, Weight};
+use derpui_core::keymap::Keystroke;
+use derpui_core::platform::Cursor;
+use derpui_core::scene::DropShadow;
+use derpui_core::text_layout::TextAlignment;
+use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui_core::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
 };
 
@@ -100,7 +100,7 @@ pub enum AgentSlideAction {
 }
 
 pub struct AgentSlide {
-    onboarding_state: warpui_core::ModelHandle<OnboardingStateModel>,
+    onboarding_state: derpui_core::ModelHandle<OnboardingStateModel>,
 
     /// Mouse state handles for each model row.
     model_mouse_states: Vec<MouseStateHandle>,
@@ -129,7 +129,7 @@ fn model_row_position_id(index: usize) -> String {
 
 impl AgentSlide {
     pub(crate) fn new(
-        onboarding_state: warpui_core::ModelHandle<OnboardingStateModel>,
+        onboarding_state: derpui_core::ModelHandle<OnboardingStateModel>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let model_count = onboarding_state.as_ref(ctx).models().len();
@@ -223,7 +223,7 @@ impl AgentSlide {
     fn render_header(&self, appearance: &Appearance) -> Box<dyn Element> {
         let title = appearance
             .ui_builder()
-            .paragraph("Customize your Warp Agent")
+            .paragraph("Customize your Derp Agent")
             .with_style(UiComponentStyles {
                 font_size: Some(36.),
                 font_weight: Some(Weight::Medium),
@@ -233,7 +233,7 @@ impl AgentSlide {
             .finish();
 
         let subtitle = FormattedTextElement::from_str(
-            "Select your Warp Agent's defaults.",
+            "Select your Derp Agent's defaults.",
             appearance.ui_font_family(),
             16.,
         )
@@ -416,7 +416,7 @@ impl AgentSlide {
             let title_row: Box<dyn Element> = if let Some(icon) = icon {
                 const ICON_SIZE: f32 = 14.;
                 let icon_el =
-                    ConstrainedBox::new(Box::new(icon.to_warpui_icon(title_color.into())))
+                    ConstrainedBox::new(Box::new(icon.to_derpui_icon(title_color.into())))
                         .with_width(ICON_SIZE)
                         .with_height(ICON_SIZE)
                         .finish();
@@ -430,7 +430,7 @@ impl AgentSlide {
             };
 
             // Trailing chevron icon.
-            let chevron = ConstrainedBox::new(Box::new(WarpUiIcon::new(
+            let chevron = ConstrainedBox::new(Box::new(DerpUiIcon::new(
                 "bundled/svg/chevron-down.svg",
                 title_color,
             )))
@@ -587,7 +587,7 @@ impl AgentSlide {
                 .finish();
 
             const ICON_SIZE: f32 = 14.;
-            let icon_el = ConstrainedBox::new(Box::new(icon.to_warpui_icon(title_color.into())))
+            let icon_el = ConstrainedBox::new(Box::new(icon.to_derpui_icon(title_color.into())))
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish();
@@ -736,19 +736,19 @@ impl AgentSlide {
             (
                 AgentAutonomy::Full,
                 "Full",
-                "Warp Agent runs commands, writes code, and reads files without asking.",
+                "Derp Agent runs commands, writes code, and reads files without asking.",
                 self.autonomy_full_mouse_state.clone(),
             ),
             (
                 AgentAutonomy::Partial,
                 "Partial",
-                "Warp Agent can plan, read files, and execute low-risk commands. Asks before making any changes or executing sensitive commands.",
+                "Derp Agent can plan, read files, and execute low-risk commands. Asks before making any changes or executing sensitive commands.",
                 self.autonomy_partial_mouse_state.clone(),
             ),
             (
                 AgentAutonomy::None,
                 "None",
-                "Warp Agent takes no actions without your approval.",
+                "Derp Agent takes no actions without your approval.",
                 self.autonomy_none_mouse_state.clone(),
             ),
         ];
@@ -838,7 +838,7 @@ impl AgentSlide {
     fn render_visual(&self, appearance: &Appearance, app: &AppContext) -> Box<dyn Element> {
         let theme = appearance.theme();
 
-        if FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
             let use_vertical = self
                 .onboarding_state
                 .as_ref(app)

@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use warp_completer::completer::{CommandExitStatus, CommandOutput};
-use warp_core::command::ExitCode;
-use warp_core::SessionId;
+use derp_completer::completer::{CommandExitStatus, CommandOutput};
+use derp_core::command::ExitCode;
+use derp_core::SessionId;
 
 use crate::remote_server::client::RemoteServerClient;
 use crate::remote_server::proto::{run_command_response, RunCommandErrorCode};
@@ -14,7 +14,7 @@ use crate::terminal::model::session::command_executor::{CommandExecutor, Execute
 use crate::terminal::shell::Shell;
 
 /// `CommandExecutor` implementation that executes commands via a persistent
-/// `warp remote-server` process running on the remote host over SSH.
+/// `derp remote-server` process running on the remote host over SSH.
 ///
 /// The executor is always constructed with a live `RemoteServerClient` that
 /// was obtained from [`crate::remote_server::manager::RemoteServerManager`]
@@ -95,7 +95,7 @@ impl CommandExecutor for RemoteServerCommandExecutor {
             }
             Some(run_command_response::Result::Error(err)) => {
                 if err.code() == RunCommandErrorCode::SessionNotFound {
-                    warp_core::safe_error!(
+                    derp_core::safe_error!(
                         safe: ("Remote command SESSION_NOT_FOUND — SessionBootstrapped notification likely lost"),
                         full: ("Remote command SESSION_NOT_FOUND (session={:?}): {} — the SessionBootstrapped notification was likely lost", self.session_id, err.message)
                     );
@@ -108,7 +108,7 @@ impl CommandExecutor for RemoteServerCommandExecutor {
                 ))
             }
             None => {
-                warp_core::safe_error!(
+                derp_core::safe_error!(
                     safe: ("Remote command returned empty response — proto-level bug"),
                     full: ("Remote command returned empty response (session={:?}) — proto-level bug", self.session_id)
                 );

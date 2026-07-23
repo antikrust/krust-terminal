@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 
 use settings::Setting as _;
-use warp::integration_testing::command_search::{
+use derp::integration_testing::command_search::{
     assert_command_search_has_results, assert_command_search_is_open,
     assert_history_filter_is_active,
 };
-use warp::integration_testing::input::assert_workflow_info_box_is_open;
-use warp::integration_testing::step::new_step_with_default_assertions;
-use warp::integration_testing::terminal::{
+use derp::integration_testing::input::assert_workflow_info_box_is_open;
+use derp::integration_testing::step::new_step_with_default_assertions;
+use derp::integration_testing::terminal::{
     assert_input_editor_contents, wait_until_bootstrapped_single_pane_for_tab,
 };
-use warp::integration_testing::view_getters::single_input_view;
-use warp::integration_testing::{self};
-use warp::search::command_search::settings::ShowGlobalWorkflowsInUniversalSearch;
-use warp::sqlite_testing::set_user_and_hostname_for_commands;
-use warp::terminal::input::Input;
-use warp::terminal::model::session::get_local_hostname;
-use warp::terminal::shell::ShellType;
-use warpui_core::{async_assert, ViewHandle};
+use derp::integration_testing::view_getters::single_input_view;
+use derp::integration_testing::{self};
+use derp::search::command_search::settings::ShowGlobalWorkflowsInUniversalSearch;
+use derp::sqlite_testing::set_user_and_hostname_for_commands;
+use derp::terminal::input::Input;
+use derp::terminal::model::session::get_local_hostname;
+use derp::terminal::shell::ShellType;
+use derpui_core::{async_assert, ViewHandle};
 
 use super::{new_builder, TEST_ONLY_ASSETS};
 use crate::util::{get_local_user, write_histfiles_for_test};
@@ -317,7 +317,7 @@ pub fn test_command_search_loads_history_from_nondefault_histfile_path() -> Buil
 /// histfile commands, effectively "enriching" them with metadata.
 ///
 /// Basically, if a user manually deletes a command from their shell histfile, it should not show
-/// up in Warp -- so we effectively do a "left join" on commands from the histfile with commands
+/// up in Derp -- so we effectively do a "left join" on commands from the histfile with commands
 /// loaded from sqlite.
 pub fn test_histfile_left_joined_with_persisted_history() -> Builder {
     new_builder()

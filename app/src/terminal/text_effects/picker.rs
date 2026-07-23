@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use warp_errors::report_if_error;
-use warpui::presenter::ChildView;
-use warpui::{
+use derp_errors::report_if_error;
+use derpui::presenter::ChildView;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

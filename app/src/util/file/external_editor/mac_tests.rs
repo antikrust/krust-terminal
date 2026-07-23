@@ -1,18 +1,18 @@
-use super::is_warp_bundle;
+use super::is_derp_bundle;
 
 #[test]
-fn is_warp_bundle_recognises_warp_channels() {
-    assert!(is_warp_bundle("dev.warp.Warp"));
-    assert!(is_warp_bundle("dev.warp.WarpDev"));
-    assert!(is_warp_bundle("dev.warp.WarpPreview"));
-    assert!(is_warp_bundle("dev.warp.WarpOss"));
+fn is_derp_bundle_recognises_derp_channels() {
+    assert!(is_derp_bundle("baby.derp.Derp"));
+    assert!(is_derp_bundle("baby.derp.DerpDev"));
+    assert!(is_derp_bundle("baby.derp.DerpPreview"));
+    assert!(is_derp_bundle("baby.derp.DerpOss"));
 }
 
 #[test]
-fn is_warp_bundle_rejects_other_apps() {
-    assert!(!is_warp_bundle("com.microsoft.VSCode"));
-    assert!(!is_warp_bundle("com.apple.TextEdit"));
-    assert!(!is_warp_bundle("dev.zed.Zed"));
-    assert!(!is_warp_bundle("invalid"));
-    assert!(!is_warp_bundle(""));
+fn is_derp_bundle_rejects_other_apps() {
+    assert!(!is_derp_bundle("com.microsoft.VSCode"));
+    assert!(!is_derp_bundle("com.apple.TextEdit"));
+    assert!(!is_derp_bundle("dev.zed.Zed"));
+    assert!(!is_derp_bundle("invalid"));
+    assert!(!is_derp_bundle(""));
 }

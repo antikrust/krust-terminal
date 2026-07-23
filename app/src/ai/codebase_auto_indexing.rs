@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derpui::{AppContext, SingletonEntity};
 
 use crate::settings::CodeSettings;
 use crate::workspaces::user_workspaces::UserWorkspaces;

@@ -297,7 +297,7 @@ settings page.
 
 ## Settings and UI
 
-One JSON setting (`agents.warp_agent.other.ollama_committee_config`, never synced),
+One JSON setting (`agents.derp_agent.other.ollama_committee_config`, never synced),
 following the `ollama_model_mode_overrides` string-JSON pattern:
 
 ```json

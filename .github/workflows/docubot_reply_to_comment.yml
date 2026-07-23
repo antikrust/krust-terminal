@@ -17,9 +17,9 @@ on:
         description: Prompt to send to Docubot
         required: true
         default: "Analyze this PR for documentation needs"
-      warp_channel:
+      derp_channel:
         type: choice
-        description: Warp release channel
+        description: Derp release channel
         required: true
         default: dev
         options:
@@ -27,7 +27,7 @@ on:
           - preview
           - stable
       profile_id:
-        description: Warp profile ID
+        description: Derp profile ID
         required: false
 permissions:
   contents: write
@@ -63,7 +63,7 @@ jobs:
         uses: ./.github/actions/docubot
         with:
           prompt: ${{ github.event.comment.body || inputs.prompt}}
-          warp_api_key: ${{ secrets.WARP_DEV_API_KEY }}
-          warp_channel: ${{ inputs.warp_channel || 'dev' }}
-          profile_id: ${{ inputs.profile_id || vars.WARP_DEV_API_PROFILE_ID }}
+          derp_api_key: ${{ secrets.DERP_DEV_API_KEY }}
+          derp_channel: ${{ inputs.derp_channel || 'dev' }}
+          profile_id: ${{ inputs.profile_id || vars.DERP_DEV_API_PROFILE_ID }}
           github_token: ${{ secrets.PEI_GH_TOKEN_PLS_DEL }}

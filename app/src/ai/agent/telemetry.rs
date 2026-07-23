@@ -1,5 +1,5 @@
 use serde::Serialize;
-use warpui::{AppContext, SingletonEntity};
+use derpui::{AppContext, SingletonEntity};
 
 use super::conversation::AIConversationId;
 use super::{
@@ -21,16 +21,16 @@ impl ForTelemetry for AIAgentCitation {
 
     fn for_telemetry(&self, ctx: &AppContext) -> Option<Self::Output> {
         match self {
-            Self::WarpDriveObject { uid } => {
+            Self::DerpDriveObject { uid } => {
                 CloudModel::as_ref(ctx).get_by_uid(uid).map(|object| {
-                    CitationForTelemetry::WarpDriveObject {
+                    CitationForTelemetry::DerpDriveObject {
                         object_type: object.object_type(),
                         uid: object.uid(),
                     }
                 })
             }
-            Self::WarpDocumentation { path } => {
-                Some(CitationForTelemetry::WarpDocs { page: path.clone() })
+            Self::DerpDocumentation { path } => {
+                Some(CitationForTelemetry::DerpDocs { page: path.clone() })
             }
             Self::WebPage { url } => Some(CitationForTelemetry::WebPage { url: url.clone() }),
             Self::AgentMemory {

@@ -1,5 +1,5 @@
 use instant::Instant;
-use warp_terminal::model::char_or_str::CharOrStr;
+use derp_terminal::model::char_or_str::CharOrStr;
 
 use super::*;
 use crate::terminal::model::ansi::{Handler as _, Processor, ProcessorInput};

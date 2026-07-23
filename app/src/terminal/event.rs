@@ -89,8 +89,8 @@ pub enum Event {
     SourcedRcFileInSubshell(SourcedRcFileInSubshellEvent),
     /// Emitted when the active block's prompt has been updated.
     PromptUpdated,
-    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Warp's settings.
-    /// This can happen in cases such as when the user changes between PS1 and Warp prompt inside
+    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Derp's settings.
+    /// This can happen in cases such as when the user changes between PS1 and Derp prompt inside
     /// of an SSH session (the bindkeys are sent to the SSH session but not the local session, so
     /// they are out-of-sync when the user exits SSH).
     HonorPS1OutOfSync,
@@ -138,7 +138,7 @@ pub enum Event {
     },
     BootstrapPrecmdDone,
     /// A pluggable notification triggered via OSC 9 or OSC 777 escape sequences.
-    /// External programs can use this to trigger notifications in Warp.
+    /// External programs can use this to trigger notifications in Derp.
     ///
     /// References:
     /// - OSC 9: <https://conemu.github.io/en/AnsiEscapeCodes.html#OSC_Operating_system_commands>
@@ -170,9 +170,9 @@ pub enum TerminalMode {
 #[derive(Clone, Debug)]
 pub enum SshLoginStatus {
     /// We have some evidence login is complete but should check again.
-    RecheckBeforeWarpifying,
+    RecheckBeforeDerpifying,
     /// We have high confidence login is complete.
-    ReadyToWarpify,
+    ReadyToDerpify,
 }
 
 #[derive(Clone, Debug)]
@@ -250,7 +250,7 @@ pub enum BlockType {
     /// This is a block containing background process output.
     Background(Arc<SerializedBlock>),
 
-    /// This is a block containing static/hardcoded content (e.g. the subshell Warpification
+    /// This is a block containing static/hardcoded content (e.g. the subshell Derpification
     /// welcome block).
     Static,
 }

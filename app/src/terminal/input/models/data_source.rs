@@ -2,21 +2,21 @@ use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     ConstrainedBox, Container, CornerRadius, FormattedTextElement, Highlight, HighlightedHyperlink,
     MouseStateHandle, Radius, Text,
 };
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::keymap::Keystroke;
-use warpui::platform::{Cursor, OperatingSystem};
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Properties, Style, Weight};
+use derpui::keymap::Keystroke;
+use derpui::platform::{Cursor, OperatingSystem};
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _,
 };
 
@@ -47,7 +47,7 @@ use crate::terminal::view::ambient_agent::AmbientAgentViewModel;
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
-const AUTO_BEDROCK_TOOLTIP: &str = "Warp uses Bedrock when the model Auto selects supports it; otherwise it may use Warp-hosted inference.";
+const AUTO_BEDROCK_TOOLTIP: &str = "Derp uses Bedrock when the model Auto selects supports it; otherwise it may use Derp-hosted inference.";
 
 #[derive(Clone, Debug)]
 pub struct AcceptModel {
@@ -241,7 +241,7 @@ impl ModelSelectorDataSource {
 
     /// Returns whether a model should appear in the inline picker.
     /// Custom-endpoint models are suppressed in Oz cloud agent panes because
-    /// they cannot route through Warp's cloud inference infrastructure.
+    /// they cannot route through Derp's cloud inference infrastructure.
     pub(crate) fn include_model_in_picker(is_cloud_pane: bool, is_custom_endpoint: bool) -> bool {
         !is_cloud_pane || !is_custom_endpoint
     }
@@ -410,7 +410,7 @@ impl SearchItem for ModelSearchItem {
         let icon_size = inline_styles::font_size(appearance);
         let icon_color = inline_styles::icon_color(appearance);
 
-        let icon = self.leading_icon.to_warpui_icon(icon_color).finish();
+        let icon = self.leading_icon.to_derpui_icon(icon_color).finish();
 
         Container::new(
             ConstrainedBox::new(icon)
@@ -427,8 +427,8 @@ impl SearchItem for ModelSearchItem {
         _highlight_state: ItemHighlightState,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use warpui::elements::{Flex, ParentElement as _};
-        use warpui::prelude::CrossAxisAlignment;
+        use derpui::elements::{Flex, ParentElement as _};
+        use derpui::prelude::CrossAxisAlignment;
 
         let appearance = crate::appearance::Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -467,7 +467,7 @@ impl SearchItem for ModelSearchItem {
             .with_child(text.finish());
         if let Some(icon) = self.credential_icon {
             let credential_icon =
-                ConstrainedBox::new(icon.to_warpui_icon(secondary_text_color).finish())
+                ConstrainedBox::new(icon.to_derpui_icon(secondary_text_color).finish())
                     .with_width(font_size)
                     .with_height(font_size)
                     .finish();
@@ -551,7 +551,7 @@ impl SearchItem for ModelSearchItem {
     }
 
     fn render_details(&self, app: &AppContext) -> Option<Box<dyn Element>> {
-        use warpui::elements::{Flex, ParentElement as _};
+        use derpui::elements::{Flex, ParentElement as _};
 
         let appearance = crate::appearance::Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -617,7 +617,7 @@ impl SearchItem for ModelSearchItem {
                 .on_click(move |ctx, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: search_query.clone(),
-                        section: Some(SettingsSection::WarpAgent),
+                        section: Some(SettingsSection::DerpAgent),
                     });
                 })
                 .finish();
@@ -697,7 +697,7 @@ impl SearchItem for ModelSearchItem {
                     "bring your own key",
                     WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: "api".to_string(),
-                        section: Some(SettingsSection::WarpAgent),
+                        section: Some(SettingsSection::DerpAgent),
                     },
                 ));
             }
@@ -713,10 +713,10 @@ impl SearchItem for ModelSearchItem {
             .with_hyperlink_font_color(theme.accent().into_solid())
             .register_default_click_handlers_with_action_support(|hyperlink_lens, event, ctx| {
                 match hyperlink_lens {
-                    warpui::elements::HyperlinkLens::Url(url) => {
+                    derpui::elements::HyperlinkLens::Url(url) => {
                         ctx.open_url(url);
                     }
-                    warpui::elements::HyperlinkLens::Action(action_ref) => {
+                    derpui::elements::HyperlinkLens::Action(action_ref) => {
                         if let Some(action) = action_ref.as_any().downcast_ref::<WorkspaceAction>()
                         {
                             event.dispatch_typed_action(action.clone());
@@ -781,7 +781,7 @@ impl SearchItem for ModelSearchItem {
 }
 
 /// Returns true when a promo discount chip should be shown for a model.
-/// Discounts only apply when the user is billing through Warp credits,
+/// Discounts only apply when the user is billing through Derp credits,
 /// so we suppress the chip when the user is routing through their own API key.
 fn should_show_discount_chip(discount_percentage: Option<f32>, is_using_byok: bool) -> bool {
     discount_percentage.is_some_and(|p| p > 0.) && !is_using_byok

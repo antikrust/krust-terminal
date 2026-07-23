@@ -1,6 +1,6 @@
 # Product Spec: `--jq` filter flag for `oz run get` and `oz run list`
 
-Linear: [REMOTE-1393](https://linear.app/warpdotdev/issue/REMOTE-1393)
+Linear: [REMOTE-1393](https://linear.app/derpdotdev/issue/REMOTE-1393)
 Figma: none (CLI-only change)
 
 ## Summary
@@ -9,7 +9,7 @@ Add a `--jq "<filter>"` flag to `oz run get` and `oz run list`. When set, the co
 
 ## Problem
 
-[REMOTE-1374](https://linear.app/warpdotdev/issue/REMOTE-1374) landed `--output-format json` on both commands and deliberately deferred first-class JQ-style filtering as a follow-up. In practice, the scripting pattern it unlocks still requires an external `jq` binary on the user's `PATH`:
+[REMOTE-1374](https://linear.app/derpdotdev/issue/REMOTE-1374) landed `--output-format json` on both commands and deliberately deferred first-class JQ-style filtering as a follow-up. In practice, the scripting pattern it unlocks still requires an external `jq` binary on the user's `PATH`:
 
 ```
 oz run list --state failed --output-format json | jq -r '.runs[].task_id'

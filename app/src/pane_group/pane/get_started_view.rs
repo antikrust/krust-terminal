@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::color::blend::Blend as _;
-use warp_core::ui::{self};
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::color::blend::Blend as _;
+use derp_core::ui::{self};
+use derpui::elements::{
     Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _, Radius,
 };
-use warpui::keymap::EditableBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::keymap::EditableBinding;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -28,7 +28,7 @@ use crate::workspace::{ToastStack, Workspace, WorkspaceAction};
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_editable_bindings([EditableBinding::new(
         "workspace:new_tab",
@@ -213,7 +213,7 @@ impl GetStartedView {
             .with_children([
                 Container::new(
                     ConstrainedBox::new(
-                        Icon::new("bundled/svg/warp-logo-neutral.svg", theme.foreground()).finish(),
+                        Icon::new("bundled/svg/derp-logo-neutral.svg", theme.foreground()).finish(),
                     )
                     .with_height(40.)
                     .with_width(40.)
@@ -223,7 +223,7 @@ impl GetStartedView {
                 .finish(),
                 appearance
                     .ui_builder()
-                    .paragraph("Welcome to Warp")
+                    .paragraph("Welcome to Derp")
                     .with_style(UiComponentStyles {
                         font_size: Some(20.),
                         ..Default::default()
@@ -280,7 +280,7 @@ impl GetStartedView {
                             keybinding_name_to_display_string("workspace:new_tab", app)
                                 .unwrap_or_default()
                         ),
-                        ui::Icon::Terminal.to_warpui_icon(theme.foreground()),
+                        ui::Icon::Terminal.to_derpui_icon(theme.foreground()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(16., 16.),

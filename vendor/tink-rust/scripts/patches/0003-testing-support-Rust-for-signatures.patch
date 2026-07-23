@@ -1,0 +1,108 @@
+From 711e16a1a1f99f5d571126b08a83148d700b0e48 Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Mon, 14 Sep 2020 08:55:49 +0100
+Subject: [PATCH] testing: support Rust for signatures
+
+Rust only supports P256 as yet so also add some expected failures.
+---
+ .../key_generation_consistency_test.py           |  7 +++++++
+ testing/cross_language/signature_test.py         | 16 ++++++++++++++--
+ .../cross_language/util/supported_key_types.py   |  4 ++--
+ testing/cross_language/util/testing_servers.py   |  2 +-
+ 4 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/testing/cross_language/key_generation_consistency_test.py b/testing/cross_language/key_generation_consistency_test.py
+index 876c3a6d5aea..20297f345316 100644
+--- a/testing/cross_language/key_generation_consistency_test.py
++++ b/testing/cross_language/key_generation_consistency_test.py
+@@ -67,6 +67,13 @@ FAILS_BUT_SHOULD_SUCCEED = [
+      'java'),
+     ('EciesAeadHkdfPrivateKey(CURVE25519,UNCOMPRESSED,SHA512,AesGcmKey(16))',
+      'go'),
++    # TODO: Rust does not support Ecdsa with NIST_P384 nor NIST_P521.
++    ('EcdsaPrivateKey(SHA384,NIST_P384,IEEE_P1363)', 'rust'),
++    ('EcdsaPrivateKey(SHA384,NIST_P384,DER)', 'rust'),
++    ('EcdsaPrivateKey(SHA512,NIST_P384,IEEE_P1363)', 'rust'),
++    ('EcdsaPrivateKey(SHA512,NIST_P384,DER)', 'rust'),
++    ('EcdsaPrivateKey(SHA512,NIST_P521,IEEE_P1363)', 'rust'),
++    ('EcdsaPrivateKey(SHA512,NIST_P521,DER)', 'rust'),
+ ]
+
+ HASH_TYPES = [
+diff --git a/testing/cross_language/signature_test.py b/testing/cross_language/signature_test.py
+index 1a954b0c01bb..274fb11bf1a5 100644
+--- a/testing/cross_language/signature_test.py
++++ b/testing/cross_language/signature_test.py
+@@ -30,6 +30,16 @@ from util import testing_servers
+ SUPPORTED_LANGUAGES = (testing_servers
+                        .SUPPORTED_LANGUAGES_BY_PRIMITIVE['signature'])
+
++# Test cases that fail in a language but should succeed
++FAILS_BUT_SHOULD_SUCCEED = [
++    # TODO: Rust does not support Ecdsa with NIST_P384 nor NIST_P521.
++    ('ECDSA_P384', 'rust'),
++    ('ECDSA_P384_IEEE_P1363', 'rust'),
++    ('ECDSA_P384_SHA384', 'rust'),
++    ('ECDSA_P384_SHA384_IEEE_P1363', 'rust'),
++    ('ECDSA_P521', 'rust'),
++    ('ECDSA_P521_IEEE_P1363', 'rust'),
++]
+
+ def setUpModule():
+   signature.register()
+@@ -61,21 +71,23 @@ class SignatureTest(parameterized.TestCase):
+     supported_signers = [
+         testing_servers.public_key_sign(lang, private_keyset)
+         for lang in supported_langs
++        if (key_template_name, lang) not in FAILS_BUT_SHOULD_SUCCEED
+     ]
+     unsupported_signers = [
+         testing_servers.public_key_sign(lang, private_keyset)
+         for lang in SUPPORTED_LANGUAGES
+-        if lang not in supported_langs
++        if (lang not in supported_langs or (key_template_name, lang) in FAILS_BUT_SHOULD_SUCCEED)
+     ]
+     public_keyset = testing_servers.public_keyset('java', private_keyset)
+     supported_verifiers = [
+         testing_servers.public_key_verify(lang, public_keyset)
+         for lang in supported_langs
++        if (key_template_name, lang) not in FAILS_BUT_SHOULD_SUCCEED
+     ]
+     unsupported_verifiers = [
+         testing_servers.public_key_verify(lang, public_keyset)
+         for lang in testing_servers.LANGUAGES
+-        if lang not in supported_langs
++        if (lang not in supported_langs or (key_template_name, lang) in FAILS_BUT_SHOULD_SUCCEED)
+     ]
+     for signer in supported_signers:
+       message = (
+diff --git a/testing/cross_language/util/supported_key_types.py b/testing/cross_language/util/supported_key_types.py
+index 16616d6156ef..b58e28cf3c10 100644
+--- a/testing/cross_language/util/supported_key_types.py
++++ b/testing/cross_language/util/supported_key_types.py
+@@ -102,8 +102,8 @@ SUPPORTED_LANGUAGES = {
+     'EciesAeadHkdfPrivateKey': ['cc', 'java', 'go', 'python'],
+     'AesCmacKey': ['cc', 'java', 'go', 'python', 'rust'],
+     'HmacKey': ['cc', 'java', 'go', 'python', 'rust'],
+-    'EcdsaPrivateKey': ['cc', 'java', 'go', 'python'],
+-    'Ed25519PrivateKey': ['cc', 'java', 'go', 'python'],
++    'EcdsaPrivateKey': ['cc', 'java', 'go', 'python', 'rust'],
++    'Ed25519PrivateKey': ['cc', 'java', 'go', 'python', 'rust'],
+     'RsaSsaPkcs1PrivateKey': ['cc', 'java', 'python'],
+     'RsaSsaPssPrivateKey': ['cc', 'java', 'python'],
+     'AesCmacPrfKey': ['cc', 'java', 'go', 'python', 'rust'],
+diff --git a/testing/cross_language/util/testing_servers.py b/testing/cross_language/util/testing_servers.py
+index cb23d9f750a1..7215f37f1662 100644
+--- a/testing/cross_language/util/testing_servers.py
++++ b/testing/cross_language/util/testing_servers.py
+@@ -84,7 +84,7 @@ SUPPORTED_LANGUAGES_BY_PRIMITIVE = {
+     'streaming_aead': ['cc', 'go', 'java', 'python'],
+     'hybrid': ['cc', 'go', 'java', 'python'],
+     'mac': ['cc', 'go', 'java', 'python', 'rust'],
+-    'signature': ['cc', 'go', 'java', 'python'],
++    'signature': ['cc', 'go', 'java', 'python', 'rust'],
+     'prf': ['cc', 'java', 'go', 'python', 'rust'],
+     'jwt': ['cc', 'java', 'python'],
+ }
+--
+2.31.1

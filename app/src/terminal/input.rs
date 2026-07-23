@@ -58,49 +58,49 @@ use settings::{Setting as _, ToggleableSetting};
 use string_offset::{ByteOffset, CharOffset};
 use vec1::Vec1;
 use vim::vim::{VimHandler, VimMode};
-use warp_cli::agent::Harness;
-use warp_completer::completer::{
+use derp_cli::agent::Harness;
+use derp_completer::completer::{
     self, CompleterOptions, CompletionContext, CompletionsFallbackStrategy, Description, Match,
     MatchStrategy, MatchType, PathSeparators, SuggestionResults,
 };
-use warp_completer::meta::{HasSpan, Spanned};
-use warp_completer::parsers::simple::command_at_cursor_position;
-use warp_completer::parsers::LiteCommand;
-use warp_completer::signatures::CommandRegistry;
-use warp_completer::util::parse_current_commands_and_tokens;
-use warp_core::context_flag::ContextFlag;
-use warp_core::r#async::debounce;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warp_core::user_preferences::GetUserPreferences as _;
-use warp_editor::editor::NavigationKey;
-use warp_errors::{report_error, report_if_error};
-use warp_util::path::ShellFamily;
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::clipboard::{ClipboardContent, ImageData};
-use warpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
-use warpui::color::ColorU;
-use warpui::elements::{
+use derp_completer::meta::{HasSpan, Spanned};
+use derp_completer::parsers::simple::command_at_cursor_position;
+use derp_completer::parsers::LiteCommand;
+use derp_completer::signatures::CommandRegistry;
+use derp_completer::util::parse_current_commands_and_tokens;
+use derp_core::context_flag::ContextFlag;
+use derp_core::r#async::debounce;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::AnsiColorIdentifier;
+use derp_core::user_preferences::GetUserPreferences as _;
+use derp_editor::editor::NavigationKey;
+use derp_errors::{report_error, report_if_error};
+use derp_util::path::ShellFamily;
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::clipboard::{ClipboardContent, ImageData};
+use derpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
+use derpui::color::ColorU;
+use derpui::elements::{
     resizable_state_handle, Align, AnchorPair, ChildAnchor, Clipped, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTargetData, Element, EventHandler,
     Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, OffsetType,
     ParentAnchor, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius,
     ResizableStateHandle, SavePosition, SelectionHandle, Text, Wrap, XAxisAnchor, YAxisAnchor,
 };
-pub use warpui::elements::{ParentElement as _, Stack};
-pub use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::keymap::{BindingDescription, EditableBinding, FixedBinding, Keystroke};
-use warpui::platform::OperatingSystem;
-use warpui::presenter::ChildView;
+pub use derpui::elements::{ParentElement as _, Stack};
+pub use derpui::geometry::vector::{vec2f, Vector2F};
+use derpui::keymap::{BindingDescription, EditableBinding, FixedBinding, Keystroke};
+use derpui::platform::OperatingSystem;
+use derpui::presenter::ChildView;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
-use warpui::r#async::FutureExt as _;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::text_layout::TextStyle;
-use warpui::ui_components::chip::Chip;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::units::IntoPixels;
-pub use warpui::WindowId;
-use warpui::{
+use derpui::r#async::FutureExt as _;
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::text_layout::TextStyle;
+use derpui::ui_components::chip::Chip;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::units::IntoPixels;
+pub use derpui::WindowId;
+use derpui::{
     end_trace, start_trace, AppContext, Entity, EntityId, FocusContext, ModelAsRef, ModelHandle,
     SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -142,7 +142,7 @@ use super::view::queued_prompts_panel::{QueuedPromptsPanelEvent, QueuedPromptsPa
 use super::view::{
     ExecuteCommandEvent, SyncInputType, TerminalAction, PADDING_LEFT as TERMINAL_VIEW_PADDING_LEFT,
 };
-use super::warpify::SubshellSource;
+use super::derpify::SubshellSource;
 use super::{prompt, History, HistoryEntry, SizeInfo, TerminalModel, UpArrowHistoryConfig};
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -201,7 +201,7 @@ use crate::ai::predict::prompt_suggestions::{
 };
 use crate::ai::skills::{SkillOpenOrigin, SkillTelemetryEvent};
 use crate::ai::AIRequestUsageModel;
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::DerpAiExecutionContext;
 use crate::appearance::{Appearance, AppearanceEvent};
 use crate::channel::{Channel, ChannelState};
 use crate::cloud_object::model::actions::ObjectActionType;
@@ -318,7 +318,7 @@ use crate::terminal::view::{resolve_ai_query_routing, AIQueryRouting, CodeDiffAc
 use crate::terminal::CLIAgent;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
-use crate::user_config::WarpConfig;
+use crate::user_config::DerpConfig;
 use crate::util::bindings::{self, keybinding_name_to_normalized_string, CustomAction};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor;
@@ -410,26 +410,26 @@ const AGENT_MODE_AI_DISABLED_AUTODETECTION_DISABLED_HINT_TEXT: &str = "Run comma
 
 // Rotating hint text options for new Agent Mode conversations
 const AGENT_MODE_HINT_OPTIONS: &[&str] = &[
-    "Warp anything e.g. Deploy my React app to Vercel and set up environment variables",
-    "Warp anything e.g. Help me debug why my Python tests are failing in CI",
-    "Warp anything e.g. Set up a new microservice with Docker and create the deployment pipeline",
-    "Warp anything e.g. Find and fix the memory leak in my Node.js application",
-    "Warp anything e.g. Create a backup script for my PostgreSQL database and schedule it",
-    "Warp anything e.g. Help me migrate my data from MySQL to PostgreSQL",
-    "Warp anything e.g. Set up monitoring and alerts for my AWS infrastructure",
-    "Warp anything e.g. Build a REST API for my mobile app using FastAPI",
-    "Warp anything e.g. Help me optimize my SQL queries that are running slowly",
-    "Warp anything e.g. Create a GitHub Actions workflow to automatically deploy on merge",
-    "Warp anything e.g. Set up Redis caching for my web application",
-    "Warp anything e.g. Help me troubleshoot why my Kubernetes pods keep crashing",
-    "Warp anything e.g. Build a data pipeline to process CSV files and load them into BigQuery",
-    "Warp anything e.g. Set up SSL certificates and configure HTTPS for my domain",
-    "Warp anything e.g. Help me refactor this legacy code to use modern design patterns",
-    "Warp anything e.g. Create unit tests for my authentication service",
-    "Warp anything e.g. Set up log aggregation with ELK stack for my distributed system",
-    "Warp anything e.g. Help me implement OAuth2 authentication in my Express.js app",
-    "Warp anything e.g. Optimize my Docker images to reduce build times and size",
-    "Warp anything e.g. Set up A/B testing infrastructure for my web application",
+    "Derp anything e.g. Deploy my React app to Vercel and set up environment variables",
+    "Derp anything e.g. Help me debug why my Python tests are failing in CI",
+    "Derp anything e.g. Set up a new microservice with Docker and create the deployment pipeline",
+    "Derp anything e.g. Find and fix the memory leak in my Node.js application",
+    "Derp anything e.g. Create a backup script for my PostgreSQL database and schedule it",
+    "Derp anything e.g. Help me migrate my data from MySQL to PostgreSQL",
+    "Derp anything e.g. Set up monitoring and alerts for my AWS infrastructure",
+    "Derp anything e.g. Build a REST API for my mobile app using FastAPI",
+    "Derp anything e.g. Help me optimize my SQL queries that are running slowly",
+    "Derp anything e.g. Create a GitHub Actions workflow to automatically deploy on merge",
+    "Derp anything e.g. Set up Redis caching for my web application",
+    "Derp anything e.g. Help me troubleshoot why my Kubernetes pods keep crashing",
+    "Derp anything e.g. Build a data pipeline to process CSV files and load them into BigQuery",
+    "Derp anything e.g. Set up SSL certificates and configure HTTPS for my domain",
+    "Derp anything e.g. Help me refactor this legacy code to use modern design patterns",
+    "Derp anything e.g. Create unit tests for my authentication service",
+    "Derp anything e.g. Set up log aggregation with ELK stack for my distributed system",
+    "Derp anything e.g. Help me implement OAuth2 authentication in my Express.js app",
+    "Derp anything e.g. Optimize my Docker images to reduce build times and size",
+    "Derp anything e.g. Set up A/B testing infrastructure for my web application",
 ];
 
 fn get_agent_mode_new_conversation_hint_text() -> &'static str {
@@ -863,7 +863,7 @@ struct ViewerCommandExecutionRequest {
 /// Where a command execution request originates from.
 #[derive(Clone)]
 pub enum CommandExecutionSource {
-    /// A non-shared command execution request from Warp AI++.
+    /// A non-shared command execution request from Derp AI++.
     /// Shared commands use the SharedSession variant instead.
     AI {
         /// Metadata associated with the execution.
@@ -1062,7 +1062,7 @@ pub enum Event {
     },
     OpenSettings(SettingsSection),
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInDerp {
         source: CodeSource,
         layout: external_editor::settings::EditorLayout,
     },
@@ -1826,7 +1826,7 @@ impl DeferredRemoteOperations {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     if cfg!(feature = "integration_tests") {
         app.register_fixed_bindings([
@@ -1864,7 +1864,7 @@ pub fn init(app: &mut AppContext) {
 
     app.register_editable_bindings([EditableBinding::new(
         "input:insert_network_logging_workflow",
-        "Show Warp network log",
+        "Show Derp network log",
         WorkspaceAction::OpenNetworkLogPane,
     )
     .with_enabled(|| ContextFlag::NetworkLogConsole.is_enabled())]);
@@ -1993,7 +1993,7 @@ pub fn init(app: &mut AppContext) {
                 & id!(flags::IS_ANY_AI_ENABLED)
                 & !id!("AIInput"),
         )
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_custom_action(CustomAction::AISearch),
         EditableBinding::new(
             START_NEW_CONVERSATION_KEYBINDING_NAME,
@@ -2005,7 +2005,7 @@ pub fn init(app: &mut AppContext) {
             },
         )
         .with_enabled(|| !FeatureFlag::AgentView.is_enabled())
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_context_predicate(
             id!("Input") & id!(flags::IS_ANY_AI_ENABLED) & id!("TerminalView_NonEmptyBlockList"),
         )
@@ -2017,7 +2017,7 @@ pub fn init(app: &mut AppContext) {
             InputAction::EnableAutoDetection,
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
-        .with_group(bindings::BindingGroup::WarpAi.as_str())
+        .with_group(bindings::BindingGroup::DerpAi.as_str())
         .with_context_predicate(
             id!("Input")
                 & id!("UniversalDeveloperInput")
@@ -2228,7 +2228,7 @@ impl Input {
         let view = ctx
             .add_typed_action_view(|ctx| HostSelector::new(menu_positioning_provider.clone(), ctx));
         // Env var takes priority over workspace setting for developer testing.
-        let effective_host = std::env::var("WARP_CLOUD_MODE_DEFAULT_HOST")
+        let effective_host = std::env::var("DERP_CLOUD_MODE_DEFAULT_HOST")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| {
@@ -2276,7 +2276,7 @@ impl Input {
             if !matches!(event, UserWorkspacesEvent::TeamsChanged) {
                 return;
             }
-            let effective_host = std::env::var("WARP_CLOUD_MODE_DEFAULT_HOST")
+            let effective_host = std::env::var("DERP_CLOUD_MODE_DEFAULT_HOST")
                 .ok()
                 .filter(|s| !s.is_empty())
                 .or_else(|| {
@@ -3140,7 +3140,7 @@ impl Input {
             .app_workflows()
             .cloned()
             .collect_vec();
-        let local_user_workflows = WarpConfig::as_ref(ctx).local_user_workflows().clone();
+        let local_user_workflows = DerpConfig::as_ref(ctx).local_user_workflows().clone();
 
         let workflows_search_view = ctx.add_typed_action_view(|ctx| {
             workflows::CategoriesView::new(local_user_workflows, app_workflows, ctx)
@@ -4520,7 +4520,7 @@ impl Input {
     }
 
     /// Cloud handoff is Oz-only. When this pane's active Agent Mode model can't
-    /// run in a Warp cloud (Oz) agent (e.g. a custom-endpoint/BYOK model or
+    /// run in a Derp cloud (Oz) agent (e.g. a custom-endpoint/BYOK model or
     /// local custom router), shows an explanatory error toast and returns true
     /// so the `&`, footer-chip, and `/handoff` entry points can bail out up
     /// front instead of failing at spawn time.
@@ -4535,7 +4535,7 @@ impl Input {
         ToastStack::handle(ctx).update(ctx, |ts, ctx| {
             ts.add_ephemeral_toast(
                 DismissibleToast::error(
-                    "Custom models can't run in the cloud. Switch to a Warp model to hand off."
+                    "Custom models can't run in the cloud. Switch to a Derp model to hand off."
                         .to_owned(),
                 ),
                 window_id,
@@ -5143,7 +5143,7 @@ impl Input {
 
         self.show_workflows_info_box_on_workflow_selection(
             WorkflowType::Cloud(Box::new(workflow)),
-            WorkflowSource::WarpAI,
+            WorkflowSource::DerpAI,
             WorkflowSelectionSource::SlashMenu,
             None,
             ctx,
@@ -6264,7 +6264,7 @@ impl Input {
                 range_end: None,
             };
             // Emit an event to create a new code pane
-            ctx.emit(Event::OpenCodeInWarp {
+            ctx.emit(Event::OpenCodeInDerp {
                 source: code_source,
                 layout: *external_editor::EditorSettings::as_ref(ctx)
                     .open_file_layout
@@ -6438,7 +6438,7 @@ impl Input {
                 }
 
                 // Follow the `agent_indicator` pattern (see `app/src/tab.rs`):
-                //  * `None` (no conversation, empty, passive, or untitled) => new conversation => "Warp anything"
+                //  * `None` (no conversation, empty, passive, or untitled) => new conversation => "Derp anything"
                 //  * `InProgress`                                           => agent running    => "Steer"
                 //  * Any other status                                       => finished         => "Ask a follow up"
                 match self
@@ -6832,7 +6832,7 @@ impl Input {
         });
     }
 
-    /// Predicts the next action using an AI model and past context on blocks within Warp.
+    /// Predicts the next action using an AI model and past context on blocks within Derp.
     /// Populates the autosuggestion with the predicted action, if any. Otherwise, falls back to
     /// existing autosuggestion logic.
     #[cfg_attr(target_family = "wasm", allow(unused_variables))]
@@ -6871,7 +6871,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = WarpAiExecutionContext::new(&session);
+        let context = DerpAiExecutionContext::new(&session);
         let completer_data = self.completer_data();
         let block_context = Some(BlockContext::from_completed_block(&block_completed));
         let previous_result = self.last_intelligent_autosuggestion_result.take();
@@ -8115,7 +8115,7 @@ impl Input {
         ctx.emit_a11y_content(AccessibilityContent::new(
             accessibility_text,
             "Press shift-tab to select the next workflow argument",
-            WarpA11yRole::UserAction,
+            DerpA11yRole::UserAction,
         ));
 
         // Only highlight an argument and show enum suggestions if history suggestions are not active
@@ -8140,7 +8140,7 @@ impl Input {
             .string_model;
 
         if shell_type == ShellType::Fish {
-            // Warp currently doesn't support newlines in Fish, just prepend the vars
+            // Derp currently doesn't support newlines in Fish, just prepend the vars
             let mut command = env_vars.export_variables_for_shell(ShellType::Fish);
             command.push(' ');
             Some(command)
@@ -8260,7 +8260,7 @@ impl Input {
     /// This is a short-term fix and should be addressed in a more comprehensive way that does
     /// not rely on the styling of the input.
     ///
-    /// See [CLD-997](https://linear.app/warpdotdev/issue/CLD-997)
+    /// See [CLD-997](https://linear.app/derpdotdev/issue/CLD-997)
     fn build_text_run_ranges_for_workflows(
         &self,
         text_style_runs: &[TextRun],
@@ -8467,7 +8467,7 @@ impl Input {
 
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Executed: {command}"),
-                    WarpA11yRole::UserAction,
+                    DerpA11yRole::UserAction,
                 ));
             }
             InputSuggestionsEvent::CloseSuggestion {
@@ -9540,7 +9540,7 @@ impl Input {
             let Some(session) = self.active_session(ctx) else {
                 return;
             };
-            let context = WarpAiExecutionContext::new(&session);
+            let context = DerpAiExecutionContext::new(&session);
             if let Some(last_user_block_completed) =
                 completer_data.last_user_block_completed.clone()
             {
@@ -10499,7 +10499,7 @@ impl Input {
                             // the completions finish quickly, since that causes a jittery UX.
                             let _ = ctx.spawn(
                                 async move {
-                                    warpui::r#async::Timer::after(Duration::from_millis(750)).await;
+                                    derpui::r#async::Timer::after(Duration::from_millis(750)).await;
                                     old_buffer_text_original
                                 },
                                 move |input, old_buffer_text_original, ctx| {
@@ -11101,7 +11101,7 @@ impl Input {
                                     .and_then(|pwd| {
                                         // Find git repo and construct absolute path
                                         use repo_metadata::repositories::DetectedRepositories;
-                                        use warp_util::local_or_remote_path::LocalOrRemotePath;
+                                        use derp_util::local_or_remote_path::LocalOrRemotePath;
                                         let git_repo_path = DetectedRepositories::as_ref(ctx)
                                             .get_root_for_path(&LocalOrRemotePath::Local(
                                                 Path::new(pwd).to_path_buf(),
@@ -11115,7 +11115,7 @@ impl Input {
                                             .map(|session| session.is_wsl())
                                             .unwrap_or(false);
 
-                                        let relative_path = warp_util::path::to_relative_path(
+                                        let relative_path = derp_util::path::to_relative_path(
                                             is_wsl,
                                             &absolute_path,
                                             Path::new(pwd),
@@ -11192,7 +11192,7 @@ impl Input {
                         None => image_filepaths.clone(),
                     };
                     let paths_str =
-                        warpui::clipboard_utils::escaped_paths_str(&transformed, shell_family);
+                        derpui::clipboard_utils::escaped_paths_str(&transformed, shell_family);
 
                     self.editor.update(ctx, |editor, ctx| {
                         editor.user_insert(&paths_str, ctx);
@@ -11242,7 +11242,7 @@ impl Input {
 
         // Check if we should insert clipboard text in advance
         let mut already_inserted_text = false;
-        if warpui::clipboard::should_insert_text_on_paste(&content) {
+        if derpui::clipboard::should_insert_text_on_paste(&content) {
             self.insert_clipboard_text_content(ctx, content.clone());
             already_inserted_text = true;
         }
@@ -11254,7 +11254,7 @@ impl Input {
             self.handle_pasted_image_data(content.clone(), ctx) == 0
         } else if content.num_paths() > 0 {
             // Else, we check the pasted file paths for any images.
-            let image_filepaths = warpui::clipboard_utils::get_image_filepaths_from_paths(
+            let image_filepaths = derpui::clipboard_utils::get_image_filepaths_from_paths(
                 content.paths.as_deref().unwrap_or(&[]),
             );
             let num_images_expected = image_filepaths.len();
@@ -12010,13 +12010,13 @@ impl Input {
 
         // CLI agent rich input in shell mode (! prefix) should allow completions
         // even though the active block is a long-running command.
-        // However, completions are disabled on warpified remote hosts because
+        // However, completions are disabled on derpified remote hosts because
         // in-band generators don't work in this context (with CLI agent).
         let is_cli_agent_shell_mode = self.is_locked_in_shell_mode(ctx)
             && CLIAgentSessionsModel::as_ref(ctx).is_input_open(self.terminal_view_id)
             && !self
                 .active_session(ctx)
-                .is_some_and(|s| matches!(s.session_type(), SessionType::WarpifiedRemote { .. }));
+                .is_some_and(|s| matches!(s.session_type(), SessionType::DerpifiedRemote { .. }));
 
         // If the cursor is in a valid completion position, go into CompletionSuggestions mode
         if (is_command_grid_active || is_cli_agent_shell_mode) && self.can_query_history(ctx) {
@@ -12703,7 +12703,7 @@ impl Input {
             if let Some(a11y_text) = self.selected_workflow_a11y_text(ctx) {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     a11y_text,
-                    WarpA11yRole::UserAction,
+                    DerpA11yRole::UserAction,
                 ));
             }
         } else {
@@ -12785,7 +12785,7 @@ impl Input {
             if trigger == CommandXRayTrigger::Keystroke {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     description.a11y_text(),
-                    WarpA11yRole::UserAction,
+                    DerpA11yRole::UserAction,
                 ));
             }
             ctx.notify();
@@ -13716,7 +13716,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = WarpAiExecutionContext::new(&session);
+        let context = DerpAiExecutionContext::new(&session);
 
         let request = PredictAMQueriesRequest {
             context_messages: vec![json_message.to_string()],
@@ -13763,7 +13763,7 @@ impl Input {
     /// without touching the input buffer or triggering NLD / autosuggestion side-effects.
     ///
     /// Cancels the in-flight stream first so slash/skill paths don't trip the in-flight assertion.
-    /// `is_for_same_conversation: true` keeps the conversation status `InProgress` so the warping
+    /// `is_for_same_conversation: true` keeps the conversation status `InProgress` so the derping
     /// indicator stays visible.
     pub(crate) fn submit_queued_prompt(
         &mut self,
@@ -14297,7 +14297,7 @@ impl Input {
 
         // This fork routes every agent prompt to a local CLI harness
         // (rendered inline by TerminalView); the upstream cloud "Oz" path
-        // requires a Warp account and 401s here. Harness/model/reasoning come
+        // requires a Derp account and 401s here. Harness/model/reasoning come
         // from the ambient view model when present (the picker), else the
         // default harness with its CLI-configured model.
         let (harness, model_id, reasoning_level) = self
@@ -14327,7 +14327,7 @@ impl Input {
         if let Some(workflow_state) = self.workflows_state.selected_workflow_state.as_ref() {
             if let WorkflowType::Cloud(workflow) = &workflow_state.workflow_type {
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::ExecutedWarpDrivePrompt {
+                    TelemetryEvent::ExecutedDerpDrivePrompt {
                         id: workflow.id.into_server().map(Into::into),
                         selection_source: workflow_state.workflow_selection_source,
                     },
@@ -15219,7 +15219,7 @@ impl Input {
                                 .cloned(),
                             workflow_selection_source: selected_workflow_state
                                 .workflow_selection_source,
-                            // This is only `Some()` for WarpDrive workflows; we don't track
+                            // This is only `Some()` for DerpDrive workflows; we don't track
                             // ID for execution of local workflows because they have no such
                             // unique ID.
                             workflow_id: selected_workflow_state.workflow_type.server_id(),
@@ -15599,7 +15599,7 @@ impl Input {
                 ..Default::default()
             },
         )
-        .with_icon(icon.to_warpui_icon(
+        .with_icon(icon.to_derpui_icon(
             blended_colors::text_main(appearance.theme(), appearance.theme().background()).into(),
         ))
         .with_close_button(close_button)
@@ -15872,7 +15872,7 @@ impl TypedActionView for Input {
                     INPUT_A11Y_LABEL,
                     // TODO (a11y) use bindings from user settings
                     INPUT_A11Y_HELPER,
-                    WarpA11yRole::TextareaRole,
+                    DerpA11yRole::TextareaRole,
                 ))
             }
             _ => ActionAccessibilityContent::Empty,
@@ -16090,7 +16090,7 @@ impl View for Input {
             INPUT_A11Y_LABEL,
             // TODO (a11y) use bindings from user settings
             INPUT_A11Y_HELPER,
-            WarpA11yRole::TextareaRole,
+            DerpA11yRole::TextareaRole,
         ))
     }
 
@@ -16113,7 +16113,7 @@ impl View for Input {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
         let mut ctx = Self::default_keymap_context();
         let ai_settings = AISettings::as_ref(app);
 

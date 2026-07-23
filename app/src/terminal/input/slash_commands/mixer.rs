@@ -1,4 +1,4 @@
-use warpui::{Entity, ModelContext, ModelHandle};
+use derpui::{Entity, ModelContext, ModelHandle};
 
 use crate::search::data_source::{Query, QueryFilter};
 use crate::search::mixer::{AddAsyncSourceOptions, SearchMixer};

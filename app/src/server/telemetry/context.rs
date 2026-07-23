@@ -5,9 +5,9 @@ use std::sync::OnceLock;
 
 use serde::Serialize;
 use serde_json::{json, Value};
-use warp_errors::report_error;
+use derp_errors::report_error;
 #[cfg(target_family = "wasm")]
-use warpui::platform::wasm;
+use derpui::platform::wasm;
 
 use super::rudder_message::Message as RudderMessage;
 use crate::server::OperatingSystemInfo;

@@ -6,11 +6,11 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use pathfinder_color::ColorU;
-use warp_core::ui::Icon;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::MouseStateHandle;
-use warpui::keymap::Keystroke;
-use warpui::EventContext;
+use derp_core::ui::Icon;
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::MouseStateHandle;
+use derpui::keymap::Keystroke;
+use derpui::EventContext;
 /// A trait for types that can produce a message based on some contextual arguments.
 ///
 /// The generic `Args` parameter allows each call site to define its own

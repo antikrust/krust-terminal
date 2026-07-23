@@ -10,11 +10,11 @@ use aho_corasick::{AhoCorasick, MatchKind};
 use anyhow::{anyhow, Context};
 #[cfg(feature = "local_fs")]
 use futures::AsyncWriteExt;
-use warp_util::path::ShellFamily;
-use warpui::platform::file_picker::FilePickerError;
-use warpui::platform::{FilePickerConfiguration, OperatingSystem};
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use derp_util::path::ShellFamily;
+use derpui::platform::file_picker::FilePickerError;
+use derpui::platform::{FilePickerConfiguration, OperatingSystem};
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 use super::CloudObjectTypeAndId;
 #[cfg(feature = "local_fs")]
@@ -35,7 +35,7 @@ use crate::{
     workspace::WorkspaceAction,
 };
 
-/// Singleton model for exporting from Warp Drive.
+/// Singleton model for exporting from Derp Drive.
 pub struct ExportManager {
     exports: HashMap<ExportId, Export>,
 }
@@ -58,7 +58,7 @@ pub enum ExportEvent {
     Completed { id: ExportId, path: PathBuf },
 }
 
-/// A single Warp Drive export.
+/// A single Derp Drive export.
 struct Export {
     /// The ID of the window that started this export, for showing toasts.
     window_id: WindowId,
@@ -480,7 +480,7 @@ impl ExportManager {
         ctx: &mut ModelContext<Self>,
     ) {
         let id = *export.key();
-        // Don't send the error to Sentry, since it likely includes a user file path and their Warp
+        // Don't send the error to Sentry, since it likely includes a user file path and their Derp
         // Drive object name. Also don't report this as an error, since the most likely failure
         // reason is an I/O issue on the user's machine (like being out of disk space, or exporting
         // to a directory they can't write to).

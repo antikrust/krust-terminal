@@ -8,11 +8,11 @@ use base64::Engine as _;
 #[cfg(not(target_family = "wasm"))]
 use session_sharing_protocol::sharer::SessionSourceType;
 use url::Url;
-use warp_cli::agent::Harness;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_errors::report_error;
-use warp_multi_agent_api as multi_agent_api;
-use warpui::{
+use derp_cli::agent::Harness;
+use derp_core::execution_mode::AppExecutionMode;
+use derp_errors::report_error;
+use derp_multi_agent_api as multi_agent_api;
+use derpui::{
     AppContext, EntityId, ModelHandle, SingletonEntity, ViewContext, ViewHandle, WindowId,
 };
 
@@ -1103,21 +1103,21 @@ fn handle_terminal_view_event(
             Event::OpenCLIAgentToolbarEditor => {
                 ctx.emit(pane_group::Event::OpenCLIAgentToolbarEditor);
             }
-            Event::OpenFileInWarp { path, session } => {
-                ctx.emit(pane_group::Event::OpenFileInWarp {
+            Event::OpenFileInDerp { path, session } => {
+                ctx.emit(pane_group::Event::OpenFileInDerp {
                     path: LocalOrRemotePath::Local(path.clone()),
                     session: session.clone(),
                 });
             }
             #[cfg(feature = "local_fs")]
-            Event::PreviewCodeInWarp { source } => {
-                ctx.emit(pane_group::Event::PreviewCodeInWarp {
+            Event::PreviewCodeInDerp { source } => {
+                ctx.emit(pane_group::Event::PreviewCodeInDerp {
                     source: source.clone(),
                 });
             }
             #[cfg(feature = "local_fs")]
-            Event::OpenCodeInWarp { source, layout } => {
-                ctx.emit(pane_group::Event::OpenCodeInWarp {
+            Event::OpenCodeInDerp { source, layout } => {
+                ctx.emit(pane_group::Event::OpenCodeInDerp {
                     source: source.clone(),
                     layout: *layout,
                     line_col: if let CodeSource::Link { range_start, .. } = source {
@@ -1208,8 +1208,8 @@ fn handle_terminal_view_event(
             Event::RoleRequestCancelled(role_request_id) => {
                 group.remove_shared_session_role_request(role_request_id.clone(), ctx);
             }
-            Event::OpenWarpDriveObjectInPane(uid) => {
-                ctx.emit(pane_group::Event::OpenWarpDriveObjectInPane(uid.clone()));
+            Event::OpenDerpDriveObjectInPane(uid) => {
+                ctx.emit(pane_group::Event::OpenDerpDriveObjectInPane(uid.clone()));
             }
             Event::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 ctx.emit(pane_group::Event::OpenSuggestedAgentModeWorkflowModal {
@@ -2044,7 +2044,7 @@ fn launch_remote_child(
     // Map the run-wide auth secret name into the harness-specific
     // config variant. For unsupported harnesses (Oz, OpenCode, Gemini,
     // Unknown), the secret is silently ignored — those harnesses either
-    // use Warp's built-in auth (Oz) or don't currently support managed
+    // use Derp's built-in auth (Oz) or don't currently support managed
     // secrets via this flow.
     let harness_auth_secrets = auth_secret_name
         .as_ref()

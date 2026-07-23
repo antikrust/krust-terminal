@@ -1,7 +1,7 @@
 # Agent flow map: routing terminal prompts to the local Claude Code harness
 
-This document maps how a prompt typed into Warp's terminal agent becomes an
-agent run, why it currently hits Warp's cloud (the `401 Unauthorized: User not
+This document maps how a prompt typed into Derp's terminal agent becomes an
+agent run, why it currently hits Derp's cloud (the `401 Unauthorized: User not
 in context`), where the local **Claude Code streaming harness** (this fork's
 addition) plugs in, and the concrete plug points to (a) route terminal prompts
 to the local harness, (b) repurpose the model picker for Claude Code + reasoning
@@ -19,14 +19,14 @@ It is a point-in-time snapshot of the code, not a durable guarantee; verify
 
 ## TL;DR
 
-- The `/agent <prompt>` you type in the terminal runs Warp's **cloud "Oz"
-  agent**. It has no harness switch on its send path — it always calls Warp's
+- The `/agent <prompt>` you type in the terminal runs Derp's **cloud "Oz"
+  agent**. It has no harness switch on its send path — it always calls Derp's
   multi-agent backend, which 401s under this fork's faked auth.
 - The local Claude Code harness (parse → stream → inline render, already built
   and tested) is **fully wired end-to-end inside the `AgentDriver` path** and
   **is** the live target of `harness_kind(Harness::Claude)`. What's missing is
   any route from terminal input into that path — today it's only reachable via
-  the `warp agent run` CLI subcommand.
+  the `derp agent run` CLI subcommand.
 - The **only mandatory cloud gate** on the local Claude path is one
   `is_logged_in()` check in `AgentDriver::new` ([driver.rs:667](../app/src/ai/agent_sdk/driver.rs)).
   Everything else on that path is Oz-only, task-id-conditional, or best-effort.
@@ -61,12 +61,12 @@ terminal input submit
 The controller is **Oz-only on the send path**; there is no harness dispatch
 here. The model chosen in the picker is stamped onto `RequestParams.model`
 ([controller.rs:2470](../app/src/ai/blocklist/controller.rs)) and sent to the
-cloud. This whole path requires a real Warp account and cannot work offline.
+cloud. This whole path requires a real Derp account and cannot work offline.
 
 ### Path B — the harness driver (where the local Claude harness runs)
 
 ```
-`warp agent run --harness claude …`  (CLI subcommand only, today)
+`derp agent run --harness claude …`  (CLI subcommand only, today)
   lib.rs:2913 → agent_sdk::run (mod.rs:127) → dispatch_command (139)
     → run_agent (252) → AgentCommand::Run (258)
   build_server_side_task: harness = harness_kind(args.harness)  (mod.rs:457/528)
@@ -82,7 +82,7 @@ cloud. This whole path requires a real Warp account and cannot work offline.
                  --session-id <uuid> --dangerously-skip-permissions
         → parse_stream_json_line (claude_stream.rs:22) → TurnEvent
       → LocalHarnessStream begin/apply/complete (local_harness_stream.rs:45/100/125)
-        → inline AI blocks in Warp's own UI
+        → inline AI blocks in Derp's own UI
 ```
 
 **The gap:** terminal input (Path A) never enters Path B. The terminal's
@@ -187,10 +187,10 @@ It flows: `merged_config.harness.model_config()` →
   ([claude_transcript.rs:86](../app/src/ai/agent_sdk/driver/harness/claude_transcript.rs)).
   OAuth tokens / API-key creds are written and owned by the `claude` CLI itself
   (e.g. `~/.claude/.credentials.json` or the OS keychain).
-- Warp writes only non-credential config — `~/.claude.json` (onboarding/trust
+- Derp writes only non-credential config — `~/.claude.json` (onboarding/trust
   flags) and `~/.claude/settings.json`
   ([claude_code.rs:610](../app/src/ai/agent_sdk/driver/harness/claude_code.rs)).
-  **Warp never authenticates `claude`.**
+  **Derp never authenticates `claude`.**
 - Preflight `claude auth status --json` (claude_stream_runner.rs:70) runs
   **locally** in the terminal, not a server call.
 

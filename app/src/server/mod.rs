@@ -11,4 +11,4 @@ pub mod telemetry;
 pub(crate) mod telemetry_ext;
 pub mod voice_transcriber;
 
-pub use warp_core::operating_system_info::OperatingSystemInfo;
+pub use derp_core::operating_system_info::OperatingSystemInfo;

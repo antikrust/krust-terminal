@@ -2,16 +2,16 @@ use std::path::PathBuf;
 
 use futures_util::stream::AbortHandle;
 use pathfinder_geometry::vector::vec2f;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_errors::report_error;
+use derpui::elements::{
     Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius,
 };
-use warpui::platform::file_picker::FilePickerError;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::platform::file_picker::FilePickerError;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -36,7 +36,7 @@ pub(super) const INDENT_MARGIN: f32 = 22.;
 pub(super) const BASE_INDENT: f32 = 30.;
 
 const FILE_TYPE_DOCS_URL: &str =
-    "https://therob.lol/derp-terminal/help/knowledge-and-collaboration/warp-drive#import-and-export";
+    "https://therob.lol/derp-terminal/help/knowledge-and-collaboration/derp-drive#import-and-export";
 const SUPPORTED_FILE_TYPE_TEXT: &str = "md, yaml, yml";
 
 #[cfg(test)]
@@ -84,7 +84,7 @@ pub enum ImportModalBodyEvent {
 pub struct ImportModalBody {
     state: ImportState,
     in_progress_handle: Option<AbortHandle>,
-    // Queue to handle requests to upload objects to warp drive.
+    // Queue to handle requests to upload objects to derp drive.
     // All updates should go through the queue rather than calling
     // UpdateManager directly.
     import_queue: ModelHandle<ImportQueue>,
@@ -388,7 +388,7 @@ impl ImportModalBody {
                 TextAndIcon::new(
                     TextAndIconAlignment::TextFirst,
                     "Choose files...".to_string(),
-                    Icon::Import.to_warpui_icon(
+                    Icon::Import.to_derpui_icon(
                         appearance
                             .theme()
                             .main_text_color(appearance.theme().accent_button_color()),

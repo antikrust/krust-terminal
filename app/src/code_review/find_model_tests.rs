@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use repo_metadata::repositories::DetectedRepositories;
 use string_offset::CharOffset;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::elements::Empty;
-use warpui::platform::WindowStyle;
-use warpui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
+use derp_core::ui::appearance::Appearance;
+use derp_editor::content::buffer::InitialBufferState;
+use derp_editor::render::element::VerticalExpansionBehavior;
+use derpui::elements::Empty;
+use derpui::platform::WindowStyle;
+use derpui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::*;
 use crate::ai::request_usage_model::AIRequestUsageModel;
@@ -36,12 +36,12 @@ use crate::NotebookKeybindings;
 #[derive(Default)]
 struct TestView;
 
-impl warpui::Entity for TestView {
+impl derpui::Entity for TestView {
     type Event = ();
 }
 
-impl warpui::View for TestView {
-    fn render(&self, _: &warpui::AppContext) -> Box<dyn warpui::Element> {
+impl derpui::View for TestView {
+    fn render(&self, _: &derpui::AppContext) -> Box<dyn derpui::Element> {
         Empty::new().finish()
     }
 
@@ -50,7 +50,7 @@ impl warpui::View for TestView {
     }
 }
 
-impl warpui::TypedActionView for TestView {
+impl derpui::TypedActionView for TestView {
     type Action = ();
 }
 

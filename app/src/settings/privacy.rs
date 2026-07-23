@@ -6,10 +6,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use settings::macros::{define_settings_group, maybe_define_setting, register_settings_events};
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use warp_core::features::FeatureFlag;
-use warp_errors::{report_error, report_if_error};
-use warp_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
+use derp_core::features::FeatureFlag;
+use derp_errors::{report_error, report_if_error};
+use derp_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
 
 use super::cloud_preferences_syncer::CloudPreferencesSyncer;
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
@@ -87,7 +87,7 @@ impl PartialEq for CustomSecretRegex {
 
 impl settings_value::SettingsValue for CustomSecretRegex {}
 
-define_settings_group!(WarpDrivePrivacySettings, settings: [
+define_settings_group!(DerpDrivePrivacySettings, settings: [
     is_telemetry_enabled: IsTelemetryEnabled {
         type: bool,
         default: true,
@@ -247,34 +247,34 @@ impl PrivacySettings {
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
         let auth_client = ServerApiProvider::as_ref(ctx).get_auth_client();
 
-        // Initialize from `WarpDrivePrivacySettings`, which is the source of truth for these
+        // Initialize from `DerpDrivePrivacySettings`, which is the source of truth for these
         // booleans.
-        let warp_drive_privacy = WarpDrivePrivacySettings::as_ref(ctx);
-        let is_telemetry_enabled = *warp_drive_privacy.is_telemetry_enabled.value();
-        let is_crash_reporting_enabled = *warp_drive_privacy.is_crash_reporting_enabled.value();
-        let is_cloud_conversation_storage_enabled = *warp_drive_privacy
+        let derp_drive_privacy = DerpDrivePrivacySettings::as_ref(ctx);
+        let is_telemetry_enabled = *derp_drive_privacy.is_telemetry_enabled.value();
+        let is_crash_reporting_enabled = *derp_drive_privacy.is_crash_reporting_enabled.value();
+        let is_cloud_conversation_storage_enabled = *derp_drive_privacy
             .is_cloud_conversation_storage_enabled
             .value();
 
         // Listen for changes to the cloud model and update ourselves when they happen.
         ctx.subscribe_to_model(
-            &WarpDrivePrivacySettings::handle(ctx),
+            &DerpDrivePrivacySettings::handle(ctx),
             |me, _, event, ctx| {
-                let privacy_settings = WarpDrivePrivacySettings::as_ref(ctx);
+                let privacy_settings = DerpDrivePrivacySettings::as_ref(ctx);
                 match event {
-                    WarpDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
+                    DerpDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
                         me.set_is_telemetry_enabled(
                             *privacy_settings.is_telemetry_enabled.value(),
                             ctx,
                         );
                     }
-                    WarpDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
+                    DerpDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
                         me.set_is_crash_reporting_enabled(
                             *privacy_settings.is_crash_reporting_enabled.value(),
                             ctx,
                         );
                     }
-                    WarpDrivePrivacySettingsChangedEvent::IsCloudConversationStorageEnabled {
+                    DerpDrivePrivacySettingsChangedEvent::IsCloudConversationStorageEnabled {
                         ..
                     } => {
                         me.set_is_cloud_conversation_storage_enabled(
@@ -414,7 +414,7 @@ impl PrivacySettings {
             }
         }
 
-        self.maybe_sync_with_warp_drive_prefs(ctx);
+        self.maybe_sync_with_derp_drive_prefs(ctx);
     }
 
     fn overwrite_local_settings_if_cloud_disabled(
@@ -501,7 +501,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_crash_reporting_enabled = new_value;
 
-            WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            DerpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_crash_reporting_enabled to {new_value}");
                 let _ = settings
                     .is_crash_reporting_enabled
@@ -537,7 +537,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_telemetry_enabled = new_value;
 
-            WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            DerpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_telemetry_enabled to {new_value}");
                 let _ = settings.is_telemetry_enabled.set_value(new_value, ctx);
             });
@@ -569,7 +569,7 @@ impl PrivacySettings {
 
         self.is_cloud_conversation_storage_enabled = new_value;
 
-        WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+        DerpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
             log::info!("Setting is_cloud_conversation_storage_enabled to {new_value}");
             let _ = settings
                 .is_cloud_conversation_storage_enabled
@@ -704,26 +704,26 @@ impl PrivacySettings {
         }
     }
 
-    /// We wait until warp drive prefs have loaded and then either
+    /// We wait until derp drive prefs have loaded and then either
     /// 1) use them as the data store for is_telemetry_enabled and is_crash_reporting_enabled, if those
-    ///    values are set in warp drive, or
-    /// 2) update the warp drive prefs to match the values from the legacy user_settings endpoint so
-    ///    that we can use warp drive prefs going forward.
-    pub fn maybe_sync_with_warp_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
-        // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to warp drive
-        // initialize from the warp drive values.
+    ///    values are set in derp drive, or
+    /// 2) update the derp drive prefs to match the values from the legacy user_settings endpoint so
+    ///    that we can use derp drive prefs going forward.
+    pub fn maybe_sync_with_derp_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
+        // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to derp drive
+        // initialize from the derp drive values.
         let update_manager = UpdateManager::as_ref(ctx);
         ctx.spawn(
             update_manager.initial_load_complete(),
-            Self::handle_warp_drive_objects_loaded,
+            Self::handle_derp_drive_objects_loaded,
         );
     }
 
-    fn handle_warp_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
+    fn handle_derp_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
         self.initialize_default_regexes_once(ctx);
-        // Check if the warp drive preferences are set. If they are, and telemetry and crash reporting
-        // are set as warp drive prefs, then use those.  Otherwise, update the warp drive prefs to match
-        // the values from the legacy user_settings endpoint so that we can use warp drive prefs going forward.
+        // Check if the derp drive preferences are set. If they are, and telemetry and crash reporting
+        // are set as derp drive prefs, then use those.  Otherwise, update the derp drive prefs to match
+        // the values from the legacy user_settings endpoint so that we can use derp drive prefs going forward.
         let cloud_model = CloudModel::as_ref(ctx);
         let cloud_prefs = cloud_model.get_all_cloud_preferences_by_storage_key();
         let cloud_telemetry_value =
@@ -779,19 +779,19 @@ impl PrivacySettings {
             _ => {
                 log::info!(
                     "Library privacy preferences are not set, syncing local PrivacySettings values to \
-                    WarpDrivePrivacySettings and cloud. telemetry={}, crash_reporting={}, \
+                    DerpDrivePrivacySettings and cloud. telemetry={}, crash_reporting={}, \
                     cloud_conversation_storage={}",
                     self.is_telemetry_enabled,
                     self.is_crash_reporting_enabled,
                     self.is_cloud_conversation_storage_enabled
                 );
-                // First, ensure WarpDrivePrivacySettings (the define_settings_group model)
+                // First, ensure DerpDrivePrivacySettings (the define_settings_group model)
                 // reflects the actual PrivacySettings in-memory values. These may differ
-                // because WarpDrivePrivacySettings defaults to `true` for all three settings,
+                // because DerpDrivePrivacySettings defaults to `true` for all three settings,
                 // while the user may have changed them to `false` via PrivacySettings before
                 // signing up. Without this step, maybe_sync_local_prefs_to_cloud would read
-                // the stale WarpDrivePrivacySettings defaults and push those to the cloud.
-                WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+                // the stale DerpDrivePrivacySettings defaults and push those to the cloud.
+                DerpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings
                         .is_telemetry_enabled
                         .set_value(self.is_telemetry_enabled, ctx));

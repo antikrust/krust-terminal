@@ -1,13 +1,13 @@
 use settings::Setting as _;
-use warp_core::ui::Icon;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_core::ui::Icon;
+use derp_errors::report_if_error;
+use derpui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch, Text,
 };
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -129,7 +129,7 @@ impl View for AwsBedrockCredentialsErrorView {
         let make_alert_icon = || {
             ConstrainedBox::new(
                 Icon::AlertTriangle
-                    .to_warpui_icon(error_color(theme).into())
+                    .to_derpui_icon(error_color(theme).into())
                     .finish(),
             )
             .with_width(icon_size(app))

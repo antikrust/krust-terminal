@@ -1,18 +1,18 @@
 ---
-name: "Run Warp locally with shell"
-command: "WARP_SHELL_PATH={{shell}} cargo run"
-description: "Runs warp with the particular shell so devs don't need to change their login shell to test a different shell locally"
+name: "Run Derp locally with shell"
+command: "DERP_SHELL_PATH={{shell}} cargo run"
+description: "Runs derp with the particular shell so devs don't need to change their login shell to test a different shell locally"
 arguments:
   - name: shell
     description: path of shell to use
-author: Warp Team
+author: Derp Team
 shells: []
 ---
-name: "Run Warp locally with shell 2: Electric Boogaloo"
-command: "WARP_SHELL_PATH={{shell}} cargo run"
-description: "Runs warp with the particular shell so devs don't need to change their login shell to test a different shell locally"
+name: "Run Derp locally with shell 2: Electric Boogaloo"
+command: "DERP_SHELL_PATH={{shell}} cargo run"
+description: "Runs derp with the particular shell so devs don't need to change their login shell to test a different shell locally"
 arguments:
   - name: shell
     description: path of shell to use
-author: Warp Team
+author: Derp Team
 shells: []

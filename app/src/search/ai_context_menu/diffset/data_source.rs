@@ -1,4 +1,4 @@
-use warpui::AppContext;
+use derpui::AppContext;
 
 use super::search_item::DiffSetSearchItem;
 use crate::code_review::diff_state::DiffMode;
@@ -53,6 +53,6 @@ impl SyncDataSource for DiffSetDataSource {
     }
 }
 
-impl warpui::Entity for DiffSetDataSource {
+impl derpui::Entity for DiffSetDataSource {
     type Event = ();
 }

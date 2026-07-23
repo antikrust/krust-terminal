@@ -4,8 +4,8 @@ ENV RUSTUP_HOME=/usr/local/rustup
 ENV CARGO_HOME=/usr/local/cargo
 ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:$PATH
 
-# This set of packages is adapted from ./script/bootstrap in warp-internal and warp-server.
-# It doesn't include *everything* (ex. no wgslfmt or gcloud), but is enough to build and test Warp.
+# This set of packages is adapted from ./script/bootstrap in derp-internal and derp-server.
+# It doesn't include *everything* (ex. no wgslfmt or gcloud), but is enough to build and test Derp.
 # Note: currently, only x86_64 builds are supported.
 
 # Install system-level packages. These are needed to build on Linux, and/or to run integration tests.
@@ -36,7 +36,7 @@ RUN set -eux; \
   curl --proto '=https' --tlsv1.2 -fsSLO https://go.dev/dl/go1.26.1.linux-$ARCH.tar.gz; \
   tar -C /usr/local -xzf go1.26.1.linux-$ARCH.tar.gz; \
   go version; \
-  go env -w "GOPRIVATE=github.com/warpdotdev/*"; \
+  go env -w "GOPRIVATE=github.com/derpdotdev/*"; \
   CGO_ENABLED=0 go install -tags='no_clickhouse no_libsql no_mssql no_mysql no_sqlite3 no_vertica no_ydb' github.com/pressly/goose/v3/cmd/goose@v3.24.1; \
   echo "Installed goose"; \
   go install github.com/vektra/mockery/v2@v2.53.5; \
@@ -75,7 +75,7 @@ RUN set -eux; \
   rustup toolchain install; \
   rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
-# Install all dependencies needed to build, run, and test Warp
+# Install all dependencies needed to build, run, and test Derp
 COPY ./script ./setup/script
 RUN cd ./setup && ./script/linux/install_test_deps
 

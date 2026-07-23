@@ -10,7 +10,7 @@ fn record(id: &str, pid: u32) -> InstanceRecord {
         instance_id: InstanceId(id.to_owned()),
         pid,
         channel: "local".to_owned(),
-        app_id: "dev.warp.WarpLocal".to_owned(),
+        app_id: "baby.derp.DerpLocal".to_owned(),
         app_version: None,
         started_at: Utc::now(),
         executable_path: None,

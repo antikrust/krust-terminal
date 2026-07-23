@@ -1,0 +1,41 @@
+[package]
+name = "tink-testing-server"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Testing server for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+keywords = ["cryptography", "tink"]
+categories = ["cryptography"]
+publish = false
+
+[dependencies]
+env_logger = "^0.11.6"
+futures = "^0.3.31"
+log = "^0.4.29"
+prost = "^0.14"
+structopt = "^0.3.26"
+tink-aead = "^0.3"
+tink-core = { version = "^0.3", features = [
+  "insecure",
+  "json",
+ ] }
+tink-daead = "^0.3"
+tink-hybrid = "^0.3"
+tink-mac = "^0.3"
+tink-prf = "^0.3"
+tink-proto = "^0.3"
+tink-signature = "^0.3"
+tink-streaming-aead = "^0.3"
+tink-tests = "^0.3"
+tokio = { version = "^1.48", features = [
+  "macros",
+  "rt-multi-thread",
+  "signal",
+] }
+tonic = "^0.14"
+tonic-prost = "^0.14"
+
+[build-dependencies]
+tonic-prost-build = "^0.14"

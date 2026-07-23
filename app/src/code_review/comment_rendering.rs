@@ -7,20 +7,20 @@ use std::rc::Rc;
 
 use chrono::{Duration, Local};
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
-use warp_core::ui::theme::Fill;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::elements::new_scrollable::ScrollableAppearance;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
+use derp_core::ui::theme::Fill;
+use derp_editor::content::buffer::InitialBufferState;
+use derp_editor::render::element::VerticalExpansionBehavior;
+use derpui::elements::new_scrollable::ScrollableAppearance;
+use derpui::elements::{
     Border, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
     Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::units::Pixels;
-use warpui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
+use derpui::platform::Cursor;
+use derpui::text_layout::ClipConfig;
+use derpui::units::Pixels;
+use derpui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::code::buffer_location::LocalOrRemotePath;
@@ -43,7 +43,7 @@ pub(crate) struct HeaderClickHandler {
 /// (rounded corners, neutral background, outline border).
 fn comment_card_container(
     content: Box<dyn Element>,
-    theme: &warp_core::ui::theme::WarpTheme,
+    theme: &derp_core::ui::theme::DerpTheme,
 ) -> Box<dyn Element> {
     Container::new(content)
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))

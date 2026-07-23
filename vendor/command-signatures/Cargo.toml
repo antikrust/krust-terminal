@@ -1,0 +1,11 @@
+[workspace]
+members = [
+  "completion-metadata",
+  "command-signatures",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["Derp Team <dev@derp.baby>"]
+license = "MIT"
+publish = false

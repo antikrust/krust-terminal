@@ -4,19 +4,19 @@ use std::sync::Arc;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use warpui::fonts::{Cache, FamilyId, Properties, Weight};
-use warpui::keymap::Keystroke;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Cache, FamilyId, Properties, Weight};
+use derpui::keymap::Keystroke;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, EntityId, Gradient, ModelHandle, SingletonEntity, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -80,12 +80,12 @@ pub fn render_git_diff_stats_content(
     let icon_element = if has_changes {
         // Use file icon when there are changes
         Icon::File
-            .to_warpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+            .to_derpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
             .finish()
     } else {
         // Use diff icon when there are no changes
         Icon::Diff
-            .to_warpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+            .to_derpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
             .finish()
     };
 
@@ -168,7 +168,7 @@ pub fn render_git_diff_stats_content(
 
 fn git_branch_status_icon(icon: Icon, color: ColorU, icon_size: f32) -> Box<dyn Element> {
     Container::new(
-        ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(color)).finish())
+        ConstrainedBox::new(icon.to_derpui_icon(Fill::Solid(color)).finish())
             .with_height(icon_size)
             .with_width(icon_size)
             .finish(),
@@ -715,7 +715,7 @@ impl GitBranch {
 
         if branch.is_linked_worktree {
             return PromptChipShellCommand::Echo {
-                message: "The branch is already checked out in another worktree, but Warp couldn't find its path.",
+                message: "The branch is already checked out in another worktree, but Derp couldn't find its path.",
             };
         }
 
@@ -1638,10 +1638,10 @@ impl DisplayChip {
             .as_ref()
             .map(|ctx| match ctx.session.session_type() {
                 SessionType::Local => true,
-                SessionType::WarpifiedRemote { host_id: Some(_) } => {
+                SessionType::DerpifiedRemote { host_id: Some(_) } => {
                     FeatureFlag::RemoteCodeReview.is_enabled()
                 }
-                SessionType::WarpifiedRemote { host_id: None } => false,
+                SessionType::DerpifiedRemote { host_id: None } => false,
             })
             .unwrap_or(false);
 
@@ -2325,7 +2325,7 @@ pub(crate) fn render_udi_chip(config: UdiChipConfig, appearance: &Appearance) ->
     if let Some(icon) = config.icon {
         content.add_child(
             Container::new(
-                ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(config.color)).finish())
+                ConstrainedBox::new(icon.to_derpui_icon(Fill::Solid(config.color)).finish())
                     .with_height(icon_size)
                     .with_width(icon_size)
                     .finish(),

@@ -1,5 +1,5 @@
 //! OAuth flow for connecting an xAI / Grok subscription (e.g. SuperGrok) to
-//! Warp, so users can "plug in" their subscription instead of pasting a
+//! Derp, so users can "plug in" their subscription instead of pasting a
 //! pay-as-you-go API key.
 //!
 //! This mirrors the public Grok-CLI desktop OAuth flow: an OAuth 2.0
@@ -174,7 +174,7 @@ fn authorize_url(pkce: &PkceParams) -> String {
         ("code_challenge_method", "S256"),
         ("state", &pkce.state),
         ("plan", "generic"),
-        ("referrer", "warp"),
+        ("referrer", "derp"),
     ];
     let query =
         serde_urlencoded::to_string(params).expect("static OAuth params are always serializable");
@@ -225,7 +225,7 @@ async fn run_oauth_flow(listener: TcpListener, pkce: PkceParams) -> anyhow::Resu
         .spawn(move || {
             // `send_blocking` is disallowed (no wasm support); block this
             // dedicated thread on the async `send` instead.
-            let _ = warpui_core::r#async::block_on(
+            let _ = derpui_core::r#async::block_on(
                 tx.send(wait_for_callback(&listener, CALLBACK_TIMEOUT)),
             );
         })
@@ -443,14 +443,14 @@ async fn post_token_request<T: serde::Serialize + ?Sized>(
 }
 
 const SUCCESS_HTML: &str = "<!doctype html><html><head><meta charset=\"utf-8\">\
-<title>Warp — Grok connected</title></head>\
+<title>Derp — Grok connected</title></head>\
 <body style=\"font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:3rem\">\
-<h1>Grok connected</h1><p>You can close this window and return to Warp.</p></body></html>";
+<h1>Grok connected</h1><p>You can close this window and return to Derp.</p></body></html>";
 
 const FAILURE_HTML: &str = "<!doctype html><html><head><meta charset=\"utf-8\">\
-<title>Warp — Grok authorization failed</title></head>\
+<title>Derp — Grok authorization failed</title></head>\
 <body style=\"font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:3rem\">\
-<h1>Authorization failed</h1><p>Something went wrong. Return to Warp and try again.</p></body></html>";
+<h1>Authorization failed</h1><p>Something went wrong. Return to Derp and try again.</p></body></html>";
 
 #[cfg(test)]
 #[path = "oauth_tests.rs"]

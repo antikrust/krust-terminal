@@ -9,8 +9,8 @@ use futures_lite::FutureExt;
 use fuzzy_match::FuzzyMatchResult;
 use instant::Instant;
 use itertools::Itertools;
-use warp_util::path::CleanPathResult;
-use warpui::{AppContext, Entity, SingletonEntity};
+use derp_util::path::CleanPathResult;
+use derpui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::{CreateFileSearchItem, FileSearchItem};
 use crate::code::opened_files::{OpenedFilesInRepo, OpenedFilesModel};
@@ -26,7 +26,7 @@ const MAX_RESULTS: usize = 100;
 enum FileRanking {
     None,
     ChangedInGit,
-    OpenedInWarp { timestamp: Instant },
+    OpenedInDerp { timestamp: Instant },
 }
 
 pub struct FileDataSource {
@@ -155,7 +155,7 @@ impl FileDataSource {
                         .as_ref()
                         .and_then(|of: &OpenedFilesInRepo| of.get(&item.path))
                     {
-                        file_ranking = FileRanking::OpenedInWarp {
+                        file_ranking = FileRanking::OpenedInDerp {
                             timestamp: *last_opened_timestamp,
                         };
                     }

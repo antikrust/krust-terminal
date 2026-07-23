@@ -2,17 +2,17 @@ use std::cell::RefCell;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derp_editor::render::element::VerticalExpansionBehavior;
+use derpui::elements::{
     Border, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::keymap::Keystroke;
-use warpui::text_layout::ClipConfig;
-use warpui::units::Pixels;
-use warpui::{
+use derpui::keymap::Keystroke;
+use derpui::text_layout::ClipConfig;
+use derpui::units::Pixels;
+use derpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -330,7 +330,7 @@ impl CommentEditor {
         let theme = appearance.theme();
         let sub_text_color = theme.sub_text_color(Fill::Solid(background)).into_solid();
         let icon = Icon::Github
-            .to_warpui_icon(Fill::Solid(sub_text_color))
+            .to_derpui_icon(Fill::Solid(sub_text_color))
             .finish();
 
         let label = Text::new(

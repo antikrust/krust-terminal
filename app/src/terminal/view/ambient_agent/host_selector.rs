@@ -3,20 +3,20 @@ use std::sync::Arc;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_errors::report_if_error;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
-use crate::ai::blocklist::inline_action::orchestration_controls::ORCHESTRATION_WARP_WORKER_HOST;
+use crate::ai::blocklist::inline_action::orchestration_controls::ORCHESTRATION_DERP_WORKER_HOST;
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::connected_self_hosted_workers::ConnectedSelfHostedWorkersModel;
 use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields};
@@ -49,14 +49,14 @@ const DISCONNECTED_BADGE: &str = "Disconnected";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Host {
-    Warp,
+    Derp,
     SelfHosted { slug: String },
 }
 
 impl Host {
     fn display_name(&self) -> &str {
         match self {
-            Host::Warp => "Warp",
+            Host::Derp => "Derp",
             Host::SelfHosted { slug } => slug.as_str(),
         }
     }
@@ -64,7 +64,7 @@ impl Host {
     /// Returns the value to send as `worker_host` in the config snapshot.
     pub fn worker_host_value(&self) -> Option<String> {
         match self {
-            Host::Warp => Some(ORCHESTRATION_WARP_WORKER_HOST.to_string()),
+            Host::Derp => Some(ORCHESTRATION_DERP_WORKER_HOST.to_string()),
             Host::SelfHosted { slug } => Some(slug.clone()),
         }
     }
@@ -100,7 +100,7 @@ impl HostSelector {
         // field is exercised at construction time (not just written to on
         // `SelectHost`), so it stays out of clippy's `field is never read`
         // warning while still serving as the source of truth for the label.
-        let selected = Host::Warp;
+        let selected = Host::Derp;
         let initial_label = selected.display_name().to_string();
 
         let button = ctx.add_typed_action_view(|_ctx| {
@@ -152,8 +152,8 @@ impl HostSelector {
             .value()
             .as_deref()
         {
-            let restored = if saved_slug == ORCHESTRATION_WARP_WORKER_HOST {
-                Host::Warp
+            let restored = if saved_slug == ORCHESTRATION_DERP_WORKER_HOST {
+                Host::Derp
             } else {
                 Host::SelfHosted {
                     slug: saved_slug.to_string(),
@@ -315,10 +315,10 @@ fn build_menu_items(
     if let Some(host) = default_host {
         items.push(item_for(host.clone(), Some(DEFAULT_BADGE)));
     }
-    items.push(item_for(Host::Warp, None));
+    items.push(item_for(Host::Derp, None));
     let default_slug = match default_host {
         Some(Host::SelfHosted { slug }) => Some(slug.as_str()),
-        Some(Host::Warp) | None => None,
+        Some(Host::Derp) | None => None,
     };
     let mut connected_hosts = ConnectedSelfHostedWorkersModel::as_ref(ctx)
         .worker_hosts_excluding(default_slug)

@@ -1,10 +1,10 @@
-use warp_editor::editor::NavigationKey;
-use warpui::elements::{
+use derp_editor::editor::NavigationKey;
+use derpui::elements::{
     Align, ConstrainedBox, Container, Flex, ParentElement, SavePosition, Shrinkable, Stack,
 };
-use warpui::fonts::FamilyId;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, ViewContext, ViewHandle};
+use derpui::fonts::FamilyId;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, ViewContext, ViewHandle};
 
 use crate::editor::{
     EditOrigin, EditorOptions, EditorView, Event as EditorEvent, InteractionState,

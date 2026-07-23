@@ -48,31 +48,31 @@ use vim::{
     vim_a_block, vim_a_paragraph, vim_a_quote, vim_a_word, vim_inner_block, vim_inner_paragraph,
     vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use warp_completer::completer::Description;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::{safe_error, send_telemetry_from_ctx};
-use warp_editor::editor::NavigationKey;
-use warp_util::path::ShellFamily;
-use warp_util::user_input::UserInput;
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::actions::StandardAction;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derp_completer::completer::Description;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_core::{safe_error, send_telemetry_from_ctx};
+use derp_editor::editor::NavigationKey;
+use derp_util::path::ShellFamily;
+use derp_util::user_input::UserInput;
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::actions::StandardAction;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use warpui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
-use warpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
-use warpui::platform::keyboard::KeyCode;
-use warpui::platform::{Cursor, FilePickerConfiguration, OperatingSystem};
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::text::word_boundaries::WordBoundariesPolicy;
-use warpui::text::TextBuffer;
-use warpui::text_layout::TextStyle;
-use warpui::ui_components::button::ButtonTooltipPosition;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::windowing::WindowManager;
-use warpui::{
+use derpui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
+use derpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
+use derpui::platform::keyboard::KeyCode;
+use derpui::platform::{Cursor, FilePickerConfiguration, OperatingSystem};
+use derpui::r#async::{SpawnedFutureHandle, Timer};
+use derpui::text::word_boundaries::WordBoundariesPolicy;
+use derpui::text::TextBuffer;
+use derpui::text_layout::TextStyle;
+use derpui::ui_components::button::ButtonTooltipPosition;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::windowing::WindowManager;
+use derpui::{
     elements, windowing, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId,
     FocusContext, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
@@ -141,7 +141,7 @@ pub const VOICE_ERROR_TOAST_TEXT: &str = "An error occurred while processing you
 
 pub const MAX_IMAGES_PER_CONVERSATION: usize = 200;
 
-use warpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
+use derpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
 
 #[derive(Clone, Copy)]
 pub enum AutosuggestionLocation {
@@ -183,7 +183,7 @@ pub const SELECT_UP_ACTION_NAME: &str = "editor_view:select_up";
 pub const SELECT_DOWN_ACTION_NAME: &str = "editor_view:select_down";
 
 pub fn init(ctx: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     ctx.register_fixed_bindings(vec![
         // Below are default bindings that are similar to the behavior in all other text editors.
@@ -406,7 +406,7 @@ pub fn init(ctx: &mut AppContext) {
         // This might seem like a no-op since `ctrl-right` changes desktops on Mac by default.
         // However, many Mac users coming from fish shell have asked for this binding.
         // They've already disabled the desktop change shortcut, and are expecting that this
-        // binding also works in Warp. We should not break their workflow.
+        // binding also works in Derp. We should not break their workflow.
         FixedBinding::new(
             "ctrl-right",
             EditorAction::MoveForwardOneWord,
@@ -1397,7 +1397,7 @@ type RenderDecoratorElementsFn = Box<dyn Fn(&AppContext) -> EditorDecoratorEleme
 
 /// Type alias for a closure that allows parent views to add flags to the EditorView's keymap context.
 /// The closure takes the context by mutable reference and can insert additional flags.
-pub type KeymapContextModifierFn = Box<dyn Fn(&mut warpui::keymap::Context, &AppContext)>;
+pub type KeymapContextModifierFn = Box<dyn Fn(&mut derpui::keymap::Context, &AppContext)>;
 
 /// Enum to choose between different methods of computing the baseline offset for text.
 #[derive(Clone, Debug)]
@@ -1411,7 +1411,7 @@ pub enum BaselinePositionComputationMethod {
 }
 
 // Re-export voice transcription types for backwards compatibility
-use warp_errors::report_error;
+use derp_errors::report_error;
 
 pub use crate::voice::transcriber::{Transcriber, VoiceTranscriber};
 
@@ -5725,7 +5725,7 @@ impl EditorView {
     }
 
     pub fn move_to_paragraph_start(&mut self, ctx: &mut ViewContext<Self>) {
-        // warp doesn't wrap the text, so basically each line is a paragraph.
+        // derp doesn't wrap the text, so basically each line is a paragraph.
         // this moves to the start of the paragraph (and the previous one if used multiple times).
         self.change_selections(ctx, |editor_model, ctx| {
             editor_model.move_cursor(
@@ -8000,7 +8000,7 @@ impl EditorView {
         // from the filesystem (the path transformer, if any, only applies to text insertion).
         let paths_as_strings: Vec<String> = paths.iter().map(|path| path.to_string()).collect();
         let image_filepaths =
-            warpui::clipboard_utils::get_image_filepaths_from_paths(&paths_as_strings);
+            derpui::clipboard_utils::get_image_filepaths_from_paths(&paths_as_strings);
 
         // If we have image file paths, emit event for parent to handle terminal-specific processing
         let num_image_files = image_filepaths.len();
@@ -8019,7 +8019,7 @@ impl EditorView {
         };
 
         let input =
-            warpui::clipboard_utils::escaped_paths_str(&transformed_paths, self.shell_family);
+            derpui::clipboard_utils::escaped_paths_str(&transformed_paths, self.shell_family);
 
         self.user_insert(&input, ctx);
     }
@@ -8456,7 +8456,7 @@ impl TypedActionView for EditorView {
     ) -> ActionAccessibilityContent {
         match action {
             EditorAction::UserInsert(text) => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help(text.to_string(), WarpA11yRole::UserAction),
+                AccessibilityContent::new_without_help(text.to_string(), DerpA11yRole::UserAction),
             ),
             EditorAction::SelectLeft
             | EditorAction::SelectToLineEnd
@@ -8491,7 +8491,7 @@ impl TypedActionView for EditorView {
             EditorAction::Paste => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Pasting: {}", self.clipboard_content(ctx)),
-                    WarpA11yRole::UserAction,
+                    DerpA11yRole::UserAction,
                 ))
             }
             _ => ActionAccessibilityContent::from_debug(),
@@ -8599,7 +8599,7 @@ impl TypedActionView for EditorView {
             UnhandledModifierKey(keystroke) => {
                 if self.can_select(ctx) {
                     // This event helps us to keep track of what key bindings users
-                    // try to use in the editor but are currently not available in Warp.
+                    // try to use in the editor but are currently not available in Derp.
                     ctx.emit(Event::UnhandledModifierKeyOnEditor(keystroke.clone()))
                 }
             }
@@ -8755,7 +8755,7 @@ impl View for EditorView {
         }
     }
 
-    fn keymap_context(&self, ctx: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, ctx: &AppContext) -> derpui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self.single_cursor_at_buffer_end(false /* respect_line_cap */, ctx) {

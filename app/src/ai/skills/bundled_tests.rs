@@ -1,6 +1,6 @@
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::*;
 
@@ -14,7 +14,7 @@ fn bundled_skill(content: &str) -> BundledSkill {
             path: LocalOrRemotePath::Local("/bundled/skills/test-skill/SKILL.md".into()),
             content: content.to_string(),
             line_range: None,
-            provider: SkillProvider::Warp,
+            provider: SkillProvider::Derp,
             scope: SkillScope::Bundled,
         },
         BundledSkillActivation::Always,

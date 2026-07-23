@@ -1,20 +1,20 @@
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui_core::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui_core::elements::{
     Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Stack,
 };
-use warpui_core::fonts::Weight;
-use warpui_core::keymap::Keystroke;
-use warpui_core::platform::Cursor;
-use warpui_core::prelude::Align;
-use warpui_core::text_layout::TextAlignment;
-use warpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui_core::{
+use derpui_core::fonts::Weight;
+use derpui_core::keymap::Keystroke;
+use derpui_core::platform::Cursor;
+use derpui_core::prelude::Align;
+use derpui_core::text_layout::TextAlignment;
+use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -42,8 +42,8 @@ pub enum AiAccessSlideEvent {
     PasteAuthTokenFromClipboardRequested,
 }
 
-/// The "Choose how to access AI" slide (Warp Agent path). Forks between a paid
-/// subscription and a "Set up later" option that lets the user explore Warp's
+/// The "Choose how to access AI" slide (Derp Agent path). Forks between a paid
+/// subscription and a "Set up later" option that lets the user explore Derp's
 /// built-in AI before committing to a plan.
 pub struct AiAccessSlide {
     onboarding_state: ModelHandle<OnboardingStateModel>,
@@ -115,7 +115,7 @@ impl AiAccessSlide {
             .finish();
 
         let subtitle = FormattedTextElement::from_str(
-            "Save with a recurring plan, or explore Warp's AI before committing.",
+            "Save with a recurring plan, or explore Derp's AI before committing.",
             appearance.ui_font_family(),
             16.,
         )
@@ -309,7 +309,7 @@ impl AiAccessSlide {
             .finish();
 
         let description = FormattedTextElement::from_str(
-            "Explore Warp's built-in AI features before committing to a plan, or bring your own \
+            "Explore Derp's built-in AI features before committing to a plan, or bring your own \
              inference.",
             appearance.ui_font_family(),
             14.,
@@ -410,7 +410,7 @@ impl AiAccessSlide {
         };
 
         let icon = ConstrainedBox::new(Box::new(
-            Icon::AlertCircle.to_warpui_icon(Fill::Solid(text_color)),
+            Icon::AlertCircle.to_derpui_icon(Fill::Solid(text_color)),
         ))
         .with_width(ICON_SIZE)
         .with_height(ICON_SIZE)

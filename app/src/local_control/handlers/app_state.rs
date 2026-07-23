@@ -14,10 +14,10 @@ use ::local_control::protocol::{
 };
 use ::local_control::{ActionKind, ControlError, ErrorCode, InstanceId};
 use serde_json::json;
-use warp_util::path::LineAndColumnArg;
+use derp_util::path::LineAndColumnArg;
 #[cfg(feature = "local_fs")]
-use warpui::SingletonEntity;
-use warpui::{AppContext, ModelContext, TypedActionView};
+use derpui::SingletonEntity;
+use derpui::{AppContext, ModelContext, TypedActionView};
 
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
@@ -37,7 +37,7 @@ use crate::settings_view::SettingsSection;
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::EditorSettings;
 #[cfg(feature = "local_fs")]
-use crate::util::openable_file_type::{resolve_file_target_to_open_in_warp, EditorLayout};
+use crate::util::openable_file_type::{resolve_file_target_to_open_in_derp, EditorLayout};
 #[cfg(feature = "local_fs")]
 use crate::workspace::PaneViewLocator;
 use crate::workspace::{CommandSearchOptions, InitContent, WorkspaceAction};
@@ -82,11 +82,11 @@ pub(crate) fn handle(
             target,
             ctx,
         ),
-        ActionKind::SurfaceWarpDriveOpen => surface_workspace_action(
+        ActionKind::SurfaceDerpDriveOpen => surface_workspace_action(
             instance_id,
             action,
-            SurfaceDestination::WarpDrive,
-            WorkspaceAction::OpenWarpDrive,
+            SurfaceDestination::DerpDrive,
+            WorkspaceAction::OpenDerpDrive,
             target,
             ctx,
         ),
@@ -121,10 +121,10 @@ pub(crate) fn handle(
             surface_command_search_open(instance_id, params, target, ctx)
         }
         ActionKind::SurfaceThemePickerOpen => surface_theme_picker_open(instance_id, target, ctx),
-        ActionKind::SurfaceWarpDriveToggle => workspace_action(
+        ActionKind::SurfaceDerpDriveToggle => workspace_action(
             instance_id,
             action,
-            WorkspaceAction::ToggleWarpDrive,
+            WorkspaceAction::ToggleDerpDrive,
             target,
             ctx,
         ),
@@ -760,7 +760,7 @@ fn file_open(
         let path = PathBuf::from(params.path);
         let layout = params.new_tab.then_some(EditorLayout::NewTab);
         let file_target =
-            resolve_file_target_to_open_in_warp(&path, EditorSettings::as_ref(ctx), layout);
+            resolve_file_target_to_open_in_derp(&path, EditorSettings::as_ref(ctx), layout);
         workspace.update(ctx, |workspace, ctx| {
             workspace.open_file_with_target(
                 path.clone(),

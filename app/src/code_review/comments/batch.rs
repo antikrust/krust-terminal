@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use warp_editor::render::model::LineCount;
-use warpui::{Entity, ModelContext};
+use derp_editor::render::model::LineCount;
+use derpui::{Entity, ModelContext};
 
 use super::{
     AttachedReviewComment, AttachedReviewCommentTarget, CommentId, PendingImportedReviewComment,

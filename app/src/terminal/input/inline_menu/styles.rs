@@ -3,10 +3,10 @@
 //! This module provides common styling functions used across all inline menu
 //! implementations (models, slash commands, conversations) to ensure consistent
 //! visual design matching the Figma specifications.
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warpui::color::ColorU;
-use warpui::{AppContext, SingletonEntity};
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::{Fill, DerpTheme};
+use derpui::color::ColorU;
+use derpui::{AppContext, SingletonEntity};
 
 use crate::search::result_renderer::ItemHighlightState;
 
@@ -44,15 +44,15 @@ pub fn item_background(
     }
 }
 
-pub fn primary_text_color(theme: &WarpTheme, background: Fill) -> Fill {
+pub fn primary_text_color(theme: &DerpTheme, background: Fill) -> Fill {
     theme.main_text_color(background)
 }
 
-pub fn secondary_text_color(theme: &WarpTheme, background: Fill) -> Fill {
+pub fn secondary_text_color(theme: &DerpTheme, background: Fill) -> Fill {
     theme.sub_text_color(background)
 }
 
-pub fn disabled_text_color(theme: &WarpTheme, background: Fill) -> Fill {
+pub fn disabled_text_color(theme: &DerpTheme, background: Fill) -> Fill {
     theme.disabled_text_color(background)
 }
 

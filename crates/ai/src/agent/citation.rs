@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
-use warp_multi_agent_api as api;
+use derp_multi_agent_api as api;
 
 /// A citation listed in an AI response.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum AIAgentCitation {
-    WarpDriveObject {
+    DerpDriveObject {
         uid: String,
     },
-    WarpDocumentation {
+    DerpDocumentation {
         path: String,
     },
     WebPage {
@@ -26,11 +26,11 @@ pub enum AIAgentCitation {
 impl Display for AIAgentCitation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AIAgentCitation::WarpDriveObject { uid } => {
-                write!(f, "Warp Drive Object: {uid}")
+            AIAgentCitation::DerpDriveObject { uid } => {
+                write!(f, "Derp Drive Object: {uid}")
             }
-            AIAgentCitation::WarpDocumentation { path } => {
-                write!(f, "Warp Documentation: {path}")
+            AIAgentCitation::DerpDocumentation { path } => {
+                write!(f, "Derp Documentation: {path}")
             }
             AIAgentCitation::WebPage { url } => {
                 write!(f, "Web Page: {url}")
@@ -59,13 +59,13 @@ impl TryFrom<api::Citation> for AIAgentCitation {
             .unwrap_or(api::DocumentType::Unknown);
 
         match doc_type {
-            api::DocumentType::WarpDriveWorkflow
-            | api::DocumentType::WarpDriveNotebook
-            | api::DocumentType::WarpDriveEnvVar
-            | api::DocumentType::Rule => Ok(AIAgentCitation::WarpDriveObject {
+            api::DocumentType::DerpDriveWorkflow
+            | api::DocumentType::DerpDriveNotebook
+            | api::DocumentType::DerpDriveEnvVar
+            | api::DocumentType::Rule => Ok(AIAgentCitation::DerpDriveObject {
                 uid: citation.document_id,
             }),
-            api::DocumentType::WarpDocumentation => Ok(AIAgentCitation::WarpDocumentation {
+            api::DocumentType::DerpDocumentation => Ok(AIAgentCitation::DerpDocumentation {
                 path: citation.document_id,
             }),
             api::DocumentType::WebPage => Ok(AIAgentCitation::WebPage {

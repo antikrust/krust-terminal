@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors;
+use derpui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Expanded, Flex, Hoverable,
-    Icon as WarpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
+    Icon as DerpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Percentage, Radius, Rect, Stack, Text,
 };
-use warpui::prelude::{Align, CrossAxisAlignment};
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, Element, SingletonEntity as _};
+use derpui::prelude::{Align, CrossAxisAlignment};
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, Element, SingletonEntity as _};
 
 use crate::ai::llms::LLMSpec;
 use crate::appearance::Appearance;
@@ -19,7 +19,7 @@ const CORNER_RADIUS: f32 = 4.0;
 const ROW_SPACING: f32 = 12.0;
 
 pub const MODEL_SPECS_TITLE: &str = "Model Specs";
-pub const MODEL_SPECS_DESCRIPTION: &str = "Warp's benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.";
+pub const MODEL_SPECS_DESCRIPTION: &str = "Derp's benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.";
 
 pub const REASONING_LEVEL_TITLE: &str = "Reasoning level";
 pub const REASONING_LEVEL_DESCRIPTION: &str = "Increased reasoning levels consume more credits and have higher latency, but higher performance for complicated tasks.";
@@ -277,7 +277,7 @@ fn render_info_tooltip(tooltip: CostRowTooltip, appearance: &Appearance) -> Box<
     let tooltip_text = tooltip.text.to_string();
     Hoverable::new(tooltip.mouse_state, move |state| {
         let info_icon = Container::new(
-            ConstrainedBox::new(WarpUiIcon::new("bundled/svg/info.svg", icon_color).finish())
+            ConstrainedBox::new(DerpUiIcon::new("bundled/svg/info.svg", icon_color).finish())
                 .with_width(13.)
                 .with_height(13.)
                 .finish(),

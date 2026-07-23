@@ -1,4 +1,4 @@
-use warpui::EntityId;
+use derpui::EntityId;
 
 use super::WorkspaceAction;
 use crate::pane_group::TerminalPaneId;

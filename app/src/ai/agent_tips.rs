@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
 use markdown_parser::FormattedTextFragment;
-use warpui::keymap::Keystroke;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use derpui::keymap::Keystroke;
+use derpui::r#async::{SpawnedFutureHandle, Timer};
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::persisted_workspace::PersistedWorkspace;
 use crate::palette::PaletteMode;
@@ -72,7 +72,7 @@ pub trait AITip: Clone {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AgentTipKind {
     CodebaseContext,
-    WarpDrive,
+    DerpDrive,
     General,
     Mcp,
     SlashCommands,
@@ -108,7 +108,7 @@ static DEFAULT_TIPS: LazyLock<Vec<AgentTip>> = LazyLock::new(|| {
             kind: AgentTipKind::SlashCommands,
         },
         AgentTip {
-            description: "<keybinding> to open the Command Palette and access Warp actions and shortcuts.".to_string(),
+            description: "<keybinding> to open the Command Palette and access Derp actions and shortcuts.".to_string(),
             link: Some("https://therob.lol/derp-terminal/help/terminal/command-palette".to_string()),
             binding_name: Some(TOGGLE_COMMAND_PALETTE_KEYBINDING_NAME),
             action: Some(WorkspaceAction::OpenPalette {
@@ -120,10 +120,10 @@ static DEFAULT_TIPS: LazyLock<Vec<AgentTip>> = LazyLock::new(|| {
         },
         AgentTip {
             description: "Store reusable workflows, notebooks, and prompts in your".to_string(),
-            link: Some("https://therob.lol/derp-terminal/help/knowledge-and-collaboration/warp-drive".to_string()),
+            link: Some("https://therob.lol/derp-terminal/help/knowledge-and-collaboration/derp-drive".to_string()),
             binding_name: None,
-            action: Some(WorkspaceAction::OpenWarpDrive),
-            kind: AgentTipKind::WarpDrive,
+            action: Some(WorkspaceAction::OpenDerpDrive),
+            kind: AgentTipKind::DerpDrive,
         },
         AgentTip {
             description: "Enter a new prompt to redirect the agent while it's running.".to_string(),
@@ -221,7 +221,7 @@ static DEFAULT_TIPS: LazyLock<Vec<AgentTip>> = LazyLock::new(|| {
             link: None,
             binding_name: None,
             action: None,
-            kind: AgentTipKind::WarpDrive,
+            kind: AgentTipKind::DerpDrive,
         },
         AgentTip {
             description: "`/add-rule` to create a global agent rule.".to_string(),
@@ -294,8 +294,8 @@ static DEFAULT_TIPS: LazyLock<Vec<AgentTip>> = LazyLock::new(|| {
             kind: AgentTipKind::Context,
         },
         AgentTip {
-            description: "Warpify a remote SSH session to enable Oz inside that environment.".to_string(),
-            link: Some("https://therob.lol/derp-terminal/help/terminal/warpify".to_string()),
+            description: "Derpify a remote SSH session to enable Oz inside that environment.".to_string(),
+            link: Some("https://therob.lol/derp-terminal/help/terminal/derpify".to_string()),
             binding_name: None,
             action: None,
             kind: AgentTipKind::General,
@@ -308,7 +308,7 @@ static DEFAULT_TIPS: LazyLock<Vec<AgentTip>> = LazyLock::new(|| {
             kind: AgentTipKind::General,
         },
         AgentTip {
-            description: "`/init` to generate a `WARP.md` file and define project rules for the agent.".to_string(),
+            description: "`/init` to generate a `DERP.md` file and define project rules for the agent.".to_string(),
             link: Some("https://therob.lol/derp-terminal/help/agent-platform/capabilities/rules".to_string()),
             binding_name: None,
             action: None,
@@ -439,7 +439,7 @@ impl WorkspaceAction {
     pub fn display_text(&self) -> Option<String> {
         match self {
             WorkspaceAction::OpenPalette { .. } => Some("Open palette".to_string()),
-            WorkspaceAction::OpenWarpDrive => Some("the Library.".to_string()),
+            WorkspaceAction::OpenDerpDrive => Some("the Library.".to_string()),
             WorkspaceAction::ToggleRightPanel => Some("Show diff view".to_string()),
             _ => None,
         }

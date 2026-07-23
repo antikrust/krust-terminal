@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use session_sharing_protocol::common::SessionId;
 use uuid::Uuid;
-use warp_errors::report_error;
-use warpui::{SingletonEntity, ViewContext};
+use derp_errors::report_error;
+use derpui::{SingletonEntity, ViewContext};
 
 use super::{apply_hidden_child_agent_task_context, HiddenChildAgentTaskContext};
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};

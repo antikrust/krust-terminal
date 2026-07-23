@@ -1,21 +1,21 @@
 use chrono::Utc;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_geometry::vector::vec2f;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_server_client::auth::AgentIdentity;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_server_client::auth::AgentIdentity;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, Padding, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack, Text,
 };
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::segmented_control::{
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl,
 };
-use warpui::{
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -30,7 +30,7 @@ use crate::view_components::dropdown::{DROPDOWN_PADDING, TOP_MENU_BAR_HEIGHT};
 use crate::view_components::{Dropdown as DropdownView, DropdownItem, FilterableDropdown};
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
-const OZ_AGENTS_URL: &str = "https://oz.warp.dev/agents?new=true";
+const OZ_AGENTS_URL: &str = "https://oz.derp.baby/agents?new=true";
 const API_KEY_DOCS_URL: &str =
     "https://therob.lol/derp-terminal/help/reference/cli/api-keys/#personal-vs-agent-keys";
 
@@ -130,7 +130,7 @@ pub enum CreateApiKeyModalAction {
 pub enum CreateApiKeyModalEvent {
     Close,
     Created {
-        api_key: warp_graphql::queries::api_keys::ApiKeyProperties,
+        api_key: derp_graphql::queries::api_keys::ApiKeyProperties,
     },
     Error {
         message: String,
@@ -352,7 +352,7 @@ impl CreateApiKeyModal {
         let expires_at = match self.expiration.days() {
             Some(days) => {
                 let t = Utc::now() + chrono::Duration::days(days);
-                Some(warp_graphql::scalars::Time::from(t))
+                Some(derp_graphql::scalars::Time::from(t))
             }
             None => None,
         };
@@ -400,20 +400,20 @@ impl CreateApiKeyModal {
             async move { auth_client.create_api_key(final_name, team_id, agent_uid, expires_at).await },
             |me, res, ctx| {
                 match res {
-                    Ok(warp_graphql::mutations::generate_api_key::GenerateApiKeyResult::GenerateApiKeyOutput(output)) => {
+                    Ok(derp_graphql::mutations::generate_api_key::GenerateApiKeyResult::GenerateApiKeyOutput(output)) => {
                         ctx.emit(CreateApiKeyModalEvent::Created { api_key: output.api_key });
                         me.request_state = RequestState::Succeeded;
                         me.raw_key_copied = false;
                         me.raw_key = Some(output.raw_api_key);
                         ctx.notify();
                     }
-                    Ok(warp_graphql::mutations::generate_api_key::GenerateApiKeyResult::UserFacingError(e)) => {
-                        let msg = warp_graphql::client::get_user_facing_error_message(e);
+                    Ok(derp_graphql::mutations::generate_api_key::GenerateApiKeyResult::UserFacingError(e)) => {
+                        let msg = derp_graphql::client::get_user_facing_error_message(e);
                         me.request_state = RequestState::Idle;
                         ctx.emit(CreateApiKeyModalEvent::Error { message: msg });
                         ctx.notify();
                     }
-                    Ok(warp_graphql::mutations::generate_api_key::GenerateApiKeyResult::Unknown) | Err(_) => {
+                    Ok(derp_graphql::mutations::generate_api_key::GenerateApiKeyResult::Unknown) | Err(_) => {
                         me.request_state = RequestState::Idle;
                         ctx.emit(CreateApiKeyModalEvent::Error { message: "Failed to create API key. Please try again.".to_string() });
                         ctx.notify();
@@ -518,10 +518,10 @@ impl CreateApiKeyModal {
             "Copy"
         };
         let copy_icon = if self.raw_key_copied {
-            warp_core::ui::icons::Icon::Check.to_warpui_icon(appearance.theme().background())
+            derp_core::ui::icons::Icon::Check.to_derpui_icon(appearance.theme().background())
         } else {
-            warp_core::ui::icons::Icon::Copy
-                .to_warpui_icon(appearance.theme().active_ui_text_color())
+            derp_core::ui::icons::Icon::Copy
+                .to_derpui_icon(appearance.theme().active_ui_text_color())
         };
         let mut copy_button_builder = appearance
             .ui_builder()
@@ -534,8 +534,8 @@ impl CreateApiKeyModal {
                 self.create_button_mouse_state.clone(),
             )
             .with_text_and_icon_label(
-                warpui::ui_components::button::TextAndIcon::new(
-                    warpui::ui_components::button::TextAndIconAlignment::IconFirst,
+                derpui::ui_components::button::TextAndIcon::new(
+                    derpui::ui_components::button::TextAndIconAlignment::IconFirst,
                     copy_label,
                     copy_icon,
                     MainAxisSize::Min,
@@ -874,7 +874,7 @@ impl TypedActionView for CreateApiKeyModal {
             CreateApiKeyModalAction::CopyRawKey => {
                 let content = self.raw_key.clone().unwrap_or_default();
                 ctx.clipboard()
-                    .write(warpui::clipboard::ClipboardContent::plain_text(content));
+                    .write(derpui::clipboard::ClipboardContent::plain_text(content));
                 self.raw_key_copied = true;
                 // Success toast
                 let window_id = ctx.window_id();

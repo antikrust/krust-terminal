@@ -2,18 +2,18 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use warp_util::path::ShellFamily;
-use warp_workflows::workflows as global_workflows;
+use derp_util::path::ShellFamily;
+use derp_workflows::workflows as global_workflows;
 #[cfg(not(target_family = "wasm"))]
-use warpui::platform::OperatingSystem;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use derpui::platform::OperatingSystem;
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::workflow::Workflow;
 use super::WorkflowSource;
 use crate::terminal::model::session::Session;
 #[cfg(feature = "local_fs")]
 use crate::user_config::load_workflows;
-use crate::user_config::WarpConfig;
+use crate::user_config::DerpConfig;
 
 pub fn workflows_dir(base_dir: impl AsRef<Path>) -> PathBuf {
     base_dir.as_ref().join("workflows")
@@ -25,7 +25,7 @@ pub enum UseCache {
     No,
 }
 
-/// Singleton model that loads and caches local (non-WarpDrive) workflows.
+/// Singleton model that loads and caches local (non-DerpDrive) workflows.
 pub struct LocalWorkflows {
     app_workflows: Vec<Workflow>,
 
@@ -38,17 +38,17 @@ impl LocalWorkflows {
     pub fn new(_ctx: &mut ModelContext<Self>) -> Self {
         Self {
             app_workflows: app_workflows(),
-            global_workflows: global_workflows().into_iter().map(Workflow::from).collect(), // convert from public-facing Workflow type to warp-internal Workflow type
+            global_workflows: global_workflows().into_iter().map(Workflow::from).collect(), // convert from public-facing Workflow type to derp-internal Workflow type
             project_workflows: Default::default(),
         }
     }
 
-    /// Returns an iterator over hardcoded "application" workflows included in the Warp binary.
+    /// Returns an iterator over hardcoded "application" workflows included in the Derp binary.
     pub fn app_workflows(&self) -> impl Iterator<Item = &Workflow> {
         self.app_workflows.iter()
     }
 
-    /// Returns an iterator over the static set of workflows for 3rd party tools loaded from Warp's
+    /// Returns an iterator over the static set of workflows for 3rd party tools loaded from Derp's
     /// workflows GitHub repo.
     pub fn global_workflows(
         &self,
@@ -81,7 +81,7 @@ impl LocalWorkflows {
         })
     }
 
-    /// Returns an iterator over file-based workflows loaded from the `.warp/workflows` directory in
+    /// Returns an iterator over file-based workflows loaded from the `.derp/workflows` directory in
     /// the `working_directory`.
     ///
     /// The loaded workflows vector is cached.
@@ -135,7 +135,7 @@ impl LocalWorkflows {
                     .map(|workflow| (WorkflowSource::Project, workflow)),
             )
             .chain(
-                WarpConfig::as_ref(ctx)
+                DerpConfig::as_ref(ctx)
                     .local_user_workflows()
                     .iter()
                     .map(|workflow| (WorkflowSource::Local, workflow)),
@@ -176,14 +176,14 @@ fn app_workflows() -> Vec<Workflow> {
     }
 }
 
-/// Loads project-level workflows (if any) from the warp config directory in the current working
+/// Loads project-level workflows (if any) from the derp config directory in the current working
 /// directory.
 #[cfg(feature = "local_fs")]
 pub(super) fn load_project_workflows(path: &Path) -> Vec<Workflow> {
     match git2::Repository::discover(path) {
         Ok(repository) => repository.workdir().map_or(Vec::new(), |workdir| {
             load_workflows(&workflows_dir(
-                workdir.join(warp_core::paths::WARP_CONFIG_DIR),
+                workdir.join(derp_core::paths::DERP_CONFIG_DIR),
             ))
         }),
         Err(_) => Vec::new(),
@@ -209,21 +209,21 @@ pub fn tail_command_for_shell(shell_family: ShellFamily, path: &PathBuf) -> Stri
 
 #[cfg(not(target_family = "wasm"))]
 pub fn prompt_chip_logging_workflow(shell_family: ShellFamily) -> Option<Workflow> {
-    if !warp_core::channel::ChannelState::enable_debug_features() {
+    if !derp_core::channel::ChannelState::enable_debug_features() {
         return None;
     }
     let log_file_path = crate::context_chips::logging::log_file_path().ok()?;
     Some(Workflow::Command {
         name: "Tail prompt chip log".into(),
         command: tail_command_for_shell(shell_family, &log_file_path),
-        tags: vec!["warp".into(), "debug".into()],
+        tags: vec!["derp".into(), "debug".into()],
         description: Some(
             "Shows the diagnostic log of shell commands run by prompt context chips (dogfood only)"
                 .into(),
         ),
         arguments: vec![],
         source_url: None,
-        author: Some("Warp".into()),
+        author: Some("Derp".into()),
         author_url: None,
         shells: vec![],
         environment_variables: None,

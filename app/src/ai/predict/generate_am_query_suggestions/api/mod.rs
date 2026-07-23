@@ -1,8 +1,8 @@
-//! This module contains Rust types for the GenerateAMQuerySuggestions endpoint in warp-server that
+//! This module contains Rust types for the GenerateAMQuerySuggestions endpoint in derp-server that
 //! serves Agent Mode.
 //!
 //! These types are manually transposed from the API schema defined in go
-//! (warp-server/model/types/generate_am_query_suggestions/(request.go|response.go|common.go)).
+//! (derp-server/model/types/generate_am_query_suggestions/(request.go|response.go|common.go)).
 //!
 //! Documentation on the types here is directly borrowed from the documentation on the go schema;
 //! see the go schema for the source-of-truth.

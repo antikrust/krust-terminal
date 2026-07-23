@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chrono::{DateTime, FixedOffset};
 use settings::Setting as _;
-use warp_errors::report_if_error;
+use derp_errors::report_if_error;
 
 use crate::terminal::general_settings::GeneralSettings;
 use crate::util::bindings::trigger_to_keystroke;
@@ -18,8 +18,8 @@ pub mod sections;
 mod view;
 use serde::{Deserialize, Serialize};
 pub use view::{ResourceCenterAction, ResourceCenterEvent, ResourceCenterPage, ResourceCenterView};
-use warpui::keymap::Keystroke;
-use warpui::{AppContext, Entity, SingletonEntity};
+use derpui::keymap::Keystroke;
+use derpui::{AppContext, Entity, SingletonEntity};
 
 use self::section_views::feature_section::FeatureSection;
 
@@ -88,10 +88,10 @@ pub enum TipAction {
     CommandSearch,
     AiCommandSearch,
     SaveNewLaunchConfig,
-    WarpAI,
-    // This toggles Warp Drive rather than opening it. This enum can't directly be
+    DerpAI,
+    // This toggles Derp Drive rather than opening it. This enum can't directly be
     // renamed because we serialize it into the welcome tips.
-    OpenWarpDrive,
+    OpenDerpDrive,
     Changelog,
     // Note that this item has been deprecated from the UI and is not in any section.
     // We are leaving it in this enum to ensure that we don't re-use `Workflows` as a
@@ -110,8 +110,8 @@ impl TipAction {
             TipAction::AiCommandSearch => "input:toggle_natural_language_command_search",
             TipAction::ThemePicker => "workspace:show_theme_chooser",
             TipAction::SaveNewLaunchConfig => "workspace:open_launch_config_save_modal",
-            TipAction::WarpAI => "workspace:toggle_ai_assistant",
-            TipAction::OpenWarpDrive => "workspace:toggle_left_panel",
+            TipAction::DerpAI => "workspace:toggle_ai_assistant",
+            TipAction::OpenDerpDrive => "workspace:toggle_left_panel",
             // Slash commands are also registered as editable bindings, so callers can look them up here
             // the same way they do regular app actions.
             TipAction::Changelog => "/changelog",

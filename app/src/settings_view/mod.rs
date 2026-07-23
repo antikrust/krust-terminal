@@ -23,24 +23,24 @@ use settings_page::{
     HEADER_PADDING,
 };
 use teams_page::TeamsPageViewEvent;
-use warp_core::channel::ChannelState;
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::settings::ToggleableSetting as _;
-use warp_core::ui::theme::color::internal_colors;
-use warp_editor::editor::NavigationKey;
-use warpify_page::{WarpifyPageAction, WarpifyPageView};
-use warpui::elements::{
+use derp_core::channel::ChannelState;
+use derp_core::context_flag::ContextFlag;
+use derp_core::features::FeatureFlag;
+use derp_core::send_telemetry_from_ctx;
+use derp_core::settings::ToggleableSetting as _;
+use derp_core::ui::theme::color::internal_colors;
+use derp_editor::editor::NavigationKey;
+use derpify_page::{DerpifyPageAction, DerpifyPageView};
+use derpui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty,
     EventHandler, Expanded, Fill, Flex, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack,
     Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::{ContextPredicate, EnabledPredicate, FixedBinding};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::{ContextPredicate, EnabledPredicate, FixedBinding};
+use derpui::{
     id, Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView,
     UpdateView as _, View, ViewContext, ViewHandle,
 };
@@ -110,7 +110,7 @@ mod teams_page;
 mod telemetry;
 mod transfer_ownership_confirmation_modal;
 pub mod update_environment_form;
-mod warpify_page;
+mod derpify_page;
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) use ai_page::cli_agent_settings_widget_id;
@@ -165,7 +165,7 @@ pub(super) fn editor_text_colors(appearance: &Appearance) -> TextColors {
 }
 
 /// Small inline pill rendered next to a settings label to mark a feature as beta.
-/// Used for experimental features (i.e. AsyncFind) that are enabled for Friends of Warp (i.e. Dogfood/Preview) and toggleable by others.
+/// Used for experimental features (i.e. AsyncFind) that are enabled for Friends of Derp (i.e. Dogfood/Preview) and toggleable by others.
 pub(super) fn render_beta_chip(appearance: &Appearance) -> Box<dyn Element> {
     let theme = appearance.theme();
     let chip_color = theme.sub_text_color(theme.surface_3()).into_solid();
@@ -187,10 +187,10 @@ pub(super) fn render_beta_chip(appearance: &Appearance) -> Box<dyn Element> {
 pub(super) fn render_model_chips(
     labels: impl IntoIterator<Item = String>,
     appearance: &Appearance,
-    text_color: warp_core::ui::theme::Fill,
+    text_color: derp_core::ui::theme::Fill,
 ) -> Box<dyn Element> {
-    use warpui::ui_components::chip::Chip;
-    use warpui::ui_components::components::{UiComponent, UiComponentStyles};
+    use derpui::ui_components::chip::Chip;
+    use derpui::ui_components::components::{UiComponent, UiComponentStyles};
 
     let theme = appearance.theme();
     let chip_border = internal_colors::neutral_4(theme).into();
@@ -218,7 +218,7 @@ pub enum SettingsViewEvent {
     StartResize,
     CheckForUpdate,
     LaunchNetworkLogging,
-    OpenWarpDrive,
+    OpenDerpDrive,
     SignupAnonymousUser,
     ShowToast {
         message: String,
@@ -251,15 +251,15 @@ pub enum SettingsSection {
     Privacy,
     Scripting,
     Teams,
-    Warpify,
+    Derpify,
     /// Internal backing-page identifier for AISettingsPageView. Multiple subpages
-    /// (WarpAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents, BringYourOwnKey)
+    /// (DerpAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents, BringYourOwnKey)
     /// share this single backing page, so this variant is needed as the key in
     /// `settings_pages`.
-    /// External callers should navigate to a specific subpage (e.g. `WarpAgent`) instead.
+    /// External callers should navigate to a specific subpage (e.g. `DerpAgent`) instead.
     AI,
     // ── Agents umbrella subpages ──
-    WarpAgent,
+    DerpAgent,
     AgentProfiles,
     AgentMCPServers,
     Knowledge,
@@ -301,7 +301,7 @@ impl Display for SettingsSection {
             SettingsSection::Keybindings => write!(f, "Keyboard shortcuts"),
             SettingsSection::MCPServers => write!(f, "MCP Servers"),
             SettingsSection::Scripting => write!(f, "Scripting"),
-            SettingsSection::WarpAgent => write!(f, "AI Manager"),
+            SettingsSection::DerpAgent => write!(f, "AI Manager"),
             SettingsSection::AgentProfiles => write!(f, "Profiles"),
             SettingsSection::AgentMCPServers => write!(f, "MCP servers"),
             SettingsSection::Knowledge => write!(f, "Knowledge"),
@@ -348,7 +348,7 @@ impl SettingsSection {
     pub fn is_ai_subpage(&self) -> bool {
         matches!(
             self,
-            Self::WarpAgent
+            Self::DerpAgent
                 | Self::AgentProfiles
                 | Self::AgentMCPServers
                 | Self::Knowledge
@@ -399,7 +399,7 @@ impl SettingsSection {
         // within it (see ai_page.rs), so neither is a standalone nav item.
         &[
             Self::ThirdPartyCLIAgents,
-            Self::WarpAgent,
+            Self::DerpAgent,
             Self::BringYourOwnKey,
             Self::AgentMCPServers,
             Self::Ollama,
@@ -450,9 +450,9 @@ impl FromStr for SettingsSection {
             "Privacy" => Ok(Self::Privacy),
             "Scripting" => Ok(Self::Scripting),
             "Teams" => Ok(Self::Teams),
-            "Warpify" => Ok(Self::Warpify),
+            "Derpify" => Ok(Self::Derpify),
             // This page was called "Oz" at one point, keep for backward compatibility.
-            "Oz" | "Warp Agent" => Ok(Self::WarpAgent),
+            "Oz" | "Derp Agent" => Ok(Self::DerpAgent),
             "Profiles" | "AgentProfiles" => Ok(Self::AgentProfiles),
             "MCP servers" | "AgentMCPServers" => Ok(Self::AgentMCPServers),
             "Knowledge" => Ok(Self::Knowledge),
@@ -480,7 +480,7 @@ impl FromStr for SettingsSection {
 }
 
 /// Resolves a stable, friendly deeplink slug (used by
-/// `warp://settings?widget=<slug>`) to the settings page and `&'static str`
+/// `derp://settings?widget=<slug>`) to the settings page and `&'static str`
 /// widget id it should scroll to.
 ///
 /// Only allowlisted widgets are linkable, so the public URL contract stays
@@ -492,7 +492,7 @@ pub fn settings_widget_deeplink_target(slug: &str) -> Option<(SettingsSection, &
             SettingsSection::Features,
             features_page::global_hotkey_widget_id(),
         )),
-        "custom_router" => Some((SettingsSection::WarpAgent, custom_model_routers_widget_id())),
+        "custom_router" => Some((SettingsSection::DerpAgent, custom_model_routers_widget_id())),
         #[cfg(not(target_family = "wasm"))]
         "cli_agents" => Some((
             SettingsSection::ThirdPartyCLIAgents,
@@ -538,7 +538,7 @@ pub mod flags {
     pub const SCROLL_REPORTING_CONTEXT_FLAG: &str = "Scroll_Reporting";
     pub const FOCUS_REPORTING_CONTEXT_FLAG: &str = "Focus_Reporting";
     pub const SSH_REUSE_CONTROL_MASTER_CONTEXT_FLAG: &str = "SSH_Reuse_Control_Master";
-    pub const SSH_WARPIFICATION_CONTEXT_FLAG: &str = "SSH_Warpification";
+    pub const SSH_DERPIFICATION_CONTEXT_FLAG: &str = "SSH_Derpification";
     pub const NOTIFICATIONS_CONTEXT_FLAG: &str = "Notifications_Enabled";
     pub const LONG_RUNNING_NOTIFICATIONS_FLAG: &str = "Long_Running_Notifications";
     pub const AGENT_TASK_COMPLETED_NOTIFICATIONS_FLAG: &str = "Agent_Task_Completed_Notifications";
@@ -635,7 +635,7 @@ pub mod flags {
     pub const IN_BAND_COMMAND_BLOCKS_FLAG: &str = "In_Band_Command_Blocks_Visible";
     pub const RECORDING_MODE_FLAG: &str = "Recording_Mode_Enabled";
     pub const IN_BAND_GENERATORS_FLAG: &str = "In_Band_Generators_Enabled";
-    pub const WARP_SAME_LINE_PROMPT_FLAG: &str = "Warp_Same_Line_Prompt_Enabled";
+    pub const DERP_SAME_LINE_PROMPT_FLAG: &str = "Derp_Same_Line_Prompt_Enabled";
     pub const DEBUG_NETWORK_ONLINE_FLAG: &str = "Network_Status_Online";
     pub const AI_INPUT_AUTODETECTION_FLAG: &str = "AI_Input_Autodetection";
     pub const NLD_IN_TERMINAL_FLAG: &str = "NLD_In_Terminal";
@@ -649,9 +649,9 @@ pub mod flags {
     pub const MISERY_MODE_FLAG: &str = "Misery_Mode";
     pub const AI_RULES_FLAG: &str = "AI_Rules";
     pub const SUGGESTED_RULES_FLAG: &str = "Suggested_Rules";
-    pub const WARP_DRIVE_CONTEXT_FLAG: &str = "Warp_Drive_Context";
+    pub const DERP_DRIVE_CONTEXT_FLAG: &str = "Derp_Drive_Context";
     pub const FILE_BASED_MCP_FLAG: &str = "File_Based_MCP";
-    pub const WARP_CREDIT_FALLBACK_FLAG: &str = "Warp_Credit_Fallback";
+    pub const DERP_CREDIT_FALLBACK_FLAG: &str = "Derp_Credit_Fallback";
     pub const SHOW_BASE_MODEL_PICKER_IN_PROMPT_FLAG: &str = "Show_Base_Model_Picker_In_Prompt";
     pub const ALLOW_NATIVE_WAYLAND: &str = "Allow_Native_Wayland";
     pub const IS_ANY_AI_ENABLED: &str = "IsAnyAIEnabled";
@@ -664,11 +664,11 @@ pub mod flags {
     pub const TEXT_EFFECTS_CONTEXT_FLAG: &str = "Text_Effects_Enabled";
     pub const TEXT_EFFECTS_AGENT_MODE_CONTEXT_FLAG: &str = "Text_Effects_Agent_Mode_Enabled";
     pub const HAS_SETTINGS_TO_IMPORT_FLAG: &str = "HasSettingsToImport";
-    /// The user's setting enabled UDI, but we may show a classic input (e.g. ssh/subshell warpification)
+    /// The user's setting enabled UDI, but we may show a classic input (e.g. ssh/subshell derpification)
     pub const UNIVERSAL_DEVELOPER_INPUT_ENABLED: &str = "UniversalDeveloperInputEnabled";
     pub const AGENT_MODE_INPUT: &str = "InputAgentMode";
     pub const TERMINAL_MODE_INPUT: &str = "InputTerminalMode";
-    pub const WARP_IS_DEFAULT_TERMINAL: &str = "WarpIsDefaultTerminal";
+    pub const DERP_IS_DEFAULT_TERMINAL: &str = "DerpIsDefaultTerminal";
     pub const PASSIVE_CODE_DIFF_KEYBINDINGS_ENABLED: &str = "PassiveCodeDiffKeybindingsEnabled";
     /// When set, ctrl-enter should accept a prompt suggestion rather than insert a newline.
     /// This flag is set by the terminal Input when there's a pending passive code diff.
@@ -710,7 +710,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     main_page::init_actions_from_parent_view(app, context, builder);
     appearance_page::init_actions_from_parent_view(app, context, builder);
     features_page::init_actions_from_parent_view(app, context, builder);
-    warpify_page::init_actions_from_parent_view(app, context, builder);
+    derpify_page::init_actions_from_parent_view(app, context, builder);
     privacy_page::init_actions_from_parent_view(app, context, builder);
     ai_page::init_actions_from_parent_view(app, context, builder);
     code_page::init_actions_from_parent_view(app, context, builder);
@@ -863,7 +863,7 @@ impl<T: Action + Clone> ToggleSettingActionPair<T> {
         context_prefix: &ContextPredicate,
         context_boolean_flag: &'static str,
     ) -> Self {
-        use warpui::keymap::macros::id;
+        use derpui::keymap::macros::id;
 
         ToggleSettingActionPair {
             descriptions: SettingActionPairDescriptions {
@@ -1011,7 +1011,7 @@ pub enum SettingsAction {
     PrivacyPageToggle(PrivacyPageAction),
     AI(AISettingsPageAction),
     Code(CodeSettingsPageAction),
-    WarpifyPageToggle(WarpifyPageAction),
+    DerpifyPageToggle(DerpifyPageAction),
     Tab,
     Split(Direction),
     ToggleMaximizePane,
@@ -1156,7 +1156,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Teams(handle) => $ctx.update_view(handle, $update),
-            SettingsPageViewHandle::Warpify(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::Derpify(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::MolochStatus(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::OzCloudAPIKeys(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Privacy(handle) => $ctx.update_view(handle, $update),
@@ -1200,7 +1200,7 @@ pub struct SettingsView {
     /// Mirrored from `Workspace` via [`set_settings_error_state`].
     settings_error_banner_dismissed: bool,
     /// Mouse state handles for the nav-rail footer buttons. Constructed once
-    /// per `SettingsView` per `WARP.md`'s guidance that inline
+    /// per `SettingsView` per `DERP.md`'s guidance that inline
     /// `MouseStateHandle::default()` breaks hover/click tracking.
     footer_mouse_states: SettingsFooterMouseStates,
 }
@@ -1261,9 +1261,9 @@ impl SettingsView {
         // Teams is no longer a page of its own — the Account page hosts it and
         // re-emits its events (see `MainSettingsPageEvent::Teams`).
 
-        let warpify_page_handle = ctx.add_typed_action_view(WarpifyPageView::new);
-        ctx.subscribe_to_view(&warpify_page_handle, |me, _, event, ctx| {
-            me.handle_warpify_page_event(event, ctx);
+        let derpify_page_handle = ctx.add_typed_action_view(DerpifyPageView::new);
+        ctx.subscribe_to_view(&derpify_page_handle, |me, _, event, ctx| {
+            me.handle_derpify_page_event(event, ctx);
         });
 
         // Render the privacy page only if telemetry opt-out is enabled.
@@ -1272,13 +1272,13 @@ impl SettingsView {
             me.handle_privacy_page_event(event, ctx);
         });
 
-        let scripting_page_handle = if FeatureFlag::WarpControlCli.is_enabled() {
+        let scripting_page_handle = if FeatureFlag::DerpControlCli.is_enabled() {
             Some(ctx.add_typed_action_view(ScriptingSettingsPageView::new))
         } else {
             None
         };
 
-        // Warp Drive page
+        // Derp Drive page
 
         let platform_page_handle = ctx.add_typed_action_view(platform_page::PlatformPageView::new);
         ctx.subscribe_to_view(&platform_page_handle, |me, _, event, ctx| {
@@ -1334,7 +1334,7 @@ impl SettingsView {
             SettingsPage::new(keybindings_handle),
             SettingsPage::new(moloch_page_handle),
             SettingsPage::new(platform_page_handle),
-            SettingsPage::new(warpify_page_handle),
+            SettingsPage::new(derpify_page_handle),
         ];
 
         if let Some(scripting_page_handle) = scripting_page_handle {
@@ -1382,12 +1382,12 @@ impl SettingsView {
             },
             SettingsNavItem::Page(SettingsSection::Features),
             SettingsNavItem::Page(SettingsSection::Keybindings),
-            SettingsNavItem::Page(SettingsSection::Warpify),
+            SettingsNavItem::Page(SettingsSection::Derpify),
             SettingsNavItem::Page(SettingsSection::Privacy),
             SettingsNavItem::Page(SettingsSection::About),
         ];
 
-        if FeatureFlag::WarpControlCli.is_enabled() {
+        if FeatureFlag::DerpControlCli.is_enabled() {
             let scripting_index = nav_items
                 .iter()
                 .position(|item| matches!(item, SettingsNavItem::Page(SettingsSection::Privacy)))
@@ -1400,12 +1400,12 @@ impl SettingsView {
 
         // Resolve the initial page: map internal backing-page sections to their default subpage.
         let initial_page = match page {
-            Some(SettingsSection::AI) => SettingsSection::WarpAgent,
+            Some(SettingsSection::AI) => SettingsSection::DerpAgent,
             Some(SettingsSection::Code) => SettingsSection::CodeIndexing,
             Some(SettingsSection::Appearance) if FeatureFlag::TextEffects.is_enabled() => {
                 SettingsSection::AppearanceGeneral
             }
-            Some(SettingsSection::Scripting) if !FeatureFlag::WarpControlCli.is_enabled() => {
+            Some(SettingsSection::Scripting) if !FeatureFlag::DerpControlCli.is_enabled() => {
                 SettingsSection::Account
             }
             Some(section) if section.is_subpage() => section,
@@ -1809,7 +1809,7 @@ impl SettingsView {
             }
             MainSettingsPageEvent::Teams(event) => match event {
                 TeamsPageViewEvent::TeamsChanged => ctx.notify(),
-                TeamsPageViewEvent::OpenWarpDrive => ctx.emit(SettingsViewEvent::OpenWarpDrive),
+                TeamsPageViewEvent::OpenDerpDrive => ctx.emit(SettingsViewEvent::OpenDerpDrive),
                 TeamsPageViewEvent::ShowToast { message, flavor } => {
                     ctx.emit(SettingsViewEvent::ShowToast {
                         message: message.clone(),
@@ -1891,7 +1891,7 @@ impl SettingsView {
         }
     }
 
-    fn handle_warpify_page_event(
+    fn handle_derpify_page_event(
         &mut self,
         event: &SettingsPageEvent,
         ctx: &mut ViewContext<Self>,
@@ -2072,7 +2072,7 @@ impl SettingsView {
         let scroll_to_billing = section == SettingsSection::BillingAndUsage;
         let scroll_to_team = section == SettingsSection::Teams;
         let section = match section {
-            SettingsSection::AI => SettingsSection::WarpAgent,
+            SettingsSection::AI => SettingsSection::DerpAgent,
             SettingsSection::Code => SettingsSection::CodeIndexing,
             SettingsSection::BillingAndUsage | SettingsSection::Teams => SettingsSection::Account,
             other => other,
@@ -2148,7 +2148,7 @@ impl SettingsView {
 
         #[cfg(feature = "crash_reporting")]
         {
-            crate::crash_reporting::set_tag("warp.settings_page", section.to_string());
+            crate::crash_reporting::set_tag("derp.settings_page", section.to_string());
         }
 
         if let Some(settings_page) = self.current_settings_page() {
@@ -2204,7 +2204,7 @@ impl SettingsView {
             SettingsPageViewHandle::MolochStatus(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::OzCloudAPIKeys(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Privacy(v) => v.as_ref(app).should_render(app),
-            SettingsPageViewHandle::Warpify(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::Derpify(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Scripting(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::AI(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::CloudEnvironments(v) => v.as_ref(app).should_render(app),
@@ -2443,7 +2443,7 @@ impl SettingsView {
                     Container::new(
                         ConstrainedBox::new(
                             icons::Icon::SearchSmall
-                                .to_warpui_icon(appearance.theme().active_ui_text_color())
+                                .to_derpui_icon(appearance.theme().active_ui_text_color())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -2829,11 +2829,11 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-            SettingsAction::WarpifyPageToggle(warpify_action) => {
-                if let Some(warpify_page) = self.settings_page(SettingsSection::Warpify) {
-                    if let SettingsPageViewHandle::Warpify(view) = &warpify_page.view_handle {
+            SettingsAction::DerpifyPageToggle(derpify_action) => {
+                if let Some(derpify_page) = self.settings_page(SettingsSection::Derpify) {
+                    if let SettingsPageViewHandle::Derpify(view) = &derpify_page.view_handle {
                         view.update(ctx, |view, ctx| {
-                            view.handle_action(warpify_action, ctx);
+                            view.handle_action(derpify_action, ctx);
                         })
                     }
                 }
@@ -2877,16 +2877,16 @@ impl BackingView for SettingsView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         action: &Self::PaneHeaderOverflowMenuAction,
-        ctx: &mut warpui::ViewContext<Self>,
+        ctx: &mut derpui::ViewContext<Self>,
     ) {
         self.handle_action(action, ctx)
     }
 
-    fn close(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut derpui::ViewContext<Self>) {
         ctx.emit(SettingsViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut derpui::ViewContext<Self>) {
         ctx.focus(&self.search_editor)
     }
 

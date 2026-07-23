@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::{Duration, Utc};
 use cloud_object_client::MockObjectClient;
 use settings::manager::SettingsManager;
-use warpui::{App, SingletonEntity};
+use derpui::{App, SingletonEntity};
 
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFactModel};
 use crate::auth::AuthStateProvider;

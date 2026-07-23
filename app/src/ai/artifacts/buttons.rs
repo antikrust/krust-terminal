@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warpui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
-use warpui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::AnsiColorIdentifier;
+use derpui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
+use derpui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::{file_button_label, Artifact};
 use crate::notebooks::NotebookId;
@@ -139,7 +139,7 @@ fn collect_buttons(
                 notebook_uid,
                 document_uid: _,
             } => {
-                // Only show plan button if synced to Warp Drive (has notebook_uid)
+                // Only show plan button if synced to Derp Drive (has notebook_uid)
                 if let Some(notebook_uid) = notebook_uid {
                     let button_text = title.clone().unwrap_or("Untitled Plan".to_string());
                     let theme = theme.clone();

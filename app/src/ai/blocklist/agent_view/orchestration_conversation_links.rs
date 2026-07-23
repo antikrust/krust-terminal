@@ -1,16 +1,16 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::Properties;
-use warpui::fonts::Weight::Bold;
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
+use derpui::fonts::Properties;
+use derpui::fonts::Weight::Bold;
+use derpui::platform::Cursor;
+use derpui::text_layout::ClipConfig;
+use derpui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
@@ -245,7 +245,7 @@ pub(crate) fn conversation_navigation_card_with_icon(
         if let Some((icon, color)) = icon {
             row.add_child(
                 Container::new(
-                    ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(color)).finish())
+                    ConstrainedBox::new(icon.to_derpui_icon(Fill::Solid(color)).finish())
                         .with_width(16.)
                         .with_height(16.)
                         .finish(),
@@ -265,7 +265,7 @@ pub(crate) fn conversation_navigation_card_with_icon(
             Container::new(
                 ConstrainedBox::new(
                     Icon::ChevronRight
-                        .to_warpui_icon(blended_colors::text_sub(theme, theme.background()).into())
+                        .to_derpui_icon(blended_colors::text_sub(theme, theme.background()).into())
                         .finish(),
                 )
                 .with_height(20.)

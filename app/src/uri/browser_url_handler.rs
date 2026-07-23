@@ -1,9 +1,9 @@
 use url::Url;
-use warp_errors::report_error;
+use derp_errors::report_error;
 
 use super::web_intent_parser::WebIntent;
 
-const DEFAULT_TITLE: &str = "Warp";
+const DEFAULT_TITLE: &str = "Derp";
 const BASE_APP_PATH: &str = "/app";
 
 pub fn update_browser_url(url: Option<Url>, force_redirect: bool) {
@@ -26,7 +26,7 @@ pub fn update_browser_url(url: Option<Url>, force_redirect: bool) {
                 .unwrap_or_else(|_| {
                     report_error!("Failed to replace browser state");
                     crate::platform::wasm::emit_event(
-                        crate::platform::wasm::WarpEvent::ErrorLogged {
+                        crate::platform::wasm::DerpEvent::ErrorLogged {
                             error: String::from("Failed to replace browser state"),
                         },
                     );

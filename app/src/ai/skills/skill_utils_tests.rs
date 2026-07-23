@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
 
 use super::*;
 

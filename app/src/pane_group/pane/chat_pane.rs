@@ -12,14 +12,14 @@ use std::collections::HashMap;
 
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors;
+use derpui::elements::{
     Border, Container, CrossAxisAlignment, Fill, Flex, FormattedTextElement, MainAxisSize,
     ParentElement, Shrinkable,
 };
-use warpui::keymap::Keystroke;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::keymap::Keystroke;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };

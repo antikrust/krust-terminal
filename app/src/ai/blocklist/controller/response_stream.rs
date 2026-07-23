@@ -6,9 +6,9 @@ use anyhow::anyhow;
 use chrono::{DateTime, Local, TimeDelta};
 use futures::channel::oneshot;
 use uuid::Uuid;
-use warp_errors::report_error;
-use warp_multi_agent_api::response_event;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use derp_errors::report_error;
+use derp_multi_agent_api::response_event;
+use derpui::{Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::api::{self, generate_multi_agent_output, ConvertToAPITypeError};
 use crate::ai::agent::conversation::AIConversationId;
@@ -143,7 +143,7 @@ impl ResponseStream {
     #[cfg(test)]
     pub fn emit_response_event_for_test(
         &mut self,
-        event: warp_multi_agent_api::ResponseEvent,
+        event: derp_multi_agent_api::ResponseEvent,
         ctx: &mut ModelContext<Self>,
     ) {
         ctx.emit(ResponseStreamEvent::ReceivedEvent(Consumable::new(Ok(
@@ -265,7 +265,7 @@ impl ResponseStream {
         #[cfg(not(target_family = "wasm"))]
         {
             use ::ai::api_keys::{ApiKeyManager, GrokRefreshOutcome};
-            use warpui::r#async::FutureExt as _;
+            use derpui::r#async::FutureExt as _;
 
             use crate::ai::llms::{LLMPreferences, LLMProvider};
             use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -437,23 +437,23 @@ impl ResponseStream {
             Ok(response_event) => {
                 if let Some(event_type) = &response_event.r#type {
                     match event_type {
-                        warp_multi_agent_api::response_event::Type::Init(init_event) => {
+                        derp_multi_agent_api::response_event::Type::Init(init_event) => {
                             // Capture server_output_id from StreamInit event
                             self.ai_identifiers.server_output_id =
                                 Some(crate::ai::agent::ServerOutputId::new(
                                     init_event.request_id.clone(),
                                 ));
                         }
-                        warp_multi_agent_api::response_event::Type::ClientActions(_) => {
+                        derp_multi_agent_api::response_event::Type::ClientActions(_) => {
                             // Mark that we've received client actions
                             self.has_received_client_actions = true;
                         }
-                        warp_multi_agent_api::response_event::Type::Finished(finished_event) => {
+                        derp_multi_agent_api::response_event::Type::Finished(finished_event) => {
                             self.stream_finished_received = true;
                             // Emit retry success telemetry on successful completion
                             if matches!(
                                 finished_event.reason,
-                                Some(warp_multi_agent_api::response_event::stream_finished::Reason::Done(_)) | None
+                                Some(derp_multi_agent_api::response_event::stream_finished::Reason::Done(_)) | None
                             ) {
                                 // Emit retry success telemetry if this was a successful completion after retries
                                 if self.retry_count > 0 {

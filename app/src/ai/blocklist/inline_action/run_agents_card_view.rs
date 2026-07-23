@@ -11,14 +11,14 @@ use ai::agent::action_result::{RunAgentsAgentOutcomeKind, RunAgentsResult};
 use ai::agent::orchestration_config::{OrchestrationConfig, OrchestrationConfigStatus};
 use ai::skills::SkillReference;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::send_telemetry_from_ctx;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_core::send_telemetry_from_ctx;
+use derp_errors::report_error;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, Container, CornerRadius, CrossAxisAlignment, Empty, Flex,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack, Text, Wrap,
 };
-use warpui::keymap::FixedBinding;
-use warpui::{
+use derpui::keymap::FixedBinding;
+use derpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -73,7 +73,7 @@ use crate::view_components::{FilterableDropdownEvent, FilterableDropdownOrientat
 const RUN_AGENTS_CARD_TITLE: &str = "Can I start additional agents for this task?";
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -253,7 +253,7 @@ pub struct RunAgentsCardView {
 /// matching.
 ///
 /// 1. Defaults the Oz model to the conversation's base model.
-/// 2. Defaults Remote worker_host to "warp".
+/// 2. Defaults Remote worker_host to "derp".
 /// 3. Defaults a Remote environment from settings / recency.
 fn resolve_interactive_defaults(
     state: &mut RunAgentsEditState,
@@ -262,8 +262,8 @@ fn resolve_interactive_defaults(
 ) {
     if state.orch.model_id.is_empty() {
         let harness =
-            warp_cli::agent::Harness::parse_orchestration_harness(&state.orch.harness_type);
-        if matches!(harness, Some(warp_cli::agent::Harness::Oz) | None) {
+            derp_cli::agent::Harness::parse_orchestration_harness(&state.orch.harness_type);
+        if matches!(harness, Some(derp_cli::agent::Harness::Oz) | None) {
             if let Some(base) = block_model.base_model(ctx).map(|id| id.to_string()) {
                 state.orch.model_id = base;
             }
@@ -279,11 +279,11 @@ fn resolve_interactive_defaults(
         let needs_env = environment_id.is_empty();
         if needs_host {
             // Prefer the workspace default (or the dev env-var override)
-            // over the bare "warp" fallback so self-hosted teams see
+            // over the bare "derp" fallback so self-hosted teams see
             // their default pre-selected. Mirrors the Oz webapp's
             // `HostSelector` initial-selection behavior.
             let default_host = oc::resolve_default_host_slug(ctx)
-                .unwrap_or_else(|| oc::ORCHESTRATION_WARP_WORKER_HOST.to_string());
+                .unwrap_or_else(|| oc::ORCHESTRATION_DERP_WORKER_HOST.to_string());
             state.orch.set_worker_host(default_host);
         }
         if needs_env {
@@ -396,7 +396,7 @@ impl RunAgentsCardView {
             _ => {}
         });
 
-        // Repopulate the model picker when available Warp LLMs change.
+        // Repopulate the model picker when available Derp LLMs change.
         // Only relevant for Oz harness — non-Oz harnesses get their
         // model catalog from HarnessAvailabilityModel, not LLMPreferences.
         ctx.subscribe_to_model(&LLMPreferences::handle(ctx), |me, _, event, ctx| {
@@ -522,8 +522,8 @@ impl RunAgentsCardView {
         }
         if new_state.orch.model_id.is_empty() {
             let harness =
-                warp_cli::agent::Harness::parse_orchestration_harness(&new_state.orch.harness_type);
-            if matches!(harness, Some(warp_cli::agent::Harness::Oz) | None) {
+                derp_cli::agent::Harness::parse_orchestration_harness(&new_state.orch.harness_type);
+            if matches!(harness, Some(derp_cli::agent::Harness::Oz) | None) {
                 if let Some(base) = self.block_model.base_model(ctx).map(|id| id.to_string()) {
                     new_state.orch.model_id = base;
                 }
@@ -683,7 +683,7 @@ impl RunAgentsCardView {
             return;
         }
         let Some(harness) =
-            warp_cli::agent::Harness::parse_orchestration_harness(&self.state.orch.harness_type)
+            derp_cli::agent::Harness::parse_orchestration_harness(&self.state.orch.harness_type)
         else {
             return;
         };
@@ -780,15 +780,15 @@ impl RunAgentsCardView {
         if self.handles.pickers.host_picker.is_none() {
             let initial_host = match &state.orch.execution_mode {
                 RunAgentsExecutionMode::Remote { worker_host, .. } => worker_host.as_str(),
-                RunAgentsExecutionMode::Local => oc::ORCHESTRATION_WARP_WORKER_HOST,
+                RunAgentsExecutionMode::Local => oc::ORCHESTRATION_DERP_WORKER_HOST,
             };
             let handle = ctx.add_typed_action_view(HostPicker::new);
             // Open upward so the menu doesn't overlap pickers below it,
             // matching the other dropdowns in this card.
             handle.update(ctx, |picker, picker_ctx| {
                 picker.set_menu_position(
-                    warpui::elements::PositionedElementAnchor::TopLeft,
-                    warpui::elements::ChildAnchor::BottomLeft,
+                    derpui::elements::PositionedElementAnchor::TopLeft,
+                    derpui::elements::ChildAnchor::BottomLeft,
                     picker_ctx,
                 );
             });
@@ -849,8 +849,8 @@ impl RunAgentsCardView {
     ) {
         dropdown_handle.update(ctx, |dropdown, ctx| {
             dropdown.set_menu_position(
-                warpui::elements::PositionedElementAnchor::TopLeft,
-                warpui::elements::ChildAnchor::BottomLeft,
+                derpui::elements::PositionedElementAnchor::TopLeft,
+                derpui::elements::ChildAnchor::BottomLeft,
                 ctx,
             );
         });
@@ -1015,9 +1015,9 @@ impl View for RunAgentsCardView {
                 OffsetPositioning::offset_from_save_position_element(
                     Self::get_position_id_for_accept_split_button(&self.position_id_prefix),
                     vec2f(0., 8.),
-                    warpui::elements::PositionedElementOffsetBounds::WindowByPosition,
-                    warpui::elements::PositionedElementAnchor::BottomRight,
-                    warpui::elements::ChildAnchor::TopRight,
+                    derpui::elements::PositionedElementOffsetBounds::WindowByPosition,
+                    derpui::elements::PositionedElementAnchor::BottomRight,
+                    derpui::elements::ChildAnchor::TopRight,
                 ),
             );
         }
@@ -1125,7 +1125,7 @@ impl TypedActionView for RunAgentsCardView {
             }
             RunAgentsCardViewAction::CreateNewAuthSecretRequested => {
                 oc::apply_create_new_auth_secret_requested(&mut self.state.orch, ctx);
-                if let Some(harness) = warp_cli::agent::Harness::parse_orchestration_harness(
+                if let Some(harness) = derp_cli::agent::Harness::parse_orchestration_harness(
                     &self.state.orch.harness_type,
                 ) {
                     ctx.dispatch_typed_action(
@@ -1475,7 +1475,7 @@ fn render_editor(
     handles: &RunAgentsCardHandles,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::elements::ConstrainedBox;
+    use derpui::elements::ConstrainedBox;
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);

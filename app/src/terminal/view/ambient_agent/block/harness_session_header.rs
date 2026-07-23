@@ -1,13 +1,13 @@
-use warp_core::ui::appearance::Appearance;
-use warp_terminal::model::BlockId;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_terminal::model::BlockId;
+use derpui::elements::{
     ConstrainedBox, CrossAxisAlignment, Flex, Hoverable, MainAxisSize, ParentElement, Shrinkable,
     Text,
 };
-use warpui::platform::Cursor;
-use warpui::prelude::{Container, MouseStateHandle};
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::platform::Cursor;
+use derpui::prelude::{Container, MouseStateHandle};
+use derpui::text_layout::ClipConfig;
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::terminal::view::PADDING_LEFT;
 use crate::terminal::CLIAgent;
@@ -87,7 +87,7 @@ impl View for HarnessSessionHeader {
                 Container::new(
                     ConstrainedBox::new(
                         chevron_icon
-                            .to_warpui_icon(theme.sub_text_color(theme.background()))
+                            .to_derpui_icon(theme.sub_text_color(theme.background()))
                             .finish(),
                     )
                     .with_width(CHEVRON_SIZE)

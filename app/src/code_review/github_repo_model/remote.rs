@@ -1,6 +1,6 @@
 use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
-use warp_util::remote_path::RemotePath;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use derp_util::remote_path::RemotePath;
+use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::GitHubRepoEvent;
 use crate::remote_server::proto;

@@ -3,8 +3,8 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, Table};
 use serde::Serialize;
 use serde_json::{Map, Value};
-use warp_cli::agent::OutputFormat;
-use warp_graphql::queries::get_simple_integrations::{
+use derp_cli::agent::OutputFormat;
+use derp_graphql::queries::get_simple_integrations::{
     ListedSimpleIntegrationConfig, SimpleIntegration, SimpleIntegrationConnectionStatus,
     SimpleIntegrationsOutput,
 };
@@ -112,13 +112,13 @@ fn format_mcp_server_display(name: &str, config: &Value) -> String {
         return format!("{name}: {command} {}", args.join(" "));
     }
 
-    if let Some(warp_id) = obj
-        .get("warp_id")
+    if let Some(derp_id) = obj
+        .get("derp_id")
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|s| !s.is_empty())
     {
-        return format!("{name}: warp_id={warp_id}");
+        return format!("{name}: derp_id={derp_id}");
     }
 
     name.to_string()

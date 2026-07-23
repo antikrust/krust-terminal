@@ -1536,7 +1536,7 @@ pub struct ModelStats {
 pub type CommitteeLeaderboard = BTreeMap<String, ModelStats>;
 
 fn leaderboard_path() -> PathBuf {
-    warp_core::paths::state_dir().join(LEADERBOARD_FILE_NAME)
+    derp_core::paths::state_dir().join(LEADERBOARD_FILE_NAME)
 }
 
 /// Loads the standings; every failure is an empty board, never an error —
@@ -1642,7 +1642,7 @@ struct ReviewContinuation {
 /// writes one every time, and a tool that litters the user's repo with files
 /// they didn't ask for gets turned off. `save transcript` moves one out.
 fn transcripts_dir() -> std::path::PathBuf {
-    warp_core::paths::state_dir().join("committee_runs")
+    derp_core::paths::state_dir().join("committee_runs")
 }
 
 /// Transcripts kept before the oldest are swept. Twenty runs is more history

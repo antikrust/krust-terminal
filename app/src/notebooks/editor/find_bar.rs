@@ -3,21 +3,21 @@ use std::time::Duration;
 
 use async_channel::Sender;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::r#async::debounce;
-use warp_editor::render::model::{AutoScrollMode, Decoration};
-use warp_editor::search::{SearchEvent, Searcher};
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::elements::{
+use derp_core::r#async::debounce;
+use derp_editor::render::model::{AutoScrollMode, Decoration};
+use derp_editor::search::{SearchEvent, Searcher};
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::elements::{
     Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Flex, MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, Rect, Shrinkable, Stack,
 };
-use warpui::platform::Cursor;
-use warpui::presenter::ChildView;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::toggle_button::ToggleButton;
-use warpui::{
+use derpui::platform::Cursor;
+use derpui::presenter::ChildView;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::ui_components::toggle_button::ToggleButton;
+use derpui::{
     AppContext, BlurContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, ViewHandle,
 };
@@ -251,7 +251,7 @@ impl FindBar {
             .ui_builder()
             .button(ButtonVariant::Text, mouse_state_handle)
             // The fill here doesn't matter, since it's overridden by the button text color.
-            .with_icon_label(icon.to_warpui_icon(crate::themes::theme::Fill::white()))
+            .with_icon_label(icon.to_derpui_icon(crate::themes::theme::Fill::white()))
             .with_style(base_styles)
             .with_hovered_styles(UiComponentStyles {
                 background: Some(appearance.theme().foreground_button_color().into()),
@@ -348,7 +348,7 @@ impl View for FindBar {
         "FindBar"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
         let appearance = Appearance::as_ref(app);
         let searcher = self.searcher.as_ref(app);
         let theme = appearance.theme();
@@ -356,7 +356,7 @@ impl View for FindBar {
         let has_matches = searcher.match_count() > 0;
 
         let find_icon = Container::new(
-            ConstrainedBox::new(Icon::Find.to_warpui_icon(theme.active_ui_detail()).finish())
+            ConstrainedBox::new(Icon::Find.to_derpui_icon(theme.active_ui_detail()).finish())
                 .with_height(editor_height)
                 .with_width(editor_height)
                 .finish(),
@@ -553,7 +553,7 @@ impl TypedActionView for FindBar {
         };
         Some(AccessibilityContent::new_without_help(
             text,
-            WarpA11yRole::UserAction,
+            DerpA11yRole::UserAction,
         ))
         .into()
     }

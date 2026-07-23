@@ -1,0 +1,40 @@
+From 68ab878e8e9eb4f9e21fb0f3420fd327d63aa959 Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Wed, 18 Nov 2020 18:16:27 +0000
+Subject: [PATCH] testing: support Rust for streaming AEAD
+
+---
+ testing/cross_language/util/supported_key_types.py | 4 ++--
+ testing/cross_language/util/testing_servers.py     | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/testing/cross_language/util/supported_key_types.py b/testing/cross_language/util/supported_key_types.py
+index 7d0d58d55e85..dfb5140ca55c 100644
+--- a/testing/cross_language/util/supported_key_types.py
++++ b/testing/cross_language/util/supported_key_types.py
+@@ -97,8 +97,8 @@ SUPPORTED_LANGUAGES = {
+     'KmsAeadKey': ['cc', 'java', 'python'],
+     'KmsEnvelopeAeadKey': ['cc', 'java', 'go', 'python'],
+     'AesSivKey': ['cc', 'java', 'go', 'python', 'rust'],
+-    'AesCtrHmacStreamingKey': ['cc', 'java', 'go', 'python'],
+-    'AesGcmHkdfStreamingKey': ['cc', 'java', 'go', 'python'],
++    'AesCtrHmacStreamingKey': ['cc', 'java', 'go', 'python', 'rust'],
++    'AesGcmHkdfStreamingKey': ['cc', 'java', 'go', 'python', 'rust'],
+     'EciesAeadHkdfPrivateKey': ['cc', 'java', 'go', 'python'],
+     'AesCmacKey': ['cc', 'java', 'go', 'python', 'rust'],
+     'HmacKey': ['cc', 'java', 'go', 'python', 'rust'],
+diff --git a/testing/cross_language/util/testing_servers.py b/testing/cross_language/util/testing_servers.py
+index 1139e034a2b0..51c3e8e376bd 100644
+--- a/testing/cross_language/util/testing_servers.py
++++ b/testing/cross_language/util/testing_servers.py
+@@ -81,7 +81,7 @@ _PRIMITIVES = list(_PRIMITIVE_STUBS.keys())
+ SUPPORTED_LANGUAGES_BY_PRIMITIVE = {
+     'aead': ['cc', 'go', 'java', 'python', 'rust'],
+     'daead': ['cc', 'go', 'java', 'python', 'rust'],
+-    'streaming_aead': ['cc', 'go', 'java', 'python'],
++    'streaming_aead': ['cc', 'go', 'java', 'python', 'rust'],
+     'hybrid': ['cc', 'go', 'java', 'python'],
+     'mac': ['cc', 'go', 'java', 'python', 'rust'],
+     'signature': ['cc', 'go', 'java', 'python', 'rust'],
+--
+2.31.1

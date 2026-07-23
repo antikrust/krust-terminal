@@ -1,7 +1,7 @@
-use warp_core::ui::appearance::Appearance;
-use warp_server_client::auth::AgentIdentity;
-use warpui::platform::WindowStyle;
-use warpui::App;
+use derp_core::ui::appearance::Appearance;
+use derp_server_client::auth::AgentIdentity;
+use derpui::platform::WindowStyle;
+use derpui::App;
 
 use super::CreateApiKeyModal;
 use crate::auth::AuthStateProvider;

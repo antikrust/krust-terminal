@@ -10,12 +10,12 @@ use ai::index::full_source_code_embedding::manager::{
 use futures::channel::oneshot;
 use futures::future::join_all;
 use repo_metadata::repositories::{DetectedRepositories, RepoDetectionSource};
-use warp_cli::agent::Harness;
-use warp_completer::completer::CommandExitStatus;
-use warp_core::command::ExitCode;
-use warp_core::{safe_info, safe_warn};
-use warpui::r#async::FutureExt;
-use warpui::{ModelContext, ModelSpawner, SingletonEntity};
+use derp_cli::agent::Harness;
+use derp_completer::completer::CommandExitStatus;
+use derp_core::command::ExitCode;
+use derp_core::{safe_info, safe_warn};
+use derpui::r#async::FutureExt;
+use derpui::{ModelContext, ModelSpawner, SingletonEntity};
 
 use super::terminal::TerminalDriver;
 use super::AgentDriverError;
@@ -266,7 +266,7 @@ fn build_parallel_clone_command(repos: &[SourceRepo], shell_type: ShellType) -> 
         r#"set +e
 failed=0
 pids=""
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/warp-clone-logs.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/derp-clone-logs.XXXXXX")"
 cleanup_clone_logs() {
   rm -rf "$tmp_dir"
 }

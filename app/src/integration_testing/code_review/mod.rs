@@ -1,5 +1,5 @@
-use warpui::integration::{AssertionCallback, AssertionOutcome, TestStep};
-use warpui::{async_assert, App, ViewHandle, WindowId};
+use derpui::integration::{AssertionCallback, AssertionOutcome, TestStep};
+use derpui::{async_assert, App, ViewHandle, WindowId};
 
 use crate::code_review::code_review_view::{CodeReviewView, CodeReviewVisibleAnchorForTest};
 

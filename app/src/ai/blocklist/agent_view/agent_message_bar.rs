@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{Element, Empty, MouseStateHandle};
-use warpui::keymap::Keystroke;
-use warpui::platform::OperatingSystem;
-use warpui::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::{Element, Empty, MouseStateHandle};
+use derpui::keymap::Keystroke;
+use derpui::platform::OperatingSystem;
+use derpui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -783,7 +783,7 @@ fn should_fork_from_last_known_good_state(
         | RenderableAIError::AwsBedrockCredentialsExpiredOrInvalid { .. } => false,
         // A shell-exit failure can't resume in this (now-dead) pane, but the user
         // can fork from the last known good state to continue in a fresh one.
-        RenderableAIError::InternalWarpError | RenderableAIError::AgentExitedShell => true,
+        RenderableAIError::InternalDerpError | RenderableAIError::AgentExitedShell => true,
         RenderableAIError::Other {
             will_attempt_resume,
             ..

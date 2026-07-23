@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_channel::Receiver;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::event::{BootstrappedEvent, SshLoginStatus};
 use super::model::ansi;
@@ -386,15 +386,15 @@ pub enum ModelEvent {
     ExecutedInBandCommand(ExecutedExecutorCommandEvent),
     /// Sent when a line of output from an interactive ssh session indicates login is complete.
     /// A line such as "Last login: Wed Oct 30" for example indicates login is complete. This is
-    /// useful for detecting when an ssh session becomes ready for warpification.
+    /// useful for detecting when an ssh session becomes ready for derpification.
     DetectedEndOfSshLogin(SshLoginStatus),
     InitSubshell(InitSubshellEvent),
     /// Emitted when the user's RC file has been executed in a subshell.
     SourcedRcFileInSubshell(SourcedRcFileInSubshellEvent),
     /// Emitted when the active block's prompt has been updated.
     PromptUpdated,
-    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Warp's settings.
-    /// This can happen in cases such as when the user changes between PS1 and Warp prompt inside
+    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Derp's settings.
+    /// This can happen in cases such as when the user changes between PS1 and Derp prompt inside
     /// of an SSH session (the bindkeys are sent to the SSH session but not the local session, so
     /// they are out-of-sync when the user exits SSH).
     HonorPS1OutOfSync,

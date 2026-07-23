@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use warp_editor::model::CoreEditorModel;
-use warp_editor::render::model::{
+use derp_editor::model::CoreEditorModel;
+use derp_editor::render::model::{
     BlockItem, HitTestOptions, LineCount, Location, RenderLineLocation,
 };
-use warpui::units::Pixels;
-use warpui::{AppContext, ViewContext};
+use derpui::units::Pixels;
+use derpui::{AppContext, ViewContext};
 
 use super::{CodeReviewView, CodeReviewViewState, FILE_HEADER_HEIGHT};
 use crate::code::buffer_location::LocalOrRemotePath;

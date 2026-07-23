@@ -53,7 +53,7 @@ Unchanged — reads `installed_plugins.json`, returns true if the `PLUGIN_KEY` e
 
 New `pub(crate)` `&str` constant (initially `"2.0.0"`). Exported so the footer can compare against it.
 
-Must be kept in sync with the plugin version in `warpdotdev/claude-code-warp`. Add a comment on the constant pointing to the plugin repo, and a reciprocal comment in the plugin repo's README.
+Must be kept in sync with the plugin version in `derpdotdev/claude-code-derp`. Add a comment on the constant pointing to the plugin repo, and a reciprocal comment in the plugin repo's README.
 
 ### compare_versions()
 
@@ -65,7 +65,7 @@ Checks the on-disk version in `installed_plugins.json`. Returns true if the inst
 
 ### update()
 
-Runs `marketplace remove` + `marketplace add` (to ensure the local clone is fresh) + `plugin install` (to reinstall the plugin from the freshly added marketplace). We use `plugin install` instead of `plugin update` because `marketplace remove` unlinks the plugin, so `plugin update` would fail with `Plugin "warp" is not installed`.
+Runs `marketplace remove` + `marketplace add` (to ensure the local clone is fresh) + `plugin install` (to reinstall the plugin from the freshly added marketplace). We use `plugin install` instead of `plugin update` because `marketplace remove` unlinks the plugin, so `plugin update` would fail with `Plugin "derp" is not installed`.
 
 As an internal sanity check, re-reads `installed_plugins.json` and checks the version. If still below minimum → returns `Err` with a message like "Plugin update did not take effect". This triggers the fallback to manual mode in the footer.
 
@@ -85,14 +85,14 @@ This is the **authoritative signal** for whether the plugin is outdated. It work
 
 Returns a `&'static PluginInstructions` (via `LazyLock`) with:
 
-- Title: "Update Warp Plugin for Claude Code"
+- Title: "Update Derp Plugin for Claude Code"
 - Subtitle: "Run the following commands in Claude Code by typing ! before each command, or in a separate terminal."
 - Steps:
-  1. `claude plugin marketplace remove claude-code-warp`
-  2. `claude plugin marketplace add warpdotdev/claude-code-warp`
-  3. `claude plugin install warp@claude-code-warp`
+  1. `claude plugin marketplace remove claude-code-derp`
+  2. `claude plugin marketplace add derpdotdev/claude-code-derp`
+  3. `claude plugin install derp@claude-code-derp`
   4. Restart Claude Code to activate → `/exit`
-- Success toast (auto-update): "Warp plugin updated. Please run /reload-plugins to activate." (the one-click flow registers the listener programmatically, so `/reload-plugins` suffices)
+- Success toast (auto-update): "Derp plugin updated. Please run /reload-plugins to activate." (the one-click flow registers the listener programmatically, so `/reload-plugins` suffices)
 - Success toast (manual modal): tells user to restart Claude Code (manual installs require a full restart for hooks to fire)
 
 Note: the update modal uses CLI commands (not in-session slash commands) because there is no working `/plugin update` slash command in Claude Code. The install modal continues to use slash commands since `/plugin install` works in-session.
@@ -113,7 +113,7 @@ Copy button on each step copies the command to clipboard and shows a green succe
 
 Add two new `ActionButton` views (same `InstallPluginButtonTheme` and construction pattern as the existing install buttons):
 
-- `update_plugin_button`: "Update Warp plugin", `Icon::Download`, dispatches `AgentInputFooterAction::UpdatePlugin`
+- `update_plugin_button`: "Update Derp plugin", `Icon::Download`, dispatches `AgentInputFooterAction::UpdatePlugin`
 - `update_instructions_button`: "Plugin update instructions", `Icon::Info`, dispatches `AgentInputFooterAction::ShowPluginInstructionsModal`
 
 ### Chip visibility and mode
@@ -226,7 +226,7 @@ Using the existing `App::test` + `CLIAgentSessionsModel` pattern:
 
 Add to `integration/tests/integration/ui_tests.rs`:
 
-- `test_plugin_update_chip_appears_for_outdated_plugin` — start a Claude Code session (via OSC event injection), set up a fake `installed_plugins.json` with an old version, verify the "Update Warp plugin" chip renders in the footer
+- `test_plugin_update_chip_appears_for_outdated_plugin` — start a Claude Code session (via OSC event injection), set up a fake `installed_plugins.json` with an old version, verify the "Update Derp plugin" chip renders in the footer
 - `test_plugin_update_modal_opens` — same setup as above but in manual mode (inject a failure first), click the instructions chip, verify the modal opens with update steps
 - `test_plugin_update_chip_dismiss_persists` — click dismiss on the update chip, verify it stays hidden, then bump `MINIMUM_PLUGIN_VERSION` concept (or re-render), verify it reappears for a new minimum
 

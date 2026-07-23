@@ -1,15 +1,15 @@
-use warp_errors::report_error;
+use derp_errors::report_error;
 /// Stages during the course of bootstrapping the shell.  
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BootstrapStage {
-    /// Warp is re-parsing historical blocks for this session. We haven't yet started
+    /// Derp is re-parsing historical blocks for this session. We haven't yet started
     /// bootstrapping.
     RestoreBlocks,
-    /// Warp is writing the bootstrap script into the running shell.
-    WarpInput,
+    /// Derp is writing the bootstrap script into the running shell.
+    DerpInput,
     /// Execution of any shell startup scripts such as .rc or .profile files.
     ScriptExecution,
-    /// Model is fully bootstrapped (i.e the `Bootstrap` message was successfully received by Warp).   
+    /// Model is fully bootstrapped (i.e the `Bootstrap` message was successfully received by Derp).   
     Bootstrapped,
     /// Model is fully bootstrapped and we've received the precmd that results from bootstrapping itself
     PostBootstrapPrecmd,
@@ -18,8 +18,8 @@ pub enum BootstrapStage {
 impl BootstrapStage {
     pub fn next_stage(&self) -> Self {
         match self {
-            BootstrapStage::RestoreBlocks => BootstrapStage::WarpInput,
-            BootstrapStage::WarpInput => BootstrapStage::ScriptExecution,
+            BootstrapStage::RestoreBlocks => BootstrapStage::DerpInput,
+            BootstrapStage::DerpInput => BootstrapStage::ScriptExecution,
             BootstrapStage::ScriptExecution => {
                 report_error!("calling next_stage on a block that should be bootstrapped");
                 BootstrapStage::ScriptExecution
@@ -45,9 +45,9 @@ impl BootstrapStage {
         matches!(self, BootstrapStage::PostBootstrapPrecmd)
     }
 
-    /// WarpInput is the one block that is hidden by default (unless debug mode is on).
+    /// DerpInput is the one block that is hidden by default (unless debug mode is on).
     pub fn is_hidden(&self) -> bool {
-        matches!(self, BootstrapStage::WarpInput)
+        matches!(self, BootstrapStage::DerpInput)
     }
 
     /// We only can have an empty block that's shown if it's a block a user created by hitting enter, or if it's

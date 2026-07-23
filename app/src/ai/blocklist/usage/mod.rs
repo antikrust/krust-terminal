@@ -1,6 +1,6 @@
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warp_core::ui::Icon;
-use warpui::Element;
+use derp_core::ui::theme::{Fill, DerpTheme};
+use derp_core::ui::Icon;
+use derpui::Element;
 
 pub mod conversation_usage_view;
 pub mod rollup;
@@ -40,7 +40,7 @@ pub fn icon_for_context_window_usage(context_window_usage: f32) -> Icon {
 
 pub fn render_context_window_usage_icon(
     context_window_usage: f32,
-    theme: &WarpTheme,
+    theme: &DerpTheme,
     color_override: Option<Fill>,
 ) -> Box<dyn Element> {
     let icon = icon_for_context_window_usage(context_window_usage);
@@ -51,7 +51,7 @@ pub fn render_context_window_usage_icon(
         color_override.unwrap_or_else(|| theme.main_text_color(theme.background()))
     };
 
-    icon.to_warpui_icon(fill).finish()
+    icon.to_derpui_icon(fill).finish()
 }
 
 #[cfg(test)]

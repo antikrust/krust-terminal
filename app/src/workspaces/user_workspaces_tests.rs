@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use mockall::Sequence;
 use settings::{PrivatePreferences, PublicPreferences};
-use warpui::{AddSingletonModel, App};
-use warpui_extras::user_preferences;
+use derpui::{AddSingletonModel, App};
+use derpui_extras::user_preferences;
 
 use super::*;
 use crate::ai::llms::LLMModelHost;
@@ -187,7 +187,7 @@ fn test_loading_all_spaces_after_switching_from_offline() {
         });
 
         // Spend time waiting for the initial load to finish etc.
-        warpui::r#async::Timer::after(Duration::from_secs(1)).await;
+        derpui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // Lets go offline
         NetworkStatus::handle(&app).update(&mut app, |network_status, ctx| {
@@ -200,7 +200,7 @@ fn test_loading_all_spaces_after_switching_from_offline() {
         });
 
         // Spend time waiting for the load to finish etc.
-        warpui::r#async::Timer::after(Duration::from_secs(1)).await;
+        derpui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // We also ensure that UserWorkspaces stores a team
         UserWorkspaces::handle(&app).read(&app, |teams, _| {
@@ -395,8 +395,8 @@ fn test_aws_bedrock_credentials_enforced_by_admin() {
     })
 }
 
-const TEST_GCP_AUDIENCE: &str = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/warp-pool/providers/warp-provider";
-const TEST_GCP_SA_EMAIL: &str = "warp-geap@test-project.iam.gserviceaccount.com";
+const TEST_GCP_AUDIENCE: &str = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/derp-pool/providers/derp-provider";
+const TEST_GCP_SA_EMAIL: &str = "derp-geap@test-project.iam.gserviceaccount.com";
 
 fn workspace_with_gemini_enterprise_host(
     team: &Team,
@@ -908,7 +908,7 @@ fn test_agent_attribution_default_with_no_workspace() {
 #[test]
 fn test_agent_attribution_forced_on_by_team() {
     let mut team = team_for_test();
-    team.organization_settings.enable_warp_attribution = AdminEnablementSetting::Enable;
+    team.organization_settings.enable_derp_attribution = AdminEnablementSetting::Enable;
     let workspace = workspace_for_test(&team);
 
     App::test((), |mut app| async move {
@@ -935,7 +935,7 @@ fn test_agent_attribution_forced_on_by_team() {
 #[test]
 fn test_agent_attribution_forced_off_by_team() {
     let mut team = team_for_test();
-    team.organization_settings.enable_warp_attribution = AdminEnablementSetting::Disable;
+    team.organization_settings.enable_derp_attribution = AdminEnablementSetting::Disable;
     let workspace = workspace_for_test(&team);
 
     App::test((), |mut app| async move {
@@ -962,7 +962,7 @@ fn test_agent_attribution_forced_off_by_team() {
 #[test]
 fn test_agent_attribution_respects_user_setting() {
     let mut team = team_for_test();
-    team.organization_settings.enable_warp_attribution = AdminEnablementSetting::RespectUserSetting;
+    team.organization_settings.enable_derp_attribution = AdminEnablementSetting::RespectUserSetting;
     let workspace = workspace_for_test(&team);
 
     App::test((), |mut app| async move {

@@ -2,9 +2,9 @@ use std::fmt::Write;
 
 use itertools::Itertools;
 use settings::ToggleableSetting as _;
-use warp_errors::report_if_error;
-use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback, ModalButton};
-use warpui::{AppContext, EntityId, SingletonEntity, ViewContext, WeakViewHandle, WindowId};
+use derp_errors::report_if_error;
+use derpui::modals::{AlertDialogWithCallbacks, AppModalCallback, ModalButton};
+use derpui::{AppContext, EntityId, SingletonEntity, ViewContext, WeakViewHandle, WindowId};
 
 use crate::code::editor_management::{CodeEditorStatus, CodeEditorSummary};
 use crate::pane_group::{CodePane, PaneGroup, PaneId, TerminalPane};
@@ -432,7 +432,7 @@ impl<'a> QuitWarningDialog<'a> {
             QuitScope::Tabs(tabs) if tabs.len() == 1 => "Close tab?",
             QuitScope::Tabs(_) => "Close tabs?",
             QuitScope::Window(_) => "Close window?",
-            QuitScope::App => "Quit Warp?",
+            QuitScope::App => "Quit Derp?",
             QuitScope::EditorTab { .. } => "Save changes?",
         };
 
@@ -467,7 +467,7 @@ impl<'a> QuitWarningDialog<'a> {
             not(target_family = "wasm"),
             any(target_os = "linux", target_os = "freebsd", windows)
         )) {
-            // Find a window to show the Warp-native modal in. If there is no active window, use
+            // Find a window to show the Derp-native modal in. If there is no active window, use
             // one of the windows with a running process.
             let window_id_to_focus = ctx
                 .windows()

@@ -34,7 +34,7 @@ struct ThreadBinding {
 static REGISTRY: Mutex<Option<HashMap<String, ThreadBinding>>> = Mutex::new(None);
 
 fn registry_path() -> PathBuf {
-    warp_core::paths::state_dir().join(FILE_NAME)
+    derp_core::paths::state_dir().join(FILE_NAME)
 }
 
 fn load() -> HashMap<String, ThreadBinding> {

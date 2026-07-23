@@ -1,16 +1,16 @@
-use warp::cmd_or_ctrl_shift;
-use warp::integration_testing::terminal::util::current_shell_starter_and_version;
-use warp::integration_testing::terminal::{
+use derp::cmd_or_ctrl_shift;
+use derp::integration_testing::terminal::util::current_shell_starter_and_version;
+use derp::integration_testing::terminal::{
     assert_context_menu_is_open, initialize_secret_regexes,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use warp::integration_testing::view_getters::single_terminal_view_for_tab;
-use warp::settings_view::{PrivacyPageAction, SettingsAction};
-use warp::terminal::model::index::Point;
-use warp::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
-use warp::terminal::shell::ShellType;
-use warp::terminal::GridType;
-use warpui_core::{async_assert, async_assert_eq};
+use derp::integration_testing::view_getters::single_terminal_view_for_tab;
+use derp::settings_view::{PrivacyPageAction, SettingsAction};
+use derp::terminal::model::index::Point;
+use derp::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
+use derp::terminal::shell::ShellType;
+use derp::terminal::GridType;
+use derpui_core::{async_assert, async_assert_eq};
 
 use super::new_builder;
 use crate::test::integration_testing::block_filtering::{

@@ -13,16 +13,16 @@ use super::{
 use crate::terminal::model::session::LocalCommandExecutor;
 use crate::terminal::shell::ShellType;
 
-const PLUGIN_KEY: &str = "warp@claude-code-warp";
-const PLATFORM_PLUGIN_KEY: &str = "oz-harness-support@claude-code-warp";
+const PLUGIN_KEY: &str = "derp@claude-code-derp";
+const PLATFORM_PLUGIN_KEY: &str = "oz-harness-support@claude-code-derp";
 
-const MARKETPLACE_REPO: &str = "warpdotdev/claude-code-warp";
-const MARKETPLACE_NAME: &str = "claude-code-warp";
+const MARKETPLACE_REPO: &str = "derpdotdev/claude-code-derp";
+const MARKETPLACE_NAME: &str = "claude-code-derp";
 
-// Keep in sync with the plugin version in warpdotdev/claude-code-warp.
+// Keep in sync with the plugin version in derpdotdev/claude-code-derp.
 // (See the Versioning section of that repo's README.)
 const MINIMUM_PLUGIN_VERSION: &str = "2.1.0";
-// Keep in sync with the oz-harness-support plugin version in warpdotdev/claude-code-warp.
+// Keep in sync with the oz-harness-support plugin version in derpdotdev/claude-code-derp.
 const MINIMUM_PLATFORM_PLUGIN_VERSION: &str = "1.1.2";
 
 pub(super) struct ClaudeCodePluginManager {
@@ -145,11 +145,11 @@ impl CliAgentPluginManager for ClaudeCodePluginManager {
     }
 
     fn install_success_message(&self) -> &'static str {
-        "Warp plugin installed. Please run /reload-plugins to activate."
+        "Derp plugin installed. Please run /reload-plugins to activate."
     }
 
     fn update_success_message(&self) -> &'static str {
-        "Warp plugin updated. Please run /reload-plugins to activate."
+        "Derp plugin updated. Please run /reload-plugins to activate."
     }
 
     fn install_instructions(&self) -> &'static PluginInstructions {
@@ -211,18 +211,18 @@ impl CliAgentPluginManager for ClaudeCodePluginManager {
 
 static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
     PluginInstructions {
-        title: "Install Warp Plugin for Claude Code",
+        title: "Install Derp Plugin for Claude Code",
         subtitle: "Ensure that jq is installed on your machine. Then, run these commands.",
         steps: &[
             PluginInstructionStep {
-                description: "Add the Warp plugin marketplace repository",
-                command: "claude plugin marketplace add warpdotdev/claude-code-warp",
+                description: "Add the Derp plugin marketplace repository",
+                command: "claude plugin marketplace add derpdotdev/claude-code-derp",
                 executable: true,
                 link: None,
             },
             PluginInstructionStep {
-                description: "Install the Warp plugin",
-                command: "claude plugin install warp@claude-code-warp",
+                description: "Install the Derp plugin",
+                command: "claude plugin install derp@claude-code-derp",
                 executable: true,
                 link: None,
             },
@@ -236,24 +236,24 @@ static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
 });
 
 static UPDATE_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| PluginInstructions {
-    title: "Update Warp Plugin for Claude Code",
+    title: "Update Derp Plugin for Claude Code",
     subtitle: "Run the following commands.",
     steps: &[
         PluginInstructionStep {
             description: "Remove the existing marketplace (if present)",
-            command: "claude plugin marketplace remove claude-code-warp",
+            command: "claude plugin marketplace remove claude-code-derp",
             executable: true,
             link: None,
         },
         PluginInstructionStep {
             description: "Re-add the marketplace",
-            command: "claude plugin marketplace add warpdotdev/claude-code-warp",
+            command: "claude plugin marketplace add derpdotdev/claude-code-derp",
             executable: true,
             link: None,
         },
         PluginInstructionStep {
             description: "Install the latest plugin version",
-            command: "claude plugin install warp@claude-code-warp",
+            command: "claude plugin install derp@claude-code-derp",
             executable: true,
             link: None,
         },
@@ -285,7 +285,7 @@ fn check_plugin_installed(claude_dir: &Path, plugin_key: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Reads the installed version string for the Warp plugin, if present.
+/// Reads the installed version string for the Derp plugin, if present.
 fn installed_version(claude_dir: &Path) -> Option<String> {
     installed_plugin_version(claude_dir, PLUGIN_KEY)
 }

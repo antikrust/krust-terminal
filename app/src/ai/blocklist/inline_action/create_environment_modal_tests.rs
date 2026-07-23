@@ -1,7 +1,7 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::Empty;
-use warpui::platform::WindowStyle;
-use warpui::{
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::Empty;
+use derpui::platform::WindowStyle;
+use derpui::{
     AddSingletonModel, App, AppContext, Element, Entity, TypedActionView, View, WindowId,
 };
 

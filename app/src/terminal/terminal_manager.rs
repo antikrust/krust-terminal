@@ -5,14 +5,14 @@ use std::sync::Arc;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
 use settings::Setting as _;
-use warpui::{AppContext, SingletonEntity};
+use derpui::{AppContext, SingletonEntity};
 
 use super::event_listener::ChannelEventListener;
 use super::model::block::BlockSize;
 use super::safe_mode_settings::get_secret_obfuscation_mode;
 use super::session_settings::SessionSettings;
 use super::settings::TerminalSettings;
-use super::view::{create_size_info_for_blocklist, WARP_PROMPT_HEIGHT_LINES};
+use super::view::{create_size_info_for_blocklist, DERP_PROMPT_HEIGHT_LINES};
 use super::{color, BlockPadding, ShellLaunchState, SizeInfo, TerminalModel};
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::ai::blocklist::SerializedBlockListItem;
@@ -39,12 +39,12 @@ pub trait TerminalManager: Any {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl warpui::Entity for Box<dyn TerminalManager> {
+impl derpui::Entity for Box<dyn TerminalManager> {
     type Event = ();
 }
 
 /// Spacing baked into block heights: the per-block padding, the height
-/// reserved for the rendered Warp prompt (in lines), and whether blocks
+/// reserved for the rendered Derp prompt (in lines), and whether blocks
 /// reserve a footer row for the debug memory-stats overlay.
 ///
 /// [`Self::for_gui`] derives the GUI blocklist's spacing from the user's
@@ -53,13 +53,13 @@ impl warpui::Entity for Box<dyn TerminalManager> {
 /// terminal model.
 pub struct BlockSpacing {
     pub block_padding: BlockPadding,
-    pub warp_prompt_height_lines: f32,
+    pub derp_prompt_height_lines: f32,
     pub show_memory_stats: bool,
 }
 
 impl BlockSpacing {
     /// The GUI blocklist's spacing, derived from the user's settings: padding
-    /// from the terminal-spacing style, the rendered Warp prompt's height, and
+    /// from the terminal-spacing style, the rendered Derp prompt's height, and
     /// the "Add useless information" footer toggle.
     pub(super) fn for_gui(ctx: &AppContext) -> Self {
         let appearance = Appearance::as_ref(ctx);
@@ -67,7 +67,7 @@ impl BlockSpacing {
             TerminalSettings::as_ref(ctx).terminal_spacing(appearance.line_height_ratio(), ctx);
         Self {
             block_padding: terminal_spacing.block_padding,
-            warp_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
+            derp_prompt_height_lines: DERP_PROMPT_HEIGHT_LINES,
             // Fork: gated on the "Add useless information" appearance toggle.
             show_memory_stats: *BlockVisibilitySettings::as_ref(ctx)
                 .should_show_useless_information
@@ -102,7 +102,7 @@ pub(super) fn compute_block_size(
         block_padding: block_spacing.block_padding,
         size: size_info,
         max_block_scroll_limit: maximum_grid_size,
-        warp_prompt_height_lines: block_spacing.warp_prompt_height_lines,
+        derp_prompt_height_lines: block_spacing.derp_prompt_height_lines,
     }
 }
 

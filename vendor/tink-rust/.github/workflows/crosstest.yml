@@ -1,0 +1,33 @@
+name: crosstest
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+      - main
+      - crosstest
+    paths-ignore:
+      - README.md
+
+jobs:
+  crosstest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@629c2de402a417ea7690ca6ce3f33229e27606a5 # v2
+      - uses: actions-rs/toolchain@63eb9591781c46a70274cb3ebdf190fce92702e8 # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+      - run: git clone --depth 1 --branch v1.6.0 https://github.com/google/tink upstream
+      - run: (cd upstream && git apply ../scripts/patches/*)
+      - uses: actions/setup-python@f38219332975fe8f9c04cca981d674bf22aea1d3 # v2
+        with:
+          python-version: '3.7'
+      - run: python --version
+      - uses: abhinavsingh/setup-bazel@1fe920bf5df3791aab606c06a3608f4bb600c4f2 # v3
+        with:
+          version: 3.7.2
+      - run: bazel --version
+      - run: echo "y" | sudo /usr/local/lib/android/sdk/tools/bin/sdkmanager "platforms;android-26" --sdk_root=${ANDROID_SDK_ROOT}
+      - run: TINK_TESTING_DIR=$PWD/upstream/testing scripts/run-tests.sh

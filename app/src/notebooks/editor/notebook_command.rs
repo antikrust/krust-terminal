@@ -14,28 +14,28 @@ use syntect::highlighting::{self, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 use ui_components::lightbox::{LightboxImage, LightboxImageSource};
-use warp_completer::signatures::CommandRegistry;
-use warp_core::r#async::debounce;
-use warp_editor::content::anchor::Anchor;
-use warp_editor::content::buffer::{Buffer, BufferEvent, EditOrigin};
-use warp_editor::content::mermaid_diagram::mermaid_asset_source;
-use warp_editor::content::selection_model::BufferSelectionModel;
-use warp_editor::content::text::{
+use derp_completer::signatures::CommandRegistry;
+use derp_core::r#async::debounce;
+use derp_editor::content::anchor::Anchor;
+use derp_editor::content::buffer::{Buffer, BufferEvent, EditOrigin};
+use derp_editor::content::mermaid_diagram::mermaid_asset_source;
+use derp_editor::content::selection_model::BufferSelectionModel;
+use derp_editor::content::text::{
     BlockType, BufferBlockStyle, CodeBlockType, CODE_BLOCK_DEFAULT_DISPLAY_LANG,
     CODE_BLOCK_SHELL_DISPLAY_LANG,
 };
-use warp_editor::editor::RunnableCommandModel;
-use warp_util::user_input::UserInput;
-use warpui::elements::{
+use derp_editor::editor::RunnableCommandModel;
+use derp_util::user_input::UserInput;
+use derpui::elements::{
     Align, Border, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, MainAxisAlignment,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::Properties;
-use warpui::platform::Cursor;
-use warpui::presenter::ChildView;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Properties;
+use derpui::platform::Cursor;
+use derpui::presenter::ChildView;
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, AssetProvider as _, Element, Entity, ModelAsRef, ModelContext, ModelHandle,
     SingletonEntity, ViewHandle, WeakModelHandle, WindowId,
 };
@@ -638,7 +638,7 @@ impl RunnableCommandModel for NotebookCommand {
                         appearance.ui_font_size(),
                     )
                     .with_style(Properties {
-                        weight: warpui::fonts::Weight::Light,
+                        weight: derpui::fonts::Weight::Light,
                         ..Default::default()
                     })
                     .with_color(

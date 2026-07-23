@@ -1,10 +1,10 @@
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::{
     Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,
     MainAxisAlignment, MouseStateHandle, ParentElement, Wrap,
 };
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Entity, View, ViewContext, ViewHandle};
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Entity, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     MatchData, PageType, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
@@ -50,7 +50,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about derp warp version"
+        "about derp derp version"
     }
 
     fn render(
@@ -63,7 +63,7 @@ impl SettingsWidget for AboutPageWidget {
 
         // The derp wordmark is white-filled with a heavy black outline, so a
         // single asset reads correctly on both light and dark backgrounds —
-        // unlike the old Warp logo, which needed a per-scheme variant.
+        // unlike the old Derp logo, which needed a per-scheme variant.
         let image_path = "bundled/png/derp-logo.png";
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
@@ -115,6 +115,15 @@ impl SettingsWidget for AboutPageWidget {
                         .span("Copyright 2026 Derp")
                         .build()
                         .with_margin_top(16.)
+                        .finish(),
+                )
+                // Preserved upstream attribution: Derp is a rebranded fork and
+                // must keep the original copyright notice.
+                .with_child(
+                    ui_builder
+                        .span("© 2025, Denver Technologies, Inc")
+                        .build()
+                        .with_margin_top(4.)
                         .finish(),
                 )
                 // Attribution for the bundled avatar art. Several of the

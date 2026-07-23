@@ -1,5 +1,5 @@
-use warpui::integration::{AssertionCallback, TestStep};
-use warpui::{async_assert, App, SingletonEntity, TypedActionView, WindowId};
+use derpui::integration::{AssertionCallback, TestStep};
+use derpui::{async_assert, App, SingletonEntity, TypedActionView, WindowId};
 
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::ai::document::ai_document_model::{AIDocumentModel, AIDocumentVersion};

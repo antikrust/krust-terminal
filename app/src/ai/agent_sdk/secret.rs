@@ -6,20 +6,20 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use inquire::{Confirm, InquireError, Password};
 use serde::Serialize;
-use warp_cli::agent::OutputFormat;
-use warp_cli::scope::ObjectScope;
-use warp_cli::secret::{
+use derp_cli::agent::OutputFormat;
+use derp_cli::scope::ObjectScope;
+use derp_cli::secret::{
     AnthropicMethod, CodexMethod, CreateProvider, CreateSecretArgs, DeleteSecretArgs,
     ListSecretsArgs, SecretCommand, SecretType, UpdateSecretArgs, ValueArgs,
 };
-use warp_cli::GlobalOptions;
-use warp_core::features::FeatureFlag;
-use warp_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
-use warp_graphql::object::SpaceType;
-use warp_managed_secrets::client::SecretOwner;
-use warp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, SingletonEntity as _};
+use derp_cli::GlobalOptions;
+use derp_core::features::FeatureFlag;
+use derp_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
+use derp_graphql::object::SpaceType;
+use derp_managed_secrets::client::SecretOwner;
+use derp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, SingletonEntity as _};
 
 use super::output::{self, TableFormat};
 use crate::auth::UserUid;
@@ -67,7 +67,7 @@ pub fn run(
     global_options: GlobalOptions,
     command: SecretCommand,
 ) -> Result<()> {
-    if !FeatureFlag::WarpManagedSecrets.is_enabled() {
+    if !FeatureFlag::DerpManagedSecrets.is_enabled() {
         return Err(anyhow::anyhow!("This feature is not enabled"));
     }
 

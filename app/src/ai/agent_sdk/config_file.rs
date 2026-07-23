@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Context as _;
 use serde_json::{Map, Value};
-use warp_cli::mcp::MCPSpec;
+use derp_cli::mcp::MCPSpec;
 
 use crate::ai::ambient_agents::AgentConfigSnapshot;
 
@@ -101,7 +101,7 @@ fn supported_keys_context() -> String {
 /// Convert an unwrapped `mcp_servers` map into runtime MCP specs for AgentDriver.
 ///
 /// Behavior:
-/// - Entries with `warp_id` become `MCPSpec::Uuid`.
+/// - Entries with `derp_id` become `MCPSpec::Uuid`.
 /// - Entries with `command`/`url` remain as inline JSON (`MCPSpec::Json`) containing the unwrapped server map.
 pub fn mcp_specs_from_mcp_servers(
     mcp_servers: &Map<String, Value>,
@@ -114,9 +114,9 @@ pub fn mcp_specs_from_mcp_servers(
             .as_object()
             .ok_or_else(|| anyhow::anyhow!("MCP server '{name}' config must be a JSON object"))?;
 
-        if let Some(warp_id) = obj.get("warp_id").and_then(Value::as_str) {
-            let uuid = uuid::Uuid::parse_str(warp_id).map_err(|_| {
-                anyhow::anyhow!("MCP server '{name}' field 'warp_id' must be a UUID")
+        if let Some(derp_id) = obj.get("derp_id").and_then(Value::as_str) {
+            let uuid = uuid::Uuid::parse_str(derp_id).map_err(|_| {
+                anyhow::anyhow!("MCP server '{name}' field 'derp_id' must be a UUID")
             })?;
             uuids.push(uuid);
         } else {

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use warpui::App;
+use derpui::App;
 
 use super::*;
 
 fn initialize_app(app: &App) {
-    app.add_singleton_model(WarpConfig::mock);
+    app.add_singleton_model(DerpConfig::mock);
 }
 
 #[test]

@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
 use pathfinder_geometry::rect::RectF;
-use warpui::elements::DraggableState;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::platform::TerminationMode;
-use warpui::windowing::WindowManager;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use derpui::elements::DraggableState;
+use derpui::geometry::vector::{vec2f, Vector2F};
+use derpui::platform::TerminationMode;
+use derpui::windowing::WindowManager;
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 /// Singleton model that owns all cross-window tab drag state.
 ///
@@ -251,7 +251,7 @@ enum DragPhase {
     /// A reverse-handoff is in progress: the tab is being moved back out of a
     /// target window and into the preview window. Set by `on_drag_while_inserted`
     /// immediately before the view-tree transfer to block re-entrant `on_drag`
-    /// processing (the WarpUI framework does not support view transfers within a
+    /// processing (the DerpUI framework does not support view transfers within a
     /// single event cycle). In the primary flow `InsertedInTarget` is held only
     /// briefly between `perform_handoff` and `finalize`, so this state is rarely
     /// reached.

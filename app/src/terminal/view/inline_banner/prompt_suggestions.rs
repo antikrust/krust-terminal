@@ -2,19 +2,19 @@ use std::rc::Rc;
 
 use pathfinder_geometry::vector::vec2f;
 use serde::Serialize;
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
-use warpui::elements::{
+use derp_core::channel::ChannelState;
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
+use derpui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Fill, Flex, HighlightedHyperlink, Hoverable, Icon, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Shrinkable, Stack, Text,
 };
-use warpui::keymap::Keystroke;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::keymap::Keystroke;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, EventContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -35,7 +35,7 @@ use crate::settings::InputSettings;
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
 use crate::terminal::view::{ContextMenuAction, InputType, PromptSuggestion, TerminalAction};
 use crate::ui_components::blended_colors;
-use crate::ui_components::icons::Icon as WarpUIIcon;
+use crate::ui_components::icons::Icon as DerpUIIcon;
 use crate::util::bindings::keybinding_name_to_keystroke;
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -124,7 +124,7 @@ pub struct PromptSuggestionBannerState {
 #[allow(clippy::too_many_arguments)]
 fn render_button(
     text: String,
-    icon: WarpUIIcon,
+    icon: DerpUIIcon,
     button_index: usize,
     keystroke: Option<Keystroke>,
     mouse_state: MouseStateHandle,
@@ -313,11 +313,11 @@ fn get_tooltip_text_for_alert_state(alert_state: &PromptAlertState) -> Option<St
     }
 }
 
-/// Free-plan users who run out of Warp-provided AI credits should get a modal
+/// Free-plan users who run out of Derp-provided AI credits should get a modal
 /// offering BYO/upgrade instead of a disabled button. Other disabled states
 /// (offline, payment issues, team overage gates) keep the disabled treatment.
 fn should_open_unavailable_modal(state: &PromptAlertState, app: &AppContext) -> bool {
-    FeatureFlag::OpenWarpNewSettingsModes.is_enabled()
+    FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
         && matches!(state, PromptAlertState::RequestLimitReached)
         && !UserWorkspaces::as_ref(app)
             .current_workspace()
@@ -421,11 +421,11 @@ impl View for PromptSuggestionsView {
                 1.0,
                 render_button(
                     prompt_suggestion.label().clone(),
-                    WarpUIIcon::Oz,
+                    DerpUIIcon::Oz,
                     0,
                     keybinding_name_to_keystroke(ACCEPT_PROMPT_SUGGESTION_KEYBINDING, app),
                     banner_state.accept_button_mouse_state.clone(),
-                    Rc::new(move |ctx: &mut warpui::EventContext<'_>| {
+                    Rc::new(move |ctx: &mut derpui::EventContext<'_>| {
                         if open_unavailable_modal {
                             ctx.dispatch_typed_action(
                                 WorkspaceAction::OpenPromptSuggestionsUnavailableModal,

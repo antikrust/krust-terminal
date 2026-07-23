@@ -1,5 +1,5 @@
-use warp_cli::agent::Harness;
-use warpui::{AppContext, EntityId, ModelHandle, SingletonEntity};
+use derp_cli::agent::Harness;
+use derpui::{AppContext, EntityId, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{

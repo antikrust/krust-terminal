@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use session_sharing_protocol::common::SessionId;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity, WeakViewHandle};
+use derpui::r#async::{SpawnedFutureHandle, Timer};
+use derpui::{Entity, EntityId, ModelContext, SingletonEntity, WeakViewHandle};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::ambient_agents::{AmbientAgentTask, AmbientAgentTaskId, AmbientAgentTaskState};

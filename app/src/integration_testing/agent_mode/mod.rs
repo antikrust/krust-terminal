@@ -12,10 +12,10 @@ pub use assertions::*;
 pub use step::*;
 pub use user_defaults::*;
 pub use util::*;
-use warp_errors::report_error;
-use warpui::integration::PersistedDataMap;
-pub use warpui::integration::RUNTIME_TAG_FAILURE_REASON;
-use warpui::{App, SingletonEntity as _, WindowId};
+use derp_errors::report_error;
+use derpui::integration::PersistedDataMap;
+pub use derpui::integration::RUNTIME_TAG_FAILURE_REASON;
+use derpui::{App, SingletonEntity as _, WindowId};
 
 use crate::ai::agent::{AIAgentActionType, AIAgentOutputStatus, FinishedAIAgentOutput};
 pub use crate::integration_testing::view_getters::terminal_view;
@@ -203,10 +203,10 @@ pub fn output_conversation_debug_info(
                 // The debug link within the container will be using host.docker.internal, but we're opening
                 // from outside the container.
                 // The server is configured to always write debug data to GCS instead of locally when run for evals, so we replace
-                // with staging.warp.dev instead of localhost:8080.
+                // with staging.derp.baby instead of localhost:8080.
                 token
                     .debug_link()
-                    .replace("host.docker.internal:8080", "staging.warp.dev")
+                    .replace("host.docker.internal:8080", "staging.derp.baby")
             })
             .unwrap_or("unavailable".to_owned());
         write_to_debug_file(&format!("Conversation Debug Link: {debug_link}"));

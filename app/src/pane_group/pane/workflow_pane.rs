@@ -3,15 +3,15 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use url::Url;
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use derpui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use super::{
     DetachType, PaneConfiguration, PaneContent, PaneGroup, PaneId, PaneView, ShareableLink,
     ShareableLinkError,
 };
 use crate::app_state::{LeafContents, WorkflowPaneSnapshot};
-use crate::drive::items::WarpDriveItemId;
-use crate::drive::OpenWarpDriveObjectSettings;
+use crate::drive::items::DerpDriveItemId;
+use crate::drive::OpenDerpDriveObjectSettings;
 use crate::server::ids::SyncId;
 use crate::workflows::manager::{WorkflowManager, WorkflowOpenSource};
 use crate::workflows::workflow_view::{WorkflowView, WorkflowViewEvent};
@@ -39,7 +39,7 @@ impl WorkflowPane {
 
     pub fn restore(
         workflow_id: Option<SyncId>,
-        settings: OpenWarpDriveObjectSettings,
+        settings: OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<PaneGroup>,
     ) -> anyhow::Result<Self> {
         let window_id = ctx.window_id();
@@ -132,7 +132,7 @@ impl PaneContent for WorkflowPane {
         let workflow_id = self.get_view(app).as_ref(app).workflow_id();
         LeafContents::Workflow(WorkflowPaneSnapshot::CloudWorkflow {
             workflow_id: Some(workflow_id),
-            settings: OpenWarpDriveObjectSettings::default(),
+            settings: OpenDerpDriveObjectSettings::default(),
         })
     }
 
@@ -184,7 +184,7 @@ fn handle_workflow_event(
 ) {
     match event {
         WorkflowViewEvent::Pane(pane_event) => group.handle_pane_event(pane_id, pane_event, ctx),
-        WorkflowViewEvent::ViewInWarpDrive(id) => view_in_warp_drive(*id, ctx),
+        WorkflowViewEvent::ViewInDerpDrive(id) => view_in_derp_drive(*id, ctx),
         WorkflowViewEvent::RunWorkflow {
             workflow,
             source,
@@ -224,6 +224,6 @@ fn run_workflow(
     });
 }
 
-fn view_in_warp_drive(id: WarpDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
-    ctx.emit(crate::pane_group::Event::ViewInWarpDrive(id))
+fn view_in_derp_drive(id: DerpDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
+    ctx.emit(crate::pane_group::Event::ViewInDerpDrive(id))
 }

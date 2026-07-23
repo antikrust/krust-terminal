@@ -1,9 +1,9 @@
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warpui::color::ColorU;
-use warpui::elements::{ConstrainedBox, Container, CornerRadius, Radius};
-use warpui::Element;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::color::coloru_with_opacity;
+use derp_core::ui::theme::{Fill, DerpTheme};
+use derpui::color::ColorU;
+use derpui::elements::{ConstrainedBox, Container, CornerRadius, Radius};
+use derpui::Element;
 
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
 use crate::ai::agent_conversations_model::AgentRunDisplayStatus;
@@ -13,17 +13,17 @@ use crate::ui_components::icons::Icon;
 pub const STATUS_ELEMENT_PADDING: f32 = 2.;
 
 pub trait StatusElementStyle {
-    fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU);
+    fn status_icon_and_color(&self, theme: &DerpTheme) -> (Icon, ColorU);
 }
 
 impl StatusElementStyle for ConversationStatus {
-    fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    fn status_icon_and_color(&self, theme: &DerpTheme) -> (Icon, ColorU) {
         ConversationStatus::status_icon_and_color(self, theme, StatusColorStyle::Standard)
     }
 }
 
 impl StatusElementStyle for AgentRunDisplayStatus {
-    fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    fn status_icon_and_color(&self, theme: &DerpTheme) -> (Icon, ColorU) {
         AgentRunDisplayStatus::status_icon_and_color(self, theme)
     }
 }
@@ -38,7 +38,7 @@ pub fn render_status_element(
     let (icon, color) = status.status_icon_and_color(theme);
 
     Container::new(
-        ConstrainedBox::new(icon.to_warpui_icon(Fill::from(color)).finish())
+        ConstrainedBox::new(icon.to_derpui_icon(Fill::from(color)).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish(),

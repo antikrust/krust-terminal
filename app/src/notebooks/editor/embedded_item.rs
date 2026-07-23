@@ -3,33 +3,33 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use itertools::Itertools;
-use markdown_parser::html_parser::WARP_EMBED_ATTRIBUTE_NAME;
+use markdown_parser::html_parser::DERP_EMBED_ATTRIBUTE_NAME;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use serde_yaml::Mapping;
 use string_offset::ByteOffset;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::content::markdown::MarkdownStyle;
-use warp_editor::content::text::TextStylesWithMetadata;
-use warp_editor::editor::EmbeddedItemModel;
-use warp_editor::extract_block;
-use warp_editor::render::element::{CursorData, CursorDisplayType, RenderContext, RenderableBlock};
-use warp_editor::render::layout::TextLayout;
-use warp_editor::render::model::viewport::ViewportItem;
-use warp_editor::render::model::{
+use derp_core::ui::appearance::Appearance;
+use derp_editor::content::markdown::MarkdownStyle;
+use derp_editor::content::text::TextStylesWithMetadata;
+use derp_editor::editor::EmbeddedItemModel;
+use derp_editor::extract_block;
+use derp_editor::render::element::{CursorData, CursorDisplayType, RenderContext, RenderableBlock};
+use derp_editor::render::layout::TextLayout;
+use derp_editor::render::model::viewport::ViewportItem;
+use derp_editor::render::model::{
     BlockItem, BlockSpacing, BrokenBlockEmbedding, EmbeddedItem, EmbeddedItemHTMLRepresentation,
     EmbeddedItemRichFormat, LaidOutEmbeddedItem, ParagraphStyles, RenderState,
     EMBEDDED_ITEM_FIRST_LINE_HEIGHT,
 };
-use warp_editor::render::BLOCK_FOOTER_HEIGHT;
-use warpui::elements::{Border, ConstrainedBox, CornerRadius, Empty, Margin, Padding, Radius};
-use warpui::text_layout::TextFrame;
-use warpui::units::{IntoPixels, Pixels};
-use warpui::{AppContext, Element, LayoutContext, SingletonEntity, SizeConstraint};
+use derp_editor::render::BLOCK_FOOTER_HEIGHT;
+use derpui::elements::{Border, ConstrainedBox, CornerRadius, Empty, Margin, Padding, Radius};
+use derpui::text_layout::TextFrame;
+use derpui::units::{IntoPixels, Pixels};
+use derpui::{AppContext, Element, LayoutContext, SingletonEntity, SizeConstraint};
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::CloudObject;
-use crate::drive::cloud_object_styling::warp_drive_icon_color;
+use crate::drive::cloud_object_styling::derp_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::server::ids::{HashableId, ToServerId};
 use crate::ui_components::icons::Icon;
@@ -305,7 +305,7 @@ impl EmbeddedItem for EmbeddedWorkflow {
 
         // If the workflow is no longer accessible or is trashed, set the content to
         // an empty string. But we should still keep the HTML element formatting and
-        // attributes so we could re-parse the ID and metadata when pasted into Warp.
+        // attributes so we could re-parse the ID and metadata when pasted into Derp.
         let workflow_content = workflow
             .and_then(|workflow| {
                 if !workflow.is_trashed(cloud_model) {
@@ -321,7 +321,7 @@ impl EmbeddedItem for EmbeddedWorkflow {
             html: EmbeddedItemHTMLRepresentation {
                 element_name: "pre",
                 content: workflow_content,
-                attributes: HashMap::from([(WARP_EMBED_ATTRIBUTE_NAME, self.hashed_id())]),
+                attributes: HashMap::from([(DERP_EMBED_ATTRIBUTE_NAME, self.hashed_id())]),
             },
         }
     }
@@ -453,16 +453,16 @@ impl RenderableEmbeddedWorkflow {
         let (icon, icon_color) = if is_agent_mode_prompt {
             (
                 Icon::Prompt,
-                warp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
+                derp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
             )
         } else {
             (
                 Icon::Workflow,
-                warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+                derp_drive_icon_color(appearance, DriveObjectType::Workflow),
             )
         };
         let workflow_icon = ConstrainedBox::new(
-            icon.to_warpui_icon(icon_color.into())
+            icon.to_derpui_icon(icon_color.into())
                 .with_opacity(1.0)
                 .finish(),
         )
@@ -611,7 +611,7 @@ impl RenderableBlock for RenderableEmbeddedWorkflow {
             );
         }
 
-        ctx.paint.scene.start_layer(warpui::ClipBounds::ActiveLayer);
+        ctx.paint.scene.start_layer(derpui::ClipBounds::ActiveLayer);
 
         // Position the block footer right below the content area, flush with its right-hand edge.
         // This gives the footer some padding relative to the visible area with a background.
@@ -626,15 +626,15 @@ impl RenderableBlock for RenderableEmbeddedWorkflow {
         ctx.paint.scene.stop_layer();
     }
 
-    fn after_layout(&mut self, ctx: &mut warpui::AfterLayoutContext, app: &warpui::AppContext) {
+    fn after_layout(&mut self, ctx: &mut derpui::AfterLayoutContext, app: &derpui::AppContext) {
         self.footer.after_layout(ctx, app);
     }
 
     fn dispatch_event(
         &mut self,
-        _model: &warp_editor::render::model::RenderState,
-        event: &warpui::event::DispatchedEvent,
-        ctx: &mut warpui::EventContext,
+        _model: &derp_editor::render::model::RenderState,
+        event: &derpui::event::DispatchedEvent,
+        ctx: &mut derpui::EventContext,
         app: &AppContext,
     ) -> bool {
         self.footer.dispatch_event(event, ctx, app)

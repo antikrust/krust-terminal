@@ -1,17 +1,17 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use warp_core::ui::Icon;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui_core::elements::{
+use derp_core::ui::Icon;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derpui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Flex,
     ParentElement, Radius, Shrinkable,
 };
-use warpui_core::fonts::{Properties, Weight};
-use warpui_core::keymap::Keystroke;
-use warpui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
-use warpui_core::{AppContext, EventContext};
+use derpui_core::fonts::{Properties, Weight};
+use derpui_core::keymap::Keystroke;
+use derpui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
+use derpui_core::{AppContext, EventContext};
 
 use crate::{Component, Options as _, Renderable, button};
 

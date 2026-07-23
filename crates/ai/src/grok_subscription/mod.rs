@@ -20,9 +20,9 @@ pub mod oauth;
 use std::time::{Duration, SystemTime};
 
 use futures::channel::oneshot;
-use warp_errors::report_error;
-use warpui_core::r#async::Timer;
-use warpui_core::ModelContext;
+use derp_errors::report_error;
+use derpui_core::r#async::Timer;
+use derpui_core::ModelContext;
 
 use self::oauth::TokenResponse;
 use crate::api_keys::{ApiKeyManager, GrokRefreshOutcome, GrokTokens};

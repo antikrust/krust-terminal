@@ -6,23 +6,23 @@ use std::sync::Arc;
 
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use itertools::Itertools;
-use warp_core::ui::builder::UiBuilder;
-use warp_core::ui::theme::color::internal_colors;
-use warp_editor::editor::NavigationKey;
-use warp_workflows::workflows as global_workflows;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::color::ColorU;
-use warpui::elements::{
+use derp_core::ui::builder::UiBuilder;
+use derp_core::ui::theme::color::internal_colors;
+use derp_editor::editor::NavigationKey;
+use derp_workflows::workflows as global_workflows;
+use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
+use derpui::color::ColorU;
+use derpui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, DispatchEventResult, Element,
     EventHandler, Fill, Flex, Highlight, Hoverable, MainAxisSize, MouseStateHandle, ParentElement,
     ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Text,
     UniformList, UniformListState, LEFT_PADDING as SCROLLABLE_LEFT_PADDING,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::text_layout::TextStyle;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::text_layout::TextStyle;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WeakViewHandle,
 };
 
@@ -33,8 +33,8 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::editor::Event as EditorEvent;
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
-use crate::themes::theme::{self, Blend, WarpTheme};
-use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
+use crate::themes::theme::{self, Blend, DerpTheme};
+use crate::user_config::{DerpConfig, DerpConfigUpdateEvent};
 use crate::util::bindings::CustomAction;
 use crate::voltron::{VoltronFeatureViewMeta, VoltronMetadata};
 use crate::workflows::WorkflowType;
@@ -51,7 +51,7 @@ const WORKFLOW_LIST_PADDING_MIDDLE: f32 = 5.;
 pub const WORKFLOW_SUBTEXT_FONT_SIZE: f32 = 14.0;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", WorkflowsViewAction::Up, id!("WorkflowsView")),
@@ -171,7 +171,7 @@ impl WorkflowViewType {
             WorkflowViewType::Team => "Showing team workflows".into(),
         };
 
-        AccessibilityContent::new_without_help(a11y_content, WarpA11yRole::UserAction)
+        AccessibilityContent::new_without_help(a11y_content, DerpA11yRole::UserAction)
     }
 }
 
@@ -336,7 +336,7 @@ impl SelectionState {
         }
     }
 
-    fn background_color(&self, theme: &WarpTheme) -> theme::Fill {
+    fn background_color(&self, theme: &DerpTheme) -> theme::Fill {
         match self {
             SelectionState::Unselected => theme.surface_2(),
             SelectionState::Selected => theme.surface_2().blend(&theme.accent_overlay()),
@@ -372,7 +372,7 @@ impl CategoriesView {
             Self::categorize_workflows(
                 global_workflows()
                     .into_iter()
-                    .map(Workflow::from) // convert from the public-facing Workflow type to the warp-internal Workflow type
+                    .map(Workflow::from) // convert from the public-facing Workflow type to the derp-internal Workflow type
                     .map(WorkflowType::Local)
                     .map(Arc::new),
             ),
@@ -403,8 +403,8 @@ impl CategoriesView {
             ctx.notify();
         });
 
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), |me, _, event, ctx| {
-            if let WarpConfigUpdateEvent::LocalUserWorkflows = event {
+        ctx.subscribe_to_model(&DerpConfig::handle(ctx), |me, _, event, ctx| {
+            if let DerpConfigUpdateEvent::LocalUserWorkflows = event {
                 me.update_workflows(ctx);
             }
         });
@@ -719,7 +719,7 @@ impl CategoriesView {
             );
             ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                 a11y_content_text,
-                WarpA11yRole::MenuItemRole,
+                DerpA11yRole::MenuItemRole,
             ));
         }
     }
@@ -763,7 +763,7 @@ impl CategoriesView {
                 .link(
                     "creating your own workflow".into(),
                     Some(
-                        "https://therob.lol/derp-terminal/help/knowledge-and-collaboration/warp-drive/workflows"
+                        "https://therob.lol/derp-terminal/help/knowledge-and-collaboration/derp-drive/workflows"
                             .into(),
                     ),
                     None,
@@ -1153,7 +1153,7 @@ impl CategoriesView {
     }
 
     fn update_workflows(&mut self, ctx: &mut ViewContext<Self>) {
-        let workflows = WarpConfig::as_ref(ctx)
+        let workflows = DerpConfig::as_ref(ctx)
             .local_user_workflows()
             .iter()
             .map(Clone::clone)
@@ -1209,7 +1209,7 @@ impl View for CategoriesView {
         Some(AccessibilityContent::new(
             "Workflows",
             "Search or use arrow up and arrow down keys to navigate and find a workflow. Use enter to confirm the workflow and esc to quit.",
-            WarpA11yRole::MenuRole,
+            DerpA11yRole::MenuRole,
         ))
     }
 

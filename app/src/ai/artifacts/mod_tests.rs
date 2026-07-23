@@ -164,8 +164,8 @@ fn download_success_message_includes_filename_and_directory() {
 
 #[test]
 fn converts_graphql_file_artifact() {
-    let artifact = Artifact::try_from(warp_graphql::ai::AIConversationArtifact::FileArtifact(
-        warp_graphql::ai::FileArtifact {
+    let artifact = Artifact::try_from(derp_graphql::ai::AIConversationArtifact::FileArtifact(
+        derp_graphql::ai::FileArtifact {
             artifact_uid: "artifact-file-1".into(),
             filepath: "outputs/report.txt".to_string(),
             mime_type: "text/plain".to_string(),

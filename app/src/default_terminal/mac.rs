@@ -2,7 +2,7 @@ use std::ptr::NonNull;
 
 use objc2_core_foundation::{CFRetained, CFString};
 use objc2_foundation::NSBundle;
-use warp_core::channel::{Channel, ChannelState};
+use derp_core::channel::{Channel, ChannelState};
 
 // Launch Services constants
 type LSRolesMask = u32;
@@ -29,7 +29,7 @@ pub fn can_become_default_terminal() -> bool {
     NSBundle::mainBundle().bundleIdentifier().is_some() && ChannelState::channel() != Channel::Local
 }
 
-pub fn is_warp_default_terminal() -> bool {
+pub fn is_derp_default_terminal() -> bool {
     let unix_executable_content_type = CFString::from_str("public.unix-executable");
     let handler = unsafe {
         LSCopyDefaultRoleHandlerForContentType(&unix_executable_content_type, K_LS_ROLES_SHELL)
@@ -44,19 +44,19 @@ pub fn is_warp_default_terminal() -> bool {
     // `CFRetained` releases it on every exit path.
     let handler_string = unsafe { CFRetained::from_raw(handler) };
 
-    let Some(warp_bundle_id) = get_warp_bundle_id() else {
+    let Some(derp_bundle_id) = get_derp_bundle_id() else {
         return false;
     };
 
     let current_handler = handler_string.to_string();
 
-    current_handler == warp_bundle_id
+    current_handler == derp_bundle_id
 }
 
-pub fn set_warp_as_default_terminal() -> Result<(), String> {
-    log::debug!("Setting Warp as default terminal");
+pub fn set_derp_as_default_terminal() -> Result<(), String> {
+    log::debug!("Setting Derp as default terminal");
 
-    let bundle_id = get_warp_bundle_id().ok_or("No bundle ID".to_string())?;
+    let bundle_id = get_derp_bundle_id().ok_or("No bundle ID".to_string())?;
 
     set_default_terminal(&bundle_id)
 }
@@ -84,8 +84,8 @@ fn set_default_terminal(bundle_id: &str) -> Result<(), String> {
     }
 }
 
-/// Gets Warp's bundle identifier. This may be `None` if not running as a bundle, i.e. through
+/// Gets Derp's bundle identifier. This may be `None` if not running as a bundle, i.e. through
 /// `cargo run` without `cargo bundle`.
-fn get_warp_bundle_id() -> Option<String> {
+fn get_derp_bundle_id() -> Option<String> {
     Some(NSBundle::mainBundle().bundleIdentifier()?.to_string())
 }

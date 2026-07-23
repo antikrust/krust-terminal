@@ -2,21 +2,21 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use warp_core::send_telemetry_from_ctx;
-use warp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use derp_core::send_telemetry_from_ctx;
+use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{
     Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DropShadow, Flex, FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::fonts::Weight;
+use derpui::keymap::FixedBinding;
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::auth::AuthStateProvider;
 use crate::settings_view::SettingsSection;
@@ -29,14 +29,14 @@ const CORNER_RADIUS: f32 = 12.;
 const PANEL_PADDING: f32 = 24.;
 const CLOSE_BUTTON_DIAMETER: f32 = 20.;
 
-const NOTICE_TITLE_TEXT: &str = "Warp is no longer providing inference on the free plan.";
-const NOTICE_BODY_TEXT: &str = "To keep using Warp's AI features, please upgrade to a paid plan, \
+const NOTICE_TITLE_TEXT: &str = "Derp is no longer providing inference on the free plan.";
+const NOTICE_BODY_TEXT: &str = "To keep using Derp's AI features, please upgrade to a paid plan, \
      bring your own API key or endpoint, or log in with your Grok subscription.";
 const NOTICE_BONUS_CREDITS_TEXT: &str = "If you have any unused bonus credits, AI will keep \
      working until these run out.";
 
-const PROMPT_SUGGESTIONS_TITLE_TEXT: &str = "How to use AI features in Warp";
-const PROMPT_SUGGESTIONS_BODY_TEXT: &str = "To use AI features in Warp, subscribe to a paid plan, \
+const PROMPT_SUGGESTIONS_TITLE_TEXT: &str = "How to use AI features in Derp";
+const PROMPT_SUGGESTIONS_BODY_TEXT: &str = "To use AI features in Derp, subscribe to a paid plan, \
      add an API key (OpenAI, Anthropic, or Google), add a custom inference endpoint (OpenRouter, \
      LiteLLM), or log in using your SuperGrok subscription.";
 
@@ -44,7 +44,7 @@ const PROMPT_SUGGESTIONS_BODY_TEXT: &str = "To use AI features in Warp, subscrib
 /// the layout and CTAs are identical across variants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FreeAiRemovalModalVariant {
-    /// One-time notice shown to Free users when Warp-provided AI is removed from their plan.
+    /// One-time notice shown to Free users when Derp-provided AI is removed from their plan.
     Notice,
     /// Shown on demand when a Free user activates Prompt Suggestions while out of credits.
     PromptSuggestions,
@@ -84,7 +84,7 @@ impl FreeAiRemovalModalVariant {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -112,7 +112,7 @@ struct StateHandles {
     upgrade_button: MouseStateHandle,
 }
 
-/// Notice shown to Free-plan users about the removal of Warp-provided AI. The
+/// Notice shown to Free-plan users about the removal of Derp-provided AI. The
 /// `variant` selects the copy: a one-time rollout notice, or an on-demand prompt
 /// when a Free user activates a gated feature (e.g. Prompt Suggestions).
 pub struct FreeAiRemovalModal {
@@ -320,7 +320,7 @@ impl TypedActionView for FreeAiRemovalModal {
                 // the settings page this opens.
                 ctx.dispatch_typed_action_deferred(WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "api".to_string(),
-                    section: Some(SettingsSection::WarpAgent),
+                    section: Some(SettingsSection::DerpAgent),
                 });
                 ctx.emit(FreeAiRemovalModalEvent::Close);
             }
@@ -402,7 +402,7 @@ impl TelemetryEvent for FreeAiRemovalModalTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        warp_core::telemetry::enum_events::<Self>()
+        derp_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -430,4 +430,4 @@ impl TelemetryEventDesc for FreeAiRemovalModalTelemetryEventDiscriminants {
     }
 }
 
-warp_core::register_telemetry_event!(FreeAiRemovalModalTelemetryEvent);
+derp_core::register_telemetry_event!(FreeAiRemovalModalTelemetryEvent);

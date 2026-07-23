@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use shell_words::split as split_shell_words;
-use warp_cli::agent::Harness;
-use warp_errors::report_error;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use derp_cli::agent::Harness;
+use derp_errors::report_error;
+use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};

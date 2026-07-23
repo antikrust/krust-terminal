@@ -28,7 +28,7 @@ query GetConversationUsage(
             platformCreditsSpent
             summarized
             tokenUsage { modelId totalTokens }
-            warpTokenUsage { modelId totalTokens tokenUsageByCategory { category tokens } }
+            derpTokenUsage { modelId totalTokens tokenUsageByCategory { category tokens } }
             byokTokenUsage { modelId totalTokens tokenUsageByCategory { category tokens } }
             toolUsageMetadata {
               runCommandStats { count }
@@ -119,7 +119,7 @@ pub struct ConversationUsageMetadata {
     pub platform_credits_spent: f64,
     pub summarized: bool,
     pub token_usage: Vec<ModelTokenUsage>,
-    pub warp_token_usage: Vec<TokenUsage>,
+    pub derp_token_usage: Vec<TokenUsage>,
     pub byok_token_usage: Vec<TokenUsage>,
     pub tool_usage_metadata: ToolUsageMetadata,
 }
@@ -141,26 +141,26 @@ pub struct ContextWindowSegment {
     pub token_count: i32,
 }
 
-/// Merges warp and byok per-model token usage rows into the persistence-layer
+/// Merges derp and byok per-model token usage rows into the persistence-layer
 /// `ModelTokenUsage` shape, preserving per-category breakdowns. Shared by the
 /// usage-history query and the conversation restore path (`crate::ai`).
 pub(crate) fn convert_token_usage(
-    warp_token_usage: &[TokenUsage],
+    derp_token_usage: &[TokenUsage],
     byok_token_usage: &[TokenUsage],
 ) -> Vec<persistence::model::ModelTokenUsage> {
     let mut usage_by_model: HashMap<String, persistence::model::ModelTokenUsage> = HashMap::new();
 
-    for usage in warp_token_usage {
+    for usage in derp_token_usage {
         let entry = usage_by_model
             .entry(usage.model_id.clone())
             .or_insert_with(|| persistence::model::ModelTokenUsage {
                 model_id: usage.model_id.clone(),
                 ..Default::default()
             });
-        entry.warp_tokens += u32::try_from(usage.total_tokens).unwrap_or_default();
+        entry.derp_tokens += u32::try_from(usage.total_tokens).unwrap_or_default();
         for category_breakdown in &usage.token_usage_by_category {
             *entry
-                .warp_token_usage_by_category
+                .derp_token_usage_by_category
                 .entry(category_breakdown.category.clone())
                 .or_default() += u32::try_from(category_breakdown.tokens).unwrap_or_default();
         }
@@ -195,7 +195,7 @@ impl From<&ConversationUsageMetadata> for persistence::model::ConversationUsageM
             credits_spent: gql.credits_spent as f32,
             platform_credits_spent: gql.platform_credits_spent as f32,
             credits_spent_for_last_block: None,
-            token_usage: convert_token_usage(&gql.warp_token_usage, &gql.byok_token_usage),
+            token_usage: convert_token_usage(&gql.derp_token_usage, &gql.byok_token_usage),
             tool_usage_metadata: (&gql.tool_usage_metadata).into(),
             context_window_segments: gql.context_window_segments.iter().map(Into::into).collect(),
         }

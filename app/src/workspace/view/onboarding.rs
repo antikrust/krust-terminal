@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use onboarding::{ProjectOnboardingSettings, SelectedSettings};
-use warp_core::execution_mode::AppExecutionMode;
-use warp_errors::report_error;
-use warpui::{SingletonEntity as _, ViewContext};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_errors::report_error;
+use derpui::{SingletonEntity as _, ViewContext};
 
 use crate::pane_group::{NewTerminalOptions, PanesLayout};
 use crate::settings::AISettings;
@@ -163,7 +163,7 @@ impl Workspace {
 
         // With new onboarding, skip the guided tour when AI is not enabled
         // (e.g. terminal-intent users or users who disabled AI).
-        if FeatureFlag::OpenWarpNewSettingsModes.is_enabled()
+        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
             && !*AISettings::as_ref(ctx).is_any_ai_enabled
         {
             return;

@@ -1,14 +1,14 @@
-use warp_cli::agent::Harness;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_editor::editor::NavigationKey;
-use warpui::elements::{
+use derp_cli::agent::Harness;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_editor::editor::NavigationKey;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Expanded, Flex, Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Radius, Stack, Text,
 };
-use warpui::{
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -439,13 +439,13 @@ impl AuthSecretFtuxDropdown {
 
         let icon_color: Fill = internal_colors::text_sub(theme, theme.surface_1()).into();
 
-        let search_icon = ConstrainedBox::new(Icon::Search.to_warpui_icon(icon_color).finish())
+        let search_icon = ConstrainedBox::new(Icon::Search.to_derpui_icon(icon_color).finish())
             .with_height(SELECT_ICON_SIZE)
             .with_width(SELECT_ICON_SIZE)
             .finish();
 
         let right_icon_element =
-            ConstrainedBox::new(right_icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(right_icon.to_derpui_icon(icon_color).finish())
                 .with_height(SELECT_ICON_SIZE)
                 .with_width(SELECT_ICON_SIZE)
                 .finish();
@@ -481,7 +481,7 @@ impl AuthSecretFtuxDropdown {
 
         if self.display_label.is_some() {
             Hoverable::new(self.label_mouse_state.clone(), move |_| container)
-                .with_cursor(warpui::platform::Cursor::PointingHand)
+                .with_cursor(derpui::platform::Cursor::PointingHand)
                 .on_click(|ctx, _, _| {
                     ctx.dispatch_typed_action(FtuxDropdownAction::ClearDisplayLabel);
                 })
@@ -511,7 +511,7 @@ impl AuthSecretFtuxDropdown {
 
     fn menu_positioning(&self) -> OffsetPositioning {
         OffsetPositioning::offset_from_parent(
-            warpui::geometry::vector::vec2f(0., 0.),
+            derpui::geometry::vector::vec2f(0., 0.),
             ParentOffsetBounds::WindowByPosition,
             ParentAnchor::BottomLeft,
             ChildAnchor::TopLeft,

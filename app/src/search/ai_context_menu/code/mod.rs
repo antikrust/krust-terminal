@@ -5,9 +5,9 @@ pub mod search_item;
 #[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 
-use warpui::AppContext;
+use derpui::AppContext;
 #[cfg(not(target_family = "wasm"))]
-use warpui::SingletonEntity;
+use derpui::SingletonEntity;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::outline::{OutlineStatus, RepoOutlines};

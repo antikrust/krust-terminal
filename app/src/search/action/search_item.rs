@@ -3,16 +3,16 @@ use std::sync::Arc;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 use pathfinder_color::ColorU;
-use warpui::elements::{
+use derpui::elements::{
     Align, ConstrainedBox, Container, Flex, Highlight, ParentElement, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::{DescriptionContext, Keystroke};
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, Element, SingletonEntity};
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::{DescriptionContext, Keystroke};
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
-use crate::drive::cloud_object_styling::warp_drive_icon_color;
+use crate::drive::cloud_object_styling::derp_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::features::FeatureFlag;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
@@ -182,7 +182,7 @@ impl SearchItemIcon for BindingGroup {
     fn icon(&self) -> Icon {
         match self {
             Self::Settings => Icon::Gear,
-            Self::WarpAi => {
+            Self::DerpAi => {
                 if !FeatureFlag::AgentMode.is_enabled() {
                     Icon::AiAssistant
                 } else {
@@ -212,19 +212,19 @@ impl SearchItemIcon for BindingGroup {
             | Self::Folders
             | Self::Terminal
             | Self::Notifications => appearance.theme().foreground().into_solid(),
-            Self::WarpAi if !FeatureFlag::AgentMode.is_enabled() => {
-                ColorU::from_u32(colors::WARP_AI)
+            Self::DerpAi if !FeatureFlag::AgentMode.is_enabled() => {
+                ColorU::from_u32(colors::DERP_AI)
             }
-            Self::WarpAi => appearance.theme().foreground().into_solid(),
-            Self::Workflow => warp_drive_icon_color(appearance, DriveObjectType::Workflow),
-            Self::Notebooks => warp_drive_icon_color(
+            Self::DerpAi => appearance.theme().foreground().into_solid(),
+            Self::Workflow => derp_drive_icon_color(appearance, DriveObjectType::Workflow),
+            Self::Notebooks => derp_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: false,
                 },
             ),
             Self::EnvVarCollection => {
-                warp_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
+                derp_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
             }
         }
     }

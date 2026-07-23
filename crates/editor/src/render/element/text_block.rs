@@ -22,8 +22,8 @@ impl RenderableBlock for RenderableTextBlock {
     fn layout(
         &mut self,
         _model: &RenderState,
-        _ctx: &mut warpui_core::LayoutContext,
-        _app: &warpui_core::AppContext,
+        _ctx: &mut derpui_core::LayoutContext,
+        _app: &derpui_core::AppContext,
     ) {
     }
 
@@ -31,7 +31,7 @@ impl RenderableBlock for RenderableTextBlock {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        _app: &warpui_core::AppContext,
+        _app: &derpui_core::AppContext,
     ) {
         let content = model.content();
         let text_block = extract_block!(

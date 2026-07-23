@@ -17,13 +17,13 @@ use regex::Regex;
 use sentry::{ClientInitGuard, IntoDsn, SessionMode};
 #[cfg(linux_or_windows)]
 pub use sentry_minidump::run_server as run_minidump_server;
-use warp_core::channel::Channel;
-use warp_server_auth::anonymous_id::get_or_create_anonymous_id;
-use warpui::r#async::block_on;
-use warpui::rendering::GPUDeviceInfo;
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{self, StateEvent, WindowManager};
-use warpui::{AppContext, SingletonEntity};
+use derp_core::channel::Channel;
+use derp_server_auth::anonymous_id::get_or_create_anonymous_id;
+use derpui::r#async::block_on;
+use derpui::rendering::GPUDeviceInfo;
+use derpui::windowing::state::ApplicationStage;
+use derpui::windowing::{self, StateEvent, WindowManager};
+use derpui::{AppContext, SingletonEntity};
 
 use crate::antivirus::{AntivirusInfo, AntivirusInfoEvent};
 use crate::auth::{AuthStateProvider, UserUid};
@@ -47,7 +47,7 @@ lazy_static! {
     ];
 
     /// The current [`ApplicationStage`] of the application. Used when reporting the
-    /// `warp.application_stage` tag to Sentry.
+    /// `derp.application_stage` tag to Sentry.
     static ref APPLICATION_LIFECYCLE_STAGE: RwLock<ApplicationStage> = RwLock::new(ApplicationStage::Starting);
 
     /// The set of tags that we want to attach to all Sentry reports.
@@ -163,11 +163,11 @@ impl ToSentryTags for CrashRecoveryMetadata {
 
             [
                 (
-                    "warp.crash_recovery_process.running",
+                    "derp.crash_recovery_process.running",
                     bool_to_sentry_value(self.is_crash_recovery_process_running),
                 ),
                 (
-                    "warp.handled_by_crash_recovery_process",
+                    "derp.handled_by_crash_recovery_process",
                     bool_to_sentry_value(self.was_unhandled_event),
                 ),
             ]
@@ -476,7 +476,7 @@ fn set_optional_user_information(
         let anonymous_id = get_or_create_anonymous_id(ctx);
         format!("anon.{anonymous_id}")
     });
-    // Only send along emails if we're on WarpDev.
+    // Only send along emails if we're on DerpDev.
     // We try to keep PII out of Sentry as much as possible.
     let email = if ChannelState::channel() == Channel::Dev {
         email
@@ -518,12 +518,12 @@ fn release_version() -> &'static str {
     ChannelState::app_version().unwrap_or("<no tag>")
 }
 
-/// Sets the warp.client_type Sentry tag.
+/// Sets the derp.client_type Sentry tag.
 pub fn set_client_type_tag(client_id: &str) {
-    set_tag("warp.client_type", client_id);
+    set_tag("derp.client_type", client_id);
 }
 
-/// Initializes the warp.virtual_env Sentry tag group.
+/// Initializes the derp.virtual_env Sentry tag group.
 fn init_virtual_environment_tag(ctx: &mut AppContext) {
     let (tx, rx) = async_channel::unbounded();
 
@@ -570,18 +570,18 @@ trait ToSentryTags {
 
 impl ToSentryTags for ApplicationStage {
     fn to_sentry_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
-        [("warp.application_stage", self.to_string())]
+        [("derp.application_stage", self.to_string())]
     }
 }
 
 impl ToSentryTags for GPUDeviceInfo {
     fn to_sentry_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
         [
-            ("warp.gpu.device.name", self.device_name.to_string()),
-            ("warp.gpu.device.type", self.device_type.to_string()),
-            ("warp.gpu.backend", self.backend.to_string()),
-            ("warp.gpu.driver.name", self.driver_name.to_string()),
-            ("warp.gpu.driver.info", self.driver_info.to_string()),
+            ("derp.gpu.device.name", self.device_name.to_string()),
+            ("derp.gpu.device.type", self.device_type.to_string()),
+            ("derp.gpu.backend", self.backend.to_string()),
+            ("derp.gpu.driver.name", self.driver_name.to_string()),
+            ("derp.gpu.driver.info", self.driver_info.to_string()),
         ]
     }
 }
@@ -590,7 +590,7 @@ impl ToSentryTags for Option<VirtualEnvironment> {
     fn to_sentry_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
         let env = self.clone();
         [(
-            "warp.virtual_env.name",
+            "derp.virtual_env.name",
             env.map(|env| env.name).unwrap_or_else(|| "none".to_owned()),
         )]
     }
@@ -599,7 +599,7 @@ impl ToSentryTags for Option<VirtualEnvironment> {
 impl ToSentryTags for Option<windowing::System> {
     fn to_sentry_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
         [(
-            "warp.window.system",
+            "derp.window.system",
             self.as_ref()
                 .map(|windowing_system| windowing_system.to_string())
                 .unwrap_or_else(|| "unknown".to_owned()),
@@ -610,7 +610,7 @@ impl ToSentryTags for Option<windowing::System> {
 impl ToSentryTags for &AntivirusInfo {
     fn to_sentry_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
         [(
-            "warp.window.antivirus.name",
+            "derp.window.antivirus.name",
             self.get().unwrap_or("none").into(),
         )]
     }

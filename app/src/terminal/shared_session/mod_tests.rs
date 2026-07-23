@@ -3,10 +3,10 @@ use std::sync::Arc;
 use serde_json::Value;
 use session_sharing_protocol::common::{Scrollback, ScrollbackBlock};
 use url::Url;
-use warp_core::command::ExitCode;
-use warp_core::features::FeatureFlag;
-use warpui::r#async::executor::Background;
-use warpui::units::Lines;
+use derp_core::command::ExitCode;
+use derp_core::features::FeatureFlag;
+use derpui::r#async::executor::Background;
+use derpui::units::Lines;
 
 use super::{decode_scrollback, SharedSessionScrollbackType};
 use crate::assert_lines_approx_eq;

@@ -7,10 +7,10 @@ use std::path::PathBuf;
 #[cfg(feature = "local_fs")]
 use std::sync::{Arc, Mutex};
 
-use warpui::elements::ChildView;
+use derpui::elements::ChildView;
 #[cfg(feature = "local_fs")]
-use warpui::SingletonEntity;
-use warpui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use derpui::SingletonEntity;
+use derpui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::blocklist::agent_view::AgentViewController;
 #[cfg(feature = "local_fs")]
@@ -224,7 +224,7 @@ impl View for InlineReposMenuView {
         "InlineReposMenuView"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &derpui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

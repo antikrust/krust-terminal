@@ -14,17 +14,17 @@
 
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors;
+use derpui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill,
     Flex, FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     Radius, Shrinkable, Stack,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::text_layout::TextAlignment;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::{FixedBinding, Keystroke};
+use derpui::text_layout::TextAlignment;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -40,7 +40,7 @@ const MODAL_WIDTH: f32 = 460.;
 const INPUT_BORDER_RADIUS: Radius = Radius::Pixels(4.);
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
         AccountModalAction::Cancel,
@@ -253,7 +253,7 @@ impl View for AccountModalView {
         let close_button = ui_builder
             .close_button(24., self.close_mouse_state.clone())
             .build()
-            .on_click(|ctx: &mut warpui::EventContext, _, _| {
+            .on_click(|ctx: &mut derpui::EventContext, _, _| {
                 ctx.dispatch_typed_action(AccountModalAction::Cancel);
             })
             .finish();
@@ -426,7 +426,7 @@ impl View for AccountModalView {
 
         let mut stack = Stack::new();
         stack.add_child(
-            Container::new(warpui::elements::Empty::new().finish())
+            Container::new(derpui::elements::Empty::new().finish())
                 .with_background_color(ColorU::new(0, 0, 0, 179))
                 .finish(),
         );

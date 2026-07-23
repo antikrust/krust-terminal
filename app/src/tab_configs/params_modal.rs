@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::Icon;
-use warp_editor::editor::NavigationKey;
-use warpui::elements::{
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::Icon;
+use derp_editor::editor::NavigationKey;
+use derpui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, Padding, ParentElement, Radius, SavePosition, ScrollTarget,
     ScrollToPositionMode, ScrollbarWidth, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::macros::*;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::macros::*;
+use derpui::keymap::{FixedBinding, Keystroke};
+use derpui::platform::Cursor;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -508,7 +508,7 @@ impl View for TabConfigParamsModal {
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(3.)))
             .finish();
 
-            let close_icon = ConstrainedBox::new(Icon::X.to_warpui_icon(sub_text).finish())
+            let close_icon = ConstrainedBox::new(Icon::X.to_derpui_icon(sub_text).finish())
                 .with_width(14.)
                 .with_height(14.)
                 .finish();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use warp_core::ui::theme::AnsiColorIdentifier;
+use derp_core::ui::theme::AnsiColorIdentifier;
 
 use super::compute_candidate_paths;
 use crate::workspace::tab_settings::{DirectoryTabColor, DirectoryTabColors};
@@ -83,8 +83,8 @@ fn test_non_existent_paths_are_dropped() {
 #[test]
 fn test_worktree_paths_are_kept() {
     let indexed = vec![
-        PathBuf::from("/users/alice/.warp-dev/worktrees/warp-internal/feature_a"),
-        PathBuf::from("/users/alice/.warp-dev/worktrees/warp-internal/feature_b"),
+        PathBuf::from("/users/alice/.derp-dev/worktrees/derp-internal/feature_a"),
+        PathBuf::from("/users/alice/.derp-dev/worktrees/derp-internal/feature_b"),
         PathBuf::from("/users/alice/code/primary-repo"),
     ];
     let existing = DirectoryTabColors::default();
@@ -94,8 +94,8 @@ fn test_worktree_paths_are_kept() {
     assert_eq!(
         candidates,
         vec![
-            PathBuf::from("/users/alice/.warp-dev/worktrees/warp-internal/feature_a"),
-            PathBuf::from("/users/alice/.warp-dev/worktrees/warp-internal/feature_b"),
+            PathBuf::from("/users/alice/.derp-dev/worktrees/derp-internal/feature_a"),
+            PathBuf::from("/users/alice/.derp-dev/worktrees/derp-internal/feature_b"),
             PathBuf::from("/users/alice/code/primary-repo"),
         ]
     );

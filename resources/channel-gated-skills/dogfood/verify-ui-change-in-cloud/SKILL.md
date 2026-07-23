@@ -2,8 +2,8 @@
 name: verify-ui-change-in-cloud
 description: >
   Invoke this automatically after completing any user-facing client change, ONLY in non-sandboxed environments and local environments.
-  Verifies changes by spawning a cloud agent with computer use to test Warp.
-  Triggers a cloud agent that runs the test-warp-ui skill.
+  Verifies changes by spawning a cloud agent with computer use to test Derp.
+  Triggers a cloud agent that runs the test-derp-ui skill.
 user-invocable: true
 ---
 
@@ -25,27 +25,27 @@ Before spawning the cloud agent, detect which repository you are running in. Che
 git remote get-url origin
 ```
 
-Verify the remote URL contains `warpdotdev/warp`. If it does not, warn the user that this skill only supports the warp repository and stop.
+Verify the remote URL contains `derpdotdev/derp`. If it does not, warn the user that this skill only supports the derp repository and stop.
 
-The environment ID for the warp Dev Environment is `SVhg783GBFQHk1OfdPfFU9`.
+The environment ID for the derp Dev Environment is `SVhg783GBFQHk1OfdPfFU9`.
 
 ### 3. Spawn the Cloud Agent
 
 Use the `run_agents` tool to spawn a remote cloud agent. A single-child batch (one entry in `agent_run_configs`) is valid.
 
 - `summary`: a brief declarative explanation, e.g. `"Spawning a cloud agent with computer use to verify the UI change."`
-- `base_prompt`: include an instruction to read and follow the `test-warp-ui` skill, followed by the verification task (see the next section)
+- `base_prompt`: include an instruction to read and follow the `test-derp-ui` skill, followed by the verification task (see the next section)
 - `remote.environment_id`: `SVhg783GBFQHk1OfdPfFU9`
 - `remote.computer_use_enabled`: `true`
 - `agent_run_configs`: a single entry with `name` set to a short display name such as `"verify-ui-change"`. The per-agent `prompt` can be empty since `base_prompt` covers the task.
 
-The `test-warp-ui` skill is bundled, so the cloud agent has it automatically. Tell the agent to invoke it by name in the `base_prompt` (e.g. "Read and follow the test-warp-ui skill.").
+The `test-derp-ui` skill is bundled, so the cloud agent has it automatically. Tell the agent to invoke it by name in the `base_prompt` (e.g. "Read and follow the test-derp-ui skill.").
 
 ### 4. Write an Effective Prompt
 
 The prompt should tell the cloud agent:
 - Which element, flow, or behavior to test
-- What hardcoding or mocking is needed (see below and the test-warp-ui skill for details on sandbox constraints)
+- What hardcoding or mocking is needed (see below and the test-derp-ui skill for details on sandbox constraints)
 - What filesystem or app state to pre-seed before launching (e.g., creating directories, writing config files)
 - What specific observations to report back
 
@@ -58,15 +58,15 @@ font size relative to other text, and color.
 ```
 
 ```
-I added a migration that symlinks config from ~/.warp into ~/.warp-preview on first launch.
+I added a migration that symlinks config from ~/.derp into ~/.derp-preview on first launch.
 The migration is gated on Channel::Preview. Before building, hardcode the migration to run
-regardless of channel by removing the channel check. Also create a fake ~/.warp directory
-with test files. After launching Warp, verify the symlinks were created in ~/.warp-preview.
+regardless of channel by removing the channel check. Also create a fake ~/.derp directory
+with test files. After launching Derp, verify the symlinks were created in ~/.derp-preview.
 ```
 
 ### Hardcoding to reach the code path under test
 
-The cloud agent builds Warp with `cargo run`, which may not match the exact runtime conditions of your change (e.g., different channel, missing feature flags, absent preconditions). When this happens, instruct the cloud agent to temporarily hardcode the code so the build exercises the path you need to test. Common examples:
+The cloud agent builds Derp with `cargo run`, which may not match the exact runtime conditions of your change (e.g., different channel, missing feature flags, absent preconditions). When this happens, instruct the cloud agent to temporarily hardcode the code so the build exercises the path you need to test. Common examples:
 
 - **Gated code paths**: If the change is behind a channel check, feature flag, or experiment, tell the agent to remove or bypass the gate before building.
 - **Pre-existing state**: If the change depends on filesystem state that wouldn't exist in a clean environment (e.g., a config directory from a prior install), tell the agent to create it before launching.
@@ -76,4 +76,4 @@ Be explicit in the prompt about what to hardcode and why — the cloud agent won
 
 ### 5. Surface the Cloud Agent Link
 
-No extra surfacing step is needed — the Warp client displays the cloud agent run automatically.
+No extra surfacing step is needed — the Derp client displays the cloud agent run automatically.

@@ -1,0 +1,6 @@
+# CODEOWNERS file for derp-proto-apis
+# These users will be automatically requested for review when PRs are opened.
+
+# Global code owners
+* @derpdotdev/proto-api-reviewers
+

@@ -3,8 +3,8 @@ use ai::agent::action_result::StopRecordingResult;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 #[cfg(not(target_family = "wasm"))]
-use warpui::SingletonEntity;
-use warpui::{Entity, ModelContext};
+use derpui::SingletonEntity;
+use derpui::{Entity, ModelContext};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::AIAgentActionType;
@@ -35,7 +35,7 @@ impl StopRecordingExecutor {
     ) -> bool {
         let ExecuteActionInput { action, .. } = input;
         matches!(action.action, AIAgentActionType::StopRecording { .. })
-            && warp_core::features::FeatureFlag::VideoRecording.is_enabled()
+            && derp_core::features::FeatureFlag::VideoRecording.is_enabled()
     }
 
     #[cfg_attr(target_family = "wasm", allow(unused_variables))]

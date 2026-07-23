@@ -10,20 +10,20 @@ use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use vec1::{Size0Error, Vec1};
-use warp_cli::agent::Harness;
-use warp_core::command::ExitCode;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::WarpTheme;
-use warp_errors::report_error;
-use warp_multi_agent_api::response_event::stream_finished;
-use warp_multi_agent_api::response_event::stream_finished::TokenUsage;
-use warp_multi_agent_api::{self as api};
-use warpui::color::ColorU;
-use warpui::{AppContext, EntityId, ModelContext, SingletonEntity};
+use derp_cli::agent::Harness;
+use derp_core::command::ExitCode;
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::features::FeatureFlag;
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::DerpTheme;
+use derp_errors::report_error;
+use derp_multi_agent_api::response_event::stream_finished;
+use derp_multi_agent_api::response_event::stream_finished::TokenUsage;
+use derp_multi_agent_api::{self as api};
+use derpui::color::ColorU;
+use derpui::{AppContext, EntityId, ModelContext, SingletonEntity};
 
 use super::api::ServerConversationToken;
 use super::task::helper::*;
@@ -109,24 +109,24 @@ fn footer_model_token_usage(
     usage_metadata: &stream_finished::ConversationUsageMetadata,
     llm_preferences: &LLMPreferences,
 ) -> Vec<ModelTokenUsage> {
-    // warp + byok rows merge on their server-known model id. Custom endpoint
+    // derp + byok rows merge on their server-known model id. Custom endpoint
     // rows live in a separate bucket keyed by their upstream `config_key` so
-    // they never collide with a warp/byok row that happens to share the same
+    // they never collide with a derp/byok row that happens to share the same
     // resolved alias. The `config_key` itself is not retained on
     // `ModelTokenUsage`; it is translated to an alias up front and only the
     // alias flows downstream (display + shared-session replay).
     let mut standard_usage: HashMap<String, ModelTokenUsage> = HashMap::new();
-    for (model_id, usage) in &usage_metadata.warp_token_usage {
+    for (model_id, usage) in &usage_metadata.derp_token_usage {
         let entry = standard_usage
             .entry(model_id.clone())
             .or_insert_with(|| ModelTokenUsage {
                 model_id: model_id.clone(),
                 ..Default::default()
             });
-        entry.warp_tokens += usage.total_tokens;
+        entry.derp_tokens += usage.total_tokens;
         for (category, tokens) in &usage.token_usage_by_category {
             *entry
-                .warp_token_usage_by_category
+                .derp_token_usage_by_category
                 .entry(category.clone())
                 .or_default() += *tokens;
         }
@@ -232,7 +232,7 @@ pub struct AIConversation {
     /// Unique ID for this conversation.
     id: AIConversationId,
 
-    /// Whether this conversation is being shared from a different warp instance
+    /// Whether this conversation is being shared from a different derp instance
     /// (i.e. is not a local conversation).
     is_viewing_shared_session: bool,
     task_store: TaskStore,
@@ -1282,11 +1282,11 @@ impl AIConversation {
     ///
     /// This filters the full task list using DFS linearization to determine
     /// which tasks have open subagent tool calls without corresponding results.
-    pub fn compute_active_tasks(&self) -> Vec<warp_multi_agent_api::Task> {
+    pub fn compute_active_tasks(&self) -> Vec<derp_multi_agent_api::Task> {
         use std::collections::HashMap;
 
         let root_task_id = self.get_root_task_id().to_string();
-        let all_tasks: HashMap<&str, &warp_multi_agent_api::Task> = self
+        let all_tasks: HashMap<&str, &derp_multi_agent_api::Task> = self
             .all_tasks()
             .filter_map(|task| {
                 let source = task.source()?;
@@ -1639,7 +1639,7 @@ impl AIConversation {
         });
     }
 
-    /// Updates the notebook_uid for a plan artifact when it's synced to Warp Drive.
+    /// Updates the notebook_uid for a plan artifact when it's synced to Derp Drive.
     pub fn update_plan_notebook_uid(
         &mut self,
         document_uid: AIDocumentId,
@@ -2110,7 +2110,7 @@ impl AIConversation {
     pub fn initialize_output_for_response_stream(
         &mut self,
         stream_id: &ResponseStreamId,
-        init_event: warp_multi_agent_api::response_event::StreamInit,
+        init_event: derp_multi_agent_api::response_event::StreamInit,
         terminal_surface_id: EntityId,
         ctx: &mut ModelContext<BlocklistAIHistoryModel>,
     ) -> Result<(), UpdateConversationError> {
@@ -2612,11 +2612,11 @@ impl AIConversation {
         &mut self,
         response_stream_id: &ResponseStreamId,
         terminal_surface_id: EntityId,
-        action: warp_multi_agent_api::client_action::Action,
+        action: derp_multi_agent_api::client_action::Action,
         skill_path_origin: &SkillPathOrigin,
         ctx: &mut ModelContext<BlocklistAIHistoryModel>,
     ) -> Result<(), UpdateConversationError> {
-        use warp_multi_agent_api::client_action::*;
+        use derp_multi_agent_api::client_action::*;
         match action {
             Action::BeginTransaction(_) => {
                 self.begin_transaction();
@@ -4004,7 +4004,7 @@ impl AIConversation {
     /// Converts the conversation into a vector of serialized command blocks.
     /// When we open a new tab to restore a conversation in, we need to precompute this serialized list of blocks
     /// to pass into the TerminalModel constructor since command blocks must be created
-    /// before the warp input block to not break bootstrapping.
+    /// before the derp input block to not break bootstrapping.
     /// Only the command blocks are actually created in the terminal model. During restoration in the TerminalView,
     /// AI blocks are inserted relative to the command blocks based on timestamp.
     pub fn to_serialized_blocklist_items(&self) -> Vec<SerializedBlockListItem> {
@@ -4470,7 +4470,7 @@ pub enum AIAgentSerializedBlockFormat {
 /// Describes the format capabilities of a conversation.
 #[derive(Debug, Clone)]
 pub struct AIAgentConversationFormat {
-    /// Whether there is a Warp MAA task list available for this conversation.
+    /// Whether there is a Derp MAA task list available for this conversation.
     pub has_task_list: bool,
     /// The format of the TUI serialized block, if available.
     pub block_snapshot: Option<AIAgentSerializedBlockFormat>,
@@ -4646,7 +4646,7 @@ impl std::fmt::Display for ConversationStatus {
 }
 
 impl ConversationStatus {
-    pub fn render_icon(&self, appearance: &Appearance) -> warpui::elements::Icon {
+    pub fn render_icon(&self, appearance: &Appearance) -> derpui::elements::Icon {
         match self {
             ConversationStatus::InProgress => in_progress_icon(appearance),
             ConversationStatus::Success => succeeded_icon(appearance),
@@ -4661,7 +4661,7 @@ impl ConversationStatus {
 
     pub fn status_icon_and_color(
         &self,
-        theme: &WarpTheme,
+        theme: &DerpTheme,
         color_style: StatusColorStyle,
     ) -> (Icon, ColorU) {
         match self {

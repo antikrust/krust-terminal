@@ -1,22 +1,22 @@
 use pathfinder_color::ColorU;
 use settings::Setting as _;
-use warp_editor::editor::NavigationKey;
-use warp_errors::report_if_error;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::elements::{
+use derp_editor::editor::NavigationKey;
+use derp_errors::report_if_error;
+use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
+use derpui::elements::{
     Align, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, Empty, EventHandler, Fill, Flex, Hoverable, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Rect, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use warpui::fonts::{FamilyId, Weight};
-use warpui::geometry::vector::vec2f;
-use warpui::keymap::FixedBinding;
-use warpui::platform::{Cursor, SystemTheme};
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{
+use derpui::fonts::{FamilyId, Weight};
+use derpui::geometry::vector::vec2f;
+use derpui::keymap::FixedBinding;
+use derpui::platform::{Cursor, SystemTheme};
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::windowing::{StateEvent, WindowManager};
+use derpui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, Tracked, TypedActionView,
     UpdateModel, View, ViewContext, ViewHandle,
 };
@@ -34,12 +34,12 @@ use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::{respect_system_theme, ThemeSettings};
 use crate::themes::theme::{
-    RespectSystemTheme, SelectedSystemThemes, ThemeKind, WarpTheme, WarpThemeConfig,
+    RespectSystemTheme, SelectedSystemThemes, ThemeKind, DerpTheme, DerpThemeConfig,
 };
 use crate::ui_components::buttons::{close_button, icon_button};
 use crate::ui_components::icons;
 use crate::ui_components::window_focus_dimming::WindowFocusDimming;
-use crate::user_config::{load_theme_configs, themes_dir, WarpConfig, WarpConfigUpdateEvent};
+use crate::user_config::{load_theme_configs, themes_dir, DerpConfig, DerpConfigUpdateEvent};
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightData, TrafficLightSide};
 use crate::window_settings::WindowSettings;
 use crate::workspace::PANEL_HEADER_HEIGHT;
@@ -142,7 +142,7 @@ pub struct ThemeChooser {
     mode: ThemeChooserMode,
     search_editor: ViewHandle<EditorView>,
     tips_completed: ModelHandle<TipsCompleted>,
-    window_id: warpui::WindowId,
+    window_id: derpui::WindowId,
 }
 
 #[derive(Debug)]
@@ -157,7 +157,7 @@ pub enum ThemeChooserAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", ThemeChooserAction::Up, id!("ThemeChooser")),
@@ -167,7 +167,7 @@ pub fn init(app: &mut AppContext) {
     ]);
 }
 
-fn theme_chooser_items(theme_config: &WarpThemeConfig) -> Vec<ThemeChooserItem> {
+fn theme_chooser_items(theme_config: &DerpThemeConfig) -> Vec<ThemeChooserItem> {
     let mut theme_items: Vec<ThemeChooserItem> = theme_config
         .theme_items()
         .map(|(key, theme)| ThemeChooserItem::new(key.clone(), theme.clone()))
@@ -195,9 +195,9 @@ impl ThemeChooser {
             me.handle_editor_event(event, ctx);
         });
 
-        let warp_config_handle = WarpConfig::handle(ctx);
-        ctx.subscribe_to_model(&warp_config_handle, |me, _, event, ctx| {
-            if let WarpConfigUpdateEvent::Themes = event {
+        let derp_config_handle = DerpConfig::handle(ctx);
+        ctx.subscribe_to_model(&derp_config_handle, |me, _, event, ctx| {
+            if let DerpConfigUpdateEvent::Themes = event {
                 me.update_themes(ctx);
                 ctx.notify();
             }
@@ -216,7 +216,7 @@ impl ThemeChooser {
             }
         });
 
-        let themes = theme_chooser_items(WarpConfig::as_ref(ctx).theme_config());
+        let themes = theme_chooser_items(DerpConfig::as_ref(ctx).theme_config());
 
         Self {
             themes: Tracked::new(themes),
@@ -278,8 +278,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&DerpConfig::handle(ctx), move |derp_config, ctx| {
+                    derp_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_and_save_theme(&theme, ctx);
@@ -291,8 +291,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&DerpConfig::handle(ctx), move |derp_config, ctx| {
+                    derp_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_latest_theme(ctx);
@@ -483,7 +483,7 @@ impl ThemeChooser {
     }
 
     fn update_themes(&mut self, ctx: &mut ViewContext<Self>) {
-        *self.themes = theme_chooser_items(WarpConfig::as_ref(ctx).theme_config());
+        *self.themes = theme_chooser_items(DerpConfig::as_ref(ctx).theme_config());
     }
 
     fn up(&mut self, ctx: &mut ViewContext<Self>) {
@@ -758,16 +758,16 @@ impl ThemeChooser {
                     .collect::<Vec<_>>()
                     .into_iter()
             });
-            let warp_theme = appearance.theme();
+            let derp_theme = appearance.theme();
 
             Scrollable::vertical(
                 self.scroll_state.clone(),
                 list.finish_scrollable(),
                 SCROLLBAR_WIDTH,
-                warp_theme
-                    .disabled_text_color(warp_theme.surface_2())
+                derp_theme
+                    .disabled_text_color(derp_theme.surface_2())
                     .into(),
-                warp_theme.main_text_color(warp_theme.surface_2()).into(),
+                derp_theme.main_text_color(derp_theme.surface_2()).into(),
                 Fill::None,
             )
             .finish()
@@ -812,7 +812,7 @@ impl View for ThemeChooser {
         Some(AccessibilityContent::new(
                 "Theme chooser. Unfortunately, theme chooser window isn't compatible with screen readers yet.",
                 "Press escape to close.",
-                WarpA11yRole::WindowRole,
+                DerpA11yRole::WindowRole,
         ))
     }
 
@@ -842,21 +842,21 @@ impl View for ThemeChooser {
 #[derive(Clone)]
 struct ThemeChooserItem {
     pub kind: ThemeKind,
-    warp_theme: WarpTheme,
+    derp_theme: DerpTheme,
     mouse_state: MouseStateHandle,
 }
 
 impl ThemeChooserItem {
-    pub fn new(kind: ThemeKind, warp_theme: WarpTheme) -> Self {
+    pub fn new(kind: ThemeKind, derp_theme: DerpTheme) -> Self {
         Self {
             kind,
-            warp_theme,
+            derp_theme,
             mouse_state: MouseStateHandle::default(),
         }
     }
 
     fn render_thumbnail(&self, font_family: FamilyId) -> Box<dyn Element> {
-        theme::render_preview(&self.warp_theme, font_family, None)
+        theme::render_preview(&self.derp_theme, font_family, None)
     }
 
     pub fn render(

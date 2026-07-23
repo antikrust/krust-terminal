@@ -1,9 +1,9 @@
 pub mod inactivity_modal;
 use async_channel::Sender;
 use inactivity_modal::InactivityModal;
-use warpui::elements::MouseStateHandle;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{SingletonEntity, ViewContext, ViewHandle};
+use derpui::elements::MouseStateHandle;
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::{SingletonEntity, ViewContext, ViewHandle};
 
 use crate::terminal::shared_session::settings::SharedSessionSettings;
 use crate::terminal::TerminalView;

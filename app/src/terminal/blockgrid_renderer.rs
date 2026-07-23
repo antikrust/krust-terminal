@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::ops::{Neg, RangeInclusive};
 
 use pathfinder_color::ColorU;
-use warpui::fonts::{FamilyId, Properties, Weight};
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::{AppContext, Element, EntityId, PaintContext};
+use derpui::fonts::{FamilyId, Properties, Weight};
+use derpui::geometry::rect::RectF;
+use derpui::geometry::vector::{vec2f, Vector2F};
+use derpui::{AppContext, Element, EntityId, PaintContext};
 
 use super::model::ansi::{CursorShape, CursorStyle};
 use super::model::grid::RespectDisplayedOutput;
@@ -19,10 +19,10 @@ use crate::terminal::model::index::Point;
 use crate::terminal::model::ObfuscateSecrets;
 use crate::terminal::text_effects::{TextEffectSurface, TextEffectsConfig};
 use crate::terminal::{color, SizeInfo};
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::DerpTheme;
 
 pub struct GridRenderParams {
-    pub warp_theme: WarpTheme,
+    pub derp_theme: DerpTheme,
     pub font_family: FamilyId,
     pub font_size: f32,
     pub font_weight: Weight,
@@ -33,7 +33,7 @@ pub struct GridRenderParams {
     pub cell_size: Vector2F,
     pub use_ligature_rendering: bool,
     /// When true, suppresses cursor rendering for CLI agents when rich input is open. For agents that draw their own cursor (SHOW_CURSOR off),
-    /// the cursor cell is skipped. For agents that let Warp draw the cursor
+    /// the cursor cell is skipped. For agents that let Derp draw the cursor
     /// (SHOW_CURSOR on), the `draw_cursor` call and cursor contrast colouring
     /// are suppressed instead.
     pub hide_cursor_cell: bool,
@@ -93,7 +93,7 @@ impl BlockGrid {
             end_row,
             &block_grid_params.colors,
             &block_grid_params.override_colors,
-            &block_grid_params.grid_render_params.warp_theme,
+            &block_grid_params.grid_render_params.derp_theme,
             properties,
             block_grid_params.grid_render_params.font_family,
             block_grid_params.grid_render_params.font_size,

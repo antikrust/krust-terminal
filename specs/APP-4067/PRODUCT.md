@@ -1,15 +1,15 @@
 # Product Spec: Gemini CLI Plugin Install & Update Flow
 
-Linear: [APP-4067](https://linear.app/warpdotdev/issue/APP-4067/enable-gemini-notifications)
+Linear: [APP-4067](https://linear.app/derpdotdev/issue/APP-4067/enable-gemini-notifications)
 Figma: none provided
 
 ## Summary
 
-Add install and update chip support for the Gemini CLI Warp plugin (`gemini-warp`), matching the existing Claude Code chip UX. Enable the listener so Warp processes structured notifications from Gemini sessions (session status, permission requests, task completion).
+Add install and update chip support for the Gemini CLI Derp plugin (`gemini-derp`), matching the existing Claude Code chip UX. Enable the listener so Derp processes structured notifications from Gemini sessions (session status, permission requests, task completion).
 
 ## Problem
 
-The `gemini-warp` extension already exists and uses the same structured OSC 777 notification protocol as Claude Code (`warp://cli-agent` title, JSON body with `agent: "gemini"`). However, Warp currently ignores these notifications because:
+The `gemini-derp` extension already exists and uses the same structured OSC 777 notification protocol as Claude Code (`derp://cli-agent` title, JSON body with `agent: "gemini"`). However, Derp currently ignores these notifications because:
 
 1. `create_handler` in the listener returns `None` for `CLIAgent::Gemini`.
 2. `plugin_manager_for` returns `None` for `CLIAgent::Gemini` — there's no install/update chip.
@@ -24,7 +24,7 @@ The `gemini-warp` extension already exists and uses the same structured OSC 777 
 
 ## Non-Goals
 
-- Changing the gemini-warp plugin itself (it's maintained separately in `warpdotdev/gemini-cli-warp`).
+- Changing the gemini-derp plugin itself (it's maintained separately in `derpdotdev/gemini-cli-derp`).
 - Platform plugin / Oz harness support for Gemini (future work).
 
 ## How Gemini CLI Extensions Work
@@ -35,7 +35,7 @@ Gemini CLI has a first-class extension system:
 - **Update**: `gemini extensions update <name>` — pulls the latest version from the source.
 - **Uninstall**: `gemini extensions uninstall <name>`.
 - **Manifest**: Each extension has a `gemini-extension.json` with `name`, `version`, `description`, and hook/MCP/command definitions.
-- **Hooks**: Defined in `hooks/hooks.json` within the extension directory (not in the manifest). The gemini-warp plugin uses `SessionStart`, `AfterAgent`, `Notification`, `BeforeAgent`, and `AfterTool` hooks.
+- **Hooks**: Defined in `hooks/hooks.json` within the extension directory (not in the manifest). The gemini-derp plugin uses `SessionStart`, `AfterAgent`, `Notification`, `BeforeAgent`, and `AfterTool` hooks.
 
 Key difference from Claude Code: Gemini extensions install from a GitHub URL directly (no separate marketplace add step). The install and update are each a single CLI command.
 
@@ -48,16 +48,16 @@ Key difference from OpenCode: Gemini CLI *does* have CLI commands for extension 
 When a user starts a Gemini session and the plugin has never connected (no listener, no `plugin_version` reported):
 
 - A green chip appears: "Notifications setup instructions"
-- Clicking triggers auto-install via `gemini extensions install https://github.com/warpdotdev/gemini-cli-warp --consent`.
+- Clicking triggers auto-install via `gemini extensions install https://github.com/derpdotdev/gemini-cli-derp --consent`.
   - `--consent` skips the interactive confirmation prompt that would block the non-interactive shell execution.
 - On success, a toast confirms installation and tells the user to restart Gemini.
 - On failure, a toast appears with an error, and the user can click the info (ⓘ) button to open manual instructions in a split pane.
 
 **Manual install instructions (split pane):**
-- Title: "Install Warp Plugin for Gemini CLI"
+- Title: "Install Derp Plugin for Gemini CLI"
 - Subtitle: "Run the following command, then restart Gemini CLI."
 - Steps:
-  1. "Install the Warp extension" — command: `gemini extensions install https://github.com/warpdotdev/gemini-cli-warp --consent`
+  1. "Install the Derp extension" — command: `gemini extensions install https://github.com/derpdotdev/gemini-cli-derp --consent`
 - Post-install notes: "Restart Gemini CLI to activate the plugin."
 
 ### Update Chip
@@ -65,23 +65,23 @@ When a user starts a Gemini session and the plugin has never connected (no liste
 When the plugin is connected but reports a version below `MINIMUM_PLUGIN_VERSION`:
 
 - Label: "Plugin update available"
-- Clicking triggers auto-update via `gemini extensions update gemini-warp`.
-  - The extension name is `gemini-warp` (the installed directory name under `~/.gemini/extensions/`).
+- Clicking triggers auto-update via `gemini extensions update gemini-derp`.
+  - The extension name is `gemini-derp` (the installed directory name under `~/.gemini/extensions/`).
 - On success, a toast confirms the update and tells the user to restart Gemini.
 - On failure, a toast appears with an error, and the user can click the info (ⓘ) button to open manual instructions in a split pane.
 
 **Manual update instructions (split pane):**
-- Title: "Update Warp Plugin for Gemini CLI"
+- Title: "Update Derp Plugin for Gemini CLI"
 - Subtitle: "Run the following command, then restart Gemini CLI."
 - Steps:
-  1. "Update the Warp extension" — command: `gemini extensions update gemini-warp`
+  1. "Update the Derp extension" — command: `gemini extensions update gemini-derp`
 - Post-install notes: "Restart Gemini CLI to activate the update."
 
 ### Version Detection
 
 Two signals, matching the Claude Code pattern:
 
-1. **Filesystem check**: `~/.gemini/extensions/gemini-warp/gemini-extension.json` — read the `version` field to determine if the plugin is installed and whether it's outdated. Symlinks are followed (supports `gemini extensions link`).
+1. **Filesystem check**: `~/.gemini/extensions/gemini-derp/gemini-extension.json` — read the `version` field to determine if the plugin is installed and whether it's outdated. Symlinks are followed (supports `gemini extensions link`).
 2. **Runtime signal**: `plugin_version` field from the `SessionStart` event (emitted by `on-session-start.sh` in the plugin).
 
 The filesystem check eliminates install chip flicker (the chip never appears if the plugin is already on disk) and enables update detection before the plugin connects.
@@ -115,11 +115,11 @@ Same as Claude Code / OpenCode: install chip and update chip have independent di
 
 ## Success Criteria
 
-1. Starting a Gemini CLI session in Warp when the plugin is not installed shows a green install chip.
+1. Starting a Gemini CLI session in Derp when the plugin is not installed shows a green install chip.
 2. Clicking the install chip runs `gemini extensions install` and shows a success/failure toast.
 3. After restart, the plugin connects, notifications appear in the inbox, and the chip disappears.
 4. When the plugin reports a version below `MINIMUM_PLUGIN_VERSION`, an update chip appears.
-5. Clicking the update chip runs `gemini extensions update gemini-warp` and shows a success/failure toast.
+5. Clicking the update chip runs `gemini extensions update gemini-derp` and shows a success/failure toast.
 6. The info (ⓘ) button opens a split pane with manual instructions (not a modal).
 7. Dismissing the chips works identically to other agents (independent dismiss state, version-tracked update dismiss).
 8. Gemini notifications (stop, blocked, permission request) surface in the agent inbox when HOANotifications is enabled.

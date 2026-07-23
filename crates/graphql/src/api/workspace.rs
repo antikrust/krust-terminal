@@ -131,7 +131,7 @@ pub struct CodebaseContextSettings {
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct AmbientAgentSettings {
-    pub enable_warp_attribution: AdminEnablementSetting,
+    pub enable_derp_attribution: AdminEnablementSetting,
     pub default_host_slug: Option<String>,
 }
 

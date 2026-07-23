@@ -4,9 +4,9 @@
 //! drag/drop chips between left, right, and unused banks.
 
 use settings::Setting as _;
-use warp_errors::report_if_error;
-use warpui::keymap::FixedBinding;
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derp_errors::report_if_error;
+use derpui::keymap::FixedBinding;
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::toolbar_item::AgentToolbarItemKind;
 use crate::appearance::AppearanceEvent;
@@ -264,7 +264,7 @@ impl View for AgentToolbarInlineEditor {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

@@ -2,7 +2,7 @@
 param(
     [switch]$Help,
     [switch]$InstallCommonSkills,
-    [string]$CommonSkillsTarget = $env:WARP_COMMON_SKILLS_INSTALL_TARGET
+    [string]$CommonSkillsTarget = $env:DERP_COMMON_SKILLS_INSTALL_TARGET
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +11,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 function Show-Usage {
     Write-Output 'Usage: .\script\windows\bootstrap.ps1 [-Help] [-InstallCommonSkills] [-CommonSkillsTarget <project|global>]'
     Write-Output ''
-    Write-Output 'Prepare this checkout for Warp development on Windows.'
+    Write-Output 'Prepare this checkout for Derp development on Windows.'
     Write-Output ''
     Write-Output 'Options:'
     Write-Output '  -Help                 Show this help message.'
@@ -19,15 +19,15 @@ function Show-Usage {
     Write-Output '  -CommonSkillsTarget   Install into project .agents/skills or global ~/.agents/skills.'
     Write-Output ''
     Write-Output 'Environment:'
-    Write-Output '  WARP_SKIP_COMMON_SKILLS_INSTALL=1'
+    Write-Output '  DERP_SKIP_COMMON_SKILLS_INSTALL=1'
     Write-Output '      Skip installing common agent skills.'
-    Write-Output '  WARP_COMMON_SKILLS_INSTALL_TARGET=project|global'
+    Write-Output '  DERP_COMMON_SKILLS_INSTALL_TARGET=project|global'
     Write-Output '      Choose the install target when -CommonSkillsTarget is omitted.'
-    Write-Output '      Target prompting and duplicate checks are delegated to warpdotdev/common-skills/scripts/install_common_skills.'
-    Write-Output '  WARP_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts'
+    Write-Output '      Target prompting and duplicate checks are delegated to derpdotdev/common-skills/scripts/install_common_skills.'
+    Write-Output '  DERP_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts'
     Write-Output '      Override where common-skills management scripts are loaded from.'
-    Write-Output '  WARP_COMMON_SKILLS_REF=<git-ref>'
-    Write-Output '      Override the remote warpdotdev/common-skills ref used when fetching scripts.'
+    Write-Output '  DERP_COMMON_SKILLS_REF=<git-ref>'
+    Write-Output '      Override the remote derpdotdev/common-skills ref used when fetching scripts.'
 }
 
 function ConvertTo-CommonSkillsTarget {
@@ -42,7 +42,7 @@ function ConvertTo-CommonSkillsTarget {
 
 
 function Show-BootstrapPreview {
-    Write-Output 'Warp bootstrap is starting for Windows.'
+    Write-Output 'Derp bootstrap is starting for Windows.'
     Write-Output 'It will:'
     Write-Output '  - Check for Git for Windows.'
     Write-Output '  - Install Rust if cargo is unavailable.'
@@ -51,8 +51,8 @@ function Show-BootstrapPreview {
 
     if (-not $InstallCommonSkills) {
         Write-Output '  - Skip common agent skills unless -InstallCommonSkills is provided.'
-    } elseif ($env:WARP_SKIP_COMMON_SKILLS_INSTALL -eq '1') {
-        Write-Output '  - Skip common agent skills because WARP_SKIP_COMMON_SKILLS_INSTALL=1.'
+    } elseif ($env:DERP_SKIP_COMMON_SKILLS_INSTALL -eq '1') {
+        Write-Output '  - Skip common agent skills because DERP_SKIP_COMMON_SKILLS_INSTALL=1.'
     } elseif ($script:ResolvedCommonSkillsTarget -eq 'global') {
         Write-Output '  - Install or update common agent skills in ~/.agents/skills if needed.'
     } elseif ($script:ResolvedCommonSkillsTarget -eq 'project') {
@@ -91,20 +91,20 @@ $env:PATH = "$gitBinDir;$env:PATH"
 function Resolve-CommonSkillsScript {
     param([string]$ScriptName)
 
-    if ($env:WARP_COMMON_SKILLS_SCRIPTS_DIR) {
-        $scriptPath = Join-Path $env:WARP_COMMON_SKILLS_SCRIPTS_DIR $ScriptName
+    if ($env:DERP_COMMON_SKILLS_SCRIPTS_DIR) {
+        $scriptPath = Join-Path $env:DERP_COMMON_SKILLS_SCRIPTS_DIR $ScriptName
         if (Test-Path -PathType Leaf $scriptPath) { return $scriptPath }
-        throw "Could not find $ScriptName in WARP_COMMON_SKILLS_SCRIPTS_DIR=$env:WARP_COMMON_SKILLS_SCRIPTS_DIR."
+        throw "Could not find $ScriptName in DERP_COMMON_SKILLS_SCRIPTS_DIR=$env:DERP_COMMON_SKILLS_SCRIPTS_DIR."
     }
 
-    $commonSkillsRef = if ($env:WARP_COMMON_SKILLS_REF) { $env:WARP_COMMON_SKILLS_REF } else { 'main' }
-    $rawBaseUrl = if ($env:WARP_COMMON_SKILLS_RAW_BASE_URL) {
-        $env:WARP_COMMON_SKILLS_RAW_BASE_URL.TrimEnd('/')
+    $commonSkillsRef = if ($env:DERP_COMMON_SKILLS_REF) { $env:DERP_COMMON_SKILLS_REF } else { 'main' }
+    $rawBaseUrl = if ($env:DERP_COMMON_SKILLS_RAW_BASE_URL) {
+        $env:DERP_COMMON_SKILLS_RAW_BASE_URL.TrimEnd('/')
     } else {
-        "https://raw.githubusercontent.com/warpdotdev/common-skills/$commonSkillsRef/scripts"
+        "https://raw.githubusercontent.com/derpdotdev/common-skills/$commonSkillsRef/scripts"
     }
     $rawUrl = "$rawBaseUrl/$ScriptName"
-    $scriptPath = Join-Path $env:TEMP "warp-$ScriptName"
+    $scriptPath = Join-Path $env:TEMP "derp-$ScriptName"
 
     Invoke-WebRequest -Uri $rawUrl -OutFile $scriptPath
     return $scriptPath
@@ -168,7 +168,7 @@ if (-not (Get-Command -Name gcloud -Type Application -ErrorAction SilentlyContin
     Start-Process "$env:Temp\GoogleCloudSDKInstaller.exe" -Wait
 }
 
-if ($env:WARP_SKIP_GCLOUD_AUTH -ne '1') {
+if ($env:DERP_SKIP_GCLOUD_AUTH -ne '1') {
     [string]$identityToken = gcloud auth print-identity-token
     if ($identityToken.Trim().Length -eq 0) {
         Write-Output 'gcloud CLI authentication missing.  Press enter to continue...'

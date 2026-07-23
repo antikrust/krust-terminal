@@ -14,10 +14,10 @@ use std::time::{Duration, SystemTime};
 use ai::api_keys::{ApiKeyManager, AwsCredentials, AwsCredentialsState};
 use anyhow::{Context as _, Result};
 use vec1::vec1;
-use warp_errors::report_error;
-use warp_managed_secrets::client::IdentityTokenOptions;
-use warp_managed_secrets::ManagedSecretManager;
-use warpui::{ModelSpawner, SingletonEntity};
+use derp_errors::report_error;
+use derp_managed_secrets::client::IdentityTokenOptions;
+use derp_managed_secrets::ManagedSecretManager;
+use derpui::{ModelSpawner, SingletonEntity};
 
 use super::agent_sdk::driver::AgentDriver;
 use super::aws_credentials::{
@@ -116,7 +116,7 @@ async fn try_refresh(
 /// for their entire duration.
 ///
 /// On each iteration:
-/// 1. Issue a new OIDC identity token via warp-server.
+/// 1. Issue a new OIDC identity token via derp-server.
 /// 2. Call STS `AssumeRoleWithWebIdentity` to get fresh temporary credentials.
 /// 3. Update `ApiKeyManager` with the new credentials.
 ///
@@ -134,7 +134,7 @@ pub(crate) async fn refresh_loop(
     foreground: &ModelSpawner<AgentDriver>,
 ) {
     loop {
-        warpui::r#async::Timer::after(BEDROCK_CREDENTIALS_REFRESH_INTERVAL).await;
+        derpui::r#async::Timer::after(BEDROCK_CREDENTIALS_REFRESH_INTERVAL).await;
 
         log::info!("Proactively refreshing AWS Bedrock OIDC credentials for task {task_id}");
 
@@ -155,7 +155,7 @@ pub(crate) async fn refresh_loop(
                         attempt + 1,
                         delay.as_secs()
                     );
-                    warpui::r#async::Timer::after(delay).await;
+                    derpui::r#async::Timer::after(delay).await;
                     attempt += 1;
                 }
                 Err(e) => {

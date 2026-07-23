@@ -321,7 +321,7 @@ fn session_starts_before_model_progress_and_text() {
 }
 
 #[test]
-fn shell_execution_captures_multiline_output_for_warp_tool_card() {
+fn shell_execution_captures_multiline_output_for_derp_tool_card() {
     let execution = block_on(execute_shell(
         "printf 'one\\ntwo\\n'",
         Path::new("/tmp"),
@@ -493,8 +493,8 @@ fn chat_turn_falls_back_when_model_lacks_tool_support() {
 
 #[test]
 fn fake_tool_caller_dispatches_by_name() {
-    let ok = block_on(FakeToolCaller.call("web_search", json!({ "query": "warp" })));
-    assert_eq!(ok, Ok("results for \"warp\"".to_string()));
+    let ok = block_on(FakeToolCaller.call("web_search", json!({ "query": "derp" })));
+    assert_eq!(ok, Ok("results for \"derp\"".to_string()));
 
     let err = block_on(FakeToolCaller.call("unknown_tool", Value::Null));
     assert_eq!(err, Err("no such tool: unknown_tool".to_string()));

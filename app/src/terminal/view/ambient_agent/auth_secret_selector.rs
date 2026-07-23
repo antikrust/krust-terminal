@@ -3,17 +3,17 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use warp_cli::agent::Harness;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_errors::report_if_error;
-use warp_managed_secrets::client::SecretOwner;
-use warpui::elements::{
+use derp_cli::agent::Harness;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_errors::report_if_error;
+use derp_managed_secrets::client::SecretOwner;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use warpui::{
+use derpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -530,8 +530,8 @@ impl AuthSecretSelector {
         OffsetPositioning::offset_from_save_position_element(
             MAIN_MENU_SAVE_POSITION_ID.to_string(),
             vec2f(offset_x, 0.),
-            warpui::elements::PositionedElementOffsetBounds::WindowByPosition,
-            warpui::elements::PositionedElementAnchor::BottomLeft,
+            derpui::elements::PositionedElementOffsetBounds::WindowByPosition,
+            derpui::elements::PositionedElementAnchor::BottomLeft,
             ChildAnchor::BottomLeft,
         )
     }
@@ -768,7 +768,7 @@ impl View for AuthSecretSelector {
         stack.add_child(ChildView::new(&self.button).finish());
 
         if self.is_menu_open {
-            let main_menu = warpui::elements::SavePosition::new(
+            let main_menu = derpui::elements::SavePosition::new(
                 ChildView::new(&self.menu).finish(),
                 MAIN_MENU_SAVE_POSITION_ID,
             )

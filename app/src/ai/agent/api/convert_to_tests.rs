@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use warp_core::command::ExitCode;
-use warp_multi_agent_api as api;
+use derp_core::command::ExitCode;
+use derp_multi_agent_api as api;
 
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{
@@ -17,8 +17,8 @@ fn git_context_converts_repository_and_pull_request_metadata() {
             branch: Some("feature/repo-pr".to_string()),
         },
         AIAgentContext::Repository {
-            name: "warp-internal".to_string(),
-            owner: Some("warpdotdev".to_string()),
+            name: "derp-internal".to_string(),
+            owner: Some("derpdotdev".to_string()),
         },
         AIAgentContext::PullRequest {
             number: 42,
@@ -34,8 +34,8 @@ fn git_context_converts_repository_and_pull_request_metadata() {
     assert_eq!(git.branch, "feature/repo-pr");
 
     let repository = git.repository.expect("expected repository context");
-    assert_eq!(repository.name, "warp-internal");
-    assert_eq!(repository.owner, "warpdotdev");
+    assert_eq!(repository.name, "derp-internal");
+    assert_eq!(repository.owner, "derpdotdev");
 
     let pull_request = git.pull_request.expect("expected pull request context");
     assert_eq!(pull_request.number, 42);

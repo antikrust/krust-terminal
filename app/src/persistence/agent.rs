@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::SqliteConnection;
 use prost::Message;
-use warp_errors::report_error;
-use warp_multi_agent_api as api;
+use derp_errors::report_error;
+use derp_multi_agent_api as api;
 
 use super::model::{AgentConversation, AgentConversationData, AgentConversationSummary};
 use super::ConversationSummaryBackfill;

@@ -5,7 +5,7 @@ use std::mem;
 use ai::agent::action_result::StopRecordingResult;
 use futures::channel::oneshot;
 use thiserror::Error;
-use warpui::{Entity, SingletonEntity};
+use derpui::{Entity, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 

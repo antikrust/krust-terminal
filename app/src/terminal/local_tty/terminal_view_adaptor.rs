@@ -19,10 +19,10 @@ use session_sharing_protocol::sharer::{
     QuotaType, RemoveGuestResponse, SessionEndedReason, SessionSourceType,
     TeamAccessLevelUpdateResponse, UpdatePendingUserRoleResponse,
 };
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::send_telemetry_from_ctx;
-use warp_errors::report_error;
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::send_telemetry_from_ctx;
+use derp_errors::report_error;
+use derpui::{AppContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
 
 use super::terminal_manager::{TerminalManager, TerminalSurfaceInit, TerminalSurfaceResult};
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -255,9 +255,9 @@ fn wire_up_terminal_view_session_sharing(
     let session_sharer: Rc<RefCell<Option<ModelHandle<Network>>>> = Rc::new(RefCell::new(None));
     let session_sharer_clone = session_sharer.clone();
 
-    // Send warp prompt updates.
+    // Send derp prompt updates.
     ctx.observe_model(&current_prompt, move |current_prompt, ctx| {
-        // If for some reason ctx.notify() was called on the warp prompt but we're using ps1, do nothing.
+        // If for some reason ctx.notify() was called on the derp prompt but we're using ps1, do nothing.
         if *SessionSettings::as_ref(ctx).honor_ps1 {
             return
         }
@@ -270,7 +270,7 @@ fn wire_up_terminal_view_session_sharing(
                 return
             };
             network.update(ctx, |network, _| {
-                network.send_active_prompt_update_if_changed(session_sharing_protocol::common::ActivePrompt::WarpPrompt(serialized_prompt))
+                network.send_active_prompt_update_if_changed(session_sharing_protocol::common::ActivePrompt::DerpPrompt(serialized_prompt))
             });
         }
     });
@@ -279,8 +279,8 @@ fn wire_up_terminal_view_session_sharing(
     ctx.subscribe_to_model(&SessionSettings::handle(ctx), move |_, event, ctx| {
         if let SessionSettingsChangedEvent::HonorPS1 { .. } = event {
             if !*SessionSettings::as_ref(ctx).honor_ps1 {
-                // We don't need to send a WarpPrompt message here when turning off PS1 because this will be sent
-                // as part of observing the warp prompt and sending messages on updates.
+                // We don't need to send a DerpPrompt message here when turning off PS1 because this will be sent
+                // as part of observing the derp prompt and sending messages on updates.
                 return;
             }
             if let Some(network) = session_sharer_clone.borrow().as_ref() {
@@ -741,7 +741,7 @@ impl TerminalManager<TerminalView> {
                 );
                 return;
             };
-            ActivePrompt::WarpPrompt(serialized_prompt)
+            ActivePrompt::DerpPrompt(serialized_prompt)
         };
 
         let selection = terminal_view.read(ctx, |view, ctx| {

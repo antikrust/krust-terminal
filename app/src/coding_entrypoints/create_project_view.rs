@@ -1,12 +1,12 @@
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::icons::Icon;
-use warpui::elements::{
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::icons::Icon;
+use derpui::elements::{
     ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Expanded, Fill, Flex,
     Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _, Radius, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::platform::Cursor;
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -130,7 +130,7 @@ impl CreateProjectView {
             .with_main_axis_size(MainAxisSize::Max)
             .with_children([
                 Container::new(
-                    ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+                    ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
                         .with_height(font_size)
                         .with_width(font_size)
                         .finish(),

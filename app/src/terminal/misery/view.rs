@@ -7,9 +7,9 @@
 //! command's real stdout is untouched, so `ls | wc -l` still counts files
 //! rather than insults.
 
-use warpui::elements::{Container, Element, Text};
-use warpui::fonts::{Properties, Style};
-use warpui::{AppContext, Entity, SingletonEntity, View, ViewContext};
+use derpui::elements::{Container, Element, Text};
+use derpui::fonts::{Properties, Style};
+use derpui::{AppContext, Entity, SingletonEntity, View, ViewContext};
 
 use super::Phase;
 use crate::appearance::Appearance;

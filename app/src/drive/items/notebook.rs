@@ -1,9 +1,9 @@
-use warpui::elements::{Flex, MouseStateHandle, ParentElement};
-use warpui::fonts::Weight;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element};
+use derpui::elements::{Flex, MouseStateHandle, ParentElement};
+use derpui::fonts::Weight;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element};
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{DerpDriveItem, DerpDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
 use crate::drive::index::DriveIndexAction;
@@ -12,13 +12,13 @@ use crate::notebooks::CloudNotebook;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct WarpDriveNotebook {
+pub struct DerpDriveNotebook {
     id: CloudObjectTypeAndId,
     notebook: CloudNotebook,
     is_ai_document: bool,
 }
 
-impl WarpDriveNotebook {
+impl DerpDriveNotebook {
     pub fn new(id: CloudObjectTypeAndId, notebook: CloudNotebook, is_ai_document: bool) -> Self {
         Self {
             id,
@@ -28,7 +28,7 @@ impl WarpDriveNotebook {
     }
 }
 
-impl WarpDriveItem for WarpDriveNotebook {
+impl DerpDriveItem for DerpDriveNotebook {
     fn display_name(&self) -> Option<String> {
         if self.notebook.model().title.is_empty() {
             None
@@ -82,8 +82,8 @@ impl WarpDriveItem for WarpDriveNotebook {
         Some(Flex::column().with_child(title).finish())
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::Object(self.id)
+    fn derp_drive_id(&self) -> DerpDriveItemId {
+        DerpDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -103,7 +103,7 @@ impl WarpDriveItem for WarpDriveNotebook {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
         Box::new(self.clone())
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use warp_multi_agent_api as api;
+use derp_multi_agent_api as api;
 
 use super::{AgentConversation, AgentConversationData, AgentConversationSummary, ModelTokenUsage};
 
@@ -426,10 +426,10 @@ fn model_token_usage_replays_custom_endpoint_usage_by_model_id() {
 #[allow(deprecated)]
 #[test]
 fn model_token_usage_replay_skips_non_custom_endpoint_entries() {
-    let warp_only = ModelTokenUsage {
-        model_id: "warp-model".to_string(),
-        warp_tokens: 4,
+    let derp_only = ModelTokenUsage {
+        model_id: "derp-model".to_string(),
+        derp_tokens: 4,
         ..Default::default()
     };
-    assert!(warp_only.to_proto_custom_endpoint_usage().is_none());
+    assert!(derp_only.to_proto_custom_endpoint_usage().is_none());
 }

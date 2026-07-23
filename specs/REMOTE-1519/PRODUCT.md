@@ -1,5 +1,5 @@
 # Local-to-Cloud Handoff: UI Polish — Product Spec
-Linear: [REMOTE-1519](https://linear.app/warpdotdev/issue/REMOTE-1519/make-ui-better-for-local-cloud-handoff)
+Linear: [REMOTE-1519](https://linear.app/derpdotdev/issue/REMOTE-1519/make-ui-better-for-local-cloud-handoff)
 ## Summary
 Polish the local-to-cloud handoff (REMOTE-1486) so that the cloud-mode pane that opens next to the local pane already shows the source conversation, and looks identical to a regular fresh cloud-mode run while the cloud agent is starting up. Today the user clicks the chip and is dropped into a blank pane that only fills in once the cloud agent's first turn streams in.
 ## Problem

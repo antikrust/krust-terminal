@@ -1,6 +1,6 @@
-use warp_core::semantic_selection::SemanticSelection;
-use warpui::text::SelectionType;
-use warpui::App;
+use derp_core::semantic_selection::SemanticSelection;
+use derpui::text::SelectionType;
+use derpui::App;
 
 use crate::terminal::block_filter::BlockFilterQuery;
 use crate::terminal::event_listener::ChannelEventListener;

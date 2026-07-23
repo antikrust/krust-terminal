@@ -1,7 +1,7 @@
 //! Tips for cloud mode loading screen.
 
-use warpui::keymap::Keystroke;
-use warpui::AppContext;
+use derpui::keymap::Keystroke;
+use derpui::AppContext;
 
 use crate::ai::agent_tips::AITip;
 
@@ -54,7 +54,7 @@ pub fn get_cloud_mode_tips() -> Vec<CloudModeTip> {
         ),
         CloudModeTip::new(
             "View all your agent runs and their status in the Oz web app.",
-            Some("https://oz.warp.dev"),
+            Some("https://oz.derp.baby"),
         ),
         CloudModeTip::new(
             "Join any Oz cloud agent run in real-time using Agent Session Sharing.",
@@ -74,7 +74,7 @@ pub fn get_cloud_mode_tips() -> Vec<CloudModeTip> {
         ),
         CloudModeTip::new(
             "Run agents from GitHub Actions using the `oz-agent-action`.",
-            Some("https://github.com/warpdotdev/oz-agent-action"),
+            Some("https://github.com/derpdotdev/oz-agent-action"),
         ),
         CloudModeTip::new(
             "Call the Oz REST API to trigger agents from any backend service or internal tool.",
@@ -93,7 +93,7 @@ pub fn get_cloud_mode_tips() -> Vec<CloudModeTip> {
             Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/platform"),
         ),
         CloudModeTip::new(
-            "Fork a completed Oz cloud agent session into Warp to continue the work locally.",
+            "Fork a completed Oz cloud agent session into Derp to continue the work locally.",
             Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
         ),
         CloudModeTip::new(
@@ -117,12 +117,12 @@ pub fn get_cloud_mode_tips() -> Vec<CloudModeTip> {
             Some("https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp"),
         ),
         CloudModeTip::new(
-            "Use `oz agent run` to kick off tasks without opening the Warp terminal.",
+            "Use `oz agent run` to kick off tasks without opening the Derp terminal.",
             Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/platform"),
         ),
         CloudModeTip::new(
             "View your teammates' agent runs in the Oz web app for shared visibility.",
-            Some("https://oz.warp.dev"),
+            Some("https://oz.derp.baby"),
         ),
         CloudModeTip::new(
             "Build agents that automatically triage and label incoming GitHub issues.",

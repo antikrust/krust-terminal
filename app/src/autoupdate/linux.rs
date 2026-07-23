@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use anyhow::{bail, Context as _, Result};
 use channel_versions::VersionInfo;
 use instant::Duration;
-use warp_core::channel::{Channel, ChannelState};
-use warp_terminal::shell::ShellType;
-use warpui::ViewContext;
+use derp_core::channel::{Channel, ChannelState};
+use derp_terminal::shell::ShellType;
+use derpui::ViewContext;
 
 use super::{release_assets_directory_url, DownloadReady, ReadyForRelaunch};
 use crate::workspace::Workspace;
@@ -31,7 +31,7 @@ pub(super) async fn download_update_and_cleanup(
             appimage::download_update_and_cleanup(version_info, &appimage_path, client).await
         }
         UpdateMethod::PackageManager(package_manager) => {
-            log::info!("Detected that Warp was installed using {package_manager:?}");
+            log::info!("Detected that Derp was installed using {package_manager:?}");
             Ok(DownloadReady::Yes)
         }
     }
@@ -121,7 +121,7 @@ mod appimage {
             .as_file_mut()
             .set_permissions(appimage_path.metadata()?.permissions())?;
 
-        // Move new AppImage over the one that launched the current Warp instance.
+        // Move new AppImage over the one that launched the current Derp instance.
         let new_appimage_path = new_appimage.into_temp_path();
         let mv_status = command::r#async::Command::new("mv")
             .arg(new_appimage_path.as_os_str())
@@ -144,15 +144,15 @@ mod appimage {
         let mut command = command::blocking::Command::new(appimage_path);
         // Pass a flag to the app to let it know it was restarted as part of the
         // autoupdate process.
-        command.arg(warp_cli::finish_update_flag());
+        command.arg(derp_cli::finish_update_flag());
         // If we're testing with a local copy of channel_versions.json, have the
         // newly-started binary also reference that same file (so we can test
         // displaying an updated changelog after an autoupdate).
-        if let Ok(path) = std::env::var("WARP_CHANNEL_VERSIONS_PATH") {
-            command.env("WARP_CHANNEL_VERSIONS_PATH", path);
+        if let Ok(path) = std::env::var("DERP_CHANNEL_VERSIONS_PATH") {
+            command.env("DERP_CHANNEL_VERSIONS_PATH", path);
         }
 
-        log::info!("Relaunching warp for update...");
+        log::info!("Relaunching derp for update...");
         command.spawn()?;
         Ok(())
     }
@@ -162,8 +162,8 @@ mod package_manager {
     use markdown_parser::{
         FormattedText, FormattedTextFragment, FormattedTextHeader, FormattedTextLine,
     };
-    use warpui::elements::{Container, FormattedTextElement, HighlightedHyperlink};
-    use warpui::{Element, SingletonEntity as _};
+    use derpui::elements::{Container, FormattedTextElement, HighlightedHyperlink};
+    use derpui::{Element, SingletonEntity as _};
 
     use super::*;
     use crate::appearance::Appearance;
@@ -182,16 +182,16 @@ mod package_manager {
         }
     }
 
-    impl warpui::Entity for AutoupdateContextBlock {
+    impl derpui::Entity for AutoupdateContextBlock {
         type Event = ();
     }
 
-    impl warpui::View for AutoupdateContextBlock {
+    impl derpui::View for AutoupdateContextBlock {
         fn ui_name() -> &'static str {
             "AutoupdateContextBlock"
         }
 
-        fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+        fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
             let appearance = Appearance::as_ref(app);
             let theme = appearance.theme();
             let package_manager_name = self.package_manager.to_string();
@@ -205,10 +205,10 @@ mod package_manager {
                     ))],
                 }),
                 FormattedTextLine::Line(vec![
-                    FormattedTextFragment::plain_text("If you installed Warp using "),
+                    FormattedTextFragment::plain_text("If you installed Derp using "),
                     FormattedTextFragment::bold(package_manager_name),
                     FormattedTextFragment::plain_text(
-                        " or a compatible tool, the pre-filled command will update Warp for you.",
+                        " or a compatible tool, the pre-filled command will update Derp for you.",
                     ),
                 ]),
             ];
@@ -216,7 +216,7 @@ mod package_manager {
             if self.package_manager.needs_repository_configuration() {
                 lines.push(FormattedTextLine::Line(vec![
                     FormattedTextFragment::plain_text(
-                        "\nThe command below includes a one-time configuration of the Warp package repository and PGP signing key.",
+                        "\nThe command below includes a one-time configuration of the Derp package repository and PGP signing key.",
                     ),
                 ]));
             }
@@ -229,9 +229,9 @@ mod package_manager {
                     FormattedTextFragment::plain_text(
                         "\nThe ",
                     ),
-                    FormattedTextFragment::inline_code("warp_handle_dist_upgrade"),
+                    FormattedTextFragment::inline_code("derp_handle_dist_upgrade"),
                     FormattedTextFragment::plain_text(
-                        " function ensures the Warp package repository is enabled, as we've detected you recently upgraded your distribution.",
+                        " function ensures the Derp package repository is enabled, as we've detected you recently upgraded your distribution.",
                     ),
                 ]));
             }
@@ -239,10 +239,10 @@ mod package_manager {
             lines.push(FormattedTextLine::Line(vec![
                 FormattedTextFragment::plain_text("\nReview the command below, then "),
                 FormattedTextFragment::bold("press enter"),
-                FormattedTextFragment::plain_text(" to install the update and re-launch Warp.  "),
+                FormattedTextFragment::plain_text(" to install the update and re-launch Derp.  "),
                 FormattedTextFragment::hyperlink(
                     "Please report any issues",
-                    "https://github.com/warpdotdev/Warp/issues/new/choose",
+                    "https://github.com/derpdotdev/Derp/issues/new/choose",
                 ),
             ]));
 
@@ -281,10 +281,10 @@ mod package_manager {
         };
         log::info!("Relaunching using path: {program:?}");
         let mut command = command::blocking::Command::new(program);
-        // Add any arguments that were passed to warp, skipping the first
+        // Add any arguments that were passed to derp, skipping the first
         // argument (the name of the executable) and dropping the flag for
         // finishing an update.
-        let finish_update_flag = warp_cli::finish_update_flag();
+        let finish_update_flag = derp_cli::finish_update_flag();
         command.args(
             std::env::args()
                 .skip(1)
@@ -296,24 +296,24 @@ mod package_manager {
         // If we're testing with a local copy of channel_versions.json, have the
         // newly-started binary also reference that same file (so we can test
         // displaying an updated changelog after an autoupdate).
-        if let Ok(path) = std::env::var("WARP_CHANNEL_VERSIONS_PATH") {
-            command.env("WARP_CHANNEL_VERSIONS_PATH", path);
+        if let Ok(path) = std::env::var("DERP_CHANNEL_VERSIONS_PATH") {
+            command.env("DERP_CHANNEL_VERSIONS_PATH", path);
         }
 
-        log::info!("Relaunching warp for update...");
+        log::info!("Relaunching derp for update...");
         command.spawn()?;
         Ok(())
     }
 }
 
-/// Returns which method should be used to update Warp.
+/// Returns which method should be used to update Derp.
 #[derive(Debug)]
 pub(crate) enum UpdateMethod {
-    /// We don't know how to update Warp.
+    /// We don't know how to update Derp.
     Unknown,
-    /// Warp is running as an AppImage and should be updated in-place.
+    /// Derp is running as an AppImage and should be updated in-place.
     AppImage(PathBuf),
-    /// Warp can be updated using the given package manager.
+    /// Derp can be updated using the given package manager.
     PackageManager(PackageManager),
 }
 
@@ -358,12 +358,12 @@ impl PackageManager {
             } => {
                 let dist_upgrade_fn = match shell_type {
                     ShellType::Zsh | ShellType::Bash | ShellType::Fish => {
-                        "warp_handle_dist_upgrade"
+                        "derp_handle_dist_upgrade"
                     }
-                    ShellType::PowerShell => "Warp-Handle-DistUpgrade",
+                    ShellType::PowerShell => "Derp-Handle-DistUpgrade",
                 };
                 // If running with apt, attempt to handle a distribution update that may rename the
-                // warp source file to `{repo_name}.distUpgrade`.
+                // derp source file to `{repo_name}.distUpgrade`.
                 // We explicitly use `or` here instead of `and` to limit the blast radius of this
                 // change, if handling a dist upgrade was unsuccessful we still want to try to
                 // install the new version.
@@ -388,11 +388,11 @@ impl PackageManager {
                 is_signing_key_configured,
             } => {
                 let repo_prefix = if !is_repo_configured {
-                    let cache_dir = warp_core::paths::cache_dir();
+                    let cache_dir = derp_core::paths::cache_dir();
                     let cache_dir_str = cache_dir.display();
                     // Back up the existing pacman.conf file just in case
                     // anything goes wrong, then add the repository config.
-                    format!("mkdir -p {cache_dir_str}{and}\\\ncp /etc/pacman.conf {cache_dir_str}{and}\\\nsudo sh -c \"echo '\n[{repo_name}]\nServer = https://releases.warp.dev/linux/pacman/\\$repo/\\$arch' >> /etc/pacman.conf\"{and}\\\n")
+                    format!("mkdir -p {cache_dir_str}{and}\\\ncp /etc/pacman.conf {cache_dir_str}{and}\\\nsudo sh -c \"echo '\n[{repo_name}]\nServer = https://releases.derp.baby/linux/pacman/\\$repo/\\$arch' >> /etc/pacman.conf\"{and}\\\n")
                 } else {
                     String::new()
                 };
@@ -400,7 +400,7 @@ impl PackageManager {
                     // Retrieve our key from keys.openpgp.org and locally sign
                     // it before retrieving the package repository and
                     // installing the updated package.
-                    format!("sudo pacman-key -r \"linux-maintainers@warp.dev\" --keyserver hkp://keys.openpgp.org:80{and}\\\nsudo pacman-key --lsign-key \"linux-maintainers@warp.dev\"{and}\\\n")
+                    format!("sudo pacman-key -r \"linux-maintainers@derp.baby\" --keyserver hkp://keys.openpgp.org:80{and}\\\nsudo pacman-key --lsign-key \"linux-maintainers@derp.baby\"{and}\\\n")
                 } else {
                     String::new()
                 };
@@ -409,8 +409,8 @@ impl PackageManager {
         };
 
         let finish_update_fn = match shell_type {
-            ShellType::Zsh | ShellType::Bash | ShellType::Fish => "warp_finish_update",
-            ShellType::PowerShell => "Warp-Finish-Update",
+            ShellType::Zsh | ShellType::Bash | ShellType::Fish => "derp_finish_update",
+            ShellType::PowerShell => "Derp-Finish-Update",
         };
         format!("{base_command}{and}{finish_update_fn} {update_id}")
     }
@@ -466,7 +466,7 @@ impl PackageManager {
         match output {
             Ok(output) => {
                 if !output.status.success() {
-                    bail!("Failed to determine which package manager was used to install warp");
+                    bail!("Failed to determine which package manager was used to install derp");
                 }
                 let Ok(stdout) = std::str::from_utf8(&output.stdout) else {
                     bail!("Could not parse package manager detection script output as UTF-8");
@@ -536,17 +536,17 @@ impl std::fmt::Display for PackageManager {
     }
 }
 
-/// Returns whether the warp apt repository is disabled due to a version update.
-/// This occurs if there's a `warpdotdev.list.distUpgrade` file but no `warpdotdev.sources` or
-/// `warpdotdev.list` file.
+/// Returns whether the derp apt repository is disabled due to a version update.
+/// This occurs if there's a `derpdotdev.list.distUpgrade` file but no `derpdotdev.sources` or
+/// `derpdotdev.list` file.
 /// In a traditional Ubuntu distro update, Ubuntu renames each source file from `foo.list` to
 /// `foo.list.distUpgrade`. It then creates a new version of `foo.list` (or `foo.sources` if
 /// updating to Ubuntu 24+) with the repo disabled.
 ///
-/// However, Ubuntu incorrectly thinks the Warp source file is invalid (due to the addition of the
+/// However, Ubuntu incorrectly thinks the Derp source file is invalid (due to the addition of the
 /// `signed-by` key) so it only leaves the `*.distUpgrade` source file. We use the existence of this
-/// file to determine whether we need to run the special `warp_handle_dist_upgrade` function to copy
-/// `warpdotdev.list.distUpgrade` back to `warpdotdev.list` to re-enable the repository.
+/// file to determine whether we need to run the special `derp_handle_dist_upgrade` function to copy
+/// `derpdotdev.list.distUpgrade` back to `derpdotdev.list` to re-enable the repository.
 fn is_apt_repository_disabled_due_to_version_update(repo_name: &str) -> bool {
     let apt_sources_directory = match get_apt_sources_directory() {
         Ok(apt_sources_directory) => apt_sources_directory,
@@ -604,7 +604,7 @@ fn is_pacman_signing_key_installed() -> bool {
             "/etc/pacman.d/gnupg",
             "--list-keys",
             "--with-colons",
-            "linux-maintainers@warp.dev",
+            "linux-maintainers@derp.baby",
         ])
         .output()
     {
@@ -665,21 +665,21 @@ fn is_pacman_signing_key_installed() -> bool {
 
 fn package_name(channel: Channel) -> &'static str {
     match channel {
-        Channel::Stable => "warp-terminal",
-        Channel::Preview => "warp-terminal-preview",
-        Channel::Dev => "warp-terminal-dev",
-        Channel::Integration => "warp-terminal-integration",
-        Channel::Local => "warp-terminal-local",
-        Channel::Oss => "warp-oss",
+        Channel::Stable => "derp-terminal",
+        Channel::Preview => "derp-terminal-preview",
+        Channel::Dev => "derp-terminal-dev",
+        Channel::Integration => "derp-terminal-integration",
+        Channel::Local => "derp-terminal-local",
+        Channel::Oss => "derp-oss",
     }
 }
 
 fn repo_name(channel: Channel) -> String {
     let package_name = package_name(channel);
     let channel_suffix = package_name
-        .strip_prefix("warp-terminal")
+        .strip_prefix("derp-terminal")
         .unwrap_or_default();
-    format!("warpdotdev{channel_suffix}")
+    format!("derpdotdev{channel_suffix}")
 }
 
 #[cfg(test)]

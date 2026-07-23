@@ -1,7 +1,7 @@
 # Accounts in 0term
 
 Everything we know about how accounts, authentication, and the "user" concept
-work in this fork of Warp's open-source release — what upstream built, what the
+work in this fork of Derp's open-source release — what upstream built, what the
 fork changed, what is currently broken-on-purpose, and where we want to take it.
 
 Written 2026-07-16. File paths are current as of that date; function names are
@@ -9,10 +9,10 @@ given instead of line numbers where possible.
 
 ## TL;DR
 
-- Upstream Warp requires a cloud account (Firebase-backed) for almost all AI
+- Upstream Derp requires a cloud account (Firebase-backed) for almost all AI
   features. This fork **fakes the login**: every launch boots as a permanent
-  local test user (`test_user@warp.dev`), no network auth ever happens.
-- All requests to Warp's servers therefore go out **unauthenticated** and fail
+  local test user (`test_user@derp.baby`), no network auth ever happens.
+- All requests to Derp's servers therefore go out **unauthenticated** and fail
   with `Unauthorized: User not in context`. The local Claude/Codex harness
   doesn't care; a few upstream code paths needed silencing (see below).
 - **"Log out" is now non-destructive** — upstream's logout deleted the local
@@ -24,7 +24,7 @@ given instead of line numbers where possible.
 
 ## The fork's change (all of it)
 
-One function. `crates/warp_server_auth/src/auth_state.rs`:
+One function. `crates/derp_server_auth/src/auth_state.rs`:
 
 ```rust
 fn should_use_test_user() -> bool {
@@ -38,22 +38,22 @@ builds, and the Integration channel. With it always-true,
 
 1. Test user            ← we always stop here now
 2. Provided API key (`--api-key` style injection)
-3. `WARP_USER_SECRET` (a **compile-time** `option_env!`, baked into the binary)
+3. `DERP_USER_SECRET` (a **compile-time** `option_env!`, baked into the binary)
 4. Persisted user from secure storage (Keychain on macOS)
 
-The test user is `User::test()` (`crates/warp_server_auth/src/user.rs`):
+The test user is `User::test()` (`crates/derp_server_auth/src/user.rs`):
 
 | field        | value                                   |
 |--------------|-----------------------------------------|
 | uid          | `test_user_uid` (`user_uid.rs` const)    |
-| email        | `test_user@warp.dev` (`user_uid.rs`)     |
+| email        | `test_user@derp.baby` (`user_uid.rs`)     |
 | onboarded    | `true` (skips onboarding UI)             |
 | anonymous    | no — a "real" account as far as UI goes  |
 
 Credentials are set to `Credentials::SessionCookie` (the fork also removed the
 `cfg` gates around `test_credentials()`; in a normal desktop build the `Test`
 variant doesn't exist, and `SessionCookie` is the variant that maps to
-**`AuthToken::NoAuth`** — see `crates/warp_server_client/src/auth/session.rs`
+**`AuthToken::NoAuth`** — see `crates/derp_server_client/src/auth/session.rs`
 and `credentials.rs`: every token/header accessor returns `None`). That is why
 the app is "logged in" locally but every server call is anonymous.
 
@@ -74,15 +74,15 @@ SessionCookie satisfies every gate:
 - The root view decides between auth screens and the workspace based on auth
   state; the fake user lands us in the workspace.
 - The user menu (avatar, top right) shows the email and a Log out item when a
-  non-anonymous user exists — hence `test_user@warp.dev` in the corner.
+  non-anonymous user exists — hence `test_user@derp.baby` in the corner.
 
 ## What breaks (and what we silenced)
 
 With `AuthToken::NoAuth` on the wire:
 
-- **Every GraphQL query/mutation** against `app.warp.dev` returns
+- **Every GraphQL query/mutation** against `app.derp.baby` returns
   `Unauthorized: User not in context`. Sources: conversation metadata fetches,
-  harness availability, billing/workspace info (`UserWorkspaces`), Warp Drive,
+  harness availability, billing/workspace info (`UserWorkspaces`), Derp Drive,
   telemetry uploads, changelog fetches.
 - **Websockets** (CloudObjects live-sync) would retry forever; the fork
   hard-disables the listener via `CLOUD_OBJECTS_LISTENER_ENABLED = false` in
@@ -99,25 +99,25 @@ Everything else just logs a warning and moves on; the app is fully usable.
 
 Where it all lives:
 
-- `crates/warp_server_auth/` — `AuthState` (current user + credentials),
+- `crates/derp_server_auth/` — `AuthState` (current user + credentials),
   `Credentials` enum (`Firebase(FirebaseAuthTokens)` with id+refresh token,
   `ApiKey`, `Bearer`, `SessionCookie`, `Test`), `User`/`UserMetadata`,
   persistence to secure storage (`PersistedUser`), anonymous-id generation.
-- `crates/warp_server_client/src/auth/` — turning credentials into request
+- `crates/derp_server_client/src/auth/` — turning credentials into request
   auth (`AuthToken`), refresh-token exchange.
 - `app/src/auth/` — the UI and orchestration:
   - `auth_manager.rs` — `AuthManager` singleton: login/logout state machine,
     CSRF (`pending_auth_state`), token refresh, `create_anonymous_user`,
     needs-reauth events.
   - `login_slide.rs`, `auth_view_modal.rs`, `auth_view_body.rs` — the login
-    screens (browser-based OAuth handoff to warp.dev).
+    screens (browser-based OAuth handoff to derp.baby).
   - `paste_auth_token_modal.rs` — manual fallback: paste a token from the
     browser when the custom-URI callback fails.
   - `web_handoff.rs` — wasm/web build: derive auth from the browser session.
   - `needs_sso_link_view.rs`, `login_error_modal.rs`,
     `login_failure_notification.rs` — edge-case UI.
 - Login flow on desktop (upstream): login screen → opens browser to
-  warp.dev auth → server redirects to a `warp://` URI with a token → app
+  derp.baby auth → server redirects to a `derp://` URI with a token → app
   exchanges it for Firebase credentials → persisted to Keychain →
   `AuthManagerEvent` swaps the root view into the workspace.
 - **Anonymous users**: upstream can mint a server-side anonymous account
@@ -126,7 +126,7 @@ Where it all lives:
   user is not anonymous), but the code paths are still present.
 - **Billing**: `UserWorkspaces` fetches workspace + plan metadata; the user
   menu shows "Upgrade" (or "Billing and usage" on paid plans) off that. With
-  the server dead it always shows "Upgrade" linking to warp.dev — rip-out
+  the server dead it always shows "Upgrade" linking to derp.baby — rip-out
   candidate.
 
 ## Log out is no longer destructive
@@ -159,7 +159,7 @@ The direction (not yet implemented):
 2. **Neuter `log_out`** — either remove the menu item or turn it into
    "Switch profile" without the database wipe.
 3. **Strip the auth UI** — `app/src/auth/` login slides/modals, anonymous-user
-   machinery, needs-reauth plumbing, `warp_server_auth` persistence; keep a
+   machinery, needs-reauth plumbing, `derp_server_auth` persistence; keep a
    thin `AuthState` shim so `is_logged_in()` keeps returning true for the many
    upstream gates (or progressively delete the gates).
 4. **Stop the unauthenticated server traffic** at the source (ServerApi

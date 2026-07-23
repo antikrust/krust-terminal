@@ -7,21 +7,21 @@ use itertools::Itertools as _;
 use markdown_parser::{parse_markdown, FormattedText, FormattedTextFragment, FormattedTextLine};
 use parking_lot::FairMutex;
 use settings::Setting;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::Icon;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::Icon;
+use derp_errors::report_if_error;
+use derpui::elements::{
     Clipped, Container, CornerRadius, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::Keystroke;
-use warpui::prelude::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::Keystroke;
+use derpui::prelude::{
     Align, ConstrainedBox, Cursor, Empty, Hoverable, MainAxisAlignment, SavePosition,
 };
-use warpui::scene::Border;
-use warpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui::{
+use derpui::scene::Border;
+use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui::{
     Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -379,7 +379,7 @@ fn format_session_location(session: &Session, working_directory: Option<&str>) -
     let hostname = session.hostname();
     match session_type {
         SessionType::Local => Some(display_path),
-        SessionType::WarpifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
+        SessionType::DerpifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
     }
 }
 
@@ -598,7 +598,7 @@ fn current_working_directory_for_zero_state(terminal_model: &TerminalModel) -> O
                     .is_some_and(|pending_session_info| {
                         matches!(
                             pending_session_info.session_type,
-                            BootstrapSessionType::WarpifiedRemote
+                            BootstrapSessionType::DerpifiedRemote
                         )
                     });
             (!terminal_model.block_list().is_bootstrapped() && !is_bootstrapping_remote_shell)
@@ -641,7 +641,7 @@ fn render_title_and_description(props: HeaderProps, app: &AppContext) -> Vec<Box
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(
+                    icon.to_derpui_icon(
                         theme
                             .main_text_color(theme.background())
                             .into_solid()
@@ -1094,7 +1094,7 @@ fn render_oz_updates(props: OzUpdatesProps<'_>, app: &AppContext) -> Option<Box<
                                     } else {
                                         Icon::ChevronRight
                                     }
-                                    .to_warpui_icon(theme.sub_text_color(theme.background()))
+                                    .to_derpui_icon(theme.sub_text_color(theme.background()))
                                     .finish(),
                                 )
                                 .with_height(appearance.monospace_font_size())
@@ -1180,7 +1180,7 @@ fn render_oz_updates(props: OzUpdatesProps<'_>, app: &AppContext) -> Option<Box<
                                 .with_child(
                                     ConstrainedBox::new(
                                         Icon::Share3
-                                            .to_warpui_icon(
+                                            .to_derpui_icon(
                                                 theme.sub_text_color(theme.background()),
                                             )
                                             .finish(),
@@ -1321,7 +1321,7 @@ where
 }
 
 mod styles {
-    use warp_core::ui::appearance::Appearance;
+    use derp_core::ui::appearance::Appearance;
 
     pub const CONTAINER_VERTICAL_PADDING: f32 = 16.;
     pub const TITLE_MARGIN_BOTTOM: f32 = 8.;

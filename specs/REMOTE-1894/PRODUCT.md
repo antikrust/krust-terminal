@@ -1,6 +1,6 @@
 # Resume cloud agent runs on transient transport failures
 
-Linear: [REMOTE-1894](https://linear.app/warpdotdev/issue/REMOTE-1894/oz-cloud-runs-error-mid-execution-from-connectivitytransport-failures)
+Linear: [REMOTE-1894](https://linear.app/derpdotdev/issue/REMOTE-1894/oz-cloud-runs-error-mid-execution-from-connectivitytransport-failures)
 
 ## Summary
 
@@ -25,13 +25,13 @@ Goals:
 
 Non-goals:
 
-- Session-share initialization failures (bb8 pool timeouts) — tracked separately in [REMOTE-1878](https://linear.app/warpdotdev/issue/REMOTE-1878).
-- Silent conversation death with no error emitted — tracked in [REMOTE-1881](https://linear.app/warpdotdev/issue/REMOTE-1881).
-- Server-side LLM/turn retries (landed separately in warp-server #11754/#11755/#11770).
+- Session-share initialization failures (bb8 pool timeouts) — tracked separately in [REMOTE-1878](https://linear.app/derpdotdev/issue/REMOTE-1878).
+- Silent conversation death with no error emitted — tracked in [REMOTE-1881](https://linear.app/derpdotdev/issue/REMOTE-1881).
+- Server-side LLM/turn retries (landed separately in derp-server #11754/#11755/#11770).
 
 ## Behavior
 
-"User" below means both the operator observing a cloud run (Oz UI, run state API, pipeline webhooks) and the Warp user watching a local agent conversation.
+"User" below means both the operator observing a cloud run (Oz UI, run state API, pipeline webhooks) and the Derp user watching a local agent conversation.
 
 ### Recovery on transient failure
 
@@ -57,7 +57,7 @@ Non-goals:
 
 9. Recovery is bounded: at most 3 in-request retries before actions have streamed, and at most one automatic resume after actions have streamed. A resumed request does not auto-resume again.
 
-10. If recovery is exhausted (the resume also hits a transient failure, or pre-action retries run out while online), the run ends with a terminal error and the message "Warp lost connection while receiving the agent response. This is usually temporary." There is no retry storm: a persistent outage produces exactly one resume attempt before the terminal failure.
+10. If recovery is exhausted (the resume also hits a transient failure, or pre-action retries run out while online), the run ends with a terminal error and the message "Derp lost connection while receiving the agent response. This is usually temporary." There is no retry storm: a persistent outage produces exactly one resume attempt before the terminal failure.
 
 11. A cloud run held open for recovery waits at most 120 seconds; if recovery has not restored progress by then, the run ends with the last recorded error.
 

@@ -21,12 +21,12 @@ use std::time::Duration;
 use context_chip::PromptGenerator;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::color::contrast::{high_enough_contrast, MinimumAllowedContrast};
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warpui::color::ColorU;
-use warpui::elements::Text;
-use warpui::fonts::{Properties, Weight};
+use derp_core::ui::color::blend::Blend;
+use derp_core::ui::color::contrast::{high_enough_contrast, MinimumAllowedContrast};
+use derp_core::ui::theme::{Fill, DerpTheme};
+use derpui::color::ColorU;
+use derpui::elements::Text;
+use derpui::fonts::{Properties, Weight};
 
 #[allow(unused_imports)]
 pub use self::context_chip::{
@@ -657,7 +657,7 @@ pub(crate) fn agent_view_chip_color(appearance: &Appearance) -> ColorU {
 /// making chip labels hard to read. So we keep the muted look wherever it is
 /// still legible (e.g. dark themes) and only fall back to the fully-opaque,
 /// contrast-enforced `font_color` where the muted color would be sub-AA.
-pub(crate) fn readable_chip_label_color(theme: &WarpTheme, background: Fill) -> ColorU {
+pub(crate) fn readable_chip_label_color(theme: &DerpTheme, background: Fill) -> ColorU {
     let muted = theme.sub_text_color(background).into_solid();
     let solid_background = background.into_solid();
     if high_enough_contrast(

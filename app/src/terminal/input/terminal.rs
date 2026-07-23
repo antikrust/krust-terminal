@@ -1,10 +1,10 @@
-use warp_core::settings::Setting;
-use warpui::elements::{
+use derp_core::settings::Setting;
+use derpui::elements::{
     Border, Clipped, Container, CrossAxisAlignment, DropTarget, Element, Expanded, Flex, Hoverable,
     ParentElement, SavePosition, Stack,
 };
-use warpui::presenter::ChildView;
-use warpui::{AppContext, SingletonEntity};
+use derpui::presenter::ChildView;
+use derpui::{AppContext, SingletonEntity};
 
 use super::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay,
@@ -314,9 +314,9 @@ impl Input {
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use warp_core::ui::theme::WarpTheme;
+    use derp_core::ui::theme::DerpTheme;
 
-    pub fn default_border_color(theme: &WarpTheme) -> ColorU {
+    pub fn default_border_color(theme: &DerpTheme) -> ColorU {
         theme.outline().into()
     }
 }

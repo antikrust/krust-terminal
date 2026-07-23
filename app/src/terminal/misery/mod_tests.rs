@@ -5,7 +5,7 @@ use super::*;
 fn ctx(command: &str) -> MiseryContext {
     MiseryContext {
         command_name: command.to_owned(),
-        directory_name: Some("warp".to_owned()),
+        directory_name: Some("derp".to_owned()),
         nearby_files: vec![
             "Cargo.toml".to_owned(),
             "README.md".to_owned(),

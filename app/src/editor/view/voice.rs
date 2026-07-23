@@ -1,15 +1,15 @@
 use settings::Setting as _;
 use voice_input::{StartListeningError, VoiceInput, VoiceSessionResult};
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warp_errors::report_error;
-use warpui::elements::{Container, CornerRadius, Icon, Radius};
-use warpui::platform::Cursor;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::ui_components::button::ButtonTooltipPosition;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{elements, AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::AnsiColorIdentifier;
+use derp_errors::report_error;
+use derpui::elements::{Container, CornerRadius, Icon, Radius};
+use derpui::platform::Cursor;
+use derpui::r#async::SpawnedFutureHandle;
+use derpui::ui_components::button::ButtonTooltipPosition;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{elements, AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
 
 use super::{EditorAction, EditorView, VoiceTranscriber, VoiceTranscriptionOptions};
 use crate::ai::blocklist::InputType;
@@ -80,7 +80,7 @@ impl EditorView {
                 crate::view_components::NewFeaturePopupEvent::Dismissed
             ) {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
-                    warp_errors::report_if_error!(settings
+                    derp_errors::report_if_error!(settings
                         .dismissed_voice_input_new_feature_popup
                         .set_value(true, ctx));
                 });
@@ -234,18 +234,18 @@ impl EditorView {
                 // If the keypress is not valid in the current state, we ignore it.
                 match &self.voice_input_state {
                     // For example, the user could press Fn in a different app, then switch focus
-                    // to Warp and let it go - we should NOT activate voice input in this case.
+                    // to Derp and let it go - we should NOT activate voice input in this case.
                     VoiceInputState::Stopped => {
-                        if matches!(state, warpui::event::KeyState::Released) {
+                        if matches!(state, derpui::event::KeyState::Released) {
                             return false;
                         }
                     }
                     // Note that in reality, this case is unreachable because we stop voice input
-                    // if the user is not focused on Warp (since we lose the ability to listen to modifier
+                    // if the user is not focused on Derp (since we lose the ability to listen to modifier
                     // key events). Thus, the user cannot enter a state where we're listening for voice input
                     // but the key is not held already.
                     VoiceInputState::Listening => {
-                        if matches!(state, warpui::event::KeyState::Pressed) {
+                        if matches!(state, derpui::event::KeyState::Pressed) {
                             return false;
                         }
                     }
@@ -525,8 +525,8 @@ impl EditorView {
         let microphone_access_state = app.microphone_access_state();
         let mic_access_denied = matches!(
             microphone_access_state,
-            warpui::platform::MicrophoneAccessState::Restricted
-                | warpui::platform::MicrophoneAccessState::Denied
+            derpui::platform::MicrophoneAccessState::Restricted
+                | derpui::platform::MicrophoneAccessState::Denied
         );
 
         let modifier_key = AISettings::handle(app).as_ref(app).voice_input_toggle_key;
@@ -605,7 +605,7 @@ impl EditorView {
             button = button.disabled();
         }
 
-        warpui::elements::SavePosition::new(
+        derpui::elements::SavePosition::new(
             button
                 .build()
                 .on_click(move |ctx, _, _| {

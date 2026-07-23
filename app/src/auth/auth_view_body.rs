@@ -1,20 +1,20 @@
 use anyhow::anyhow;
 use lazy_static::lazy_static;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::DEFAULT_COMMAND_PALETTE_FONT_SIZE;
-use warp_core::ui::builder::UiBuilder;
-use warp_errors::report_error;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::clipboard::ClipboardContent;
-use warpui::color::ColorU;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::DEFAULT_COMMAND_PALETTE_FONT_SIZE;
+use derp_core::ui::builder::UiBuilder;
+use derp_errors::report_error;
+use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
+use derpui::clipboard::ClipboardContent;
+use derpui::color::ColorU;
+use derpui::elements::{
     Align, Border, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Stack,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::FixedBinding;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::FixedBinding;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, UpdateModel, View,
     ViewContext, ViewHandle,
 };
@@ -41,7 +41,7 @@ use crate::themes::theme::Fill as ThemeFill;
 use crate::util::color::{darken, lighten};
 use crate::{send_telemetry_from_ctx, send_telemetry_sync_from_ctx};
 
-const TOS_URL: &str = "https://www.warp.dev/terms-of-service";
+const TOS_URL: &str = "https://www.derp.baby/terms-of-service";
 
 const COMMON_BODY_UI_FONT_SIZE: f32 = 12.;
 const AUTH_MODAL_GAP: f32 = 16.;
@@ -62,7 +62,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
@@ -329,7 +329,7 @@ impl AuthViewBody {
             Flex::row()
                 .with_child(
                     ui_builder
-                        .span("By continuing, you agree to Warp's ")
+                        .span("By continuing, you agree to Derp's ")
                         .with_style(disclaimer_styles)
                         .build()
                         .finish(),
@@ -605,7 +605,7 @@ impl AuthViewBody {
 
         let text = match self.variant {
             AuthViewVariant::RequireLoginCloseable  => {
-                "In order to use Warp’s AI features or collaborate with others, please create an account."
+                "In order to use Derp’s AI features or collaborate with others, please create an account."
             }
             AuthViewVariant::HitDriveObjectLimitCloseable => {
                 "In order to create more objects in the Library, please create an account."
@@ -646,12 +646,12 @@ impl AuthViewBody {
                 if AISettings::as_ref(app).is_swear_mode_enabled() {
                     "well fucking hell. look at this"
                 } else {
-                    "Welcome to Warp!"
+                    "Welcome to Derp!"
                 }
             }
             AuthViewVariant::RequireLoginCloseable
             | AuthViewVariant::HitDriveObjectLimitCloseable
-            | AuthViewVariant::ShareRequirementCloseable => "Sign up for Warp",
+            | AuthViewVariant::ShareRequirementCloseable => "Sign up for Derp",
         };
 
         ui_builder
@@ -1009,10 +1009,10 @@ impl View for AuthViewBody {
             if AISettings::as_ref(app).is_swear_mode_enabled() {
                 "well fucking hell. look at this"
             } else {
-                "Welcome to Warp!"
+                "Welcome to Derp!"
             },
             "Press enter to open your browser to Sign Up or Sign In.",
-            WarpA11yRole::HelpRole,
+            DerpA11yRole::HelpRole,
         ))
     }
 

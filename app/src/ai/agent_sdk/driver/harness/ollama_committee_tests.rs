@@ -1410,7 +1410,7 @@ fn truncation_respects_char_boundaries_and_short_input() {
 /// it takes minutes — run it deliberately:
 ///
 /// ```sh
-/// cargo test -p warp committee_reviews_a_planted_bug -- --ignored --nocapture
+/// cargo test -p derp committee_reviews_a_planted_bug -- --ignored --nocapture
 /// ```
 #[test]
 #[ignore = "hits the live local Ollama service and loads real models"]

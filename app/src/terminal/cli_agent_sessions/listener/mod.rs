@@ -1,4 +1,4 @@
-use warpui::{EntityId, ModelContext, ModelHandle, SingletonEntity};
+use derpui::{EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{CLIAgentEvent, CLIAgentSessionsModel};
 use crate::features::FeatureFlag;
@@ -53,7 +53,7 @@ pub fn is_agent_supported(agent: &CLIAgent) -> bool {
 fn create_handler(agent: &CLIAgent) -> Option<Box<dyn CLIAgentSessionHandler>> {
     match agent {
         // Auggie and Pi are supported via community-maintained plugins
-        // (https://github.com/augmentmoogi/auggie-warp,
+        // (https://github.com/augmentmoogi/auggie-derp,
         // https://github.com/badlogic/pi-mono), which emit the same
         // structured OSC 777 events as the first-party Claude/OpenCode/Gemini
         // plugins. Droid can be supported by user-configured hooks or future
@@ -125,7 +125,7 @@ impl CodexSessionHandler {
 }
 
 impl CLIAgentSessionHandler for CodexSessionHandler {
-    /// Before Codex enabled support for hooks, we relied on OSC 9 to trigger notifications in Warp.
+    /// Before Codex enabled support for hooks, we relied on OSC 9 to trigger notifications in Derp.
     /// Here, we try to parse an OSC 777 event if we can, and remember when we've seen one.
     /// This lets us ignore OSC 9 notifications if we are working with a client that is using
     /// the new plugin, but keeps them intact for legacy clients.
@@ -165,7 +165,7 @@ pub struct CLIAgentSessionListener {
     inner: Box<dyn CLIAgentSessionHandler>,
 }
 
-impl warpui::Entity for CLIAgentSessionListener {
+impl derpui::Entity for CLIAgentSessionListener {
     type Event = ();
 }
 

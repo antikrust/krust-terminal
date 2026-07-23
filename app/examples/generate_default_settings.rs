@@ -18,19 +18,19 @@ use std::path::PathBuf;
 
 use settings::schema::SettingSchemaEntry;
 use settings::SettingsMode;
-use warp_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
-use warpui_extras::user_preferences::toml_backed::TomlBackedUserPreferences;
-use warpui_extras::user_preferences::UserPreferences as _;
+use derp_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
+use derpui_extras::user_preferences::toml_backed::TomlBackedUserPreferences;
+use derpui_extras::user_preferences::UserPreferences as _;
 
 /// Ensures all `inventory::submit!` registrations from the app crate's
 /// dependency tree are linked into the binary.
 ///
 /// Binary targets only link crate code that is transitively referenced.
-/// Without an explicit reference to the `warp` library, the linker will
+/// Without an explicit reference to the `derp` library, the linker will
 /// not include most of the app's object files and the `inventory`
 /// submissions they contain.
 fn ensure_settings_linked() {
-    let _ = std::hint::black_box(warp::settings::RESTORE_SESSION);
+    let _ = std::hint::black_box(derp::settings::RESTORE_SESSION);
 }
 
 fn active_flags_for_channel(channel: &str) -> HashSet<FeatureFlag> {

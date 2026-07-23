@@ -11,7 +11,7 @@ fn authorize_url_contains_required_params() {
     assert!(url.contains("code_challenge_method=S256"));
     assert!(url.contains("scope=openid"));
     assert!(url.contains("plan=generic"));
-    assert!(url.contains("referrer=warp"));
+    assert!(url.contains("referrer=derp"));
     // The redirect URI must be percent-encoded and match the registered value.
     assert!(url.contains("redirect_uri=http%3A%2F%2F127.0.0.1%3A56121%2Fcallback"));
     // The CSRF state and PKCE challenge are echoed into the URL verbatim
@@ -52,6 +52,6 @@ fn manual_code_exchange_rejects_blank_code() {
     let exchange = ManualCodeExchange {
         verifier: "verifier".to_string(),
     };
-    let result = warpui_core::r#async::block_on(exchange.exchange("   "));
+    let result = derpui_core::r#async::block_on(exchange.exchange("   "));
     assert!(result.is_err());
 }

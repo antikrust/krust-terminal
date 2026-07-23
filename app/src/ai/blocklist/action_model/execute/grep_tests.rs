@@ -12,16 +12,16 @@ fn test_create_redacted_grep_error_event() {
     // Create input with a known secret pattern (Firebase domain)
     let queries = vec![
         "normal query".to_string(),
-        "query with warp-server-staging.firebaseapp.com secret".to_string(),
+        "query with derp-server-staging.firebaseapp.com secret".to_string(),
     ];
-    let path = "path/to/file/with/warp-server-staging.firebaseapp.com/secret".to_string();
+    let path = "path/to/file/with/derp-server-staging.firebaseapp.com/secret".to_string();
     let shell_type = Some(ShellType::Bash);
-    let working_directory = Some("/users/test/warp-server-staging.firebaseapp.com".to_string());
+    let working_directory = Some("/users/test/derp-server-staging.firebaseapp.com".to_string());
     let absolute_path =
-        "/absolute/path/with/warp-server-staging.firebaseapp.com/secret".to_string();
+        "/absolute/path/with/derp-server-staging.firebaseapp.com/secret".to_string();
     let error = GrepError::new("Error message".to_string())
-        .with_command("grep warp-server-staging.firebaseapp.com".to_string())
-        .with_output("Output with warp-server-staging.firebaseapp.com".to_string());
+        .with_command("grep derp-server-staging.firebaseapp.com".to_string())
+        .with_output("Output with derp-server-staging.firebaseapp.com".to_string());
 
     // Call the function with the test inputs
     let event = create_redacted_grep_error_event(
@@ -51,22 +51,22 @@ fn test_create_redacted_grep_error_event() {
         // Verify secrets are redacted from all relevant fields
         assert_eq!(redacted_queries.len(), 2);
         assert_eq!(redacted_queries[0], "normal query");
-        assert!(!redacted_queries[1].contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_queries[1].contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_queries[1].contains("*****"));
 
-        assert!(!redacted_path.contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_path.contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_path.contains("*****"));
 
-        assert!(!redacted_working_directory.contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_working_directory.contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_working_directory.contains("*****"));
 
-        assert!(!redacted_absolute_path.contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_absolute_path.contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_absolute_path.contains("*****"));
 
-        assert!(!redacted_command.contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_command.contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_command.contains("*****"));
 
-        assert!(!redacted_output.contains("warp-server-staging.firebaseapp.com"));
+        assert!(!redacted_output.contains("derp-server-staging.firebaseapp.com"));
         assert!(redacted_output.contains("*****"));
     } else {
         panic!("Expected GrepToolFailed event");
@@ -75,13 +75,13 @@ fn test_create_redacted_grep_error_event() {
 
 #[test]
 fn build_git_grep_command_single_quotes_shell_substitution() {
-    let queries = vec!["$(touch /tmp/warp-poc); `id`".to_string()];
+    let queries = vec!["$(touch /tmp/derp-poc); `id`".to_string()];
 
     let command = build_git_grep_command(&queries, "/tmp/repo path", ShellType::Bash);
 
     assert_eq!(
         command,
-        "git --no-pager grep --color=never --untracked -nIE -e '$(touch /tmp/warp-poc); `id`' '/tmp/repo path'"
+        "git --no-pager grep --color=never --untracked -nIE -e '$(touch /tmp/derp-poc); `id`' '/tmp/repo path'"
     );
 }
 

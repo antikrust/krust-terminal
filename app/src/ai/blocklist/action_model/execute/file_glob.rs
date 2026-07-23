@@ -5,9 +5,9 @@ use std::time::Duration;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use itertools::Itertools;
-use warp_core::features::FeatureFlag;
-use warpui::r#async::FutureExt as AsyncFutureExt;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derpui::r#async::FutureExt as AsyncFutureExt;
+use derpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -25,7 +25,7 @@ use crate::{send_telemetry_from_app_ctx, TelemetryEvent};
 
 const FILE_GLOB_TIMEOUT: Duration = Duration::from_secs(10);
 
-use warp_errors::report_error;
+use derp_errors::report_error;
 
 use super::{
     get_server_output_id, is_git_repository, ActionExecution, AnyActionExecution,

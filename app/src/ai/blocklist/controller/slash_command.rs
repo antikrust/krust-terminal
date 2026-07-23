@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derpui::{AppContext, ModelContext, SingletonEntity};
 
 use super::{
     add_pending_file_attachments, input_context_for_request, parse_context_attachments,

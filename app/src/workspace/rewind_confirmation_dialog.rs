@@ -1,18 +1,18 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::Fill;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_core::ui::color::coloru_with_opacity;
+use derp_core::ui::theme::Fill;
+use derp_errors::report_error;
+use derpui::elements::{
     Align, ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
     Text,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::{FixedBinding, Keystroke};
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -23,7 +23,7 @@ use crate::ui_components::dialog::{dialog_styles, Dialog};
 use crate::ui_components::icons::Icon;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -85,7 +85,7 @@ impl View for RewindConfirmationDialog {
         "RewindConfirmationDialog"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &derpui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 
@@ -177,7 +177,7 @@ impl View for RewindConfirmationDialog {
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(
                 Container::new(
-                    ConstrainedBox::new(Icon::Info.to_warpui_icon(info_color).finish())
+                    ConstrainedBox::new(Icon::Info.to_derpui_icon(info_color).finish())
                         .with_height(14.)
                         .with_width(14.)
                         .finish(),

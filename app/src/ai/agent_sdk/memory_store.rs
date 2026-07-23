@@ -1,14 +1,14 @@
 use anyhow::Result;
 use comfy_table::Cell;
 use serde::Serialize;
-use warp_cli::agent::OutputFormat;
-use warp_cli::memory_store::{
+use derp_cli::agent::OutputFormat;
+use derp_cli::memory_store::{
     CreateMemoryArgs, DeleteMemoryArgs, GetStoreArgs, ListMemoriesArgs, ListStoreAgentsArgs,
     ListVersionsArgs, MemoryCommand, MemoryStoreCommand, UpdateMemoryArgs, UpdateStoreArgs,
 };
-use warp_cli::GlobalOptions;
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use derp_cli::GlobalOptions;
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::server::server_api::ai::{
@@ -313,7 +313,7 @@ impl MemoryStoreCommandRunner {
     }
 }
 
-impl warpui::Entity for MemoryStoreCommandRunner {
+impl derpui::Entity for MemoryStoreCommandRunner {
     type Event = ();
 }
 

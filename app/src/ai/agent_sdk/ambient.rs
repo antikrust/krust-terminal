@@ -1,4 +1,4 @@
-//! Commands to interact with ambient agents on Warp's platform.
+//! Commands to interact with ambient agents on Derp's platform.
 use std::io::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,19 +7,19 @@ use anyhow::{anyhow, Context as _};
 use comfy_table::Cell;
 use futures::{future, StreamExt};
 use serde::Serialize;
-use warp_cli::agent::{Harness, OutputFormat, Prompt, RunCloudArgs};
-use warp_cli::json_filter::JsonOutput;
-use warp_cli::task::{
+use derp_cli::agent::{Harness, OutputFormat, Prompt, RunCloudArgs};
+use derp_cli::json_filter::JsonOutput;
+use derp_cli::task::{
     ArtifactTypeArg, ExecutionLocationArg, ListTasksArgs, MessageCommand, MessageDeliveredArgs,
     MessageListArgs, MessageReadArgs, MessageSendArgs, MessageWatchArgs, RunSortByArg,
     RunSourceArg, RunStateArg, TaskGetArgs,
 };
-use warp_cli::{GlobalOptions, SortOrderArg};
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warpui::platform::TerminationMode;
-use warpui::r#async::{Spawnable, Timer};
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use derp_cli::{GlobalOptions, SortOrderArg};
+use derp_core::channel::ChannelState;
+use derp_core::features::FeatureFlag;
+use derpui::platform::TerminationMode;
+use derpui::r#async::{Spawnable, Timer};
+use derpui::{AppContext, ModelContext, SingletonEntity};
 
 use super::common::{parse_ambient_task_id, EnvironmentChoice, ResolveConfigurationError};
 use crate::ai::agent::{extract_user_query_mode, UserQueryMode};
@@ -240,8 +240,8 @@ impl AmbientAgentRunner {
         }
 
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        let setup_future = future::try_join(refresh_future, warp_drive_sync_future);
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        let setup_future = future::try_join(refresh_future, derp_drive_sync_future);
 
         ctx.spawn(setup_future, move |_runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -581,7 +581,7 @@ impl AmbientAgentRunner {
                     if should_open {
                         if let Some(session_join_info) = session_join_info {
                             let url =
-                                match (super::is_running_in_warp(), session_join_info.session_id) {
+                                match (super::is_running_in_derp(), session_join_info.session_id) {
                                     (true, Some(session_id)) => {
                                         shared_session::join_native_intent(&session_id)
                                     }
@@ -1020,12 +1020,12 @@ fn task_id_from_run_id(run_id: &str) -> Option<AmbientAgentTaskId> {
 }
 
 fn task_id_from_oz_run_id_env() -> anyhow::Result<Option<AmbientAgentTaskId>> {
-    match std::env::var(warp_cli::OZ_RUN_ID_ENV) {
+    match std::env::var(derp_cli::OZ_RUN_ID_ENV) {
         Ok(run_id) => parse_ambient_task_id(&run_id, "Invalid OZ_RUN_ID").map(Some),
         Err(std::env::VarError::NotPresent) => Ok(None),
         Err(std::env::VarError::NotUnicode(_)) => Err(anyhow!(
             "{} is set but is not valid Unicode",
-            warp_cli::OZ_RUN_ID_ENV
+            derp_cli::OZ_RUN_ID_ENV
         )),
     }
 }
@@ -1423,7 +1423,7 @@ impl AmbientAgentRunner {
     }
 }
 
-impl warpui::Entity for AmbientAgentRunner {
+impl derpui::Entity for AmbientAgentRunner {
     type Event = ();
 }
 

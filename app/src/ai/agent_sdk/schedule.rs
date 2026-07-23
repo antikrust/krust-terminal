@@ -2,15 +2,15 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use futures::future;
 use serde::Serialize;
-use warp_cli::agent::OutputFormat;
-use warp_cli::schedule::{
+use derp_cli::agent::OutputFormat;
+use derp_cli::schedule::{
     CreateScheduleArgs, DeleteScheduleArgs, GetScheduleArgs, PauseScheduleArgs, ScheduleCommand,
     ScheduleSubcommand, UnpauseScheduleArgs, UpdateScheduleArgs,
 };
-use warp_cli::GlobalOptions;
-use warp_graphql::queries::get_scheduled_agent_history::ScheduledAgentHistory;
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, SingletonEntity};
+use derp_cli::GlobalOptions;
+use derp_graphql::queries::get_scheduled_agent_history::ScheduledAgentHistory;
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, SingletonEntity};
 
 use super::common::{EnvironmentChoice, ResolveConfigurationError};
 use super::output::{self, TableFormat};
@@ -43,8 +43,8 @@ pub fn run(
 fn create(ctx: &mut AppContext, args: CreateScheduleArgs) -> anyhow::Result<()> {
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        let setup_future = future::try_join(refresh_future, warp_drive_sync_future);
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        let setup_future = future::try_join(refresh_future, derp_drive_sync_future);
 
         ctx.spawn(setup_future, move |manager, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -341,8 +341,8 @@ fn pause(ctx: &mut AppContext, args: PauseScheduleArgs) -> anyhow::Result<()> {
     let schedule_id = SyncId::ServerId(ServerId::try_from(args.schedule_id)?);
 
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        ctx.spawn(warp_drive_sync_future, move |manager, result, ctx| {
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        ctx.spawn(derp_drive_sync_future, move |manager, result, ctx| {
             if let Err(err) = result {
                 super::report_fatal_error(err, ctx);
                 return;
@@ -369,8 +369,8 @@ fn unpause(ctx: &mut AppContext, args: UnpauseScheduleArgs) -> anyhow::Result<()
     let schedule_id = SyncId::ServerId(ServerId::try_from(args.schedule_id)?);
 
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        ctx.spawn(warp_drive_sync_future, move |manager, result, ctx| {
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        ctx.spawn(derp_drive_sync_future, move |manager, result, ctx| {
             if let Err(err) = result {
                 super::report_fatal_error(err, ctx);
                 return;
@@ -398,8 +398,8 @@ fn update(ctx: &mut AppContext, args: UpdateScheduleArgs) -> anyhow::Result<()> 
 
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        let setup_future = future::try_join(refresh_future, warp_drive_sync_future);
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        let setup_future = future::try_join(refresh_future, derp_drive_sync_future);
 
         ctx.spawn(setup_future, move |manager, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -536,8 +536,8 @@ fn update(ctx: &mut AppContext, args: UpdateScheduleArgs) -> anyhow::Result<()> 
 /// List all scheduled agents available to the current user.
 fn list(ctx: &mut AppContext, output_format: OutputFormat) -> anyhow::Result<()> {
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        ctx.spawn(warp_drive_sync_future, move |manager, result, ctx| {
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        ctx.spawn(derp_drive_sync_future, move |manager, result, ctx| {
             if let Err(err) = result {
                 super::report_fatal_error(err, ctx);
                 return;
@@ -596,8 +596,8 @@ fn get(
     let schedule_id = SyncId::ServerId(ServerId::try_from(args.schedule_id)?);
 
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        ctx.spawn(warp_drive_sync_future, move |manager, result, ctx| {
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        ctx.spawn(derp_drive_sync_future, move |manager, result, ctx| {
             if let Err(err) = result {
                 super::report_fatal_error(err, ctx);
                 return;
@@ -645,8 +645,8 @@ fn delete(ctx: &mut AppContext, args: DeleteScheduleArgs) -> anyhow::Result<()> 
     let schedule_id = SyncId::ServerId(ServerId::try_from(args.schedule_id)?);
 
     ScheduledAgentManager::handle(ctx).update(ctx, move |_manager, ctx| {
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        ctx.spawn(warp_drive_sync_future, move |manager, result, ctx| {
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        ctx.spawn(derp_drive_sync_future, move |manager, result, ctx| {
             if let Err(err) = result {
                 super::report_fatal_error(err, ctx);
                 return;

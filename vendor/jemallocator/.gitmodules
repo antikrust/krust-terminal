@@ -1,0 +1,3 @@
+[submodule "jemalloc-sys/jemalloc"]
+	path = jemalloc-sys/jemalloc
+	url = https://github.com/facebook/jemalloc

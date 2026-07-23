@@ -3,11 +3,11 @@
 #[cfg(feature = "local_fs")]
 use std::path::Path;
 
-use warpui::elements::{
+use derpui::elements::{
     Border, Container, CornerRadius, Flex, MouseStateHandle, ParentElement, Radius, Text,
 };
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, EventContext, SingletonEntity};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, EventContext, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::settings::PrivacySettings;
@@ -201,7 +201,7 @@ where
             .with_child(
                 appearance
                     .ui_builder()
-                    .span("*Secrets are not sent to Warp's server.")
+                    .span("*Secrets are not sent to Derp's server.")
                     .with_style(UiComponentStyles {
                         font_size: Some(12.),
                         margin: Some(Coords::default().top(4.)),
@@ -234,32 +234,32 @@ where
         .finish()
 }
 
-/// Returns whether "Open in Warp" should be offered for the given file path.
+/// Returns whether "Open in Derp" should be offered for the given file path.
 ///
 /// This checks:
-/// - Whether Warp is already the default editor (skip if so)
-/// - Whether this file is openable in Warp (skips binary files and directories)
-/// - Whether the file renders in Warp's notebook viewer, which is reached via a
+/// - Whether Derp is already the default editor (skip if so)
+/// - Whether this file is openable in Derp (skips binary files and directories)
+/// - Whether the file renders in Derp's notebook viewer, which is reached via a
 ///   different affordance (skips Markdown and, when enabled, Jupyter notebooks)
 #[cfg(feature = "local_fs")]
-pub fn should_show_open_in_warp_link(path: &Path, app: &AppContext) -> bool {
-    use warpui::SingletonEntity;
+pub fn should_show_open_in_derp_link(path: &Path, app: &AppContext) -> bool {
+    use derpui::SingletonEntity;
 
     use crate::code::view::is_binary_file;
-    use crate::notebooks::file::renders_in_warp_notebook_viewer;
+    use crate::notebooks::file::renders_in_derp_notebook_viewer;
     use crate::util::file::external_editor::settings::EditorChoice;
     use crate::util::file::external_editor::EditorSettings;
 
     let settings = EditorSettings::as_ref(app);
 
-    if matches!(*settings.open_file_editor, EditorChoice::Warp) {
+    if matches!(*settings.open_file_editor, EditorChoice::Derp) {
         return false;
     }
 
-    !renders_in_warp_notebook_viewer(path) && !is_binary_file(path) && !path.is_dir()
+    !renders_in_derp_notebook_viewer(path) && !is_binary_file(path) && !path.is_dir()
 }
 
 #[cfg(not(feature = "local_fs"))]
-pub fn should_show_open_in_warp_link(_path: &std::path::Path, _app: &AppContext) -> bool {
+pub fn should_show_open_in_derp_link(_path: &std::path::Path, _app: &AppContext) -> bool {
     false
 }

@@ -1,9 +1,9 @@
 //! Support for displaying inherited ACLs.
 
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{CrossAxisAlignment, Flex, MouseStateHandle, ParentElement as _};
-use warpui::ui_components::components::UiComponent as _;
-use warpui::{AppContext, Element, SingletonEntity as _};
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::{CrossAxisAlignment, Flex, MouseStateHandle, ParentElement as _};
+use derpui::ui_components::components::UiComponent as _;
+use derpui::{AppContext, Element, SingletonEntity as _};
 
 use super::style;
 use crate::cloud_object::model::persistence::CloudModel;

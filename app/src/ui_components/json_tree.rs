@@ -7,14 +7,14 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use pathfinder_color::ColorU;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::WarpTheme;
-use warpui::elements::{
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::DerpTheme;
+use derpui::elements::{
     ConstrainedBox, CrossAxisAlignment, Empty, Flex, Hoverable, MainAxisSize, MouseState,
     MouseStateHandle, ParentElement, SavePosition, Shrinkable, Text,
 };
-use warpui::{Element, EventContext};
+use derpui::{Element, EventContext};
 
 use crate::appearance::Appearance;
 
@@ -83,7 +83,7 @@ pub struct JsonTreeState {
     /// Per-node `MouseStateHandle`s used by the `Hoverable` elements in each
     /// rendered row.
     ///
-    /// WarpUI requires that `MouseStateHandle`s be created once and reused
+    /// DerpUI requires that `MouseStateHandle`s be created once and reused
     /// across renders: creating `MouseStateHandle::default()` inline during
     /// render discards the `click_count` set during `LeftMouseDown` before
     /// `LeftMouseUp` fires, so click handlers never trigger. Storing handles
@@ -139,7 +139,7 @@ impl JsonTreeState {
 // ---------------------------------------------------------------------------
 
 /// Pre-resolved colors for each JSON value category, sourced from the active
-/// `WarpTheme`. Build this once per render from `JsonTreeColors::from_theme`.
+/// `DerpTheme`. Build this once per render from `JsonTreeColors::from_theme`.
 #[derive(Debug, Clone, Copy)]
 pub struct JsonTreeColors {
     /// Color for object/array keys and array indices.
@@ -157,13 +157,13 @@ pub struct JsonTreeColors {
 }
 
 impl JsonTreeColors {
-    /// Resolve colors from a `WarpTheme` and its background color.
+    /// Resolve colors from a `DerpTheme` and its background color.
     ///
     /// Each JSON value type maps to a visually distinct ANSI foreground color
     /// so that keys, strings, numbers, booleans, and null are easy to
     /// distinguish at a glance. Annotations and punctuation use the theme's
     /// subdued text color so they don't compete with value content.
-    pub fn from_theme(theme: &WarpTheme) -> Self {
+    pub fn from_theme(theme: &DerpTheme) -> Self {
         let bg = theme.background();
         Self {
             key: theme.ansi_fg_cyan(),
@@ -309,7 +309,7 @@ fn render_value(
     on_toggle: &Arc<ToggleFn>,
     on_toggle_string: &Arc<ToggleStringFn>,
     on_copy_json: &Arc<CopyJsonFn>,
-    font_family: warpui::fonts::FamilyId,
+    font_family: derpui::fonts::FamilyId,
     column: &mut Flex,
 ) {
     match value {
@@ -515,7 +515,7 @@ fn render_long_string_row(
     position_id_prefix: &str,
     on_toggle_string: &Arc<ToggleStringFn>,
     on_copy_json: &Arc<CopyJsonFn>,
-    font_family: warpui::fonts::FamilyId,
+    font_family: derpui::fonts::FamilyId,
     column: &mut Flex,
 ) {
     let anchor_id = format!("{position_id_prefix}:row:{path:?}");
@@ -537,7 +537,7 @@ fn render_long_string_row(
     // Chevron in the standard left position.
     row.add_child(
         ConstrainedBox::new(
-            icon.to_warpui_icon(warp_core::ui::theme::Fill::Solid(colors.annotation))
+            icon.to_derpui_icon(derp_core::ui::theme::Fill::Solid(colors.annotation))
                 .finish(),
         )
         .with_width(CHEVRON_SIZE)
@@ -623,7 +623,7 @@ fn render_container_node(
     position_id_prefix: &str,
     on_toggle: &Arc<ToggleFn>,
     on_copy_json: &Arc<CopyJsonFn>,
-    font_family: warpui::fonts::FamilyId,
+    font_family: derpui::fonts::FamilyId,
     column: &mut Flex,
 ) {
     // Empty containers have no chevron and are not interactive.
@@ -655,7 +655,7 @@ fn render_container_node(
         let icon_color = colors.annotation;
         row.add_child(
             ConstrainedBox::new(
-                icon.to_warpui_icon(warp_core::ui::theme::Fill::Solid(icon_color))
+                icon.to_derpui_icon(derp_core::ui::theme::Fill::Solid(icon_color))
                     .finish(),
             )
             .with_width(CHEVRON_SIZE)
@@ -732,7 +732,7 @@ fn render_scalar_row(
     colors: &JsonTreeColors,
     position_id_prefix: &str,
     on_copy_json: &Arc<CopyJsonFn>,
-    font_family: warpui::fonts::FamilyId,
+    font_family: derpui::fonts::FamilyId,
     column: &mut Flex,
 ) {
     let anchor_id = format!("{position_id_prefix}:row:{path:?}");

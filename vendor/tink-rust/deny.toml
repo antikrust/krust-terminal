@@ -1,0 +1,122 @@
+# Configuration used for dependency checking with cargo-deny.
+#
+# For further details on all configuration options see:
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+[graph]
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+    { triple = "x86_64-apple-darwin" },
+]
+
+# Deny all advisories unless explicitly ignored.
+[advisories]
+yanked = "deny"
+ignore = [
+    # atty is not used with a custom global allocator.
+    "RUSTSEC-2021-0145",
+    # rusoto_* is Unmaintained.
+    # TODO(#416): migrate off rusoto
+    "RUSTSEC-2022-0071",
+    # ansi_term is Unmaintained (via structopt(0.3.26)).
+    "RUSTSEC-2021-0139",
+    # proc-macro-error is Unmaintained (via structopt-derive(0.4.18)).
+    "RUSTSEC-2024-0370",
+    # atty is Unmaintained (via structopt(v0.3.26)).
+    "RUSTSEC-2024-0375",
+    # No use of externally-provided WebPKI chains.
+    "RUSTSEC-2023-0052",
+    # TODO(692): upgrade tink-gcp-kms dependencies
+    "RUSTSEC-2024-0336",
+    # TODO: upgrade idna dep (via yup-oauth2)
+    "RUSTSEC-2024-0421",
+    # *ring* overflow checking not turned on for release builts
+    "RUSTSEC-2025-0009",
+    # *ring* is Unmaintained
+    "RUSTSEC-2025-0010",
+]
+
+# Deny multiple versions unless explicitly skipped.
+[bans]
+multiple-versions = "deny"
+wildcards = "allow"
+
+######################################
+
+# Old versions of crates pulled in (transitively) by rusoto_*(v0.47.0)
+[[bans.skip]]
+name = "hmac"
+version = "=0.11.0"
+[[bans.skip]]
+name = "base64"
+version = "=0.13.1"
+[[bans.skip]]
+name = "digest"
+version = "0.9.0"
+[[bans.skip]]
+name = "sha2"
+version = "0.9.9"
+[[bans.skip]]
+name = "bitflags"
+version = "1.3.2"
+[[bans.skip]]
+name = "h2"
+version = "0.3.26"
+[[bans.skip]]
+name = "http"
+version = "0.2.11"
+[[bans.skip]]
+name = "http-body"
+version = "0.4.5"
+[[bans.skip]]
+name = "hyper"
+version = "0.14.24"
+[[bans.skip]]
+name = "socket2"
+version = "0.4.9"
+
+# tonic(0.14.2) => socket2(0.6.1) in addition to 0.5
+[[bans.skip]]
+name = "socket2"
+version = "0.5.7"
+
+# structopt(0.3.26) => structopt-derive(0.4.18) => heck(0.3.*)
+[[bans.skip]]
+name = "heck"
+version = "0.3.1"
+
+# Various dependencies use block-buffer(0.9.0)
+[[bans.skip]]
+name = "block-buffer"
+version = "0.9.0"
+
+# Various dependencies use syn(1.0.109)
+[[bans.skip]]
+name = "syn"
+version = "1.0.109"
+
+######################################
+
+# List of allowed licenses.
+# For more detailed information see http://go/thirdpartylicenses.
+[licenses]
+allow = [
+  "Apache-2.0",
+  "ISC",
+  "MIT",
+  "OpenSSL",
+  "BSD-3-Clause",
+  "Unicode-DFS-2016",
+]
+
+[[licenses.clarify]]
+name = "ring"
+version = "*"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 3171872035 }]
+
+[[licenses.clarify]]
+name = "webpki"
+version = "*"
+expression = "ISC"
+license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]

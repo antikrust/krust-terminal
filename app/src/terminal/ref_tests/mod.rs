@@ -1,5 +1,5 @@
 // The test harness in this file is adapted from the alacritty_terminal crate
-// under the Apache license; see: crates/warp_terminal/src/model/LICENSE-ALACRITTY.
+// under the Apache license; see: crates/derp_terminal/src/model/LICENSE-ALACRITTY.
 
 use std::fs::{self, File};
 use std::io::{self, Read};
@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json as json;
-use warpui::r#async::executor::Background;
+use derpui::r#async::executor::Background;
 
 use crate::terminal::color::Colors;
 use crate::terminal::event_listener::ChannelEventListener;
@@ -119,7 +119,7 @@ fn ref_test(dir: &Path) {
         block_padding,
         size,
         max_block_scroll_limit: history_size as usize,
-        warp_prompt_height_lines: 0.1,
+        derp_prompt_height_lines: 0.1,
     };
     let mut terminal = TerminalModel::new(
         None, /* restored_blocks */

@@ -12,12 +12,12 @@ use markdown_parser::parse_markdown;
 use pathfinder_color::ColorU;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use warp_cli::agent::Harness;
-use warp_completer::parsers::simple::top_level_command;
-use warp_editor::content::buffer::Buffer;
-use warp_editor::content::markdown::MarkdownStyle;
-use warp_util::path::EscapeChar;
-use warpui::{AppContext, SingletonEntity};
+use derp_cli::agent::Harness;
+use derp_completer::parsers::simple::top_level_command;
+use derp_editor::content::buffer::Buffer;
+use derp_editor::content::markdown::MarkdownStyle;
+use derp_util::path::EscapeChar;
+use derpui::{AppContext, SingletonEntity};
 
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
 use crate::ai::blocklist::CLAUDE_ORANGE;
@@ -28,7 +28,7 @@ use crate::ui_components::icons::Icon;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// UID for the Uber team.
-/// See https://warp.metabaseapp.com/dashboard/1454?team_id=46347
+/// See https://derp.metabaseapp.com/dashboard/1454?team_id=46347
 const UBER_TEAM_UID: &str = "BdVbYjy9LRZcZrYBemSfAF";
 
 /// Gemini brand blue color
@@ -193,7 +193,7 @@ impl CLIAgent {
     }
 
     /// Returns the [`CLIAgent`] corresponding to a cloud-agent [`Harness`] when it represents a
-    /// third-party agent. Returns `None` for [`Harness::Oz`] (Warp's built-in harness has no
+    /// third-party agent. Returns `None` for [`Harness::Oz`] (Derp's built-in harness has no
     /// distinct CLI agent identity).
     pub fn from_harness(harness: Harness) -> Option<Self> {
         match harness {

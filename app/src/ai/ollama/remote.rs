@@ -2,7 +2,7 @@
 //!
 //! The local install is not the only one worth using: a desktop with more
 //! memory can hold larger models — or several at once — while the laptop that
-//! runs Warp cannot. Ollama's HTTP API is the same wherever it runs, so a LAN
+//! runs Derp cannot. Ollama's HTTP API is the same wherever it runs, so a LAN
 //! address is enough to borrow that machine's models.
 //!
 //! A model therefore has to say where it lives. [`qualify`] appends the host
@@ -120,10 +120,10 @@ pub fn normalize_host_input(input: &str) -> Result<String, String> {
 }
 
 /// The hosts the user has configured, as recorded in settings.
-pub fn configured(app: &warpui::AppContext) -> Vec<RemoteHost> {
+pub fn configured(app: &derpui::AppContext) -> Vec<RemoteHost> {
     use crate::settings::ai::AISettings;
     use settings::Setting as _;
-    use warpui::SingletonEntity as _;
+    use derpui::SingletonEntity as _;
     parse_hosts(
         AISettings::as_ref(app)
             .ollama_remote_hosts
@@ -133,10 +133,10 @@ pub fn configured(app: &warpui::AppContext) -> Vec<RemoteHost> {
 }
 
 /// Persists the host list back to settings.
-pub fn save(hosts: &[RemoteHost], ctx: &mut warpui::AppContext) {
+pub fn save(hosts: &[RemoteHost], ctx: &mut derpui::AppContext) {
     use crate::settings::ai::AISettings;
     use settings::Setting as _;
-    use warpui::SingletonEntity as _;
+    use derpui::SingletonEntity as _;
     let json = to_json(hosts);
     AISettings::handle(ctx).update(ctx, |settings, ctx| {
         if let Err(error) = settings.ollama_remote_hosts.set_value(Some(json), ctx) {

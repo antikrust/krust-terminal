@@ -1,5 +1,5 @@
-use warpui::platform::WindowStyle;
-use warpui::App;
+use derpui::platform::WindowStyle;
+use derpui::App;
 
 use super::*;
 use crate::cloud_object::model::persistence::CloudModel;

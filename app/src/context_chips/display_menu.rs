@@ -7,14 +7,14 @@ use std::sync::Arc;
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use instant::Instant;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::builder::MIN_FONT_SIZE;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warp_editor::editor::NavigationKey;
-use warpui::clipboard::ClipboardContent;
-use warpui::color::ColorU;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::builder::MIN_FONT_SIZE;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derp_editor::editor::NavigationKey;
+use derpui::clipboard::ClipboardContent;
+use derpui::color::ColorU;
+use derpui::elements::{
     Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty,
     EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior,
@@ -22,12 +22,12 @@ use warpui::elements::{
     PositionedElementOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::r#async::Timer;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::units::Pixels;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::r#async::Timer;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::units::Pixels;
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -127,7 +127,7 @@ const ENV_SIDE_CAR_OUTER_RADIUS: f32 = 6.;
 const ENV_SIDE_CAR_INNER_RADIUS: f32 = 4.;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -786,7 +786,7 @@ impl DisplayChipMenu {
         let image_key = format!("env-sidecar:{}:image", data.id);
 
         let icon = |icon: Icon| {
-            ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(label_text_color)).finish())
+            ConstrainedBox::new(icon.to_derpui_icon(Fill::Solid(label_text_color)).finish())
                 .with_width(ENV_SIDE_CAR_ICON_SIZE)
                 .with_height(ENV_SIDE_CAR_ICON_SIZE)
                 .finish()
@@ -909,7 +909,7 @@ impl DisplayChipMenu {
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
             // Leave the scrollbar gutter background transparent.
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .with_padding_start(0.)
         .with_padding_end(0.)
@@ -1008,7 +1008,7 @@ impl DisplayChipMenu {
                     updated_text.add_child(
                         Container::new(
                             ConstrainedBox::new(
-                                icon.to_warpui_icon(Fill::Solid(text_color)).finish(),
+                                icon.to_derpui_icon(Fill::Solid(text_color)).finish(),
                             )
                             .with_height(icon_size)
                             .with_width(icon_size)
@@ -1181,7 +1181,7 @@ impl DisplayChipMenu {
                                 let glyph_size = ENV_MENU_ICON_SIZE;
 
                                 let icon_glyph = ConstrainedBox::new(
-                                    icon.to_warpui_icon(Fill::Solid(main_text)).finish(),
+                                    icon.to_derpui_icon(Fill::Solid(main_text)).finish(),
                                 )
                                 .with_width(glyph_size)
                                 .with_height(glyph_size)
@@ -1208,7 +1208,7 @@ impl DisplayChipMenu {
                             left_side.add_child(
                                 Container::new(
                                     ConstrainedBox::new(
-                                        icon.to_warpui_icon(Fill::Solid(main_text)).finish(),
+                                        icon.to_derpui_icon(Fill::Solid(main_text)).finish(),
                                     )
                                     .with_height(icon_size)
                                     .with_width(icon_size)
@@ -1326,7 +1326,7 @@ impl DisplayChipMenu {
             scrollbar_width,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .with_padding_end(0.)
         .with_padding_start(0.);

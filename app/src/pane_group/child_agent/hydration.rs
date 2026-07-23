@@ -1,5 +1,5 @@
-use warp_errors::report_error;
-use warpui::{SingletonEntity, ViewContext};
+use derp_errors::report_error;
+use derpui::{SingletonEntity, ViewContext};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
@@ -290,7 +290,7 @@ impl PaneGroup {
 
             match conversation {
                 Some(CloudConversationData::Oz(cloud)) => {
-                    let tasks: Vec<warp_multi_agent_api::Task> = cloud
+                    let tasks: Vec<derp_multi_agent_api::Task> = cloud
                         .all_tasks()
                         .filter_map(|task| task.source().cloned())
                         .collect();

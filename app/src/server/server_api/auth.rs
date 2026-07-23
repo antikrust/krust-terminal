@@ -1,7 +1,7 @@
 use thiserror::Error;
 #[cfg(test)]
-pub use warp_server_client::auth::MockAuthClient;
-pub use warp_server_client::auth::{
+pub use derp_server_client::auth::MockAuthClient;
+pub use derp_server_client::auth::{
     AuthClient, FetchUserResult, MintCustomTokenError, SyncedUserSettings, UserAuthenticationError,
 };
 

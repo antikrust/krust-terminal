@@ -1,10 +1,10 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use warp_core::ui::builder::MIN_FONT_SIZE;
-use warpui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
-use warpui::fonts::Weight;
-use warpui::rendering::ThinStrokes;
-use warpui::{AppContext, SingletonEntity};
+use derp_core::ui::builder::MIN_FONT_SIZE;
+use derpui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
+use derpui::fonts::Weight;
+use derpui::rendering::ThinStrokes;
+use derpui::{AppContext, SingletonEntity};
 
 use super::EnforceMinimumContrast as EnforceMinimumContrastEnum;
 

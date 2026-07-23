@@ -1,8 +1,8 @@
-use warp_errors::report_if_error;
-use warpui::elements::{CrossAxisAlignment, Fill, Flex, ParentElement, Shrinkable};
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use derp_errors::report_if_error;
+use derpui::elements::{CrossAxisAlignment, Fill, Flex, ParentElement, Shrinkable};
+use derpui::presenter::ChildView;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, Event, SingleLineEditorOptions, TextOptions};
@@ -203,7 +203,7 @@ impl View for StartupShellView {
     }
 
     /// Renders controls to change the default shell for new sessions.
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
         let appearance = Appearance::as_ref(app);
         let ui_builder = appearance.ui_builder();
         let theme = appearance.theme();

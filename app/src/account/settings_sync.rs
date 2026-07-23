@@ -26,7 +26,7 @@
 use ::settings::SettingsManager;
 use account_client::{AccountClient, ScopeDocument, SettingsWrite};
 use serde_json::{Map, Value};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::AccountSession;
 

@@ -10,8 +10,8 @@ use ai::skills::{
     skill_reference_from_api_skill_ref, skill_reference_from_read_skill_ref, SkillPathOrigin,
 };
 use api::ask_user_question::question::QuestionType;
-use warp_core::channel::ChannelState;
-use warp_multi_agent_api as api;
+use derp_core::channel::ChannelState;
+use derp_multi_agent_api as api;
 
 use crate::ai::agent::api::convert_conversation::{
     convert_input_context, convert_tool_call_result_to_input,
@@ -811,8 +811,8 @@ impl ConvertAPIToolCallToAIAgentAction for api::message::ToolCall {
                             agent_run_id,
                         }
                     }
-                    Some(Metadata::WarpDocumentationSearch(_)) => {
-                        SubagentType::WarpDocumentationSearch
+                    Some(Metadata::DerpDocumentationSearch(_)) => {
+                        SubagentType::DerpDocumentationSearch
                     }
                     None => SubagentType::Unknown,
                 };

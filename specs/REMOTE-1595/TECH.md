@@ -1,6 +1,6 @@
 # Handoff-Compose Footer Chip Filtering — Tech Spec
 Product spec: `specs/REMOTE-1595/PRODUCT.md`
-Linear: [REMOTE-1595](https://linear.app/warpdotdev/issue/REMOTE-1595)
+Linear: [REMOTE-1595](https://linear.app/derpdotdev/issue/REMOTE-1595)
 ## Context
 `AgentInputFooter::render_toolbar_item` (`app/src/ai/blocklist/agent_view/agent_input_footer/mod.rs:1945`) is called for each user-configured left/right toolbar item during footer rendering. It already filters by `available_in()` and `available_to_session_viewer()`. The footer already has access to `handoff_compose_state: ModelHandle<HandoffComposeState>` (added in the REMOTE-1558 PR).
 The environment selector for `&` mode is rendered separately at `mod.rs:2108`, outside the toolbar item loop, so it is unaffected by toolbar filtering.

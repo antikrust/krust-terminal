@@ -6,10 +6,10 @@ use chrono::{DateTime, Local};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warp_core::ui::color::blend::Blend;
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use derp_core::ui::color::blend::Blend;
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::assets::asset_cache::AssetSource;
+use derpui::elements::{
     Align, Border, CacheOption, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult,
     DropShadow, Element, EventHandler, Flex, Hoverable, Icon, Image, MainAxisAlignment,
@@ -18,12 +18,12 @@ use warpui::elements::{
     Radius, Rect, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable,
     Stack, Text,
 };
-use warpui::fonts::{FamilyId, Properties};
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::fonts::{FamilyId, Properties};
+use derpui::keymap::FixedBinding;
+use derpui::platform::Cursor;
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     Action, AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WindowId,
 };
 
@@ -986,7 +986,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
                 Shrinkable::new(
                     1.,
                     Container::new(
-                        ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+                        ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
                             .with_width(icon_size)
                             .with_height(icon_size)
                             .finish(),
@@ -1102,7 +1102,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
                 .finish();
             return Some(Shrinkable::new(1., Align::new(element).right().finish()).finish());
         }
-        let icon_element = ConstrainedBox::new(config.icon.to_warpui_icon(icon_color).finish())
+        let icon_element = ConstrainedBox::new(config.icon.to_derpui_icon(icon_color).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();
@@ -1743,7 +1743,7 @@ pub enum MenuAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -2223,7 +2223,7 @@ impl<A: Action + Clone> SubMenu<A> {
                         ScrollbarWidth::Auto,
                         appearance.theme().nonactive_ui_detail().into(),
                         appearance.theme().active_ui_detail().into(),
-                        warpui::elements::Fill::None,
+                        derpui::elements::Fill::None,
                     )
                     .with_overlayed_scrollbar()
                     .finish(),
@@ -2576,28 +2576,28 @@ impl<A: Action + Clone> SubMenu<A> {
                 Custom(AccessibilityContent::new(
                     menu_item,
                     instructions,
-                    WarpA11yRole::TextRole,
+                    DerpA11yRole::TextRole,
                 ))
             }
             OpenSubmenu => Custom(AccessibilityContent::new(
                 String::from("Submenu Expanded"),
                 "Press the right key to open the selected submenu",
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             CloseSubmenu(_) => Custom(AccessibilityContent::new(
                 String::from("Submenu Closed"),
                 "Removing focus from a submenu will close the submenu",
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             Close(_) => Custom(AccessibilityContent::new(
                 String::from("Menu Closed"),
                 "Press the escape key to close the menu",
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             Enter => Custom(AccessibilityContent::new(
                 String::from("Action Selected"),
                 "Press the enter key to execute the selected menu item action",
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             HoverSubmenuLeafNode { .. }
             | UnhoverSubmenuParent(_)

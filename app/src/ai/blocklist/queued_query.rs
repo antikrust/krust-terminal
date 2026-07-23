@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use uuid::Uuid;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel, PendingAttachment};
@@ -30,7 +30,7 @@ pub enum QueuedQueryOrigin {
     InitialCloudMode,
     /// Filed via the `/queue <prompt>` slash command.
     QueueSlashCommand,
-    /// Filed via the auto-queue toggle in the warping indicator.
+    /// Filed via the auto-queue toggle in the derping indicator.
     AutoQueueToggle,
     /// Filed because auto-queue was in effect during an agent-requested long-running command.
     LrcAutoQueue,
@@ -188,7 +188,7 @@ pub struct QueuedQueryModel {
     /// Cached value of the `AISettings::default_prompt_submission_mode` setting,
     /// refreshed by an `AISettingsChangedEvent::DefaultPromptSubmissionMode`
     /// subscription. Used as the fallback when a conversation has no explicit
-    /// per-conversation override. Caching keeps the warping-indicator render
+    /// per-conversation override. Caching keeps the derping-indicator render
     /// path doing only a hashmap lookup plus a comparison.
     default_mode: PromptSubmissionMode,
 }

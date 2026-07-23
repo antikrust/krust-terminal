@@ -1,7 +1,7 @@
-use warpui::elements::MouseStateHandle;
-use warpui::{AppContext, Element};
+use derpui::elements::MouseStateHandle;
+use derpui::{AppContext, Element};
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{DerpDriveItem, DerpDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
 use crate::drive::index::DriveIndexAction;
@@ -10,11 +10,11 @@ use crate::server::ids::ClientId;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct WarpDriveAIFactCollection {
+pub struct DerpDriveAIFactCollection {
     id: ClientId,
 }
 
-impl WarpDriveAIFactCollection {
+impl DerpDriveAIFactCollection {
     pub fn new(id: ClientId) -> Self {
         Self { id }
     }
@@ -24,7 +24,7 @@ impl WarpDriveAIFactCollection {
     }
 }
 
-impl WarpDriveItem for WarpDriveAIFactCollection {
+impl DerpDriveItem for DerpDriveAIFactCollection {
     fn display_name(&self) -> Option<String> {
         Some("Rules".to_string())
     }
@@ -49,8 +49,8 @@ impl WarpDriveItem for WarpDriveAIFactCollection {
         None
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::AIFactCollection
+    fn derp_drive_id(&self) -> DerpDriveItemId {
+        DerpDriveItemId::AIFactCollection
     }
 
     fn sync_status_icon(
@@ -66,7 +66,7 @@ impl WarpDriveItem for WarpDriveAIFactCollection {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
         Box::new(self.clone())
     }
 }

@@ -1,5 +1,5 @@
-use warp_util::standardized_path::StandardizedPath;
-use warpui_core::App;
+use derp_util::standardized_path::StandardizedPath;
+use derpui_core::App;
 
 use super::*;
 use crate::StandingQueryContent;
@@ -15,7 +15,7 @@ fn snapshot_and_incremental_update_maintain_remote_standing_results() {
         let host = HostId::new("remote-host".to_string());
         let repo_path = path("/repo");
         let skill = StandingQueryContent::file(path("/repo/.agents/skills/review/SKILL.md"));
-        let rule = StandingQueryContent::file(path("/repo/WARP.md"));
+        let rule = StandingQueryContent::file(path("/repo/DERP.md"));
         let id = RemoteRepositoryIdentifier::new(host.clone(), repo_path.clone());
         let snapshot = RepoMetadataUpdate {
             repo_path: repo_path.clone(),

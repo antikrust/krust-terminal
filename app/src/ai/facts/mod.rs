@@ -1,13 +1,13 @@
 pub use cloud_object_models::{AIFact, AIMemory, CloudAIFact, CloudAIFactModel};
-use warp_core::ui::appearance::Appearance;
+use derp_core::ui::appearance::Appearance;
 
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::cloud_object::model::json_model::JsonModel;
 use crate::cloud_object::{
     GenericStringObjectFormat, GenericStringObjectUniqueKey, JsonObjectType, Revision,
 };
-use crate::drive::items::ai_fact::WarpDriveAIFact;
-use crate::drive::items::WarpDriveItem;
+use crate::drive::items::ai_fact::DerpDriveAIFact;
+use crate::drive::items::DerpDriveItem;
 use crate::drive::CloudObjectTypeAndId;
 use crate::server::ids::SyncId;
 use crate::server::sync_queue::QueueItem;
@@ -68,17 +68,17 @@ impl StringModel for AIFact {
         None
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_derp_drive(&self) -> bool {
         false
     }
 
-    fn to_warp_drive_item(
+    fn to_derp_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         ai_fact: &CloudAIFact,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveAIFact::new(
+    ) -> Option<Box<dyn DerpDriveItem>> {
+        Some(Box::new(DerpDriveAIFact::new(
             CloudObjectTypeAndId::GenericStringObject {
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::AIFact),
                 id,

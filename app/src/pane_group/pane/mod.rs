@@ -36,10 +36,10 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 use url::Url;
-use warp_util::remote_path::RemotePath;
-use warpui::elements::{DispatchEventResult, EventHandler, MouseInBehavior};
-use warpui::presenter::ChildView;
-use warpui::{
+use derp_util::remote_path::RemotePath;
+use derpui::elements::{DispatchEventResult, EventHandler, MouseInBehavior};
+use derpui::presenter::ChildView;
+use derpui::{
     Action, AppContext, Element, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity,
     View, ViewContext, ViewHandle, WeakModelHandle,
 };
@@ -417,7 +417,7 @@ impl PaneId {
     pub(super) fn deferred_placeholder_pane_id() -> Self {
         Self(IPaneId {
             pane_type: IPaneType::DeferredPlaceholder,
-            pane_view_id: warpui::EntityId::new(),
+            pane_view_id: derpui::EntityId::new(),
         })
     }
 
@@ -426,7 +426,7 @@ impl PaneId {
     pub fn dummy_pane_id() -> Self {
         Self(IPaneId {
             pane_type: IPaneType::Dummy,
-            pane_view_id: warpui::EntityId::new(),
+            pane_view_id: derpui::EntityId::new(),
         })
     }
 
@@ -471,8 +471,8 @@ impl PaneId {
         matches!(self.0.pane_type, IPaneType::EnvironmentManagement)
     }
 
-    /// Returns true if this pane contains a Warp Drive object (notebook, workflow, etc.).
-    pub fn is_warp_drive_object_pane(&self) -> bool {
+    /// Returns true if this pane contains a Derp Drive object (notebook, workflow, etc.).
+    pub fn is_derp_drive_object_pane(&self) -> bool {
         matches!(
             self.0.pane_type,
             IPaneType::Notebook
@@ -542,9 +542,9 @@ impl PaneId {
                 ChildView::<PaneView<chat_pane::ChatPaneView>>::with_id(self.0.pane_view_id)
                     .finish()
             }
-            IPaneType::DeferredPlaceholder => warpui::elements::Empty::new().finish(),
+            IPaneType::DeferredPlaceholder => derpui::elements::Empty::new().finish(),
             #[cfg(test)]
-            IPaneType::Dummy => warpui::elements::Empty::new().finish(),
+            IPaneType::Dummy => derpui::elements::Empty::new().finish(),
         };
         if *PaneSettings::as_ref(app).focus_panes_on_hover {
             element = EventHandler::new(element)

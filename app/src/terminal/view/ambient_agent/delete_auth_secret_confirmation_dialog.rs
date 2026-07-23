@@ -1,10 +1,10 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_cli::agent::Harness;
-use warp_managed_secrets::client::SecretOwner;
-use warpui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derp_cli::agent::Harness;
+use derp_managed_secrets::client::SecretOwner;
+use derpui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

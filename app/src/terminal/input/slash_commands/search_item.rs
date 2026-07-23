@@ -1,10 +1,10 @@
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
-use warpui::fonts::{Properties, Weight};
-use warpui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
-use warpui::{AppContext, Element, SingletonEntity};
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
+use derpui::fonts::{Properties, Weight};
+use derpui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
+use derpui::{AppContext, Element, SingletonEntity};
 
 use super::{AcceptSlashCommandOrSavedPrompt, InlineItem};
 use crate::ai::blocklist::agent_view::shortcuts::render_keystroke_with_color_overrides;

@@ -1,8 +1,8 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{Flex, ParentElement};
-use warpui::platform::WindowStyle;
-use warpui::{
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::{Flex, ParentElement};
+use derpui::platform::WindowStyle;
+use derpui::{
     App, Element, Entity, Presenter, SingletonEntity, TypedActionView, View, WindowInvalidation,
 };
 
@@ -25,7 +25,7 @@ impl View for ErrorCardTestView {
         "CustomRouterErrorCardTestView"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
         let appearance = Appearance::as_ref(app);
         Flex::column()
             .with_child(render_router_error_card(

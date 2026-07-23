@@ -1,4 +1,4 @@
-use warpui::Entity;
+use derpui::Entity;
 
 use crate::terminal::HistoryEntry;
 

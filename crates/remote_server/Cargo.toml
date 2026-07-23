@@ -2,7 +2,7 @@
 name = "remote_server"
 version = "0.1.0"
 edition = "2021"
-authors = ["Warp Team <dev@warp.dev>"]
+authors = ["Derp Team <dev@derp.baby>"]
 publish.workspace = true
 license.workspace = true
 
@@ -20,10 +20,10 @@ repo_metadata.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
-warp_core.workspace = true
-warp_errors.workspace = true
-warp_util.workspace = true
-warpui_core.workspace = true
+derp_core.workspace = true
+derp_errors.workspace = true
+derp_util.workspace = true
+derpui_core.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-io.workspace = true

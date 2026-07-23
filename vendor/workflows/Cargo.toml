@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "workflow-types",
+    "workflows",
+]
+
+[workspace.package]
+authors = ["Derp Team <dev@derp.baby>"]
+license = "Apache-2.0"
+publish = false

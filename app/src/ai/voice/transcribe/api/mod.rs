@@ -1,7 +1,7 @@
-//! This module contains Rust types for the Transcribe endpoint in warp-server for voice transcription.
+//! This module contains Rust types for the Transcribe endpoint in derp-server for voice transcription.
 //!
 //! These types are manually transposed from the API schema defined in go
-//! (warp-server/model/types/transcribe/(request.go|response.go|common.go)).
+//! (derp-server/model/types/transcribe/(request.go|response.go|common.go)).
 //!
 //! Documentation on the types here is directly borrowed from the documentation on the go schema;
 //! see the go schema for the source-of-truth.

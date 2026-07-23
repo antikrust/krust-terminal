@@ -9,7 +9,7 @@
 //! keyboard focus.
 //!
 //! The server routes all *core* input-related requests of a client — XTEST fake input,
-//! `WarpPointer`, `QueryPointer`, `SetInputFocus` — through that client's "ClientPointer"
+//! `DerpPointer`, `QueryPointer`, `SetInputFocus` — through that client's "ClientPointer"
 //! master pair. By creating a private master pair and pointing a dedicated connection's
 //! ClientPointer at it (`XISetClientPointer`), the existing XTEST-based mouse and keyboard code
 //! drives the agent seat unchanged: events are indistinguishable from real hardware input to
@@ -36,7 +36,7 @@ use x11rb::rust_connection::RustConnection;
 /// The prefix of agent seat device names. A seat is named `{PREFIX}{pid}-{sequence}` and the
 /// server derives the individual device names from it (e.g. "… pointer", "… keyboard",
 /// "… XTEST pointer"). The embedded pid identifies the owning process for stale-seat reaping.
-const SEAT_NAME_PREFIX: &str = "warp-agent-cu-";
+const SEAT_NAME_PREFIX: &str = "derp-agent-cu-";
 
 /// The XI2 device id wildcard meaning "all devices" in `XIQueryDevice`.
 const ALL_DEVICES: u16 = 0;
@@ -104,7 +104,7 @@ impl AgentSeat {
             }
         };
 
-        // Route this connection's core requests (XTEST fake input, WarpPointer, QueryPointer,
+        // Route this connection's core requests (XTEST fake input, DerpPointer, QueryPointer,
         // SetInputFocus) through the agent master pair instead of the user's virtual core
         // pointer and keyboard. Window `None` selects the requesting client itself.
         let selected = conn
@@ -305,7 +305,7 @@ fn remove_stale_seats(conn: &RustConnection) {
     let _ = conn.flush();
 }
 
-/// Parses the owning pid out of a seat name like "warp-agent-cu-1234-0".
+/// Parses the owning pid out of a seat name like "derp-agent-cu-1234-0".
 fn seat_pid(seat_name: &str) -> Option<u32> {
     let rest = seat_name.strip_prefix(SEAT_NAME_PREFIX)?;
     rest.split('-').next()?.parse().ok()

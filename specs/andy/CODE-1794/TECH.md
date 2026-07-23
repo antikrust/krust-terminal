@@ -1,6 +1,6 @@
 # TECH — Distinguish left vs right Alt on Windows and Linux
 
-Linear: [CODE-1794](https://linear.app/warpdotdev/issue/CODE-1794/windowslinux-right-alt-isnt-recognized-breaking-right-alt-as-meta)
+Linear: [CODE-1794](https://linear.app/derpdotdev/issue/CODE-1794/windowslinux-right-alt-isnt-recognized-breaking-right-alt-as-meta)
 
 See `PRODUCT.md` for user-visible behavior.
 
@@ -8,9 +8,9 @@ See `PRODUCT.md` for user-visible behavior.
 
 The extra-meta-keys setting is consumed by the `apply_extra_meta_keys` event munger in `app/src/lib.rs:461-480`. It reads `details.left_alt` and `details.right_alt` from the `KeyEventDetails` attached to a `KeyDown` event and rewrites the keystroke (strips `alt`, sets `meta`) when the corresponding side is enabled.
 
-On macOS, those flags are populated by the platform-native NSEvent path (`crates/warpui/src/platform/mac/event.rs`) which reads `NSEvent.modifierFlags` and correctly distinguishes the two Option keys.
+On macOS, those flags are populated by the platform-native NSEvent path (`crates/derpui/src/platform/mac/event.rs`) which reads `NSEvent.modifierFlags` and correctly distinguishes the two Option keys.
 
-On Windows and Linux, events flow through winit (`crates/warpui/src/windowing/winit/event_loop/...`). Before this change, `convert_keyboard_input_event` in `crates/warpui/src/windowing/winit/event_loop/key_events.rs:125-134` populated `KeyEventDetails` as:
+On Windows and Linux, events flow through winit (`crates/derpui/src/windowing/winit/event_loop/...`). Before this change, `convert_keyboard_input_event` in `crates/derpui/src/windowing/winit/event_loop/key_events.rs:125-134` populated `KeyEventDetails` as:
 
 ```rust path=null start=null
 details: KeyEventDetails {
@@ -28,15 +28,15 @@ Relevant files:
 
 - `app/src/lib.rs:458-480` — `apply_extra_meta_keys`, the consumer of `details.left_alt` / `right_alt`.
 - `app/src/settings/mod.rs:181-199` — `ExtraMetaKeys` struct with `left_alt` / `right_alt` bools.
-- `crates/warpui/src/windowing/winit/event_loop/mod.rs` — `WindowState` and event dispatch for the winit platform.
-- `crates/warpui/src/windowing/winit/event_loop/key_events.rs` — winit → warpui keyboard event conversion.
-- `crates/warpui_core/src/event.rs` — `KeyEventDetails` definition.
+- `crates/derpui/src/windowing/winit/event_loop/mod.rs` — `WindowState` and event dispatch for the winit platform.
+- `crates/derpui/src/windowing/winit/event_loop/key_events.rs` — winit → derpui keyboard event conversion.
+- `crates/derpui_core/src/event.rs` — `KeyEventDetails` definition.
 
 ## Proposed changes
 
 Track per-side Alt press state in `WindowState` based on `PhysicalKey::Code(AltLeft/AltRight)` from `KeyboardInput` events, and surface those flags through `KeyEventDetails` so the existing `apply_extra_meta_keys` munger distinguishes the two sides without any other changes.
 
-1. `crates/warpui/src/windowing/winit/event_loop/mod.rs` — Add two booleans to `WindowState`:
+1. `crates/derpui/src/windowing/winit/event_loop/mod.rs` — Add two booleans to `WindowState`:
    - `left_alt_pressed: bool`
    - `right_alt_pressed: bool`
    Initialize both to `false` in `WindowState::new`. These are per-window state to match the existing `modifiers` field.
@@ -51,7 +51,7 @@ Track per-side Alt press state in `WindowState` based on `PhysicalKey::Code(AltL
    - `WindowEvent::Focused(false)`: clear both flags before the existing focus-out bookkeeping.
    These mirror how the synthetic-event guard already protects against Alt+Tab races in `convert_keyboard_input_event` (`key_events.rs:81-83`).
 
-4. `crates/warpui/src/windowing/winit/event_loop/key_events.rs` — In `convert_keyboard_input_event`, populate `KeyEventDetails` from the tracked flags instead of from `ModifiersState`:
+4. `crates/derpui/src/windowing/winit/event_loop/key_events.rs` — In `convert_keyboard_input_event`, populate `KeyEventDetails` from the tracked flags instead of from `ModifiersState`:
    ```rust path=null start=null
    details: KeyEventDetails {
        left_alt: window_state.left_alt_pressed,
@@ -74,13 +74,13 @@ No new public types or cross-crate API changes. No setting migration. No feature
 
 Invariant references are to the numbered behaviors in `PRODUCT.md`.
 
-- Unit tests in `crates/warpui/src/windowing/winit/event_loop/key_events_tests.rs` (existing file) that drive `convert_keyboard_input_event` with a `WindowState` set to combinations of `left_alt_pressed` / `right_alt_pressed` and assert `KeyEventDetails.left_alt` / `right_alt` round-trip correctly. Covers invariants 2, 3, 4, 5, 10.
+- Unit tests in `crates/derpui/src/windowing/winit/event_loop/key_events_tests.rs` (existing file) that drive `convert_keyboard_input_event` with a `WindowState` set to combinations of `left_alt_pressed` / `right_alt_pressed` and assert `KeyEventDetails.left_alt` / `right_alt` round-trip correctly. Covers invariants 2, 3, 4, 5, 10.
 - Unit test(s) for `apply_extra_meta_keys` in `app/src/lib.rs` exercising the four `(left_alt, right_alt)` × `(ExtraMetaKeys.left_alt, ExtraMetaKeys.right_alt)` combinations. Covers invariants 2, 3, 4, 5, 11 (via the tagged log message if captured).
 - Manual verification on Windows (primary risk surface):
   - With `ExtraMetaKeys { left_alt: true, right_alt: false }`: `LeftAlt+b` sends ESC-b to the PTY; `Ctrl+RightAlt+R` fires the Resume conversation keybinding (invariant 2, 6).
   - With `ExtraMetaKeys { left_alt: false, right_alt: true }`: `RightAlt+b` sends ESC-b; `Ctrl+LeftAlt+R` fires the Resume conversation keybinding (invariant 3, 6).
   - Toggling one setting on the Keys page without touching the other and re-testing (invariant 1, 8).
-  - Alt+Tab out of Warp with Alt held, release outside the window, refocus: next character key reports plain Alt (invariant 9).
+  - Alt+Tab out of Derp with Alt held, release outside the window, refocus: next character key reports plain Alt (invariant 9).
 - Manual verification on Linux (X11 and Wayland) for invariants 2, 3, 5, 9. Confirms the per-side tracking works regardless of the per-side `Modifiers` state reliability caveat.
 - Manual verification on macOS that the Option-as-meta path is unchanged (invariant 7) — the change is gated to the winit path and should be a no-op on macOS, but a smoke test is cheap.
 

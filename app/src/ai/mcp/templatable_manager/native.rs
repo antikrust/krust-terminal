@@ -12,13 +12,13 @@ use parking_lot::Mutex;
 use simple_logger::manager::LogManager;
 use url::Url;
 use uuid::Uuid;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::safe_error;
-use warp_core::settings::Setting as _;
-use warp_errors::report_error;
-use warpui::windowing::WindowManager;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::features::FeatureFlag;
+use derp_core::safe_error;
+use derp_core::settings::Setting as _;
+use derp_errors::report_error;
+use derpui::windowing::WindowManager;
+use derpui::{AppContext, ModelContext, SingletonEntity};
 
 use super::{
     MCPServerState, SpawnedServerInfo, TemplatableMCPServerInfo, TemplatableMCPServerManager,
@@ -98,7 +98,7 @@ enum LegacyToTemplatableMCPConversionError {
     InstallationFailed,
 }
 
-/// An MCP server integration that Warp ships with bundled skills for.
+/// An MCP server integration that Derp ships with bundled skills for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum McpIntegration {
     Figma,
@@ -155,7 +155,7 @@ impl TemplatableMCPServerManager {
             anyhow::bail!("No spawned server found for uuid={server_uuid}");
         };
 
-        warpui::r#async::block_on(server_info.oauth_result_tx.send(result)).map_err(|_| {
+        derpui::r#async::block_on(server_info.oauth_result_tx.send(result)).map_err(|_| {
             anyhow::anyhow!(
                 "Failed to send OAuth result to server {server_uuid} - receiver dropped"
             )
@@ -167,7 +167,7 @@ impl TemplatableMCPServerManager {
 
     fn save_credentials_to_secure_storage(
         &mut self,
-        app: &mut warpui::AppContext,
+        app: &mut derpui::AppContext,
         installation_uuid: Uuid,
         credentials: PersistedCredentials,
     ) {
@@ -199,7 +199,7 @@ impl TemplatableMCPServerManager {
     pub fn delete_credentials_from_secure_storage(
         &mut self,
         installation_uuid: Uuid,
-        app: &mut warpui::AppContext,
+        app: &mut derpui::AppContext,
     ) {
         if let Some(template_uuid) = self.get_template_uuid(installation_uuid) {
             self.server_credentials.remove(&template_uuid);
@@ -828,10 +828,10 @@ impl TemplatableMCPServerManager {
 
             // For file-based MCP installations without an explicit `working_directory`,
             // default the spawn cwd to the directory the config was discovered in
-            // (repo root for project-scoped configs, ~/.warp/ or ~ for globals). This
+            // (repo root for project-scoped configs, ~/.derp/ or ~ for globals). This
             // matches user expectations for repo-relative commands in `.mcp.json`.
             // Cloud-templated installations (lookup returns None) are unaffected and
-            // continue to inherit Warp's process cwd.
+            // continue to inherit Derp's process cwd.
             if cli_server.cwd_parameter.is_none() {
                 if let Some(spawn_root) =
                     FileBasedMCPManager::as_ref(ctx).spawn_root_for_installation(installation_uuid)
@@ -1190,7 +1190,7 @@ impl TemplatableMCPServerManager {
     const BUILTIN_WEB_SEARCH_TEMPLATE_UUID: Uuid =
         Uuid::from_u128(0x2355db49_c68a_4008_90da_70802fc50e85);
 
-    /// Template UUIDs of Warp's built-in, Ollama-safe MCP servers — always
+    /// Template UUIDs of Derp's built-in, Ollama-safe MCP servers — always
     /// exposed to local models (see [`Self::is_exposed_to_local_models`]).
     const BUILTIN_LOCAL_MODEL_TEMPLATES: &'static [Uuid] =
         &[Self::BUILTIN_WEB_SEARCH_TEMPLATE_UUID];
@@ -1198,7 +1198,7 @@ impl TemplatableMCPServerManager {
     /// Whether the given installed server may be handed to local (Ollama)
     /// models. Third-party MCP servers are hidden from them by default —
     /// weak local models misuse general-purpose or stateful tools (e.g. a
-    /// persistent js REPL). Warp's built-in, Ollama-safe servers always
+    /// persistent js REPL). Derp's built-in, Ollama-safe servers always
     /// qualify; anything else only if the user opted it in via the per-card
     /// toggle on the MCP Servers page (persisted in
     /// `AISettings::mcp_local_model_exposed_templates`).
@@ -1241,7 +1241,7 @@ impl TemplatableMCPServerManager {
         serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string())
     }
 
-    /// Installs Warp's built-in "Web Search" MCP server the first time it's
+    /// Installs Derp's built-in "Web Search" MCP server the first time it's
     /// needed, so harnesses that don't have their own web search — chiefly
     /// tool-capable local Ollama models, see
     /// `ai::agent_sdk::driver::harness::ollama_stream_exec` — get one
@@ -1252,7 +1252,7 @@ impl TemplatableMCPServerManager {
     /// Unlike Figma, this isn't pulled from the cloud gallery: it's a
     /// first-party feature of this binary, spawned as a subcommand of
     /// itself (see `ai::mcp::web_search_server` and
-    /// `warp_cli::WorkerCommand::WebSearchMcpServer`) rather than an
+    /// `derp_cli::WorkerCommand::WebSearchMcpServer`) rather than an
     /// external process the user installs.
     pub fn ensure_builtin_web_search_server(&mut self, ctx: &mut ModelContext<Self>) {
         if self

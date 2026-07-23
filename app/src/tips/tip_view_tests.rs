@@ -1,6 +1,6 @@
-use warpui::elements::{ChildView, Empty, SavePosition};
-use warpui::platform::WindowStyle;
-use warpui::{App, ViewHandle};
+use derpui::elements::{ChildView, Empty, SavePosition};
+use derpui::platform::WindowStyle;
+use derpui::{App, ViewHandle};
 
 use super::*;
 

@@ -1,23 +1,23 @@
 //! Editor view for creating and editing local custom model routers.
 //!
-//! Opened as a side-pane from the Warp Agent settings page when the user clicks
+//! Opened as a side-pane from the Derp Agent settings page when the user clicks
 //! "Add router" or "Edit" on an existing router card. Writes changes to
-//! `~/.warp/custom_model_routers/` via [`WarpConfig::save_custom_model_router`].
+//! `~/.derp/custom_model_routers/` via [`DerpConfig::save_custom_model_router`].
 
 use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warpui::elements::{
+use derpui::elements::{
     ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Empty, Expanded, Fill as UiFill, Flex, FormattedTextElement,
     HighlightedHyperlink, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, ScrollbarWidth, Text,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::segmented_control::{
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl, SegmentedControlEvent,
 };
-use warpui::{
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -36,7 +36,7 @@ use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
 #[cfg(feature = "local_fs")]
-use crate::user_config::WarpConfig;
+use crate::user_config::DerpConfig;
 use crate::view_components::action_button::{
     ActionButton, ButtonSize, PrimaryTheme, SecondaryTheme,
 };
@@ -107,7 +107,7 @@ struct PromptRuleRow {
 
 pub struct CustomRouterEditorView {
     existing: Option<CustomModelRouter>,
-    pane_configuration: warpui::ModelHandle<PaneConfiguration>,
+    pane_configuration: derpui::ModelHandle<PaneConfiguration>,
     focus_handle: Option<PaneFocusHandle>,
     scroll_state: ClippedScrollStateHandle,
 
@@ -371,7 +371,7 @@ impl CustomRouterEditorView {
         view
     }
 
-    pub fn pane_configuration(&self) -> warpui::ModelHandle<PaneConfiguration> {
+    pub fn pane_configuration(&self) -> derpui::ModelHandle<PaneConfiguration> {
         self.pane_configuration.clone()
     }
 
@@ -535,7 +535,7 @@ impl CustomRouterEditorView {
                 }
             };
             let ep = self.existing.as_ref().and_then(|r| r.source_path.clone());
-            if let Err(e) = WarpConfig::save_custom_model_router(&name, &yaml, ep.as_deref()) {
+            if let Err(e) = DerpConfig::save_custom_model_router(&name, &yaml, ep.as_deref()) {
                 self.save_error = Some(format!("Write error: {e}"));
                 ctx.notify();
                 return;
@@ -687,7 +687,7 @@ impl CustomRouterEditorView {
             );
             let rules_copy = FormattedText::new([
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
-                    "Rules are custom prompts that describe when to use a specific model. Warp intelligently matches your tasks against these rules.",
+                    "Rules are custom prompts that describe when to use a specific model. Derp intelligently matches your tasks against these rules.",
                 )]),
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
                     "Rules are matched top to bottom — rules higher in the list take precedence over those below.",
@@ -750,7 +750,7 @@ impl CustomRouterEditorView {
             FormattedTextLine::Line(vec![
                 FormattedTextFragment::bold("Complexity-based"),
                 FormattedTextFragment::plain_text(
-                    " routing chooses a model based on Warp's classification of the task's difficulty.",
+                    " routing chooses a model based on Derp's classification of the task's difficulty.",
                 ),
             ]),
             FormattedTextLine::Line(vec![
@@ -828,7 +828,7 @@ impl CustomRouterEditorView {
 
         // Error
         if let Some(msg) = &self.save_error {
-            let err_color = warp_core::ui::theme::Fill::Solid(appearance.theme().ui_error_color());
+            let err_color = derp_core::ui::theme::Fill::Solid(appearance.theme().ui_error_color());
             col.add_child(
                 Container::new(
                     Text::new(msg.clone(), appearance.ui_font_family(), 12.)
@@ -871,7 +871,7 @@ impl View for CustomRouterEditorView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .finish()
     }
@@ -950,7 +950,7 @@ impl BackingView for CustomRouterEditorView {
             title: HEADER_TEXT.into(),
             title_secondary: None,
             title_style: None,
-            title_clip_config: warpui::text_layout::ClipConfig::start(),
+            title_clip_config: derpui::text_layout::ClipConfig::start(),
             title_max_width: None,
             left_of_title: None,
             right_of_title: None,
@@ -1036,7 +1036,7 @@ fn repopulate_filterable<F>(
 
 /// Inner helper: fills a [`FilterableDropdown`] with rich model items.
 fn fill_filterable_dropdown<F>(
-    ctx: &mut warpui::ViewContext<FilterableDropdown<CustomRouterEditorAction>>,
+    ctx: &mut derpui::ViewContext<FilterableDropdown<CustomRouterEditorAction>>,
     dropdown: &mut FilterableDropdown<CustomRouterEditorAction>,
     selected_id: &str,
     make_action: F,
@@ -1223,7 +1223,7 @@ fn rule_icon_button(
     // Inline the builder closure (rather than binding it to a `let`) so the
     // compiler infers the higher-ranked closure lifetime `Hoverable` requires.
     let hoverable = Hoverable::new(mouse_state, move |_| {
-        ConstrainedBox::new(icon.to_warpui_icon(color).finish())
+        ConstrainedBox::new(icon.to_derpui_icon(color).finish())
             .with_width(RULE_ICON_BUTTON_SIZE)
             .with_height(RULE_ICON_BUTTON_SIZE)
             .finish()

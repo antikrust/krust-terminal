@@ -9,24 +9,24 @@ use instant::Instant;
 use parking_lot::RwLock;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_cli::agent::Harness;
-use warp_cli::skill::SkillSpec;
-use warp_core::channel::ChannelState;
-use warp_core::ui::color::coloru_with_opacity;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::new_scrollable::{NewScrollable, SingleAxisConfig};
-use warpui::elements::{
+use derp_cli::agent::Harness;
+use derp_cli::skill::SkillSpec;
+use derp_core::channel::ChannelState;
+use derp_core::ui::color::coloru_with_opacity;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::new_scrollable::{NewScrollable, SingleAxisConfig};
+use derpui::elements::{
     resizable_state_handle, Border, ChildAnchor, ChildView, ClippedScrollStateHandle,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DragBarSide, Empty, Expanded,
     Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Resizable, ResizableStateHandle,
     SelectableArea, SelectionHandle, Shrinkable, Stack, Text, Wrap,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -276,7 +276,7 @@ impl ConversationDetailsData {
 
     /// Build details data from an in-memory `AIConversation`. Used both by the WASM
     /// transcript/shared-session details panel and by the native pane-level details panel
-    /// when the active conversation is a local (non-cloud) Warp Agent run.
+    /// when the active conversation is a local (non-cloud) Derp Agent run.
     pub fn from_conversation(conversation: &AIConversation, app: &AppContext) -> Self {
         let mut directory = None;
         let mut conversation_id = None;
@@ -638,7 +638,7 @@ enum DetailsPanelLocalContinuationInfo {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::custom(
         CustomAction::Copy,
@@ -1027,16 +1027,16 @@ impl ConversationDetailsPanel {
             .unwrap_or_else(|| AvatarContent::DisplayName(creator.display_name.clone()));
         let avatar = Avatar::new(
             avatar_content,
-            warpui::ui_components::components::UiComponentStyles {
+            derpui::ui_components::components::UiComponentStyles {
                 width: Some(20.),
                 height: Some(20.),
-                border_radius: Some(warpui::elements::CornerRadius::with_all(
-                    warpui::elements::Radius::Percentage(50.),
+                border_radius: Some(derpui::elements::CornerRadius::with_all(
+                    derpui::elements::Radius::Percentage(50.),
                 )),
                 background: Some(blended_colors::accent(theme).into()),
                 font_color: Some(ColorU::black()),
                 font_family_id: Some(appearance.ui_font_family()),
-                font_weight: Some(warpui::fonts::Weight::Bold),
+                font_weight: Some(derpui::fonts::Weight::Bold),
                 font_size: Some(small_font_size),
                 ..Default::default()
             },
@@ -1193,7 +1193,7 @@ impl ConversationDetailsPanel {
         if fetch_error.is_access_denied() {
             let icon_color = blended_colors::text_sub(theme, theme.surface_1());
             let notice_icon =
-                ConstrainedBox::new(Icon::Info.to_warpui_icon(icon_color.into()).finish())
+                ConstrainedBox::new(Icon::Info.to_derpui_icon(icon_color.into()).finish())
                     .with_width(STATUS_ICON_SIZE)
                     .with_height(STATUS_ICON_SIZE)
                     .finish();
@@ -1241,7 +1241,7 @@ impl ConversationDetailsPanel {
 
         let error_icon = ConstrainedBox::new(
             Icon::Triangle
-                .to_warpui_icon(theme.ansi_fg_red().into())
+                .to_derpui_icon(theme.ansi_fg_red().into())
                 .finish(),
         )
         .with_width(STATUS_ICON_SIZE)
@@ -1300,7 +1300,7 @@ impl ConversationDetailsPanel {
             }
         };
 
-        let status_icon = ConstrainedBox::new(icon.to_warpui_icon(color.into()).finish())
+        let status_icon = ConstrainedBox::new(icon.to_derpui_icon(color.into()).finish())
             .with_width(STATUS_ICON_SIZE)
             .with_height(STATUS_ICON_SIZE)
             .finish();
@@ -1398,7 +1398,7 @@ impl ConversationDetailsPanel {
         let icon_fill = harness_display::icon_fill_on_circle(harness, theme);
         let icon_glyph = ConstrainedBox::new(
             harness_display::icon_for(harness)
-                .to_warpui_icon(icon_fill)
+                .to_derpui_icon(icon_fill)
                 .finish(),
         )
         .with_width(HARNESS_ICON_IN_CIRCLE)
@@ -1449,7 +1449,7 @@ impl ConversationDetailsPanel {
         let ui_font_size = appearance.ui_font_size();
         let sub_color = blended_colors::text_sub(theme, theme.surface_1());
 
-        let icon = ConstrainedBox::new(Icon::Warp.to_warpui_icon(theme.foreground()).finish())
+        let icon = ConstrainedBox::new(Icon::Derp.to_derpui_icon(theme.foreground()).finish())
             .with_width(20.)
             .with_height(20.)
             .finish();
@@ -1808,7 +1808,7 @@ impl ConversationDetailsPanel {
         let duration = COPY_FEEDBACK_DURATION;
         ctx.spawn(
             async move {
-                warpui::r#async::Timer::after(duration).await;
+                derpui::r#async::Timer::after(duration).await;
             },
             |me, _, ctx| {
                 ctx.notify();
@@ -2146,7 +2146,7 @@ impl View for ConversationDetailsPanel {
             },
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .finish();
 
@@ -2179,7 +2179,7 @@ impl View for ConversationDetailsPanel {
 
         // On mobile, add background and skip Resizable
         #[cfg(target_family = "wasm")]
-        if warpui::platform::wasm::is_mobile_device() {
+        if derpui::platform::wasm::is_mobile_device() {
             return Container::new(panel_content)
                 .with_background(theme.surface_1())
                 .finish();

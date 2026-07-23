@@ -1,12 +1,12 @@
 //! Rendering logic for todo list components in AI blocks.
 
-use warpui::elements::{
+use derpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, Highlight,
     ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::Properties;
-use warpui::text_layout::TextStyle;
-use warpui::{AppContext, Element, SingletonEntity};
+use derpui::fonts::Properties;
+use derpui::text_layout::TextStyle;
+use derpui::{AppContext, Element, SingletonEntity};
 
 use super::WithContentItemSpacing;
 use crate::ai::agent::conversation::{AIConversation, TodoStatus};
@@ -159,9 +159,9 @@ pub(super) fn render_completed_todo_items(
     // Create a check mark icon
     let check_icon = Container::new(
         ConstrainedBox::new(
-            warpui::elements::Icon::new(
+            derpui::elements::Icon::new(
                 Icon::Check.into(),
-                warp_core::ui::theme::Fill::Solid(sub_text_color),
+                derp_core::ui::theme::Fill::Solid(sub_text_color),
             )
             .finish(),
         )

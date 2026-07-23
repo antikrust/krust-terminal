@@ -1,0 +1,23 @@
+[package]
+name = "tink-signature"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+description = "Signature functionality for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+documentation = "https://docs.rs/tink-signature"
+readme = "README.md"
+keywords = ["cryptography", "tink", "signature"]
+categories = ["cryptography"]
+rust-version = "1.78.0"
+
+[dependencies]
+ecdsa = { version = "^0.16.9", features = ["der", "signing", "verifying"] }
+ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
+generic-array = "^0.14.7"
+p256 = { version = "^0.13.2", features = ["ecdsa"] }
+rand = "^0.8"
+signature = "^2.2"
+tink-core = "^0.3"
+tink-proto = "^0.3"

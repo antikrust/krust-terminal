@@ -14,33 +14,33 @@ pub use driver::AgentDriver;
 use driver::AgentDriverError;
 use telemetry::CliTelemetryEvent;
 use tracing::Instrument as _;
-use warp_cli::agent::{
+use derp_cli::agent::{
     AgentCommand, AgentProfileCommand, Harness, OutputFormat, Prompt, RunAgentArgs,
 };
-use warp_cli::api_key::ApiKeyCommand;
-use warp_cli::artifact::ArtifactCommand;
-use warp_cli::environment::{EnvironmentCommand, ImageCommand};
-use warp_cli::federate::FederateCommand;
-use warp_cli::harness_support::{HarnessSupportCommand, ReportArtifactCommand, TaskStatus};
-use warp_cli::integration::IntegrationCommand;
-use warp_cli::mcp::MCPCommand;
-use warp_cli::memory_store::{MemoryCommand, MemoryStoreCommand};
-use warp_cli::model::ModelCommand;
-use warp_cli::provider::ProviderCommand;
-use warp_cli::schedule::ScheduleSubcommand;
-use warp_cli::secret::SecretCommand;
-use warp_cli::share::ShareRequest;
-use warp_cli::task::{MessageCommand, TaskCommand};
-use warp_cli::{CliCommand, GlobalOptions, OZ_HARNESS_ENV};
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_graphql::object_permissions::OwnerType;
-use warp_isolation_platform::IsolationPlatformError;
+use derp_cli::api_key::ApiKeyCommand;
+use derp_cli::artifact::ArtifactCommand;
+use derp_cli::environment::{EnvironmentCommand, ImageCommand};
+use derp_cli::federate::FederateCommand;
+use derp_cli::harness_support::{HarnessSupportCommand, ReportArtifactCommand, TaskStatus};
+use derp_cli::integration::IntegrationCommand;
+use derp_cli::mcp::MCPCommand;
+use derp_cli::memory_store::{MemoryCommand, MemoryStoreCommand};
+use derp_cli::model::ModelCommand;
+use derp_cli::provider::ProviderCommand;
+use derp_cli::schedule::ScheduleSubcommand;
+use derp_cli::secret::SecretCommand;
+use derp_cli::share::ShareRequest;
+use derp_cli::task::{MessageCommand, TaskCommand};
+use derp_cli::{CliCommand, GlobalOptions, OZ_HARNESS_ENV};
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_graphql::object_permissions::OwnerType;
+use derp_isolation_platform::IsolationPlatformError;
 #[cfg(not(target_family = "wasm"))]
-use warp_logging::log_file_path;
-use warp_managed_secrets::ManagedSecretManager;
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, ModelSpawner, SingletonEntity};
+use derp_logging::log_file_path;
+use derp_managed_secrets::ManagedSecretManager;
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, ModelSpawner, SingletonEntity};
 
 use crate::ai::agent::api::convert_conversation::{
     convert_conversation_data_to_ai_conversation, RestorationMode,
@@ -122,7 +122,7 @@ fn maybe_warn_team_api_key(ctx: &AppContext) {
     );
 }
 
-/// Run a Warp CLI command.
+/// Run a Derp CLI command.
 #[tracing::instrument(name = "agent_sdk::run", skip_all, err, fields(tags.cloud_agent = true))]
 pub fn run(
     ctx: &mut AppContext,
@@ -183,7 +183,7 @@ fn dispatch_command(
             schedule::run(ctx, global_options, schedule_cmd)
         }
         CliCommand::Secret(secret_cmd) => {
-            if !FeatureFlag::WarpManagedSecrets.is_enabled() {
+            if !FeatureFlag::DerpManagedSecrets.is_enabled() {
                 return Err(anyhow::anyhow!("invalid value 'secret'"));
             }
             secret::run(ctx, global_options, secret_cmd)
@@ -593,7 +593,7 @@ fn run_task(
                 ));
             }
             match conv_cmd {
-                warp_cli::task::ConversationCommand::Get(args) => {
+                derp_cli::task::ConversationCommand::Get(args) => {
                     ambient::get_conversation(ctx, args.conversation_id)
                 }
             }
@@ -607,11 +607,11 @@ fn run_task(
 /// requires spawning an async task, which requires a ModelContext.
 struct AgentDriverRunner;
 
-impl warpui::Entity for AgentDriverRunner {
+impl derpui::Entity for AgentDriverRunner {
     type Event = ();
 }
 
-impl warpui::SingletonEntity for AgentDriverRunner {}
+impl derpui::SingletonEntity for AgentDriverRunner {}
 
 impl AgentDriverRunner {
     #[tracing::instrument(skip_all, err, fields(
@@ -648,18 +648,18 @@ impl AgentDriverRunner {
             )
             .await?;
 
-        // Wait for Warp Drive to sync before building the task config, since
+        // Wait for Derp Drive to sync before building the task config, since
         // prompt resolution (SavedPrompt -> workflow lookup) and environment
         // resolution (CloudAmbientAgentEnvironment lookup) depend on it.
         setup_events
-            .record_result(SetupStep::WarpDriveSync, async {
+            .record_result(SetupStep::DerpDriveSync, async {
                 if foreground
-                    .spawn(|_, ctx| common::refresh_warp_drive(ctx))
+                    .spawn(|_, ctx| common::refresh_derp_drive(ctx))
                     .await?
                     .await
                     .is_err()
                 {
-                    return Err(AgentDriverError::WarpDriveSyncFailed);
+                    return Err(AgentDriverError::DerpDriveSyncFailed);
                 }
                 Ok(())
             })
@@ -839,7 +839,7 @@ impl AgentDriverRunner {
         task_id_str: String,
         ai_client: Arc<dyn AIClient>,
     ) -> anyhow::Result<Vec<GitCredential>> {
-        let workload_token = warp_isolation_platform::issue_workload_token(Some(
+        let workload_token = derp_isolation_platform::issue_workload_token(Some(
             std::time::Duration::from_secs(5 * 60),
         ))
         .await?
@@ -854,7 +854,7 @@ impl AgentDriverRunner {
         task_id_str: &str,
         args: &RunAgentArgs,
     ) -> Result<(), AgentDriverError> {
-        if warp_isolation_platform::detect().is_none() && args.configure_git_credentials_with_github
+        if derp_isolation_platform::detect().is_none() && args.configure_git_credentials_with_github
         {
             foreground
                 .spawn(|_, _| {
@@ -1110,7 +1110,7 @@ impl AgentDriverRunner {
     }
 
     /// Creates a new task on the server for this agent run, sets the task ID on the driver
-    /// options, and updates the Server API provider so that all subsequent requests to warp-server
+    /// options, and updates the Server API provider so that all subsequent requests to derp-server
     /// contain this new task ID.
     async fn initialize_new_task(
         foreground: &ModelSpawner<Self>,
@@ -1568,7 +1568,7 @@ fn launch_command(
         return dispatch_command(ctx, command, global_options);
     }
 
-    let cli_name = warp_cli::binary_name().unwrap_or_else(|| "warp".to_string());
+    let cli_name = derp_cli::binary_name().unwrap_or_else(|| "derp".to_string());
 
     let auth_state = AuthStateProvider::handle(ctx).as_ref(ctx).get();
     if !auth_state.is_logged_in() {
@@ -1595,7 +1595,7 @@ fn launch_command(
                 dispatched = true;
                 let auth_state = AuthStateProvider::handle(ctx).as_ref(ctx).get();
                 let message = if auth_state.is_api_key_authenticated() {
-                    "Your API key is invalid. Please provide a valid key via '--api-key' or the WARP_API_KEY environment variable.".to_string()
+                    "Your API key is invalid. Please provide a valid key via '--api-key' or the DERP_API_KEY environment variable.".to_string()
                 } else {
                     format!("Your credentials are invalid. Please log in again with `{cli_name} login`.")
                 };
@@ -1617,11 +1617,11 @@ fn launch_command(
     Ok(())
 }
 
-/// Check if we're running within Warp (for example, if this is an invocation of the Warp CLI
-/// within a Warp terminal session).
-pub fn is_running_in_warp() -> bool {
+/// Check if we're running within Derp (for example, if this is an invocation of the Derp CLI
+/// within a Derp terminal session).
+pub fn is_running_in_derp() -> bool {
     std::env::var("TERM_PROGRAM")
-        .map(|v| v == "WarpTerminal")
+        .map(|v| v == "DerpTerminal")
         .unwrap_or(false)
 }
 
@@ -1639,7 +1639,7 @@ fn report_fatal_error(err: anyhow::Error, ctx: &mut AppContext) {
         if let Ok(path) = log_file_path() {
             let _ = write!(
                 message,
-                "\n\nFor more information, check Warp logs at {}",
+                "\n\nFor more information, check Derp logs at {}",
                 path.display()
             );
         }

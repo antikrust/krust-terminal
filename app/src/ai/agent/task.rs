@@ -13,10 +13,10 @@ use itertools::Itertools;
 use prost_types::FieldMask;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use warp_errors::report_error;
-use warp_multi_agent_api::message::tool_call::subagent::Metadata;
-use warp_multi_agent_api::message::Message;
-use warp_multi_agent_api::{self as api};
+use derp_errors::report_error;
+use derp_multi_agent_api::message::tool_call::subagent::Metadata;
+use derp_multi_agent_api::message::Message;
+use derp_multi_agent_api::{self as api};
 
 use super::api::convert_conversation::convert_tool_call_result_to_input;
 use super::api::{
@@ -416,7 +416,7 @@ impl Task {
                     Some(Metadata::ComputerUse(_)) => None,
                     Some(Metadata::Summarization(_)) => None,
                     Some(Metadata::ConversationSearch(_)) => None,
-                    Some(Metadata::WarpDocumentationSearch(_)) => None,
+                    Some(Metadata::DerpDocumentationSearch(_)) => None,
                     None => None,
                 }),
             TaskImpl::Optimistic(optimistic::Task::CLIAgent(subtask)) => {
@@ -525,12 +525,12 @@ impl Task {
         }
     }
 
-    pub fn is_warp_documentation_search_subagent(&self) -> bool {
+    pub fn is_derp_documentation_search_subagent(&self) -> bool {
         match &self.data {
             TaskImpl::Server(server_data) => server_data
                 .subagent_params
                 .as_ref()
-                .is_some_and(|params| params.call.is_warp_documentation_search()),
+                .is_some_and(|params| params.call.is_derp_documentation_search()),
             TaskImpl::Optimistic(_) => false,
         }
     }

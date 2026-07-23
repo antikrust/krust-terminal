@@ -4,8 +4,8 @@
 //! rendering an empty face.
 
 use settings::Setting as _;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::{App, SingletonEntity as _};
+use derpui::assets::asset_cache::AssetSource;
+use derpui::{App, SingletonEntity as _};
 
 use super::*;
 use crate::test_util::settings::initialize_settings_for_tests;

@@ -4,27 +4,27 @@ use onboarding::components::feature_optout_dialog::{
     render_feature_optout_dialog, FeatureOptOutDialog,
 };
 use onboarding::slides::{layout, slide_content};
-use onboarding::{OnboardingIntention, WARP_DRIVE_FEATURES};
+use onboarding::{OnboardingIntention, DERP_DRIVE_FEATURES};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::features::FeatureFlag;
-use warp_core::safe_error;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::Icon;
-use warpui::actions::StandardAction;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derp_core::features::FeatureFlag;
+use derp_core::safe_error;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::Icon;
+use derpui::actions::StandardAction;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     Align, CacheOption, ChildAnchor, ClippedScrollStateHandle, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, Fill, Flex, FormattedTextElement, HighlightedHyperlink, Image,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
 };
-use warpui::fonts::Weight;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::text_layout::TextAlignment;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::{FixedBinding, Keystroke};
+use derpui::text_layout::TextAlignment;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, UpdateModel, View,
     ViewContext, ViewHandle,
 };
@@ -43,14 +43,14 @@ use crate::themes::theme::Fill as ThemeFill;
 use crate::util::bindings::CustomAction;
 use crate::{send_telemetry_from_ctx, send_telemetry_sync_from_ctx};
 
-const TOS_URL: &str = "https://www.warp.dev/terms-of-service";
+const TOS_URL: &str = "https://www.derp.baby/terms-of-service";
 
 // ---------------------------------------------------------------------------
 // Init (keybindings)
 // ---------------------------------------------------------------------------
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -153,13 +153,13 @@ enum LoginSlideOverlay {
 }
 
 /// Why the login slide is being shown, which drives its copy. All three paths
-/// need an account: Terminal+Drive for cloud sync, and the Warp-agent and
-/// third-party paths because Warp's AI features run on a Warp account. Skipping
+/// need an account: Terminal+Drive for cloud sync, and the Derp-agent and
+/// third-party paths because Derp's AI features run on a Derp account. Skipping
 /// therefore defers sign-in and leaves the gated features off until the user
 /// creates an account.
 enum LoginPurpose {
-    WarpAgent,
-    WarpDrive,
+    DerpAgent,
+    DerpDrive,
     ThirdParty,
 }
 
@@ -173,18 +173,18 @@ pub struct LoginSlideView {
     /// Whether this path wants AI (agent intent) vs. not (terminal intention).
     /// Used to gate the cloud-conversation-storage toggle and AI wording in the
     /// privacy settings step. This reflects intent, not the final state: AI runs
-    /// on a Warp account, so skipping login leaves it off even when this is true.
+    /// on a Derp account, so skipping login leaves it off even when this is true.
     /// The actual `AISettings` value is written when settings are applied.
     ai_enabled: bool,
     /// Whether the user chose third-party (BYO) agents during onboarding. Drives
     /// the agent-path login copy ("Create an account" for third-party vs. "Get
-    /// started with AI" for Warp Agent); it does not affect whether AI is
+    /// started with AI" for Derp Agent); it does not affect whether AI is
     /// enabled, which depends on the user creating an account.
     uses_third_party_agents: bool,
     /// Onboarding intention selected by the user, used to render Drive-focused
     /// copy on the Terminal+Drive path. On the login slide, `intention ==
     /// OnboardingIntention::Terminal` is equivalent to "Terminal+Drive":
-    /// `RootView` only routes Terminal-intent users here when Warp Drive is
+    /// `RootView` only routes Terminal-intent users here when Derp Drive is
     /// enabled.
     intention: OnboardingIntention,
     theme_visual_path: &'static str,
@@ -514,12 +514,12 @@ impl LoginSlideView {
 
     fn login_purpose(&self) -> LoginPurpose {
         match self.intention {
-            OnboardingIntention::Terminal => LoginPurpose::WarpDrive,
+            OnboardingIntention::Terminal => LoginPurpose::DerpDrive,
             OnboardingIntention::AgentDrivenDevelopment => {
                 if self.uses_third_party_agents {
                     LoginPurpose::ThirdParty
                 } else {
-                    LoginPurpose::WarpAgent
+                    LoginPurpose::DerpAgent
                 }
             }
         }
@@ -531,17 +531,17 @@ impl LoginSlideView {
         let ui_builder = appearance.ui_builder();
 
         let (title_text, subtitle_text) = match self.login_purpose() {
-            LoginPurpose::WarpDrive => (
+            LoginPurpose::DerpDrive => (
                 "Get started with the Library",
                 "Connect your account to save and share notebooks, workflows, and more across devices.",
             ),
-            LoginPurpose::WarpAgent => (
+            LoginPurpose::DerpAgent => (
                 "Get started with AI",
                 "Connect your account to enable AI-powered planning, coding, and automation.",
             ),
             LoginPurpose::ThirdParty => (
                 "Create an account",
-                "Create a Warp account to enable AI-powered planning, coding, and automations.",
+                "Create a Derp account to enable AI-powered planning, coding, and automations.",
             ),
         };
         let title = FormattedTextElement::from_str(title_text, appearance.ui_font_family(), 36.)
@@ -571,7 +571,7 @@ impl LoginSlideView {
         let tos_line = Flex::row()
             .with_child(
                 ui_builder
-                    .span("By continuing, you agree to Warp's ")
+                    .span("By continuing, you agree to Derp's ")
                     .with_style(disclaimer_styles)
                     .build()
                     .finish(),
@@ -659,8 +659,8 @@ impl LoginSlideView {
 
         let cmd_enter = Keystroke::parse("cmdorctrl-enter").unwrap_or_default();
         let skip_label = match self.login_purpose() {
-            LoginPurpose::WarpDrive => "Disable Library",
-            LoginPurpose::WarpAgent => "Skip for now",
+            LoginPurpose::DerpDrive => "Disable Library",
+            LoginPurpose::DerpAgent => "Skip for now",
             LoginPurpose::ThirdParty => "Skip for now",
         };
         let skip_button = self.skip_button.render(
@@ -816,7 +816,7 @@ impl LoginSlideView {
             } else {
                 // First call (narrow layout fallback): placeholder.
                 editor_rendered.set(true);
-                Container::new(warpui::elements::Empty::new().finish())
+                Container::new(derpui::elements::Empty::new().finish())
                     .with_padding_top(12.)
                     .with_padding_bottom(12.)
                     .with_padding_left(16.)
@@ -955,15 +955,15 @@ impl LoginSlideView {
             &'static [&'static str],
             &'static str,
         ) = match self.login_purpose() {
-            LoginPurpose::WarpDrive => (
+            LoginPurpose::DerpDrive => (
                 "Are you sure you want to disable Library?",
                 "The Library lets you save workflows and knowledge locally. By continuing, you won't have access to the following features:",
-                WARP_DRIVE_FEATURES,
+                DERP_DRIVE_FEATURES,
                 "Enable Library",
             ),
-            LoginPurpose::WarpAgent | LoginPurpose::ThirdParty => (
+            LoginPurpose::DerpAgent | LoginPurpose::ThirdParty => (
                 "Continue without signing in?",
-                "Without an account, you won't have access to Warp's AI features. Sign in anytime to unlock agents and other AI features.",
+                "Without an account, you won't have access to Derp's AI features. Sign in anytime to unlock agents and other AI features.",
                 &[],
                 "Sign in",
             ),
@@ -1068,13 +1068,13 @@ impl View for LoginSlideView {
             );
             let overlay_opacity = (100u8).saturating_sub(img.opacity);
             stack.add_child(
-                warpui::elements::Rect::new()
+                derpui::elements::Rect::new()
                     .with_background(theme.background().with_opacity(overlay_opacity))
                     .finish(),
             );
         } else {
             stack.add_child(
-                Container::new(warpui::elements::Empty::new().finish())
+                Container::new(derpui::elements::Empty::new().finish())
                     .with_background(theme.background())
                     .finish(),
             );
@@ -1094,9 +1094,9 @@ impl View for LoginSlideView {
         if matches!(self.active_overlay, Some(LoginSlideOverlay::SkipDialog)) {
             let dialog = self.render_skip_dialog(appearance);
             stack.add_child(
-                warpui::elements::Rect::new()
+                derpui::elements::Rect::new()
                     .with_background(
-                        warp_core::ui::theme::Fill::Solid(ColorU::black()).with_opacity(60),
+                        derp_core::ui::theme::Fill::Solid(ColorU::black()).with_opacity(60),
                     )
                     .finish(),
             );

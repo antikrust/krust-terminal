@@ -20,7 +20,7 @@ pub fn upsert_folders(
             let folder_clone = cloud_folder.clone();
             let folder_name = cloud_folder.model().name.clone();
             let folder_is_open = cloud_folder.model().is_open;
-            let folder_is_warp_pack = cloud_folder.model().is_warp_pack;
+            let folder_is_derp_pack = cloud_folder.model().is_derp_pack;
             upsert_cloud_object(
                 conn,
                 ObjectType::Folder,
@@ -31,7 +31,7 @@ pub fn upsert_folders(
                     let new_folder = NewFolder {
                         name: folder_name,
                         is_open: folder_is_open,
-                        is_warp_pack: folder_is_warp_pack,
+                        is_derp_pack: folder_is_derp_pack,
                     };
                     diesel::insert_into(schema::folders::dsl::folders)
                         .values(new_folder)
@@ -47,7 +47,7 @@ pub fn upsert_folders(
                         .set((
                             name.eq(folder_clone.model().name.clone()),
                             is_open.eq(folder_clone.model().is_open),
-                            is_warp_pack.eq(folder_clone.model().is_warp_pack),
+                            is_derp_pack.eq(folder_clone.model().is_derp_pack),
                         ))
                         .execute(conn)?;
                     Ok(())
@@ -74,7 +74,7 @@ pub fn read_folders(
                 CloudFolderModel {
                     name: folder.name,
                     is_open: folder.is_open,
-                    is_warp_pack: folder.is_warp_pack,
+                    is_derp_pack: folder.is_derp_pack,
                 },
                 to_cloud_object_metadata(metadata),
                 cloud_object_permissions,

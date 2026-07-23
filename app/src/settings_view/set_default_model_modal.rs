@@ -1,8 +1,8 @@
-use warpui::elements::{
+use derpui::elements::{
     ChildView, Container, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Text,
 };
-use warpui::{
+use derpui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
     WeakViewHandle,
 };

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use settings::Setting as _;
 /// TODO: move alias_expansion setting into this group.
 use settings::{define_settings_group, RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use warpui::{AppContext, SingletonEntity};
+use derpui::{AppContext, SingletonEntity};
 
 use crate::terminal::input::inline_menu::InlineMenuType;
 use crate::terminal::session_settings::SessionSettings;
@@ -175,7 +175,7 @@ define_settings_group!(InputSettings,
             sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
             surface: settings::SettingSurfaces::GUI,
             private: false,
-            toml_path: "agents.warp_agent.input.show_agent_tips",
+            toml_path: "agents.derp_agent.input.show_agent_tips",
             description: "Whether agent tips are displayed in the input.",
         },
         // Whether to show the terminal input message bar (contextual hints at the bottom of terminal input).
@@ -240,7 +240,7 @@ impl InputSettings {
         };
 
         // PS1 input is only valid when honor_ps1 is active. If the user has PS1 selected
-        // but the shell has not signalled PS1 support, fall back to Warp input.
+        // but the shell has not signalled PS1 support, fall back to Derp input.
         let is_ps1_enabled = *SessionSettings::as_ref(app).honor_ps1
             && computed_input_type_value == InputBoxType::Classic;
         if is_ps1_enabled {

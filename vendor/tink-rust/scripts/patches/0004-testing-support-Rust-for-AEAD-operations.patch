@@ -1,0 +1,45 @@
+From 65a63a142d5428a04fcea8361627ac973ae09cec Mon Sep 17 00:00:00 2001
+From: David Drysdale <drysdale@google.com>
+Date: Wed, 7 Oct 2020 16:13:42 +0100
+Subject: [PATCH] testing: support Rust for AEAD operations
+
+---
+ testing/cross_language/util/supported_key_types.py | 8 ++++----
+ testing/cross_language/util/testing_servers.py     | 2 +-
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/testing/cross_language/util/supported_key_types.py b/testing/cross_language/util/supported_key_types.py
+index b58e28cf3c10..823c42ee703f 100644
+--- a/testing/cross_language/util/supported_key_types.py
++++ b/testing/cross_language/util/supported_key_types.py
+@@ -89,11 +89,11 @@ _FAKE_KMS_KEY_URI = (
+ # All languages that are supported by a KeyType
+ SUPPORTED_LANGUAGES = {
+     'AesEaxKey': ['cc', 'java', 'python'],
+-    'AesGcmKey': ['cc', 'java', 'go', 'python'],
++    'AesGcmKey': ['cc', 'java', 'go', 'python', 'rust'],
+     'AesGcmSivKey': ['cc', 'python'],
+-    'AesCtrHmacAeadKey': ['cc', 'java', 'go', 'python'],
+-    'ChaCha20Poly1305Key': ['java', 'go'],
+-    'XChaCha20Poly1305Key': ['cc', 'java', 'go', 'python'],
++    'AesCtrHmacAeadKey': ['cc', 'java', 'go', 'python', 'rust'],
++    'ChaCha20Poly1305Key': ['java', 'go', 'rust'],
++    'XChaCha20Poly1305Key': ['cc', 'java', 'go', 'python', 'rust'],
+     'KmsAeadKey': ['cc', 'java', 'python'],
+     'KmsEnvelopeAeadKey': ['cc', 'java', 'go', 'python'],
+     'AesSivKey': ['cc', 'java', 'go', 'python', 'rust'],
+diff --git a/testing/cross_language/util/testing_servers.py b/testing/cross_language/util/testing_servers.py
+index 7215f37f1662..1139e034a2b0 100644
+--- a/testing/cross_language/util/testing_servers.py
++++ b/testing/cross_language/util/testing_servers.py
+@@ -79,7 +79,7 @@ _PRIMITIVE_STUBS = {
+ _PRIMITIVES = list(_PRIMITIVE_STUBS.keys())
+
+ SUPPORTED_LANGUAGES_BY_PRIMITIVE = {
+-    'aead': ['cc', 'go', 'java', 'python'],
++    'aead': ['cc', 'go', 'java', 'python', 'rust'],
+     'daead': ['cc', 'go', 'java', 'python', 'rust'],
+     'streaming_aead': ['cc', 'go', 'java', 'python'],
+     'hybrid': ['cc', 'go', 'java', 'python'],
+--
+2.31.1

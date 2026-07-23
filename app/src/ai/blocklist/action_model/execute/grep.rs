@@ -6,10 +6,10 @@ use std::time::Duration;
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use warp_errors::report_error;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::r#async::FutureExt as AsyncFutureExt;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use derp_errors::report_error;
+use derp_util::standardized_path::StandardizedPath;
+use derpui::r#async::FutureExt as AsyncFutureExt;
+use derpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{
     get_server_output_id, is_file_path, is_git_repository, ActionExecution, AnyActionExecution,
@@ -424,7 +424,7 @@ async fn run_grep(
 #[cfg(not(target_family = "wasm"))]
 async fn run_ripgrep(queries: &[String], absolute_path: String) -> Result<GrepResult, GrepError> {
     let path = PathBuf::from(absolute_path);
-    let result = warp_ripgrep::search::search(queries, &[path], false, false).await;
+    let result = derp_ripgrep::search::search(queries, &[path], false, false).await;
 
     match result {
         Ok(matches) => {

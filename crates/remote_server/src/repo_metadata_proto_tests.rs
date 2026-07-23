@@ -1,6 +1,6 @@
 use repo_metadata::file_tree_update::RepoMetadataUpdate;
 use repo_metadata::{StandingQueryContent, StandingQueryResultsDelta};
-use warp_util::standardized_path::StandardizedPath;
+use derp_util::standardized_path::StandardizedPath;
 
 use super::{proto_snapshot_to_update, proto_to_repo_metadata_update};
 use crate::proto;
@@ -17,7 +17,7 @@ fn standing_delta() -> StandingQueryResultsDelta {
         removed_project_skills: vec![StandingQueryContent::directory(path(
             "/repo/.claude/skills",
         ))],
-        upserted_project_rules: vec![StandingQueryContent::file(path("/repo/WARP.md"))],
+        upserted_project_rules: vec![StandingQueryContent::file(path("/repo/DERP.md"))],
         removed_project_rules: vec![StandingQueryContent::file(path(
             "/repo/packages/api/AGENTS.md",
         ))],

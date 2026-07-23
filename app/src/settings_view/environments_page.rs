@@ -2,23 +2,23 @@ use std::collections::HashMap;
 
 use instant::Instant;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::theme::color::internal_colors;
-use warp_editor::editor::NavigationKey;
-use warp_graphql::scalars::time::ServerTimestamp;
-use warpui::elements::{
+use derp_core::ui::color::blend::Blend;
+use derp_core::ui::theme::color::internal_colors;
+use derp_editor::editor::NavigationKey;
+use derp_graphql::scalars::time::ServerTimestamp;
+use derpui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::prelude::ChildView;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{self, WindowManager};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::prelude::ChildView;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::windowing::state::ApplicationStage;
+use derpui::windowing::{self, WindowManager};
+use derpui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -76,11 +76,11 @@ use new_environment_button::NewEnvironmentButtonView;
 #[allow(unused_imports)] // IntegrationsClient trait is used in fetch_github_repos
 use {
     crate::server::server_api::{integrations::IntegrationsClient, ServerApiProvider},
-    warp_graphql::queries::user_github_info::UserGithubInfoResult,
+    derp_graphql::queries::user_github_info::UserGithubInfoResult,
 };
 
 const PAGE_TITLE_TEXT: &str = "Environments";
-const PAGE_DESCRIPTION_TEXT: &str = "Environments define where your ambient agents run. Set one up in minutes via GitHub (recommended), Warp-assisted setup, or manual configuration.";
+const PAGE_DESCRIPTION_TEXT: &str = "Environments define where your ambient agents run. Set one up in minutes via GitHub (recommended), Derp-assisted setup, or manual configuration.";
 const CARD_BORDER_WIDTH: f32 = 1.;
 const CARD_PADDING: f32 = 16.;
 const CARD_SPACING: f32 = 12.;
@@ -927,7 +927,7 @@ impl TypedActionView for EnvironmentsPageView {
             }
             EnvironmentsPageAction::CopyEnvId(sync_id, env_id_string) => {
                 ctx.clipboard()
-                    .write(warpui::clipboard::ClipboardContent::plain_text(
+                    .write(derpui::clipboard::ClipboardContent::plain_text(
                         env_id_string.clone(),
                     ));
                 // Track when this was copied for feedback
@@ -936,7 +936,7 @@ impl TypedActionView for EnvironmentsPageView {
                 let duration = COPY_FEEDBACK_DURATION;
                 ctx.spawn(
                     async move {
-                        warpui::r#async::Timer::after(duration).await;
+                        derpui::r#async::Timer::after(duration).await;
                     },
                     |me, _, ctx| {
                         ctx.notify();
@@ -997,8 +997,8 @@ impl TypedActionView for EnvironmentsPageView {
         &mut self,
         _action: &Self::Action,
         _ctx: &mut ViewContext<Self>,
-    ) -> warpui::accessibility::ActionAccessibilityContent {
-        warpui::accessibility::ActionAccessibilityContent::default()
+    ) -> derpui::accessibility::ActionAccessibilityContent {
+        derpui::accessibility::ActionAccessibilityContent::default()
     }
 }
 
@@ -1039,7 +1039,7 @@ impl SettingsWidget for EnvironmentsPageWidget {
     type View = EnvironmentsPageView;
 
     fn search_terms(&self) -> &str {
-        "environments environment ambient agents github warp assisted manual configuration"
+        "environments environment ambient agents github derp assisted manual configuration"
     }
 
     fn render(
@@ -1239,7 +1239,7 @@ impl EnvironmentsPageWidget {
 
         let search_icon = ConstrainedBox::new(
             Icon::Search
-                .to_warpui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
+                .to_derpui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
                 .finish(),
         )
         .with_width(icon_size)
@@ -1314,8 +1314,8 @@ impl EnvironmentsPageWidget {
             EnvironmentListScope::Team => {
                 let shared_by_text = UserWorkspaces::as_ref(app)
                     .current_team()
-                    .map(|team| format!("Shared by Warp and {}", team.name))
-                    .unwrap_or_else(|| "Shared by Warp and your team".to_string());
+                    .map(|team| format!("Shared by Derp and {}", team.name))
+                    .unwrap_or_else(|| "Shared by Derp and your team".to_string());
                 Self::render_overline_header(&shared_by_text, appearance)
             }
         };
@@ -1541,7 +1541,7 @@ impl EnvironmentsPageWidget {
         let theme = appearance.theme();
         let build_icon = || {
             Container::new(
-                ConstrainedBox::new(icon.to_warpui_icon(theme.active_ui_text_color()).finish())
+                ConstrainedBox::new(icon.to_derpui_icon(theme.active_ui_text_color()).finish())
                     .with_width(icon_size)
                     .with_height(icon_size)
                     .finish(),
@@ -1917,7 +1917,7 @@ impl EnvironmentsPageWidget {
             let icon_color: ThemeFill = if is_card_hovered {
                 theme.foreground()
             } else {
-                ThemeFill::Solid(warpui::color::ColorU::transparent_black())
+                ThemeFill::Solid(derpui::color::ColorU::transparent_black())
             };
 
             let should_render_share_button = list_scope == EnvironmentListScope::Personal

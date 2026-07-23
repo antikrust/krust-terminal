@@ -11,8 +11,8 @@ use command::blocking::Command;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use tempfile::TempPath;
-use warp_core::channel::{Channel, ChannelState};
-use warpui::AppContext;
+use derp_core::channel::{Channel, ChannelState};
+use derpui::AppContext;
 
 use super::{release_assets_directory_url, DownloadReady};
 use crate::server::telemetry::TelemetryEvent;
@@ -23,7 +23,7 @@ lazy_static! {
     static ref INSTALLER_PATH: Arc<Mutex<Option<TempPath>>> = Default::default();
 }
 
-/// Download the Inno Setup install wizard, the same one users run on the first Warp install, and
+/// Download the Inno Setup install wizard, the same one users run on the first Derp install, and
 /// place it into the "data dir".
 pub(super) async fn download_update_and_cleanup(
     version_info: &VersionInfo,
@@ -74,10 +74,10 @@ pub(super) async fn download_update_and_cleanup(
     Ok(DownloadReady::Yes)
 }
 
-const UPDATE_LOG_FILENAME: &str = "warp_update.log";
+const UPDATE_LOG_FILENAME: &str = "derp_update.log";
 
 fn autoupdate_log_file() -> Result<PathBuf> {
-    warp_logging::log_directory().map(|dir| dir.join(UPDATE_LOG_FILENAME))
+    derp_logging::log_directory().map(|dir| dir.join(UPDATE_LOG_FILENAME))
 }
 
 fn parse_exit_code_after_marker(contents_lowercase: &[u8], failed_marker: &[u8]) -> Option<i32> {
@@ -172,7 +172,7 @@ pub(super) fn check_and_report_update_errors(ctx: &mut AppContext) {
 
     // Fired when the mutex polling loop timed out and a force-kill was attempted.
     let has_mutex_timeout =
-        memchr::memmem::find(&contents_lowercase, b"warp mutex still held after timeout").is_some();
+        memchr::memmem::find(&contents_lowercase, b"derp mutex still held after timeout").is_some();
     if has_mutex_timeout {
         crate::send_telemetry_sync_from_app_ctx!(TelemetryEvent::AutoupdateMutexTimeout, ctx);
     }
@@ -267,7 +267,7 @@ pub(super) fn relaunch() -> Result<()> {
         }
     };
 
-    // The Inno Setup install wizard will run without user input. It will re-launch Warp after
+    // The Inno Setup install wizard will run without user input. It will re-launch Derp after
     // installing the update files.
     // https://jrsoftware.org/ishelp/index.php?topic=setupcmdline
     Command::new(&installer_path)
@@ -284,8 +284,8 @@ pub(super) fn relaunch() -> Result<()> {
             "/NORESTART",
             &log_arg,
             "/update=1",
-            // Do not forcibly kill Warp via RestartManager. The installer will wait for
-            // Warp to exit naturally by polling the single-instance mutex instead.
+            // Do not forcibly kill Derp via RestartManager. The installer will wait for
+            // Derp to exit naturally by polling the single-instance mutex instead.
             "/NOCLOSEAPPLICATIONS",
             &format!("/DIR={}", install_dir.display()),
         ])
@@ -297,8 +297,8 @@ pub(super) fn relaunch() -> Result<()> {
 fn installer_file_name() -> Result<String> {
     let app_name_prefix = app_name_prefix(ChannelState::channel());
 
-    // For example, on arm64 this is WarpSetup-arm64.exe and on x64 this is
-    // WarpSetup.exe.
+    // For example, on arm64 this is DerpSetup-arm64.exe and on x64 this is
+    // DerpSetup.exe.
     if cfg!(target_arch = "aarch64") {
         Ok(format!("{app_name_prefix}Setup-arm64.exe"))
     } else if cfg!(target_arch = "x86_64") {
@@ -312,12 +312,12 @@ fn installer_file_name() -> Result<String> {
 
 fn app_name_prefix(channel: Channel) -> &'static str {
     match channel {
-        Channel::Stable => "Warp",
-        Channel::Preview => "WarpPreview",
-        Channel::Local => "warp",
+        Channel::Stable => "Derp",
+        Channel::Preview => "DerpPreview",
+        Channel::Local => "derp",
         Channel::Integration => "integration",
-        Channel::Dev => "WarpDev",
-        Channel::Oss => "warp-oss",
+        Channel::Dev => "DerpDev",
+        Channel::Oss => "derp-oss",
     }
 }
 

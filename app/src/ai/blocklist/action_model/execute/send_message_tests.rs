@@ -1,4 +1,4 @@
-use warpui::{App, EntityId};
+use derpui::{App, EntityId};
 
 use super::*;
 use crate::ai::blocklist::BlocklistAIHistoryModel;

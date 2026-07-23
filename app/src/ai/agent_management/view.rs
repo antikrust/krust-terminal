@@ -8,28 +8,28 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
 use siphasher::sip::SipHasher;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::new_scrollable::{
+use derp_core::features::FeatureFlag;
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::Fill;
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::new_scrollable::{
     NewScrollableElement, ScrollableAppearance, SingleAxisConfig,
 };
-use warpui::elements::{
+use derpui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, List, ListState, MainAxisSize,
     MouseStateHandle, NewScrollable, OffsetPositioning, Padding, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Rect, ScrollStateHandle, ScrollbarWidth, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text, Wrap,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::scene::DropShadow;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::FixedBinding;
+use derpui::platform::Cursor;
+use derpui::scene::DropShadow;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -121,7 +121,7 @@ pub fn init(app: &mut AppContext) {
     app.register_fixed_bindings([FixedBinding::new(
         cmd_or_ctrl_shift("f"),
         AgentManagementViewAction::FocusSearch,
-        warpui::keymap::macros::id!(AgentManagementView::ui_name()),
+        derpui::keymap::macros::id!(AgentManagementView::ui_name()),
     )]);
 }
 
@@ -1999,7 +1999,7 @@ impl AgentManagementView {
 
         let loading_icon = ConstrainedBox::new(
             Icon::Refresh
-                .to_warpui_icon(theme.sub_text_color(theme.surface_1()))
+                .to_derpui_icon(theme.sub_text_color(theme.surface_1()))
                 .finish(),
         )
         .with_height(icon_size)
@@ -2043,7 +2043,7 @@ impl AgentManagementView {
 
         let loading_icon = ConstrainedBox::new(
             Icon::Loading
-                .to_warpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+                .to_derpui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
                 .finish(),
         )
         .with_height(appearance.ui_font_size() + 2.)
@@ -2103,7 +2103,7 @@ impl AgentManagementView {
         let appearance = Appearance::as_ref(app);
         let icon = ConstrainedBox::new(
             Icon::FilterOff
-                .to_warpui_icon(appearance.theme().nonactive_ui_text_color())
+                .to_derpui_icon(appearance.theme().nonactive_ui_text_color())
                 .finish(),
         )
         .with_width(24.)
@@ -2142,7 +2142,7 @@ impl AgentManagementView {
             axis_config,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            derpui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::None, false))
         .with_always_handle_events_first(false)

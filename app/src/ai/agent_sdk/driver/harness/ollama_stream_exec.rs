@@ -3,7 +3,7 @@
 //! Code Llama and the original DeepSeek Coder do not advertise Ollama's
 //! native tool-call capability, so sending the normal tool schema is rejected
 //! before inference. This runner gives them a small structured-output protocol
-//! instead: the model chooses either assistant text or one shell command, Warp
+//! instead: the model chooses either assistant text or one shell command, Derp
 //! executes shell calls in the terminal's working directory, and the result is
 //! returned to the model until it produces a final answer.
 
@@ -21,7 +21,7 @@ use futures::io::{AsyncRead, AsyncReadExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
-use warpui::r#async::Timer;
+use derpui::r#async::Timer;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{lost_ground, probe_source};
@@ -243,7 +243,7 @@ impl McpToolSpec {
 ///
 /// A trait rather than a concrete `TemplatableMCPServerManager` reference so
 /// the chat-with-tools loop below can be unit tested with a fake, and so this
-/// module doesn't need to know how Warp's MCP servers are spawned/reconnected
+/// module doesn't need to know how Derp's MCP servers are spawned/reconnected
 /// — only how to invoke one by name.
 #[async_trait]
 pub(crate) trait McpToolCaller: Send + Sync {
@@ -586,7 +586,7 @@ fn ollama_curl_args_for(url: &str) -> Vec<String> {
 }
 
 /// Starts Ollama's server directly, without launching Ollama.app or creating a
-/// Dock/menu-bar UI. Warp only uses this when the local API is not already up.
+/// Dock/menu-bar UI. Derp only uses this when the local API is not already up.
 pub fn ollama_serve_args() -> Vec<String> {
     vec!["serve".to_string()]
 }
@@ -600,7 +600,7 @@ async fn ollama_service_is_ready(path: &str) -> bool {
 
 /// Ensures the API exists as a headless background process. Dropping the child
 /// handle does not kill it (`kill_on_drop` defaults to false), so it continues
-/// serving subsequent Warp turns without exposing the commercial Ollama UI.
+/// serving subsequent Derp turns without exposing the commercial Ollama UI.
 pub(crate) async fn ensure_ollama_service(path: &str) -> std::io::Result<()> {
     static STARTING: AtomicBool = AtomicBool::new(false);
 
@@ -651,7 +651,7 @@ fn ollama_generate_request(
         "model": wire_name(model),
         "system": system,
         "prompt": prompt,
-        // Stream from Ollama so Warp can transition from Sending to Thinking
+        // Stream from Ollama so Derp can transition from Sending to Thinking
         // when inference actually begins. The accumulator below coalesces the
         // token chunks before emitting assistant text, avoiding one UI block
         // per token.
@@ -669,7 +669,7 @@ fn ollama_generate_request(
             "temperature": 0,
             // The models default to a 2048-token window (some as low as that),
             // which is the "lack of context" users hit in longer chats. 8192 is
-            // a sane floor across the local models Warp lists; models trained
+            // a sane floor across the local models Derp lists; models trained
             // shorter simply don't use the extra headroom.
             "num_ctx": 8192,
         },
@@ -1019,12 +1019,12 @@ async fn capture_bounded(mut reader: impl AsyncRead + Unpin) -> String {
         captured.extend_from_slice(&buffer[..read.min(remaining)]);
         truncated |= read > remaining;
         // Continue draining after the cap so the child never blocks on a full
-        // pipe, but retain no more bytes in Warp.
+        // pipe, but retain no more bytes in Derp.
     }
 
     let mut text = String::from_utf8_lossy(&captured).into_owned();
     if truncated {
-        text.push_str("\n[output truncated by Warp's Ollama harness]");
+        text.push_str("\n[output truncated by Derp's Ollama harness]");
     }
     text
 }
@@ -1050,7 +1050,7 @@ pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: im
 }
 
 /// Runs one Ollama agent turn, including up to eight structured shell calls,
-/// and converts the whole lifecycle into Warp's local-harness event stream.
+/// and converts the whole lifecycle into Derp's local-harness event stream.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_ollama_stream(
     first_command: Command,
@@ -1124,7 +1124,7 @@ async fn run_ollama_stream_inner(
     start_service: bool,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
-    // Open the Warp exchange before a cold model has loaded. This metadata
+    // Open the Derp exchange before a cold model has loaded. This metadata
     // event is intentionally non-rendering: it makes the user's message and
     // Sending... shimmer appear immediately. The first streamed model chunk
     // then emits Thinking, switching the status shimmer to Thinking....

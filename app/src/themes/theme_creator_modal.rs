@@ -1,12 +1,12 @@
 use std::default::Default;
 use std::path::PathBuf;
 
-use warpui::fonts::Weight;
-use warpui::keymap::FixedBinding;
-use warpui::platform::{FilePickerConfiguration, FileType};
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::{Coords, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::keymap::FixedBinding;
+use derpui::platform::{FilePickerConfiguration, FileType};
+use derpui::presenter::ChildView;
+use derpui::ui_components::components::{Coords, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -37,7 +37,7 @@ pub enum ThemeCreatorModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

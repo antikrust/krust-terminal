@@ -10,8 +10,8 @@
 //! `TaskNotFound`.
 
 use ai::agent::{TurnEvent, TurnUsage};
-use warp_multi_agent_api as api;
-use warpui::{App, EntityId};
+use derp_multi_agent_api as api;
+use derpui::{App, EntityId};
 
 use super::LocalHarnessStream;
 use crate::ai::agent::conversation::ConversationStatus;

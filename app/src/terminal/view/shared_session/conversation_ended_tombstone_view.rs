@@ -1,15 +1,15 @@
 use std::path::Path;
 
-use warp_core::paths::home_relative_path;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::{AnsiColorIdentifier, Fill};
-use warpui::elements::{
+use derp_core::paths::home_relative_path;
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::{AnsiColorIdentifier, Fill};
+use derpui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, MainAxisSize, Padding, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -162,7 +162,7 @@ pub struct ConversationEndedTombstoneView {
     #[cfg(not(target_family = "wasm"))]
     continue_locally_button: Option<ViewHandle<ActionButton>>,
     #[cfg(target_family = "wasm")]
-    open_in_warp_button: Option<ViewHandle<ActionButton>>,
+    open_in_derp_button: Option<ViewHandle<ActionButton>>,
 }
 
 impl ConversationEndedTombstoneView {
@@ -228,19 +228,19 @@ impl ConversationEndedTombstoneView {
         };
 
         // In wasm, continuing locally is impossible so we instead
-        // offer to open the conversation in warp (where you can continue locally).
+        // offer to open the conversation in derp (where you can continue locally).
         #[cfg(target_family = "wasm")]
-        let open_in_warp_button =
+        let open_in_derp_button =
             if matches!(tombstone_cta, Some(TombstoneCta::ContinueInCloud { .. })) {
                 None
             } else {
                 conversation_id.map(|conv_id| {
                     ctx.add_typed_action_view(move |_| {
-                        ActionButton::new("Open in Warp", PrimaryTheme)
-                            .with_tooltip("Open this conversation in the Warp desktop app")
+                        ActionButton::new("Open in Derp", PrimaryTheme)
+                            .with_tooltip("Open this conversation in the Derp desktop app")
                             .on_click(move |ctx| {
                                 ctx.dispatch_typed_action(
-                                    ConversationEndedTombstoneAction::OpenInWarp(conv_id),
+                                    ConversationEndedTombstoneAction::OpenInDerp(conv_id),
                                 );
                             })
                     })
@@ -254,7 +254,7 @@ impl ConversationEndedTombstoneView {
             #[cfg(not(target_family = "wasm"))]
             continue_locally_button,
             #[cfg(target_family = "wasm")]
-            open_in_warp_button,
+            open_in_derp_button,
         };
 
         ctx.subscribe_to_view(
@@ -279,7 +279,7 @@ impl ConversationEndedTombstoneView {
                         ctx
                     );
                     ctx.clipboard()
-                        .write(warpui::clipboard::ClipboardContent::plain_text(
+                        .write(derpui::clipboard::ClipboardContent::plain_text(
                             branch.clone(),
                         ));
                 }
@@ -364,7 +364,7 @@ impl ConversationEndedTombstoneView {
             Fill::Solid(theme.ansi_fg_green())
         };
         let icon_element = Container::new(
-            ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
                 .with_height(14.)
                 .with_width(14.)
                 .finish(),
@@ -507,9 +507,9 @@ impl ConversationEndedTombstoneView {
         #[cfg(target_family = "wasm")]
         {
             // Don't show on mobile devices - they can't use the desktop app
-            if !warpui::platform::wasm::is_mobile_device() {
-                if let Some(ref open_in_warp_button) = self.open_in_warp_button {
-                    row.add_child(ChildView::new(open_in_warp_button).finish());
+            if !derpui::platform::wasm::is_mobile_device() {
+                if let Some(ref open_in_derp_button) = self.open_in_derp_button {
+                    row.add_child(ChildView::new(open_in_derp_button).finish());
                     has_button = true;
                 }
             }
@@ -553,7 +553,7 @@ pub enum ConversationEndedTombstoneAction {
     #[cfg(not(target_family = "wasm"))]
     ContinueLocally(AIConversationId),
     #[cfg(target_family = "wasm")]
-    OpenInWarp(AIConversationId),
+    OpenInDerp(AIConversationId),
 }
 
 impl View for ConversationEndedTombstoneView {
@@ -653,8 +653,8 @@ impl TypedActionView for ConversationEndedTombstoneView {
                 });
             }
             #[cfg(target_family = "wasm")]
-            ConversationEndedTombstoneAction::OpenInWarp(conversation_id) => {
-                send_telemetry_from_ctx!(AgentManagementTelemetryEvent::TombstoneOpenInWarp, ctx);
+            ConversationEndedTombstoneAction::OpenInDerp(conversation_id) => {
+                send_telemetry_from_ctx!(AgentManagementTelemetryEvent::TombstoneOpenInDerp, ctx);
                 let conversation = BlocklistAIHistoryModel::handle(ctx)
                     .as_ref(ctx)
                     .conversation(conversation_id);
@@ -665,7 +665,7 @@ impl TypedActionView for ConversationEndedTombstoneView {
                         if let Ok(url) = url::Url::parse(&url_string) {
                             ctx.dispatch_typed_action(&WorkspaceAction::OpenLinkOnDesktop(url));
                         } else {
-                            warp_errors::report_error!(
+                            derp_errors::report_error!(
                                 "Failed to parse conversation URL",
                                 extra: { "url" => %url_string }
                             );
@@ -674,7 +674,7 @@ impl TypedActionView for ConversationEndedTombstoneView {
                         log::warn!("No server conversation token available for conversation");
                     }
                 } else {
-                    warp_errors::report_error!("Conversation not found in history model");
+                    derp_errors::report_error!("Conversation not found in history model");
                 }
             }
         }

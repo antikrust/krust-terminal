@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use persistence::model::ConversationUsageMetadata;
-use warp_cli::agent::Harness;
-use warp_graphql::object_permissions::AccessLevel;
-use warpui::{App, EntityId, SingletonEntity};
+use derp_cli::agent::Harness;
+use derp_graphql::object_permissions::AccessLevel;
+use derpui::{App, EntityId, SingletonEntity};
 
 use super::*;
 use crate::ai::agent::api::ServerConversationToken;

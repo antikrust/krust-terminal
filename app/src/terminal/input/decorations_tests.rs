@@ -1,6 +1,6 @@
-use warp_completer::completer::SuggestionTypeName;
-use warpui::text_layout::TextStyle;
-use warpui::App;
+use derp_completer::completer::SuggestionTypeName;
+use derpui::text_layout::TextStyle;
+use derpui::App;
 
 use crate::appearance::Appearance;
 use crate::terminal::input::decorations::InputBackgroundJobOptions;
@@ -39,7 +39,7 @@ fn test_decorations_with_multibyte_chars() {
                 .update(ctx, |sessions, _ctx| {
                     // Wait until external commands have been loaded.
                     let session = sessions.get(session_id).expect("session should exist");
-                    warpui::r#async::block_on(session.load_external_commands());
+                    derpui::r#async::block_on(session.load_external_commands());
                 });
             session_id
         });

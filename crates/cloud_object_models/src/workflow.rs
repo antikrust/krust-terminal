@@ -8,7 +8,7 @@ use cloud_objects::ids::{GenericStringObjectId, ServerId, SyncId};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-/// Workflow model used by Warp and warp-internal.
+/// Workflow model used by Derp and derp-internal.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
@@ -36,7 +36,7 @@ pub enum Workflow {
         author: Option<String>,
         author_url: Option<String>,
         #[serde(default)]
-        shells: Vec<warp_workflows::Shell>,
+        shells: Vec<derp_workflows::Shell>,
         #[serde(default)]
         environment_variables: Option<SyncId>,
     },
@@ -112,7 +112,7 @@ impl Workflow {
         }
     }
 
-    pub fn shells(&self) -> Option<&Vec<warp_workflows::Shell>> {
+    pub fn shells(&self) -> Option<&Vec<derp_workflows::Shell>> {
         match self {
             Self::Command { shells, .. } => Some(shells),
             Self::AgentMode { .. } => None,
@@ -254,10 +254,10 @@ impl Workflow {
     }
 }
 
-/// Create a warp-internal Workflow model from a public-facing workflow
-/// https://github.com/warpdotdev/workflows/blob/main/workflow-types/src/lib.rs
-impl From<warp_workflows::Workflow> for Workflow {
-    fn from(workflow: warp_workflows::Workflow) -> Self {
+/// Create a derp-internal Workflow model from a public-facing workflow
+/// https://github.com/derpdotdev/workflows/blob/main/workflow-types/src/lib.rs
+impl From<derp_workflows::Workflow> for Workflow {
+    fn from(workflow: derp_workflows::Workflow) -> Self {
         Workflow::Command {
             name: workflow.name,
             command: workflow.command,
@@ -273,7 +273,7 @@ impl From<warp_workflows::Workflow> for Workflow {
     }
 }
 
-/// Argument model to be used in `warp-internal`
+/// Argument model to be used in `derp-internal`
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Default)]
 pub struct Argument {
     pub name: String,
@@ -284,8 +284,8 @@ pub struct Argument {
     pub default_value: Option<String>,
 }
 
-impl From<warp_workflows::Argument> for Argument {
-    fn from(arg: warp_workflows::Argument) -> Self {
+impl From<derp_workflows::Argument> for Argument {
+    fn from(arg: derp_workflows::Argument) -> Self {
         Argument {
             name: arg.name,
             arg_type: ArgumentType::Text,

@@ -2,8 +2,8 @@ use ai::LLMId;
 use chrono::{DateTime, Utc};
 use onboarding::slides::{AgentAutonomy, AgentDevelopmentSettings, ProjectOnboardingSettings};
 use onboarding::SelectedSettings;
-use warp_core::features::FeatureFlag;
-use warpui::{App, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derpui::{App, SingletonEntity};
 
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::{
@@ -170,12 +170,12 @@ fn apply_onboarding_settings_preserves_existing_cloud_profile_on_existing_user_l
     })
 }
 
-/// Warp's AI features run on a Warp account. For third-party agent intent
+/// Derp's AI features run on a Derp account. For third-party agent intent
 /// (`disable_oz = true`), AI is therefore off when the user skips creating an
 /// account and on once they have one.
 #[test]
 fn apply_onboarding_settings_gates_third_party_ai_on_account() {
-    let _flag = FeatureFlag::OpenWarpNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenDerpNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
         app.add_singleton_model(|_| AuthStateProvider::new_for_test());

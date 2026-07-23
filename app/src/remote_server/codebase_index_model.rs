@@ -3,10 +3,10 @@ use std::str::FromStr;
 
 use ai::index::full_source_code_embedding::NodeHash;
 use remote_server::codebase_index_proto::{RemoteCodebaseIndexState, RemoteCodebaseIndexStatus};
-use warp_core::{HostId, SessionId};
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use derp_core::{HostId, SessionId};
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
+use derpui::{Entity, ModelContext, SingletonEntity};
 
 use super::manager::{
     RemoteCodebaseIndexStatusWithPath, RemoteCodebaseIndexUpdateOperation, RemoteServerManager,

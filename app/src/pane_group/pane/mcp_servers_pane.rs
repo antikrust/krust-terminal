@@ -14,11 +14,11 @@
 
 use std::collections::HashMap;
 
-use warpui::elements::{
+use derpui::elements::{
     ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use warpui::{
+use derpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };

@@ -47,16 +47,16 @@ owner fork. Do not overwrite or include another worker's changes.
 ## This fork (0term): local agent harness — read before touching AI paths
 
 This fork routes all terminal agent prompts to **local CLI harnesses**
-(`claude`, `codex`) instead of Warp's cloud backend, by replaying the cloud
-protocol locally through Warp's own conversation machinery. Those pathways
+(`claude`, `codex`) instead of Derp's cloud backend, by replaying the cloud
+protocol locally through Derp's own conversation machinery. Those pathways
 (stream handshake, message mapping, action lifecycle, conversation status)
 are intricate and full of non-obvious invariants — **do not hack around
-them; work within Warp's mechanisms**. The map, the invariants, and the
+them; work within Derp's mechanisms**. The map, the invariants, and the
 known traps are documented in
 [docs/local-harness-lifecycle.md](docs/local-harness-lifecycle.md). Golden
 rules from it:
 
-- Use Warp's existing representation (message protos, feature flags enabled
+- Use Derp's existing representation (message protos, feature flags enabled
   per-channel in `app/src/bin/oss.rs`, `ConversationStatus`) rather than
   patching shared components to special-case fork content.
 - Local conversations must never reach cloud request paths — gate with
@@ -66,22 +66,22 @@ rules from it:
   Success on complete); don't flip status elsewhere.
 - Provider differences stop at the parsers (`*_stream.rs` → `TurnEvent`).
 - After touching message shapes, run
-  `cargo test -p warp turn_events_to_conversation` — a malformed injected
+  `cargo test -p derp turn_events_to_conversation` — a malformed injected
   message wedges its conversation permanently.
 
-Build/run for this fork: `cargo build --bin warp-oss`, binary at
-`target/debug/warp-oss`. Fake-auth mechanics are in
+Build/run for this fork: `cargo build --bin derp-oss`, binary at
+`target/debug/derp-oss`. Fake-auth mechanics are in
 [ACCOUNTS.md](ACCOUNTS.md).
 
 ## Development Commands
 
 ### Build and Run
 - `cargo run` / `./script/run` - Build and run the GUI desktop app locally
-- `./script/run-tui` - Build and run the headless TUI front-end (`crates/warp_tui`)
-- `cargo bundle --bin warp` - Bundle the main (GUI) app
+- `./script/run-tui` - Build and run the headless TUI front-end (`crates/derp_tui`)
+- `cargo bundle --bin derp` - Bundle the main (GUI) app
 
-### Running with local warp-server
-To connect Warp client to a local warp-server instance:
+### Running with local derp-server
+To connect Derp client to a local derp-server instance:
 
 ```bash
 # Connect to server on default port 8080
@@ -97,7 +97,7 @@ Environment variables:
 
 ### Testing
 - `cargo nextest run --no-fail-fast --workspace --exclude command-signatures-v2` - Run tests with nextest
-- `cargo nextest run -p warp_completer --features v2` - Run completer tests with v2 features
+- `cargo nextest run -p derp_completer --features v2` - Run completer tests with v2 features
 - `cargo test --doc` - Run doc tests
 - `cargo test` - Run standard tests for individual packages
 
@@ -105,7 +105,7 @@ Environment variables:
 - `./script/presubmit` - Run all presubmit checks (fmt, clippy, tests)
 - `./script/format` - Format code
 - `cargo clippy --workspace --all-targets --all-features --tests -- -D warnings` - Run clippy
-- `./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/warpui/src/ ./app/src/` - Format C/C++/Obj-C code
+- `./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/derpui/src/ ./app/src/` - Format C/C++/Obj-C code
 - `find . -name "*.wgsl" -exec wgslfmt --check {} +` - Check WGSL shader formatting
 
 ### Platform Setup
@@ -122,32 +122,32 @@ Environment variables:
 - `./script/install_cargo_build_deps` - Install Cargo build dependencies
 - `./script/install_cargo_test_deps` - Install Cargo test dependencies
 
-`skills-lock.json` is the standard project lock file managed by `npx skills`. `warpdotdev/common-skills/scripts/install_common_skills` requires an explicit install target before restoring: pass `--project`, pass `--global`, set `WARP_COMMON_SKILLS_INSTALL_TARGET`, or answer the interactive prompt from bootstrap. Non-interactive flows fail if no target is explicit. The installer creates `skills-lock.json` from `warpdotdev/common-skills` if it is missing, uses global as the recommended interactive default, errors if common skills are present in both project and global locations, prevents a global install pinned to one lock from being silently overwritten by another checkout pinned to a different lock, and verifies installed skills against the lock after successful install or skip paths. `script/run` and `script/bootstrap` execute this installer with `script/resolve_common_skills`, which uses `WARP_COMMON_SKILLS_SCRIPTS_DIR` only when explicitly set and otherwise runs the raw script from `warpdotdev/common-skills`. To test a remote common-skills branch, set `WARP_COMMON_SKILLS_REF=<branch>`. Cloud setup should use `common-skills/scripts/install_common_skills --repo-root <warp-checkout> --project --if-needed --non-interactive` or set `WARP_COMMON_SKILLS_INSTALL_TARGET=project` to avoid the prompt. To update the locked common skills, run `npx --yes skills@1.5.6 update -p -y` and commit the resulting `skills-lock.json` changes.
+`skills-lock.json` is the standard project lock file managed by `npx skills`. `derpdotdev/common-skills/scripts/install_common_skills` requires an explicit install target before restoring: pass `--project`, pass `--global`, set `DERP_COMMON_SKILLS_INSTALL_TARGET`, or answer the interactive prompt from bootstrap. Non-interactive flows fail if no target is explicit. The installer creates `skills-lock.json` from `derpdotdev/common-skills` if it is missing, uses global as the recommended interactive default, errors if common skills are present in both project and global locations, prevents a global install pinned to one lock from being silently overwritten by another checkout pinned to a different lock, and verifies installed skills against the lock after successful install or skip paths. `script/run` and `script/bootstrap` execute this installer with `script/resolve_common_skills`, which uses `DERP_COMMON_SKILLS_SCRIPTS_DIR` only when explicitly set and otherwise runs the raw script from `derpdotdev/common-skills`. To test a remote common-skills branch, set `DERP_COMMON_SKILLS_REF=<branch>`. Cloud setup should use `common-skills/scripts/install_common_skills --repo-root <derp-checkout> --project --if-needed --non-interactive` or set `DERP_COMMON_SKILLS_INSTALL_TARGET=project` to avoid the prompt. To update the locked common skills, run `npx --yes skills@1.5.6 update -p -y` and commit the resulting `skills-lock.json` changes.
 
 ## Architecture Overview
 
-This is a Rust-based terminal emulator with a custom UI framework called **WarpUI**. It has **two front-ends** that share a common core.
+This is a Rust-based terminal emulator with a custom UI framework called **DerpUI**. It has **two front-ends** that share a common core.
 
 ### Front-ends: GUI and TUI
 
-Warp has two front-ends that share the `warp_core`/`warpui` Entity/model core (App/Entity/`AppContext`, actions, `Appearance`, `FeatureFlag`, telemetry, logging) but differ in UI framework, rendering, input, and verification:
-- **GUI desktop app** — the `app/` crate on the WarpUI pixel/GPU framework (`warpui`, `crates/warpui_core`): `Element`/`View` layout, GPU/WGSL rendering, mouse input, `.app` bundles. Run with `cargo run` / `./script/run`; verify visually with `computer_use` or the real-display integration framework (`crates/integration`).
-- **Headless TUI** — the `crates/warp_tui` crate: a console app (run with `./script/run-tui`; no `.app`/GPU) rendered with a parallel cell-grid element library at `crates/warpui_core/src/elements/tui` (the `TuiElement` trait), behind the `tui` cargo feature. Verify by running it in a real terminal and observing output; test with render-to-lines unit tests.
+Derp has two front-ends that share the `derp_core`/`derpui` Entity/model core (App/Entity/`AppContext`, actions, `Appearance`, `FeatureFlag`, telemetry, logging) but differ in UI framework, rendering, input, and verification:
+- **GUI desktop app** — the `app/` crate on the DerpUI pixel/GPU framework (`derpui`, `crates/derpui_core`): `Element`/`View` layout, GPU/WGSL rendering, mouse input, `.app` bundles. Run with `cargo run` / `./script/run`; verify visually with `computer_use` or the real-display integration framework (`crates/integration`).
+- **Headless TUI** — the `crates/derp_tui` crate: a console app (run with `./script/run-tui`; no `.app`/GPU) rendered with a parallel cell-grid element library at `crates/derpui_core/src/elements/tui` (the `TuiElement` trait), behind the `tui` cargo feature. Verify by running it in a real terminal and observing output; test with render-to-lines unit tests.
 
 **Skill convention:** a skill specific to one front-end says so in its name and/or description (e.g. `gui-ui-guidelines` / `gui-integration-test` are GUI-only; `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` are TUI-specific). Skills with no front-end call-out are surface-agnostic and apply to both. For TUI work prefer the `tui-*` skills and ignore GUI-only ones — and vice versa.
 
 ### Key Components
 
-**Shared UI core** (`crates/warpui`, `crates/warpui_core`) — used by **both** front-ends:
+**Shared UI core** (`crates/derpui`, `crates/derpui_core`) — used by **both** front-ends:
 - Entity-Component-Handle pattern: a global `App` object owns all views/models (entities); views hold `ViewHandle<T>` references to other views; `AppContext` provides temporary access to handles during render/events.
 - Actions system for event handling.
-- `crates/warpui_core` also hosts the TUI cell-grid element library under `src/elements/tui` (behind the `tui` feature).
+- `crates/derpui_core` also hosts the TUI cell-grid element library under `src/elements/tui` (behind the `tui` feature).
 
-**GUI rendering** (WarpUI GUI elements — GUI-specific):
+**GUI rendering** (DerpUI GUI elements — GUI-specific):
 - `Element`s describe visual layout (Flutter-inspired), rendered on the GPU (WGSL).
 - Mouse input uses `MouseStateHandle`: create it once during construction and reference/clone it wherever mouse input is tracked. An inline `MouseStateHandle::default()` while rendering means no mouse interactions work. (The TUI's hover/click elements — `TuiHoverable`, `tui_collapsible` — also build on `MouseStateHandle`, so the same ownership rule applies there.)
 
-**TUI rendering** (`crates/warp_tui` + `crates/warpui_core/src/elements/tui` — TUI-specific):
+**TUI rendering** (`crates/derp_tui` + `crates/derpui_core/src/elements/tui` — TUI-specific):
 - Headless console front-end. The `TuiElement` trait lays out and paints into a cell-grid `TuiBuffer`; crossterm input is converted to `TuiEvent`. No GPU/WGSL, pixel geometry, or `.app` bundle.
 
 **Main app / shared surfaces** (`app/`) — the GUI desktop app plus feature surfaces the TUI reuses:
@@ -159,10 +159,10 @@ Warp has two front-ends that share the `warp_core`/`warpui` Entity/model core (A
 - Workspace and session management (`workspace/`)
 
 **Core Libraries**:
-- `crates/warp_core/` - Core utilities and platform abstractions (shared)
-- `crates/warp_tui/` - Headless TUI front-end
+- `crates/derp_core/` - Core utilities and platform abstractions (shared)
+- `crates/derp_tui/` - Headless TUI front-end
 - `crates/editor/` - Text editing functionality
-- `crates/warpui/` and `crates/warpui_core/` - Custom UI framework (shared core plus the GUI and TUI element libraries)
+- `crates/derpui/` and `crates/derpui_core/` - Custom UI framework (shared core plus the GUI and TUI element libraries)
 - `crates/ipc/` - Inter-process communication
 - `crates/graphql/` - GraphQL client and schema
 
@@ -172,13 +172,13 @@ Warp has two front-ends that share the `warp_core`/`warpui` Entity/model core (A
 2. **Modular Structure**: Workspace contains multiple workspace configurations, each with terminals, notebooks, etc.
 3. **Cross-Platform**: Native implementations for macOS, Windows, Linux, plus WASM target
 4. **AI Integration**: Built-in AI assistant with context awareness and codebase indexing
-5. **Cloud Sync**: Objects can be synchronized across devices via Warp Drive
+5. **Cloud Sync**: Objects can be synchronized across devices via Derp Drive
 
 ### Development Guidelines
 
 **Workspace Structure**:
 - This is a Cargo workspace with 60+ member crates
-- Main binary is in `app/`, UI framework in `crates/warpui/`
+- Main binary is in `app/`, UI framework in `crates/derpui/`
 - Platform-specific code is conditionally compiled
 - Integration tests are in `crates/integration/`
 
@@ -236,15 +236,15 @@ Warp has two front-ends that share the `warp_core`/`warpui` Entity/model core (A
 - Schema defined in `crates/persistence/src/schema.rs`
 
 **GraphQL**:
-- Schema and client code generation from `crates/warp_graphql_schema/api/schema.graphql`
+- Schema and client code generation from `crates/derp_graphql_schema/api/schema.graphql`
 - TypeScript types generated for frontend integration
 
 ### Feature Flags
 
-Warp uses compile-time feature flags with a small runtime plumbing layer.
+Derp uses compile-time feature flags with a small runtime plumbing layer.
 
 How to add a feature flag:
-- Add a new variant to `warp_core/src/features.rs` in the `FeatureFlag` enum
+- Add a new variant to `derp_core/src/features.rs` in the `FeatureFlag` enum
 - (Optional) Enable it by default for dogfood builds by listing it in `DOGFOOD_FLAGS`
 - Gate code paths with `FeatureFlag::YourFlag.is_enabled()`
 - For preview or release rollout, add to `PREVIEW_FLAGS` or `RELEASE_FLAGS` respectively (as appropriate)

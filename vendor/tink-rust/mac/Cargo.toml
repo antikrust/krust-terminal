@@ -1,0 +1,18 @@
+[package]
+name = "tink-mac"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+description = "MAC functionality for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+documentation = "https://docs.rs/tink-mac"
+readme = "README.md"
+keywords = ["cryptography", "tink", "mac"]
+categories = ["cryptography"]
+rust-version = "1.78.0"
+
+[dependencies]
+tink-core = "^0.3"
+tink-prf = "^0.3"
+tink-proto = "^0.3"

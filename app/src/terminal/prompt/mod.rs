@@ -1,4 +1,4 @@
-use warp_util::path::user_friendly_path;
+use derp_util::path::user_friendly_path;
 
 use super::model::session::SessionType;
 use crate::terminal::model::block::Block;
@@ -21,7 +21,7 @@ pub fn user_and_host_name_string(
 ) -> Option<String> {
     match session_type {
         SessionType::Local => None,
-        SessionType::WarpifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
+        SessionType::DerpifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
     }
 }
 

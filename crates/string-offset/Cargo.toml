@@ -1,5 +1,5 @@
 [package]
-authors = ["Warp Team <dev@warp.dev>"]
+authors = ["Derp Team <dev@derp.baby>"]
 edition = "2021"
 name = "string-offset"
 publish.workspace = true

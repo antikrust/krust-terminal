@@ -4,14 +4,14 @@ use std::borrow::Cow;
 use std::time::Duration;
 
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::Icon;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::Icon;
+use derpui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, OffsetPositioning, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, Rect, SavePosition, Stack, Text,
 };
-use warpui::{AppContext, Element, WindowId};
+use derpui::{AppContext, Element, WindowId};
 
 /// The state of a progress step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -174,7 +174,7 @@ fn render_indicator(state: ProgressStepState, appearance: &Appearance) -> Box<dy
         ProgressStepState::Completed => {
             let check_icon = ConstrainedBox::new(
                 Icon::Check
-                    .to_warpui_icon(theme.main_text_color(background))
+                    .to_derpui_icon(theme.main_text_color(background))
                     .finish(),
             )
             .with_width(ICON_SIZE)

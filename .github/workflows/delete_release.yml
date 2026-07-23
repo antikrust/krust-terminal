@@ -65,7 +65,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Fetch channel_versions.json from the channel-versions repository
-          CHANNEL_VERSIONS=$(gh api repos/warpdotdev/channel-versions/contents/channel_versions.json --jq '.content' | base64 -d)
+          CHANNEL_VERSIONS=$(gh api repos/derpdotdev/channel-versions/contents/channel_versions.json --jq '.content' | base64 -d)
           
           # Fail fast if the channel section is missing from channel_versions.json
           CHANNEL_EXISTS=$(echo "$CHANNEL_VERSIONS" | jq -r --arg channel "$CHANNEL" 'has("changelogs") and (.changelogs | has($channel))')

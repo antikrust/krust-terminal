@@ -1,10 +1,10 @@
-//! File type detection utilities for determining if files can be opened in Warp.
+//! File type detection utilities for determining if files can be opened in Derp.
 
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use warp_core::features::FeatureFlag;
-pub use warp_util::file_type::{
+use derp_core::features::FeatureFlag;
+pub use derp_util::file_type::{
     is_binary_file, is_file_content_binary, is_jupyter_notebook_file, is_markdown_file,
 };
 
@@ -31,7 +31,7 @@ pub enum EditorLayout {
     NewTab,
 }
 
-/// The type of file that can be opened in Warp. The in-product treatment for "opening" a file
+/// The type of file that can be opened in Derp. The in-product treatment for "opening" a file
 /// depends on its type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenableFileType {
@@ -46,9 +46,9 @@ pub enum OpenableFileType {
 /// The target application or viewer to use when opening a file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileTarget {
-    /// Open in Warp's Markdown viewer.
+    /// Open in Derp's Markdown viewer.
     MarkdownViewer(EditorLayout),
-    /// Open in Warp's Code Editor.
+    /// Open in Derp's Code Editor.
     CodeEditor(EditorLayout),
     /// Open in an external editor (e.g. VS Code, Emacs).
     #[cfg(feature = "local_fs")]
@@ -72,10 +72,10 @@ pub fn is_supported_code_file(_path: impl AsRef<Path>) -> bool {
     false
 }
 
-/// Whether `path` renders in Warp's notebook viewer (with a Rendered/Raw
+/// Whether `path` renders in Derp's notebook viewer (with a Rendered/Raw
 /// toggle): Markdown files always, Jupyter notebooks when the feature flag is
 /// enabled.
-pub fn renders_in_warp_notebook_viewer(path: impl AsRef<Path>) -> bool {
+pub fn renders_in_derp_notebook_viewer(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
     is_markdown_file(path)
         || (FeatureFlag::JupyterNotebookRendering.is_enabled() && is_jupyter_notebook_file(path))
@@ -95,7 +95,7 @@ pub fn is_supported_image_file(path: impl AsRef<Path>) -> bool {
 }
 
 /// Returns true if `path` looks like a shell script the user intends to run when
-/// "Open with Warp" is invoked from Finder/another app via a `file://` URL.
+/// "Open with Derp" is invoked from Finder/another app via a `file://` URL.
 ///
 /// Policy: extension in {sh, bash, zsh, fish, ksh} with the user-execute bit set on Unix,
 /// or extension in {ps1, bat, cmd} on Windows (no x-bit concept). On Unix, files with no
@@ -120,7 +120,7 @@ pub fn is_runnable_shell_script(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
 
     // Match the documented routing policy: only the owner's execute bit counts.
-    // A file `chmod 070` belongs to a group, not to the user invoking Warp.
+    // A file `chmod 070` belongs to a group, not to the user invoking Derp.
     let has_user_x_bit = std::fs::metadata(path)
         .map(|m| m.permissions().mode() & 0o100 != 0)
         .unwrap_or(false);
@@ -150,9 +150,9 @@ pub fn is_runnable_shell_script(_path: &Path) -> bool {
     false
 }
 
-/// Determines if a file can be opened in Warp and returns its type.
+/// Determines if a file can be opened in Derp and returns its type.
 /// Returns `None` if the file is binary and should not be opened.
-pub fn is_file_openable_in_warp(path: &Path) -> Option<OpenableFileType> {
+pub fn is_file_openable_in_derp(path: &Path) -> Option<OpenableFileType> {
     if is_binary_file(path) {
         return None;
     }
@@ -168,21 +168,21 @@ pub fn is_file_openable_in_warp(path: &Path) -> Option<OpenableFileType> {
     }
 }
 
-/// Only use this for UI elements that must explicitly open a file in Warp (i.e. "Open in New Tab").
+/// Only use this for UI elements that must explicitly open a file in Derp (i.e. "Open in New Tab").
 /// Prefer `resolve_file_target` for all other cases to respect users' preferences.
-/// This would also force any binary file to be opened in Warp's Code Editor, so you should likely check
-/// `is_file_openable_in_warp` before rendering any such UI Elements.
+/// This would also force any binary file to be opened in Derp's Code Editor, so you should likely check
+/// `is_file_openable_in_derp` before rendering any such UI Elements.
 #[cfg(feature = "local_fs")]
-pub fn resolve_file_target_to_open_in_warp(
+pub fn resolve_file_target_to_open_in_derp(
     path: &Path,
     settings: &EditorSettings,
     layout: Option<EditorLayout>,
 ) -> FileTarget {
-    let openable_file_type = is_file_openable_in_warp(path);
+    let openable_file_type = is_file_openable_in_derp(path);
     let is_markdown = matches!(openable_file_type, Some(OpenableFileType::Markdown));
     let layout = layout.unwrap_or(*settings.open_file_layout);
 
-    // Jupyter notebooks render in Warp's notebook viewer unconditionally when
+    // Jupyter notebooks render in Derp's notebook viewer unconditionally when
     // the feature flag is enabled (the whole point is to avoid raw JSON).
     if openable_file_type.is_some()
         && FeatureFlag::JupyterNotebookRendering.is_enabled()
@@ -220,15 +220,15 @@ pub fn resolve_file_target_with_editor_choice(
     default_layout: EditorLayout,
     layout: Option<EditorLayout>,
 ) -> FileTarget {
-    let is_openable_in_warp = is_file_openable_in_warp(path);
-    let is_markdown = matches!(is_openable_in_warp, Some(OpenableFileType::Markdown));
+    let is_openable_in_derp = is_file_openable_in_derp(path);
+    let is_markdown = matches!(is_openable_in_derp, Some(OpenableFileType::Markdown));
     let layout = layout.unwrap_or(default_layout);
-    let is_openable_in_warp = is_openable_in_warp.is_some();
+    let is_openable_in_derp = is_openable_in_derp.is_some();
 
-    // 0. Jupyter notebooks render in Warp's notebook viewer unconditionally
+    // 0. Jupyter notebooks render in Derp's notebook viewer unconditionally
     // when the feature flag is enabled (not gated on `prefer_markdown_viewer`
     // or `editor_choice`, since rendering-instead-of-JSON is the whole point).
-    if is_openable_in_warp
+    if is_openable_in_derp
         && FeatureFlag::JupyterNotebookRendering.is_enabled()
         && is_jupyter_notebook_file(path)
     {
@@ -240,8 +240,8 @@ pub fn resolve_file_target_with_editor_choice(
         return FileTarget::MarkdownViewer(layout);
     }
 
-    // 2. Warp Code Editor (Explicit user preference)
-    if is_openable_in_warp && matches!(editor_choice, EditorChoice::Warp) {
+    // 2. Derp Code Editor (Explicit user preference)
+    if is_openable_in_derp && matches!(editor_choice, EditorChoice::Derp) {
         return FileTarget::CodeEditor(layout);
     }
 
@@ -251,7 +251,7 @@ pub fn resolve_file_target_with_editor_choice(
     }
 
     // 4. Binary files -> System Default
-    if !is_openable_in_warp {
+    if !is_openable_in_derp {
         return FileTarget::SystemGeneric;
     }
 
@@ -259,7 +259,7 @@ pub fn resolve_file_target_with_editor_choice(
     match editor_choice {
         EditorChoice::ExternalEditor(editor) => FileTarget::ExternalEditor(editor),
         EditorChoice::SystemDefault => FileTarget::SystemDefault,
-        EditorChoice::Warp | EditorChoice::EnvEditor => unreachable!("Already matched above"),
+        EditorChoice::Derp | EditorChoice::EnvEditor => unreachable!("Already matched above"),
     }
 }
 

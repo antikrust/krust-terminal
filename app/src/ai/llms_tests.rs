@@ -1,4 +1,4 @@
-use warpui::App;
+use derpui::App;
 
 use super::*;
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
@@ -403,7 +403,7 @@ fn is_cloud_runnable_oz_model_id_classifies_ids() {
     assert!(
         preferences.is_cloud_runnable_oz_model_id(&LLMId::from("custom-router:cloud:team-router"))
     );
-    // Warp Oz slugs — cloud-runnable.
+    // Derp Oz slugs — cloud-runnable.
     assert!(preferences.is_cloud_runnable_oz_model_id(&LLMId::from("auto")));
     assert!(preferences.is_cloud_runnable_oz_model_id(&LLMId::from("auto-genius")));
     // A server-provided (non-custom, non-local-router) id is treated as

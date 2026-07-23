@@ -1,9 +1,9 @@
 use pathfinder_geometry::vector::vec2f;
 use string_offset::ByteOffset;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::model::CoreEditorModel;
-use warpui::platform::WindowStyle;
-use warpui::App;
+use derp_core::ui::appearance::Appearance;
+use derp_editor::model::CoreEditorModel;
+use derpui::platform::WindowStyle;
+use derpui::App;
 
 use super::MenuSource;
 use crate::auth::AuthStateProvider;

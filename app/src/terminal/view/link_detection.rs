@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
 use serde::{Serialize, Serializer};
-use warpui::platform::Cursor;
-use warpui::ViewContext;
+use derpui::platform::Cursor;
+use derpui::ViewContext;
 
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::{LinkOpenMethod, TelemetryEvent};
@@ -23,13 +23,13 @@ cfg_if::cfg_if! {
         use std::path::PathBuf;
         use unicode_general_category::{get_general_category, GeneralCategory};
         use unicode_width::UnicodeWidthChar;
-        use warp_util::path::CleanPathResult;
-        use warp_util::path::LineAndColumnArg;
+        use derp_util::path::CleanPathResult;
+        use derp_util::path::LineAndColumnArg;
     }
 }
 
 #[cfg(feature = "local_fs")]
-use warp_errors::report_error;
+use derp_errors::report_error;
 
 use super::{FindLinkArg, TerminalEditor};
 

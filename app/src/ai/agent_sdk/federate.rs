@@ -2,14 +2,14 @@ use std::process;
 
 use anyhow::{anyhow, Result};
 use serde_json::json;
-use warp_cli::agent::OutputFormat;
-use warp_cli::federate::{FederateCommand, IssueGcpTokenArgs, IssueTokenArgs};
-use warp_cli::GlobalOptions;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_managed_secrets::ManagedSecretManager;
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, SingletonEntity as _};
+use derp_cli::agent::OutputFormat;
+use derp_cli::federate::{FederateCommand, IssueGcpTokenArgs, IssueTokenArgs};
+use derp_cli::GlobalOptions;
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_managed_secrets::ManagedSecretManager;
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, SingletonEntity as _};
 
 use super::common::set_ambient_task_context_from_run_id;
 
@@ -46,7 +46,7 @@ fn issue_token(
 
     ManagedSecretManager::handle(ctx).update(ctx, move |manager, ctx| {
         let future =
-            manager.issue_task_identity_token(warp_managed_secrets::client::IdentityTokenOptions {
+            manager.issue_task_identity_token(derp_managed_secrets::client::IdentityTokenOptions {
                 audience,
                 requested_duration: duration,
                 subject_template,

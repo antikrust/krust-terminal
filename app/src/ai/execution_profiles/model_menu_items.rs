@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use warp_core::ui::Icon;
-use warpui::elements::{
+use derp_core::ui::Icon;
+use derpui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, ParentElement, SavePosition, Shrinkable,
     Text,
 };
-use warpui::fonts::{Properties, Style};
-use warpui::{Action, AppContext, Element};
+use derpui::fonts::{Properties, Style};
+use derpui::{Action, AppContext, Element};
 
 use crate::ai::custom_model_routers::is_custom_router_id;
 use crate::ai::llms::{
@@ -109,7 +109,7 @@ fn make_item_fields<A: Action + Clone>(
                 let icon_container = Container::new(
                     ConstrainedBox::new(
                         leading_icon
-                            .to_warpui_icon(appearance.theme().foreground())
+                            .to_derpui_icon(appearance.theme().foreground())
                             .finish(),
                     )
                     .with_height(appearance.ui_font_size())
@@ -136,7 +136,7 @@ fn make_item_fields<A: Action + Clone>(
                 if let Some(icon) = trailing_credential_icon {
                     let credential_icon = Container::new(
                         ConstrainedBox::new(
-                            icon.to_warpui_icon(appearance.theme().disabled_ui_text_color())
+                            icon.to_derpui_icon(appearance.theme().disabled_ui_text_color())
                                 .finish(),
                         )
                         .with_height(appearance.ui_font_size())

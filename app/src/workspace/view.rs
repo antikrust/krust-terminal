@@ -11,7 +11,7 @@ pub mod global_search;
 pub(crate) mod launch_modal;
 pub(crate) mod left_panel;
 pub(crate) mod onboarding;
-pub(crate) mod openwarp_launch_modal;
+pub(crate) mod openderp_launch_modal;
 pub(crate) mod orchestration_launch_modal;
 pub(crate) mod right_panel;
 mod startup_directory;
@@ -67,52 +67,52 @@ use serde_json;
 use session_sharing_protocol::common::SessionId as SharedSessionId;
 #[cfg(target_family = "wasm")]
 use url::Url;
-use warp_cli::agent::Harness;
-use warp_core::context_flag::ContextFlag;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::phenomenon::PhenomenonStyle;
-use warp_core::ui::theme::{AnsiColors, Fill};
-use warp_core::ui::Icon;
-use warp_core::user_preferences::GetUserPreferences as _;
-use warp_editor::editor::NavigationKey;
-use warp_errors::{report_error, report_if_error};
-use warp_server_client::auth::AuthEvent;
-use warp_util::path::{user_friendly_path, LineAndColumnArg};
+use derp_cli::agent::Harness;
+use derp_core::context_flag::ContextFlag;
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::features::FeatureFlag;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_core::ui::color::coloru_with_opacity;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::phenomenon::PhenomenonStyle;
+use derp_core::ui::theme::{AnsiColors, Fill};
+use derp_core::ui::Icon;
+use derp_core::user_preferences::GetUserPreferences as _;
+use derp_editor::editor::NavigationKey;
+use derp_errors::{report_error, report_if_error};
+use derp_server_client::auth::AuthEvent;
+use derp_util::path::{user_friendly_path, LineAndColumnArg};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
-use warp_util::standardized_path::StandardizedPath;
-use warpui::accessibility::{
-    AccessibilityContent, AccessibilityVerbosity, ActionAccessibilityContent, WarpA11yRole,
+use derp_util::standardized_path::StandardizedPath;
+use derpui::accessibility::{
+    AccessibilityContent, AccessibilityVerbosity, ActionAccessibilityContent, DerpA11yRole,
 };
-use warpui::clipboard::ClipboardContent;
+use derpui::clipboard::ClipboardContent;
 #[cfg(target_family = "wasm")]
-use warpui::elements::Percentage;
-use warpui::elements::{
+use derpui::elements::Percentage;
+use derpui::elements::{
     Align, Border, CacheOption, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DragAxis, Draggable,
     DraggableState, DropTarget, Element, Empty, EventHandler, Expanded, Fill as ElementFill, Flex,
-    Highlight, Hoverable, Icon as WarpUiIcon, Image, MainAxisAlignment, MainAxisSize,
+    Highlight, Hoverable, Icon as DerpUiIcon, Image, MainAxisAlignment, MainAxisSize,
     MouseInBehavior, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect,
     SavePosition, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::keymap::Context;
-use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
-use warpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
-use warpui::platform::{
+use derpui::fonts::{Properties, Weight};
+use derpui::geometry::vector::{vec2f, Vector2F};
+use derpui::keymap::Context;
+use derpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
+use derpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
+use derpui::platform::{
     Cursor, FilePickerConfiguration, FullscreenState, SystemTheme, TerminationMode,
 };
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::{Button, ButtonVariant};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::button::{Button, ButtonVariant};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::windowing::state::ApplicationStage;
+use derpui::windowing::{StateEvent, WindowManager};
+use derpui::{
     AppContext, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity, TypedActionView,
     UpdateModel, UpdateView, View, ViewAsRef, ViewContext, ViewHandle, WeakViewHandle, WindowId,
 };
@@ -220,7 +220,7 @@ use crate::ai::facts::{AIFactManager, AIFactView, AIFactViewEvent};
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 use crate::ai::llms::LLMPreferences;
 use crate::ai::persisted_workspace::PersistedWorkspace;
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::DerpAiExecutionContext;
 use crate::ai_assistant::panel::{AIAssistantPanelEvent, AIAssistantPanelView};
 use crate::ai_assistant::{AskAIType, AI_ASSISTANT_FEATURE_NAME, AI_ASSISTANT_LOGO_COLOR};
 use crate::app_state::{
@@ -265,11 +265,11 @@ use crate::context_chips::ChipRuntimeCapabilities;
 use crate::default_terminal::DefaultTerminal;
 use crate::drive::export::ExportManager;
 use crate::drive::import::modal::{ImportModal, ImportModalEvent};
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::DerpDriveItemId;
 use crate::drive::workflows::arguments::ArgumentsState;
 use crate::drive::workflows::modal::{WorkflowModal, WorkflowModalEvent};
 use crate::drive::{
-    CloudObjectTypeAndId, DriveObjectType, DrivePanel, DrivePanelEvent, OpenWarpDriveObjectSettings,
+    CloudObjectTypeAndId, DriveObjectType, DrivePanel, DrivePanelEvent, OpenDerpDriveObjectSettings,
 };
 use crate::editor::{
     EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions,
@@ -330,8 +330,8 @@ use crate::server::server_api::{ServerApi, ServerApiProvider, ServerTime};
 use crate::server::telemetry::{
     AddTabWithShellSource, AnonymousUserSignupEntrypoint, CloseTarget, EnvVarTelemetryMetadata,
     FileTreeSource, KnowledgePaneEntrypoint, LaunchConfigUiLocation,
-    MCPServerCollectionPaneEntrypoint, NotificationsTurnedOnSource, OpenedWarpAISource,
-    PaletteSource, SharingDialogSource, TabRenameEvent, TierLimitHitEvent, WarpDriveSource,
+    MCPServerCollectionPaneEntrypoint, NotificationsTurnedOnSource, OpenedDerpAISource,
+    PaletteSource, SharingDialogSource, TabRenameEvent, TierLimitHitEvent, DerpDriveSource,
 };
 use crate::session_management::{SessionNavigationData, SessionSource, TabNavigationData};
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
@@ -428,7 +428,7 @@ use crate::terminal::view::{
     OnboardingIntention, OnboardingVersion, SyncEvent, SyncInputType, TerminalAction,
     NOTIFICATIONS_TROUBLESHOOT_URL,
 };
-use crate::terminal::warpify::settings::WarpifySettings;
+use crate::terminal::derpify::settings::DerpifySettings;
 use crate::terminal::{self, BlockListSettings, SizeInfo, TerminalModel, TerminalView};
 use crate::themes::theme::{AnsiColorIdentifier, RespectSystemTheme, ThemeKind};
 use crate::themes::theme_chooser::{ThemeChooser, ThemeChooserEvent, ThemeChooserMode};
@@ -449,7 +449,7 @@ use crate::user_config::{
     find_unused_worktree_config_path, materialize_default_worktree_config, sanitize_toml_base_name,
     tab_configs_dir,
 };
-use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
+use crate::user_config::{DerpConfig, DerpConfigUpdateEvent};
 use crate::util::bindings::{keybinding_name_to_display_string, keybinding_name_to_keystroke};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::settings::OpenConversationPreference;
@@ -461,7 +461,7 @@ use crate::util::links;
 use crate::util::openable_file_type::FileTarget;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::{
-    resolve_file_target_to_open_in_warp, resolve_file_target_with_editor_choice, EditorLayout,
+    resolve_file_target_to_open_in_derp, resolve_file_target_with_editor_choice, EditorLayout,
 };
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightMouseStates, TrafficLightSide};
 use crate::util::truncation::truncate_from_end;
@@ -521,8 +521,8 @@ use crate::workspace::view::launch_modal::{LaunchModal, LaunchModalEvent, OzLaun
 use crate::workspace::view::left_panel::{
     LeftPanelAction, LeftPanelEvent, LeftPanelView, ToolPanelView,
 };
-use crate::workspace::view::openwarp_launch_modal::{
-    OpenWarpLaunchModal, OpenWarpLaunchModalEvent,
+use crate::workspace::view::openderp_launch_modal::{
+    OpenDerpLaunchModal, OpenDerpLaunchModalEvent,
 };
 use crate::workspace::view::orchestration_launch_modal::{
     OrchestrationLaunchModal, OrchestrationLaunchModalEvent,
@@ -550,7 +550,7 @@ const FONT_SIZE_INCREMENT: f32 = 1.0;
 
 /// Compact application chrome, matching Bob3's single-row title bar.
 pub const TAB_BAR_HEIGHT: f32 = 28.;
-/// Height for panel headers (warp drive, resource center, theme chooser, etc.).
+/// Height for panel headers (derp drive, resource center, theme chooser, etc.).
 /// Keep content panels at their existing height; only the application chrome is compact.
 pub const PANEL_HEADER_HEIGHT: f32 = 34.;
 /// The hover area height for states where the tab bar is revealed on hover.
@@ -567,9 +567,9 @@ const TAB_BAR_ICON_PADDING: f32 = 4.;
 
 const TAB_BAR_PILL_WIDTH: f32 = 100.;
 const PILL_FONT_SIZE: f32 = 12.;
-// We use the word "Warp" in the Update Ready button to make it obvious that the terminal is Warp.
-// This can lead to free advertising when users screen-share Warp when an update is available.
-const UPDATE_READY_TEXT: &str = "Update Warp";
+// We use the word "Derp" in the Update Ready button to make it obvious that the terminal is Derp.
+// This can lead to free advertising when users screen-share Derp when an update is available.
+const UPDATE_READY_TEXT: &str = "Update Derp";
 
 const TAB_BAR_OVERFLOW_MENU_WIDTH: f32 = 300.;
 
@@ -598,7 +598,7 @@ const AI_ASSISTANT_BUTTON_ID: &str = "workspace_view:ai_assistant_button";
 
 const VERSION_DEPRECATION_BANNER_TEXT: &str = "Your app is out of date and some features may not work as expected. Please update immediately.";
 
-const VERSION_DEPRECATION_WITHOUT_PERMISSIONS_BANNER_TEXT: &str = "Some Warp features may not work as expected without updating immediately, but Warp is unable to perform the update.";
+const VERSION_DEPRECATION_WITHOUT_PERMISSIONS_BANNER_TEXT: &str = "Some Derp features may not work as expected without updating immediately, but Derp is unable to perform the update.";
 
 const ASK_AI_ASSISTANT_KEYBINDING_NAME: &str = "workspace:toggle_ai_assistant";
 const TOGGLE_RESOURCE_CENTER_KEYBINDING_NAME: &str = "workspace:toggle_resource_center";
@@ -631,7 +631,7 @@ pub(crate) const TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME: &str =
 
 // these won't have to be public after we deprecate the code mode v1 project explorer which is defined in terminal
 pub(crate) const TOGGLE_PROJECT_EXPLORER_BINDING_NAME: &str = "workspace:toggle_project_explorer";
-pub(crate) const TOGGLE_WARP_DRIVE_BINDING_NAME: &str = "workspace:toggle_warp_drive";
+pub(crate) const TOGGLE_DERP_DRIVE_BINDING_NAME: &str = "workspace:toggle_derp_drive";
 pub(crate) const TOGGLE_RIGHT_PANEL_BINDING_NAME: &str = "workspace:toggle_right_panel";
 pub(crate) const TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME: &str =
     "workspace:toggle_vertical_tabs_panel";
@@ -649,7 +649,7 @@ pub(crate) const TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME: &str = "workspace:toggle_
 pub(crate) const LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME: &str =
     "workspace:left_panel_project_explorer";
 pub(crate) const LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME: &str = "workspace:left_panel_global_search";
-pub(crate) const LEFT_PANEL_WARP_DRIVE_BINDING_NAME: &str = "workspace:left_panel_warp_drive";
+pub(crate) const LEFT_PANEL_DERP_DRIVE_BINDING_NAME: &str = "workspace:left_panel_derp_drive";
 pub(crate) const LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME: &str =
     "workspace:left_panel_agent_conversations";
 
@@ -683,13 +683,13 @@ const MAX_WINDOW_TITLE_LENGTH: usize = 80;
 
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 const AUTO_CLOUD_HANDOFF_PROMPT: &str =
-    "Continue this local Warp Agent task in the cloud from the current conversation state.";
+    "Continue this local Derp Agent task in the cloud from the current conversation state.";
 
 /// The default display name used for the user if they have no associated display name.
 pub const DEFAULT_USER_DISPLAY_NAME: &str = "User";
 
 lazy_static! {
-    static ref OPENING_WARP_DRIVE_ON_START_UP: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    static ref OPENING_DERP_DRIVE_ON_START_UP: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     static ref PANEL_CORNER_RADIUS: CornerRadius = CornerRadius::with_all(Radius::Pixels(8.));
     static ref PANEL_HEADER_CORNER_RADIUS: CornerRadius =
         CornerRadius::with_top(Radius::Pixels(8.));
@@ -835,8 +835,8 @@ impl ShowTabBar {
 #[cfg(target_family = "wasm")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SimplifiedWasmTabBarContent {
-    /// Viewing a Warp Drive object (notebook, workflow, env vars, AI facts, MCP servers)
-    WarpDriveObject,
+    /// Viewing a Derp Drive object (notebook, workflow, env vars, AI facts, MCP servers)
+    DerpDriveObject,
     /// Participating in a shared session (viewer or writer). Contains the optional ambient agent task ID.
     SharedSession { task_id: Option<AmbientAgentTaskId> },
     /// Viewing a conversation transcript. Contains the optional ambient agent task ID.
@@ -1093,7 +1093,7 @@ pub struct Workspace {
     suggested_agent_mode_workflow_modal: ViewHandle<SuggestedAgentModeWorkflowModal>,
     suggested_rule_modal: ViewHandle<SuggestedRuleModal>,
     oz_launch_modal: ModalWithTab<LaunchModal<OzLaunchSlide>>,
-    openwarp_launch_modal: ViewHandle<OpenWarpLaunchModal>,
+    openderp_launch_modal: ViewHandle<OpenDerpLaunchModal>,
     orchestration_launch_modal: ViewHandle<OrchestrationLaunchModal>,
     feature_intro_modal: ViewHandle<FeatureIntroModal>,
     /// Tab that first received the feature-intro popover. The popover stays
@@ -1130,7 +1130,7 @@ pub struct Workspace {
     #[cfg(target_family = "wasm")]
     wasm_nux_dialog: ViewHandle<WasmNUXDialog>,
     #[cfg(target_family = "wasm")]
-    open_in_warp_button: ViewHandle<ActionButton>,
+    open_in_derp_button: ViewHandle<ActionButton>,
     #[cfg(target_family = "wasm")]
     view_cloud_runs_button: ViewHandle<ActionButton>,
     #[cfg(target_family = "wasm")]
@@ -1598,7 +1598,7 @@ impl Workspace {
                 if let Some(id) = id_to_force_expand {
                     self.open_notebook(
                         &NotebookSource::Existing(id),
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         ctx,
                         true,
                     );
@@ -1614,7 +1614,7 @@ impl Workspace {
                 if let Some(id) = id_to_force_expand {
                     self.open_workflow_with_existing(
                         id,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         ctx,
                     );
                     CloudModel::handle(ctx).update(ctx, |cloud_model, ctx| {
@@ -1772,7 +1772,7 @@ impl Workspace {
                 ctx.notify();
             }
             AuthOverrideWarningModalEvent::BulkExport => {
-                self.export_all_warp_drive_objects(ctx);
+                self.export_all_derp_drive_objects(ctx);
             }
         }
     }
@@ -2154,8 +2154,8 @@ impl Workspace {
                         );
                     });
                 } else {
-                    WarpConfig::handle(ctx).update(ctx, |warp_config, ctx| {
-                        warp_config.remove_tab_config_by_path(path, ctx);
+                    DerpConfig::handle(ctx).update(ctx, |derp_config, ctx| {
+                        derp_config.remove_tab_config_by_path(path, ctx);
                     });
                 }
                 self.current_workspace_state
@@ -2484,7 +2484,7 @@ impl Workspace {
             |hover_state| {
                 let icon = ConstrainedBox::new(
                     icons::Icon::X
-                        .to_warpui_icon(Fill::Solid(PhenomenonStyle::modal_close_button_text()))
+                        .to_derpui_icon(Fill::Solid(PhenomenonStyle::modal_close_button_text()))
                         .finish(),
                 )
                 .with_width(16.)
@@ -2610,7 +2610,7 @@ impl Workspace {
         );
     }
 
-    /// Subscribes to `WarpConfigUpdateEvent::TabConfigErrors` (and the equivalent
+    /// Subscribes to `DerpConfigUpdateEvent::TabConfigErrors` (and the equivalent
     /// `ModelConfigErrors` for custom model router configs) and shows a persistent
     /// error toast for each file that failed to parse.  Uses `object_id` keyed by
     /// file path so that re-saving the same file auto-dismisses the stale toast.
@@ -2618,9 +2618,9 @@ impl Workspace {
         toast_stack: ViewHandle<DismissibleToastStack<WorkspaceAction>>,
         ctx: &mut ViewContext<Self>,
     ) {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), move |_me, _, event, ctx| {
+        ctx.subscribe_to_model(&DerpConfig::handle(ctx), move |_me, _, event, ctx| {
             match event {
-                WarpConfigUpdateEvent::TabConfigs => {
+                DerpConfigUpdateEvent::TabConfigs => {
                     // On every tab config reload, dismiss error toasts for
                     // files that now parse successfully.  The model has already
                     // been updated with the current error set before this event
@@ -2635,7 +2635,7 @@ impl Workspace {
                         toast_stack.dismiss_toasts_by_prefix("tab_config_error:", ctx);
                     });
                 }
-                WarpConfigUpdateEvent::TabConfigErrors(errors) => {
+                DerpConfigUpdateEvent::TabConfigErrors(errors) => {
                     let home_dir = dirs::home_dir();
                     for error in errors {
                         let object_id = format!("tab_config_error:{}", error.file_path.display());
@@ -2664,12 +2664,12 @@ impl Workspace {
                         });
                     }
                 }
-                WarpConfigUpdateEvent::ModelConfigs => {
+                DerpConfigUpdateEvent::ModelConfigs => {
                     toast_stack.update(ctx, |toast_stack, ctx| {
                         toast_stack.dismiss_toasts_by_prefix("model_config_error:", ctx);
                     });
                 }
-                WarpConfigUpdateEvent::ModelConfigErrors(errors) => {
+                DerpConfigUpdateEvent::ModelConfigErrors(errors) => {
                     let home_dir = dirs::home_dir();
                     for error in errors {
                         let object_id = format!("model_config_error:{}", error.file_path.display());
@@ -2703,17 +2703,17 @@ impl Workspace {
         });
     }
 
-    /// Subscribes to `WarpConfigUpdateEvent::SettingsErrors` and
+    /// Subscribes to `DerpConfigUpdateEvent::SettingsErrors` and
     /// `SettingsErrorsCleared` to update the workspace settings-error banner
     /// and mirror the state into the settings pane for its nav-rail footer.
     fn subscribe_to_settings_errors(ctx: &mut ViewContext<Self>) {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), |me, _, event, ctx| match event {
-            WarpConfigUpdateEvent::SettingsErrors(error) => {
+        ctx.subscribe_to_model(&DerpConfig::handle(ctx), |me, _, event, ctx| match event {
+            DerpConfigUpdateEvent::SettingsErrors(error) => {
                 me.settings_file_error = Some(error.clone());
                 me.sync_settings_error_state_into_settings_pane(ctx);
                 ctx.notify();
             }
-            WarpConfigUpdateEvent::SettingsErrorsCleared => {
+            DerpConfigUpdateEvent::SettingsErrorsCleared => {
                 me.settings_file_error = None;
                 me.sync_settings_error_state_into_settings_pane(ctx);
                 ctx.notify();
@@ -2956,9 +2956,9 @@ impl Workspace {
             me.handle_oz_launch_modal_event(event, ctx);
         });
 
-        let openwarp_launch_view = ctx.add_typed_action_view(OpenWarpLaunchModal::new);
-        ctx.subscribe_to_view(&openwarp_launch_view, |me, _, event, ctx| {
-            me.handle_openwarp_launch_modal_event(event, ctx);
+        let openderp_launch_view = ctx.add_typed_action_view(OpenDerpLaunchModal::new);
+        ctx.subscribe_to_view(&openderp_launch_view, |me, _, event, ctx| {
+            me.handle_openderp_launch_modal_event(event, ctx);
         });
 
         let orchestration_launch_view = ctx.add_typed_action_view(OrchestrationLaunchModal::new);
@@ -3118,7 +3118,7 @@ impl Workspace {
             me.handle_window_settings_changed_event(event, ctx);
         });
 
-        // Show the Warp AI warm welcome iff the user hasn't dismissed it nor interacted with Warp AI before.
+        // Show the Derp AI warm welcome iff the user hasn't dismissed it nor interacted with Derp AI before.
         // Also, avoid showing it in integration tests to prevent interaction with other tests.
         let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
             && AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
@@ -3131,7 +3131,7 @@ impl Workspace {
                 .map(|dismissed: bool| !dismissed)
                 .unwrap_or(true);
 
-        // Don't automatically show the Warp AI welcome during onboarding if the block onboarding flow is being used.
+        // Don't automatically show the Derp AI welcome during onboarding if the block onboarding flow is being used.
         // This way, we can delay the reveal until the end of the onboarding flow so as not to overwhelm the user.
         if matches!(
             BlockOnboarding::get_group(ctx),
@@ -3169,7 +3169,7 @@ impl Workspace {
         let wasm_nux_dialog = Self::build_wasm_nux_dialog(ctx);
 
         #[cfg(target_family = "wasm")]
-        let open_in_warp_button = Self::build_open_in_warp_button(ctx);
+        let open_in_derp_button = Self::build_open_in_derp_button(ctx);
 
         #[cfg(target_family = "wasm")]
         let transcript_info_button = Self::build_transcript_info_button(ctx);
@@ -3286,8 +3286,8 @@ impl Workspace {
                 if model_ref.target_window_id() == Some(ctx.window_id()) {
                     if model_ref.is_oz_launch_modal_open() {
                         me.open_tab_and_focus_oz_launch_modal(ctx);
-                    } else if model_ref.is_openwarp_launch_modal_open() {
-                        me.focus_openwarp_launch_modal(ctx);
+                    } else if model_ref.is_openderp_launch_modal_open() {
+                        me.focus_openderp_launch_modal(ctx);
                     } else if model_ref.is_orchestration_launch_modal_open() {
                         me.focus_orchestration_launch_modal(ctx);
                     } else if model_ref.is_auto_handoff_sleep_modal_open() {
@@ -3420,7 +3420,7 @@ impl Workspace {
             #[cfg(target_family = "wasm")]
             wasm_nux_dialog,
             #[cfg(target_family = "wasm")]
-            open_in_warp_button,
+            open_in_derp_button,
             #[cfg(target_family = "wasm")]
             transcript_info_button,
             #[cfg(target_family = "wasm")]
@@ -3432,7 +3432,7 @@ impl Workspace {
                 view: oz_launch_view,
                 tab_pane_group_id: None,
             },
-            openwarp_launch_modal: openwarp_launch_view,
+            openderp_launch_modal: openderp_launch_view,
             orchestration_launch_modal: orchestration_launch_view,
             feature_intro_modal: feature_intro_view,
             feature_intro_tab_pane_group_id: None,
@@ -4140,7 +4140,7 @@ impl Workspace {
                 LeftPanelDisplayedTab::GlobalSearch => ToolPanelView::GlobalSearch {
                     entry_focus: GlobalSearchEntryFocus::Results,
                 },
-                LeftPanelDisplayedTab::WarpDrive => ToolPanelView::WarpDrive,
+                LeftPanelDisplayedTab::DerpDrive => ToolPanelView::DerpDrive,
                 LeftPanelDisplayedTab::ConversationListView => ToolPanelView::ConversationListView,
                 LeftPanelDisplayedTab::Tabs => ToolPanelView::Tabs,
                 LeftPanelDisplayedTab::Chat => ToolPanelView::Chat,
@@ -4185,9 +4185,9 @@ impl Workspace {
         shell: Option<AvailableShell>,
         ctx: &mut ViewContext<Self>,
     ) {
-        let show_warp_home = !ContextFlag::CreateNewSession.is_enabled();
+        let show_derp_home = !ContextFlag::CreateNewSession.is_enabled();
         let mut placeholder_pane = None;
-        let open_warp_drive = if !show_warp_home {
+        let open_derp_drive = if !show_derp_home {
             if self.should_trigger_get_started_onboarding(ctx) {
                 self.trigger_get_started_onboarding(ctx);
             } else {
@@ -4207,32 +4207,32 @@ impl Workspace {
             placeholder_pane = Some(home_pane.as_pane().id());
             self.add_tab_from_existing_pane(home_pane, 0, None, ctx);
 
-            // If we can't start a terminal session to run the onboarding flow, show the Warp Home
-            // placeholder along with Warp Drive.
+            // If we can't start a terminal session to run the onboarding flow, show the Derp Home
+            // placeholder along with Derp Drive.
             true
         };
         let initial_tab = self.active_tab_pane_group().clone();
 
-        if open_warp_drive {
-            // We open Warp Drive automatically in two cases:
-            // * The user is new to Warp, and went through the overall onboarding flow
+        if open_derp_drive {
+            // We open Derp Drive automatically in two cases:
+            // * The user is new to Derp, and went through the overall onboarding flow
             // * The user is on the web, so we can't open a terminal session.
             let initial_load_complete = UpdateManager::as_ref(ctx).initial_load_complete();
             ctx.spawn(initial_load_complete, move |me, _, ctx| {
-                // New Warp users can have non-welcome objects if they were directly invited OR if
+                // New Derp users can have non-welcome objects if they were directly invited OR if
                 // linked objects were copied over from an anonymous user.
                 if CloudModel::as_ref(ctx).has_non_welcome_objects() {
-                    me.open_or_toggle_warp_drive(false, false, ctx);
+                    me.open_or_toggle_derp_drive(false, false, ctx);
 
-                    // After opening Warp Drive, if we rendered the Warp Home placeholder panel, replace it with one of
+                    // After opening Derp Drive, if we rendered the Derp Home placeholder panel, replace it with one of
                     // the user's own objects.
-                    if show_warp_home {
+                    if show_derp_home {
                         let cloud_model = CloudModel::as_ref(ctx);
                         let candidate_objects = cloud_model
                             .cloud_objects()
                             .filter(|object| {
                                 !object.is_trashed(cloud_model)
-                                    && object.renders_in_warp_drive()
+                                    && object.renders_in_derp_drive()
                                     && !object.metadata().is_welcome_object
                             })
                             .map(|object| object.cloud_object_type_and_id())
@@ -4405,7 +4405,7 @@ impl Workspace {
                 // Open the transcript details panel by default on WASM (unless on mobile)
                 #[cfg(target_family = "wasm")]
                 {
-                    if !warpui::platform::wasm::is_mobile_device() {
+                    if !derpui::platform::wasm::is_mobile_device() {
                         me.current_workspace_state.is_transcript_details_panel_open = true;
                         me.transcript_info_button.update(ctx, |button, ctx| {
                             button.set_active(true, ctx);
@@ -4524,7 +4524,7 @@ impl Workspace {
                             .ambient_agent_task_id();
                         if task_id.is_some() {
                             // Open the details panel for shared ambient agent sessions (unless on mobile)
-                            if !warpui::platform::wasm::is_mobile_device() {
+                            if !derpui::platform::wasm::is_mobile_device() {
                                 me.current_workspace_state.is_transcript_details_panel_open = true;
                                 me.transcript_info_button.update(ctx, |button, ctx| {
                                     button.set_active(true, ctx);
@@ -4611,10 +4611,10 @@ impl Workspace {
             }
         }
 
-        // Check if focused pane is a Warp Drive object
+        // Check if focused pane is a Derp Drive object
         let focused_pane_id = pane_group.focused_pane_id(ctx);
-        if focused_pane_id.is_warp_drive_object_pane() {
-            return Some(SimplifiedWasmTabBarContent::WarpDriveObject);
+        if focused_pane_id.is_derp_drive_object_pane() {
+            return Some(SimplifiedWasmTabBarContent::DerpDriveObject);
         }
 
         None
@@ -4737,7 +4737,7 @@ impl Workspace {
 
         self.tips_completed.update(ctx, |tips_completed, ctx| {
             mark_feature_used_and_write_to_user_defaults(
-                Tip::Action(TipAction::WarpAI),
+                Tip::Action(TipAction::DerpAI),
                 tips_completed,
                 ctx,
             );
@@ -4745,9 +4745,9 @@ impl Workspace {
         });
 
         // The panel is already open and no models are open, so just refocus the panel.
-        // If there is a modal open, it would sit above the Warp AI panel and we would end up
-        // focusing the Warp AI panel _behind_ the floating modal. Instead, we opt for the normal
-        // toggle behavior which will close the current modal view and then toggle Warp AI.
+        // If there is a modal open, it would sit above the Derp AI panel and we would end up
+        // focusing the Derp AI panel _behind_ the floating modal. Instead, we opt for the normal
+        // toggle behavior which will close the current modal view and then toggle Derp AI.
         if self.current_workspace_state.is_ai_assistant_panel_open
             && !self.ai_assistant_panel.is_self_or_child_focused(ctx)
             && !self.current_workspace_state.is_any_modal_open(ctx)
@@ -4760,7 +4760,7 @@ impl Workspace {
         self.current_workspace_state.is_ai_assistant_panel_open =
             !self.current_workspace_state.is_ai_assistant_panel_open;
 
-        // Close any other modals that could be floating on top of the Warp AI panel.
+        // Close any other modals that could be floating on top of the Derp AI panel.
         self.current_workspace_state.close_all_modals();
 
         if self.current_workspace_state.is_ai_assistant_panel_open {
@@ -4774,32 +4774,32 @@ impl Workspace {
     }
 
     /// Sets focused to the index of either the selected object or the first item in WD
-    fn reset_focused_index_in_warp_drive(
+    fn reset_focused_index_in_derp_drive(
         &mut self,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
     ) {
         ctx.focus(&self.left_panel_view);
 
-        self.update_warp_drive_view(ctx, |drive_panel, ctx| {
-            drive_panel.reset_focused_index_in_warp_drive(should_scroll, ctx);
+        self.update_derp_drive_view(ctx, |drive_panel, ctx| {
+            drive_panel.reset_focused_index_in_derp_drive(should_scroll, ctx);
         });
     }
 
-    pub fn has_warp_drive_initialized_sections(
+    pub fn has_derp_drive_initialized_sections(
         &self,
         app: &AppContext,
     ) -> impl Future<Output = ()> {
         self.left_panel_view
             .as_ref(app)
-            .warp_drive_view()
+            .derp_drive_view()
             .as_ref(app)
-            .has_warp_drive_initialized_sections(app)
+            .has_derp_drive_initialized_sections(app)
     }
 
-    /// Check if Warp Drive view is focused within.
-    /// Routes to the appropriate Warp Drive panel.
-    fn is_warp_drive_view_focused(&self, ctx: &mut ViewContext<Self>) -> bool {
+    /// Check if Derp Drive view is focused within.
+    /// Routes to the appropriate Derp Drive panel.
+    fn is_derp_drive_view_focused(&self, ctx: &mut ViewContext<Self>) -> bool {
         let app = ctx;
         self.left_panel_view.is_self_or_child_focused(app)
     }
@@ -5000,12 +5000,12 @@ impl Workspace {
     }
 
     /// This function shifts focus to the panel on the left.
-    /// The current focusable panels are: Warp Drive, theme chooser, AI, and resource center (keyboard shortcuts page only)
+    /// The current focusable panels are: Derp Drive, theme chooser, AI, and resource center (keyboard shortcuts page only)
     fn focus_left_panel(&mut self, ctx: &mut ViewContext<Self>) {
         // Starts from terminal
         if self.active_tab_pane_group().is_self_or_child_focused(ctx) {
-            if self.current_workspace_state.is_warp_drive_open {
-                self.reset_focused_index_in_warp_drive(true, ctx);
+            if self.current_workspace_state.is_derp_drive_open {
+                self.reset_focused_index_in_derp_drive(true, ctx);
             } else if self.is_theme_chooser_open() {
                 ctx.focus(&self.theme_chooser_view);
             } else if self.current_workspace_state.is_ai_assistant_panel_open {
@@ -5020,8 +5020,8 @@ impl Workspace {
         {
             self.focus_active_tab(ctx);
         }
-        // Starts from a left panel: Warp Drive
-        else if self.is_warp_drive_view_focused(ctx) {
+        // Starts from a left panel: Derp Drive
+        else if self.is_derp_drive_view_focused(ctx) {
             if self.current_workspace_state.is_right_panel_open() {
                 self.set_selected_object(None, ctx);
                 if self.current_workspace_state.is_ai_assistant_panel_open {
@@ -5059,14 +5059,14 @@ impl Workspace {
                 ctx.focus(&self.ai_assistant_panel);
             } else if self.current_workspace_state.is_resource_center_open {
                 ctx.focus(&self.resource_center_view);
-            } else if self.current_workspace_state.is_warp_drive_open {
-                self.reset_focused_index_in_warp_drive(true, ctx);
+            } else if self.current_workspace_state.is_derp_drive_open {
+                self.reset_focused_index_in_derp_drive(true, ctx);
             } else if self.is_theme_chooser_open() {
                 ctx.focus(&self.theme_chooser_view);
             }
         }
-        // Starts from a left panel: Warp Drive, theme chooser
-        else if self.is_warp_drive_view_focused(ctx)
+        // Starts from a left panel: Derp Drive, theme chooser
+        else if self.is_derp_drive_view_focused(ctx)
             || self.theme_chooser_view.is_self_or_child_focused(ctx)
         {
             self.focus_active_tab(ctx);
@@ -5076,8 +5076,8 @@ impl Workspace {
             || self.resource_center_view.is_self_or_child_focused(ctx)
         {
             if self.current_workspace_state.is_left_panel_open() {
-                if self.current_workspace_state.is_warp_drive_open {
-                    self.reset_focused_index_in_warp_drive(true, ctx);
+                if self.current_workspace_state.is_derp_drive_open {
+                    self.reset_focused_index_in_derp_drive(true, ctx);
                 } else if self.is_theme_chooser_open() {
                     ctx.focus(&self.theme_chooser_view);
                 }
@@ -6070,7 +6070,7 @@ impl Workspace {
     fn handle_ai_fact_view_event(&mut self, event: &AIFactViewEvent, ctx: &mut ViewContext<Self>) {
         match event {
             AIFactViewEvent::OpenSettings => {
-                self.show_settings_with_section(Some(SettingsSection::WarpAgent), ctx);
+                self.show_settings_with_section(Some(SettingsSection::DerpAgent), ctx);
             }
             #[allow(unused_variables)]
             AIFactViewEvent::OpenFile(location) => {
@@ -6151,7 +6151,7 @@ impl Workspace {
             AgentManagementViewEvent::OpenPlanNotebook { notebook_uid } => {
                 self.open_notebook(
                     &NotebookSource::Existing((*notebook_uid).into()),
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     ctx,
                     false,
                 );
@@ -6312,8 +6312,8 @@ impl Workspace {
                 let pane_group = self.active_tab_pane_group().clone();
                 self.handle_file_tree_event(pane_group, pane_group_event, ctx);
             }
-            LeftPanelEvent::WarpDrive(drive_event) => {
-                self.handle_warp_drive_event(drive_event, ctx);
+            LeftPanelEvent::DerpDrive(drive_event) => {
+                self.handle_derp_drive_event(drive_event, ctx);
             }
             LeftPanelEvent::OpenFileWithTarget {
                 location,
@@ -6445,7 +6445,7 @@ impl Workspace {
     #[cfg(not(target_family = "wasm"))]
     fn view_logs(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.spawn(
-            async { tokio::task::spawn_blocking(warp_logging::create_log_bundle_zip).await },
+            async { tokio::task::spawn_blocking(derp_logging::create_log_bundle_zip).await },
             |me, result, ctx| match result {
                 Ok(Ok(path)) => {
                     ctx.open_file_path_in_explorer(&path);
@@ -6475,7 +6475,7 @@ impl Workspace {
             .write(ClipboardContent::plain_text(version.to_string()));
     }
 
-    fn export_all_warp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
+    fn export_all_derp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let cloud_model = CloudModel::as_ref(ctx);
         let exportable_objects = cloud_model.get_all_exportable_object_ids();
@@ -6616,7 +6616,7 @@ impl Workspace {
 
         // 4. User tab configs
         if FeatureFlag::TabConfigs.is_enabled() {
-            let tab_configs = WarpConfig::as_ref(ctx).tab_configs().to_vec();
+            let tab_configs = DerpConfig::as_ref(ctx).tab_configs().to_vec();
 
             // Count occurrences of each config name so we can disambiguate
             // duplicates in the menu (e.g. "My Tab Config", "My Tab Config (1)").
@@ -6885,7 +6885,7 @@ impl Workspace {
         }
     }
 
-    /// Writes the default tab config template to an unused path in `~/.warp/tab_configs/`
+    /// Writes the default tab config template to an unused path in `~/.derp/tab_configs/`
     /// and opens it respecting the user's configured editor setting.
     #[cfg(feature = "local_fs")]
     fn create_and_open_new_tab_config(&mut self, ctx: &mut ViewContext<Self>) {
@@ -6924,7 +6924,7 @@ impl Workspace {
     }
 
     /// Snapshots the given tab's pane layout and writes it as a new tab config
-    /// TOML to `~/.warp/tab_configs/`, then opens the file in the user's editor.
+    /// TOML to `~/.derp/tab_configs/`, then opens the file in the user's editor.
     #[cfg(feature = "local_fs")]
     fn save_current_tab_as_new_config(&mut self, tab_index: usize, ctx: &mut ViewContext<Self>) {
         use crate::tab_configs::session_config::{tab_config_from_pane_snapshot, write_tab_config};
@@ -7724,7 +7724,7 @@ impl Workspace {
     }
 
     /// The tab bar overflow menu is the context menu that appears when
-    /// a user clicks "Update Warp" in the top right of the tab bar.
+    /// a user clicks "Update Derp" in the top right of the tab bar.
     pub fn toggle_tab_bar_overflow_menu(&mut self, ctx: &mut ViewContext<Self>) {
         if self.show_tab_bar_overflow_menu {
             self.close_tab_bar_overflow_menu(ctx);
@@ -7752,7 +7752,7 @@ impl Workspace {
                             .into_item(),
                     ),
                     AutoupdateStage::UnableToUpdateToNewVersion { .. } => menu_items.push(
-                        MenuItemFields::new("Update Warp manually")
+                        MenuItemFields::new("Update Derp manually")
                             .with_on_select_action(WorkspaceAction::DownloadNewVersion)
                             .into_item(),
                     ),
@@ -7978,9 +7978,9 @@ impl Workspace {
         ctx.notify();
     }
 
-    /// Opens the Warp Drive object identified by `uid` in a new pane
+    /// Opens the Derp Drive object identified by `uid` in a new pane
     /// if it has a pane representation.
-    fn open_warp_drive_object_in_new_pane(&mut self, uid: &ObjectUid, ctx: &mut ViewContext<Self>) {
+    fn open_derp_drive_object_in_new_pane(&mut self, uid: &ObjectUid, ctx: &mut ViewContext<Self>) {
         let Some(object) = CloudModel::as_ref(ctx).get_by_uid(uid) else {
             return;
         };
@@ -7990,7 +7990,7 @@ impl Workspace {
             ObjectType::Notebook => {
                 self.open_notebook(
                     &NotebookSource::Existing(sync_id),
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     ctx,
                     true,
                 );
@@ -7998,7 +7998,7 @@ impl Workspace {
             ObjectType::Workflow => {
                 self.open_workflow_in_pane(
                     &WorkflowOpenSource::Existing(sync_id),
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     WorkflowViewMode::View,
                     ctx,
                 );
@@ -8027,7 +8027,7 @@ impl Workspace {
     pub fn open_notebook(
         &mut self,
         source: &NotebookSource,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
         default_to_new_pane: bool,
     ) {
@@ -8076,7 +8076,7 @@ impl Workspace {
             });
         }
 
-        // Get notebook ID to set Warp drive index selected state
+        // Get notebook ID to set Derp drive index selected state
         if let NotebookSource::Existing(notebook_id) = source {
             let focused_folder_id = settings.focused_folder_id.map(SyncId::ServerId);
             if !notebook_already_open && !default_to_new_pane {
@@ -8085,9 +8085,9 @@ impl Workspace {
 
             if let Some(focused_folder_id) = focused_folder_id {
                 // Only focus the notebook if we don't want to focus a parent folder instead
-                self.open_or_toggle_warp_drive(false, false, ctx);
+                self.open_or_toggle_derp_drive(false, false, ctx);
                 self.set_selected_object(
-                    Some(WarpDriveItemId::Object(
+                    Some(DerpDriveItemId::Object(
                         CloudObjectTypeAndId::from_id_and_type(
                             focused_folder_id,
                             ObjectType::Folder,
@@ -8097,7 +8097,7 @@ impl Workspace {
                 );
             } else {
                 self.set_selected_object(
-                    Some(WarpDriveItemId::Object(
+                    Some(DerpDriveItemId::Object(
                         CloudObjectTypeAndId::from_id_and_type(*notebook_id, ObjectType::Notebook),
                     )),
                     ctx,
@@ -8106,11 +8106,11 @@ impl Workspace {
         }
     }
 
-    /// Open a Warp Drive workflow in response to an intent URL.
+    /// Open a Derp Drive workflow in response to an intent URL.
     pub fn open_workflow_from_intent(
         &mut self,
         workflow_id: SyncId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) {
         // If running workflows is supported, do so. Otherwise, or if the workflow isn't in memory,
@@ -8120,7 +8120,7 @@ impl Workspace {
         if ContextFlag::RunWorkflow.is_enabled() && settings.invitee_email.is_none() {
             match CloudModel::as_ref(ctx).get_workflow(&workflow_id).cloned() {
                 Some(workflow) => {
-                    self.open_or_toggle_warp_drive(false, false, ctx);
+                    self.open_or_toggle_derp_drive(false, false, ctx);
                     self.run_cloud_workflow_in_active_input(
                         workflow,
                         WorkflowSelectionSource::Undefined,
@@ -8132,7 +8132,7 @@ impl Workspace {
                     // that will focus the workflow instead.
                     if let Some(focused_folder) = settings.focused_folder_id.map(SyncId::ServerId) {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(
+                            Some(DerpDriveItemId::Object(
                                 CloudObjectTypeAndId::from_id_and_type(
                                     focused_folder,
                                     ObjectType::Folder,
@@ -8152,7 +8152,7 @@ impl Workspace {
     pub fn open_workflow_in_pane(
         &mut self,
         source: &WorkflowOpenSource,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         mode: WorkflowViewMode,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -8230,7 +8230,7 @@ impl Workspace {
 
         if let EnvVarCollectionSource::Existing(env_var_collection_id) = source {
             self.set_selected_object(
-                Some(WarpDriveItemId::Object(
+                Some(DerpDriveItemId::Object(
                     CloudObjectTypeAndId::from_generic_string_object(
                         GenericStringObjectFormat::Json(
                             crate::cloud_object::JsonObjectType::EnvVarCollection,
@@ -8299,7 +8299,7 @@ impl Workspace {
         let settings_pane_manager = SettingsPaneManager::handle(ctx);
         if let Some(locator) = settings_pane_manager.as_ref(ctx).find_pane(ctx.window_id()) {
             // Update the page and/or search query if specified. The search query
-            // must be applied even when no page is given (e.g. `warp://settings?q=`)
+            // must be applied even when no page is given (e.g. `derp://settings?q=`)
             // so an already-open settings tab reflects the new query.
             if page.is_some() || search_query.is_some() {
                 self.settings_pane.update(ctx, |settings_pane, ctx| {
@@ -8686,7 +8686,7 @@ impl Workspace {
         });
 
         // Focus WD index item
-        self.set_selected_object(Some(WarpDriveItemId::AIFactCollection), ctx);
+        self.set_selected_object(Some(DerpDriveItemId::AIFactCollection), ctx);
     }
 
     /// Open the Execution Profile Editor pane
@@ -8776,8 +8776,8 @@ impl Workspace {
         ctx.notify();
     }
 
-    /// Find an active session and pre-fill the input editor the Warp executable with the
-    /// [`warp_cli::Command::DumpDebugInfo`] subcommand.
+    /// Find an active session and pre-fill the input editor the Derp executable with the
+    /// [`derp_cli::Command::DumpDebugInfo`] subcommand.
     fn dump_debug_info(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(exec) = std::env::current_exe()
             .ok()
@@ -8811,7 +8811,7 @@ impl Workspace {
                     let command = format!(
                         "{} {}",
                         terminal_view.shell_family(ctx).shell_escape(&exec),
-                        warp_cli::dump_debug_info_flag()
+                        derp_cli::dump_debug_info_flag()
                     );
                     terminal_view.set_pending_command(&command, ctx);
                 });
@@ -8850,7 +8850,7 @@ impl Workspace {
     fn install_oz(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.spawn(async { cli_install::install_oz() }, |view, result, ctx| {
             let command_name = ChannelState::channel().cli_command_name();
-            let message = format!("Installed the Oz CLI globally. You can now run '{command_name}' from any terminal outside of Warp.");
+            let message = format!("Installed the Oz CLI globally. You can now run '{command_name}' from any terminal outside of Derp.");
             let toast = DismissibleToast::success(message).with_link(
                 ToastLink::new("Learn more".to_string())
                     .with_href("https://therob.lol/derp-terminal/help/reference/cli".to_string()),
@@ -8866,7 +8866,7 @@ impl Workspace {
             async { cli_install::uninstall_oz() },
             |view, result, ctx| {
                 let toast = DismissibleToast::success(
-                    "Removed the global Oz CLI installation — it still works inside Warp."
+                    "Removed the global Oz CLI installation — it still works inside Derp."
                         .to_string(),
                 );
                 view.handle_cli_command_result(
@@ -8879,39 +8879,39 @@ impl Workspace {
         );
     }
 
-    /// Install the Warp Control CLI by creating a symlink in /usr/local/bin
+    /// Install the Derp Control CLI by creating a symlink in /usr/local/bin
     #[cfg(target_os = "macos")]
-    fn install_warpctrl(&mut self, ctx: &mut ViewContext<Self>) {
+    fn install_derpctrl(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.spawn(
-            async { cli_install::install_warpctrl() },
+            async { cli_install::install_derpctrl() },
             |view, result, ctx| {
-                let command_name = ChannelState::channel().warpctrl_command_name();
-                let message = format!("Installed the Warp Control CLI globally. You can now run '{command_name}' from any terminal outside of Warp.");
+                let command_name = ChannelState::channel().derpctrl_command_name();
+                let message = format!("Installed the Derp Control CLI globally. You can now run '{command_name}' from any terminal outside of Derp.");
                 let toast = DismissibleToast::success(message);
                 view.handle_cli_command_result(
                     result,
                     toast,
-                    "Failed to install Warp Control command",
+                    "Failed to install Derp Control command",
                     ctx,
                 );
             },
         );
     }
 
-    /// Uninstall the Warp Control CLI by removing the symlink from /usr/local/bin
+    /// Uninstall the Derp Control CLI by removing the symlink from /usr/local/bin
     #[cfg(target_os = "macos")]
-    fn uninstall_warpctrl(&mut self, ctx: &mut ViewContext<Self>) {
+    fn uninstall_derpctrl(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.spawn(
-            async { cli_install::uninstall_warpctrl() },
+            async { cli_install::uninstall_derpctrl() },
             |view, result, ctx| {
                 let toast = DismissibleToast::success(
-                    "Removed the global Warp Control CLI installation — it still works inside Warp."
+                    "Removed the global Derp Control CLI installation — it still works inside Derp."
                         .to_string(),
                 );
                 view.handle_cli_command_result(
                     result,
                     toast,
-                    "Failed to uninstall Warp Control command",
+                    "Failed to uninstall Derp Control command",
                     ctx,
                 );
             },
@@ -8972,49 +8972,49 @@ impl Workspace {
         ctx.notify();
     }
 
-    pub fn open_or_toggle_warp_drive(
+    pub fn open_or_toggle_derp_drive(
         &mut self,
         toggle: bool,
         explicit_user_action: bool,
         ctx: &mut ViewContext<Self>,
     ) {
-        // Closing all left panels will also close warp drive so we need to retrieve
-        // whether warp drive was open first, and toggle based on the initial value.
-        let was_warp_drive_open = self.current_workspace_state.is_warp_drive_open;
+        // Closing all left panels will also close derp drive so we need to retrieve
+        // whether derp drive was open first, and toggle based on the initial value.
+        let was_derp_drive_open = self.current_workspace_state.is_derp_drive_open;
         self.current_workspace_state.close_all_left_panels();
-        self.current_workspace_state.is_warp_drive_open =
-            if toggle { !was_warp_drive_open } else { true };
+        self.current_workspace_state.is_derp_drive_open =
+            if toggle { !was_derp_drive_open } else { true };
 
-        // Set selected object to None upon toggle close of Warp Drive
-        if !self.current_workspace_state.is_warp_drive_open {
+        // Set selected object to None upon toggle close of Derp Drive
+        if !self.current_workspace_state.is_derp_drive_open {
             self.set_selected_object(None, ctx);
             self.focus_active_tab(ctx);
         }
 
-        // Reset focused index when opening/toggling Warp Drive open
-        if self.current_workspace_state.is_warp_drive_open {
-            self.reset_focused_index_in_warp_drive(true, ctx);
+        // Reset focused index when opening/toggling Derp Drive open
+        if self.current_workspace_state.is_derp_drive_open {
+            self.reset_focused_index_in_derp_drive(true, ctx);
         }
 
         ctx.notify();
 
-        // Telemetry and welcome tip logic is only for when the user explicitly opens Warp Drive
-        // AND warp drive wasn't open before. There are other scenarios where we open Warp Drive like:
+        // Telemetry and welcome tip logic is only for when the user explicitly opens Derp Drive
+        // AND derp drive wasn't open before. There are other scenarios where we open Derp Drive like:
         // new user onboarding, user joins a team, etc so we want to avoid counting those.
         if explicit_user_action
-            && !was_warp_drive_open
-            && self.current_workspace_state.is_warp_drive_open
+            && !was_derp_drive_open
+            && self.current_workspace_state.is_derp_drive_open
         {
             send_telemetry_from_ctx!(
-                TelemetryEvent::WarpDriveOpened {
-                    source: WarpDriveSource::Legacy,
+                TelemetryEvent::DerpDriveOpened {
+                    source: DerpDriveSource::Legacy,
                     is_code_mode_v2: false
                 },
                 ctx
             );
             self.tips_completed.update(ctx, |tips_completed, ctx| {
                 mark_feature_used_and_write_to_user_defaults(
-                    Tip::Action(TipAction::OpenWarpDrive),
+                    Tip::Action(TipAction::OpenDerpDrive),
                     tips_completed,
                     ctx,
                 );
@@ -9498,7 +9498,7 @@ impl Workspace {
                     ) =>
                 {
                     items.push(
-                        MenuItemFields::new("Update and relaunch Warp")
+                        MenuItemFields::new("Update and relaunch Derp")
                             .with_on_select_action(WorkspaceAction::ApplyUpdate)
                             .with_override_text_color(appearance.theme().ansi_fg_red())
                             .into_item(),
@@ -9521,7 +9521,7 @@ impl Workspace {
                     ) =>
                 {
                     items.push(
-                        MenuItemFields::new("Update Warp manually")
+                        MenuItemFields::new("Update Derp manually")
                             .with_on_select_action(WorkspaceAction::DownloadNewVersion)
                             .with_override_text_color(appearance.theme().ansi_fg_red())
                             .into_item(),
@@ -9546,7 +9546,7 @@ impl Workspace {
 
         #[cfg(not(target_family = "wasm"))]
         items.push(
-            MenuItemFields::new("View Warp logs")
+            MenuItemFields::new("View Derp logs")
                 .with_on_select_action(WorkspaceAction::ViewLogs)
                 .into_item(),
         );
@@ -10061,7 +10061,7 @@ impl Workspace {
                 let theme = appearance.theme();
                 let search_icon = ConstrainedBox::new(
                     icons::Icon::SearchSmall
-                        .to_warpui_icon(theme.sub_text_color(theme.surface_2()))
+                        .to_derpui_icon(theme.sub_text_color(theme.surface_2()))
                         .finish(),
                 )
                 .with_width(16.)
@@ -10187,7 +10187,7 @@ impl Workspace {
                     .finish()
                 })
                 .with_cursor(Cursor::PointingHand)
-                .on_click(|ctx: &mut warpui::elements::EventContext, _, _| {
+                .on_click(|ctx: &mut derpui::elements::EventContext, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::OpenWorktreeAddRepoPicker);
                     ctx.dispatch_typed_action(crate::menu::MenuAction::Close(true));
                 })
@@ -10422,8 +10422,8 @@ impl Workspace {
                 ctx.notify();
             }
             LaunchConfigModalEvent::SuccessfullySavedConfig(launch_config) => {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.append_launch_config(launch_config, ctx);
+                ctx.update_model(&DerpConfig::handle(ctx), move |derp_config, ctx| {
+                    derp_config.append_launch_config(launch_config, ctx);
                 });
                 ctx.notify();
             }
@@ -10583,7 +10583,7 @@ impl Workspace {
                     });
                 });
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            derpui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -10657,12 +10657,12 @@ impl Workspace {
             .map(crate::util::git::list_local_branches_sync)
             .unwrap_or_default();
         let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-        Some(warp_util::worktree_names::generate_worktree_branch_name(
+        Some(derp_util::worktree_names::generate_worktree_branch_name(
             &branch_refs,
         ))
     }
 
-    /// Generates a worktree tab config TOML, writes it to `~/.warp/tab_configs/`,
+    /// Generates a worktree tab config TOML, writes it to `~/.derp/tab_configs/`,
     /// and opens the resulting config as a new tab.
     ///
     /// When `worktree_branch_name` is `None` (autogenerate), the TOML stores
@@ -10697,7 +10697,7 @@ impl Workspace {
         } else {
             let branches = crate::util::git::list_local_branches_sync(Path::new(repo));
             let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-            warp_util::worktree_names::generate_worktree_branch_name(&branch_refs)
+            derp_util::worktree_names::generate_worktree_branch_name(&branch_refs)
         };
 
         let toml_content = crate::tab_configs::build_worktree_config_toml(
@@ -10783,12 +10783,12 @@ impl Workspace {
                     });
                 });
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            derpui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
     /// Opens a worktree in the given repo using the default worktree tab config,
-    /// saving the materialized config to `~/.warp/tab_configs/` first.
+    /// saving the materialized config to `~/.derp/tab_configs/` first.
     /// The branch name is auto-generated.
     #[cfg(feature = "local_fs")]
     fn open_worktree_in_repo(&mut self, repo_path: String, ctx: &mut ViewContext<Self>) {
@@ -10804,7 +10804,7 @@ impl Workspace {
         };
         let branches = crate::util::git::list_local_branches_sync(Path::new(&repo_path));
         let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-        let branch_name = warp_util::worktree_names::generate_worktree_branch_name(&branch_refs);
+        let branch_name = derp_util::worktree_names::generate_worktree_branch_name(&branch_refs);
         let repo_display_name = Path::new(&repo_path)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
@@ -10884,7 +10884,7 @@ impl Workspace {
                     persisted.user_added_workspace(path_buf, ctx);
                 });
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            derpui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -10945,8 +10945,8 @@ impl Workspace {
                 // If saved workflow id matches the one that is currently displayed, then refresh workflow info box + input
                 self.maybe_refresh_workflow_info_box_and_input(workflow_id, ctx);
             }
-            WorkflowModalEvent::ViewInWarpDrive(id) => {
-                self.view_in_and_focus_warp_drive(*id, ctx);
+            WorkflowModalEvent::ViewInDerpDrive(id) => {
+                self.view_in_and_focus_derp_drive(*id, ctx);
             }
             WorkflowModalEvent::AiAssistUpgradeError(team_uid, user_id) => {
                 let upgrade_link = team_uid
@@ -11014,7 +11014,7 @@ impl Workspace {
                     // Proc same behavior as DrivePanelEvent::RunWorkflow
                     self.run_cloud_workflow_in_active_input(
                         workflow.clone(),
-                        WorkflowSelectionSource::WarpDrive,
+                        WorkflowSelectionSource::DerpDrive,
                         TerminalSessionFallbackBehavior::default(),
                         ctx,
                     );
@@ -11432,10 +11432,10 @@ impl Workspace {
                 .size()
         });
 
-        let warp_ai_width = modal_sizes.map(|ms| {
-            ms.warp_ai_width
+        let derp_ai_width = modal_sizes.map(|ms| {
+            ms.derp_ai_width
                 .lock()
-                .expect("should be able to lock warp_ai resizable state handle")
+                .expect("should be able to lock derp_ai resizable state handle")
                 .size()
         });
 
@@ -11446,10 +11446,10 @@ impl Workspace {
                 .size()
         });
 
-        let warp_drive_index_width = modal_sizes.map(|ms| {
-            ms.warp_drive_index_width
+        let derp_drive_index_width = modal_sizes.map(|ms| {
+            ms.derp_drive_index_width
                 .lock()
-                .expect("should be able to lock warp drive resizable state handle")
+                .expect("should be able to lock derp drive resizable state handle")
                 .size()
         });
 
@@ -11479,9 +11479,9 @@ impl Workspace {
             fullscreen_state: window_fullscreen_state,
             quake_mode,
             universal_search_width,
-            warp_ai_width,
+            derp_ai_width,
             voltron_width,
-            warp_drive_index_width,
+            derp_drive_index_width,
             left_panel_open: self.left_panel_open,
             vertical_tabs_panel_open: self.vertical_tabs_panel_open,
             left_panel_width,
@@ -12185,7 +12185,7 @@ impl Workspace {
 
     pub fn open_autoupdate_failure_link(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.open_url(
-            "https://therob.lol/derp-terminal/help/support-and-community/troubleshooting-and-support/updating-warp",
+            "https://therob.lol/derp-terminal/help/support-and-community/troubleshooting-and-support/updating-derp",
         );
     }
 
@@ -12603,7 +12603,7 @@ impl Workspace {
     pub fn add_tab_for_cloud_notebook(
         &mut self,
         notebook_id: SyncId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) {
         // TODO: We should validate that this notebook exists and fallback if it doesn't
@@ -12621,7 +12621,7 @@ impl Workspace {
     fn add_tab_for_cloud_workflow(
         &mut self,
         workflow_id: SyncId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) {
         let panes_layout = PanesLayout::Snapshot(Box::new(PaneNodeSnapshot::Leaf(LeafSnapshot {
@@ -13250,7 +13250,7 @@ impl Workspace {
         ctx.spawn(
             async move {
                 let transcript_file = tempfile::Builder::new()
-                    .prefix("warp_run_transcript_")
+                    .prefix("derp_run_transcript_")
                     .suffix(".json")
                     .tempfile()
                     .context("Failed to create temporary transcript file")?;
@@ -13365,7 +13365,7 @@ impl Workspace {
         // True when the fork is paired with a follow-up that fires immediately after restore
         // (a prompt to send, or a `/summarize` triggered by `summarize_after_fork`).
         // Used to suppress the `couldn't find original conversation directory` ephemeral hint
-        // for cloud-to-local forks, which would otherwise mask the warping indicator while the
+        // for cloud-to-local forks, which would otherwise mask the derping indicator while the
         // agent processes the follow-up. See `BlocklistAIStatusBar::render`'s
         // `ephemeral_message_model.current_message().is_none()` gate.
         let has_initial_query = summarize_after_fork || initial_prompt.is_some();
@@ -13973,8 +13973,8 @@ impl Workspace {
 
     #[cfg(target_os = "macos")]
     pub fn sync_window_button_visibility(&self, ctx: &mut ViewContext<Self>) {
-        use warpui::platform::mac::WindowExt;
-        // Bob-style controls are rendered by Warp with the rest of the title bar.
+        use derpui::platform::mac::WindowExt;
+        // Bob-style controls are rendered by Derp with the rest of the title bar.
         if let Some(platform_window) = ctx.windows().platform_window(ctx.window_id()) {
             platform_window.as_ref().set_window_buttons(false);
         }
@@ -14010,7 +14010,7 @@ impl Workspace {
                         let url = NOTIFICATIONS_TROUBLESHOOT_URL.to_string();
                         view.toast_stack.update(ctx, |toast_stack, ctx| {
                             let toast = DismissibleToast::error(
-                                "Warp doesn't have permission to send desktop notifications."
+                                "Derp doesn't have permission to send desktop notifications."
                                     .to_string(),
                             )
                             .with_link(
@@ -14197,7 +14197,7 @@ impl Workspace {
         ctx.notify();
     }
 
-    fn open_warp_drive_palette(&mut self, ctx: &mut ViewContext<Self>) {
+    fn open_derp_drive_palette(&mut self, ctx: &mut ViewContext<Self>) {
         self.palette.update(ctx, |view, ctx| {
             view.reset(ctx);
             view.set_active_query_filter(QueryFilter::Drive, ctx);
@@ -14372,7 +14372,7 @@ impl Workspace {
                 _ => self.open_navigation_palette(ctx),
             },
             PaletteMode::LaunchConfig => self.open_launch_config_palette(ctx),
-            PaletteMode::WarpDrive => self.open_warp_drive_palette(ctx),
+            PaletteMode::DerpDrive => self.open_derp_drive_palette(ctx),
             PaletteMode::Files => self.open_files_palette(ctx),
             PaletteMode::Conversations => self.open_conversations_palette(ctx),
         }
@@ -14464,12 +14464,12 @@ impl Workspace {
             }
             CommandPaletteEvent::OpenNotebook { id } => self.open_notebook(
                 &NotebookSource::Existing(*id),
-                &OpenWarpDriveObjectSettings::default(),
+                &OpenDerpDriveObjectSettings::default(),
                 ctx,
                 true,
             ),
-            CommandPaletteEvent::ViewInWarpDrive { id } => {
-                self.view_in_and_focus_warp_drive(WarpDriveItemId::Object(*id), ctx);
+            CommandPaletteEvent::ViewInDerpDrive { id } => {
+                self.view_in_and_focus_derp_drive(DerpDriveItemId::Object(*id), ctx);
             }
             #[allow(unused_variables)]
             CommandPaletteEvent::OpenFile {
@@ -14487,12 +14487,12 @@ impl Workspace {
                             .and_then(|wd| match wd {
                                 LocalOrRemotePath::Remote(remote) => {
                                     let std_path =
-                                        warp_util::standardized_path::StandardizedPath::try_new(
+                                        derp_util::standardized_path::StandardizedPath::try_new(
                                             path,
                                         )
                                         .ok()?;
                                     Some(LocalOrRemotePath::Remote(
-                                        warp_util::remote_path::RemotePath::new(
+                                        derp_util::remote_path::RemotePath::new(
                                             remote.host_id.clone(),
                                             std_path,
                                         ),
@@ -14531,53 +14531,53 @@ impl Workspace {
     }
 
     /// This function is used when we set a selected object, which is an object open in an active pane.
-    /// We do not want to focus Warp Drive, instead we want to focus the editor of the open object.
-    fn view_in_warp_drive(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    /// We do not want to focus Derp Drive, instead we want to focus the editor of the open object.
+    fn view_in_derp_drive(&mut self, item_id: DerpDriveItemId, ctx: &mut ViewContext<Self>) {
         self.open_left_panel(ctx);
         self.left_panel_view.update(ctx, |left_panel, ctx| {
-            left_panel.handle_action(&LeftPanelAction::WarpDrive, ctx);
+            left_panel.handle_action(&LeftPanelAction::DerpDrive, ctx);
         });
 
-        if let WarpDriveItemId::Object(object_id) = item_id {
+        if let DerpDriveItemId::Object(object_id) = item_id {
             CloudModel::handle(ctx).update(ctx, |model, ctx| {
                 model.force_expand_object_and_ancestors_cloud_id(object_id, ctx);
             });
         }
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.scroll_item_into_view(item_id, ctx);
-            warp_drive.expand_section_for_drive_item_id(item_id, ctx);
-            warp_drive.initialize_drive_section_states(ctx);
+        self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+            derp_drive.scroll_item_into_view(item_id, ctx);
+            derp_drive.expand_section_for_drive_item_id(item_id, ctx);
+            derp_drive.initialize_drive_section_states(ctx);
         });
     }
 
-    /// This function is used when we want to view an item in Warp Drive AND focus Warp Drive.
-    pub fn view_in_and_focus_warp_drive(
+    /// This function is used when we want to view an item in Derp Drive AND focus Derp Drive.
+    pub fn view_in_and_focus_derp_drive(
         &mut self,
-        item_id: WarpDriveItemId,
+        item_id: DerpDriveItemId,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.view_in_warp_drive(item_id, ctx);
+        self.view_in_derp_drive(item_id, ctx);
 
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.reset_and_open_to_main_index(ctx);
-            warp_drive.set_focused_item(item_id, ctx);
+        self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+            derp_drive.reset_and_open_to_main_index(ctx);
+            derp_drive.set_focused_item(item_id, ctx);
         });
         ctx.notify();
     }
 
-    /// Updates the left panel's warp drive view.
-    fn update_warp_drive_view<F>(&mut self, ctx: &mut ViewContext<Self>, update_fn: F)
+    /// Updates the left panel's derp drive view.
+    fn update_derp_drive_view<F>(&mut self, ctx: &mut ViewContext<Self>, update_fn: F)
     where
         F: FnOnce(&mut DrivePanel, &mut ViewContext<DrivePanel>),
     {
         self.left_panel_view.update(ctx, |left_panel, ctx| {
-            left_panel.warp_drive_view().update(ctx, |warp_drive, ctx| {
-                update_fn(warp_drive, ctx);
+            left_panel.derp_drive_view().update(ctx, |derp_drive, ctx| {
+                update_fn(derp_drive, ctx);
             });
         });
     }
 
-    /// View an object in Warp Drive and open its sharing settings.
+    /// View an object in Derp Drive and open its sharing settings.
     fn open_object_sharing_settings(
         &mut self,
         object_id: CloudObjectTypeAndId,
@@ -14585,10 +14585,10 @@ impl Workspace {
         source: SharingDialogSource,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.view_in_warp_drive(WarpDriveItemId::Object(object_id), ctx);
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.reset_and_open_to_main_index(ctx);
-            warp_drive.open_object_sharing_settings(object_id, invitee_email, source, ctx);
+        self.view_in_derp_drive(DerpDriveItemId::Object(object_id), ctx);
+        self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+            derp_drive.reset_and_open_to_main_index(ctx);
+            derp_drive.open_object_sharing_settings(object_id, invitee_email, source, ctx);
         });
 
         ctx.notify();
@@ -14600,14 +14600,14 @@ impl Workspace {
         space: Space,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.move_object_to_team_owner(cloud_object_type_and_id, space, ctx);
+        self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+            derp_drive.move_object_to_team_owner(cloud_object_type_and_id, space, ctx);
         });
     }
 
     fn set_focused_index(&mut self, index: Option<usize>, ctx: &mut ViewContext<Self>) {
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.set_focused_index(index, ctx);
+        self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+            derp_drive.set_focused_index(index, ctx);
         });
         ctx.notify();
     }
@@ -14637,16 +14637,16 @@ impl Workspace {
                 ..
             } => match ChannelState::app_version() {
                 Some(version) => {
-                    let opening_warp_drive_on_start_up = OPENING_WARP_DRIVE_ON_START_UP
+                    let opening_derp_drive_on_start_up = OPENING_DERP_DRIVE_ON_START_UP
                         .lock()
-                        .expect("Should be able to access OPENING_WARP_DRIVE_ON_START_UP");
+                        .expect("Should be able to access OPENING_DERP_DRIVE_ON_START_UP");
 
                     request_type = Some(ChangelogRequestType::WindowLaunch);
                     // Do not show changelog on quake mode window or if it has already been shown
-                    // or if we are opening Warp Drive on start up
+                    // or if we are opening Derp Drive on start up
                     quake_mode_window_id() != Some(ctx.window_id())
                         && !Settings::has_changelog_been_shown(version, ctx)
-                        && !*opening_warp_drive_on_start_up
+                        && !*opening_derp_drive_on_start_up
                 }
                 None => false,
             },
@@ -14660,7 +14660,7 @@ impl Workspace {
             (true, Some(ChangelogRequestType::WindowLaunch)) => {
                 if let Some(version) = ChannelState::app_version() {
                     Settings::mark_changelog_shown(version, ctx);
-                    // If resource center isn't already open and Warp AI isn't open, then open resource center
+                    // If resource center isn't already open and Derp AI isn't open, then open resource center
                     if !self.current_workspace_state.is_resource_center_open
                         && !self.current_workspace_state.is_ai_assistant_panel_open
                     {
@@ -14706,8 +14706,8 @@ impl Workspace {
         self.current_workspace_state.is_workflow_modal_open
     }
 
-    pub fn is_warp_drive_open(&self) -> bool {
-        self.current_workspace_state.is_warp_drive_open
+    pub fn is_derp_drive_open(&self) -> bool {
+        self.current_workspace_state.is_derp_drive_open
     }
 
     pub fn is_left_panel_open(&self, ctx: &AppContext) -> bool {
@@ -14741,9 +14741,9 @@ impl Workspace {
             SettingsViewEvent::LaunchNetworkLogging => {
                 self.open_network_log_pane(ctx);
             }
-            SettingsViewEvent::OpenWarpDrive => {
+            SettingsViewEvent::OpenDerpDrive => {
                 self.close_all_overlays(ctx);
-                self.open_or_toggle_warp_drive(
+                self.open_or_toggle_derp_drive(
                     false, /* toggle */
                     false, /* explicit_user_action */
                     ctx,
@@ -14893,7 +14893,7 @@ impl Workspace {
         }
 
         // Mark the Library row as selected, mirroring the Rules row.
-        self.set_selected_object(Some(WarpDriveItemId::MCPServerCollection), ctx);
+        self.set_selected_object(Some(DerpDriveItemId::MCPServerCollection), ctx);
     }
 
     /// Fork: opens the global chat pane as a split, or focuses it if it's
@@ -15267,7 +15267,7 @@ impl Workspace {
             WorkspaceToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
                 toast_stack.add_ephemeral_toast(
                     DismissibleToast::error(
-                        "Couldn't open a cloud pane for handoff. Try again, or restart Warp if this keeps happening."
+                        "Couldn't open a cloud pane for handoff. Try again, or restart Derp if this keeps happening."
                             .to_owned(),
                     ),
                     window_id,
@@ -15690,7 +15690,7 @@ impl Workspace {
                 WorkspaceToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
                     toast_stack.add_ephemeral_toast(
                         DismissibleToast::error(
-                            "Couldn't open a cloud pane for handoff. Try again, or restart Warp if this keeps happening."
+                            "Couldn't open a cloud pane for handoff. Try again, or restart Derp if this keeps happening."
                                 .to_owned(),
                         ),
                         window_id,
@@ -15950,7 +15950,7 @@ impl Workspace {
             pane_group::Event::OpenCloudWorkflowForEdit(workflow_id) => self
                 .open_workflow_with_existing(
                     *workflow_id,
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     ctx,
                 ),
             pane_group::Event::OpenWorkflowModalWithTemporary(workflow) => {
@@ -15999,7 +15999,7 @@ impl Workspace {
                 );
             }
             #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
-            pane_group::Event::OpenFileInWarp { path, session } => {
+            pane_group::Event::OpenFileInDerp { path, session } => {
                 #[cfg(feature = "local_fs")]
                 {
                     let layout = *EditorSettings::as_ref(ctx).open_file_layout.value();
@@ -16012,11 +16012,11 @@ impl Workspace {
             } => {
                 self.move_to_drive_space(*cloud_object_type_and_id, *space, ctx);
             }
-            pane_group::Event::OpenWarpDriveLink {
-                open_warp_drive_args,
+            pane_group::Event::OpenDerpDriveLink {
+                open_derp_drive_args,
             } => {
                 let object_found = CloudModel::as_ref(ctx)
-                    .get_by_uid(&open_warp_drive_args.server_id.uid())
+                    .get_by_uid(&open_derp_drive_args.server_id.uid())
                     .is_some();
 
                 if !object_found {
@@ -16030,31 +16030,31 @@ impl Workspace {
                     return;
                 }
 
-                let server_id = open_warp_drive_args.server_id;
-                match open_warp_drive_args.object_type {
+                let server_id = open_derp_drive_args.server_id;
+                match open_derp_drive_args.object_type {
                     ObjectType::Notebook => self.open_notebook(
                         &NotebookSource::Existing(SyncId::ServerId(server_id)),
-                        &open_warp_drive_args.settings,
+                        &open_derp_drive_args.settings,
                         ctx,
                         true,
                     ),
-                    ObjectType::Workflow => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(CloudObjectTypeAndId::Workflow(SyncId::ServerId(
+                    ObjectType::Workflow => self.view_in_and_focus_derp_drive(
+                        DerpDriveItemId::Object(CloudObjectTypeAndId::Workflow(SyncId::ServerId(
                             server_id,
                         ))),
                         ctx,
                     ),
                     ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                         JsonObjectType::EnvVarCollection,
-                    )) => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(CloudObjectTypeAndId::from_generic_string_object(
+                    )) => self.view_in_and_focus_derp_drive(
+                        DerpDriveItemId::Object(CloudObjectTypeAndId::from_generic_string_object(
                             GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                             SyncId::ServerId(server_id),
                         )),
                         ctx,
                     ),
-                    ObjectType::Folder => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(CloudObjectTypeAndId::Folder(SyncId::ServerId(
+                    ObjectType::Folder => self.view_in_and_focus_derp_drive(
+                        DerpDriveItemId::Object(CloudObjectTypeAndId::Folder(SyncId::ServerId(
                             server_id,
                         ))),
                         ctx,
@@ -16065,7 +16065,7 @@ impl Workspace {
                 }
             }
             #[cfg(feature = "local_fs")]
-            pane_group::Event::OpenCodeInWarp {
+            pane_group::Event::OpenCodeInDerp {
                 source,
                 layout,
                 line_col,
@@ -16073,7 +16073,7 @@ impl Workspace {
                 self.open_code(source.clone(), *layout, *line_col, false, &[], ctx);
             }
             #[cfg(feature = "local_fs")]
-            pane_group::Event::PreviewCodeInWarp { source } => {
+            pane_group::Event::PreviewCodeInDerp { source } => {
                 self.open_code(
                     source.clone(),
                     EditorLayout::SplitPane, // preview always uses split pane
@@ -16189,8 +16189,8 @@ impl Workspace {
                 // Focus an existing pane by its locator (used when avoiding duplicate file panes during undo close pane)
                 self.focus_pane(*locator, ctx);
             }
-            pane_group::Event::ViewInWarpDrive(id) => {
-                self.view_in_and_focus_warp_drive(*id, ctx);
+            pane_group::Event::ViewInDerpDrive(id) => {
+                self.view_in_and_focus_derp_drive(*id, ctx);
             }
             // If focused pane contains an object, then set selected state in WD to that object
             pane_group::Event::PaneFocused => {
@@ -16215,7 +16215,7 @@ impl Workspace {
 
                     if let Some(workflow_id) = active_workflow_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(
+                            Some(DerpDriveItemId::Object(
                                 CloudObjectTypeAndId::from_id_and_type(
                                     workflow_id,
                                     ObjectType::Workflow,
@@ -16238,7 +16238,7 @@ impl Workspace {
 
                     if let Some(notebook_id) = notebook_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(
+                            Some(DerpDriveItemId::Object(
                                 CloudObjectTypeAndId::from_id_and_type(
                                     notebook_id,
                                     ObjectType::Notebook,
@@ -16260,7 +16260,7 @@ impl Workspace {
 
                     if let Some(env_var_collection_id) = env_var_collection_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(
+                            Some(DerpDriveItemId::Object(
                                 CloudObjectTypeAndId::from_generic_string_object(
                                     GenericStringObjectFormat::Json(
                                         crate::cloud_object::JsonObjectType::EnvVarCollection,
@@ -16280,7 +16280,7 @@ impl Workspace {
                     let workflow_id = workflow_pane.get_view(ctx).as_ref(ctx).workflow_id();
 
                     self.set_selected_object(
-                        Some(WarpDriveItemId::Object(
+                        Some(DerpDriveItemId::Object(
                             CloudObjectTypeAndId::from_id_and_type(
                                 workflow_id,
                                 ObjectType::Workflow,
@@ -16294,7 +16294,7 @@ impl Workspace {
                 else if let Some(_ai_fact_pane) =
                     pane_group.ai_fact_pane_by_pane_id(focused_pane_id)
                 {
-                    self.set_selected_object(Some(WarpDriveItemId::AIFactCollection), ctx);
+                    self.set_selected_object(Some(DerpDriveItemId::AIFactCollection), ctx);
                     active_object_open_in_pane = true;
                 }
 
@@ -16644,8 +16644,8 @@ impl Workspace {
                 ctx.notify();
             }
             pane_group::Event::ClearHoveredTabIndex => self.hovered_tab_index = None,
-            pane_group::Event::OpenWarpDriveObjectInPane(uid) => {
-                self.open_warp_drive_object_in_new_pane(uid, ctx);
+            pane_group::Event::OpenDerpDriveObjectInPane(uid) => {
+                self.open_derp_drive_object_in_new_pane(uid, ctx);
             }
             pane_group::Event::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 self.open_suggested_agent_mode_workflow_modal(workflow_and_id, ctx);
@@ -16834,7 +16834,7 @@ impl Workspace {
             }
             pane_group::Event::OpenAddPromptPane { initial_content } => {
                 if UserWorkspaces::as_ref(ctx).personal_drive(ctx).is_some() {
-                    self.update_warp_drive_view(ctx, |drive_view, ctx| {
+                    self.update_derp_drive_view(ctx, |drive_view, ctx| {
                         if let Some(initial_content) = initial_content {
                             drive_view.create_workflow_with_content(
                                 Space::Personal,
@@ -16865,7 +16865,7 @@ impl Workspace {
                     self.left_panel_view
                         .read(ctx, |left_panel, _| match target_view {
                             LeftPanelTargetView::FileTree => left_panel.is_file_tree_active(),
-                            LeftPanelTargetView::WarpDrive => left_panel.is_warp_drive_active(),
+                            LeftPanelTargetView::DerpDrive => left_panel.is_derp_drive_active(),
                         });
 
                 if self.active_tab_pane_group().as_ref(ctx).left_panel_open && is_target_active {
@@ -16880,7 +16880,7 @@ impl Workspace {
                     self.left_panel_view.update(ctx, |left_panel, ctx| {
                         let action = match target_view {
                             LeftPanelTargetView::FileTree => LeftPanelAction::ProjectExplorer,
-                            LeftPanelTargetView::WarpDrive => LeftPanelAction::WarpDrive,
+                            LeftPanelTargetView::DerpDrive => LeftPanelAction::DerpDrive,
                         };
                         left_panel.handle_action_with_force_open(&action, *force_open, ctx);
                     });
@@ -17100,7 +17100,7 @@ impl Workspace {
 
             let ai_execution_context = session_context
                 .as_ref()
-                .map(|session_context| WarpAiExecutionContext::new(&session_context.session));
+                .map(|session_context| DerpAiExecutionContext::new(&session_context.session));
 
             let menu_positioning = active_input_handle
                 .as_ref()
@@ -17192,7 +17192,7 @@ impl Workspace {
     }
 
     /// Insert the given command that should open a subshell. And set a flag that we should
-    /// automatically bootstrap AKA "warpify" that subshell if we support it. No-op if there is
+    /// automatically bootstrap AKA "derpify" that subshell if we support it. No-op if there is
     /// no active terminal session.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -17293,7 +17293,7 @@ impl Workspace {
 
             // Check whether this remote session has an active remote server
             // connection (or is in the process of connecting). This is only
-            // true for Auto SSH Warpification (mode 1) sessions where
+            // true for Auto SSH Derpification (mode 1) sessions where
             // `connect_session` was called at `InitShell` time.
             let has_remote_server = is_remote
                 && FeatureFlag::SshRemoteServer.is_enabled()
@@ -17356,12 +17356,12 @@ impl Workspace {
         }
     }
 
-    fn handle_warp_drive_event(&mut self, event: &DrivePanelEvent, ctx: &mut ViewContext<Self>) {
+    fn handle_derp_drive_event(&mut self, event: &DrivePanelEvent, ctx: &mut ViewContext<Self>) {
         match event {
             DrivePanelEvent::RunWorkflow(workflow) => {
                 self.run_cloud_workflow_in_active_input(
                     workflow.as_ref().clone(),
-                    WorkflowSelectionSource::WarpDrive,
+                    WorkflowSelectionSource::DerpDrive,
                     TerminalSessionFallbackBehavior::default(),
                     ctx,
                 );
@@ -17392,27 +17392,27 @@ impl Workspace {
             DrivePanelEvent::OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
                 self.open_workflow_with_existing(
                     *workflow_id,
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     ctx,
                 );
             }
             DrivePanelEvent::OpenSearch => {
                 self.open_palette_action(
-                    PaletteMode::WarpDrive,
-                    PaletteSource::WarpDrive,
+                    PaletteMode::DerpDrive,
+                    PaletteSource::DerpDrive,
                     None,
                     ctx,
                 );
             }
             DrivePanelEvent::OpenNotebook(source) => {
-                self.open_notebook(source, &OpenWarpDriveObjectSettings::default(), ctx, true)
+                self.open_notebook(source, &OpenDerpDriveObjectSettings::default(), ctx, true)
             }
             DrivePanelEvent::OpenEnvVarCollection(source) => {
                 self.open_env_var_collection(source, false, ctx)
             }
             DrivePanelEvent::OpenWorkflowInPane(source, mode) => self.open_workflow_in_pane(
                 source,
-                &OpenWarpDriveObjectSettings::default(),
+                &OpenDerpDriveObjectSettings::default(),
                 *mode,
                 ctx,
             ),
@@ -17420,7 +17420,7 @@ impl Workspace {
                 self.open_ai_fact_collection_pane(None, None, ctx);
                 send_telemetry_from_ctx!(
                     TelemetryEvent::KnowledgePaneOpened {
-                        entrypoint: KnowledgePaneEntrypoint::WarpDrive,
+                        entrypoint: KnowledgePaneEntrypoint::DerpDrive,
                     },
                     ctx
                 );
@@ -17431,12 +17431,12 @@ impl Workspace {
 
                 send_telemetry_from_ctx!(
                     TelemetryEvent::MCPServerCollectionPaneOpened {
-                        entrypoint: MCPServerCollectionPaneEntrypoint::WarpDrive,
+                        entrypoint: MCPServerCollectionPaneEntrypoint::DerpDrive,
                     },
                     ctx
                 );
             }
-            DrivePanelEvent::FocusWarpDrive => {
+            DrivePanelEvent::FocusDerpDrive => {
                 ctx.focus(&self.left_panel_view);
             }
             DrivePanelEvent::OpenSharedObjectsCreationDeniedModal(object_type, team_uid) => {
@@ -17505,7 +17505,7 @@ impl Workspace {
         ctx.focus_self();
         ctx.notify();
         self.set_selected_object(
-            Some(WarpDriveItemId::Object(workflow.cloud_object_type_and_id())),
+            Some(DerpDriveItemId::Object(workflow.cloud_object_type_and_id())),
             ctx,
         );
     }
@@ -17611,15 +17611,15 @@ impl Workspace {
         });
     }
 
-    /// Opens a custom model router's YAML config file in Warp's own editor.
+    /// Opens a custom model router's YAML config file in Derp's own editor.
     ///
-    /// Unlike most "open file" flows, this always uses the Warp code editor
+    /// Unlike most "open file" flows, this always uses the Derp code editor
     /// rather than honoring the user's external/system editor preference, since
-    /// the button is specifically for editing the router config inside Warp.
+    /// the button is specifically for editing the router config inside Derp.
     #[cfg(feature = "local_fs")]
     fn open_custom_router_file(&mut self, path: &Path, ctx: &mut ViewContext<Self>) {
         let settings = EditorSettings::as_ref(ctx);
-        let target = resolve_file_target_to_open_in_warp(path, settings, None);
+        let target = resolve_file_target_to_open_in_derp(path, settings, None);
         self.open_file_with_target(
             path.to_path_buf(),
             target,
@@ -17866,7 +17866,7 @@ impl Workspace {
                             ctx.notify();
                         });
                     }
-                    TranslateUsingWarpAI => {
+                    TranslateUsingDerpAI => {
                         active_input_handle.update(ctx, |input, ctx| {
                             let content = format!("# {query}");
                             input.focus_input_box(ctx);
@@ -17879,7 +17879,7 @@ impl Workspace {
                     AcceptNotebook(sync_id) => {
                         self.open_notebook(
                             &NotebookSource::Existing(*sync_id),
-                            &OpenWarpDriveObjectSettings::default(),
+                            &OpenDerpDriveObjectSettings::default(),
                             ctx,
                             true,
                         );
@@ -17891,7 +17891,7 @@ impl Workspace {
                             ctx,
                         );
                     }
-                    OpenWarpAI => {
+                    OpenDerpAI => {
                         if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                             return;
                         }
@@ -18033,8 +18033,8 @@ impl Workspace {
                                             .with_link(
                                                 ToastLink::new("View".to_string())
                                                     .with_onclick_action(
-                                                        WorkspaceAction::ViewObjectInWarpDrive(
-                                                            WarpDriveItemId::Object(
+                                                        WorkspaceAction::ViewObjectInDerpDrive(
+                                                            DerpDriveItemId::Object(
                                                                 CloudObjectTypeAndId::Notebook(
                                                                     notebook.id,
                                                                 ),
@@ -18054,8 +18054,8 @@ impl Workspace {
                                     {
                                         new_toast = new_toast.with_link(
                                             ToastLink::new("View".to_string()).with_onclick_action(
-                                                WorkspaceAction::ViewObjectInWarpDrive(
-                                                    WarpDriveItemId::Object(
+                                                WorkspaceAction::ViewObjectInDerpDrive(
+                                                    DerpDriveItemId::Object(
                                                         CloudObjectTypeAndId::Workflow(workflow.id),
                                                     ),
                                                 ),
@@ -18211,7 +18211,7 @@ impl Workspace {
                 .and_then(|id| CloudModel::as_ref(ctx).get_by_uid(&id.uid()))
             {
                 if created_object.space(ctx) == Space::Personal
-                    && created_object.renders_in_warp_drive()
+                    && created_object.renders_in_derp_drive()
                 {
                     self.check_and_trigger_drive_sharing_onboarding_block(
                         created_object.cloud_object_type_and_id(),
@@ -18601,15 +18601,15 @@ impl Workspace {
         });
     }
 
-    fn set_selected_object(&mut self, id: Option<WarpDriveItemId>, ctx: &mut ViewContext<Self>) {
-        // Set Warp drive index selected state
-        self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+    fn set_selected_object(&mut self, id: Option<DerpDriveItemId>, ctx: &mut ViewContext<Self>) {
+        // Set Derp drive index selected state
+        self.update_derp_drive_view(ctx, |drive_panel, ctx| {
             drive_panel.set_selected_object(id, ctx);
         });
         // If WD open, show the highlighted object (force expand necessary ancestors)
-        if self.current_workspace_state.is_warp_drive_open {
+        if self.current_workspace_state.is_derp_drive_open {
             if let Some(id) = id {
-                self.view_in_warp_drive(id, ctx);
+                self.view_in_derp_drive(id, ctx);
                 ctx.notify();
             }
         }
@@ -18747,15 +18747,15 @@ impl Workspace {
                 let command = code.trim().to_string();
                 let args_state =
                     ArgumentsState::for_command_workflow(&Default::default(), command.clone());
-                let workflow = Workflow::new("Command from Warp AI", command)
+                let workflow = Workflow::new("Command from Derp AI", command)
                     .with_arguments(args_state.arguments);
                 self.run_workflow_in_active_input(
                     &WorkflowType::AIGenerated {
                         workflow,
-                        origin: AIWorkflowOrigin::LegacyWarpAI,
+                        origin: AIWorkflowOrigin::LegacyDerpAI,
                     },
-                    WorkflowSource::WarpAI,
-                    WorkflowSelectionSource::WarpAI,
+                    WorkflowSource::DerpAI,
+                    WorkflowSelectionSource::DerpAI,
                     None,
                     TerminalSessionFallbackBehavior::default(),
                     ctx,
@@ -18772,15 +18772,15 @@ impl Workspace {
         }
     }
 
-    fn handle_openwarp_launch_modal_event(
+    fn handle_openderp_launch_modal_event(
         &mut self,
-        event: &OpenWarpLaunchModalEvent,
+        event: &OpenDerpLaunchModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
-            OpenWarpLaunchModalEvent::Close => {
+            OpenDerpLaunchModalEvent::Close => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
-                    model.mark_openwarp_launch_modal_dismissed(ctx);
+                    model.mark_openderp_launch_modal_dismissed(ctx);
                 });
                 self.focus_active_tab(ctx);
                 ctx.notify();
@@ -19403,7 +19403,7 @@ impl Workspace {
     fn open_workflow_with_existing(
         &mut self,
         workflow_id: SyncId,
-        settings: &OpenWarpDriveObjectSettings,
+        settings: &OpenDerpDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) {
         let source = WorkflowOpenSource::Existing(workflow_id);
@@ -19423,7 +19423,7 @@ impl Workspace {
         };
         self.open_workflow_in_pane(
             &source,
-            &OpenWarpDriveObjectSettings::default(),
+            &OpenDerpDriveObjectSettings::default(),
             WorkflowViewMode::Create,
             ctx,
         );
@@ -19444,7 +19444,7 @@ impl Workspace {
         };
         self.open_workflow_in_pane(
             &source,
-            &OpenWarpDriveObjectSettings::default(),
+            &OpenDerpDriveObjectSettings::default(),
             WorkflowViewMode::Create,
             ctx,
         );
@@ -19463,7 +19463,7 @@ impl Workspace {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        WarpUiIcon::new(icons::Icon::AiAssistant.into(), *AI_ASSISTANT_LOGO_COLOR)
+                        DerpUiIcon::new(icons::Icon::AiAssistant.into(), *AI_ASSISTANT_LOGO_COLOR)
                             .finish(),
                     )
                     .with_width(16.)
@@ -19476,7 +19476,7 @@ impl Workspace {
             .with_child(
                 Text::new_inline(AI_ASSISTANT_FEATURE_NAME, appearance.ui_font_family(), 14.)
                     .with_style(Properties {
-                        weight: warpui::fonts::Weight::Bold,
+                        weight: derpui::fonts::Weight::Bold,
                         ..Default::default()
                     })
                     .finish(),
@@ -19510,7 +19510,7 @@ impl Workspace {
         let body = appearance
             .ui_builder()
             .wrappable_text(
-                "Ask Warp AI to explain errors, suggest commands or write scripts.".to_owned(),
+                "Ask Derp AI to explain errors, suggest commands or write scripts.".to_owned(),
                 true,
             )
             .with_style(UiComponentStyles {
@@ -20182,11 +20182,11 @@ impl Workspace {
                         .left_panel_views
                         .first()
                         .copied()
-                        .unwrap_or(ToolPanelView::WarpDrive)
+                        .unwrap_or(ToolPanelView::DerpDrive)
                     {
                         ToolPanelView::ProjectExplorer => "Project explorer",
                         ToolPanelView::GlobalSearch { .. } => "Global search",
-                        ToolPanelView::WarpDrive => "Library",
+                        ToolPanelView::DerpDrive => "Library",
                         ToolPanelView::ConversationListView => "Agent conversations",
                         ToolPanelView::Tabs => "Tabs",
                         ToolPanelView::Chat => "Chat",
@@ -20238,11 +20238,11 @@ impl Workspace {
                 .left_panel_views
                 .first()
                 .copied()
-                .unwrap_or(ToolPanelView::WarpDrive)
+                .unwrap_or(ToolPanelView::DerpDrive)
             {
                 ToolPanelView::ProjectExplorer => "Project explorer",
                 ToolPanelView::GlobalSearch { .. } => "Global search",
-                ToolPanelView::WarpDrive => "Library",
+                ToolPanelView::DerpDrive => "Library",
                 ToolPanelView::ConversationListView => "Agent conversations",
                 ToolPanelView::Tabs => "Tabs",
                 ToolPanelView::Chat => "Chat",
@@ -20307,7 +20307,7 @@ impl Workspace {
         };
 
         // Build the button content: Diff icon + optional diff stats
-        let icon = ConstrainedBox::new(icons::Icon::Diff.to_warpui_icon(font_color).finish())
+        let icon = ConstrainedBox::new(icons::Icon::Diff.to_derpui_icon(font_color).finish())
             .with_width(16.)
             .with_height(16.)
             .finish();
@@ -20488,7 +20488,7 @@ impl Workspace {
                     .with_spacing(10.)
                     .with_child(
                         ConstrainedBox::new(
-                            icons::Icon::Search.to_warpui_icon(text_color).finish(),
+                            icons::Icon::Search.to_derpui_icon(text_color).finish(),
                         )
                         .with_width(16.)
                         .with_height(16.)
@@ -20551,7 +20551,7 @@ impl Workspace {
             .is_user_web_anonymous_user()
             .unwrap_or_default();
 
-        // Simplified mode for viewing Warp Drive objects, shared sessions, or conversation transcripts on WASM
+        // Simplified mode for viewing Derp Drive objects, shared sessions, or conversation transcripts on WASM
         #[cfg(target_family = "wasm")]
         if let Some(content_type) = self.get_simplified_wasm_tab_bar_content(ctx) {
             // Use MainAxisAlignment::SpaceBetween and expand to fill width
@@ -20560,11 +20560,11 @@ impl Workspace {
                 .with_main_axis_size(MainAxisSize::Max);
             let bg_color = blended_colors::neutral_1(appearance.theme());
 
-            // Left: Warp logo - clickable to link to warp.dev
-            let warp_logo = Hoverable::new(self.mouse_states.warp_logo.clone(), |_state| {
+            // Left: Derp logo - clickable to link to derp.baby
+            let derp_logo = Hoverable::new(self.mouse_states.derp_logo.clone(), |_state| {
                 ConstrainedBox::new(
-                    warp_core::ui::Icon::Warp
-                        .to_warpui_icon(appearance.theme().foreground())
+                    derp_core::ui::Icon::Derp
+                        .to_derpui_icon(appearance.theme().foreground())
                         .finish(),
                 )
                 .with_height(24.)
@@ -20572,13 +20572,13 @@ impl Workspace {
                 .finish()
             })
             .on_click(|ctx, _, _| {
-                ctx.dispatch_typed_action(WorkspaceAction::OpenLink("https://warp.dev".to_owned()));
+                ctx.dispatch_typed_action(WorkspaceAction::OpenLink("https://derp.baby".to_owned()));
             })
             .with_cursor(Cursor::PointingHand)
             .finish();
-            tab_bar.add_child(warp_logo);
+            tab_bar.add_child(derp_logo);
 
-            // Right: Info button + "View all cloud runs" button (for ambient agent sessions) + "Open in Warp" button
+            // Right: Info button + "View all cloud runs" button (for ambient agent sessions) + "Open in Derp" button
             let mut right_row = Flex::row()
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_main_axis_size(MainAxisSize::Min);
@@ -20587,12 +20587,12 @@ impl Workspace {
             let task_id = match content_type {
                 SimplifiedWasmTabBarContent::ConversationTranscript { task_id }
                 | SimplifiedWasmTabBarContent::SharedSession { task_id } => task_id,
-                SimplifiedWasmTabBarContent::WarpDriveObject => None,
+                SimplifiedWasmTabBarContent::DerpDriveObject => None,
             };
 
             // Show info button for conversation transcripts and shared sessions (if there's content to display)
             let should_show_info_button =
-                !matches!(content_type, SimplifiedWasmTabBarContent::WarpDriveObject)
+                !matches!(content_type, SimplifiedWasmTabBarContent::DerpDriveObject)
                     && self
                         .active_tab_pane_group()
                         .as_ref(ctx)
@@ -20618,9 +20618,9 @@ impl Workspace {
                 }
             }
 
-            // Hide "Open in Warp" button on mobile devices
-            if !warpui::platform::wasm::is_mobile_device() {
-                right_row.add_child(ChildView::new(&self.open_in_warp_button).finish());
+            // Hide "Open in Derp" button on mobile devices
+            if !derpui::platform::wasm::is_mobile_device() {
+                right_row.add_child(ChildView::new(&self.open_in_derp_button).finish());
             }
             tab_bar.add_child(right_row.finish());
 
@@ -21040,7 +21040,7 @@ impl Workspace {
             target.add_child(
                 Container::new(
                     SavePosition::new(
-                        self.render_legacy_warp_ai_entrypoint_button(appearance),
+                        self.render_legacy_derp_ai_entrypoint_button(appearance),
                         AI_ASSISTANT_BUTTON_ID,
                     )
                     .finish(),
@@ -21058,7 +21058,7 @@ impl Workspace {
             );
         } else {
             let resource_center_closed = !self.current_workspace_state.is_resource_center_open;
-            if resource_center_closed && ContextFlag::WarpEssentials.is_enabled() {
+            if resource_center_closed && ContextFlag::DerpEssentials.is_enabled() {
                 target.add_child(
                     Container::new(self.render_resource_center_button(appearance, ctx))
                         .with_margin_left(TAB_BAR_PADDING_LEFT)
@@ -21074,7 +21074,7 @@ impl Workspace {
         }
 
         if self.auth_state.is_anonymous_or_logged_out()
-            && !FeatureFlag::OpenWarpNewSettingsModes.is_enabled()
+            && !FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
         {
             if is_web_anonymous_user {
                 target.add_child(
@@ -21376,7 +21376,7 @@ impl Workspace {
         // chip and gets more room. An uploaded photo keeps the circle crop.
         let is_generated_art = matches!(
             identity_source,
-            Some(warpui::assets::asset_cache::AssetSource::Async { .. })
+            Some(derpui::assets::asset_cache::AssetSource::Async { .. })
         );
         let avatar_content = if let Some(source) = identity_source {
             AvatarContent::Source {
@@ -21492,7 +21492,7 @@ impl Workspace {
                 icons::Icon::Lightbulb,
                 &self.mouse_states.resource_center_icon,
                 WorkspaceAction::ToggleResourceCenter,
-                "Warp Essentials".to_string(),
+                "Derp Essentials".to_string(),
                 self.cached_keybindings[TOGGLE_RESOURCE_CENTER_KEYBINDING_NAME].clone(),
                 false,
                 false,
@@ -21503,7 +21503,7 @@ impl Workspace {
             const INDICATOR_DIAMETER: f32 = 6.;
             let indicator = Container::new(
                 ConstrainedBox::new(
-                    WarpUiIcon::new(ELLIPSE_SVG_PATH, appearance.theme().accent()).finish(),
+                    DerpUiIcon::new(ELLIPSE_SVG_PATH, appearance.theme().accent()).finish(),
                 )
                 .with_height(INDICATOR_DIAMETER)
                 .with_width(INDICATOR_DIAMETER)
@@ -21637,7 +21637,7 @@ impl Workspace {
         let icon = ConstrainedBox::new(
             Container::new(
                 icons::Icon::CloudOffline
-                    .to_warpui_icon(appearance.theme().foreground())
+                    .to_derpui_icon(appearance.theme().foreground())
                     .finish(),
             )
             .with_uniform_padding(3.)
@@ -21667,7 +21667,7 @@ impl Workspace {
         Align::new(hoverable.finish()).finish()
     }
 
-    fn render_legacy_warp_ai_entrypoint_button(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_legacy_derp_ai_entrypoint_button(&self, appearance: &Appearance) -> Box<dyn Element> {
         let (icon, action, label) = (
             icons::Icon::AiAssistant,
             WorkspaceAction::ClickedAIAssistantIcon,
@@ -22054,7 +22054,7 @@ impl Workspace {
                         if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
                             VERSION_DEPRECATION_WITHOUT_PERMISSIONS_BANNER_TEXT.to_owned()
                         } else {
-                            "A new version is available but Warp is unable to perform the update."
+                            "A new version is available but Derp is unable to perform the update."
                                 .to_owned()
                         };
 
@@ -22065,7 +22065,7 @@ impl Workspace {
                         description,
                         secondary_button: None,
                         button: Some(WorkspaceBannerButtonDetails {
-                            text: "Update Warp manually".to_string(),
+                            text: "Update Derp manually".to_string(),
                             action: WorkspaceAction::DownloadNewVersion,
                             variant: BannerButtonVariant::Outlined,
                             icon: None,
@@ -22080,7 +22080,7 @@ impl Workspace {
                         if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
                             VERSION_DEPRECATION_WITHOUT_PERMISSIONS_BANNER_TEXT.to_owned()
                         } else {
-                            "Warp was unable to launch the new installed version.".to_owned()
+                            "Derp was unable to launch the new installed version.".to_owned()
                         };
 
                     Some(WorkspaceBannerFields {
@@ -22090,7 +22090,7 @@ impl Workspace {
                         description,
                         secondary_button: None,
                         button: Some(WorkspaceBannerButtonDetails {
-                            text: "Update Warp manually".to_string(),
+                            text: "Update Derp manually".to_string(),
                             action: WorkspaceAction::DownloadNewVersion,
                             variant: BannerButtonVariant::Outlined,
                             icon: None,
@@ -22165,7 +22165,7 @@ impl Workspace {
 
         // Left side: alert icon + bold heading + regular description, all inline.
         let icon =
-            ConstrainedBox::new(Icon::AlertCircle.to_warpui_icon(text_color.into()).finish())
+            ConstrainedBox::new(Icon::AlertCircle.to_derpui_icon(text_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish();
@@ -22266,7 +22266,7 @@ impl Workspace {
                                     // `x-close.svg`), matching the Figma
                                     // design. `Icon::XCircle` wraps the x in
                                     // a circle which is not what we want.
-                                    Icon::X.to_warpui_icon(text_color.into()).finish(),
+                                    Icon::X.to_derpui_icon(text_color.into()).finish(),
                                 )
                                 .with_width(16.)
                                 .with_height(16.)
@@ -22329,7 +22329,7 @@ impl Workspace {
             if let Some(icon) = icon {
                 row.add_child(
                     Container::new(
-                        ConstrainedBox::new(icon.to_warpui_icon(text_color.into()).finish())
+                        ConstrainedBox::new(icon.to_derpui_icon(text_color.into()).finish())
                             .with_width(14.)
                             .with_height(14.)
                             .finish(),
@@ -22570,7 +22570,7 @@ impl Workspace {
         }
 
         #[cfg(target_family = "wasm")]
-        if !warpui::platform::wasm::is_mobile_device()
+        if !derpui::platform::wasm::is_mobile_device()
             && self
                 .current_workspace_state
                 .is_transcript_details_panel_open
@@ -22651,7 +22651,7 @@ impl Workspace {
                 )
             }
             HeaderToolbarItemKind::ToolsPanel => {
-                if !pane_group.left_panel_open || warpui::platform::is_mobile_device() {
+                if !pane_group.left_panel_open || derpui::platform::is_mobile_device() {
                     return None;
                 }
                 let left_panel = self.left_panel_view.as_ref(app);
@@ -22785,7 +22785,7 @@ impl Workspace {
         let reporting_setings = AltScreenReporting::as_ref(app);
         let general_settings = GeneralSettings::as_ref(app);
         let theme_settings = ThemeSettings::as_ref(app);
-        let warpify_settings = WarpifySettings::as_ref(app);
+        let derpify_settings = DerpifySettings::as_ref(app);
         let terminal_settings = TerminalSettings::as_ref(app);
         let window_settings = WindowSettings::as_ref(app);
         let pane_settings = PaneSettings::as_ref(app);
@@ -22829,7 +22829,7 @@ impl Workspace {
             .value()
             .same_line_prompt_enabled()
         {
-            context.set.insert(flags::WARP_SAME_LINE_PROMPT_FLAG);
+            context.set.insert(flags::DERP_SAME_LINE_PROMPT_FLAG);
         }
 
         if *ssh_settings.reuse_existing_control_master.value() {
@@ -22837,8 +22837,8 @@ impl Workspace {
                 .set
                 .insert(flags::SSH_REUSE_CONTROL_MASTER_CONTEXT_FLAG);
         }
-        if *warpify_settings.enable_ssh_warpification.value() {
-            context.set.insert(flags::SSH_WARPIFICATION_CONTEXT_FLAG);
+        if *derpify_settings.enable_ssh_derpification.value() {
+            context.set.insert(flags::SSH_DERPIFICATION_CONTEXT_FLAG);
         }
 
         if keys_settings.extra_meta_keys.left_alt {
@@ -23187,14 +23187,14 @@ impl Workspace {
         if *ai_settings.rule_suggestions_enabled_internal.value() {
             context.set.insert(flags::SUGGESTED_RULES_FLAG);
         }
-        if *ai_settings.warp_drive_context_enabled.value() {
-            context.set.insert(flags::WARP_DRIVE_CONTEXT_FLAG);
+        if *ai_settings.derp_drive_context_enabled.value() {
+            context.set.insert(flags::DERP_DRIVE_CONTEXT_FLAG);
         }
         if *ai_settings.file_based_mcp_enabled.value() {
             context.set.insert(flags::FILE_BASED_MCP_FLAG);
         }
-        if *ai_settings.can_use_warp_credits_for_fallback.value() {
-            context.set.insert(flags::WARP_CREDIT_FALLBACK_FLAG);
+        if *ai_settings.can_use_derp_credits_for_fallback.value() {
+            context.set.insert(flags::DERP_CREDIT_FALLBACK_FLAG);
         }
         if *session_settings.show_model_selectors_in_prompt.value() {
             context
@@ -23366,7 +23366,7 @@ impl Workspace {
     fn process_updated_sync_state(&self, ctx: &mut ViewContext<Self>) {
         // If there is an active terminal, return a sync event that all
         // other synced terminals should apply to match it.
-        // If there is no active terminal (like when all Warp windows are
+        // If there is no active terminal (like when all Derp windows are
         // minimized), return an event to start syncing.
         let sync_event = self
             .active_tab_pane_group()
@@ -23427,7 +23427,7 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         // Fork: sign-up is our own account system (crate::account) talking to
-        // our server — open the in-app account modal. No browser, no Warp
+        // our server — open the in-app account modal. No browser, no Derp
         // auth flow, no require-login modal.
         let _ = entrypoint;
         ctx.dispatch_typed_action(&crate::root_view::RootViewAction::OpenAccountModal);
@@ -23460,8 +23460,8 @@ impl Workspace {
         self.on_window_closed(ctx);
     }
 
-    fn focus_openwarp_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
-        ctx.focus(&self.openwarp_launch_modal);
+    fn focus_openderp_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
+        ctx.focus(&self.openderp_launch_modal);
     }
 
     fn focus_orchestration_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
@@ -23598,7 +23598,7 @@ impl Workspace {
         // its own tab from there). Always present — chat asks you to sign in
         // when you post, it doesn't hide.
         views.push(ToolPanelView::Chat);
-        views.push(ToolPanelView::WarpDrive);
+        views.push(ToolPanelView::DerpDrive);
         views
     }
 
@@ -23612,7 +23612,7 @@ impl Workspace {
         });
     }
 
-    /// Opens a given URL in the desktop Warp app if installed, or redirects to download page.
+    /// Opens a given URL in the desktop Derp app if installed, or redirects to download page.
     #[cfg(target_family = "wasm")]
     fn open_link_on_desktop(&mut self, url: &Url, ctx: &mut ViewContext<Self>) {
         use crate::settings::app_installation_detection::{
@@ -23627,7 +23627,7 @@ impl Workspace {
 
         if !is_app_installed {
             // App not installed - redirect to download page
-            ctx.open_url("https://warp.dev/download");
+            ctx.open_url("https://derp.baby/download");
             // In webapp code we cannot distinguish between
             // the localhost:9277/install_detection endpoint not running (not installed) vs
             // the browser blocking Local Network Access which results in CORS error;
@@ -23635,7 +23635,7 @@ impl Workspace {
             // Many users' browser settings will block Local Network Access so this will end up redirecting to download page,
             // even if they have the app installed.
             let toast_message = format!(
-                "Have Warp installed but redirecting to download page?\nEnable Local Network Access for {} in your browser.",
+                "Have Derp installed but redirecting to download page?\nEnable Local Network Access for {} in your browser.",
                 ChannelState::server_root_url()
             );
             self.toast_stack.update(ctx, |toast_stack, ctx| {
@@ -23665,7 +23665,7 @@ impl TypedActionView for Workspace {
             WorkspaceAction::SetA11yVerbosityLevel(verbosity) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("{verbosity:?} accessibility announcements set"),
-                    WarpA11yRole::UserAction,
+                    DerpA11yRole::UserAction,
                 ))
             }
             _ => ActionAccessibilityContent::from_debug(),
@@ -24148,8 +24148,8 @@ impl TypedActionView for Workspace {
                 // the currently active session in the log out modal.
                 ctx.dispatch_global_action("app:maybe_log_out", ());
             }
-            ExportAllWarpDriveObjects => {
-                self.export_all_warp_drive_objects(ctx);
+            ExportAllDerpDriveObjects => {
+                self.export_all_derp_drive_objects(ctx);
             }
             CopyVersion(version) => self.copy_version(version, ctx),
             DownloadNewVersion => self.download_new_version(ctx),
@@ -24235,9 +24235,9 @@ impl TypedActionView for Workspace {
             #[cfg(target_os = "macos")]
             UninstallOz => self.uninstall_oz(ctx),
             #[cfg(target_os = "macos")]
-            InstallWarpctrl => self.install_warpctrl(ctx),
+            InstallDerpctrl => self.install_derpctrl(ctx),
             #[cfg(target_os = "macos")]
-            UninstallWarpctrl => self.uninstall_warpctrl(ctx),
+            UninstallDerpctrl => self.uninstall_derpctrl(ctx),
             UndoRevertInCodeReviewPane { window_id, view_id } => {
                 self.undo_revert_in_code_review_pane(*window_id, *view_id, ctx)
             }
@@ -24270,7 +24270,7 @@ impl TypedActionView for Workspace {
                             owner: personal_drive,
                             initial_folder_id: None,
                         },
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         ctx,
                         true,
                     );
@@ -24279,7 +24279,7 @@ impl TypedActionView for Workspace {
             CreateTeamNotebook => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
-                    self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+                    self.update_derp_drive_view(ctx, |drive_panel, ctx| {
                         drive_panel.open_cloud_object_dialog(
                             DriveObjectType::Notebook {
                                 is_ai_document: false,
@@ -24289,7 +24289,7 @@ impl TypedActionView for Workspace {
                             ctx,
                         );
                     });
-                    self.current_workspace_state.is_warp_drive_open = true;
+                    self.current_workspace_state.is_derp_drive_open = true;
                     ctx.notify();
                 }
             }
@@ -24309,7 +24309,7 @@ impl TypedActionView for Workspace {
             CreateTeamEnvVarCollection => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
-                    self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+                    self.update_derp_drive_view(ctx, |drive_panel, ctx| {
                         drive_panel.open_cloud_object_dialog(
                             DriveObjectType::EnvVarCollection,
                             Space::Team { team_uid },
@@ -24317,7 +24317,7 @@ impl TypedActionView for Workspace {
                             ctx,
                         );
                     });
-                    self.current_workspace_state.is_warp_drive_open = true;
+                    self.current_workspace_state.is_derp_drive_open = true;
                     ctx.notify();
                 }
             }
@@ -24332,7 +24332,7 @@ impl TypedActionView for Workspace {
                     };
                     self.open_workflow_in_pane(
                         &source,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         WorkflowViewMode::Create,
                         ctx,
                     );
@@ -24350,14 +24350,14 @@ impl TypedActionView for Workspace {
                     };
                     self.open_workflow_in_pane(
                         &source,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         WorkflowViewMode::Create,
                         ctx,
                     );
                 }
             }
             CreatePersonalFolder => {
-                self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+                self.update_derp_drive_view(ctx, |drive_panel, ctx| {
                     drive_panel.open_cloud_object_dialog(
                         DriveObjectType::Folder,
                         Space::Personal,
@@ -24365,13 +24365,13 @@ impl TypedActionView for Workspace {
                         ctx,
                     );
                 });
-                self.current_workspace_state.is_warp_drive_open = true;
+                self.current_workspace_state.is_derp_drive_open = true;
                 ctx.notify();
             }
             CreateTeamFolder => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
-                    self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+                    self.update_derp_drive_view(ctx, |drive_panel, ctx| {
                         drive_panel.open_cloud_object_dialog(
                             DriveObjectType::Folder,
                             Space::Team { team_uid },
@@ -24379,7 +24379,7 @@ impl TypedActionView for Workspace {
                             ctx,
                         );
                     });
-                    self.current_workspace_state.is_warp_drive_open = true;
+                    self.current_workspace_state.is_derp_drive_open = true;
                     ctx.notify();
                 }
             }
@@ -24408,8 +24408,8 @@ impl TypedActionView for Workspace {
                 send_telemetry_from_ctx!(TelemetryEvent::DragAndDropTabGroup, ctx);
                 ctx.notify();
             }
-            OpenWarpDrive => {
-                self.open_left_panel_view(&LeftPanelAction::WarpDrive, ctx);
+            OpenDerpDrive => {
+                self.open_left_panel_view(&LeftPanelAction::DerpDrive, ctx);
             }
             OpenChatPanel => {
                 self.open_left_panel_view(&LeftPanelAction::Chat, ctx);
@@ -24426,9 +24426,9 @@ impl TypedActionView for Workspace {
                 let file_tree_active = self
                     .left_panel_view
                     .read(ctx, |lp, _| lp.is_file_tree_active());
-                let warp_drive_active = self
+                let derp_drive_active = self
                     .left_panel_view
-                    .read(ctx, |lp, _| lp.is_warp_drive_active());
+                    .read(ctx, |lp, _| lp.is_derp_drive_active());
 
                 self.toggle_left_panel(ctx);
 
@@ -24448,11 +24448,11 @@ impl TypedActionView for Workspace {
                             },
                             ctx
                         );
-                    } else if warp_drive_active {
-                        // Tools panel opened with Warp Drive as the active view
+                    } else if derp_drive_active {
+                        // Tools panel opened with Derp Drive as the active view
                         send_telemetry_from_ctx!(
-                            TelemetryEvent::WarpDriveOpened {
-                                source: WarpDriveSource::LeftPanelToolbelt,
+                            TelemetryEvent::DerpDriveOpened {
+                                source: DerpDriveSource::LeftPanelToolbelt,
                                 is_code_mode_v2: true
                             },
                             ctx
@@ -24772,7 +24772,7 @@ impl TypedActionView for Workspace {
             ToggleAIAssistant => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::ToggleWarpAI {
+                    TelemetryEvent::ToggleDerpAI {
                         opened: self.current_workspace_state.is_ai_assistant_panel_open
                     },
                     ctx
@@ -24783,8 +24783,8 @@ impl TypedActionView for Workspace {
                     self.toggle_ai_assistant_panel(ctx);
                     if self.current_workspace_state.is_ai_assistant_panel_open {
                         send_telemetry_from_ctx!(
-                            TelemetryEvent::OpenedWarpAI {
-                                source: OpenedWarpAISource::GlobalEntryButton
+                            TelemetryEvent::OpenedDerpAI {
+                                source: OpenedDerpAISource::GlobalEntryButton
                             },
                             ctx
                         );
@@ -24798,8 +24798,8 @@ impl TypedActionView for Workspace {
             ClickedAIAssistantWarmWelcome => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::OpenedWarpAI {
-                        source: OpenedWarpAISource::WarmWelcome
+                    TelemetryEvent::OpenedDerpAI {
+                        source: OpenedDerpAISource::WarmWelcome
                     },
                     ctx
                 );
@@ -24853,7 +24853,7 @@ impl TypedActionView for Workspace {
                 // Blocking is ok here only because this action is only registered in dev and local
                 // builds to aid in debugging and development.
                 let access_token =
-                    warpui::r#async::block_on(self.server_api.get_or_refresh_access_token());
+                    derpui::r#async::block_on(self.server_api.get_or_refresh_access_token());
                 if let Ok(token) = access_token {
                     if let Some(bearer) = token.bearer_token() {
                         ctx.clipboard().write(ClipboardContent::plain_text(bearer));
@@ -24985,7 +24985,7 @@ impl TypedActionView for Workspace {
                 });
                 self.open_workflow_with_existing(
                     *workflow_id,
-                    &OpenWarpDriveObjectSettings::default(),
+                    &OpenDerpDriveObjectSettings::default(),
                     ctx,
                 );
             }
@@ -25058,16 +25058,16 @@ impl TypedActionView for Workspace {
             }
             FocusLeftPanel => self.focus_left_panel(ctx),
             FocusRightPanel => self.focus_right_panel(ctx),
-            ViewObjectInWarpDrive(item_id) => {
+            ViewObjectInDerpDrive(item_id) => {
                 // Focus newly created object in WD
-                self.view_in_and_focus_warp_drive(*item_id, ctx);
+                self.view_in_and_focus_derp_drive(*item_id, ctx);
             }
             OpenObjectSharingSettings { object_id, source } => {
                 self.open_object_sharing_settings(*object_id, None, *source, ctx);
             }
             UndoTrash(cloud_object_type_and_id) => {
-                self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-                    warp_drive.undo_trash(cloud_object_type_and_id, ctx);
+                self.update_derp_drive_view(ctx, |derp_drive, ctx| {
+                    derp_drive.undo_trash(cloud_object_type_and_id, ctx);
                 });
             }
             TerminateApp => {
@@ -25086,8 +25086,8 @@ impl TypedActionView for Workspace {
                         workflow,
                         origin: AIWorkflowOrigin::AgentMode,
                     },
-                    WorkflowSource::WarpAI,
-                    WorkflowSelectionSource::WarpAI,
+                    WorkflowSource::DerpAI,
+                    WorkflowSelectionSource::DerpAI,
                     None,
                     TerminalSessionFallbackBehavior::default(),
                     ctx,
@@ -25318,7 +25318,7 @@ impl TypedActionView for Workspace {
             }
             OpenNotebook { id } => self.open_notebook(
                 &NotebookSource::Existing(*id),
-                &OpenWarpDriveObjectSettings::default(),
+                &OpenDerpDriveObjectSettings::default(),
                 ctx,
                 true,
             ),
@@ -25480,7 +25480,7 @@ impl TypedActionView for Workspace {
                     };
                     self.open_workflow_in_pane(
                         &source,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         WorkflowViewMode::Create,
                         ctx,
                     );
@@ -25498,7 +25498,7 @@ impl TypedActionView for Workspace {
                     };
                     self.open_workflow_in_pane(
                         &source,
-                        &OpenWarpDriveObjectSettings::default(),
+                        &OpenDerpDriveObjectSettings::default(),
                         WorkflowViewMode::Create,
                         ctx,
                     );
@@ -25580,35 +25580,35 @@ impl TypedActionView for Workspace {
                 );
             }
             #[cfg(debug_assertions)]
-            OpenOpenWarpLaunchModal => {
-                // Force open the OpenWarp launch modal for debugging
+            OpenOpenDerpLaunchModal => {
+                // Force open the OpenDerp launch modal for debugging
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
-                    model.force_open_openwarp_launch_modal(ctx);
+                    model.force_open_openderp_launch_modal(ctx);
                 });
                 ctx.notify();
             }
             #[cfg(debug_assertions)]
-            ResetOpenWarpLaunchModalState => {
-                // Reset the OpenWarp launch modal dismissed state for debugging
+            ResetOpenDerpLaunchModalState => {
+                // Reset the OpenDerp launch modal dismissed state for debugging
                 let old_value = *GeneralSettings::as_ref(ctx)
-                    .did_check_to_trigger_openwarp_launch_modal
+                    .did_check_to_trigger_openderp_launch_modal
                     .value();
                 GeneralSettings::handle(ctx).update(ctx, |settings, ctx| {
                     if let Err(e) = settings
-                        .did_check_to_trigger_openwarp_launch_modal
+                        .did_check_to_trigger_openderp_launch_modal
                         .set_value(false, ctx)
                     {
-                        log::warn!("Failed to reset OpenWarp launch modal dismissed setting: {e}");
+                        log::warn!("Failed to reset OpenDerp launch modal dismissed setting: {e}");
                     }
                 });
                 let new_value = *GeneralSettings::as_ref(ctx)
-                    .did_check_to_trigger_openwarp_launch_modal
+                    .did_check_to_trigger_openderp_launch_modal
                     .value();
                 log::info!(
-                    "OpenWarp launch modal state: old={}, new={}, feature_flag_enabled={}",
+                    "OpenDerp launch modal state: old={}, new={}, feature_flag_enabled={}",
                     old_value,
                     new_value,
-                    FeatureFlag::OpenWarpLaunchModal.is_enabled()
+                    FeatureFlag::OpenDerpLaunchModal.is_enabled()
                 );
             }
             #[cfg(debug_assertions)]
@@ -25719,19 +25719,19 @@ impl TypedActionView for Workspace {
                 log::info!("Feature intro seen state has been reset");
             }
             #[cfg(debug_assertions)]
-            InstallOpenCodeWarpPlugin => {
-                let message = set_opencode_warp_plugin("github:warpdotdev/opencode-warp-internal");
+            InstallOpenCodeDerpPlugin => {
+                let message = set_opencode_derp_plugin("github:derpdotdev/opencode-derp-internal");
                 self.toast_stack.update(ctx, |view, ctx| {
                     view.add_ephemeral_toast(DismissibleToast::default(message), ctx);
                 });
             }
             #[cfg(debug_assertions)]
-            UseLocalOpenCodeWarpPlugin => {
+            UseLocalOpenCodeDerpPlugin => {
                 let message = match dirs::home_dir() {
                     Some(home) => {
-                        let plugin_path = home.join("opencode-warp/src/index.ts");
+                        let plugin_path = home.join("opencode-derp/src/index.ts");
                         let entry = format!("file://{}", plugin_path.display());
-                        set_opencode_warp_plugin(&entry)
+                        set_opencode_derp_plugin(&entry)
                     }
                     None => "Failed to determine home directory".to_string(),
                 };
@@ -25747,7 +25747,7 @@ impl TypedActionView for Workspace {
                     .unwrap_or_default()
                     .as_secs();
                 let output_path = env::temp_dir()
-                    .join(format!("warp_sample_{timestamp}.txt"))
+                    .join(format!("derp_sample_{timestamp}.txt"))
                     .display()
                     .to_string();
 
@@ -25856,10 +25856,10 @@ impl TypedActionView for Workspace {
                     self.open_left_panel_view(&LeftPanelAction::ProjectExplorer, ctx);
                 }
             }
-            ToggleWarpDrive => {
+            ToggleDerpDrive => {
                 let is_showing =
-                    self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::WarpDrive;
-                self.toggle_left_panel_view(&LeftPanelAction::WarpDrive, is_showing, ctx);
+                    self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::DerpDrive;
+                self.toggle_left_panel_view(&LeftPanelAction::DerpDrive, is_showing, ctx);
             }
             ToggleGlobalSearch => {
                 if FeatureFlag::GlobalSearch.is_enabled()
@@ -26087,7 +26087,7 @@ impl View for Workspace {
         self.sync_window_button_visibility(ctx);
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if NetworkStatus::as_ref(app).is_online() {
@@ -26215,7 +26215,7 @@ impl View for Workspace {
         }
 
         if self.team_uid(app).is_some() {
-            context.set.insert("WarpDrive_BelongsToTeam");
+            context.set.insert("DerpDrive_BelongsToTeam");
         }
 
         if self.auth_state.is_anonymous_or_logged_out() {
@@ -26242,8 +26242,8 @@ impl View for Workspace {
         }
 
         let default_terminal = DefaultTerminal::as_ref(app);
-        if default_terminal.is_warp_default() {
-            context.set.insert(flags::WARP_IS_DEFAULT_TERMINAL);
+        if default_terminal.is_derp_default() {
+            context.set.insert(flags::DERP_IS_DEFAULT_TERMINAL);
         }
 
         if FeatureFlag::DebugMode.is_enabled() {
@@ -26312,7 +26312,7 @@ impl View for Workspace {
 
         let tab_bar_mode = self.tab_bar_mode(app);
 
-        // For WASM simplified tab bar views (Warp Drive objects, shared sessions, conversation transcripts),
+        // For WASM simplified tab bar views (Derp Drive objects, shared sessions, conversation transcripts),
         // we render the tab bar outside of panels so that the details panel only affects content below the tab bar.
         cfg_if::cfg_if! {
             if #[cfg(target_family = "wasm")] {
@@ -26354,7 +26354,7 @@ impl View for Workspace {
         #[cfg(target_family = "wasm")]
         {
             let pane_group = self.active_tab_pane_group().as_ref(app);
-            if warpui::platform::wasm::is_mobile_device() && pane_group.left_panel_open {
+            if derpui::platform::wasm::is_mobile_device() && pane_group.left_panel_open {
                 let scrim = Rect::new()
                     .with_background(Fill::Solid(ColorU::new(
                         0,
@@ -26453,7 +26453,7 @@ impl View for Workspace {
 
         // Transcript details panel overlay (right side, mobile only)
         #[cfg(target_family = "wasm")]
-        if warpui::platform::wasm::is_mobile_device()
+        if derpui::platform::wasm::is_mobile_device()
             && self
                 .current_workspace_state
                 .is_transcript_details_panel_open
@@ -27037,8 +27037,8 @@ impl View for Workspace {
             stack.add_child(ChildView::new(&self.oz_launch_modal.view).finish());
         }
 
-        if should_show_modal && one_time_modal_model.is_openwarp_launch_modal_open() {
-            stack.add_child(ChildView::new(&self.openwarp_launch_modal).finish());
+        if should_show_modal && one_time_modal_model.is_openderp_launch_modal_open() {
+            stack.add_child(ChildView::new(&self.openderp_launch_modal).finish());
         }
 
         if should_show_modal && one_time_modal_model.is_orchestration_launch_modal_open() {
@@ -28969,7 +28969,7 @@ fn render_horizontal_group_pin_indicator(appearance: &Appearance) -> Box<dyn Ele
     let theme = appearance.theme();
     ConstrainedBox::new(
         Icon::PinFilledDiagonal
-            .to_warpui_icon(theme.main_text_color(theme.background()))
+            .to_derpui_icon(theme.main_text_color(theme.background()))
             .finish(),
     )
     .with_width(TAB_PIN_INDICATOR_ICON_SIZE)
@@ -29204,7 +29204,7 @@ fn render_cross_window_ghost_chip(
     appearance: &Appearance,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::elements::DropShadow;
+    use derpui::elements::DropShadow;
 
     let theme = appearance.theme();
 
@@ -29260,11 +29260,11 @@ fn compute_default_panel_widths(
     }
 }
 
-/// Idempotently sets the opencode-warp plugin entry in `~/.config/opencode/opencode.json`.
-/// Removes any existing opencode-warp plugin entries (both local file:// and github:) and adds
+/// Idempotently sets the opencode-derp plugin entry in `~/.config/opencode/opencode.json`.
+/// Removes any existing opencode-derp plugin entries (both local file:// and github:) and adds
 /// the given `new_entry`. Creates the config file with a default structure if it doesn't exist.
 #[cfg(debug_assertions)]
-fn set_opencode_warp_plugin(new_entry: &str) -> String {
+fn set_opencode_derp_plugin(new_entry: &str) -> String {
     let Some(home) = dirs::home_dir() else {
         return "Failed to determine home directory".to_string();
     };
@@ -29296,10 +29296,10 @@ fn set_opencode_warp_plugin(new_entry: &str) -> String {
         return "opencode.json has unexpected structure (plugin is not an array)".to_string();
     };
 
-    // Remove any existing opencode-warp entries
+    // Remove any existing opencode-derp entries
     plugins.retain(|entry| {
         let s = entry.as_str().unwrap_or("");
-        !s.contains("opencode-warp")
+        !s.contains("opencode-derp")
     });
 
     plugins.push(serde_json::Value::String(new_entry.to_string()));

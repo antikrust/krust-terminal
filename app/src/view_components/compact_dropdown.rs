@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{
+use derpui::elements::{
     Border, ChildAnchor, ConstrainedBox, CornerRadius, CrossAxisAlignment, Flex,
-    Icon as WarpUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
+    Icon as DerpUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack,
 };
-use warpui::presenter::ChildView;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::presenter::ChildView;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, BlurContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -125,7 +125,7 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
     }
 
     /// Render an icon at the configured icon size.
-    fn render_sized_icon(&self, appearance: &Appearance, icon: WarpUiIcon) -> Box<dyn Element> {
+    fn render_sized_icon(&self, appearance: &Appearance, icon: DerpUiIcon) -> Box<dyn Element> {
         let icon_size = self.icon_size.unwrap_or(appearance.ui_font_size());
         ConstrainedBox::new(icon.finish())
             .with_width(icon_size)
@@ -144,7 +144,7 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
         if let Some(icon) = self.trigger_icon {
             button_label.add_child(self.render_sized_icon(
                 appearance,
-                icon.to_warpui_icon(appearance.theme().active_ui_text_color()),
+                icon.to_derpui_icon(appearance.theme().active_ui_text_color()),
             ));
         } else if let Some(MenuItem::Item(fields)) = self.dropdown.as_ref(app).selected_item() {
             if let Some(icon) = fields.icon() {
@@ -152,14 +152,14 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
                     .override_icon_color()
                     .unwrap_or_else(|| appearance.theme().active_ui_text_color());
                 button_label
-                    .add_child(self.render_sized_icon(appearance, icon.to_warpui_icon(icon_color)));
+                    .add_child(self.render_sized_icon(appearance, icon.to_derpui_icon(icon_color)));
             }
         }
 
         if self.show_trigger_chevron {
             button_label.add_child(self.render_sized_icon(
                 appearance,
-                WarpUiIcon::new(
+                DerpUiIcon::new(
                     "bundled/svg/chevron-down.svg",
                     appearance.theme().active_ui_text_color(),
                 ),

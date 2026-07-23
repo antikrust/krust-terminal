@@ -1,15 +1,15 @@
-//! Support for pane contents that are shareable, like sessions and Warp Drive objects.
+//! Support for pane contents that are shareable, like sessions and Derp Drive objects.
 //!
 //! This is tightly coupled to the pane header so that different overlays (context menus, the
 //! sharing dialog, and so on) are correctly displayed.
 
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{ConstrainedBox, MouseStateHandle, ParentElement};
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, Element, ViewContext, ViewHandle};
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::Fill;
+use derpui::elements::{ConstrainedBox, MouseStateHandle, ParentElement};
+use derpui::platform::Cursor;
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, Element, ViewContext, ViewHandle};
 
 use super::{Event, OpenOverlay, PaneHeader, PaneHeaderAction};
 use crate::drive::sharing::dialog::{SharingDialog, SharingDialogEvent};
@@ -66,18 +66,18 @@ impl<P: BackingView> PaneHeader<P> {
         &self.shared_content.sharing_dialog
     }
 
-    pub fn has_shareable_object<C: warpui::ViewAsRef>(&self, ctx: &C) -> bool {
+    pub fn has_shareable_object<C: derpui::ViewAsRef>(&self, ctx: &C) -> bool {
         self.sharing_dialog().as_ref(ctx).has_target()
     }
 
-    pub fn has_shareable_shared_session<C: warpui::ViewAsRef>(&self, ctx: &C) -> bool {
+    pub fn has_shareable_shared_session<C: derpui::ViewAsRef>(&self, ctx: &C) -> bool {
         self.sharing_dialog()
             .as_ref(ctx)
             .has_shared_session_target()
     }
 
-    pub fn is_sharing_dialog_enabled<C: warpui::ViewAsRef>(&self, ctx: &C) -> bool {
-        // Fork: Warp Drive objects are local-only, so panes backed by Drive
+    pub fn is_sharing_dialog_enabled<C: derpui::ViewAsRef>(&self, ctx: &C) -> bool {
+        // Fork: Derp Drive objects are local-only, so panes backed by Drive
         // objects (notebooks, workflows, env vars) never offer the sharing
         // dialog — sharing them is file export instead. Shared sessions are
         // a separate feature and keep their flag-gated behavior.

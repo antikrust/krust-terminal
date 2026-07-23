@@ -11,8 +11,8 @@ use ignore::gitignore::Gitignore;
 #[cfg(feature = "local_fs")]
 use notify_debouncer_full::notify::WatchFilter;
 use thiserror::Error;
-use warp_errors::report_error;
-use warp_util::standardized_path::StandardizedPath;
+use derp_errors::report_error;
+use derp_util::standardized_path::StandardizedPath;
 
 use crate::standing_queries::{StandingQueryDefinitions, StandingQueryResults};
 
@@ -564,7 +564,7 @@ fn evaluate_entry(
 ) -> Result<EvaluatedEntry, BuildTreeError> {
     let is_dir = curr_path.is_dir();
 
-    // Only ignore symlinks to directories. Symlinks to files are preserved (e.g. WARP.md).
+    // Only ignore symlinks to directories. Symlinks to files are preserved (e.g. DERP.md).
     if curr_path.is_symlink() && is_dir {
         return Err(BuildTreeError::Symlink);
     }

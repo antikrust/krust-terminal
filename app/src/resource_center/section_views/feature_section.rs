@@ -1,11 +1,11 @@
-use warpui::elements::{
+use derpui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
     MouseState, MouseStateHandle, ParentElement, Shrinkable,
 };
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::Weight;
+use derpui::platform::Cursor;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     Action, AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, WindowId,
 };
@@ -29,7 +29,7 @@ use crate::themes::theme::Fill;
 pub enum FeatureSection {
     WhatsNew,
     GettingStarted,
-    MaximizeWarp,
+    MaximizeDerp,
     AdvancedSetup,
 }
 
@@ -38,7 +38,7 @@ impl FeatureSection {
         match self {
             FeatureSection::WhatsNew => "What's New?",
             FeatureSection::GettingStarted => "Getting Started",
-            FeatureSection::MaximizeWarp => "Maximize Warp",
+            FeatureSection::MaximizeDerp => "Maximize Derp",
             FeatureSection::AdvancedSetup => "Advanced Setup",
         }
     }

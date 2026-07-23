@@ -1,6 +1,6 @@
 # Update Onboarding Agent Autonomy Settings for Full and Partial — Tech Spec
 Product spec: `specs/GH1066/product.md`
-GitHub issue: https://github.com/warpdotdev/warp-external/issues/1066
+GitHub issue: https://github.com/derpdotdev/derp-external/issues/1066
 ## Context
 Onboarding presents three autonomy options on the agent slide. When the user completes onboarding with Agent-Driven Development selected, `apply_onboarding_settings` translates the chosen `AgentAutonomy` into `ActionPermission` values and writes them onto the default `AIExecutionProfile`.
 Investigating the original issue surfaced three related bugs in the plumbing that connects the onboarding UI to the default profile. The tech spec therefore covers four changes, summarized up front so the overall shape is easy to follow:

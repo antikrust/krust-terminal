@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde_json;
-use warp_managed_secrets::ManagedSecretValue;
+use derp_managed_secrets::ManagedSecretValue;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::mcp::parsing::normalize_codex_toml_to_json;
@@ -14,12 +14,12 @@ use crate::ai::mcp::{
 };
 
 #[test]
-fn mcp_provider_from_file_path_recognizes_warp_home_path() {
-    if let Some(warp_home_mcp_config_file_path) = warp_core::paths::warp_home_mcp_config_file_path()
+fn mcp_provider_from_file_path_recognizes_derp_home_path() {
+    if let Some(derp_home_mcp_config_file_path) = derp_core::paths::derp_home_mcp_config_file_path()
     {
         assert_eq!(
-            mcp_provider_from_file_path(&warp_home_mcp_config_file_path),
-            Some(MCPProvider::Warp)
+            mcp_provider_from_file_path(&derp_home_mcp_config_file_path),
+            Some(MCPProvider::Derp)
         );
     }
 }

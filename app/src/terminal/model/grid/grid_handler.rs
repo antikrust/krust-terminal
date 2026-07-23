@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/warp_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/derp_terminal/src/model/LICENSE-ALACRITTY.
 
 #[path = "ansi_handler.rs"]
 mod ansi_handler;
@@ -28,15 +28,15 @@ use string_offset::ByteOffset;
 use unicode_general_category::{get_general_category, GeneralCategory};
 use unicode_width::UnicodeWidthChar;
 use urlocator::{UrlLocation, UrlLocator};
-use warp_core::features::FeatureFlag;
-use warp_core::semantic_selection::{SemanticSelection, SMART_SELECT_MATCH_WINDOW_LIMIT};
-use warp_core::{safe_assert, safe_assert_eq};
-use warp_errors::report_error;
-use warp_terminal::model::grid::{CellType, FlatStorage};
-pub use warp_terminal::model::TermMode;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use warp_util::path::CleanPathResult;
-use warpui::color::ColorU;
+use derp_core::features::FeatureFlag;
+use derp_core::semantic_selection::{SemanticSelection, SMART_SELECT_MATCH_WINDOW_LIMIT};
+use derp_core::{safe_assert, safe_assert_eq};
+use derp_errors::report_error;
+use derp_terminal::model::grid::{CellType, FlatStorage};
+pub use derp_terminal::model::TermMode;
+use derp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use derp_util::path::CleanPathResult;
+use derpui::color::ColorU;
 
 use super::displayed_output::DisplayedOutput;
 use super::grapheme_cursor::{self, GraphemeCursor};
@@ -391,8 +391,8 @@ impl AbsoluteRectangle {
 }
 
 /// Whether or not this Grid should keep track of a "Reset Grid" OSC. On Windows, ConPTY has an internal
-/// grid that needs to be kept in sync with Warp's grids. We do this via clearing the ConPTY
-/// grid before Warp starts populating a new grid.
+/// grid that needs to be kept in sync with Derp's grids. We do this via clearing the ConPTY
+/// grid before Derp starts populating a new grid.
 ///
 /// See here for more: https://docs.google.com/document/d/11fU_vVW8CH72W92QUnFJ1Kl31fGWNGbjkQQCK3TUaYk/edit?usp=sharing
 #[derive(Default, Clone, Copy)]
@@ -2669,7 +2669,7 @@ impl GridHandler {
     /// appropriately.
     #[cfg(test)]
     pub(super) fn input_at_cursor(&mut self, text: &str) {
-        use warp_terminal::model::VisiblePoint;
+        use derp_terminal::model::VisiblePoint;
 
         let columns = self.columns();
         let mut last_row = self.grid.cursor.point.row;

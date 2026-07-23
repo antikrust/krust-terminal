@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::new_scrollable::SingleAxisConfig;
-use warpui::elements::{ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Fill};
-use warpui::platform::WindowStyle;
-use warpui::{
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::new_scrollable::SingleAxisConfig;
+use derpui::elements::{ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Fill};
+use derpui::platform::WindowStyle;
+use derpui::{
     App, Entity, Event, Presenter, TypedActionView, View, ViewContext, ViewHandle, WindowId,
     WindowInvalidation,
 };
@@ -71,8 +71,8 @@ impl View for TestView {
         "NumberShortcutButtonsTestView"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
-        let scrollable = warpui::elements::NewScrollable::vertical(
+    fn render(&self, _app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+        let scrollable = derpui::elements::NewScrollable::vertical(
             SingleAxisConfig::Clipped {
                 handle: self.scroll_state.clone(),
                 child: ChildView::new(&self.buttons).finish(),

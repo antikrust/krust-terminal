@@ -13,14 +13,14 @@ use futures::stream::AbortHandle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_graphql::mcp_gallery_template::MCPGalleryTemplate;
-use warp_graphql::object_permissions::AccessLevel;
-use warp_graphql::scalars::time::ServerTimestamp;
-use warp_util::sync::Condition;
-use warpui::r#async::{FutureId, Timer};
-use warpui::{
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_graphql::mcp_gallery_template::MCPGalleryTemplate;
+use derp_graphql::object_permissions::AccessLevel;
+use derp_graphql::scalars::time::ServerTimestamp;
+use derp_util::sync::Condition;
+use derpui::r#async::{FutureId, Timer};
+use derpui::{
     duration_with_jitter, AppContext, Entity, ModelContext, ModelHandle, RequestState, RetryOption,
     SingletonEntity,
 };
@@ -2708,8 +2708,8 @@ impl UpdateManager {
         ctx: &mut ModelContext<Self>,
     ) where
         P: 'static + FnMut(Arc<dyn ObjectClient>) -> S,
-        S: warpui::r#async::Spawnable + Future<Output = anyhow::Result<R>>,
-        <S as Future>::Output: warpui::r#async::SpawnableOutput,
+        S: derpui::r#async::Spawnable + Future<Output = anyhow::Result<R>>,
+        <S as Future>::Output: derpui::r#async::SpawnableOutput,
         F: 'static + FnMut(R, &mut AppContext) -> Option<ServerPermissions>,
     {
         let object_client = self.object_client.clone();
@@ -2770,8 +2770,8 @@ impl UpdateManager {
         mut on_success: impl FnMut(&mut Self, M, &mut ModelContext<Self>) + 'static,
     ) where
         P: 'static + FnMut(Arc<dyn ObjectClient>) -> S,
-        S: warpui::r#async::Spawnable + Future<Output = anyhow::Result<M>>,
-        <S as Future>::Output: warpui::r#async::SpawnableOutput,
+        S: derpui::r#async::Spawnable + Future<Output = anyhow::Result<M>>,
+        <S as Future>::Output: derpui::r#async::SpawnableOutput,
     {
         let cloud_model = CloudModel::handle(ctx);
         let uid = server_id.uid();
@@ -3515,7 +3515,7 @@ impl UpdateManager {
         ctx: &mut ModelContext<Self>,
     ) {
         self.create_object(
-            // TODO(INT-789): support creating folders as warp packs
+            // TODO(INT-789): support creating folders as derp packs
             CloudFolderModel::new(&name, false),
             owner,
             client_id,
@@ -4744,7 +4744,7 @@ impl UpdateManager {
             let new_folder = CloudFolderModel {
                 name: new_name,
                 is_open: folder.model().is_open,
-                is_warp_pack: folder.model().is_warp_pack,
+                is_derp_pack: folder.model().is_derp_pack,
             };
             self.update_object(new_folder, folder_id, revision, ctx);
         } else {

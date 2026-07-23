@@ -11,8 +11,8 @@ use futures::future::BoxFuture;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::repository::{Repository, SubscriberId};
 use repo_metadata::{DirectoryWatcher, RepoMetadataModel, RepositoryIdentifier, RepositoryUpdate};
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 use watcher::{BulkFilesystemWatcherEvent, HomeDirectoryWatcher, HomeDirectoryWatcherEvent};
 
 use super::subscribers::{
@@ -26,9 +26,9 @@ use super::utils::{
 use crate::ai::remote_context_files::{
     read_remote_text_file_contents, REMOTE_CONTEXT_MAX_BATCH_BYTES, REMOTE_CONTEXT_MAX_FILE_BYTES,
 };
-use crate::warp_managed_paths_watcher::{
-    filter_repository_update_by_prefix, warp_managed_skill_dirs, WarpManagedPathsWatcher,
-    WarpManagedPathsWatcherEvent,
+use crate::derp_managed_paths_watcher::{
+    filter_repository_update_by_prefix, derp_managed_skill_dirs, DerpManagedPathsWatcher,
+    DerpManagedPathsWatcherEvent,
 };
 
 #[derive(Debug, PartialEq)]
@@ -133,9 +133,9 @@ impl SkillWatcher {
                 }
             });
             ctx.subscribe_to_model(
-                &WarpManagedPathsWatcher::handle(ctx),
+                &DerpManagedPathsWatcher::handle(ctx),
                 |me, _, event, ctx| {
-                    me.handle_warp_managed_paths_event(event, ctx);
+                    me.handle_derp_managed_paths_event(event, ctx);
                 },
             );
         }
@@ -155,10 +155,10 @@ impl SkillWatcher {
         // We use a separate HomeDirectoryWatcher to detect when those are created and start watching them after they are created.
         let mut home_provider_watchers = HashMap::new();
         if let Some(home_path) = home_dir {
-            Self::spawn_read_skills_from_directories(warp_managed_skill_dirs(), ctx);
+            Self::spawn_read_skills_from_directories(derp_managed_skill_dirs(), ctx);
             let skills_parent_paths: HashSet<PathBuf> = SKILL_PROVIDER_DEFINITIONS
                 .iter()
-                .filter(|provider| provider.provider != SkillProvider::Warp)
+                .filter(|provider| provider.provider != SkillProvider::Derp)
                 .filter_map(|provider| {
                     home_skills_path(provider.provider)
                         .and_then(|skills_path| skills_path.parent().map(Path::to_path_buf))
@@ -749,7 +749,7 @@ impl SkillWatcher {
             }
 
             let Ok(std_dir_path) =
-                warp_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                derp_util::standardized_path::StandardizedPath::from_local_canonicalized(
                     &canonical_dir,
                 )
             else {
@@ -888,7 +888,7 @@ impl SkillWatcher {
 
         let provider_root_paths: HashSet<String> = SKILL_PROVIDER_DEFINITIONS
             .iter()
-            .filter(|provider| provider.provider != SkillProvider::Warp)
+            .filter(|provider| provider.provider != SkillProvider::Derp)
             .filter_map(|provider| {
                 let component = provider.skills_path.components().next();
                 component.map(|component| component.as_os_str().to_string_lossy().to_string())
@@ -973,13 +973,13 @@ impl SkillWatcher {
         }
     }
 
-    fn handle_warp_managed_paths_event(
+    fn handle_derp_managed_paths_event(
         &mut self,
-        event: &WarpManagedPathsWatcherEvent,
+        event: &DerpManagedPathsWatcherEvent,
         ctx: &mut ModelContext<Self>,
     ) {
-        let WarpManagedPathsWatcherEvent::FilesChanged(update) = event;
-        for skill_dir in warp_managed_skill_dirs() {
+        let DerpManagedPathsWatcherEvent::FilesChanged(update) = event;
+        for skill_dir in derp_managed_skill_dirs() {
             if let Some(filtered_update) = filter_repository_update_by_prefix(update, &skill_dir) {
                 self.handle_repository_update(&filtered_update, ctx);
             }
@@ -996,7 +996,7 @@ impl SkillWatcher {
         ctx: &mut ModelContext<Self>,
     ) {
         let Ok(std_path) =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(path)
+            derp_util::standardized_path::StandardizedPath::from_local_canonicalized(path)
         else {
             return;
         };

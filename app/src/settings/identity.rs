@@ -14,7 +14,7 @@
 
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting as _, SupportedPlatforms, SyncToCloud};
-use warpui::assets::asset_cache::AssetSource;
+use derpui::assets::asset_cache::AssetSource;
 
 use crate::ui_components::dicebear;
 
@@ -87,8 +87,8 @@ impl IdentitySettings {
     /// otherwise the natively generated DiceBear avatar for the stored
     /// `(style, seed)`. `None` when nothing is chosen — callers render an
     /// initial instead.
-    pub fn selected_avatar_source(app: &warpui::AppContext) -> Option<AssetSource> {
-        use warpui::SingletonEntity as _;
+    pub fn selected_avatar_source(app: &derpui::AppContext) -> Option<AssetSource> {
+        use derpui::SingletonEntity as _;
         let settings = Self::as_ref(app);
         let photo = settings.avatar_photo_path.to_string();
         if !photo.is_empty() {
@@ -111,9 +111,9 @@ impl IdentitySettings {
     /// and save it. Runs once, right after settings load; sticky thereafter,
     /// and it never overrides a real choice, an uploaded photo, or a value
     /// arriving via settings sync.
-    pub fn assign_random_avatar_if_unset(ctx: &mut warpui::AppContext) {
+    pub fn assign_random_avatar_if_unset(ctx: &mut derpui::AppContext) {
         use rand::Rng as _;
-        use warpui::SingletonEntity as _;
+        use derpui::SingletonEntity as _;
         let settings = Self::as_ref(ctx);
         if !settings.avatar_seed.is_empty() || !settings.avatar_photo_path.is_empty() {
             return;
@@ -123,20 +123,20 @@ impl IdentitySettings {
             .to_string();
         Self::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(error) = settings.avatar_seed.set_value(seed, ctx) {
-                warp_errors::report_error!(error.context("assigning a starter avatar"));
+                derp_errors::report_error!(error.context("assigning a starter avatar"));
             }
         });
     }
 
     /// The saved-avatar shortlist as `(style, seed)` pairs, in save order.
     /// Entries whose style has since been culled from the bundle are skipped.
-    pub fn favorite_avatars(app: &warpui::AppContext) -> Vec<(String, String)> {
-        use warpui::SingletonEntity as _;
+    pub fn favorite_avatars(app: &derpui::AppContext) -> Vec<(String, String)> {
+        use derpui::SingletonEntity as _;
         parse_favorites(&Self::as_ref(app).avatar_favorites.to_string())
     }
 
     /// Whether `(style, seed)` is on the shortlist.
-    pub fn is_favorite_avatar(app: &warpui::AppContext, style: &str, seed: &str) -> bool {
+    pub fn is_favorite_avatar(app: &derpui::AppContext, style: &str, seed: &str) -> bool {
         Self::favorite_avatars(app)
             .iter()
             .any(|(s, d)| s == style && d == seed)
@@ -144,8 +144,8 @@ impl IdentitySettings {
 
     /// Adds `(style, seed)` to the shortlist, or removes it if already there.
     /// Adding beyond [`MAX_AVATAR_FAVORITES`] is a no-op.
-    pub fn toggle_favorite_avatar(style: &str, seed: &str, ctx: &mut warpui::AppContext) {
-        use warpui::SingletonEntity as _;
+    pub fn toggle_favorite_avatar(style: &str, seed: &str, ctx: &mut derpui::AppContext) {
+        use derpui::SingletonEntity as _;
         let mut favorites = Self::favorite_avatars(ctx);
         let existing = favorites.iter().position(|(s, d)| s == style && d == seed);
         match existing {
@@ -158,7 +158,7 @@ impl IdentitySettings {
         let serialized = format_favorites(&favorites);
         Self::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(error) = settings.avatar_favorites.set_value(serialized, ctx) {
-                warp_errors::report_error!(error.context("saving avatar favorites"));
+                derp_errors::report_error!(error.context("saving avatar favorites"));
             }
         });
     }

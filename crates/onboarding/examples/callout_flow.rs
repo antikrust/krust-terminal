@@ -8,17 +8,17 @@ use onboarding::OnboardingIntention;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use rust_embed::RustEmbed;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, WarpTheme};
-use warpui_core::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, DerpTheme};
+use derpui_core::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, Flex, MainAxisAlignment, MainAxisSize,
     OffsetPositioning, ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Rect,
     SavePosition, Stack,
 };
-use warpui_core::fonts::{Cache, FamilyId, Weight};
-use warpui_core::prelude::CrossAxisAlignment;
-use warpui_core::ui_components::components::UiComponent;
-use warpui_core::{
+use derpui_core::fonts::{Cache, FamilyId, Weight};
+use derpui_core::prelude::CrossAxisAlignment;
+use derpui_core::ui_components::components::UiComponent;
+use derpui_core::{
     platform, AddWindowOptions, AppContext, AssetProvider, Element, Entity, SingletonEntity as _,
     TypedActionView, View, ViewContext, ViewHandle,
 };
@@ -173,13 +173,13 @@ impl TypedActionView for OnboardingExampleView {
 
 fn main() -> Result<()> {
     // Initialize logging for the onboarding binary.
-    warp_logging::init(warp_logging::LogConfig {
+    derp_logging::init(derp_logging::LogConfig {
         is_cli: false,
         log_destination: None,
         ..Default::default()
     })?;
 
-    let app_builder = warpui::platform::AppBuilder::new(
+    let app_builder = derpui::platform::AppBuilder::new(
         platform::AppCallbacks::default(),
         Box::new(ASSETS),
         None,
@@ -225,8 +225,8 @@ fn adeberry_colors() -> TerminalColors {
     TerminalColors::new(ADEBERRY_NORMAL_COLORS, ADEBERRY_BRIGHT_COLORS)
 }
 
-fn adeberry() -> WarpTheme {
-    WarpTheme::new(
+fn adeberry() -> DerpTheme {
+    DerpTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -238,7 +238,7 @@ fn adeberry() -> WarpTheme {
     )
 }
 
-fn build_appearance(theme: WarpTheme, ctx: &mut AppContext) -> Appearance {
+fn build_appearance(theme: DerpTheme, ctx: &mut AppContext) -> Appearance {
     let ui_font_family =
         load_default_ui_font_family(ctx).expect("unable to load default ui font family");
 

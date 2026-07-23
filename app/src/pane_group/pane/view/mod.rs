@@ -8,13 +8,13 @@ pub use header_content::{
     HeaderContent, HeaderRenderContext, StandardHeader, StandardHeaderOptions,
 };
 use pathfinder_geometry::rect::RectF;
-use warpui::elements::{
+use derpui::elements::{
     Border, ConstrainedBox, Container, DropTarget, DropTargetData, Flex, MainAxisSize,
     ParentElement, SavePosition, Shrinkable,
 };
-use warpui::keymap::EditableBinding;
-use warpui::presenter::ChildView;
-use warpui::{
+use derpui::keymap::EditableBinding;
+use derpui::presenter::ChildView;
+use derpui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -42,7 +42,7 @@ const HAS_SHARED_OBJECT_CONTEXT_KEY: &str = "PaneView_HasSharedObject";
 const DRAG_PREVIEW_HEADER_MAX_WIDTH: f32 = 400.;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use derpui::keymap::macros::*;
 
     app.register_editable_bindings([EditableBinding::new(
         "pane:share_pane_contents",
@@ -442,7 +442,7 @@ impl<P: BackingView> View for PaneView<P> {
         .finish()
     }
 
-    fn keymap_context(&self, ctx: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, ctx: &AppContext) -> derpui::keymap::Context {
         let mut keymap_context = Self::default_keymap_context();
         if self.header.as_ref(ctx).is_sharing_dialog_enabled(ctx) {
             keymap_context.set.insert(HAS_SHARED_OBJECT_CONTEXT_KEY);

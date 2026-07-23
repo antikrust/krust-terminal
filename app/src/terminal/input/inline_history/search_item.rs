@@ -1,15 +1,15 @@
 use chrono::{DateTime, Local};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::Icon;
-use warpui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
-use warpui::fonts::{Properties, Weight};
-use warpui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
-use warpui::scene::{CornerRadius, Radius};
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, SingletonEntity};
+use derp_core::ui::color::coloru_with_opacity;
+use derp_core::ui::theme::Fill;
+use derp_core::ui::Icon;
+use derpui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
+use derpui::fonts::{Properties, Weight};
+use derpui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
+use derpui::scene::{CornerRadius, Radius};
+use derpui::text_layout::ClipConfig;
+use derpui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::conversation_status_ui::{render_status_element, STATUS_ELEMENT_PADDING};
@@ -124,7 +124,7 @@ impl SearchItem for InlineHistoryItem {
             HistoryItemType::Command { .. } => {
                 let icon_color = inline_styles::icon_color(appearance);
                 Container::new(
-                    ConstrainedBox::new(Icon::Terminal.to_warpui_icon(icon_color).finish())
+                    ConstrainedBox::new(Icon::Terminal.to_derpui_icon(icon_color).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),
@@ -139,7 +139,7 @@ impl SearchItem for InlineHistoryItem {
             HistoryItemType::AIPrompt { .. } => {
                 let icon_color = inline_styles::icon_color(appearance);
                 Container::new(
-                    ConstrainedBox::new(Icon::Prompt.to_warpui_icon(icon_color).finish())
+                    ConstrainedBox::new(Icon::Prompt.to_derpui_icon(icon_color).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),

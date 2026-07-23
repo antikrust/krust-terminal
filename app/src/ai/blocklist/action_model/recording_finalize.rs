@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use ai::agent::action_result::{RecordingStopped, StopRecordingResult};
 use futures::channel::oneshot;
-use warpui::r#async::Timer;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use derpui::r#async::Timer;
+use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::recording_controller::{
     ActiveRecording, FinalizationClaim, RecordingController, StopRecordingControllerError,

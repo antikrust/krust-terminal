@@ -1,11 +1,11 @@
-use warpui::elements::{
+use derpui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
+use derpui::platform::Cursor;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
 
 use crate::settings_view::SettingsSection;
 use crate::terminal::view::TerminalAction;
@@ -16,9 +16,9 @@ use crate::workspaces::workspace::UgcCollectionEnablementSetting;
 use crate::{Appearance, FeatureFlag, WorkspaceAction};
 
 const TITLE_EXISTING_USERS: &str = "We've updated our telemetry policy.";
-const TITLE_NEW_USERS: &str = "Help improve Warp.";
-const DESCRIPTION: &str = "We may collect certain console interactions to improve Warp's AI capabilities. You can opt out any time.";
-const PRIVACY_URL: &str = "https://warp.dev/privacy";
+const TITLE_NEW_USERS: &str = "Help improve Derp.";
+const DESCRIPTION: &str = "We may collect certain console interactions to improve Derp's AI capabilities. You can opt out any time.";
+const PRIVACY_URL: &str = "https://derp.baby/privacy";
 
 #[derive(Default, Debug, Clone)]
 pub struct TelemetryBanner {
@@ -61,7 +61,7 @@ impl View for TelemetryBanner {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::Info
-                            .to_warpui_icon(theme.active_ui_text_color())
+                            .to_derpui_icon(theme.active_ui_text_color())
                             .finish(),
                     )
                     .with_height(20.)

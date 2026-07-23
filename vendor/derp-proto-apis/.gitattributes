@@ -1,0 +1,2 @@
+# Tell GitHub that .pb.go files are generated code.
+**/gen/go/*.pb.go linguist-generated=true

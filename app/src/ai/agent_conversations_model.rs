@@ -17,16 +17,16 @@ use instant::Instant;
 use itertools::Itertools;
 pub use query::query_conversation_entries;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use warp_cli::agent::Harness;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::WarpTheme;
-use warp_errors::report_error;
-use warpui::color::ColorU;
-use warpui::r#async::Timer;
-use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{
+use derp_cli::agent::Harness;
+use derp_core::execution_mode::AppExecutionMode;
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::theme::DerpTheme;
+use derp_errors::report_error;
+use derpui::color::ColorU;
+use derpui::r#async::Timer;
+use derpui::windowing::{StateEvent, WindowManager};
+use derpui::{
     duration_with_jitter, AppContext, Entity, EntityId, ModelContext, ModelHandle, RequestState,
     SingletonEntity, WindowId,
 };
@@ -494,7 +494,7 @@ impl AgentRunDisplayStatus {
         )
     }
 
-    pub fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &DerpTheme) -> (Icon, ColorU) {
         match self {
             AgentRunDisplayStatus::TaskQueued
             | AgentRunDisplayStatus::TaskPending

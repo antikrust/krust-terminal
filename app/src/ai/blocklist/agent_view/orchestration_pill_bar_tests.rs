@@ -7,13 +7,13 @@ use super::*;
 #[test]
 fn pill_bar_scrollable_finite_under_capped_drag_preview() {
     use pathfinder_geometry::vector::vec2f;
-    use warpui::elements::new_scrollable::{NewScrollable, SingleAxisConfig};
-    use warpui::elements::{
+    use derpui::elements::new_scrollable::{NewScrollable, SingleAxisConfig};
+    use derpui::elements::{
         ClippedScrollStateHandle, ConstrainedBox, Container, CrossAxisAlignment, Fill, Flex,
         MainAxisSize, ParentElement, Rect,
     };
-    use warpui::platform::WindowStyle;
-    use warpui::{
+    use derpui::platform::WindowStyle;
+    use derpui::{
         App, Element, Entity, Presenter, TypedActionView, View, ViewContext, WindowInvalidation,
     };
 
@@ -42,7 +42,7 @@ fn pill_bar_scrollable_finite_under_capped_drag_preview() {
             "DragPreviewTestView"
         }
 
-        fn render(&self, _app: &warpui::AppContext) -> Box<dyn Element> {
+        fn render(&self, _app: &derpui::AppContext) -> Box<dyn Element> {
             // Overflowing content so the clipped scrollable has something to clip.
             let content = ConstrainedBox::new(Rect::new().finish())
                 .with_width(2000.)
@@ -135,7 +135,7 @@ fn pill_bar_scrollable_finite_under_capped_drag_preview() {
 fn pill_bar_data_layer_finds_restored_children_before_pane_creation() {
     use chrono::Utc;
     use uuid::Uuid;
-    use warpui::App;
+    use derpui::App;
 
     use crate::ai::blocklist::orchestration_topology::descendant_conversation_ids_in_spawn_order;
     use crate::ai::blocklist::BlocklistAIHistoryModel;
@@ -176,16 +176,16 @@ fn pill_bar_data_layer_finds_restored_children_before_pane_creation() {
                     last_modified_at: now,
                     summary: None,
                 },
-                tasks: vec![warp_multi_agent_api::Task {
+                tasks: vec![derp_multi_agent_api::Task {
                     id: format!("task-{child_id}"),
-                    messages: vec![warp_multi_agent_api::Message {
+                    messages: vec![derp_multi_agent_api::Message {
                         fetched_memories: vec![],
                         id: "child-msg".to_string(),
                         task_id: format!("task-{child_id}"),
                         server_message_data: String::new(),
                         citations: vec![],
-                        message: Some(warp_multi_agent_api::message::Message::UserQuery(
-                            warp_multi_agent_api::message::UserQuery {
+                        message: Some(derp_multi_agent_api::message::Message::UserQuery(
+                            derp_multi_agent_api::message::UserQuery {
                                 query: "Child query".to_string(),
                                 context: None,
                                 referenced_attachments: Default::default(),
@@ -227,16 +227,16 @@ fn pill_bar_data_layer_finds_restored_children_before_pane_creation() {
                     last_modified_at: now - chrono::Duration::seconds(1),
                     summary: None,
                 },
-                tasks: vec![warp_multi_agent_api::Task {
+                tasks: vec![derp_multi_agent_api::Task {
                     id: format!("task-{parent_id}"),
-                    messages: vec![warp_multi_agent_api::Message {
+                    messages: vec![derp_multi_agent_api::Message {
                         fetched_memories: vec![],
                         id: "parent-msg".to_string(),
                         task_id: format!("task-{parent_id}"),
                         server_message_data: String::new(),
                         citations: vec![],
-                        message: Some(warp_multi_agent_api::message::Message::UserQuery(
-                            warp_multi_agent_api::message::UserQuery {
+                        message: Some(derp_multi_agent_api::message::Message::UserQuery(
+                            derp_multi_agent_api::message::UserQuery {
                                 query: "Parent query".to_string(),
                                 context: None,
                                 referenced_attachments: Default::default(),

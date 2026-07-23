@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 
 # Install basic dependencies for testing. git and curl are added so we can install rust/Cargo and
-# clone the warp-internal repo to simulate more realistic development scenarios.
+# clone the derp-internal repo to simulate more realistic development scenarios.
 RUN apt update && apt install openssh-server sudo zsh fish xxd git curl vim -y
 
 RUN sudo echo `which fish` >> /etc/shells

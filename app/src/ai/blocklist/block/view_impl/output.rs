@@ -18,21 +18,21 @@ use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::channel::ChannelState;
-use warp_core::ui::theme::color::internal_colors;
-use warp_errors::report_error;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warpui::elements::new_scrollable::SingleAxisConfig;
-use warpui::elements::{
+use derp_core::channel::ChannelState;
+use derp_core::ui::theme::color::internal_colors;
+use derp_errors::report_error;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derpui::elements::new_scrollable::SingleAxisConfig;
+use derpui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Expanded, Fill, Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize,
     NewScrollable, ParentElement, Radius, Shrinkable, Text, Wrap,
 };
-use warpui::keymap::Keystroke;
-use warpui::platform::{Cursor, OperatingSystem};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::radio_buttons::{RadioButtonItem, RadioButtonLayout};
-use warpui::{
+use derpui::keymap::Keystroke;
+use derpui::platform::{Cursor, OperatingSystem};
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::ui_components::radio_buttons::{RadioButtonItem, RadioButtonLayout};
+use derpui::{
     Action, AppContext, Element, EntityId, ModelHandle, SingletonEntity, View, ViewHandle,
 };
 
@@ -299,7 +299,7 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                 let mut action_index = 0;
 
                 fn open_code_block_action(source: CodeSource) -> AIBlockAction {
-                    AIBlockAction::OpenCodeInWarp { source }
+                    AIBlockAction::OpenCodeInDerp { source }
                 }
 
                 fn copy_code_action(snippet: String) -> AIBlockAction {
@@ -1466,7 +1466,7 @@ fn render_search_codebase(
                                             ctx.dispatch_typed_action(
                                                 WorkspaceAction::ShowSettingsPageWithSearch {
                                                     search_query: "Autonomy".to_string(),
-                                                    section: Some(SettingsSection::WarpAgent),
+                                                    section: Some(SettingsSection::DerpAgent),
                                                 },
                                             );
                                         })),
@@ -1870,7 +1870,7 @@ fn render_read_skill(
                     skill.provider,
                     skill_icon_override,
                     move |ctx| {
-                        ctx.dispatch_typed_action(AIBlockAction::OpenCodeInWarp {
+                        ctx.dispatch_typed_action(AIBlockAction::OpenCodeInDerp {
                             source: source.clone(),
                         });
                     },
@@ -1998,7 +1998,7 @@ fn render_read_files(
                 skill.provider,
                 skill_icon_override,
                 move |ctx| {
-                    ctx.dispatch_typed_action(AIBlockAction::OpenCodeInWarp {
+                    ctx.dispatch_typed_action(AIBlockAction::OpenCodeInDerp {
                         source: source.clone(),
                     });
                 },
@@ -2167,7 +2167,7 @@ fn render_stopped_output(props: Props, app: &AppContext) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder().clone();
 
         let play_icon = Container::new(
-            ConstrainedBox::new(Icon::Play.to_warpui_icon(theme.foreground()).finish())
+            ConstrainedBox::new(Icon::Play.to_derpui_icon(theme.foreground()).finish())
                 .with_height(appearance.ui_font_size() + 1.)
                 .with_width(appearance.ui_font_size() + 1.)
                 .finish(),
@@ -2219,7 +2219,7 @@ fn render_stopped_output(props: Props, app: &AppContext) -> Box<dyn Element> {
                 .set_background(internal_colors::fg_overlay_3(theme).into()),
         );
 
-        let resume_button = warpui::ui_components::button::Button::new(
+        let resume_button = derpui::ui_components::button::Button::new(
             props.state_handles.resume_conversation_handle.clone(),
             button_styles,
             Some(hovered_styles),
@@ -2406,7 +2406,7 @@ fn render_suggest_new_conversation(
             ),
             SuggestNewConversationResult::Rejected => (
                 "Continuing current conversation",
-                warpui::elements::Icon::new(
+                derpui::elements::Icon::new(
                     Icon::FlipForward.into(),
                     internal_colors::neutral_6(theme),
                 )
@@ -3018,7 +3018,7 @@ fn format_video_duration(duration: std::time::Duration) -> String {
 fn recording_icon(app: &AppContext) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
     let color = appearance.theme().ansi_fg_red();
-    ConstrainedBox::new(Icon::CircleFilled.to_warpui_icon(color.into()).finish())
+    ConstrainedBox::new(Icon::CircleFilled.to_derpui_icon(color.into()).finish())
         .with_width(icon_size(app))
         .with_height(icon_size(app))
         .finish()
@@ -3277,7 +3277,7 @@ fn render_references_footer(
                 .finish(),
         )
         .with_child(
-            ConstrainedBox::new(chevron.to_warpui_icon(title_row_color).finish())
+            ConstrainedBox::new(chevron.to_derpui_icon(title_row_color).finish())
                 .with_height(icon_size(app) - 2.)
                 .with_width(icon_size(app) - 2.)
                 .finish(),
@@ -3490,7 +3490,7 @@ pub fn action_icon<V: View>(
     action_model: &ModelHandle<BlocklistAIActionModel>,
     ai_block_model: &dyn AIBlockModel<View = V>,
     app: &AppContext,
-) -> warpui::elements::Icon {
+) -> derpui::elements::Icon {
     let appearance = Appearance::as_ref(app);
     let status = action_model.as_ref(app).get_action_status(action_id);
     match status {
@@ -3591,7 +3591,7 @@ fn render_collapsible_header(
             )
             .with_child(
                 Container::new(
-                    ConstrainedBox::new(chevron_icon.to_warpui_icon(text_color.into()).finish())
+                    ConstrainedBox::new(chevron_icon.to_derpui_icon(text_color.into()).finish())
                         .with_width(icon_size - 2.)
                         .with_height(icon_size - 2.)
                         .finish(),
@@ -3625,7 +3625,7 @@ fn render_collapsible_header(
             } else {
                 text_color
             };
-            ConstrainedBox::new(Icon::Copy.to_warpui_icon(color.into()).finish())
+            ConstrainedBox::new(Icon::Copy.to_derpui_icon(color.into()).finish())
                 .with_width(icon_size - 2.)
                 .with_height(icon_size - 2.)
                 .finish()
@@ -3859,7 +3859,7 @@ fn render_collapsible_debug_output(
         // Chevron icon
         row.add_child(
             Container::new(
-                ConstrainedBox::new(chevron_icon.to_warpui_icon(text_color.into()).finish())
+                ConstrainedBox::new(chevron_icon.to_derpui_icon(text_color.into()).finish())
                     .with_width(icon_size - 2.)
                     .with_height(icon_size - 2.)
                     .finish(),

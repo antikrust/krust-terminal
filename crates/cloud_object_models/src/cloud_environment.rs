@@ -38,9 +38,9 @@ impl fmt::Display for CodeForge {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GithubRepo {
-    /// Repository owner (e.g. "warpdotdev")
+    /// Repository owner (e.g. "derpdotdev")
     pub owner: String,
-    /// Repository name (e.g. "warp-internal")
+    /// Repository name (e.g. "derp-internal")
     pub repo: String,
 }
 
@@ -158,7 +158,7 @@ pub struct EnvironmentSecretRef {
     pub name: String,
 }
 
-/// An AmbientAgentEnvironment represents an environment that we would run a Warp agent in.
+/// An AmbientAgentEnvironment represents an environment that we would run a Derp agent in.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AmbientAgentEnvironment {
     /// Environment name

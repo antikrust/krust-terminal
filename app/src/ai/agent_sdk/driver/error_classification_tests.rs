@@ -1,4 +1,4 @@
-use warp_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use derp_graphql::ai::{AgentTaskState, PlatformErrorCode};
 
 use super::classify_driver_error;
 use crate::ai::agent_sdk::driver::terminal::{BootstrapError, ShareSessionError};
@@ -90,16 +90,16 @@ fn not_logged_in_is_error_with_auth_required() {
         Some(PlatformErrorCode::AuthenticationRequired)
     );
     assert!(
-        update.message.contains("WARP_API_KEY"),
-        "message should mention WARP_API_KEY: {:?}",
+        update.message.contains("DERP_API_KEY"),
+        "message should mention DERP_API_KEY: {:?}",
         update.message
     );
 }
 
 #[test]
-fn warp_drive_sync_failed_is_error() {
+fn derp_drive_sync_failed_is_error() {
     assert_state_and_code(
-        AgentDriverError::WarpDriveSyncFailed,
+        AgentDriverError::DerpDriveSyncFailed,
         AgentTaskState::Error,
         Some(PlatformErrorCode::InternalError),
     );

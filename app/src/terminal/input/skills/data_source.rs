@@ -1,17 +1,17 @@
 use ai::skills::{SkillProvider, SkillReference, SkillScope};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::Fill;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warpui::elements::{
+use derp_core::ui::icons::Icon;
+use derp_core::ui::theme::Fill;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derpui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, ParentElement, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::Keystroke;
-use warpui::scene::{CornerRadius, Radius};
-use warpui::text_layout::ClipConfig;
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::Keystroke;
+use derpui::scene::{CornerRadius, Radius};
+use derpui::text_layout::ClipConfig;
+use derpui::{
     AppContext, Element, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _,
 };
 
@@ -217,11 +217,11 @@ impl SearchItem for SkillSearchItem {
 
         // Use icon_override if set (e.g. Figma skills), otherwise derive from provider.
         let icon = if let Some(override_icon) = self.icon_override {
-            override_icon.to_warpui_icon(icon_color).finish()
+            override_icon.to_derpui_icon(icon_color).finish()
         } else {
             self.provider
                 .icon()
-                .to_warpui_icon(self.provider.icon_fill(icon_color))
+                .to_derpui_icon(self.provider.icon_fill(icon_color))
                 .finish()
         };
 

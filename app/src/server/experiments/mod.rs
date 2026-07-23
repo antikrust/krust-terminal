@@ -8,12 +8,12 @@
 //! Then, you can use the global [`ServerExperiments`] model
 //! to update and query the latest experiment state.
 //!
-//! See [here](https://www.notion.so/warpdev/Server-side-experiments-dynamic-feature-enablement-c0fb9aed695d4178a19b8830e3269094)
+//! See [here](https://www.notion.so/derpdev/Server-side-experiments-dynamic-feature-enablement-c0fb9aed695d4178a19b8830e3269094)
 //! for a full guide on the server-side experiment framework.
 
-use warpui::AppContext;
+use derpui::AppContext;
 #[cfg(test)]
-use warpui::SingletonEntity;
+use derpui::SingletonEntity;
 
 use crate::features::FeatureFlag;
 

@@ -1,5 +1,5 @@
-use warpui::platform::WindowStyle;
-use warpui::App;
+use derpui::platform::WindowStyle;
+use derpui::App;
 
 use super::Transcript;
 use crate::ai_assistant::requests::Requests;

@@ -5,28 +5,28 @@ use lsp::LspManagerModel;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::channel::{Channel, ChannelState};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::ICON_DIMENSIONS;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warp_util::path::LineAndColumnArg;
+use derp_core::channel::{Channel, ChannelState};
+use derp_core::features::FeatureFlag;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::icons::ICON_DIMENSIONS;
+use derp_editor::render::element::VerticalExpansionBehavior;
+use derp_util::path::LineAndColumnArg;
 #[cfg(feature = "local_fs")]
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::{
     AcceptedByDropTarget, Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Draggable, DraggableState, DropTarget, Empty,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, Padding, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect,
     SavePosition, Shrinkable, Stack, Text,
 };
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::keymap::EditableBinding;
-use warpui::text::point::Point;
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use derpui::fonts::{Properties, Style, Weight};
+use derpui::keymap::EditableBinding;
+use derpui::text::point::Point;
+use derpui::text_layout::ClipConfig;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::UiComponent;
+use derpui::{
     id, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -45,7 +45,7 @@ use crate::code::{EditorTabBarDropTargetData, ImmediateSaveError, SaveOutcome, S
 use crate::editor::InteractionState;
 use crate::input::Vector2F;
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::notebooks::file::{renders_in_warp_notebook_viewer, MarkdownDisplayMode};
+use crate::notebooks::file::{renders_in_derp_notebook_viewer, MarkdownDisplayMode};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view::header::components::{
     render_pane_header_buttons, render_pane_header_title_text, render_three_column_header,
@@ -281,7 +281,7 @@ impl CodeView {
         let renders_in_notebook_viewer = self
             .tab_at(self.active_tab_index)
             .and_then(|t| t.location.as_ref())
-            .map(|loc| renders_in_warp_notebook_viewer(std::path::Path::new(&loc.display_path())))
+            .map(|loc| renders_in_derp_notebook_viewer(std::path::Path::new(&loc.display_path())))
             .unwrap_or(false);
 
         if !renders_in_notebook_viewer {
@@ -388,8 +388,8 @@ impl CodeView {
                             ctx,
                         )
                         .with_horizontal_scrollbar_appearance(
-                            warpui::elements::new_scrollable::ScrollableAppearance::new(
-                                warpui::elements::ScrollbarWidth::Auto,
+                            derpui::elements::new_scrollable::ScrollableAppearance::new(
+                                derpui::elements::ScrollbarWidth::Auto,
                                 true,
                             ),
                         )
@@ -432,8 +432,8 @@ impl CodeView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                warpui::elements::new_scrollable::ScrollableAppearance::new(
-                    warpui::elements::ScrollbarWidth::Auto,
+                derpui::elements::new_scrollable::ScrollableAppearance::new(
+                    derpui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             )
@@ -2063,11 +2063,11 @@ impl CodeView {
 
             let renders_in_notebook_viewer = local_path
                 .as_ref()
-                .map(renders_in_warp_notebook_viewer)
+                .map(renders_in_derp_notebook_viewer)
                 .unwrap_or_else(|| {
                     active_location
                         .map(|loc| {
-                            renders_in_warp_notebook_viewer(std::path::Path::new(
+                            renders_in_derp_notebook_viewer(std::path::Path::new(
                                 &loc.display_path(),
                             ))
                         })

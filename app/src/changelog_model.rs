@@ -5,9 +5,9 @@ use std::sync::Arc;
 use channel_versions::{Changelog, MarkdownSection};
 use itertools::Itertools;
 use markdown_parser::{parse_markdown, FormattedText};
-use warpui::assets::asset_cache::{AssetCache, AssetSource};
-use warpui::image_cache::ImageType;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use derpui::assets::asset_cache::{AssetCache, AssetSource};
+use derpui::image_cache::ImageType;
+use derpui::{Entity, ModelContext, SingletonEntity};
 
 use crate::autoupdate::{self};
 use crate::channel::{Channel, ChannelState};
@@ -132,7 +132,7 @@ impl ChangelogModel {
             _ => return,
         };
 
-        // For WarpPreview, add a section at the beginning describing
+        // For DerpPreview, add a section at the beginning describing
         // preview-exclusive flags.
         if ChannelState::channel() == Channel::Preview && !PREVIEW_FLAGS.is_empty() {
             let preview_flags_vec: Vec<String> = PREVIEW_FLAGS

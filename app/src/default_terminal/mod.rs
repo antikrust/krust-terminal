@@ -1,5 +1,5 @@
-use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use derpui::windowing::{StateEvent, WindowManager};
+use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(target_os = "macos")]
 mod mac;
@@ -14,12 +14,12 @@ mod non_mac {
         false
     }
 
-    pub fn is_warp_default_terminal() -> bool {
+    pub fn is_derp_default_terminal() -> bool {
         false
     }
 
-    /// Sets Warp as the default terminal
-    pub fn set_warp_as_default_terminal() -> Result<(), String> {
+    /// Sets Derp as the default terminal
+    pub fn set_derp_as_default_terminal() -> Result<(), String> {
         Err("Not implemented".to_string())
     }
 }
@@ -27,11 +27,11 @@ mod non_mac {
 #[allow(unused_imports)]
 #[cfg(not(target_os = "macos"))]
 use non_mac::*;
-use warp_errors::report_error;
+use derp_errors::report_error;
 
 pub struct DefaultTerminal {
-    /// Whether the OS will treat Warp as the default app for scripts/executables.
-    is_warp_default: bool,
+    /// Whether the OS will treat Derp as the default app for scripts/executables.
+    is_derp_default: bool,
 }
 
 impl DefaultTerminal {
@@ -43,18 +43,18 @@ impl DefaultTerminal {
 
         // This can be slow to compute due to calling into platform APIs, so in unit
         // tests, where we shouldn't care, just pretend that we are not.
-        let is_warp_default = if cfg!(test) {
+        let is_derp_default = if cfg!(test) {
             false
         } else {
-            is_warp_default_terminal()
+            is_derp_default_terminal()
         };
 
-        Self { is_warp_default }
+        Self { is_derp_default }
     }
 
-    /// This is an OS-level setting. Unlike most other settings, where Warp is the source-of-truth
-    /// for the value of the setting, it can be changed outside of Warp. We monitor if it gets
-    /// changed externally by checking when Warp is focused.
+    /// This is an OS-level setting. Unlike most other settings, where Derp is the source-of-truth
+    /// for the value of the setting, it can be changed outside of Derp. We monitor if it gets
+    /// changed externally by checking when Derp is focused.
     fn handle_window_manager_event(
         &mut self,
         _: ModelHandle<WindowManager>,
@@ -64,22 +64,22 @@ impl DefaultTerminal {
         match event {
             StateEvent::ValueChanged { current, previous } => {
                 if current.active_window.is_some() && previous.active_window.is_none() {
-                    let is_warp_default_now = is_warp_default_terminal();
-                    if is_warp_default_now != self.is_warp_default {
-                        self.set_is_warp_default(is_warp_default_now, ctx);
+                    let is_derp_default_now = is_derp_default_terminal();
+                    if is_derp_default_now != self.is_derp_default {
+                        self.set_is_derp_default(is_derp_default_now, ctx);
                     }
                 }
             }
         }
     }
 
-    fn set_is_warp_default(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
-        self.is_warp_default = value;
+    fn set_is_derp_default(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
+        self.is_derp_default = value;
         ctx.emit(DefaultTerminalEvent::ValueChanged);
         ctx.notify();
     }
 
-    pub fn can_warp_become_default() -> bool {
+    pub fn can_derp_become_default() -> bool {
         if cfg!(test) {
             // Determining whether or not we can become the default terminal requires
             // calling into platform APIs, which can be slow, and we can't actually
@@ -90,20 +90,20 @@ impl DefaultTerminal {
         }
     }
 
-    pub fn is_warp_default(&self) -> bool {
-        self.is_warp_default
+    pub fn is_derp_default(&self) -> bool {
+        self.is_derp_default
     }
 
-    /// This is a one-way operation. Once we set the default terminal to Warp, we can't really
+    /// This is a one-way operation. Once we set the default terminal to Derp, we can't really
     /// "unset" it unless we pick a new default terminal. Picking a new default is complicated.
-    pub fn make_warp_default(&mut self, ctx: &mut ModelContext<Self>) {
-        if let Err(e) = set_warp_as_default_terminal() {
+    pub fn make_derp_default(&mut self, ctx: &mut ModelContext<Self>) {
+        if let Err(e) = set_derp_as_default_terminal() {
             report_error!(
-                "Error setting Warp as default terminal",
+                "Error setting Derp as default terminal",
                 extra: { "error" => %e }
             );
         } else {
-            self.set_is_warp_default(true, ctx);
+            self.set_is_derp_default(true, ctx);
         }
     }
 }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_yaml::Value;
 use strum::VariantNames as _;
 use strum_macros::{Display, EnumString, VariantNames};
-use warpui::{AppContext, SingletonEntity};
+use derpui::{AppContext, SingletonEntity};
 
 use super::workflow::{Argument, ArgumentType, Workflow};
 use super::workflow_enum::{EnumVariants, WorkflowEnum};
@@ -330,7 +330,7 @@ where
                 (SourceUrl, "source_url", source_url, Option<String>, true),
                 (Author, "author", author, Option<String>, true),
                 (AuthorUrl, "author_url", author_url, Option<String>, true),
-                (Shells, "shells", shells, Vec<warp_workflows::Shell>, true),
+                (Shells, "shells", shells, Vec<derp_workflows::Shell>, true),
                 (EnvironmentVariables, "environment_variables", environment_variables, Option<SyncId>, true),
             );
 

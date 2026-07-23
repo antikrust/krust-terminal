@@ -12,11 +12,11 @@ use std::path::{Path, PathBuf};
 use api::message::tool_call::Tool;
 use api::message::tool_call_result::Result as ToolCallResultType;
 use api::message::Message;
-use warp_multi_agent_api as api;
+use derp_multi_agent_api as api;
 
 use super::task::helper::{SubagentExt, ToolExt};
 
-const BASE_DIR_NAME: &str = "warp_conversation_search";
+const BASE_DIR_NAME: &str = "derp_conversation_search";
 
 /// Returns the base directory for conversation search temp files.
 ///

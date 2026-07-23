@@ -1,6 +1,6 @@
 use settings::macros::define_settings_group;
 use settings::{SupportedPlatforms, SyncToCloud};
-use warpui::platform::linux;
+use derpui::platform::linux;
 
 define_settings_group!(LinuxAppConfiguration,
     settings: [

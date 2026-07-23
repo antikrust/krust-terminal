@@ -233,11 +233,11 @@ pub trait Actor: Send + Sync + 'static {
 ///
 /// A real recorder is only available on Linux (X11); every other platform, and
 /// any `test-util` build, gets a no-op recorder that reports recording as
-/// unsupported. On macOS, setting `WARP_MOCK_RECORDER` opts into a mock
+/// unsupported. On macOS, setting `DERP_MOCK_RECORDER` opts into a mock
 /// recorder for UI testing (see `mock`).
 pub fn create_recorder() -> Box<dyn Recorder> {
     #[cfg(macos)]
-    if std::env::var_os("WARP_MOCK_RECORDER").is_some() {
+    if std::env::var_os("DERP_MOCK_RECORDER").is_some() {
         return Box::new(mock::Recorder::new());
     }
     if cfg!(feature = "test-util") {

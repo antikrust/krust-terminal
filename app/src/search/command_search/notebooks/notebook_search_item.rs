@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
-use warp_errors::report_error;
-use warpui::elements::{
+use derp_errors::report_error;
+use derpui::elements::{
     ConstrainedBox, Container, Flex, Highlight, Icon, MainAxisAlignment, MainAxisSize,
     ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{AppContext, Element, SingletonEntity};
+use derpui::fonts::{Properties, Weight};
+use derpui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::notebooks::CloudNotebookModel;

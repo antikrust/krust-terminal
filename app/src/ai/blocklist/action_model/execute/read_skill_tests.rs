@@ -8,12 +8,12 @@ use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
 use tempfile::TempDir;
-use warp_core::features::FeatureFlag;
-use warp_core::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::{App, ModelHandle};
+use derp_core::features::FeatureFlag;
+use derp_core::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
+use derpui::{App, ModelHandle};
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
@@ -28,7 +28,7 @@ use crate::settings::AISettings;
 use crate::terminal::model::session::active_session::ActiveSession;
 use crate::terminal::model::session::{BootstrapSessionType, SessionId, SessionInfo, Sessions};
 use crate::terminal::model_events::ModelEventDispatcher;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
 
 fn initialize_app(app: &mut App) {
     app.add_singleton_model(DirectoryWatcher::new);
@@ -36,7 +36,7 @@ fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 }
 fn add_test_read_skill_executor(app: &mut App) -> ModelHandle<ReadSkillExecutor> {
@@ -56,7 +56,7 @@ fn bundled_skill(name: &str) -> ParsedSkill {
         path: LocalOrRemotePath::Local(PathBuf::from(format!("/bundled/skills/{name}/SKILL.md"))),
         content: format!("# {name}"),
         line_range: None,
-        provider: SkillProvider::Warp,
+        provider: SkillProvider::Derp,
         scope: SkillScope::Bundled,
     }
 }
@@ -153,7 +153,7 @@ fn disconnected_remote_session_does_not_fall_back_to_client_global_bundled_skill
             sessions.register_session_for_test(
                 SessionInfo::new_for_test()
                     .with_id(session_id)
-                    .with_session_type(BootstrapSessionType::WarpifiedRemote),
+                    .with_session_type(BootstrapSessionType::DerpifiedRemote),
             );
         });
         let (_model_events_tx, model_events_rx) = unbounded();
@@ -204,13 +204,13 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
             path: LocalOrRemotePath::Remote(RemotePath::new(
                 host_id.clone(),
                 StandardizedPath::try_new(
-                    "/opt/warp/resources/bundled/skills/host-specific/SKILL.md",
+                    "/opt/derp/resources/bundled/skills/host-specific/SKILL.md",
                 )
                 .unwrap(),
             )),
             content: "remote rendered content".to_string(),
             line_range: None,
-            provider: SkillProvider::Warp,
+            provider: SkillProvider::Derp,
             scope: SkillScope::Bundled,
         };
         SkillManager::handle(&app).update(&mut app, |manager, _ctx| {
@@ -233,7 +233,7 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
             sessions.register_session_for_test(
                 SessionInfo::new_for_test()
                     .with_id(session_id)
-                    .with_session_type(BootstrapSessionType::WarpifiedRemote),
+                    .with_session_type(BootstrapSessionType::DerpifiedRemote),
             );
         });
         let session = sessions
@@ -273,7 +273,7 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
                 )) => {
                     assert_eq!(
                         content.file_name,
-                        "/opt/warp/resources/bundled/skills/host-specific/SKILL.md"
+                        "/opt/derp/resources/bundled/skills/host-specific/SKILL.md"
                     );
                     assert_eq!(
                         content.content,
@@ -330,17 +330,17 @@ fn test_read_skill_executor_reads_enabled_bundled_skill() {
 }
 
 #[test]
-fn test_read_skill_executor_rejects_warp_control_bundled_skills_when_disabled() {
+fn test_read_skill_executor_rejects_derp_control_bundled_skills_when_disabled() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
         let _bundled_skills = FeatureFlag::BundledSkills.override_enabled(true);
-        let _warp_control_cli = FeatureFlag::WarpControlCli.override_enabled(false);
-        let skill_id = "warpctrl";
+        let _derp_control_cli = FeatureFlag::DerpControlCli.override_enabled(false);
+        let skill_id = "derpctrl";
         SkillManager::handle(&app).update(&mut app, |manager, _ctx| {
             manager.add_bundled_skill_for_testing(
                 skill_id,
                 bundled_skill(skill_id),
-                BundledSkillActivation::RequiresFeature(FeatureFlag::WarpControlCli),
+                BundledSkillActivation::RequiresFeature(FeatureFlag::DerpControlCli),
             );
         });
         let executor_handle = add_test_read_skill_executor(&mut app);

@@ -1,0 +1,24 @@
+[package]
+name = "tink-prf"
+version = "0.3.0"
+authors = ["David Drysdale <drysdale@google.com>"]
+edition = "2018"
+license = "Apache-2.0"
+description = "PRF functionality for Rust port of Google's Tink cryptography library"
+repository = "https://github.com/project-oak/tink-rust"
+documentation = "https://docs.rs/tink-prf"
+readme = "README.md"
+keywords = ["cryptography", "tink", "prf"]
+categories = ["cryptography"]
+rust-version = "1.78.0"
+
+[dependencies]
+aes = "^0.8.4"
+cmac = "^0.7.2"
+digest = "^0.10.7"
+hkdf = "^0.12.4"
+hmac = { version = "^0.12.1", features = ["reset"] }
+sha-1 = "^0.10.1"
+sha2 = "^0.10.9"
+tink-core = "^0.3"
+tink-proto = "^0.3"

@@ -7,13 +7,13 @@ use onboarding::components::onboarding_callout::{
 };
 use rust_embed::RustEmbed;
 use ui_components::Component as _;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, WarpTheme};
-use warpui_core::color::ColorU;
-use warpui_core::elements::{Rect, Stack};
-use warpui_core::fonts::{Cache, FamilyId, Weight};
-use warpui_core::prelude::*;
-use warpui_core::{platform, AddWindowOptions, AssetProvider, ModelContext};
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, DerpTheme};
+use derpui_core::color::ColorU;
+use derpui_core::elements::{Rect, Stack};
+use derpui_core::fonts::{Cache, FamilyId, Weight};
+use derpui_core::prelude::*;
+use derpui_core::{platform, AddWindowOptions, AssetProvider, ModelContext};
 
 #[derive(Clone, Copy, RustEmbed)]
 #[folder = "../../app/assets"]
@@ -30,7 +30,7 @@ impl AssetProvider for Assets {
 }
 
 fn main() -> platform::app::TerminationResult {
-    let app_builder = warpui::platform::AppBuilder::new(
+    let app_builder = derpui::platform::AppBuilder::new(
         platform::AppCallbacks::default(),
         Box::new(ASSETS),
         None,
@@ -85,7 +85,7 @@ impl View for RootView {
         let callout = self.callout.render(
             appearance,
             CalloutParams {
-                title: "Meet your Warp input".into(),
+                title: "Meet your Derp input".into(),
                 text: "Your terminal input can detect natural language as well as commands.".into(),
                 step: StepStatus::new(1, 2),
                 right_button: CalloutButton {
@@ -119,7 +119,7 @@ impl TypedActionView for RootView {
     fn handle_action(&mut self, _action: &Self::Action, _ctx: &mut ViewContext<Self>) {}
 }
 
-fn mock_theme() -> WarpTheme {
+fn mock_theme() -> DerpTheme {
     let normal = AnsiColors::new(
         AnsiColor::from_u32(0x121212FF),
         AnsiColor::from_u32(0xC76156FF),
@@ -142,7 +142,7 @@ fn mock_theme() -> WarpTheme {
         AnsiColor::from_u32(0xFFFFFFFF),
     );
 
-    WarpTheme::new(
+    DerpTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -155,7 +155,7 @@ fn mock_theme() -> WarpTheme {
 }
 
 fn build_appearance(
-    theme: WarpTheme,
+    theme: DerpTheme,
     ui_font_family: FamilyId,
     ctx: &mut ModelContext<Appearance>,
 ) -> Appearance {

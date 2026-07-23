@@ -1,11 +1,11 @@
-use warpui::elements::{
+use derpui::elements::{
     Align, ClippedScrollStateHandle, ClippedScrollable, Container, Element, Empty, Fill, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable,
 };
-use warpui::platform::Cursor;
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::platform::Cursor;
+use derpui::presenter::ChildView;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WindowId,
 };
@@ -125,9 +125,9 @@ impl ResourceCenterMainView {
                             }
                             None => !is_tips_completed && !is_onboarded,
                         },
-                        // Expand Maximize Warp section once user has completed welcome tips,
+                        // Expand Maximize Derp section once user has completed welcome tips,
                         // and keep open after users have completed/skipped all tips
-                        FeatureSection::MaximizeWarp => match ChannelState::app_version() {
+                        FeatureSection::MaximizeDerp => match ChannelState::app_version() {
                             Some(version) => {
                                 match Settings::has_changelog_been_shown(version, ctx) {
                                     true => is_tips_completed || is_onboarded,

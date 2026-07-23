@@ -3,15 +3,15 @@ use std::path::{Path, PathBuf};
 
 use ai::skills::{parse_bundled_skill, ParsedSkill, SkillPathOrigin, SkillReference};
 use futures::TryStreamExt;
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warp_core::safe_warn;
-use warp_core::ui::icons::Icon;
-use warp_errors::report_error;
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warp_util::remote_path::RemotePath;
-use warpui::{AppContext, SingletonEntity};
+use derp_core::channel::ChannelState;
+use derp_core::features::FeatureFlag;
+use derp_core::safe_warn;
+use derp_core::ui::icons::Icon;
+use derp_errors::report_error;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::remote_path::RemotePath;
+use derpui::{AppContext, SingletonEntity};
 
 use super::SkillDescriptor;
 use crate::ai::mcp::{McpIntegration, TemplatableMCPServerManager};
@@ -23,7 +23,7 @@ use crate::settings::user_preferences_toml_file_path;
 pub enum BundledSkillActivation {
     /// Always active.
     Always,
-    /// Active only when a specific Warp feature is enabled.
+    /// Active only when a specific Derp feature is enabled.
     RequiresFeature(FeatureFlag),
     /// Active only when a specific MCP server is running.
     RequiresMcp(McpIntegration),
@@ -171,16 +171,16 @@ struct BundledSkillDefinition {
     icon: Icon,
 }
 
-/// Skills bundled with Warp for a single host.
+/// Skills bundled with Derp for a single host.
 #[derive(Debug, Default)]
 pub struct BundledSkill {
     definitions: HashMap<String, BundledSkillDefinition>,
 }
 
 impl BundledSkill {
-    /// Detect all skill definitions bundled with Warp for the local host.
+    /// Detect all skill definitions bundled with Derp for the local host.
     pub async fn detect() -> Self {
-        let Some(resources_dir) = warp_core::paths::bundled_resources_dir() else {
+        let Some(resources_dir) = derp_core::paths::bundled_resources_dir() else {
             return Self::default();
         };
         Self::detect_in_resources_dir(resources_dir).await
@@ -191,7 +191,7 @@ impl BundledSkill {
     ///
     /// Called directly by the remote-server daemon, whose resources live at
     /// the global install location rather than inside an app bundle (which
-    /// is what [`warp_core::paths::bundled_resources_dir`] resolves).
+    /// is what [`derp_core::paths::bundled_resources_dir`] resolves).
     pub(crate) async fn detect_in_resources_dir(resources_dir: PathBuf) -> Self {
         let (mut definitions, figma_definitions) = futures::join!(
             load_bundled_skill_definitions(&resources_dir),
@@ -337,7 +337,7 @@ impl BundledSkill {
     }
 }
 
-/// Load skill definitions bundled with Warp.
+/// Load skill definitions bundled with Derp.
 async fn load_bundled_skill_definitions(
     resources_dir: &Path,
 ) -> HashMap<String, BundledSkillDefinition> {
@@ -440,11 +440,11 @@ pub(crate) async fn read_bundled_skills(
 /// Builds the context map for bundled skill variable substitution.
 ///
 /// Supported variables:
-/// - `{{warp_server_url}}` - The server root URL (e.g., `https://api.warp.dev`)
-/// - `{{warp_cli_binary_name}}` - The CLI binary name (e.g., `warp` or `warp-cli`)
-/// - `{{warpctrl_binary_name}}` - The channel-specific Warp Control command name
-/// - `{{warpctrl_wrapper_path}}` - Path to the bundled Warp Control wrapper
-/// - `{{warp_url_scheme}}` - The URL scheme (e.g., `warp`, `warpdev`, `warppreview`)
+/// - `{{derp_server_url}}` - The server root URL (e.g., `https://api.derp.baby`)
+/// - `{{derp_cli_binary_name}}` - The CLI binary name (e.g., `derp` or `derp-cli`)
+/// - `{{derpctrl_binary_name}}` - The channel-specific Derp Control command name
+/// - `{{derpctrl_wrapper_path}}` - Path to the bundled Derp Control wrapper
+/// - `{{derp_url_scheme}}` - The URL scheme (e.g., `derp`, `derpdev`, `derppreview`)
 /// - `{{settings_schema_path}}` - Path to the bundled JSON settings schema
 /// - `{{skill_dir}}` - Path to the bundled skill's directory
 /// - `{{settings_file_path}}` - Path to the user's settings TOML file
@@ -455,27 +455,27 @@ pub(crate) fn build_bundled_skill_context(
 ) -> HashMap<String, String> {
     [
         (
-            "warp_server_url".to_owned(),
+            "derp_server_url".to_owned(),
             ChannelState::server_root_url().into_owned(),
         ),
         (
-            "warp_cli_binary_name".to_owned(),
+            "derp_cli_binary_name".to_owned(),
             ChannelState::channel().cli_command_name().to_owned(),
         ),
         (
-            "warpctrl_binary_name".to_owned(),
-            ChannelState::channel().warpctrl_command_name().to_owned(),
+            "derpctrl_binary_name".to_owned(),
+            ChannelState::channel().derpctrl_command_name().to_owned(),
         ),
         (
-            "warpctrl_wrapper_path".to_owned(),
+            "derpctrl_wrapper_path".to_owned(),
             resources_dir
                 .join("bin")
-                .join(ChannelState::channel().warpctrl_command_name())
+                .join(ChannelState::channel().derpctrl_command_name())
                 .display()
                 .to_string(),
         ),
         (
-            "warp_url_scheme".to_owned(),
+            "derp_url_scheme".to_owned(),
             ChannelState::url_scheme().to_owned(),
         ),
         (
@@ -501,11 +501,11 @@ pub(crate) fn build_bundled_skill_context(
 
 /// Returns the icon for a bundled skill, given its directory-based ID.
 /// Skills with a known brand (e.g. `pr-comments` → GitHub) get a
-/// branded icon; everything else falls back to the Warp logo.
+/// branded icon; everything else falls back to the Derp logo.
 pub(crate) fn icon_for_bundled_skill(skill_id: &str) -> Icon {
     match skill_id {
         "pr-comments" => Icon::Github,
-        _ => Icon::WarpLogoLight,
+        _ => Icon::DerpLogoLight,
     }
 }
 
@@ -521,7 +521,7 @@ pub(crate) fn activation_for_bundled_skill(
         "modify-settings" => {
             BundledSkillActivation::RequiresFile(resources_dir.join("settings_schema.json"))
         }
-        "warpctrl" => BundledSkillActivation::RequiresFeature(FeatureFlag::WarpControlCli),
+        "derpctrl" => BundledSkillActivation::RequiresFeature(FeatureFlag::DerpControlCli),
         _ => BundledSkillActivation::Always,
     }
 }

@@ -1,6 +1,6 @@
 # Product Spec: Double-click the hidden-section bar to fully expand
 
-**Issue:** [warpdotdev/warp#11622](https://github.com/warpdotdev/warp/issues/11622)
+**Issue:** [derpdotdev/derp#11622](https://github.com/derpdotdev/derp/issues/11622)
 **Figma:** none
 
 ## Summary

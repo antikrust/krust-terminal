@@ -1,7 +1,7 @@
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::context_flag::ContextFlag;
-use warpui::keymap::Trigger;
-use warpui::{SingletonEntity, ViewContext, ViewHandle};
+use derp_core::context_flag::ContextFlag;
+use derpui::keymap::Trigger;
+use derpui::{SingletonEntity, ViewContext, ViewHandle};
 
 use super::env_var_collection::{EnvVarCollectionAction, EnvVarCollectionView, VariableRowIndex};
 use crate::cloud_object::{GenericStringObjectFormat, Space};
@@ -370,7 +370,7 @@ impl EnvVarCollectionView {
         }
 
         // Fork: no "Copy link" — Drive objects are local-only, and object
-        // links point at Warp's servers. Sharing is file export.
+        // links point at Derp's servers. Sharing is file export.
 
         // Add "Duplicate" to menu
         if space != Some(Space::Shared) {

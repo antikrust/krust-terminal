@@ -6,23 +6,23 @@ use std::path::PathBuf;
 use std::sync::mpsc::SyncSender;
 
 #[cfg(not(target_family = "wasm"))]
-use warp_cli::agent::Harness;
+use derp_cli::agent::Harness;
 #[cfg(any(feature = "local_tty", not(target_family = "wasm")))]
-use warp_errors::report_error;
+use derp_errors::report_error;
 #[cfg(feature = "local_tty")]
-use warpui::geometry::vector::Vector2F;
+use derpui::geometry::vector::Vector2F;
 #[cfg(not(target_family = "wasm"))]
-use warpui::r#async::FutureExt;
+use derpui::r#async::FutureExt;
 #[cfg(feature = "local_tty")]
-use warpui::ModelHandle;
-use warpui::ViewContext;
+use derpui::ModelHandle;
+use derpui::ViewContext;
 #[cfg(not(target_family = "wasm"))]
-use warpui::{SingletonEntity, View, ViewHandle};
+use derpui::{SingletonEntity, View, ViewHandle};
 
 use super::TerminalView;
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent_sdk::driver::{
-    environment::prepare_environment, terminal::TerminalDriver, WARP_DRIVE_SYNC_TIMEOUT,
+    environment::prepare_environment, terminal::TerminalDriver, DERP_DRIVE_SYNC_TIMEOUT,
 };
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent_sdk::setup_observability::SetupClientEventReporter;
@@ -253,10 +253,10 @@ impl TerminalView {
         let sync_future = UpdateManager::as_ref(ctx).initial_load_complete();
         ctx.spawn(
             async move {
-                // Wait for Warp Drive initial sync so environment lookup succeeds.
+                // Wait for Derp Drive initial sync so environment lookup succeeds.
 
                 if sync_future
-                    .with_timeout(WARP_DRIVE_SYNC_TIMEOUT)
+                    .with_timeout(DERP_DRIVE_SYNC_TIMEOUT)
                     .await
                     .is_err()
                 {

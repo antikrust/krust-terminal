@@ -6,12 +6,12 @@ use std::sync::Arc;
 use itertools::Itertools;
 use prost::Message;
 use vec1::Vec1;
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warp_errors::report_error;
-use warp_multi_agent_api as api;
-use warpui::units::IntoPixels;
-use warpui::{EntityId, ModelHandle, SingletonEntity, ViewContext};
+use derp_core::channel::ChannelState;
+use derp_core::features::FeatureFlag;
+use derp_errors::report_error;
+use derp_multi_agent_api as api;
+use derpui::units::IntoPixels;
+use derpui::{EntityId, ModelHandle, SingletonEntity, ViewContext};
 
 use super::blocklist_filter::exchanges_for_blocklist;
 use super::DEFAULT_AI_BLOCK_HEIGHT;
@@ -98,7 +98,7 @@ pub enum ConversationRestorationInNewPaneType {
         /// True when the fork is paired with a follow-up prompt or summarize that
         /// will be sent immediately after restore.
         /// We skip the `couldn't find original conversation directory` ephemeral
-        /// hint in that case so the warping indicator (gated on
+        /// hint in that case so the derping indicator (gated on
         /// `ephemeral_message_model.current_message().is_none()` in
         /// `BlocklistAIStatusBar::render`) isn't suppressed by the hint.
         has_initial_query: bool,

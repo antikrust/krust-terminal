@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use warp_core::settings::macros::define_settings_group;
-use warp_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
+use derp_core::settings::macros::define_settings_group;
+use derp_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
 
 use crate::banner::BannerState;
 use crate::resource_center::Tip;
@@ -15,7 +15,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.show_warning_before_quitting",
-        description: "Whether to show a warning dialog before quitting Warp.",
+        description: "Whether to show a warning dialog before quitting Derp.",
     },
     quit_on_last_window_closed: QuitOnLastWindowClosed {
         type: bool,
@@ -25,7 +25,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.quit_on_last_window_closed",
-        description: "Whether to quit Warp when the last window is closed.",
+        description: "Whether to quit Derp when the last window is closed.",
     },
     restore_session: RestoreSession {
         type: bool,
@@ -35,7 +35,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.restore_session",
-        description: "Whether to restore the previous session when Warp starts up.",
+        description: "Whether to restore the previous session when Derp starts up.",
     },
     add_app_as_login_item: LoginItem {
         type: bool,
@@ -48,13 +48,13 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.login_item",
-        description: "Whether to launch Warp automatically when you log in.",
+        description: "Whether to launch Derp automatically when you log in.",
     },
     // Records whether the app has been added as a login item.
     // If it has, we don't try to add it again unless the user explicitly
     // retoggles the setting. This is to allow a user to remove the login item
     // directly from their OS's startup UI and not have it re-added when they
-    // next start Warp.
+    // next start Derp.
     app_added_as_login_item: AppAddedAsLoginItem {
         type: bool,
         default: false,
@@ -116,7 +116,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    open_in_warp_banner_dismissed_for_markdown: OpenInWarpBannerDismissedMarkdown {
+    open_in_derp_banner_dismissed_for_markdown: OpenInDerpBannerDismissedMarkdown {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
@@ -124,7 +124,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    open_in_warp_banner_dismissed_for_code_and_text: OpenInWarpBannerDismissedCode {
+    open_in_derp_banner_dismissed_for_code_and_text: OpenInDerpBannerDismissedCode {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
@@ -148,10 +148,10 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    // One-time flag tracking whether the OpenWarp launch modal has already been
+    // One-time flag tracking whether the OpenDerp launch modal has already been
     // shown to the user. Not user-visible; modeled as a setting so it's only
     // shown once per user regardless of the number of devices they use.
-    did_check_to_trigger_openwarp_launch_modal: DidShowOpenWarpLaunchModal {
+    did_check_to_trigger_openderp_launch_modal: DidShowOpenDerpLaunchModal {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,

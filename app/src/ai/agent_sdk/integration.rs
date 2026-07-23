@@ -1,12 +1,12 @@
 use futures::future;
-use warp_cli::integration::{CreateIntegrationArgs, IntegrationCommand, UpdateIntegrationArgs};
-use warp_cli::provider::ProviderType;
-use warp_cli::GlobalOptions;
-use warp_graphql::mutations::create_simple_integration::CreateSimpleIntegrationOutput;
-use warp_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use warp_graphql::queries::get_simple_integrations::SimpleIntegrationsOutput;
-use warpui::platform::TerminationMode;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use derp_cli::integration::{CreateIntegrationArgs, IntegrationCommand, UpdateIntegrationArgs};
+use derp_cli::provider::ProviderType;
+use derp_cli::GlobalOptions;
+use derp_graphql::mutations::create_simple_integration::CreateSimpleIntegrationOutput;
+use derp_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use derp_graphql::queries::get_simple_integrations::SimpleIntegrationsOutput;
+use derpui::platform::TerminationMode;
+use derpui::{AppContext, ModelContext, SingletonEntity};
 
 use super::common::{EnvironmentChoice, ResolveConfigurationError};
 use super::integration_output;
@@ -65,8 +65,8 @@ impl IntegrationCommandRunner {
 
     fn create(&self, args: CreateIntegrationArgs, ctx: &mut ModelContext<Self>) {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        let setup_future = future::try_join(refresh_future, warp_drive_sync_future);
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        let setup_future = future::try_join(refresh_future, derp_drive_sync_future);
 
         ctx.spawn(setup_future, move |runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -377,8 +377,8 @@ impl IntegrationCommandRunner {
 
     fn update(&self, args: UpdateIntegrationArgs, ctx: &mut ModelContext<Self>) {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let warp_drive_sync_future = super::common::refresh_warp_drive(ctx);
-        let setup_future = future::try_join(refresh_future, warp_drive_sync_future);
+        let derp_drive_sync_future = super::common::refresh_derp_drive(ctx);
+        let setup_future = future::try_join(refresh_future, derp_drive_sync_future);
 
         ctx.spawn(setup_future, move |runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -521,7 +521,7 @@ impl IntegrationCommandRunner {
     }
 }
 
-impl warpui::Entity for IntegrationCommandRunner {
+impl derpui::Entity for IntegrationCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for IntegrationCommandRunner {}

@@ -20,7 +20,7 @@ Figma: none provided
    - The "Handoff to cloud" footer chip is not rendered.
    - `WorkspaceAction::OpenLocalToCloudHandoffPane` dispatches are no-ops.
 
-4. The setting is persisted locally and synced to cloud via the existing `define_settings_group!` / Warp Drive settings infrastructure, following the pattern of other AI settings (e.g. `orchestration_enabled`). TOML path: `agents.warp_agent.other.cloud_handoff_enabled`.
+4. The setting is persisted locally and synced to cloud via the existing `define_settings_group!` / Derp Drive settings infrastructure, following the pattern of other AI settings (e.g. `orchestration_enabled`). TOML path: `agents.derp_agent.other.cloud_handoff_enabled`.
 
 ### Setting: `&` prefix entrypoint enabled
 

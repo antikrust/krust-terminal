@@ -1,4 +1,4 @@
-use warpui_core::text::TextBuffer;
+use derpui_core::text::TextBuffer;
 
 use crate::vim::{Direction, FindCharDestination, FindCharMotion};
 

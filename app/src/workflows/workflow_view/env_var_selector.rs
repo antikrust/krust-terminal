@@ -1,6 +1,6 @@
 use itertools::Itertools as _;
-use warpui::elements::ChildView;
-use warpui::{
+use derpui::elements::ChildView;
+use derpui::{
     Element as _, Entity, SingletonEntity as _, TypedActionView, View, ViewAsRef, ViewContext,
     ViewHandle,
 };
@@ -130,7 +130,7 @@ impl View for EnvVarSelector {
         "EnvVarSelector"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, _app: &derpui::AppContext) -> Box<dyn derpui::Element> {
         ChildView::new(&self.dropdown).finish()
     }
 }

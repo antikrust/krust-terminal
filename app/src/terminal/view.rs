@@ -25,14 +25,14 @@ pub use init_project::{
 use onboarding::callout::{FinalState, OnboardingCalloutViewEvent, OnboardingQuery};
 use onboarding::{OnboardingCalloutView, OnboardingKeybindings};
 use repo_metadata::CanonicalizedPath;
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
 
 use crate::ai::block_context::BlockContext;
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
 pub(crate) mod docker_sandbox;
 mod link_detection;
-mod open_in_warp;
+mod open_in_derp;
 mod pane_impl;
 mod passive_suggestions;
 mod pending_user_query;
@@ -67,13 +67,13 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use action::RememberForWarpification;
+use action::RememberForDerpification;
 pub use action::{AgentOnboardingVersion, OnboardingIntention, OnboardingVersion, TerminalAction};
 use ai::api_keys::{ApiKeyManager, AwsCredentialsState};
 use ai::index::full_source_code_embedding::manager::{BuildSource, CodebaseIndexManager};
 use async_channel::{Receiver, Sender};
 use base64::Engine as _;
-use block_banner::{render_warpification_banner, WarpifyBannerState};
+use block_banner::{render_derpification_banner, DerpifyBannerState};
 pub use block_banner::{WithinBlockBanner, BLOCK_BANNER_HEIGHT};
 use block_onboarding::onboarding_drive_sharing_block::OnboardingDriveSharingBlock;
 use bookmarks::render_floating_block_snapshot;
@@ -91,11 +91,11 @@ use inline_banner::{
     render_alias_expansion_banner, render_aws_bedrock_login_banner,
     render_aws_cli_not_installed_banner, render_inline_notifications_discovery_banner,
     render_inline_notifications_error_banner, render_inline_shared_session_ended_banner,
-    render_inline_shared_session_started_banner, render_open_in_warp_banner,
+    render_inline_shared_session_started_banner, render_open_in_derp_banner,
     render_shell_process_terminated_banner, render_vim_mode_banner, AliasExpansionBanner,
     AliasExpansionBannerAction, AnonymousUserAISignUpBannerState, AnonymousUserLoginBannerAction,
     AwsBedrockLoginBannerAction, AwsBedrockLoginBannerState, AwsCliNotInstalledBannerAction,
-    AwsCliNotInstalledBannerState, ByoLlmAuthBannerSessionState, OpenInWarpBannerState,
+    AwsCliNotInstalledBannerState, ByoLlmAuthBannerSessionState, OpenInDerpBannerState,
     VimModeBannerAction,
 };
 pub use inline_banner::{NotificationsDiscoveryBannerAction, NotificationsErrorBannerAction};
@@ -131,28 +131,28 @@ use sum_tree::SeekBias;
 use use_agent_footer::UseAgentToolbar;
 use uuid::Uuid;
 use vec1::vec1;
-use warp_cli::agent::Harness;
-use warp_core::channel::ChannelState;
-use warp_core::command::ExitCode;
-use warp_core::context_flag::ContextFlag;
-use warp_core::r#async::debounce;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::user_preferences::GetUserPreferences as _;
-use warp_errors::{report_error, report_if_error};
-use warp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_cli::agent::Harness;
+use derp_core::channel::ChannelState;
+use derp_core::command::ExitCode;
+use derp_core::context_flag::ContextFlag;
+use derp_core::r#async::debounce;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_core::user_preferences::GetUserPreferences as _;
+use derp_errors::{report_error, report_if_error};
+use derp_util::local_or_remote_path::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
-use warp_util::path::LineAndColumnArg;
-use warp_util::path::ShellFamily;
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::assets::asset_cache::{AssetCache, AssetCacheEvent};
-use warpui::clipboard::ClipboardContent;
-use warpui::clipboard_utils::get_image_filepaths_from_paths;
-use warpui::elements::new_scrollable::{
+use derp_util::path::LineAndColumnArg;
+use derp_util::path::ShellFamily;
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::assets::asset_cache::{AssetCache, AssetCacheEvent};
+use derpui::clipboard::ClipboardContent;
+use derpui::clipboard_utils::get_image_filepaths_from_paths;
+use derpui::elements::new_scrollable::{
     AxisConfiguration, ClippedAxisConfiguration, DualAxisConfig, NewScrollableElement,
     ScrollableAppearance, SingleAxisConfig,
 };
-use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{
+use derpui::elements::shimmering_text::ShimmeringTextStateHandle;
+use derpui::elements::{
     get_rich_content_position_id, Align, Border, ChildAnchor, ChildView, Clipped,
     ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, DropTarget, DropTargetData, Empty, EventHandler, Expanded, Fill, Flex,
@@ -161,20 +161,20 @@ use warpui::elements::{
     Radius, Rect, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth,
     Shrinkable, Stack, Text,
 };
-use warpui::event::ModifiersState;
-use warpui::fonts::{Cache as FontCache, FamilyId, Properties, Style};
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::image_cache::ImageType;
-use warpui::keymap::Keystroke;
-use warpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
-use warpui::platform::{Cursor, OperatingSystem};
-use warpui::r#async::executor::Background;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::text::SelectionType;
-use warpui::ui_components::components::UiComponent;
-use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use warpui::windowing::WindowManager;
-use warpui::{
+use derpui::event::ModifiersState;
+use derpui::fonts::{Cache as FontCache, FamilyId, Properties, Style};
+use derpui::geometry::vector::{vec2f, Vector2F};
+use derpui::image_cache::ImageType;
+use derpui::keymap::Keystroke;
+use derpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
+use derpui::platform::{Cursor, OperatingSystem};
+use derpui::r#async::executor::Background;
+use derpui::r#async::{SpawnedFutureHandle, Timer};
+use derpui::text::SelectionType;
+use derpui::ui_components::components::UiComponent;
+use derpui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use derpui::windowing::WindowManager;
+use derpui::{
     end_trace_after_next, record_trace_event, windowing, AccessibilityData, AppContext,
     BlurContext, CursorInfo, Element, Entity, EntityId, EventContext, FocusContext, ModelAsRef,
     ModelHandle, SingletonEntity, Tracked, TypedActionView, View, ViewAsRef, ViewContext,
@@ -198,10 +198,10 @@ use super::model::secrets::RichContentSecretTooltipInfo;
 use super::model::selection::ExpandedSelectionRange;
 use super::model::session::SessionBootstrappedEvent;
 use super::settings::AltScreenPaddingMode;
-use super::ssh::util::{parse_interactive_ssh_command, InteractiveSshCommand, SshWarpifyCommand};
-use super::warpify::success_block::{WarpifySuccessBlock, WarpifySuccessBlockEvent};
-use super::warpify::trigger_state::{SshBlockState, WarpifyState};
-use super::warpify::WarpificationSource;
+use super::ssh::util::{parse_interactive_ssh_command, InteractiveSshCommand, SshDerpifyCommand};
+use super::derpify::success_block::{DerpifySuccessBlock, DerpifySuccessBlockEvent};
+use super::derpify::trigger_state::{SshBlockState, DerpifyState};
+use super::derpify::DerpificationSource;
 use super::{cli_agent, CLIAgent, GridType};
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId, ConversationStatus};
@@ -290,7 +290,7 @@ use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDo
 use crate::ai::execution_profiles::profiles::{AIExecutionProfilesModel, ClientProfileId};
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
-use crate::ai::loading::shimmering_warp_loading_text;
+use crate::ai::loading::shimmering_derp_loading_text;
 use crate::ai::mcp::TemplatableMCPServerManager;
 #[cfg(feature = "local_fs")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
@@ -335,7 +335,7 @@ use crate::code_review::DiffSetScope;
 use crate::context_chips::prompt::{Prompt, PromptSelection};
 use crate::context_chips::prompt_type::PromptType;
 use crate::context_chips::ContextChipKind;
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::DerpDriveSettings;
 use crate::drive::sharing::ShareableObject;
 use crate::drive::CloudObjectTypeAndId;
 use crate::editor::{AutosuggestionType, CrdtOperation, EditorAction};
@@ -509,9 +509,9 @@ use crate::terminal::view::ssh_tmux_deprecation_banner::{
 };
 use crate::terminal::view::telemetry::PromptSuggestionFallbackReason;
 use crate::terminal::view::zero_state_block::TerminalViewZeroStateBlock;
-use crate::terminal::warpify::render::render_subshell_separator;
-use crate::terminal::warpify::settings::WarpifySettings;
-use crate::terminal::warpify::SubshellSource;
+use crate::terminal::derpify::render::render_subshell_separator;
+use crate::terminal::derpify::settings::DerpifySettings;
+use crate::terminal::derpify::SubshellSource;
 use crate::terminal::waterfall_gap_element::WaterfallGapElement;
 use crate::terminal::writeable_pty::{PtyIntent, PtyIntentEvent, TerminalSurface};
 use crate::terminal::{
@@ -529,7 +529,7 @@ use crate::terminal::{
     CellSizeAndWindowPadding, History, HistoryEntry, ShellHost, ShellLaunchData, SizeInfo,
     SizeUpdate, SizeUpdateReason,
 };
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::DerpTheme;
 use crate::throttle::throttle;
 use crate::ui_components::icons::{self};
 use crate::util::bindings::{
@@ -542,7 +542,7 @@ use crate::util::color::darken;
 use crate::util::file::external_editor::{settings::EditorLayout, EditorSettings};
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::{
-    renders_in_warp_notebook_viewer, resolve_file_target, FileTarget,
+    renders_in_derp_notebook_viewer, resolve_file_target, FileTarget,
 };
 use crate::util::repo_detection::{detect_possible_git_repo, RepoDetectionSessionType};
 use crate::util::truncation::truncate_from_end;
@@ -631,7 +631,7 @@ pub const WAKEUP_THROTTLE_PERIOD: Duration =
 
 pub const EXECUTE_PENDING_COMMAND_DELAY: Duration = Duration::from_millis(100);
 
-pub const WARP_PROMPT_HEIGHT_LINES: f32 = 0.9;
+pub const DERP_PROMPT_HEIGHT_LINES: f32 = 0.9;
 
 const SCROLLBAR_WIDTH: ScrollbarWidth = ScrollbarWidth::Auto;
 
@@ -663,7 +663,7 @@ const PROMPT_COMPATIBILITY_URL: &str =
 
 /// Link to troubleshooting steps for ControlMaster errors.
 const CONTROLMASTER_ISSUES_URL: &str =
-    "https://therob.lol/derp-terminal/help/terminal/warpify/ssh-legacy#troubleshooting";
+    "https://therob.lol/derp-terminal/help/terminal/derpify/ssh-legacy#troubleshooting";
 
 /// Link to instructions on how to update p10k.
 const P10K_UPDATE_INSTRUCTIONS_URL: &str =
@@ -703,10 +703,10 @@ enum Osc52ClipboardBlockedType {
 /// Key used in user defaults to save whether the user has seen the banner.
 pub const ALIAS_EXPANSION_BANNER_SEEN_KEY: &str = "AliasExpansionBannerSeen";
 
-/// Delay between receiving preexec hook for a command we want to auto-warpify
-/// and triggering the warpification (subshell bootstrapping).
+/// Delay between receiving preexec hook for a command we want to auto-derpify
+/// and triggering the derpification (subshell bootstrapping).
 /// Reached this number after experimenting with different values to find a reliable delay.
-const AUTO_WARPIFY_DELAY: u64 = 1000;
+const AUTO_DERPIFY_DELAY: u64 = 1000;
 
 /// Binding names to be customized if the user indicates they prefer
 /// Emacs-style keybindings instead of IDE-style keybindings.
@@ -719,7 +719,7 @@ const DEFAULT_AI_BLOCK_HEIGHT: f32 = 96.;
 
 pub const DEFAULT_ASK_AI_AUTOSUGGESTION_TEXT: &str = "What happened here?";
 
-const WARP_MD_PATH: &str = "WARP.md";
+const DERP_MD_PATH: &str = "DERP.md";
 
 pub const LONG_RUNNING_AGENT_REQUESTED_COMMAND_CONTEXT_KEY: &str = "LongRunningRequestedCommand";
 pub const LONG_RUNNING_AGENT_REQUESTED_COMMAND_USER_TOOK_OVER_CONTEXT_KEY: &str =
@@ -807,16 +807,16 @@ impl NotificationsTrigger {
     pub fn discovery_banner_copy(&self) -> &'static str {
         match self {
             NotificationsTrigger::LongRunningCommand(..) => {
-                "Warp can notify you when long-running commands finish."
+                "Derp can notify you when long-running commands finish."
             }
             NotificationsTrigger::AgentTaskCompleted(..) => {
-                "Warp can notify you when an agent finishes responding."
+                "Derp can notify you when an agent finishes responding."
             }
             NotificationsTrigger::NeedsAttention => {
-                "Warp can notify you when a command or agent needs your attention."
+                "Derp can notify you when a command or agent needs your attention."
             }
             NotificationsTrigger::PasswordPrompt => {
-                "Warp can notify you when you're prompted to enter a password."
+                "Derp can notify you when you're prompted to enter a password."
             }
         }
     }
@@ -1020,7 +1020,7 @@ pub enum InlineBannerType {
     SharedSessionStart,
     SharedSessionEnd,
     ShellProcessTerminated,
-    OpenInWarp,
+    OpenInDerp,
     VimMode,
     CodebaseIndexSpeedbump,
     AgentModeSetup,
@@ -1048,7 +1048,7 @@ impl InlineBannerType {
             | Self::SharedSessionStart
             | Self::SharedSessionEnd
             | Self::ShellProcessTerminated
-            | Self::OpenInWarp
+            | Self::OpenInDerp
             | Self::VimMode => false,
         }
     }
@@ -1090,7 +1090,7 @@ struct InlineBannersState {
     /// banner to display.
     shell_process_terminated_banner: Option<ShellProcessTerminatedBanner>,
 
-    open_in_warp_banner: Option<OpenInWarpBannerState>,
+    open_in_derp_banner: Option<OpenInDerpBannerState>,
 
     vim_banner_state: Option<VimModeBannerState>,
 
@@ -1462,7 +1462,7 @@ pub enum InputContextMenuAction {
     Paste,
     ShowCommandSearch,
     ShowAICommandSearch,
-    AskWarpAI,
+    AskDerpAI,
     SaveAsWorkflow,
     ToggleInputHintText,
 }
@@ -1548,7 +1548,7 @@ impl fmt::Debug for InputContextMenuAction {
             Paste => f.write_str("Paste"),
             ShowCommandSearch => f.write_str("CommandSearch"),
             ShowAICommandSearch => f.write_str("AICommandSearch"),
-            AskWarpAI => f.write_str("AskWarpAI"),
+            AskDerpAI => f.write_str("AskDerpAI"),
             SaveAsWorkflow => f.write_str("SaveAsWorkflow"),
             ToggleInputHintText => f.write_str("ToggleInputHintText"),
         }
@@ -1692,7 +1692,7 @@ pub enum Event {
     OpenWorkflowModalWithCloudWorkflow(SyncId),
     // Tell the pane group to open the workflow modal with an unsaved workflow.
     OpenWorkflowModalWithTemporary(Box<Workflow>),
-    OpenWarpDriveObjectInPane(ObjectUid),
+    OpenDerpDriveObjectInPane(ObjectUid),
     OpenSuggestedAgentModeWorkflowModal {
         workflow_and_id: SuggestedAgentModeWorkflowAndId,
     },
@@ -1747,19 +1747,19 @@ pub enum Event {
     BlockStarted {
         is_for_in_band_command: bool,
     },
-    /// Tell the pane group to open a file within Warp.
-    OpenFileInWarp {
+    /// Tell the pane group to open a file within Derp.
+    OpenFileInDerp {
         path: PathBuf,
         /// The session that the file belongs to.
         session: Arc<Session>,
     },
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInDerp {
         source: CodeSource,
         layout: EditorLayout,
     },
     #[cfg(feature = "local_fs")]
-    PreviewCodeInWarp {
+    PreviewCodeInDerp {
         source: CodeSource,
     },
     OpenCodeDiff {
@@ -2059,7 +2059,7 @@ pub enum Event {
 #[derive(Clone, Copy, Debug)]
 pub enum LeftPanelTargetView {
     FileTree,
-    WarpDrive,
+    DerpDrive,
 }
 
 #[derive(Clone)]
@@ -2297,7 +2297,7 @@ impl BlocklistAIRenderContext {
     }
 
     /// Returns the AI context stripe color to use for a block, if any.
-    pub fn context_color_for_block(&self, block: &Block, theme: &WarpTheme) -> Option<ColorU> {
+    pub fn context_color_for_block(&self, block: &Block, theme: &DerpTheme) -> Option<ColorU> {
         match self.context_inclusion_state_for_block(block) {
             Some(AIContextInclusionState::Active) => self.context_color(theme),
             _ => None,
@@ -2308,7 +2308,7 @@ impl BlocklistAIRenderContext {
     pub fn context_color_for_rich_content(
         &self,
         rich_content: &RichContentMetadata,
-        theme: &WarpTheme,
+        theme: &DerpTheme,
     ) -> Option<ColorU> {
         match rich_content {
             RichContentMetadata::AIBlock(ai_metadata)
@@ -2327,7 +2327,7 @@ impl BlocklistAIRenderContext {
 
     /// The context color to use for a block, given its conversation phase.
     /// This assumes the block is part of the active conversation.
-    fn context_color(&self, theme: &WarpTheme) -> Option<ColorU> {
+    fn context_color(&self, theme: &DerpTheme) -> Option<ColorU> {
         (self.is_ai_input_enabled && self.should_highlight_context).then(|| ai_brand_color(theme))
     }
 }
@@ -2374,7 +2374,7 @@ struct TerminalViewMouseStates {
     copy_secrets_tooltip: MouseStateHandle,
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
-    open_in_warp_tooltip: MouseStateHandle,
+    open_in_derp_tooltip: MouseStateHandle,
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     show_in_file_explorer_tooltip: MouseStateHandle,
     jump_to_bottom_of_block_button: MouseStateHandle,
@@ -2446,7 +2446,7 @@ impl Default for TerminalViewStateChange {
 }
 
 /// Whether or not this is the active terminal session. The active session for a pane group
-/// is the one used for executing workflows, Warp AI suggestions, etc.
+/// is the one used for executing workflows, Derp AI suggestions, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActiveSessionState {
     Active,
@@ -2626,7 +2626,7 @@ pub struct TerminalView {
     control_master_error_banner_suppressed: bool,
 
     /// Banner to show if we detect a configuration in the user's rc files that
-    /// is incompatible with Warp.
+    /// is incompatible with Derp.
     incompatible_configuration_banner: ViewHandle<Banner<TerminalAction>>,
     is_incompatible_configuration_banner_open: bool,
 
@@ -2695,14 +2695,14 @@ pub struct TerminalView {
     ///   2. Whether this View's window is the active window.
     ///
     /// We need to derive and cache this state on this View in order to correctly implement focus
-    /// reporting. Because focus is window-scoped, i.e. warpui does not consider activating a
+    /// reporting. Because focus is window-scoped, i.e. derpui does not consider activating a
     /// different window as blurring the focused View in the previously active window, we cannot
-    /// simply rely on the warpui::View::on_blur and on_focus methods to report focus-in/out to the
+    /// simply rely on the derpui::View::on_blur and on_focus methods to report focus-in/out to the
     /// PTY, as those methods will not trigger when changing active windows. The singleton model
-    /// [`warpui::windowing::State`] will allow us to subscribe to active window change. So, we can
+    /// [`derpui::windowing::State`] will allow us to subscribe to active window change. So, we can
     /// subscribe to that and have that callback also report focus-in/out. However, that will still
     /// leave cases for potential double-reporting, as a single click can trigger both
-    /// [`warpui::View::on_focus`] and emit a [`warpui::windowing::StateEvent`]. This field will
+    /// [`derpui::View::on_focus`] and emit a [`derpui::windowing::StateEvent`]. This field will
     /// guard against that double- reporting case, though it needs to be kept in sync with the
     /// focused view and active window.
     is_focused_and_active: bool,
@@ -2759,7 +2759,7 @@ pub struct TerminalView {
 
     onboarding_callout_view: Option<ViewHandle<onboarding::OnboardingCalloutView>>,
 
-    /// The type of the subshell that we will bootstrap/"warpify"" on the next [`AfterBlockStarted`]
+    /// The type of the subshell that we will bootstrap/"derpify"" on the next [`AfterBlockStarted`]
     /// terminal model event. Will only be `Some` with a [`ShellType`] we can bootstrap.
     pending_auto_bootstrap_shell_type: Option<ShellType>,
     env_vars: Vec<EnvVar>,
@@ -2821,7 +2821,7 @@ pub struct TerminalView {
 
     find_model: ModelHandle<TerminalFindModel>,
 
-    warpify_state: WarpifyState,
+    derpify_state: DerpifyState,
 
     /// Misery mode state for this terminal. Session-scoped so its
     /// anti-repetition memory spans the whole terminal rather than resetting
@@ -2930,9 +2930,9 @@ pub struct TerminalView {
     /// Mouse state handle for the conversation details panel toggle button in the pane header.
     /// Only available on non-WASM platforms (WASM uses a per-window button instead).
     #[cfg(not(target_arch = "wasm32"))]
-    conversation_details_panel_toggle_mouse_state: warpui::elements::MouseStateHandle,
+    conversation_details_panel_toggle_mouse_state: derpui::elements::MouseStateHandle,
     /// Mouse state handle for the ambient agent cancel button in the pane header.
-    ambient_agent_cancel_mouse_state: warpui::elements::MouseStateHandle,
+    ambient_agent_cancel_mouse_state: derpui::elements::MouseStateHandle,
 
     /// First-time cloud agent setup view (full-screen overlay for creating initial environment).
     first_time_cloud_agent_setup_view: ViewHandle<ambient_agent::FirstTimeCloudAgentSetupView>,
@@ -3954,7 +3954,7 @@ impl TerminalView {
                 FormattedTextFragment::plain_text("). Enabling the SSH extension in "),
                 FormattedTextFragment::hyperlink_action(
                     "settings",
-                    TerminalAction::ShowWarpifySettings,
+                    TerminalAction::ShowDerpifySettings,
                 ),
                 FormattedTextFragment::plain_text(" may resolve this issue."),
             ]))
@@ -3967,7 +3967,7 @@ impl TerminalView {
         let incompatible_configuration_banner = ctx.add_typed_action_view(|_| {
             Banner::new(BannerTextContent::formatted_text(vec![
                 FormattedTextFragment::plain_text(
-                    "Your shell configuration is incompatible with Warp...  ",
+                    "Your shell configuration is incompatible with Derp...  ",
                 ),
                 FormattedTextFragment::hyperlink("More info", KNOWN_ISSUES_URL),
             ]))
@@ -4327,7 +4327,7 @@ impl TerminalView {
                 ConversationDetailsPanelEvent::OpenPlanNotebook { notebook_uid } => {
                     // Convert NotebookId -> SyncId -> ObjectUid (String)
                     let object_uid = SyncId::from(*notebook_uid).uid();
-                    ctx.emit(Event::OpenWarpDriveObjectInPane(object_uid));
+                    ctx.emit(Event::OpenDerpDriveObjectInPane(object_uid));
                 }
             }
         });
@@ -4448,7 +4448,7 @@ impl TerminalView {
             input_position_id,
             input_hoverable_handle: Default::default(),
             find_model,
-            warpify_state: Default::default(),
+            derpify_state: Default::default(),
             misery: Default::default(),
             cancel_command_keystroke: keybinding_name_to_keystroke(CANCEL_COMMAND_KEYBINDING, ctx),
             is_file_drop_target: false,
@@ -5263,15 +5263,15 @@ impl TerminalView {
             return true;
         }
 
-        // Terminal prompt path: the Warp prompt is active when honor_ps1 is
+        // Terminal prompt path: the Derp prompt is active when honor_ps1 is
         // off, or when UDI overrides PS1. The prompt must include a chip backed
         // by git status.
-        let is_using_warp_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
+        let is_using_derp_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
             || InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-        if is_using_warp_prompt && Self::should_retry_default_pr_chip_validation(ctx) {
+        if is_using_derp_prompt && Self::should_retry_default_pr_chip_validation(ctx) {
             return true;
         }
-        is_using_warp_prompt && Self::uses_git_status_chips(Prompt::as_ref(ctx).chip_kinds())
+        is_using_derp_prompt && Self::uses_git_status_chips(Prompt::as_ref(ctx).chip_kinds())
     }
 
     fn needs_git_status_for_agent_context(&self, ctx: &AppContext) -> bool {
@@ -5300,9 +5300,9 @@ impl TerminalView {
             return true;
         }
 
-        let is_using_warp_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
+        let is_using_derp_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
             || InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-        is_using_warp_prompt
+        is_using_derp_prompt
             && (Self::should_retry_default_pr_chip_validation(ctx)
                 || Prompt::as_ref(ctx)
                     .chip_kinds()
@@ -7446,7 +7446,7 @@ impl TerminalView {
                     .unwrap_or(false);
 
                 if maybe_modified_files {
-                    self.refresh_warp_prompt(ctx);
+                    self.refresh_derp_prompt(ctx);
                     ctx.notify();
                 }
 
@@ -7633,7 +7633,7 @@ impl TerminalView {
                             .requested_command_copied_from_doc(action_id, ctx)
                     })
                     .and_then(|citation| {
-                        if let AIAgentCitation::WarpDriveObject { uid } = citation {
+                        if let AIAgentCitation::DerpDriveObject { uid } = citation {
                             CloudModel::as_ref(ctx).get_workflow_by_uid(&uid)
                         } else {
                             None
@@ -7914,7 +7914,7 @@ impl TerminalView {
     }
 
     #[cfg(any(test, feature = "integration_tests"))]
-    pub fn sessions<'a, A: warpui::ModelAsRef>(&self, ctx: &'a A) -> &'a Sessions {
+    pub fn sessions<'a, A: derpui::ModelAsRef>(&self, ctx: &'a A) -> &'a Sessions {
         self.sessions.as_ref(ctx)
     }
 
@@ -9123,7 +9123,7 @@ impl TerminalView {
     /// events, allow it to handle the event.
     ///
     /// TODO(CORE-3415): We should probably remove the FixedBindings for ctrl-c
-    /// in the SSH warpification blocks and handle them here as well.
+    /// in the SSH derpification blocks and handle them here as well.
     fn maybe_handle_ctrl_c_in_rich_content_block(&mut self, ctx: &mut ViewContext<Self>) {
         if self.active_ai_block(ctx).is_some() {
             self.cancel_active_conversation_via_status_bar(ctx);
@@ -9199,7 +9199,7 @@ impl TerminalView {
     /// the workspace to derive `PendingRemoteSession` without storing
     /// mutable state on the workspace itself.
     pub fn has_pending_ssh_command(&self) -> bool {
-        self.warpify_state.get_pending_ssh_host().is_some() && self.is_long_running()
+        self.derpify_state.get_pending_ssh_host().is_some() && self.is_long_running()
     }
 
     /// Like `is_long_running`, but also requires the user to be in control of the command
@@ -9307,7 +9307,7 @@ impl TerminalView {
         });
     }
 
-    /// Receiving the warpui::Event::KeyDown event from a child element.
+    /// Receiving the derpui::Event::KeyDown event from a child element.
     /// Generally, this should be control characters rather than printable characters.
     fn keydown_on_terminal(&mut self, characters: &str, ctx: &mut ViewContext<Self>) {
         if self.is_long_running() {
@@ -9350,7 +9350,7 @@ impl TerminalView {
 
         was_bootstrap_script_echoed || is_shared_session_executor
     }
-    /// Receiving a warpui::Event::TypedCharacters event from a child element.
+    /// Receiving a derpui::Event::TypedCharacters event from a child element.
     /// We can assume `characters` consists of all printable characters, and therefore,
     /// can go into the input box.
     fn typed_characters_on_terminal(&mut self, characters: &str, ctx: &mut ViewContext<Self>) {
@@ -9786,7 +9786,7 @@ impl TerminalView {
                     .is_some_and(|session| {
                         matches!(
                             session.session_type(),
-                            SessionType::WarpifiedRemote {
+                            SessionType::DerpifiedRemote {
                                 host_id: Some(_),
                                 ..
                             }
@@ -9846,7 +9846,7 @@ impl TerminalView {
         triggered_by_rc_file_snippet: bool,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.dismiss_warpify_banner(&RememberForWarpification::DoNotRememberSubshellCommand, ctx);
+        self.dismiss_derpify_banner(&RememberForDerpification::DoNotRememberSubshellCommand, ctx);
 
         // Record the active long-running block so we can hide it later once the remote
         // actually confirms subshell bootstrap is in progress.
@@ -9859,7 +9859,7 @@ impl TerminalView {
                 .is_active_and_long_running()
             {
                 let block_id = model.block_list().active_block_id().clone();
-                self.warpify_state.set_block_id(block_id);
+                self.derpify_state.set_block_id(block_id);
             }
         }
 
@@ -9882,7 +9882,7 @@ impl TerminalView {
 
     /// Util method to update the ssh block, with a lock
     fn update_long_running_ssh_block_with_lock(&self, f: impl FnOnce(&mut Block)) -> bool {
-        if let Some(block_id) = self.warpify_state.block_id() {
+        if let Some(block_id) = self.derpify_state.block_id() {
             if let Some(block) = self
                 .model
                 .lock()
@@ -9904,15 +9904,15 @@ impl TerminalView {
     }
 
     fn clear_ssh_blocks(&mut self, ctx: &mut ViewContext<Self>) {
-        self.dismiss_warpify_banner(&RememberForWarpification::DoNotRememberSSHHost, ctx);
-        if let Some(ssh_block) = self.warpify_state.ssh_block_state() {
+        self.dismiss_derpify_banner(&RememberForDerpification::DoNotRememberSSHHost, ctx);
+        if let Some(ssh_block) = self.derpify_state.ssh_block_state() {
             let view_id = ssh_block.get_block_view_id();
 
             self.remove_ssh_block_by_id(view_id);
 
             self.redetermine_global_focus(ctx);
 
-            self.warpify_state.clear_ssh_block_state();
+            self.derpify_state.clear_ssh_block_state();
         }
     }
 
@@ -9936,13 +9936,13 @@ impl TerminalView {
             });
         }
 
-        let warpification_source = match session_type {
-            BootstrapSessionType::WarpifiedRemote => WarpificationSource::Ssh,
-            BootstrapSessionType::Local => WarpificationSource::Subshell,
+        let derpification_source = match session_type {
+            BootstrapSessionType::DerpifiedRemote => DerpificationSource::Ssh,
+            BootstrapSessionType::Local => DerpificationSource::Subshell,
         };
         let ssh_success_block_handle = ctx.add_typed_action_view(|ctx| {
-            WarpifySuccessBlock::new(
-                warpification_source,
+            DerpifySuccessBlock::new(
+                derpification_source,
                 spawning_command,
                 subshell_info,
                 shell,
@@ -9955,9 +9955,9 @@ impl TerminalView {
 
         self.clear_ssh_blocks(ctx);
         self.insert_rich_content(
-            Some(RichContentType::WarpifySuccessBlock),
+            Some(RichContentType::DerpifySuccessBlock),
             ssh_success_block_handle.clone(),
-            Some(RichContentMetadata::WarpifySuccessBlock {
+            Some(RichContentMetadata::DerpifySuccessBlock {
                 bootstrap_success_block_handle: ssh_success_block_handle.clone(),
             }),
             RichContentInsertionPosition::Append {
@@ -9965,30 +9965,30 @@ impl TerminalView {
             },
             ctx,
         );
-        self.warpify_state
-            .set_ssh_block_state(SshBlockState::WarpifySuccess {
+        self.derpify_state
+            .set_ssh_block_state(SshBlockState::DerpifySuccess {
                 handle: ssh_success_block_handle,
             });
         let active_session_id = self.active_block_session_id();
-        self.warpify_state.on_warpify_start(active_session_id);
-        self.refresh_warp_prompt(ctx);
+        self.derpify_state.on_derpify_start(active_session_id);
+        self.refresh_derp_prompt(ctx);
     }
 
     fn handle_ssh_success_block_events(
         &mut self,
-        event: &WarpifySuccessBlockEvent,
+        event: &DerpifySuccessBlockEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
-            WarpifySuccessBlockEvent::OpenWarpifySettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
+            DerpifySuccessBlockEvent::OpenDerpifySettings => {
+                ctx.emit(Event::OpenSettings(SettingsSection::Derpify));
             }
         }
     }
 
-    fn dismiss_warpify_banner(
+    fn dismiss_derpify_banner(
         &mut self,
-        remember_command: &RememberForWarpification,
+        remember_command: &RememberForDerpification,
         ctx: &mut ViewContext<Self>,
     ) {
         {
@@ -9996,72 +9996,72 @@ impl TerminalView {
             model.block_list_mut().set_active_block_banner(None);
         }
 
-        // Also clear the warpify footer so it doesn't linger after warpification
+        // Also clear the derpify footer so it doesn't linger after derpification
         // starts, fails, or is cancelled.
-        if FeatureFlag::WarpifyFooter.is_enabled() {
+        if FeatureFlag::DerpifyFooter.is_enabled() {
             self.use_agent_footer.update(ctx, |footer, ctx| {
-                footer.clear_warpify(ctx);
+                footer.clear_derpify(ctx);
             });
         }
 
         match remember_command {
-            RememberForWarpification::RememberSubshellCommand(command) => {
-                WarpifySettings::handle(ctx).update(ctx, |warpify, ctx| {
-                    warpify.denylist_subshell_command(command, ctx);
+            RememberForDerpification::RememberSubshellCommand(command) => {
+                DerpifySettings::handle(ctx).update(ctx, |derpify, ctx| {
+                    derpify.denylist_subshell_command(command, ctx);
                 });
             }
-            RememberForWarpification::RememberSSHHost(host) => {
-                WarpifySettings::handle(ctx).update(ctx, |warpify, ctx| {
-                    warpify.denylist_ssh_host(host, ctx);
+            RememberForDerpification::RememberSSHHost(host) => {
+                DerpifySettings::handle(ctx).update(ctx, |derpify, ctx| {
+                    derpify.denylist_ssh_host(host, ctx);
                 });
             }
-            RememberForWarpification::DoNotRememberSubshellCommand
-            | RememberForWarpification::DoNotRememberSSHHost => {}
+            RememberForDerpification::DoNotRememberSubshellCommand
+            | RememberForDerpification::DoNotRememberSSHHost => {}
         }
     }
 
-    fn show_warpify_banner(
+    fn show_derpify_banner(
         &mut self,
         command: String,
         title: &str,
         lowercase_title: &str,
-        warpify_keybinding: Option<Keystroke>,
+        derpify_keybinding: Option<Keystroke>,
         telemetry_event: TelemetryEvent,
         ctx: &mut ViewContext<Self>,
     ) {
-        if FeatureFlag::WarpifyFooter.is_enabled() {
+        if FeatureFlag::DerpifyFooter.is_enabled() {
             return;
         }
 
         let mut model = self.model.lock();
 
-        // Shared session viewers can't initiate warpification currently.
-        // Don't show the warpify banner when an agent is monitoring the command either.
+        // Shared session viewers can't initiate derpification currently.
+        // Don't show the derpify banner when an agent is monitoring the command either.
         if model.shared_session_status().is_viewer()
             || model.block_list().active_block().is_agent_monitoring()
         {
             return;
         }
 
-        let a11y_message = match &warpify_keybinding {
+        let a11y_message = match &derpify_keybinding {
             Some(keystroke) => format!(
-                "You can press {} to Warpify this {} for more Warp features.",
+                "You can press {} to Derpify this {} for more Derp features.",
                 keystroke.displayed(),
                 lowercase_title
             ),
-            None => format!("You can Warpify this {lowercase_title} for more Warp features."),
+            None => format!("You can Derpify this {lowercase_title} for more Derp features."),
         };
 
         model
             .block_list_mut()
-            .set_active_block_banner(Some(WithinBlockBanner::WarpifyBanner(
-                WarpifyBannerState::new(command, warpify_keybinding),
+            .set_active_block_banner(Some(WithinBlockBanner::DerpifyBanner(
+                DerpifyBannerState::new(command, derpify_keybinding),
             )));
 
         let a11y_content = AccessibilityContent::new(
             format!("{title} recognized."),
             a11y_message,
-            WarpA11yRole::TextRole,
+            DerpA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -10176,7 +10176,7 @@ impl TerminalView {
         let a11y_content = AccessibilityContent::new(
             trigger.discovery_banner_copy(),
             "You can enable notifications through the command palette.",
-            WarpA11yRole::TextRole,
+            DerpA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -10214,8 +10214,8 @@ impl TerminalView {
 
         let a11y_content = AccessibilityContent::new(
             banner_title,
-            "Make sure you have enabled access for Warp notifications in System Preferences.",
-            WarpA11yRole::TextRole,
+            "Make sure you have enabled access for Derp notifications in System Preferences.",
+            DerpA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -10881,7 +10881,7 @@ impl TerminalView {
     /// Checks if the current model request could be served via AWS Bedrock and the user
     /// isn't already using it. If so, inserts a banner prompting the user to log in.
     ///
-    /// The banner is shown when the user could be using AWS Bedrock to save on warp AI spend, but isn't.
+    /// The banner is shown when the user could be using AWS Bedrock to save on derp AI spend, but isn't.
     fn maybe_insert_aws_bedrock_login_banner(
         &mut self,
         model_id: &LLMId,
@@ -11182,8 +11182,8 @@ impl TerminalView {
         reset_focus
     }
 
-    /// Recomputes the chip values for the Warp prompt (i.e. _not_ PS1).
-    fn refresh_warp_prompt(&mut self, ctx: &mut ViewContext<Self>) {
+    /// Recomputes the chip values for the Derp prompt (i.e. _not_ PS1).
+    fn refresh_derp_prompt(&mut self, ctx: &mut ViewContext<Self>) {
         // Ask the per-repo sub-model to re-fetch metadata so the chip values
         // reflect the latest git state (branch, diff stats, etc.).
         #[cfg(feature = "local_fs")]
@@ -11327,7 +11327,7 @@ impl TerminalView {
     /// Returns true if the block is considered remote.
     ///
     /// Note that we don't know for sure if a block is remote, because we can only detect
-    /// warpified remote blocks.
+    /// derpified remote blocks.
     ///
     /// For some organizations, we accept a regex list that we run against commands to
     /// further make the determination.
@@ -11337,7 +11337,7 @@ impl TerminalView {
         command: Option<&str>,
         app: &AppContext,
     ) -> bool {
-        let is_warpified_remote = session_id
+        let is_derpified_remote = session_id
             .map(|id| {
                 self.sessions
                     .as_ref(app)
@@ -11347,7 +11347,7 @@ impl TerminalView {
             })
             .unwrap_or_default();
 
-        if is_warpified_remote {
+        if is_derpified_remote {
             return true;
         }
 
@@ -11382,7 +11382,7 @@ impl TerminalView {
         };
         let escape_char = session.shell_family().escape_char();
         let Some(top_level_command) =
-            warp_completer::parsers::simple::top_level_command(command, escape_char)
+            derp_completer::parsers::simple::top_level_command(command, escape_char)
         else {
             return false;
         };
@@ -11994,7 +11994,7 @@ impl TerminalView {
 
                 // If this block ran a possible subshell command, and it exited before the 1s timer
                 // completed, abort showing the banner.
-                if let Some(abort_handle) = self.warpify_state.take_subshell_banner_abort_handle() {
+                if let Some(abort_handle) = self.derpify_state.take_subshell_banner_abort_handle() {
                     abort_handle.abort();
                 }
 
@@ -12036,9 +12036,9 @@ impl TerminalView {
                     self.on_user_block_completed(&block_completed_event.block_id, ctx);
                 }
 
-                // Clear any stale warpify footer so it doesn't leak into the next command's footer rendering.
+                // Clear any stale derpify footer so it doesn't leak into the next command's footer rendering.
                 self.use_agent_footer.update(ctx, |footer, ctx| {
-                    footer.clear_warpify(ctx);
+                    footer.clear_derpify(ctx);
                 });
                 self.hide_use_agent_footer_in_blocklist(ctx);
                 if matches!(block_completed_event.block_type, BlockType::User(_)) {
@@ -12125,7 +12125,7 @@ impl TerminalView {
                 self.drop_hidden_passive_ai_blocks(ctx);
 
                 // If the first word of the command is a shell alias, expand it
-                // for subshell/SSH detection. This enables warpification for
+                // for subshell/SSH detection. This enables derpification for
                 // aliased SSH commands (e.g. `alias myssh='ssh user@host'`).
                 let expanded_command = self
                     .active_block_session_id()
@@ -12135,19 +12135,19 @@ impl TerminalView {
                         let alias_value = session.alias_value(first_word)?;
                         Some(format!("{alias_value}{rest}"))
                     });
-                let warpify_command = expanded_command.as_deref().unwrap_or(command.as_str());
+                let derpify_command = expanded_command.as_deref().unwrap_or(command.as_str());
 
-                // Check if the current running command spawns a subshell eligible for Warpification.
+                // Check if the current running command spawns a subshell eligible for Derpification.
                 let shell_family = self.shell_family(ctx);
-                let warpify_settings = WarpifySettings::as_ref(ctx);
-                let is_compatible_subshell_command = warpify_settings
+                let derpify_settings = DerpifySettings::as_ref(ctx);
+                let is_compatible_subshell_command = derpify_settings
                     .is_compatible_subshell_command(command, shell_family)
-                    || warpify_settings
-                        .is_compatible_subshell_command(warpify_command, shell_family);
-                let command_is_denylisted = warpify_settings
+                    || derpify_settings
+                        .is_compatible_subshell_command(derpify_command, shell_family);
+                let command_is_denylisted = derpify_settings
                     .is_denylisted_subshell_command(command)
-                    || warpify_settings.is_denylisted_subshell_command(warpify_command);
-                // Never warpify or surface warpification for agent-requested commands.
+                    || derpify_settings.is_denylisted_subshell_command(derpify_command);
+                // Never derpify or surface derpification for agent-requested commands.
                 let has_ai_metadata = self
                     .model
                     .lock()
@@ -12158,30 +12158,30 @@ impl TerminalView {
 
                 if is_compatible_subshell_command {
                     if command_is_denylisted || has_ai_metadata {
-                        // Don't auto-warpify or surface warpification for these commands.
+                        // Don't auto-derpify or surface derpification for these commands.
                     } else if let Some(shell_type) = self.pending_auto_bootstrap_shell_type.take() {
                         // If there is a subshell we're waiting to bootstrap until we receive
                         // the preexec hook, now we can bootstrap it.
-                        let auto_warpify_abort_handle = ctx.spawn_abortable(
-                            Timer::after(Duration::from_millis(AUTO_WARPIFY_DELAY)),
+                        let auto_derpify_abort_handle = ctx.spawn_abortable(
+                            Timer::after(Duration::from_millis(AUTO_DERPIFY_DELAY)),
                             move |me, _, ctx| {
                                 me.trigger_subshell_bootstrap(Some(shell_type), false, ctx);
                             },
                             |_, _| (),
                         );
-                        self.warpify_state
-                            .add_auto_warpify_abort_handle(auto_warpify_abort_handle);
+                        self.derpify_state
+                            .add_auto_derpify_abort_handle(auto_derpify_abort_handle);
                     } else {
                         // Wait 1 second before showing the banner, just to make sure the
                         // command stays running for a bit. If the command fails instantly,
                         // we don't want to flicker the banner away so quickly.
                         let command = command.clone();
-                        self.warpify_state
+                        self.derpify_state
                             .add_subshell_banner_abort_handle(ctx.spawn_abortable(
                                 Timer::after(*SUBSHELL_BANNER_DELAY_DURATION),
                                 |view, _, ctx| {
-                                    if FeatureFlag::WarpifyFooter.is_enabled() {
-                                        view.show_warpify_footer(ctx);
+                                    if FeatureFlag::DerpifyFooter.is_enabled() {
+                                        view.show_derpify_footer(ctx);
                                     } else {
                                         view.handle_action(
                                             &TerminalAction::ShowSubshellBanner(command),
@@ -12195,14 +12195,14 @@ impl TerminalView {
                 } else {
                     if !has_ai_metadata {
                         if let Some(ssh_host) =
-                            parse_interactive_ssh_command(warpify_command).map(|cmd| cmd.host)
+                            parse_interactive_ssh_command(derpify_command).map(|cmd| cmd.host)
                         {
-                            self.warpify_state
-                                .set_pending_ssh_host(warpify_command.to_string(), ssh_host);
+                            self.derpify_state
+                                .set_pending_ssh_host(derpify_command.to_string(), ssh_host);
                             self.model.lock().start_notify_on_end_of_ssh_login();
                             ctx.emit(Event::TerminalViewStateChanged);
                         } else {
-                            self.warpify_state.clear_pending_ssh_host();
+                            self.derpify_state.clear_pending_ssh_host();
 
                             ctx.spawn(
                                 Timer::after(Duration::from_millis(
@@ -12300,14 +12300,14 @@ impl TerminalView {
                 cloud_workflow_id,
                 cloud_env_var_collection_id,
             }) => {
-                // To automatically warpify a subshell, we run the relevant command to open the
+                // To automatically derpify a subshell, we run the relevant command to open the
                 // subshell and create a future to delay bootstrapping the subshell long enough for
                 // the command to complete. We receive AfterBlockCompleted if the subshell command
                 // returns an error or the user exits the subshell. Here we abort the future to
                 // avoid an attempt to trigger bootstrapping if the subshell command failed. If the
                 // future already resolved, abort has no effect. We handle this as early as possible
                 // because the abort is time sensitive.
-                self.warpify_state.abort_auto_warpify();
+                self.derpify_state.abort_auto_derpify();
 
                 let active_session = self
                     .active_block_session_id()
@@ -12356,7 +12356,7 @@ impl TerminalView {
                         );
 
                         // On dogfood only, we're interested in the block commands, durations,
-                        // and exit codes to trial Warp Analytics.
+                        // and exit codes to trial Derp Analytics.
                         if ChannelState::channel().is_dogfood() {
                             send_telemetry_from_ctx!(
                                 TelemetryEvent::BlockCompletedOnDogfoodOnly {
@@ -12382,14 +12382,14 @@ impl TerminalView {
                 }
                 let active_session_id = self.active_block_session_id();
                 if let Some(block_id) = self
-                    .warpify_state
-                    .get_completed_warpify_session_id(active_session_id, ctx)
+                    .derpify_state
+                    .get_completed_derpify_session_id(active_session_id, ctx)
                 {
                     self.remove_ssh_block_by_id(block_id);
                 }
 
-                self.dismiss_warpify_banner(
-                    &RememberForWarpification::DoNotRememberSubshellCommand,
+                self.dismiss_derpify_banner(
+                    &RememberForDerpification::DoNotRememberSubshellCommand,
                     ctx,
                 );
 
@@ -12450,12 +12450,12 @@ impl TerminalView {
                 // command list, we execute the command after a delay.
                 // The delay is necessary because the shell needs a tiny bit of
                 // extra time after the last precmd function is finished.
-                // Additionally, it's possible for hooks to install themselves after the warp
+                // Additionally, it's possible for hooks to install themselves after the derp
                 // precmd. For example, `fig_precmd` does this.
                 if self.is_login_shell_bootstrapped {
                     let _ = ctx.spawn(
                         async move {
-                            warpui::r#async::Timer::after(EXECUTE_PENDING_COMMAND_DELAY).await;
+                            derpui::r#async::Timer::after(EXECUTE_PENDING_COMMAND_DELAY).await;
                         },
                         Self::execute_pending_command,
                     );
@@ -12475,7 +12475,7 @@ impl TerminalView {
                         .block_list()
                         .is_bootstrapping_precmd_done()
                 {
-                    self.refresh_warp_prompt(ctx);
+                    self.refresh_derp_prompt(ctx);
 
                     // If the completed command was a `gh` or `gt` invocation, eagerly refresh PR
                     // info since these don't touch .git/ and won't be caught by the filesystem watcher.
@@ -12494,14 +12494,14 @@ impl TerminalView {
                                     .and_then(|session| {
                                         let escape_char = session.shell_family().escape_char();
                                         let cmd =
-                                            warp_completer::parsers::simple::top_level_command(
+                                            derp_completer::parsers::simple::top_level_command(
                                                 command,
                                                 escape_char,
                                             )?;
                                         let cmd = session
                                             .alias_value(cmd.as_str())
                                             .and_then(|alias| {
-                                                warp_completer::parsers::simple::top_level_command(
+                                                derp_completer::parsers::simple::top_level_command(
                                                     alias,
                                                     escape_char,
                                                 )
@@ -12541,7 +12541,7 @@ impl TerminalView {
                             self.maybe_suggest_alias_expansion(block_completed, ctx);
                         }
 
-                        self.maybe_suggest_open_in_warp(block_completed, ctx);
+                        self.maybe_suggest_open_in_derp(block_completed, ctx);
                     }
 
                     // Check if the user tried to run an AWS login command but AWS CLI wasn't installed.
@@ -12740,11 +12740,11 @@ impl TerminalView {
                     BlockMetadataUpdateSource::Osc7,
                     ctx,
                 );
-                // Recompute Warp-prompt chip values (notably the
+                // Recompute Derp-prompt chip values (notably the
                 // `WorkingDirectory` chip text that feeds the vertical-tab
                 // subtitle via `display_working_directory`). The chip
                 // generator reads from `CurrentPrompt::latest_context`, which
-                // is only refreshed through `refresh_warp_prompt` →
+                // is only refreshed through `refresh_derp_prompt` →
                 // `current_prompt.update_context`. In the normal precmd flow
                 // that refresh is triggered by `BlockCompleted`, but an OSC 7
                 // fires mid-command — the block never completes — so without
@@ -12757,7 +12757,7 @@ impl TerminalView {
                 // can re-fire chip generators that schedule another in-band
                 // command, leading to a refresh loop.
                 if !block_working_directory_updated_event.is_for_in_band_command {
-                    self.refresh_warp_prompt(ctx);
+                    self.refresh_derp_prompt(ctx);
                 }
             }
 
@@ -12873,7 +12873,7 @@ impl TerminalView {
 
                 ctx.spawn(
                     async {
-                        warpui::r#async::Timer::after(*TRIGGER_RC_FILE_SUBSHELL_BOOTSTRAP_DELAY)
+                        derpui::r#async::Timer::after(*TRIGGER_RC_FILE_SUBSHELL_BOOTSTRAP_DELAY)
                             .await
                     },
                     move |me, _, ctx| {
@@ -12884,7 +12884,7 @@ impl TerminalView {
                             .active_block()
                             .agent_interaction_metadata()
                             .is_some();
-                        // Never warpify for agent-requested commands.
+                        // Never derpify for agent-requested commands.
                         if has_ai_metadata {
                             return;
                         }
@@ -13073,8 +13073,8 @@ impl TerminalView {
                 me.remove_ssh_remote_server_choice_block(session_id, ctx);
                 ctx.emit(Event::RemoteServerSkipRequested { session_id });
             }
-            SshRemoteServerChoiceViewEvent::OpenWarpifySettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
+            SshRemoteServerChoiceViewEvent::OpenDerpifySettings => {
+                ctx.emit(Event::OpenSettings(SettingsSection::Derpify));
             }
         });
 
@@ -13166,7 +13166,7 @@ impl TerminalView {
             })
             .unwrap_or_else(|| "Starting shell...".to_string());
 
-        let shimmer_element = shimmering_warp_loading_text(
+        let shimmer_element = shimmering_derp_loading_text(
             message,
             appearance.monospace_font_size() - 2.,
             self.remote_server_shimmer_handle.clone(),
@@ -13269,7 +13269,7 @@ impl TerminalView {
 
         // Clear the pending flag up front so the notice is shown at most once, even if the
         // banner is dismissed without interaction or the session ends early.
-        WarpifySettings::handle(ctx).update(ctx, |settings, ctx| {
+        DerpifySettings::handle(ctx).update(ctx, |settings, ctx| {
             settings.mark_tmux_deprecation_notice_shown(ctx);
         });
 
@@ -13354,7 +13354,7 @@ impl TerminalView {
         ctx.notify();
     }
 
-    /// Handles an OSC 777 event with the `warp://cli-agent` sentinel title.
+    /// Handles an OSC 777 event with the `derp://cli-agent` sentinel title.
     /// On `session_start`, creates a `CLIAgentSessionListener` that subscribes
     /// to subsequent events from this terminal's PTY.
     fn handle_cli_agent_notification(
@@ -13700,7 +13700,7 @@ impl TerminalView {
         self.update_incompatible_configuration_banner(session.shell().plugins(), ctx);
 
         if let Some(subshell_info) = session.subshell_info() {
-            self.warpify_state
+            self.derpify_state
                 .add_subshell_separator(subshell_info, self.model.clone(), ctx);
         }
 
@@ -13708,7 +13708,7 @@ impl TerminalView {
         self.hide_slow_bootstrap_banner(ctx);
 
         if self.auth_state.is_anonymous_or_logged_out()
-            && !FeatureFlag::OpenWarpNewSettingsModes.is_enabled()
+            && !FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
         {
             self.insert_anonymous_user_ai_sign_up_banner(ctx);
         }
@@ -13770,7 +13770,7 @@ impl TerminalView {
                         ctx,
                     );
                 });
-                me.refresh_warp_prompt(ctx);
+                me.refresh_derp_prompt(ctx);
             },
         );
 
@@ -13782,22 +13782,22 @@ impl TerminalView {
             .spawn(async move { session_clone2.load_all_builtins().await })
             .detach();
 
-        // If we were waiting for a successful warpification, it's come. Stop the timeout.
-        self.warpify_state.abort_ssh_warpify_timeout();
+        // If we were waiting for a successful derpification, it's come. Stop the timeout.
+        self.derpify_state.abort_ssh_derpify_timeout();
 
-        let is_warpified_remote = matches!(
+        let is_derpified_remote = matches!(
             bootstrap_event.session_type,
-            BootstrapSessionType::WarpifiedRemote
+            BootstrapSessionType::DerpifiedRemote
         );
         if bootstrap_event.subshell_info.is_some() {
             self.add_bootstrap_success_block(bootstrap_event, ctx);
         }
 
         // Show the one-time tmux deprecation notice when an SSH session successfully
-        // warpifies. The end-of-ssh-login path (`handle_detected_end_of_ssh_login`) only
-        // fires for sessions that stay unwarpified, since warpification replaces the
+        // derpifies. The end-of-ssh-login path (`handle_detected_end_of_ssh_login`) only
+        // fires for sessions that stay underpified, since derpification replaces the
         // original ssh block before login detection can confirm completion.
-        if is_warpified_remote && WarpifySettings::as_ref(ctx).should_show_tmux_deprecation_notice()
+        if is_derpified_remote && DerpifySettings::as_ref(ctx).should_show_tmux_deprecation_notice()
         {
             self.show_ssh_tmux_deprecation_banner(session_id, ctx);
         }
@@ -13862,7 +13862,7 @@ impl TerminalView {
 
         // Now that the session is bootstrapped, update any restored AI blocks that were
         // created before bootstrapping with the shell launch data. This enables file link
-        // detection and the "Open in Warp" button on code blocks in restored conversations.
+        // detection and the "Open in Derp" button on code blocks in restored conversations.
         if let Some(shell_launch_data) = self.active_session.as_ref(ctx).shell_launch_data(ctx) {
             let ai_block_handles: Vec<_> = self
                 .rich_content_views
@@ -13877,7 +13877,7 @@ impl TerminalView {
             }
         }
 
-        self.refresh_warp_prompt(ctx);
+        self.refresh_derp_prompt(ctx);
         ctx.emit(Event::SessionBootstrapped);
     }
 
@@ -13927,7 +13927,7 @@ impl TerminalView {
     ) {
         self.reset_onboarding_blocks(ctx);
 
-        WarpDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
+        DerpDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
             report_if_error!(settings.sharing_onboarding_block_shown.set_value(true, ctx));
         });
 
@@ -14388,7 +14388,7 @@ impl TerminalView {
         ctx.emit(Event::OpenEnvironmentManagementPane);
     }
 
-    /// Check if completed command was `warp environment create` and emit event if successful
+    /// Check if completed command was `derp environment create` and emit event if successful
     fn maybe_handle_environment_create_command(
         &mut self,
         block_completed: &UserBlockCompleted,
@@ -15212,10 +15212,10 @@ impl TerminalView {
         }
         session_metadata.set_git_branches(git_branches.iter().flatten().map(|s| s.as_str()));
 
-        // https://github.com/warpdotdev/command-corrections/blob/df7848d4fb3da7883623e959889a296a07d88053/src/rules/cd/mod.rs#L31-L36
+        // https://github.com/derpdotdev/command-corrections/blob/df7848d4fb3da7883623e959889a296a07d88053/src/rules/cd/mod.rs#L31-L36
         // We don't currently support dynamic rules over SSH, so we should not attempt to correct commands if
         // inside ssh session.
-        let is_ssh_command = SshWarpifyCommand::matches(input).is_some();
+        let is_ssh_command = SshDerpifyCommand::matches(input).is_some();
         if is_ssh_command {
             return vec![];
         }
@@ -15277,7 +15277,7 @@ impl TerminalView {
             let a11y_content = AccessibilityContent::new(
                 format!("Suggested corrected command: {}", correction.command),
                 "Press right arrow to insert or keep editing to ignore",
-                WarpA11yRole::HelpRole,
+                DerpA11yRole::HelpRole,
             );
             ctx.emit_a11y_content(a11y_content);
 
@@ -16040,7 +16040,7 @@ impl TerminalView {
     }
 
     /// Shared logic for sending a desktop notification (or showing a discovery banner)
-    /// for any agent status change (both Warp's agent and any CLI agent).
+    /// for any agent status change (both Derp's agent and any CLI agent).
     fn send_agent_desktop_notification_or_show_banner(
         &mut self,
         trigger: NotificationsTrigger,
@@ -16144,7 +16144,7 @@ impl TerminalView {
     fn start_bootstrap_timer(&self, duration: Duration, ctx: &mut ViewContext<Self>) {
         let _ = ctx.spawn(
             async move {
-                warpui::r#async::Timer::after(duration).await;
+                derpui::r#async::Timer::after(duration).await;
             },
             Self::on_bootstrap_failed_timer_complete,
         );
@@ -16208,7 +16208,7 @@ impl TerminalView {
                 bootstrap_duration_seconds: None,
                 shell_version: None,
                 rcfiles_duration_seconds: None,
-                warp_attributed_bootstrap_duration_seconds: None,
+                derp_attributed_bootstrap_duration_seconds: None,
                 terminal_session_id: None,
             }),
             ctx
@@ -16751,13 +16751,13 @@ impl TerminalView {
                                     .into_item(),
                             ];
 
-                            if renders_in_warp_notebook_viewer(&path) {
+                            if renders_in_derp_notebook_viewer(&path) {
                                 items.push(
-                                    MenuItemFields::new("Open in Warp")
-                                        .with_on_select_action(TerminalAction::OpenFileInWarp(path))
+                                    MenuItemFields::new("Open in Derp")
+                                        .with_on_select_action(TerminalAction::OpenFileInDerp(path))
                                         .into_item(),
                                 );
-                                // Because the default for cmd-click is to open in Warp, we also
+                                // Because the default for cmd-click is to open in Derp, we also
                                 // have an open-in-editor option.
                                 items.push(
                                     MenuItemFields::new("Open in editor")
@@ -16940,7 +16940,7 @@ impl TerminalView {
                     } else {
                         items.extend([
                             MenuItem::Separator,
-                            MenuItemFields::new("Ask Warp AI")
+                            MenuItemFields::new("Ask Derp AI")
                                 .with_on_select_action(TerminalAction::ContextMenu(
                                     ContextMenuAction::AskAI(AskAISource::SelectedBlockOrText),
                                 ))
@@ -17581,7 +17581,7 @@ impl TerminalView {
             items.extend(self.session_sharing_context_menu_items(&model, false));
         }
 
-        // Section 2: AI Command Search, Ask Warp AI
+        // Section 2: AI Command Search, Ask Derp AI
         items.extend([
             MenuItem::Separator,
             MenuItemFields::new("Command search")
@@ -17612,9 +17612,9 @@ impl TerminalView {
 
             if !selected_input_text.is_empty() && !FeatureFlag::AgentMode.is_enabled() {
                 items.push(
-                    MenuItemFields::new("Ask Warp AI")
+                    MenuItemFields::new("Ask Derp AI")
                         .with_on_select_action(TerminalAction::InputContextMenuItem(
-                            InputContextMenuAction::AskWarpAI,
+                            InputContextMenuAction::AskDerpAI,
                         ))
                         .into_item(),
                 );
@@ -17760,7 +17760,7 @@ impl TerminalView {
 
         send_telemetry_from_ctx!(
             TelemetryEvent::SaveAsWorkflowModal {
-                source: SaveAsWorkflowModalSource::WarpAIWorkflowCard,
+                source: SaveAsWorkflowModalSource::DerpAIWorkflowCard,
             },
             ctx
         );
@@ -18544,24 +18544,24 @@ impl TerminalView {
         self.paste(true, ctx);
     }
 
-    /// Tell the pane group to open a file within Warp.
-    fn open_file_in_warp(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
+    /// Tell the pane group to open a file within Derp.
+    fn open_file_in_derp(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
         if let Some(session) = self
             .active_block_session_id()
             .and_then(|session_id| self.sessions.as_ref(ctx).get(session_id))
         {
-            ctx.emit(Event::OpenFileInWarp { path, session })
+            ctx.emit(Event::OpenFileInDerp { path, session })
         }
     }
 
     #[cfg(feature = "local_fs")]
-    fn open_code_in_warp(
+    fn open_code_in_derp(
         &mut self,
         source: CodeSource,
         layout: EditorLayout,
         ctx: &mut ViewContext<Self>,
     ) {
-        ctx.emit(Event::OpenCodeInWarp { source, layout })
+        ctx.emit(Event::OpenCodeInDerp { source, layout })
     }
 
     fn open_code_diff(&self, view: ViewHandle<CodeDiffView>, ctx: &mut ViewContext<Self>) {
@@ -19082,7 +19082,7 @@ impl TerminalView {
             .and_then(|id| self.sessions.as_ref(ctx).get(id))
         {
             if let Some(info) = session.subshell_info() {
-                self.warpify_state
+                self.derpify_state
                     .add_subshell_separator(info, self.model.clone(), ctx);
             }
         }
@@ -19505,7 +19505,7 @@ impl TerminalView {
                     return;
                 }
 
-                send_telemetry_from_ctx!(TelemetryEvent::InputAskWarpAI, ctx);
+                send_telemetry_from_ctx!(TelemetryEvent::InputAskDerpAI, ctx);
                 AskAIType::FromTextSelection {
                     text: Arc::new(selected_input_text),
                     populate_input_box: true,
@@ -20129,9 +20129,9 @@ impl TerminalView {
                         env_var_collection_block.clear_selection(ctx);
                     });
                 }
-                Some(RichContentMetadata::WarpifySuccessBlock { .. }) => {
-                    // TODO(Simon): We should be checking for WarpifySuccessBlocks here as well.
-                    // The `WarpifySuccessBlock` implements a `SelectableArea`.
+                Some(RichContentMetadata::DerpifySuccessBlock { .. }) => {
+                    // TODO(Simon): We should be checking for DerpifySuccessBlocks here as well.
+                    // The `DerpifySuccessBlock` implements a `SelectableArea`.
                 }
                 _ => {}
             }
@@ -20371,10 +20371,10 @@ impl TerminalView {
                 ctx.notify();
             }
             AIBlockEvent::OpenCitation(citation) => match citation {
-                AIAgentCitation::WarpDriveObject { uid } => {
-                    ctx.emit(Event::OpenWarpDriveObjectInPane(uid.clone()));
+                AIAgentCitation::DerpDriveObject { uid } => {
+                    ctx.emit(Event::OpenDerpDriveObjectInPane(uid.clone()));
                 }
-                AIAgentCitation::WarpDocumentation { path } => {
+                AIAgentCitation::DerpDocumentation { path } => {
                     ctx.open_url(&format!("https://therob.lol/derp-terminal/help/{path}"));
                 }
                 AIAgentCitation::WebPage { url } => {
@@ -20399,7 +20399,7 @@ impl TerminalView {
             }
             AIBlockEvent::OpenWorkflow { sync_id } => {
                 if let Some(object) = CloudModel::as_ref(ctx).get_workflow(sync_id) {
-                    ctx.emit(Event::OpenWarpDriveObjectInPane(object.uid()));
+                    ctx.emit(Event::OpenDerpDriveObjectInPane(object.uid()));
                 }
             }
             AIBlockEvent::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
@@ -20493,11 +20493,11 @@ impl TerminalView {
                 self.handle_usage_footer_toggled(block.id(), *conversation_id, *is_expanded, ctx);
             }
             AIBlockEvent::OpenSettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::WarpAgent));
+                ctx.emit(Event::OpenSettings(SettingsSection::DerpAgent));
             }
             #[cfg(feature = "local_fs")]
-            AIBlockEvent::OpenCodeInWarp { source, layout } => {
-                ctx.emit(Event::OpenCodeInWarp {
+            AIBlockEvent::OpenCodeInDerp { source, layout } => {
+                ctx.emit(Event::OpenCodeInDerp {
                     source: source.clone(),
                     layout: *layout,
                 });
@@ -20864,7 +20864,7 @@ impl TerminalView {
     /// WARNING: this method takes a lock on the TerminalModel.
     /// Caller must ensure the model is not already locked!
     ///
-    /// TODO: https://linear.app/warpdotdev/issue/CORE-277
+    /// TODO: https://linear.app/derpdotdev/issue/CORE-277
     pub fn redetermine_global_focus(&mut self, ctx: &mut ViewContext<Self>) {
         self.redetermine_global_focus_with_policy(SelectionFocusPolicy::HoldsFocus, ctx);
     }
@@ -21862,8 +21862,8 @@ impl TerminalView {
                 ctx.emit(Event::OpenSettings(*section));
             }
             #[cfg(feature = "local_fs")]
-            InputEvent::OpenCodeInWarp { source, layout } => {
-                ctx.emit(Event::OpenCodeInWarp {
+            InputEvent::OpenCodeInDerp { source, layout } => {
+                ctx.emit(Event::OpenCodeInDerp {
                     source: source.clone(),
                     layout: *layout,
                 });
@@ -22053,7 +22053,7 @@ impl TerminalView {
 
         // When we insert rich content (including agent view blocks) we insert it immediately before
         // the active block (unless explicitly inserting below a long-running block). The active
-        // block is a special "warp input" block that often exists even when it isn't user-visible.
+        // block is a special "derp input" block that often exists even when it isn't user-visible.
         //
         // So, for dedupe we check the first visible (non-zero height) item *immediately before the
         // active block*. This avoids false negatives caused by the active block itself.
@@ -22446,7 +22446,7 @@ impl TerminalView {
         let show_banner = if honor_ps1 {
             let banner_content = if shell_plugins.contains("p10k_unsupported") {
                 Some(BannerTextContent::formatted_text(vec![
-                    FormattedTextFragment::bold("Powerlevel10k now supports Warp!  "),
+                    FormattedTextFragment::bold("Powerlevel10k now supports Derp!  "),
                     FormattedTextFragment::plain_text(
                         "You seem to be running an older (unsupported) version, please follow ",
                     ),
@@ -22459,7 +22459,7 @@ impl TerminalView {
             } else if shell_plugins.contains("pure") {
                 Some(BannerTextContent::formatted_text(vec![
                     FormattedTextFragment::plain_text(
-                        "Pure is not yet supported in Warp. You might consider one of the \
+                        "Pure is not yet supported in Derp. You might consider one of the \
                         supported prompts as an alternative.  ",
                     ),
                     FormattedTextFragment::hyperlink("Learn more", PROMPT_COMPATIBILITY_URL),
@@ -23276,7 +23276,7 @@ impl TerminalView {
                     self.update_incompatible_configuration_banner(session.shell().plugins(), ctx)
                 }
 
-                // honor_ps1 affects whether the Warp prompt is active, which
+                // honor_ps1 affects whether the Derp prompt is active, which
                 // determines if we need git status updates.
                 self.update_git_status_subscription(ctx);
             }
@@ -23669,7 +23669,7 @@ impl TerminalView {
             }
         };
         command.current_dir(&working_dir);
-        let mut path = warp_util::path::warp_shell_path()
+        let mut path = derp_util::path::derp_shell_path()
             .or_else(|| std::env::var("PATH").ok())
             .unwrap_or_default();
         let mut extra_dirs = vec![
@@ -23692,7 +23692,7 @@ impl TerminalView {
         }
         command.env("PATH", &path);
 
-        // Snapshot Warp's configured MCP servers into plain tool schemas plus
+        // Snapshot Derp's configured MCP servers into plain tool schemas plus
         // reconnecting call handles, while `ctx` is still available — the
         // background pump below runs as a detached task with no `ctx` access
         // of its own. `ReconnectingPeer` needs no further `ctx` to make
@@ -23703,7 +23703,7 @@ impl TerminalView {
             Vec<ollama_stream_exec::McpToolSpec>,
             Option<Arc<dyn ollama_stream_exec::McpToolCaller>>,
         ) = if harness == LocalHarnessKind::Ollama {
-            // First run in this session: installs and starts Warp's
+            // First run in this session: installs and starts Derp's
             // built-in web search server so it's available below. A no-op
             // on every call after the first.
             TemplatableMCPServerManager::handle(ctx).update(ctx, |manager, ctx| {
@@ -23714,7 +23714,7 @@ impl TerminalView {
             let mut callers = HashMap::new();
             for tool in manager.tools() {
                 let name = tool.name.to_string();
-                // Local models only get Warp's built-in, Ollama-safe servers;
+                // Local models only get Derp's built-in, Ollama-safe servers;
                 // third-party MCP servers are hidden from them by default
                 // because weak local models misuse general-purpose or stateful
                 // tools (e.g. a persistent js REPL). Built-in file/code tools
@@ -24016,7 +24016,7 @@ impl TerminalView {
         } else {
             // Remote session: pair CWD with the session's host_id.
             let host_id = match session.session_type() {
-                SessionType::WarpifiedRemote { host_id } => host_id,
+                SessionType::DerpifiedRemote { host_id } => host_id,
                 SessionType::Local => return None,
             }?;
             let std_path = StandardizedPath::try_new(cwd_str).ok()?;
@@ -24113,11 +24113,11 @@ impl TerminalView {
         let icon = Container::new(
             ConstrainedBox::new(if has_active_filter {
                 icons::Icon::FilterFunnelFilled
-                    .to_warpui_icon(appearance.theme().accent())
+                    .to_derpui_icon(appearance.theme().accent())
                     .finish()
             } else {
                 icons::Icon::FilterFunnel
-                    .to_warpui_icon(
+                    .to_derpui_icon(
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_2()),
@@ -24309,7 +24309,7 @@ impl TerminalView {
         let prompt = Text::new_inline(
             Self::block_prompt(model, sessions, index),
             appearance.monospace_font_family(),
-            appearance.monospace_font_size() * WARP_PROMPT_HEIGHT_LINES,
+            appearance.monospace_font_size() * DERP_PROMPT_HEIGHT_LINES,
         )
         .with_style(Properties::default().weight(appearance.monospace_font_weight()))
         .with_color(terminal_theme_prompt)
@@ -24328,7 +24328,7 @@ impl TerminalView {
                 Text::new_inline(
                     format!("  {submit}"),
                     appearance.monospace_font_family(),
-                    appearance.monospace_font_size() * WARP_PROMPT_HEIGHT_LINES,
+                    appearance.monospace_font_size() * DERP_PROMPT_HEIGHT_LINES,
                 )
                 .with_style(Properties::default().style(Style::Italic))
                 .with_color(terminal_theme_prompt)
@@ -24346,7 +24346,7 @@ impl TerminalView {
             let duration = Text::new_inline(
                 duration_string,
                 appearance.monospace_font_family(),
-                appearance.monospace_font_size() * WARP_PROMPT_HEIGHT_LINES,
+                appearance.monospace_font_size() * DERP_PROMPT_HEIGHT_LINES,
             )
             .with_style(Properties::default().weight(appearance.monospace_font_weight()))
             .with_color(terminal_theme_prompt)
@@ -24556,10 +24556,10 @@ impl TerminalView {
             }
         }
 
-        if let Some(open_in_warp_banner) = &self.inline_banners_state.open_in_warp_banner {
+        if let Some(open_in_derp_banner) = &self.inline_banners_state.open_in_derp_banner {
             inline_banners.insert(
-                open_in_warp_banner.id,
-                render_open_in_warp_banner(open_in_warp_banner, self.view_id, appearance),
+                open_in_derp_banner.id,
+                render_open_in_derp_banner(open_in_derp_banner, self.view_id, appearance),
             );
         }
 
@@ -24786,7 +24786,7 @@ impl TerminalView {
 
         let mut subshell_separators = HashMap::new();
 
-        for (id, command) in self.warpify_state.get_subshell_separators() {
+        for (id, command) in self.derpify_state.get_subshell_separators() {
             subshell_separators.insert(*id, render_subshell_separator(command.clone(), appearance));
         }
 
@@ -24798,8 +24798,8 @@ impl TerminalView {
             .active_block()
             .block_banner()
             .map(|banner| match banner {
-                WithinBlockBanner::WarpifyBanner(state) => {
-                    render_warpification_banner(state, appearance)
+                WithinBlockBanner::DerpifyBanner(state) => {
+                    render_derpification_banner(state, appearance)
                 }
             });
 
@@ -25801,7 +25801,7 @@ impl TerminalView {
             SelectAll => self.select_all_text_from_input(ctx),
             Paste => self.paste_in_input(ctx),
             ShowCommandSearch => self.command_search_from_input(ctx),
-            AskWarpAI => self.ask_ai(&AskAISource::SelectedInputText, ctx),
+            AskDerpAI => self.ask_ai(&AskAISource::SelectedInputText, ctx),
             ShowAICommandSearch => self.ai_command_search_from_input(ctx),
             SaveAsWorkflow => self.save_as_workflow_from_input(ctx),
             ToggleInputHintText => self.toggle_input_hint_text(ctx),
@@ -25829,7 +25829,7 @@ impl TerminalView {
                 // TODO (a11y) Keybindings should be taken from the actual user's
                 // configuration
                 "Press cmd-C to read and copy both command and output, and cmd-option-shift-C to read and copy output only. Press cmd-B to bookmark the block: you could navigate between bookmarked blocks quickly using option-up and option-down.",
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )
         })
     }
@@ -26083,7 +26083,7 @@ impl TerminalView {
     }
 
     /// Replace the terminal input buffer with the given command that is meant to open a subshell.
-    /// Set a flag that we should automatically bootstrap AKA "warpify" the subshell when we
+    /// Set a flag that we should automatically bootstrap AKA "derpify" the subshell when we
     /// receive the [`AfterBlockStarted`] event.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -26317,7 +26317,7 @@ impl TerminalView {
         shell_type: ShellType,
         ctx: &mut ViewContext<Self>,
     ) {
-        // Attempt to auto warpify the subshell when bootstrapped
+        // Attempt to auto derpify the subshell when bootstrapped
         self.pending_auto_bootstrap_shell_type = Some(shell_type);
 
         self.input.update(ctx, |input, ctx| {
@@ -26468,7 +26468,7 @@ impl TerminalView {
                 && session.shell_family() == ShellFamily::Posix
                 && is_in_long_running_command;
             if is_msys2_long_running {
-                let input = warpui::clipboard_utils::escaped_paths_str(paths, None);
+                let input = derpui::clipboard_utils::escaped_paths_str(paths, None);
                 self.typed_characters_on_terminal(&input, ctx);
                 return;
             }
@@ -26479,7 +26479,7 @@ impl TerminalView {
             let paths = if session.is_wsl() {
                 paths_converted = paths
                     .iter()
-                    .map(|p| warp_util::path::convert_windows_path_to_wsl(p))
+                    .map(|p| derp_util::path::convert_windows_path_to_wsl(p))
                     .collect::<Vec<_>>();
                 paths_converted.as_slice()
             } else {
@@ -26487,7 +26487,7 @@ impl TerminalView {
             };
 
             let input =
-                warpui::clipboard_utils::escaped_paths_str(paths, Some(self.shell_family(ctx)));
+                derpui::clipboard_utils::escaped_paths_str(paths, Some(self.shell_family(ctx)));
             self.typed_characters_on_terminal(&input, ctx);
         }
     }
@@ -26539,7 +26539,7 @@ impl TerminalView {
         ctx: &mut ViewContext<TerminalView>,
     ) {
         match check_type {
-            SshLoginStatus::RecheckBeforeWarpifying => {
+            SshLoginStatus::RecheckBeforeDerpifying => {
                 // After we receive a line of output from ssh that is NOT prompting for user input (unlike "Enter passphrase: "),
                 // we wait and repeat the check after a small delay in case the state returned to something that's user-input bound.
                 // For example, say the output that kicked off this event was "Permission denied, please try again." and
@@ -26550,7 +26550,7 @@ impl TerminalView {
                 let active_block_id = self.model.lock().block_list().active_block_id().clone();
                 ctx.spawn(
                     async {
-                        warpui::r#async::Timer::after(Duration::from_secs(3)).await;
+                        derpui::r#async::Timer::after(Duration::from_secs(3)).await;
                         active_block_id
                     },
                     move |terminal_view, active_block_id, _| {
@@ -26561,11 +26561,11 @@ impl TerminalView {
                     },
                 );
             }
-            SshLoginStatus::ReadyToWarpify => {
-                // The tmux-based SSH warpification flow has been removed in favor of the
+            SshLoginStatus::ReadyToDerpify => {
+                // The tmux-based SSH derpification flow has been removed in favor of the
                 // remote-server SSH extension. If this user had previously opted into the tmux
                 // wrapper, show them a one-time deprecation notice on their next SSH session.
-                if WarpifySettings::as_ref(ctx).should_show_tmux_deprecation_notice() {
+                if DerpifySettings::as_ref(ctx).should_show_tmux_deprecation_notice() {
                     if let Some(session_id) = self.active_block_session_id() {
                         self.show_ssh_tmux_deprecation_banner(session_id, ctx);
                     }
@@ -26608,22 +26608,22 @@ impl TerminalView {
                 let alias_value = session.alias_value(first_word)?;
                 Some(format!("{alias_value}{rest}"))
             });
-        let warpify_command = expanded_command.as_deref().unwrap_or(command);
+        let derpify_command = expanded_command.as_deref().unwrap_or(command);
         let shell_family = self.shell_family_for_password_prompt_polling(ctx);
-        let warpify_settings = WarpifySettings::as_ref(ctx);
-        let is_compatible_subshell_command = warpify_settings
+        let derpify_settings = DerpifySettings::as_ref(ctx);
+        let is_compatible_subshell_command = derpify_settings
             .is_compatible_subshell_command(command, shell_family)
-            || warpify_settings.is_compatible_subshell_command(warpify_command, shell_family);
+            || derpify_settings.is_compatible_subshell_command(derpify_command, shell_family);
 
         !is_compatible_subshell_command
     }
 
-    /// Shows the warpify footer for a detected subshell command.
-    fn show_warpify_footer(&mut self, ctx: &mut ViewContext<Self>) {
+    /// Shows the derpify footer for a detected subshell command.
+    fn show_derpify_footer(&mut self, ctx: &mut ViewContext<Self>) {
         let model = self.model.lock();
 
-        // Shared session viewers can't initiate warpification currently.
-        // Don't show the warpify footer when an agent is monitoring the command either.
+        // Shared session viewers can't initiate derpification currently.
+        // Don't show the derpify footer when an agent is monitoring the command either.
         if model.shared_session_status().is_viewer()
             || model.block_list().active_block().is_agent_monitoring()
         {
@@ -26632,11 +26632,11 @@ impl TerminalView {
         drop(model);
 
         self.use_agent_footer.update(ctx, |footer, ctx| {
-            footer.show_warpify(ctx);
+            footer.show_derpify(ctx);
         });
         self.maybe_show_use_agent_footer_in_blocklist(ctx);
 
-        send_telemetry_from_ctx!(TelemetryEvent::WarpifyFooterShown { is_ssh: false }, ctx);
+        send_telemetry_from_ctx!(TelemetryEvent::DerpifyFooterShown { is_ssh: false }, ctx);
     }
 
     fn show_initialization_block(&mut self) {
@@ -26885,7 +26885,7 @@ impl TypedActionView for TerminalView {
                     .map_or(Empty, |selected| {
                         Custom(AccessibilityContent::new_without_help(
                             selected,
-                            WarpA11yRole::TextRole,
+                            DerpA11yRole::TextRole,
                         ))
                     })
             }
@@ -26912,7 +26912,7 @@ impl TypedActionView for TerminalView {
             BookmarkBlock(_) | BookmarkSelectedBlock => {
                 Custom(AccessibilityContent::new_without_help(
                     "Toggle Bookmark block",
-                    WarpA11yRole::TextRole,
+                    DerpA11yRole::TextRole,
                 ))
             }
             ExpandBlockSelectionAbove | ExpandBlockSelectionBelow => {
@@ -26934,19 +26934,19 @@ impl TypedActionView for TerminalView {
                     "Selected all {} blocks.",
                     self.num_non_hidden_selected_blocks()
                 ),
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             ScrollToBottomOfSelectedBlocks => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to bottom of selected block".to_string(),
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             ScrollToTopOfSelectedBlocks => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to top of selected block".to_string(),
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             ScrollToBottomOfOverhangingBlock(_) => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to bottom of bottommost visible block".to_string(),
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             CopyOutputs => {
                 let mut outputs = vec![];
@@ -26967,7 +26967,7 @@ impl TypedActionView for TerminalView {
                 );
                 Custom(AccessibilityContent::new_without_help(
                     text,
-                    WarpA11yRole::TextRole,
+                    DerpA11yRole::TextRole,
                 ))
             }
             Copy => {
@@ -26986,7 +26986,7 @@ impl TypedActionView for TerminalView {
                 let text = format!("Copied {} blocks.\n{}", blocks.len(), blocks.join("\n"));
                 Custom(AccessibilityContent::new_without_help(
                     text,
-                    WarpA11yRole::TextRole,
+                    DerpA11yRole::TextRole,
                 ))
             }
             FocusInputAndClearSelection => {
@@ -26994,7 +26994,7 @@ impl TypedActionView for TerminalView {
                     INPUT_A11Y_LABEL,
                     // TODO (a11y) use bindings from user settings
                     INPUT_A11Y_HELPER,
-                    WarpA11yRole::TextareaRole,
+                    DerpA11yRole::TextareaRole,
                 ))
             }
             KeyDown(key) => {
@@ -27005,24 +27005,24 @@ impl TypedActionView for TerminalView {
                 };
                 Custom(AccessibilityContent::new_without_help(
                     label,
-                    WarpA11yRole::TextareaRole,
+                    DerpA11yRole::TextareaRole,
                 ))
             }
             OpenBlockFilterEditor(block_index) => Custom(AccessibilityContent::new_without_help(
                 format!("Open block filter editor for block {block_index}"),
-                WarpA11yRole::TextRole,
+                DerpA11yRole::TextRole,
             )),
             ShowInitializationBlock => Custom(AccessibilityContent::new_without_help(
                 "Showed initialization block",
-                WarpA11yRole::TextareaRole,
+                DerpA11yRole::TextareaRole,
             )),
-            ShowWarpifySettings => Custom(AccessibilityContent::new_without_help(
-                "Opened Warpify Settings",
-                WarpA11yRole::ButtonRole,
+            ShowDerpifySettings => Custom(AccessibilityContent::new_without_help(
+                "Opened Derpify Settings",
+                DerpA11yRole::ButtonRole,
             )),
             OpenFilesPalette { .. } => Custom(AccessibilityContent::new_without_help(
                 "Opened file search palette",
-                WarpA11yRole::ButtonRole,
+                DerpA11yRole::ButtonRole,
             )),
             InsertCommandCorrection { .. }
             | BlockListContextMenu(_)
@@ -27055,7 +27055,7 @@ impl TypedActionView for TerminalView {
             | CopyGridSecret(_)
             | CopyRichContentSecret(_)
             | ShowInFileExplorer(_)
-            | OpenFileInWarp(_)
+            | OpenFileInDerp(_)
             | CtrlD
             | CtrlC
             | ClearSelectionsWhenShellMode
@@ -27065,7 +27065,7 @@ impl TypedActionView for TerminalView {
             | ControlSequence(_)
             | TriggerSubshellBootstrap
             | ShowSubshellBanner(_)
-            | DismissWarpifyBanner(_)
+            | DismissDerpifyBanner(_)
             | OpenBlockListContextMenu
             | AliasExpansionBanner(_)
             | VimModeBanner(_)
@@ -27083,32 +27083,32 @@ impl TypedActionView for TerminalView {
             | ClearMarkedText
             | StartLspServer => ActionAccessibilityContent::from_debug(),
             #[cfg(feature = "local_fs")]
-            OpenCodeInWarp { .. } => ActionAccessibilityContent::from_debug(),
-            OpenInWarpBanner(action) => self.open_in_warp_banner_accessibility_content(*action),
+            OpenCodeInDerp { .. } => ActionAccessibilityContent::from_debug(),
+            OpenInDerpBanner(action) => self.open_in_derp_banner_accessibility_content(*action),
             OpenAIBlockAttachedBlocksMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open list of blocks attached as context to this AI query.".to_owned(),
-                WarpA11yRole::PopoverRole,
+                DerpA11yRole::PopoverRole,
             )),
             OpenAIBlockOverflowMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open overflow menu with copy options for this AI block.".to_owned(),
-                WarpA11yRole::PopoverRole,
+                DerpA11yRole::PopoverRole,
             )),
             RewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Show confirmation dialog to rewind to before this point in the AI conversation."
                     .to_owned(),
-                WarpA11yRole::ButtonRole,
+                DerpA11yRole::ButtonRole,
             )),
             ExecuteRewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Execute rewind to before this point in the AI conversation.".to_owned(),
-                WarpA11yRole::ButtonRole,
+                DerpA11yRole::ButtonRole,
             )),
             SelectAIAttachedBlock(_) => Custom(AccessibilityContent::new_without_help(
                 "Click on a block attached as context to this AI query.".to_owned(),
-                WarpA11yRole::ButtonRole,
+                DerpA11yRole::ButtonRole,
             )),
             PickRepoToOpen => Custom(AccessibilityContent::new_without_help(
                 "Use file picker to select a git repository".to_owned(),
-                WarpA11yRole::PopoverRole,
+                DerpA11yRole::PopoverRole,
             )),
             #[cfg(feature = "voice_input")]
             ToggleCLIAgentVoiceInput(_) => Empty,
@@ -27516,16 +27516,16 @@ impl TypedActionView for TerminalView {
 
                 ctx.open_file_path_in_explorer(path);
             }
-            OpenFileInWarp(path) => {
-                self.open_file_in_warp(path.clone(), ctx);
+            OpenFileInDerp(path) => {
+                self.open_file_in_derp(path.clone(), ctx);
             }
             #[cfg(feature = "local_fs")]
-            OpenCodeInWarp {
+            OpenCodeInDerp {
                 path,
                 layout,
                 line_col,
             } => {
-                self.open_code_in_warp(
+                self.open_code_in_derp(
                     CodeSource::Link {
                         path: path.clone(),
                         range_start: *line_col,
@@ -27562,21 +27562,21 @@ impl TypedActionView for TerminalView {
             TriggerSubshellBootstrap => self.trigger_subshell_bootstrap(None, false, ctx),
             ShowSubshellBanner(command) => {
                 // Abort handle is no longer needed since we've waited the 1s already.
-                self.warpify_state.take_subshell_banner_abort_handle();
+                self.derpify_state.take_subshell_banner_abort_handle();
 
-                let warpify_keybinding =
-                    keybinding_name_to_keystroke("terminal:warpify_subshell", ctx);
-                self.show_warpify_banner(
+                let derpify_keybinding =
+                    keybinding_name_to_keystroke("terminal:derpify_subshell", ctx);
+                self.show_derpify_banner(
                     command.to_owned(),
                     "Subshell",
                     "subshell",
-                    warpify_keybinding,
+                    derpify_keybinding,
                     TelemetryEvent::ShowSubshellBanner,
                     ctx,
                 );
             }
-            DismissWarpifyBanner(remember) => {
-                self.dismiss_warpify_banner(remember, ctx);
+            DismissDerpifyBanner(remember) => {
+                self.dismiss_derpify_banner(remember, ctx);
                 if !remember.is_ssh() {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::DeclineSubshellBootstrap {
@@ -27588,7 +27588,7 @@ impl TypedActionView for TerminalView {
             }
             InsertMostRecentCommandCorrection => self.insert_most_recent_command_correction(ctx),
             AliasExpansionBanner(action) => self.alias_expansion_banner_action(*action, ctx),
-            OpenInWarpBanner(action) => self.handle_open_in_warp_banner_action(*action, ctx),
+            OpenInDerpBanner(action) => self.handle_open_in_derp_banner_action(*action, ctx),
             OpenBlockFilterEditor(block_index) => {
                 self.open_block_filter_editor(*block_index, OpenedFromClick::Yes, ctx)
             }
@@ -27812,7 +27812,7 @@ impl TypedActionView for TerminalView {
             LoadAgentModeConversation => {
                 self.load_agent_mode_conversation(ctx);
             }
-            ShowWarpifySettings => ctx.emit(Event::OpenSettings(SettingsSection::Warpify)),
+            ShowDerpifySettings => ctx.emit(Event::OpenSettings(SettingsSection::Derpify)),
             DeleteAttachment { index } => {
                 self.ai_context_model.update(ctx, |context_model, ctx| {
                     context_model.remove_pending_attachment(*index, ctx);
@@ -27858,7 +27858,7 @@ impl TypedActionView for TerminalView {
                     }
                     images.push(ui_components::lightbox::LightboxImage {
                         source: ui_components::lightbox::LightboxImageSource::Resolved {
-                            asset_source: warpui::assets::asset_cache::AssetSource::Raw {
+                            asset_source: derpui::assets::asset_cache::AssetSource::Raw {
                                 id: asset_id,
                             },
                         },
@@ -28097,12 +28097,12 @@ impl TypedActionView for TerminalView {
             }
             OpenProjectRulesPane => {
                 if let Some(current_dir) = self.pwd() {
-                    let mut warp_md_path = PathBuf::from(&current_dir);
-                    warp_md_path.push(WARP_MD_PATH);
+                    let mut derp_md_path = PathBuf::from(&current_dir);
+                    derp_md_path.push(DERP_MD_PATH);
                     #[cfg(feature = "local_fs")]
-                    ctx.emit(Event::OpenCodeInWarp {
+                    ctx.emit(Event::OpenCodeInDerp {
                         source: CodeSource::ProjectRules {
-                            location: LocalOrRemotePath::Local(warp_md_path),
+                            location: LocalOrRemotePath::Local(derp_md_path),
                         },
                         layout: *crate::util::file::external_editor::EditorSettings::as_ref(ctx)
                             .open_file_layout
@@ -28136,7 +28136,7 @@ impl TypedActionView for TerminalView {
 
                     match skill_reference {
                         SkillReference::Path(path) => {
-                            ctx.emit(Event::OpenCodeInWarp {
+                            ctx.emit(Event::OpenCodeInDerp {
                                 source: CodeSource::Skill {
                                     reference: skill_reference.clone(),
                                     location: path.clone(),
@@ -28890,7 +28890,7 @@ impl View for TerminalView {
         if should_show_panel {
             Container::new(
                 Flex::row()
-                    .with_main_axis_size(warpui::elements::MainAxisSize::Max)
+                    .with_main_axis_size(derpui::elements::MainAxisSize::Max)
                     .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
                     .with_child(Shrinkable::new(1., final_element).finish())
                     .with_child(ChildView::new(&self.conversation_details_panel).finish())
@@ -28929,7 +28929,7 @@ impl View for TerminalView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
         let mut context = Self::default_keymap_context();
         context.map.insert(
             "TerminalView_BlockSelectionCardinality",
@@ -29024,15 +29024,15 @@ impl View for TerminalView {
             context.set.insert(init::ROOT_CLOUD_MODE_PANE_KEY);
         }
 
-        if let Some(WithinBlockBanner::WarpifyBanner(_)) =
+        if let Some(WithinBlockBanner::DerpifyBanner(_)) =
             model_lock.block_list().active_block().block_banner()
         {
             context.set.insert("SubshellBanner");
         }
 
-        // Also set the warpify context when the footer (flag-gated replacement
+        // Also set the derpify context when the footer (flag-gated replacement
         // for the in-block banner) is active, so the ctrl-i keybinding works.
-        if self.use_agent_footer.as_ref(app).is_warpify_active(app) {
+        if self.use_agent_footer.as_ref(app).is_derpify_active(app) {
             context.set.insert("SubshellBanner");
         }
 
@@ -29442,7 +29442,7 @@ fn maybe_wrap_terminal_element_in_scrollable(
     vertical_scroll_handle: ScrollStateHandle,
     horizontal_scroll_handle: ClippedScrollStateHandle,
     required_terminal_width: f32,
-    theme: &WarpTheme,
+    theme: &DerpTheme,
     element: impl NewScrollableElement + 'static,
 ) -> Box<dyn Element> {
     let nonactive_thumb_background = theme.disabled_text_color(theme.background()).into();

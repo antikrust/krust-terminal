@@ -1,5 +1,5 @@
 //! This module contains all auxiliary code for hitting the GenerateAIInputSuggestions endpoint in
-//! warp-server that serves Agent Predict.
+//! derp-server that serves Agent Predict.
 
 mod api;
 
@@ -11,7 +11,7 @@ use itertools::Itertools;
 use parking_lot::FairMutex;
 use serde::{Deserialize, Serialize};
 
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::DerpAiExecutionContext;
 use crate::terminal::model::block::BlockState;
 use crate::terminal::TerminalModel;
 
@@ -45,7 +45,7 @@ pub struct HistoryContext {
 #[derive(Clone)]
 pub struct NextCommandContext {
     pub history_contexts: Vec<HistoryContext>,
-    pub ai_execution_context: WarpAiExecutionContext,
+    pub ai_execution_context: DerpAiExecutionContext,
     pub context_messages: Vec<ContextMessageInput>,
 }
 

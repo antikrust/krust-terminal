@@ -15,7 +15,7 @@ pub(in crate::terminal) use transition::{
     CommandStartKind, IgnoreReason, LifecycleAction, LifecycleInput, LifecyclePhase,
     LifecycleSnapshot, LifecycleTransition, NextBlockIdDisposition, PreexecObservation,
 };
-use warp_core::features::FeatureFlag;
+use derp_core::features::FeatureFlag;
 
 use super::block::BlockState;
 

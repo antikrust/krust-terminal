@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/warp_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/derp_terminal/src/model/LICENSE-ALACRITTY.
 
 //! TTY related functionality.
 
@@ -111,7 +111,7 @@ pub struct PtyOptions {
     pub honor_ps1: bool,
     /// Whether the Node.js Version context chip is enabled for this session. When
     /// `false`, the shell bootstrap skips the per-prompt `node --version` detection
-    /// (gated via the `WARP_PROMPT_NODE_VERSION_ENABLED` env var).
+    /// (gated via the `DERP_PROMPT_NODE_VERSION_ENABLED` env var).
     pub node_version_chip_enabled: bool,
     pub close_fds: bool,
 }

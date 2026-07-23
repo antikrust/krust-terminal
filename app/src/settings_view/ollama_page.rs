@@ -10,16 +10,16 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ::settings::{Setting, ToggleableSetting};
-use warp_core::ui::theme::Fill as ThemeFill;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_core::ui::theme::Fill as ThemeFill;
+use derp_errors::report_if_error;
+use derpui::elements::{
     Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Element, Empty, Flex,
     MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use warpui::fonts::Weight;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::ui_components::switch::SwitchStateHandle;
-use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use derpui::fonts::Weight;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::ui_components::switch::SwitchStateHandle;
+use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     render_separator, render_sub_header, MatchData, PageTitleWidget, PageType, SettingsPageMeta,
@@ -45,7 +45,7 @@ use crate::appearance::Appearance;
 use crate::editor::{EditorView, SingleLineEditorOptions};
 use crate::settings::ai::AISettings;
 use crate::util::bindings::CustomAction;
-use warpui::windowing::WindowManager;
+use derpui::windowing::WindowManager;
 
 const VERTICAL_MARGIN: f32 = 16.;
 const OLLAMA_DOWNLOAD_URL: &str = "https://ollama.com/download";
@@ -343,7 +343,7 @@ impl OllamaPageView {
                     });
                 }
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            derpui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -536,7 +536,7 @@ impl OllamaPageView {
                         me.migration_progress = None;
                         // `apply_models_dir_override` only ever *sets*
                         // `OLLAMA_MODELS` (never clears it, in case the
-                        // user's own shell set it independently of Warp) —
+                        // user's own shell set it independently of Derp) —
                         // but resetting to default is the one place the
                         // user explicitly asked to stop overriding it, so
                         // clear the env var here too.
@@ -615,7 +615,7 @@ impl OllamaPageView {
                 me.committee_leaderboard = leaderboard;
                 me.catalog_loading = false;
                 // Sync the model picker to what's actually on disk — this
-                // catches models pulled outside Warp (e.g. `ollama pull` in a
+                // catches models pulled outside Derp (e.g. `ollama pull` in a
                 // terminal), which wouldn't otherwise appear until restart.
                 crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx).update(
                     ctx,
@@ -1105,7 +1105,7 @@ impl SettingsWidget for InstalledWidget {
                         Shrinkable::new(1.0, render_sub_header(appearance, "Installed", None))
                             .finish(),
                     )
-                    .with_child(warpui::elements::Expanded::new(1., Empty::new().finish()).finish())
+                    .with_child(derpui::elements::Expanded::new(1., Empty::new().finish()).finish())
                     .with_child(model_folder_header(view, appearance))
                     .finish(),
             )
@@ -1199,7 +1199,7 @@ impl SettingsWidget for InstalledWidget {
                             appearance.ui_font_family(),
                             appearance.ui_font_size(),
                         )
-                        .with_style(warpui::fonts::Properties::default().weight(Weight::Medium))
+                        .with_style(derpui::fonts::Properties::default().weight(Weight::Medium))
                         .finish(),
                     );
                     row.add_child(
@@ -1472,7 +1472,7 @@ impl SettingsWidget for CatalogWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(
-                            warpui::elements::Expanded::new(
+                            derpui::elements::Expanded::new(
                                 1.,
                                 ChildView::new(&view.model_input).finish(),
                             )
@@ -1683,7 +1683,7 @@ impl SettingsWidget for RemoteHostsWidget {
         column.add_child(
             Container::new(body_text(
                 "Use the models on another computer running Ollama. Give it the machine's \
-                 address and Warp will ask what it has; those models then appear in the \
+                 address and Derp will ask what it has; those models then appear in the \
                  model picker, and can serve on the committee, like models installed here. \
                  Ollama only listens to its own machine by default, so set \
                  OLLAMA_HOST=0.0.0.0 there first.",
@@ -1700,7 +1700,7 @@ impl SettingsWidget for RemoteHostsWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(
-                            warpui::elements::Expanded::new(
+                            derpui::elements::Expanded::new(
                                 1.,
                                 ChildView::new(&view.remote_input).finish(),
                             )
@@ -1757,7 +1757,7 @@ impl SettingsWidget for RemoteHostsWidget {
 
             let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
             row.add_child(
-                warpui::elements::Expanded::new(1., body_text(&host.display(), appearance))
+                derpui::elements::Expanded::new(1., body_text(&host.display(), appearance))
                     .finish(),
             );
             row.add_child(
@@ -2250,7 +2250,7 @@ fn render_catalog_entry(
             appearance.ui_font_family(),
             appearance.ui_font_size(),
         )
-        .with_style(warpui::fonts::Properties::default().weight(Weight::Medium))
+        .with_style(derpui::fonts::Properties::default().weight(Weight::Medium))
         .finish(),
     );
     card.add_child(sub_text(&entry.description, appearance));
@@ -2402,8 +2402,8 @@ fn progress_row(fraction: f32, width: f32, appearance: &Appearance) -> Box<dyn E
             UiComponentStyles {
                 // A visible track (outline) behind the accent-filled portion,
                 // rather than the page background, so the empty part still
-                // reads as a bar. `.into()` bridges warp_core's theme `Fill`
-                // to warpui's element `Fill`.
+                // reads as a bar. `.into()` bridges derp_core's theme `Fill`
+                // to derpui's element `Fill`.
                 background: Some(theme.outline().into()),
                 foreground: Some(theme.accent().into()),
                 width: Some(width),
@@ -2571,15 +2571,15 @@ fn fit_badge(fit: Fit, appearance: &Appearance) -> Option<Box<dyn Element>> {
         Container::new(
             Text::new(label.to_string(), appearance.ui_font_family(), 10.)
                 .with_color(color.into_solid())
-                .with_style(warpui::fonts::Properties::default().weight(Weight::Bold))
+                .with_style(derpui::fonts::Properties::default().weight(Weight::Bold))
                 .finish(),
         )
         .with_horizontal_padding(6.)
         .with_vertical_padding(2.)
-        .with_corner_radius(warpui::elements::CornerRadius::with_all(
-            warpui::elements::Radius::Pixels(4.),
+        .with_corner_radius(derpui::elements::CornerRadius::with_all(
+            derpui::elements::Radius::Pixels(4.),
         ))
-        .with_border(warpui::elements::Border::all(1.).with_border_fill(color))
+        .with_border(derpui::elements::Border::all(1.).with_border_fill(color))
         .finish(),
     )
 }

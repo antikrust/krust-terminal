@@ -13,17 +13,17 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use string_offset::{ByteOffset, CharOffset};
 use urlocator::{UrlLocation, UrlLocator};
 use vec1::Vec1;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::Fill as ThemeFill;
-use warp_errors::report_error;
-use warpui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use warpui_core::fonts::Weight;
-use warpui_core::image_cache::ImageType;
-use warpui_core::text::char_slice;
-use warpui_core::text::point::Point;
-use warpui_core::text_layout::{StyleAndFont, TextAlignment};
-use warpui_core::units::{IntoPixels, Pixels};
-use warpui_core::{AppContext, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derp_core::ui::theme::Fill as ThemeFill;
+use derp_errors::report_error;
+use derpui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use derpui_core::fonts::Weight;
+use derpui_core::image_cache::ImageType;
+use derpui_core::text::char_slice;
+use derpui_core::text::point::Point;
+use derpui_core::text_layout::{StyleAndFont, TextAlignment};
+use derpui_core::units::{IntoPixels, Pixels};
+use derpui_core::{AppContext, SingletonEntity};
 
 use super::buffer::{StyledBufferBlock, StyledBufferRun, StyledTextBlock};
 use super::mermaid_diagram::{mermaid_asset_source, mermaid_diagram_layout};

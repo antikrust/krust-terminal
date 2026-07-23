@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use uuid::Uuid;
-use warp_errors::report_error;
-use warpui::elements::{ChildView, Container};
-use warpui::ui_components::components::{Coords, UiComponentStyles};
-use warpui::{
+use derp_errors::report_error;
+use derpui::elements::{ChildView, Container};
+use derpui::ui_components::components::{Coords, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -43,10 +43,10 @@ use crate::workspace::ToastStack;
 /// See `specs/GH686/product.md`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum InstallOrigin {
-    /// Triggered by a user gesture inside Warp (gallery card click,
+    /// Triggered by a user gesture inside Derp (gallery card click,
     /// reinstall button, programmatic in-app flows, etc.).
     InApp,
-    /// Triggered by a `warp://settings/mcp?autoinstall=...` deeplink; must be
+    /// Triggered by a `derp://settings/mcp?autoinstall=...` deeplink; must be
     /// gated by an explicit in-app confirmation before install or spawn.
     Deeplink,
 }
@@ -292,7 +292,7 @@ impl MCPServersSettingsPageView {
 
     /// Auto-installs an MCP server from the gallery.
     ///
-    /// This is the single sink for `warp://settings/mcp?autoinstall=<title>`
+    /// This is the single sink for `derp://settings/mcp?autoinstall=<title>`
     /// deeplinks; callers must therefore treat the `autoinstall_param` as
     /// untrusted input. The `autoinstall_param` is matched case-insensitively
     /// against gallery titles.

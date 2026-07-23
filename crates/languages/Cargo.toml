@@ -1,7 +1,7 @@
 [package]
 name = "languages"
 edition = "2021"
-authors = ["Warp Team <dev@warp.dev>"]
+authors = ["Derp Team <dev@derp.baby>"]
 publish.workspace = true
 license.workspace = true
 
@@ -11,5 +11,5 @@ serde_yaml.workspace = true
 rust-embed.workspace = true
 arborium.workspace = true
 lazy_static.workspace = true
-warp_editor = { path = "../editor" }
-warp_util.workspace = true
+derp_editor = { path = "../editor" }
+derp_util.workspace = true

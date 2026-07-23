@@ -2,12 +2,12 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use warpui_core::assets::asset_cache::{
+use derpui_core::assets::asset_cache::{
     AssetCache, AssetSource, AssetState, AsyncAssetId, AsyncAssetType,
 };
-use warpui_core::image_cache::ImageType;
-use warpui_core::units::{IntoPixels, Pixels};
-use warpui_core::{AppContext, SingletonEntity};
+use derpui_core::image_cache::ImageType;
+use derpui_core::units::{IntoPixels, Pixels};
+use derpui_core::{AppContext, SingletonEntity};
 
 use crate::render::layout::TextLayout;
 use crate::render::model::{BlockSpacing, ImageBlockConfig};

@@ -30,7 +30,7 @@ The rewrite is not a finished engine. It preserves most of the original state ma
 
 Local smoke checks confirmed that modes 0–6 can execute without an exception when timing is disabled and no spinner is used. That is not evidence that modes 3–6 are visually correct. All eight spinner frame sets advance if `clock_res` is manually supplied, confirming the frame data itself is usable.
 
-## How Warp displays a character today
+## How Derp displays a character today
 
 ```mermaid
 flowchart LR
@@ -67,7 +67,7 @@ flowchart LR
 - handles wrapping, insertion, wide-character spacers, cursor motion, scrolling, and SGR state;
 - calls `write_at_cursor`, which stores the character, foreground, background, and flags in a `Cell`.
 
-`crates/warp_terminal/src/model/grid/cell.rs` defines `Cell`. It is deliberately packed into 24 bytes. Adding one byte would increase it to 32 bytes, so Text FX must not add always-present animation fields to every cell.
+`crates/derp_terminal/src/model/grid/cell.rs` defines `Cell`. It is deliberately packed into 24 bytes. Adding one byte would increase it to 32 bytes, so Text FX must not add always-present animation fields to every cell.
 
 The grid already provides `AbsolutePoint`, a row/column coordinate adjusted by `num_lines_truncated`. Text FX should use this for short-lived visual spans so scrollback truncation cannot move an animation onto unrelated text.
 
@@ -80,15 +80,15 @@ Both primary-screen blocks and the alternate screen converge on `app/src/termina
 
 The non-ligature path visits each visible cell, resolves foreground/background, links, find matches, secrets, wide characters, and decorations, then calls `render_cell_glyph`. `CellGlyphCache` maps character-or-grapheme plus font to a glyph ID. Box drawing, block elements, and Powerline characters may use native drawing instead of a font glyph.
 
-The ligature path builds an attributed string for each row and a character-index-to-grid-column map, asks Warp's text layout system to shape the line, and paints shaped glyphs back at terminal cell positions.
+The ligature path builds an attributed string for each row and a character-index-to-grid-column map, asks Derp's text layout system to shape the line, and paints shaped glyphs back at terminal cell positions.
 
 ### 4. Scene and GPU
 
-`crates/warpui_core/src/scene.rs::draw_glyph` records glyph ID, font ID, size, position, and color. The WGPU/Metal backends rasterize missing glyphs into an atlas and draw instances. Text FX does not need a shader for the original effects; it can choose visual content/color before `draw_glyph`.
+`crates/derpui_core/src/scene.rs::draw_glyph` records glyph ID, font ID, size, position, and color. The WGPU/Metal backends rasterize missing glyphs into an atlas and draw instances. Text FX does not need a shader for the original effects; it can choose visual content/color before `draw_glyph`.
 
 ### 5. Animation clock
 
-WarpUI already supports self-sustaining local animation through `PaintContext::repaint_after`. `ShimmeringTextElement` and `LiveElement` use an `Instant`, sample current visual state during paint, and schedule only the next required repaint. Text FX should follow this model instead of creating worker threads.
+DerpUI already supports self-sustaining local animation through `PaintContext::repaint_after`. `ShimmeringTextElement` and `LiveElement` use an `Instant`, sample current visual state during paint, and schedule only the next required repaint. Text FX should follow this model instead of creating worker threads.
 
 ## Proposed insertion point
 
@@ -189,7 +189,7 @@ The primary screen and alternate screen both use `render_grid`, so core visual s
 
 ## Private control protocol
 
-The fork now reserves OSC `9281`, immediately after Warp's current `9277`–`9280` range. The implemented spinner operations are:
+The fork now reserves OSC `9281`, immediately after Derp's current `9277`–`9280` range. The implemented spinner operations are:
 
 ```text
 OSC 9281 ; spinner ; start  ; <id> ; <style> ; <fps> ST

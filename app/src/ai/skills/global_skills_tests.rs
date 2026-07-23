@@ -2,11 +2,11 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use ai::skills::{get_provider_for_path, ParsedSkill, SkillProvider, SkillScope};
-use warp_cli::skill::SkillSpec;
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
+use derp_cli::skill::SkillSpec;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
 
 use super::{filter_skills_by_spec, resolve_skill_repos};
 use crate::ai::cloud_environments::GithubRepo;
@@ -23,7 +23,7 @@ fn resolve_skill_repos_returns_empty_for_empty_input() {
 fn resolve_skill_repos_skips_parse_failures() {
     let (specs, repos) = resolve_skill_repos(&[
         String::new(),
-        "warpdotdev/warp-internal:read-google-doc".to_string(),
+        "derpdotdev/derp-internal:read-google-doc".to_string(),
     ]);
 
     assert_eq!(specs.len(), 1);
@@ -31,8 +31,8 @@ fn resolve_skill_repos_skips_parse_failures() {
     assert_eq!(
         repos,
         vec![GithubRepo::new(
-            "warpdotdev".to_string(),
-            "warp-internal".to_string(),
+            "derpdotdev".to_string(),
+            "derp-internal".to_string(),
         )]
     );
 }
@@ -42,7 +42,7 @@ fn resolve_skill_repos_skips_unqualified_and_repo_only_specs() {
     let (_specs, repos) = resolve_skill_repos(&[
         "bare-name".to_string(),
         ".agents/skills/read-google-doc/SKILL.md".to_string(),
-        "warp-internal:read-google-doc".to_string(),
+        "derp-internal:read-google-doc".to_string(),
     ]);
 
     assert_eq!(repos, Vec::<GithubRepo>::new());
@@ -51,29 +51,29 @@ fn resolve_skill_repos_skips_unqualified_and_repo_only_specs() {
 #[test]
 fn resolve_skill_repos_collects_org_qualified_repos() {
     let (_specs, repos) = resolve_skill_repos(&[
-        "warpdotdev/warp-internal:read-google-doc".to_string(),
-        "warpdotdev/warp-server:deploy".to_string(),
+        "derpdotdev/derp-internal:read-google-doc".to_string(),
+        "derpdotdev/derp-server:deploy".to_string(),
     ]);
 
     assert_eq!(
         repos,
         vec![
-            GithubRepo::new("warpdotdev".to_string(), "warp-internal".to_string()),
-            GithubRepo::new("warpdotdev".to_string(), "warp-server".to_string()),
+            GithubRepo::new("derpdotdev".to_string(), "derp-internal".to_string()),
+            GithubRepo::new("derpdotdev".to_string(), "derp-server".to_string()),
         ]
     );
 }
 
 #[test]
 fn filter_skills_by_spec_only_loads_requested_simple_names() {
-    let repo_path = std::env::temp_dir().join("work").join("warp-internal");
+    let repo_path = std::env::temp_dir().join("work").join("derp-internal");
     let requested_skill_path = skill_path(&repo_path, ".agents", "read-google-doc");
     let other_skill_path = skill_path(&repo_path, ".agents", "deploy");
     let skills = vec![
         parsed_skill(requested_skill_path.clone(), "read-google-doc"),
         parsed_skill(other_skill_path, "deploy"),
     ];
-    let specs = global_specs(&["warpdotdev/warp-internal:read-google-doc".to_string()]);
+    let specs = global_specs(&["derpdotdev/derp-internal:read-google-doc".to_string()]);
 
     let filtered = filter_skills_by_spec(&LocalOrRemotePath::Local(repo_path), skills, &specs);
 
@@ -82,10 +82,10 @@ fn filter_skills_by_spec_only_loads_requested_simple_names() {
 
 #[test]
 fn filter_skills_by_spec_matches_full_path_specs_for_remote_repos() {
-    let repo_path = remote_path("host-a", "/work/warp-internal");
+    let repo_path = remote_path("host-a", "/work/derp-internal");
     let requested_skill_path = repo_path.join(".claude/skills/deploy/SKILL.md");
     let other_host_skill_path =
-        remote_path("host-b", "/work/warp-internal").join(".claude/skills/deploy/SKILL.md");
+        remote_path("host-b", "/work/derp-internal").join(".claude/skills/deploy/SKILL.md");
     let skills = vec![
         parsed_skill_at_location(other_host_skill_path, "deploy", SkillProvider::Claude),
         parsed_skill_at_location(
@@ -95,7 +95,7 @@ fn filter_skills_by_spec_matches_full_path_specs_for_remote_repos() {
         ),
     ];
     let specs =
-        global_specs(&["warpdotdev/warp-internal:.claude/skills/deploy/SKILL.md".to_string()]);
+        global_specs(&["derpdotdev/derp-internal:.claude/skills/deploy/SKILL.md".to_string()]);
 
     let filtered = filter_skills_by_spec(&repo_path, skills, &specs);
 
@@ -104,10 +104,10 @@ fn filter_skills_by_spec_matches_full_path_specs_for_remote_repos() {
 
 #[test]
 fn filter_skills_by_spec_scopes_simple_remote_names_to_the_repo_host() {
-    let repo_path = remote_path("host-a", "/work/warp-internal");
+    let repo_path = remote_path("host-a", "/work/derp-internal");
     let requested_skill_path = repo_path.join(".claude/skills/deploy/SKILL.md");
     let other_host_skill_path =
-        remote_path("host-b", "/work/warp-internal").join(".agents/skills/deploy/SKILL.md");
+        remote_path("host-b", "/work/derp-internal").join(".agents/skills/deploy/SKILL.md");
     let skills = vec![
         parsed_skill_at_location(other_host_skill_path, "deploy", SkillProvider::Agents),
         parsed_skill_at_location(
@@ -116,7 +116,7 @@ fn filter_skills_by_spec_scopes_simple_remote_names_to_the_repo_host() {
             SkillProvider::Claude,
         ),
     ];
-    let specs = global_specs(&["warpdotdev/warp-internal:deploy".to_string()]);
+    let specs = global_specs(&["derpdotdev/derp-internal:deploy".to_string()]);
 
     let filtered = filter_skills_by_spec(&repo_path, skills, &specs);
 
@@ -125,14 +125,14 @@ fn filter_skills_by_spec_scopes_simple_remote_names_to_the_repo_host() {
 
 #[test]
 fn filter_skills_by_spec_matches_simple_names_by_parsed_skill_name() {
-    let repo_path = std::env::temp_dir().join("work").join("warp-internal");
+    let repo_path = std::env::temp_dir().join("work").join("derp-internal");
     let requested_skill_path = skill_path(&repo_path, ".agents", "google-doc");
     let directory_name_match_path = skill_path(&repo_path, ".agents", "read-google-doc");
     let skills = vec![
         parsed_skill(requested_skill_path.clone(), "read-google-doc"),
         parsed_skill(directory_name_match_path, "unrelated-skill"),
     ];
-    let specs = global_specs(&["warpdotdev/warp-internal:read-google-doc".to_string()]);
+    let specs = global_specs(&["derpdotdev/derp-internal:read-google-doc".to_string()]);
     let filtered = filter_skills_by_spec(&LocalOrRemotePath::Local(repo_path), skills, &specs);
 
     assert_eq!(skill_paths(filtered), vec![requested_skill_path]);
@@ -140,14 +140,14 @@ fn filter_skills_by_spec_matches_simple_names_by_parsed_skill_name() {
 
 #[test]
 fn filter_skills_by_spec_uses_provider_precedence_for_simple_names() {
-    let repo_path = std::env::temp_dir().join("work").join("warp-internal");
+    let repo_path = std::env::temp_dir().join("work").join("derp-internal");
     let agents_skill_path = skill_path(&repo_path, ".agents", "deploy");
     let claude_skill_path = skill_path(&repo_path, ".claude", "deploy");
     let skills = vec![
         parsed_skill(claude_skill_path, "deploy"),
         parsed_skill(agents_skill_path.clone(), "deploy"),
     ];
-    let specs = global_specs(&["warpdotdev/warp-internal:deploy".to_string()]);
+    let specs = global_specs(&["derpdotdev/derp-internal:deploy".to_string()]);
     let filtered = filter_skills_by_spec(&LocalOrRemotePath::Local(repo_path), skills, &specs);
 
     assert_eq!(skill_paths(filtered), vec![agents_skill_path]);
@@ -155,7 +155,7 @@ fn filter_skills_by_spec_uses_provider_precedence_for_simple_names() {
 
 #[test]
 fn filter_skills_by_spec_matches_full_path_specs() {
-    let repo_path = std::env::temp_dir().join("work").join("warp-internal");
+    let repo_path = std::env::temp_dir().join("work").join("derp-internal");
     let requested_relative_path = PathBuf::from(".claude")
         .join("skills")
         .join("deploy")
@@ -167,7 +167,7 @@ fn filter_skills_by_spec_matches_full_path_specs() {
         parsed_skill(requested_skill_path.clone(), "deploy-from-full-path"),
     ];
     let specs = global_specs(&[format!(
-        "warpdotdev/warp-internal:{}",
+        "derpdotdev/derp-internal:{}",
         requested_relative_path.display()
     )]);
     let filtered = filter_skills_by_spec(&LocalOrRemotePath::Local(repo_path), skills, &specs);

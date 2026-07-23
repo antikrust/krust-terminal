@@ -1,7 +1,7 @@
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warp_util::remote_path::RemotePath;
-use warp_util::standardized_path::StandardizedPath;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derp_util::remote_path::RemotePath;
+use derp_util::standardized_path::StandardizedPath;
 
 use super::{
     get_provider_for_path, get_scope_for_path, home_skills_path,
@@ -9,24 +9,24 @@ use super::{
 };
 
 #[test]
-fn warp_home_skills_path_uses_warp_home_path() {
+fn derp_home_skills_path_uses_derp_home_path() {
     assert_eq!(
-        home_skills_path(SkillProvider::Warp),
-        warp_core::paths::warp_home_skills_dir()
+        home_skills_path(SkillProvider::Derp),
+        derp_core::paths::derp_home_skills_dir()
     );
 }
 
 #[test]
-fn warp_home_skill_path_is_home_warp_skill() {
-    let Some(warp_home_skills_dir) = warp_core::paths::warp_home_skills_dir() else {
+fn derp_home_skill_path_is_home_derp_skill() {
+    let Some(derp_home_skills_dir) = derp_core::paths::derp_home_skills_dir() else {
         eprintln!("Skipping test: home directory not available");
         return;
     };
-    let path = warp_home_skills_dir.join("my-skill").join("SKILL.md");
+    let path = derp_home_skills_dir.join("my-skill").join("SKILL.md");
 
     assert_eq!(
         get_provider_for_path(&LocalOrRemotePath::Local(path.clone())),
-        Some(SkillProvider::Warp)
+        Some(SkillProvider::Derp)
     );
     assert_eq!(get_scope_for_path(&path), SkillScope::Home);
 }

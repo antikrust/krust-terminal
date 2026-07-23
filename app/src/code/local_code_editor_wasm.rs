@@ -4,12 +4,12 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use ai::diff_validation::DiffType;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::model::LineCount;
-use warp_util::file::{FileLoadError, FileSaveError};
-use warpui::elements::MouseStateHandle;
-use warpui::{
+use derp_core::ui::appearance::Appearance;
+use derp_editor::content::buffer::InitialBufferState;
+use derp_editor::render::model::LineCount;
+use derp_util::file::{FileLoadError, FileSaveError};
+use derpui::elements::MouseStateHandle;
+use derpui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
 
@@ -112,7 +112,7 @@ impl View for LocalCodeEditorView {
         "LocalCodeEditorView"
     }
     fn render(&self, _app: &AppContext) -> Box<dyn Element> {
-        warpui::elements::Empty::new().finish()
+        derpui::elements::Empty::new().finish()
     }
 }
 
@@ -129,5 +129,5 @@ pub fn render_unsaved_circle_with_tooltip(
     _right_margin: f32,
     _appearance: &Appearance,
 ) -> Box<dyn Element> {
-    warpui::elements::Empty::new().finish()
+    derpui::elements::Empty::new().finish()
 }

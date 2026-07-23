@@ -1,11 +1,11 @@
 # TECH.md — Linear deeplink must not silently auto-submit prompts into the agent
 
-**GitHub Issue:** [warpdotdev/warp-external#703](https://github.com/warpdotdev/warp-external/issues/703)
+**GitHub Issue:** [derpdotdev/derp-external#703](https://github.com/derpdotdev/derp-external/issues/703)
 **Product Spec:** `specs/GH703/product.md`
 
 ## Context
 
-`warp://linear/work?prompt=<PROMPT>` is a trusted `warp://` URI. The handler decodes the `prompt` query parameter and feeds it into a new agent conversation. A shortcut in `try_enter_agent_view` today promotes *any* origin with an `initial_prompt` to auto-submit when the focused terminal was already in fullscreen agent view, which causes the Linear-supplied prompt to be sent to the LLM without any user interaction. This is contrary to the intent encoded in `AgentViewEntryOrigin::should_autotrigger_request`, which deliberately excludes `LinearDeepLink`.
+`derp://linear/work?prompt=<PROMPT>` is a trusted `derp://` URI. The handler decodes the `prompt` query parameter and feeds it into a new agent conversation. A shortcut in `try_enter_agent_view` today promotes *any* origin with an `initial_prompt` to auto-submit when the focused terminal was already in fullscreen agent view, which causes the Linear-supplied prompt to be sent to the LLM without any user interaction. This is contrary to the intent encoded in `AgentViewEntryOrigin::should_autotrigger_request`, which deliberately excludes `LinearDeepLink`.
 
 The relevant code paths today:
 
@@ -61,7 +61,7 @@ To honor product invariant 12 (logging / telemetry redaction), the implementatio
 
 ## End-to-end flow (after the fix)
 
-1. OS/dispatch primitive hands `warp://linear/work?prompt=<ATTACKER>` to Warp.
+1. OS/dispatch primitive hands `derp://linear/work?prompt=<ATTACKER>` to Derp.
 2. `validate_custom_uri` → `UriHost::Linear` → `LinearAction::WorkOnIssue` → `LinearIssueWork::from_url` → `open_linear_issue_work_in_{new,existing}_window`.
 3. `workspace.open_linear_issue_work` opens a new tab and invokes `enter_agent_view_for_new_conversation_with_prompt_draft(prompt, AgentViewEntryOrigin::LinearDeepLink, ctx)` (new entrypoint from step 3).
 4. `try_enter_agent_view` enters agent view for the new conversation. Because `should_autotrigger_request()` returns `false` for `LinearDeepLink` and the `was_in_agent_view_already` shortcut has been removed (step 1) — or, belt-and-suspenders, because the caller passed `NeverAutoSubmit` (step 3) — the code takes the "replace buffer + show ephemeral message" branch.
@@ -77,10 +77,10 @@ Tests map back to the numbered product invariants in `specs/GH703/product.md`.
 2. **Regression guard for other origins (invariant 10).** The existing `clear_buffer_action_in_fullscreen_agent_view_starts_new_conversation` test and the broader agent-view test suite cover `AgentViewEntryOrigin::Input { was_prompt_autodetected: true }` and keyboard-driven flows. The allowlist in `should_autotrigger_request` is unchanged, so origins that auto-submit today (`Cli`, `Input { was_prompt_autodetected: true }`, `SlashCommand { trigger: !is_keybinding() }`, `AcceptedPromptSuggestion`) continue to do so.
 3. **Unit test for URL parsing (already present, keep).** `app/src/uri/uri_test.rs` covers `validate_custom_uri_linear`, `test_linear_action_parse_*`, and `test_linear_issue_work_*`. No changes required; they continue to exercise the decoding path to ensure we don't regress the URI schema.
 4. **Manual verification (invariants 1–5, 7, 11).**
-   - On macOS, Linux, and Windows, open `warp://linear/work?prompt=<attacker+payload>` while the focused terminal is already in fullscreen agent view. Confirm the prompt shows up in the input, the ephemeral "enter again to send" message is visible, and no LLM request is made until the user presses Enter.
+   - On macOS, Linux, and Windows, open `derp://linear/work?prompt=<attacker+payload>` while the focused terminal is already in fullscreen agent view. Confirm the prompt shows up in the input, the ephemeral "enter again to send" message is visible, and no LLM request is made until the user presses Enter.
    - Repeat with the focused terminal not in agent view.
    - Repeat with the app closed (cold start) to cover the dispatch path used by `open_linear_issue_work_in_new_window`.
-   - Repeat with Warp backgrounded at dispatch time (invariant 11): foreground Warp afterward and confirm the prompt stays as a draft and the affordance is still shown.
+   - Repeat with Derp backgrounded at dispatch time (invariant 11): foreground Derp afterward and confirm the prompt stays as a draft and the affordance is still shown.
    - Confirm that opening the URL does not cause any of `read_files`, `StartAgent`, `SendMessageToAgent`, `FetchConversation`, or `UseComputer` tool calls to be issued.
 5. **Telemetry and redaction spot check (invariants 8, 12).** Inspect the emitted `AgentViewEntered` event and confirm `did_auto_trigger_request = false`. Confirm `LinearIssueLinkOpened` still fires once per dispatch. Grep `log::` output from the agent-view entry path to confirm the verbatim prompt never appears in a log line.
 6. **`./script/presubmit`** passes (fmt, clippy, tests).
@@ -96,5 +96,5 @@ Tests map back to the numbered product invariants in `specs/GH703/product.md`.
 
 ## Follow-ups
 - The audit of other `AgentViewEntryOrigin` variants (previously a follow-up) is now promoted into step 1 above and is a committed deliverable of this change. No follow-up issue is required; the grep-based audit is covered by the shortcut removal.
-- Coordinate with the owners of #655 (Windows named pipe) and #666 (Linux D-Bus) to gate `warp://` dispatch on a platform-trusted source. This spec is orthogonal defense; with that work landed the prompt-injection blast radius shrinks further. Tracked separately in those issues — this spec does not block on them.
+- Coordinate with the owners of #655 (Windows named pipe) and #666 (Linux D-Bus) to gate `derp://` dispatch on a platform-trusted source. This spec is orthogonal defense; with that work landed the prompt-injection blast radius shrinks further. Tracked separately in those issues — this spec does not block on them.
 - Consider adding a dedicated UI indicator (banner or toast) identifying a prompt as "from a Linear deeplink" so the user knows its provenance at a glance. Not required for the fix but would improve trust; can be added iteratively once the safety invariant is in place.

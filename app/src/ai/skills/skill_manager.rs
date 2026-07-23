@@ -9,10 +9,10 @@ use ai::skills::{
 pub use file_watchers::{
     extract_skill_parent_directory, read_skills_from_directories, SkillWatcher, SkillWatcherEvent,
 };
-use warp_core::features::FeatureFlag;
-use warp_util::host_id::HostId;
-use warp_util::local_or_remote_path::LocalOrRemotePath;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use derp_core::features::FeatureFlag;
+use derp_util::host_id::HostId;
+use derp_util::local_or_remote_path::LocalOrRemotePath;
+use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(test)]
 use super::bundled::{
@@ -40,7 +40,7 @@ pub struct SkillManager {
     /// Reverse lookup: skill name → set of paths with that name.
     /// This allows efficient lookup by skill name without scanning all paths.
     skills_by_name: HashMap<String, HashSet<LocalOrRemotePath>>,
-    /// Skills bundled into Warp for the local host and connected remote hosts.
+    /// Skills bundled into Derp for the local host and connected remote hosts.
     bundled_skills: BundledSkills,
     /// Home directories published by connected remote hosts.
     ///

@@ -11,8 +11,8 @@ use session_sharing_protocol::common::{
 use session_sharing_protocol::sharer::{
     DownstreamMessage, FailedToInitializeSessionReason, QuotaType, ReconnectToken, UpstreamMessage,
 };
-use warp_server_client::iap::IapManager;
-use warpui::{App, ModelHandle};
+use derp_server_client::iap::IapManager;
+use derpui::{App, ModelHandle};
 use websocket::{Message, WebsocketMessage as _};
 
 use super::{
@@ -511,30 +511,30 @@ fn test_ignore_duplicate_prompt_updates() {
         assert_eq!(ws_proxy_rx.len(), 0);
         // First prompt update should go through.
         network.update(&mut app, |network, _ctx| {
-            network.send_active_prompt_update_if_changed(ActivePrompt::WarpPrompt(
-                "test warp prompt".to_owned(),
+            network.send_active_prompt_update_if_changed(ActivePrompt::DerpPrompt(
+                "test derp prompt".to_owned(),
             ));
         });
         assert_eq!(ws_proxy_rx.len(), 1);
 
         // Duplicate prompt updates should be ignored.
         network.update(&mut app, |network, _ctx| {
-            network.send_active_prompt_update_if_changed(ActivePrompt::WarpPrompt(
-                "test warp prompt".to_owned(),
+            network.send_active_prompt_update_if_changed(ActivePrompt::DerpPrompt(
+                "test derp prompt".to_owned(),
             ));
         });
         assert_eq!(ws_proxy_rx.len(), 1);
         network.update(&mut app, |network, _ctx| {
-            network.send_active_prompt_update_if_changed(ActivePrompt::WarpPrompt(
-                "test warp prompt".to_owned(),
+            network.send_active_prompt_update_if_changed(ActivePrompt::DerpPrompt(
+                "test derp prompt".to_owned(),
             ));
         });
         assert_eq!(ws_proxy_rx.len(), 1);
 
         // Different prompt should go through.
         network.update(&mut app, |network, _ctx| {
-            network.send_active_prompt_update_if_changed(ActivePrompt::WarpPrompt(
-                "different warp prompt".to_owned(),
+            network.send_active_prompt_update_if_changed(ActivePrompt::DerpPrompt(
+                "different derp prompt".to_owned(),
             ));
         });
         assert_eq!(ws_proxy_rx.len(), 2);
@@ -830,7 +830,7 @@ fn test_events_are_saved_on_send_and_removed_on_ack() {
         // Simulate receiving the EventsProcessedAck message from the server.
         network.update(
             &mut app,
-            |network, ctx: &mut warpui::ModelContext<'_, Network>| {
+            |network, ctx: &mut derpui::ModelContext<'_, Network>| {
                 let downstream_message = DownstreamMessage::EventsProcessedAck {
                     latest_processed_event_no: 1,
                 };

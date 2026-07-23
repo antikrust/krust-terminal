@@ -10,11 +10,11 @@ use futures::{select, FutureExt};
 use futures_lite::pin;
 use itertools::Itertools;
 use parking_lot::FairMutex;
-use warp_core::command::ExitCode;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_util::path::ShellFamily;
-use warpui::r#async::{Spawnable, Timer};
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use derp_core::command::ExitCode;
+use derp_core::execution_mode::AppExecutionMode;
+use derp_util::path::ShellFamily;
+use derpui::r#async::{Spawnable, Timer};
+use derpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::{
@@ -82,7 +82,7 @@ impl ShellCommandExecutor {
     ) {
         // We wait for precmd for the block _after_ the requested command's block so that
         // downstream checks for current working directory are fresh. The precmd hook is when
-        // the shell relays current working directory to warp.
+        // the shell relays current working directory to derp.
         if let ModelEvent::BlockMetadataReceived(BlockMetadataReceivedEvent { .. }) = event {
             let model = self.terminal_model.lock();
             let block_finished_senders = self.block_finished_senders.drain().collect_vec();
@@ -536,7 +536,7 @@ impl ShellCommandExecutor {
         enum WakeReason {
             BlockFinished,
             Timeout,
-            /// User clicked `Check now` in the warping indicator, short-circuiting  
+            /// User clicked `Check now` in the derping indicator, short-circuiting  
             /// the agent-set poll timer. Treated as a preemption so the server does  
             /// not interpret the early snapshot as a completion.  
             ForceRefresh,
@@ -654,7 +654,7 @@ impl ShellCommandExecutor {
     /// Force any in-flight poll for the given long-running command block to resolve
     /// immediately with a fresh snapshot, bypassing the agent-set timeout.
     ///
-    /// Called by the `Check now` affordance in the warping indicator. No-ops if there
+    /// Called by the `Check now` affordance in the derping indicator. No-ops if there
     /// is no matching in-flight poll (e.g. because the block already finished or the
     /// agent has transferred control to the user).
     pub fn force_refresh_block(&mut self, block_id: &BlockId) {

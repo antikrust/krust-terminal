@@ -1,24 +1,24 @@
 //! Loading screen UI for cloud mode initialization.
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warp_core::ui::Icon;
-use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::theme::AnsiColorIdentifier;
+use derp_core::ui::Icon;
+use derpui::elements::shimmering_text::ShimmeringTextStateHandle;
+use derpui::elements::{
     Align, Border, ConstrainedBox, Container, CrossAxisAlignment, Element, Expanded, Flex,
     FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     SelectableArea, SelectionHandle, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::prelude::{CornerRadius, Radius};
-use warpui::text_layout::TextAlignment;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::{AppContext, ModelHandle, SingletonEntity};
+use derpui::fonts::{Properties, Weight};
+use derpui::prelude::{CornerRadius, Radius};
+use derpui::text_layout::TextAlignment;
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::UiComponent;
+use derpui::{AppContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent_tips::{AITip, AITipModel};
-use crate::ai::loading::shimmering_warp_loading_text;
+use crate::ai::loading::shimmering_derp_loading_text;
 use crate::terminal::view::ambient_agent::CloudModeTip;
 use crate::ui_components::blended_colors;
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -26,7 +26,7 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 /// Icon size for the error icon
 const ERROR_ICON_SIZE: f32 = 24.;
 
-/// Renders the cloud mode loading screen with shimmering warp logo and tips.
+/// Renders the cloud mode loading screen with shimmering derp logo and tips.
 pub fn render_cloud_mode_loading_screen(
     message: &str,
     appearance: &Appearance,
@@ -38,9 +38,9 @@ pub fn render_cloud_mode_loading_screen(
     // Larger font size for the main loading text
     let loading_font_size = appearance.monospace_font_size() + 2.;
 
-    // Create the shimmering warp loading text element
+    // Create the shimmering derp loading text element
     let shimmer_element =
-        shimmering_warp_loading_text(message, loading_font_size, shimmer_handle.clone(), app);
+        shimmering_derp_loading_text(message, loading_font_size, shimmer_handle.clone(), app);
 
     // Get current tip from the model and render with link
     let tip_element = if let Some(tip) = tip_model.as_ref(app).current_tip() {
@@ -66,7 +66,7 @@ pub fn render_cloud_mode_loading_screen(
         .with_hyperlink_font_color(theme.accent().into())
         .set_selectable(true)
         .register_default_click_handlers_with_action_support(|link, _evt, app| {
-            use warpui::elements::HyperlinkLens;
+            use derpui::elements::HyperlinkLens;
             if let HyperlinkLens::Url(url) = link {
                 app.open_url(url);
             }
@@ -181,7 +181,7 @@ fn render_tier_limits_footer(
     .with_alignment(TextAlignment::Center)
     .with_hyperlink_font_color(theme.accent().into())
     .register_default_click_handlers_with_action_support(|link, _evt, app| {
-        use warpui::elements::HyperlinkLens;
+        use derpui::elements::HyperlinkLens;
         if let HyperlinkLens::Url(url) = link {
             app.open_url(url);
         }
@@ -192,7 +192,7 @@ fn render_tier_limits_footer(
     let icon_size = footer_font_size;
     let info_icon = ConstrainedBox::new(
         Icon::Info
-            .to_warpui_icon(blended_colors::text_sub(theme, theme.surface_1()).into())
+            .to_derpui_icon(blended_colors::text_sub(theme, theme.surface_1()).into())
             .finish(),
     )
     .with_width(icon_size)
@@ -224,7 +224,7 @@ pub fn render_cloud_mode_error_screen(
     // Error icon with fixed size constraints - using AlertTriangle icon
     let error_icon = ConstrainedBox::new(
         Icon::AlertTriangle
-            .to_warpui_icon(error_color.into())
+            .to_derpui_icon(error_color.into())
             .finish(),
     )
     .with_width(ERROR_ICON_SIZE)
@@ -273,7 +273,7 @@ pub fn render_cloud_mode_error_screen(
         .finish();
 
     // Red bordered container with 10% opacity background
-    let error_background = warp_core::ui::color::coloru_with_opacity(error_color.into(), 10);
+    let error_background = derp_core::ui::color::coloru_with_opacity(error_color.into(), 10);
 
     let error_container = Container::new(content)
         .with_background(error_background)
@@ -316,7 +316,7 @@ pub fn render_cloud_mode_github_auth_required_screen(
     let border_color = blended_colors::neutral_4(theme);
 
     // Info icon with fixed size constraints
-    let auth_icon = ConstrainedBox::new(Icon::Info.to_warpui_icon(accent_color).finish())
+    let auth_icon = ConstrainedBox::new(Icon::Info.to_derpui_icon(accent_color).finish())
         .with_width(ERROR_ICON_SIZE)
         .with_height(ERROR_ICON_SIZE)
         .finish();
@@ -363,7 +363,7 @@ pub fn render_cloud_mode_github_auth_required_screen(
         .finish();
 
     // Dark background (surface_2) with subtle border
-    let auth_background: warpui::elements::Fill = theme.surface_2().into();
+    let auth_background: derpui::elements::Fill = theme.surface_2().into();
 
     let auth_container = Container::new(content)
         .with_background(auth_background)
@@ -401,7 +401,7 @@ pub fn render_cloud_mode_cancelled_screen(appearance: &Appearance) -> Box<dyn El
     // SlashCircle icon with fixed size constraints
     let cancelled_icon = ConstrainedBox::new(
         Icon::SlashCircle
-            .to_warpui_icon(title_color.into())
+            .to_derpui_icon(title_color.into())
             .finish(),
     )
     .with_width(ERROR_ICON_SIZE)
@@ -437,7 +437,7 @@ pub fn render_cloud_mode_cancelled_screen(appearance: &Appearance) -> Box<dyn El
         .finish();
 
     // Dark background (surface_2) with subtle border
-    let cancelled_background: warpui::elements::Fill = theme.surface_2().into();
+    let cancelled_background: derpui::elements::Fill = theme.surface_2().into();
 
     let cancelled_container = Container::new(content)
         .with_background(cancelled_background)

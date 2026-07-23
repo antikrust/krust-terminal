@@ -1,7 +1,7 @@
-use warpui::elements::{Align, MouseStateHandle, Shrinkable};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use derpui::elements::{Align, MouseStateHandle, Shrinkable};
+use derpui::ui_components::button::ButtonVariant;
+use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::auth_manager::AuthManager;
 use crate::appearance::Appearance;
@@ -78,7 +78,7 @@ impl View for NeedsSsoLinkView {
 
         LoginErrorModal::new(app)
             .with_header("Your organization has enabled SSO for your account")
-            .with_detail("Click the button below to link your Warp account to your SSO provider.")
+            .with_detail("Click the button below to link your Derp account to your SSO provider.")
             .with_action(link_sso_button)
             .build()
             .finish()

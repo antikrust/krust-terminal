@@ -1,0 +1,100 @@
+[package]
+name = "derp_tui"
+edition = "2021"
+description = "Headless terminal-UI front-end for Derp"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+autobins = false
+default-run = "derp-tui-oss"
+
+# One binary per channel, mirroring the GUI app's `app/src/bin/*` layout. The
+# OSS bin is the `default-run` so bare `cargo run -p derp_tui` builds without
+# the internal `derp-channel-config` generator; `./script/run-tui` selects the
+# local bin when the generator is available.
+[[bin]]
+name = "derp-tui-oss"
+path = "src/bin/oss.rs"
+
+[[bin]]
+name = "derp-tui"
+path = "src/bin/local.rs"
+
+[[bin]]
+name = "derp-tui-dev"
+path = "src/bin/dev.rs"
+
+[[bin]]
+name = "derp-tui-preview"
+path = "src/bin/preview.rs"
+
+[[bin]]
+name = "derp-tui-stable"
+path = "src/bin/stable.rs"
+
+[dependencies]
+ai.workspace = true
+anyhow.workspace = true
+async-channel.workspace = true
+async-fs.workspace = true
+base64.workspace = true
+channel_versions.workspace = true
+clap.workspace = true
+command.workspace = true
+dirs.workspace = true
+futures.workspace = true
+futures-lite.workspace = true
+http_client.workspace = true
+instant.workspace = true
+itertools.workspace = true
+log.workspace = true
+num-traits.workspace = true
+parking_lot.workspace = true
+pathfinder_color.workspace = true
+pathfinder_geometry.workspace = true
+serde_json.workspace = true
+similar.workspace = true
+string-offset.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+sum_tree.workspace = true
+unicode-width.workspace = true
+vec1.workspace = true
+derp = { workspace = true, features = ["tui"] }
+derp_channel_config.workspace = true
+derp_core.workspace = true
+derp_errors.workspace = true
+derp_editor.workspace = true
+derp_files.workspace = true
+derp_search_core.workspace = true
+derp_terminal.workspace = true
+derp_util.workspace = true
+derpui.workspace = true
+derpui_core = { workspace = true, features = ["tui"] }
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+# `test-util` exposes `Appearance::mock()`, used to register the `Appearance`
+# singleton that the editor-backed TUI input view depends on in tests.
+derp_core = { workspace = true, features = ["test-util"] }
+# `test-util` exposes `RenderState::layout_complete()`, used to deterministically
+# await async layout (e.g. diff ghost blocks) in tests instead of busy-polling.
+derp_editor = { workspace = true, features = ["test-util"] }
+# Process-level worker-dispatch regression test.
+command.workspace = true
+pathfinder_color.workspace = true
+derp = { workspace = true, features = ["tui", "test-util"] }
+
+[features]
+# Declared so the `derp_channel_config::load_config!` macro's
+# `cfg(feature = "release_bundle")` branch is a known cfg in this crate. Today it
+# stays off and the local bin uses the runtime generator; wiring the embedded
+# config path (a `build.rs`) is phase 2 of the channel setup.
+release_bundle = ["derp/release_bundle"]
+# Self-contained TUI build (the binary is not inside a `.app` bundle). Enables
+# `derp/standalone`, which turns on `derp_core/standalone` so
+# `derp_core::paths::bundled_resources_dir()` resolves the sibling `resources/`
+# dir next to the executable (and `derp_assets/standalone` to drop GUI-only async
+# assets). Mirrors the `app` crate's `standalone` feature.
+standalone = ["derp/standalone"]

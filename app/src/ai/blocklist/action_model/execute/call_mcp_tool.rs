@@ -3,8 +3,8 @@ use futures::FutureExt;
 #[cfg(not(target_family = "wasm"))]
 use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
-use warpui::SingletonEntity;
-use warpui::{Entity, EntityId, ModelContext, ModelHandle};
+use derpui::SingletonEntity;
+use derpui::{Entity, EntityId, ModelContext, ModelHandle};
 
 #[cfg(not(target_family = "wasm"))]
 use super::get_server_output_id;
@@ -295,7 +295,7 @@ fn handle_call_tool_result(
     res: Result<rmcp::model::CallToolResult, rmcp::ServiceError>,
     server_output_id: Option<crate::ai::blocklist::action_model::execute::ServerOutputId>,
     tool_name: String,
-    ctx: &warpui::AppContext,
+    ctx: &derpui::AppContext,
 ) -> AIAgentActionResultType {
     let action_result = match res {
         Ok(result) => {

@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{ChildView, Container, Fill};
-use warpui::ui_components::components::{Coords, UiComponentStyles};
-use warpui::{
+use derp_core::ui::appearance::Appearance;
+use derpui::elements::{ChildView, Container, Fill};
+use derpui::ui_components::components::{Coords, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

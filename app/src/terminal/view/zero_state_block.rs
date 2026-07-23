@@ -1,17 +1,17 @@
 use settings::Setting;
-use warp_core::ui::Icon;
-use warp_errors::report_if_error;
-use warpui::elements::{
+use derp_core::ui::Icon;
+use derp_errors::report_if_error;
+use derpui::elements::{
     ChildAnchor, Container, CrossAxisAlignment, Flex, MainAxisSize, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Shrinkable, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::Keystroke;
-use warpui::prelude::{vec2f, ConstrainedBox, Cursor, Empty, Hoverable, MouseStateHandle};
-use warpui::scene::{Border, CornerRadius, Radius};
-use warpui::ui_components::checkbox::Checkbox;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use derpui::fonts::{Properties, Weight};
+use derpui::keymap::Keystroke;
+use derpui::prelude::{vec2f, ConstrainedBox, Cursor, Empty, Hoverable, MouseStateHandle};
+use derpui::scene::{Border, CornerRadius, Radius};
+use derpui::ui_components::checkbox::Checkbox;
+use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use derpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -148,8 +148,8 @@ impl View for TerminalViewZeroStateBlock {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        Icon::Warp
-                            .to_warpui_icon(theme.main_text_color(theme.background()))
+                        Icon::Derp
+                            .to_derpui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_height(title_font_size)

@@ -15,29 +15,29 @@ use regex::Regex;
 use string_offset::CharOffset;
 use url::Url;
 use vec1::{vec1, Vec1};
-use warp_core::features::FeatureFlag;
-use warp_core::r#async::debounce;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_editor::content::buffer::{
+use derp_core::features::FeatureFlag;
+use derp_core::r#async::debounce;
+use derp_core::semantic_selection::SemanticSelection;
+use derp_editor::content::buffer::{
     AutoScrollBehavior, Buffer, BufferEditAction, BufferEvent, BufferSelectAction, EditOrigin,
     SelectionOffsets, ShouldAutoscroll,
 };
-use warp_editor::content::selection_model::BufferSelectionModel;
-use warp_editor::content::text::{
+use derp_editor::content::selection_model::BufferSelectionModel;
+use derp_editor::content::text::{
     BlockHeaderSize, BlockType, BufferBlockItem, BufferBlockStyle, BufferTextStyle, CodeBlockType,
     IndentBehavior, IndentUnit, TextStyles, TextStylesWithMetadata,
 };
-use warp_editor::model::{BufferUpdateWrapper, CoreEditorModel, RichTextEditorModel};
-use warp_editor::render::model::{
+use derp_editor::model::{BufferUpdateWrapper, CoreEditorModel, RichTextEditorModel};
+use derp_editor::render::model::{
     AutoScrollMode, BlockItem, RenderEvent, RenderState, RichTextStyles, StyleUpdateAction,
 };
-use warp_editor::search::Searcher;
-use warp_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
-use warp_errors::report_error;
-use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::ListIndentLevel;
-use warpui::{
+use derp_editor::search::Searcher;
+use derp_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
+use derp_errors::report_error;
+use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
+use derpui::clipboard::ClipboardContent;
+use derpui::elements::ListIndentLevel;
+use derpui::{
     AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, WindowId,
 };
 
@@ -1411,7 +1411,7 @@ impl NotebooksEditorModel {
         if let Some(command) = child_model.executable_command(ctx) {
             ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                 format!("Selected workflow: {command}"),
-                WarpA11yRole::TextareaRole,
+                DerpA11yRole::TextareaRole,
             ));
         }
 
@@ -1775,7 +1775,7 @@ impl NotebooksEditorModel {
         let text = format!("{style:?} {action}");
         ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
             text,
-            WarpA11yRole::UserAction,
+            DerpA11yRole::UserAction,
         ))
     }
 

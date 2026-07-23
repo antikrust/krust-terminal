@@ -14,15 +14,15 @@ use anyhow::Result;
 use async_trait::async_trait;
 pub use cloud_object_models::{CloudNotebook, CloudNotebookModel, NotebookId, SerializedNotebook};
 use serde::{Deserialize, Serialize};
-use warpui::AppContext;
+use derpui::AppContext;
 
 use crate::appearance::Appearance;
 use crate::cloud_object::{
     CloudModelType, CloudObjectEventEntrypoint, CloudObjectUpsertParams, CreateCloudObjectResult,
     CreateObjectRequest, GenericServerObject, ObjectType, Owner, Revision, UpdateCloudObjectResult,
 };
-use crate::drive::items::notebook::WarpDriveNotebook;
-use crate::drive::items::WarpDriveItem;
+use crate::drive::items::notebook::DerpDriveNotebook;
+use crate::drive::items::DerpDriveItem;
 use crate::drive::CloudObjectTypeAndId;
 use crate::persistence::ModelEvent;
 use crate::server::cloud_objects::update_manager::InitiatedBy;
@@ -148,7 +148,7 @@ impl CloudModelType for CloudNotebookModel {
             .await
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_derp_drive(&self) -> bool {
         true
     }
 
@@ -156,13 +156,13 @@ impl CloudModelType for CloudNotebookModel {
         true
     }
 
-    fn to_warp_drive_item(
+    fn to_derp_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         notebook: &CloudNotebook,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveNotebook::new(
+    ) -> Option<Box<dyn DerpDriveItem>> {
+        Some(Box::new(DerpDriveNotebook::new(
             self.cloud_object_type_and_id(id),
             notebook.clone(),
             notebook.model().ai_document_id.is_some(),
@@ -207,8 +207,8 @@ pub fn init(app: &mut AppContext) {
 /// * Includes extra context for embedded objects.
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
 pub fn export_notebook(data: &str, ctx: &AppContext) -> anyhow::Result<String> {
-    use warp_editor::content::buffer::Buffer;
-    use warp_editor::content::markdown::MarkdownStyle;
+    use derp_editor::content::buffer::Buffer;
+    use derp_editor::content::markdown::MarkdownStyle;
 
     // Parse the Markdown directly rather than using [`Buffer::from_markdown`] so that we can
     // report errors to the exporter.

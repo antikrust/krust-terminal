@@ -1,7 +1,7 @@
 // Hard coded constants to divide keybindings into their respective categories/sections.
 // This should always align with documentation: https://therob.lol/derp-terminal/help/getting-started/keyboard-shortcuts
 
-use warpui::keymap::Keystroke;
+use derpui::keymap::Keystroke;
 
 use crate::util::bindings::CommandBinding;
 
@@ -107,9 +107,9 @@ pub const TERMINAL_KEYBINDINGS: &[&str] = &[
 
 pub const FUNDAMENTALS_KEYBINDINGS: &[&str] = &[
     "workspace:new_window",
-    "workspace:hide_warp",
+    "workspace:hide_derp",
     "workspace:hide_others",
-    "workspace:quit_warp",
+    "workspace:quit_derp",
     "workspace:minimize",
 ];
 
@@ -123,8 +123,8 @@ pub fn get_additional_keybindings() -> Vec<CommandBinding> {
             Some(Keystroke::parse("cmd-n").expect("Valid keystroke")),
         ),
         CommandBinding::new(
-            "workspace:hide_warp".into(),
-            "Hide Warp".into(),
+            "workspace:hide_derp".into(),
+            "Hide Derp".into(),
             Some(Keystroke::parse("cmd-h").expect("Valid keystroke")),
         ),
         CommandBinding::new(
@@ -133,8 +133,8 @@ pub fn get_additional_keybindings() -> Vec<CommandBinding> {
             Some(Keystroke::parse("alt-cmd-h").expect("Valid keystroke")),
         ),
         CommandBinding::new(
-            "workspace:quit_warp".into(),
-            "Quit Warp".into(),
+            "workspace:quit_derp".into(),
+            "Quit Derp".into(),
             Some(Keystroke::parse("cmd-q").expect("Valid keystroke")),
         ),
         CommandBinding::new(

@@ -1,8 +1,8 @@
 // Diff state protocol messages for communication between
-// the Warp client and the remote server binary.
+// the Derp client and the remote server binary.
 //
 // These messages are used by the diff state subsystem to synchronize
-// code review diff data between a remote daemon and the Warp client.
+// code review diff data between a remote daemon and the Derp client.
 
 syntax = "proto3";
 
@@ -429,7 +429,7 @@ message GitGetCommittedBranchFilesSuccess {
 }
 
 // Client → server: generate a commit message via AI on the remote host.
-// The daemon computes the working-tree diff locally and calls the Warp
+// The daemon computes the working-tree diff locally and calls the Derp
 // server's code-review content endpoint, returning the message string. Sent
 // at commit-dialog open time, mirroring the local open-time autogen.
 message GitGenerateCommitMessageRequest {

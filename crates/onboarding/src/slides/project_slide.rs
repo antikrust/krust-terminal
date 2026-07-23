@@ -1,20 +1,20 @@
 use ui_components::{button, keyboard_shortcut, Component as _, Options as _};
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::Icon;
-use warpui_core::elements::{
+use derp_core::send_telemetry_from_ctx;
+use derp_core::ui::appearance::Appearance;
+use derp_core::ui::color::coloru_with_opacity;
+use derp_core::ui::theme::color::internal_colors;
+use derp_core::ui::Icon;
+use derpui_core::elements::{
     Align, ClippedScrollStateHandle, ConstrainedBox, Container, CrossAxisAlignment, Flex,
     MouseStateHandle, ParentElement, Shrinkable,
 };
-use warpui_core::fonts::Weight;
-use warpui_core::keymap::Keystroke;
-use warpui_core::platform::file_picker::{FilePickerConfiguration, FilePickerError};
-use warpui_core::prelude::{MainAxisAlignment, MainAxisSize, Vector2F};
-use warpui_core::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use warpui_core::{
+use derpui_core::fonts::Weight;
+use derpui_core::keymap::Keystroke;
+use derpui_core::platform::file_picker::{FilePickerConfiguration, FilePickerError};
+use derpui_core::prelude::{MainAxisAlignment, MainAxisSize, Vector2F};
+use derpui_core::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use derpui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -135,7 +135,7 @@ impl ProjectSlide {
 
         let subtitle = appearance
             .ui_builder()
-            .paragraph("Set up a project to optimize it for coding in Warp.")
+            .paragraph("Set up a project to optimize it for coding in Derp.")
             .with_style(UiComponentStyles {
                 font_size: Some(20.),
                 font_weight: Some(Weight::Normal),
@@ -175,7 +175,7 @@ impl ProjectSlide {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     selected_local_folder.to_owned(),
-                    Icon::Folder.to_warpui_icon(theme.foreground()),
+                    Icon::Folder.to_derpui_icon(theme.foreground()),
                     MainAxisSize::Max,
                     MainAxisAlignment::Center,
                     Vector2F::new(16., 16.),
@@ -205,7 +205,7 @@ impl ProjectSlide {
                 );
 
                 let folder_icon =
-                    ConstrainedBox::new(Icon::Folder.to_warpui_icon(theme.foreground()).finish())
+                    ConstrainedBox::new(Icon::Folder.to_derpui_icon(theme.foreground()).finish())
                         .with_width(16.)
                         .with_height(16.)
                         .finish();
@@ -292,14 +292,14 @@ impl ProjectSlide {
         );
 
         let theme_picker_last =
-            warp_core::features::FeatureFlag::OpenWarpNewSettingsModes.is_enabled();
+            derp_core::features::FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
 
         let (label, keystroke, action) = match settings {
             ProjectOnboardingSettings::Project { .. } => (
                 if theme_picker_last {
                     "Next"
                 } else {
-                    "Get Warping"
+                    "Get Derping"
                 },
                 Keystroke::parse("enter").unwrap_or_default(),
                 ProjectSlideAction::NextClicked,
@@ -484,7 +484,7 @@ impl ProjectSlide {
         }
 
         self.onboarding_state.update(ctx, |model, ctx| {
-            if warp_core::features::FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+            if derp_core::features::FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
                 model.next(ctx);
             } else {
                 model.complete(ctx);
@@ -495,7 +495,7 @@ impl ProjectSlide {
     fn skip(&mut self, ctx: &mut ViewContext<Self>) {
         self.onboarding_state.update(ctx, |model, ctx| {
             model.set_project_selected_local_folder(None, ctx);
-            if warp_core::features::FeatureFlag::OpenWarpNewSettingsModes.is_enabled() {
+            if derp_core::features::FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
                 model.next(ctx);
             } else {
                 model.complete(ctx);

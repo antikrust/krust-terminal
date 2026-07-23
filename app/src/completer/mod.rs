@@ -11,14 +11,14 @@ use async_trait::async_trait;
 use lazy_static::lazy_static;
 use smol_str::SmolStr;
 use typed_path::{TypedPath, TypedPathBuf};
-use warp_completer::completer::{
+use derp_completer::completer::{
     CommandExitStatus, CommandOutput, CompletionContext, EngineDirEntry, EngineFileType,
     GeneratorContext, PathCompletionContext, PathSeparators, TopLevelCommandCaseSensitivity,
 };
-use warp_completer::signatures::CommandRegistry;
-use warp_core::features::FeatureFlag;
-use warp_util::path::{EscapeChar, ShellFamily};
-use warpui::{AppContext, SingletonEntity};
+use derp_completer::signatures::CommandRegistry;
+use derp_core::features::FeatureFlag;
+use derp_util::path::{EscapeChar, ShellFamily};
+use derpui::{AppContext, SingletonEntity};
 
 use crate::safe_warn;
 use crate::terminal::model::session::{ExecuteCommandOptions, Session, SessionType};
@@ -50,7 +50,7 @@ pub struct SessionContext {
     /// current contents should use `refresh_directory_entries` to re-read from disk.
     cached_directory_entries: Arc<dashmap::DashMap<TypedPathBuf, Arc<Vec<EngineDirEntry>>>>,
 
-    /// Snapshot of all Warp workflow aliases.
+    /// Snapshot of all Derp workflow aliases.
     workflow_aliases: HashMap<String, String>,
 }
 
@@ -101,7 +101,7 @@ impl SessionContext {
                     .filter_map(|res| res.and_then(EngineDirEntry::try_from).ok())
                     .collect::<Vec<_>>()
             }
-            SessionType::WarpifiedRemote { .. } => {
+            SessionType::DerpifiedRemote { .. } => {
                 let env_vars = self
                     .session
                     .path()
@@ -238,7 +238,7 @@ impl GeneratorContext for SessionContext {
     ) -> Result<CommandOutput> {
         let mut env_vars = session_env_vars.unwrap_or_default();
         // We need to run the command with the PATH var set explicitly even if we have session env vars
-        // because if the user opened Warp through a parent process that didn't have the PATH var set
+        // because if the user opened Derp through a parent process that didn't have the PATH var set
         // (i.e. outside of a shell, for example opening the app via Finder),
         // the subshell won't inherit the PATH var, but we need the PATH var
         // to reference executables we might run as part of generators.
@@ -340,10 +340,10 @@ impl CompletionContext for SessionContext {
     }
 
     #[cfg(feature = "completions_v2")]
-    fn js_context(&self) -> Option<&dyn warp_completer::completer::JsExecutionContext> {
+    fn js_context(&self) -> Option<&dyn derp_completer::completer::JsExecutionContext> {
         self.js_ctx
             .as_ref()
-            .map(|ctx| -> &dyn warp_completer::completer::JsExecutionContext { ctx })
+            .map(|ctx| -> &dyn derp_completer::completer::JsExecutionContext { ctx })
     }
 
     fn shell_family(&self) -> Option<ShellFamily> {
@@ -479,7 +479,7 @@ fn ls_script_for_dir(directory: &TypedPath) -> Option<String> {
         log::warn!("Non-unicode character found in path: `{directory:?}`");
         return None;
     };
-    let escaped_dir = warp_util::path::ShellFamily::Posix.shell_escape(dir_str);
+    let escaped_dir = derp_util::path::ShellFamily::Posix.shell_escape(dir_str);
 
     // Get all directories with -print0, which makes all items end in `\0` (null character)
     // Get all files with -print0, which makes all items end in `\0`

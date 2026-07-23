@@ -132,7 +132,7 @@ jobs:
         uses: getsentry/action-release@5657c9e888b4e2cc85f4d29143ea4131fde4a73a # v3.6.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          SENTRY_ORG: warpdotdev
+          SENTRY_ORG: derpdotdev
           SENTRY_PROJECT: ${{ steps.get-config.outputs.sentry_project }}
         with:
           environment: ${{ steps.get-config.outputs.sentry_environment }}
@@ -161,7 +161,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       - name: Ensure rust target is installed
         run: rustup target add ${{ matrix.arch }}-apple-darwin
@@ -194,11 +194,11 @@ jobs:
         env:
           CHANNEL: ${{ steps.get-config.outputs.channel }}
           GIT_RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
-          WARP_DEVELOPER_ID_CERT: ${{ secrets.WARP_DEVELOPER_ID_CERT }}
-          WARP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.WARP_DEVELOPER_ID_CERT_PASSWORD }}
-          WARP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.WARP_CODESIGN_KEYCHAIN_PASSWORD }}
-          WARP_NOTARIZATION_APPLE_ID: ${{ secrets.WARP_NOTARIZATION_APPLE_ID }}
-          WARP_NOTARIZATION_PASSWORD: ${{ secrets.WARP_NOTARIZATION_PASSWORD }}
+          DERP_DEVELOPER_ID_CERT: ${{ secrets.DERP_DEVELOPER_ID_CERT }}
+          DERP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DERP_DEVELOPER_ID_CERT_PASSWORD }}
+          DERP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.DERP_CODESIGN_KEYCHAIN_PASSWORD }}
+          DERP_NOTARIZATION_APPLE_ID: ${{ secrets.DERP_NOTARIZATION_APPLE_ID }}
+          DERP_NOTARIZATION_PASSWORD: ${{ secrets.DERP_NOTARIZATION_PASSWORD }}
 
       - name: Add DMG to GitHub release assets
         if: ${{ needs.prepare_release.outputs.should_publish == 'true' }}
@@ -218,7 +218,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: ${{ steps.bundle_app.outputs.dmg_path }}
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           headers: |-
             cache-control: ${{ steps.get-config.outputs.gcs_cache_control_value }}
 
@@ -234,7 +234,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debug symbols from frameworks to Sentry
@@ -281,7 +281,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       # Install go toolchain, as it may be needed for some build steps.
       - name: Setup Go
@@ -328,18 +328,18 @@ jobs:
         env:
           CHANNEL: ${{ steps.get-config.outputs.channel }}
           GIT_RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
-          WARP_DEVELOPER_ID_CERT: ${{ secrets.WARP_DEVELOPER_ID_CERT }}
-          WARP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.WARP_DEVELOPER_ID_CERT_PASSWORD }}
-          WARP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.WARP_CODESIGN_KEYCHAIN_PASSWORD }}
-          WARP_NOTARIZATION_APPLE_ID: ${{ secrets.WARP_NOTARIZATION_APPLE_ID }}
-          WARP_NOTARIZATION_PASSWORD: ${{ secrets.WARP_NOTARIZATION_PASSWORD }}
+          DERP_DEVELOPER_ID_CERT: ${{ secrets.DERP_DEVELOPER_ID_CERT }}
+          DERP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DERP_DEVELOPER_ID_CERT_PASSWORD }}
+          DERP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.DERP_CODESIGN_KEYCHAIN_PASSWORD }}
+          DERP_NOTARIZATION_APPLE_ID: ${{ secrets.DERP_NOTARIZATION_APPLE_ID }}
+          DERP_NOTARIZATION_PASSWORD: ${{ secrets.DERP_NOTARIZATION_PASSWORD }}
 
       - name: Set up Sentry CLI
         if: ${{ needs.prepare_release.outputs.should_publish == 'true' }}
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debugging symbols to Sentry
@@ -393,7 +393,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: ${{ steps.bundle_app.outputs.dmg_path }}
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -428,7 +428,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       - name: Ensure rust target is installed
         run: rustup target add ${{ matrix.arch }}-apple-darwin
@@ -455,11 +455,11 @@ jobs:
         env:
           CHANNEL: ${{ steps.get-config.outputs.channel }}
           GIT_RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
-          WARP_DEVELOPER_ID_CERT: ${{ secrets.WARP_DEVELOPER_ID_CERT }}
-          WARP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.WARP_DEVELOPER_ID_CERT_PASSWORD }}
-          WARP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.WARP_CODESIGN_KEYCHAIN_PASSWORD }}
-          WARP_NOTARIZATION_APPLE_ID: ${{ secrets.WARP_NOTARIZATION_APPLE_ID }}
-          WARP_NOTARIZATION_PASSWORD: ${{ secrets.WARP_NOTARIZATION_PASSWORD }}
+          DERP_DEVELOPER_ID_CERT: ${{ secrets.DERP_DEVELOPER_ID_CERT }}
+          DERP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DERP_DEVELOPER_ID_CERT_PASSWORD }}
+          DERP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.DERP_CODESIGN_KEYCHAIN_PASSWORD }}
+          DERP_NOTARIZATION_APPLE_ID: ${{ secrets.DERP_NOTARIZATION_APPLE_ID }}
+          DERP_NOTARIZATION_PASSWORD: ${{ secrets.DERP_NOTARIZATION_PASSWORD }}
 
       - name: Package CLI binary
         run: |
@@ -484,7 +484,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: oz-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/macos/${{ matrix.arch }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/macos/${{ matrix.arch }}
           headers: |-
             cache-control: ${{ steps.get-config.outputs.gcs_cache_control_value }}
 
@@ -500,7 +500,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debugging symbols to Sentry
@@ -515,7 +515,7 @@ jobs:
     name: Build Release (macOS TUI ${{ matrix.arch }})
     runs-on: macos-26-xlarge
     needs: prepare_release
-    # The Warp TUI is currently a dev-only, macOS-only artifact. Keep this job
+    # The Derp TUI is currently a dev-only, macOS-only artifact. Keep this job
     # scoped to the dev channel; it rides the existing nightly dev cut.
     if: ${{ inputs.build_macos != false && inputs.channel == 'dev' }}
     timeout-minutes: 60
@@ -534,7 +534,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       - name: Ensure rust target is installed
         run: rustup target add ${{ matrix.arch }}-apple-darwin
@@ -561,23 +561,23 @@ jobs:
         env:
           CHANNEL: ${{ steps.get-config.outputs.channel }}
           GIT_RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
-          WARP_DEVELOPER_ID_CERT: ${{ secrets.WARP_DEVELOPER_ID_CERT }}
-          WARP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.WARP_DEVELOPER_ID_CERT_PASSWORD }}
-          WARP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.WARP_CODESIGN_KEYCHAIN_PASSWORD }}
-          WARP_NOTARIZATION_APPLE_ID: ${{ secrets.WARP_NOTARIZATION_APPLE_ID }}
-          WARP_NOTARIZATION_PASSWORD: ${{ secrets.WARP_NOTARIZATION_PASSWORD }}
+          DERP_DEVELOPER_ID_CERT: ${{ secrets.DERP_DEVELOPER_ID_CERT }}
+          DERP_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DERP_DEVELOPER_ID_CERT_PASSWORD }}
+          DERP_CODESIGN_KEYCHAIN_PASSWORD: ${{ secrets.DERP_CODESIGN_KEYCHAIN_PASSWORD }}
+          DERP_NOTARIZATION_APPLE_ID: ${{ secrets.DERP_NOTARIZATION_APPLE_ID }}
+          DERP_NOTARIZATION_PASSWORD: ${{ secrets.DERP_NOTARIZATION_PASSWORD }}
 
       - name: Package TUI binary
         run: |
-          mv ${{ steps.bundle_tui.outputs.binary_path }} warp-tui-${{ steps.get-config.outputs.channel }}
-          tar czf warp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz warp-tui-${{ steps.get-config.outputs.channel }} -C "$(dirname "${{ steps.bundle_tui.outputs.bundled_resources_dir }}")" resources
+          mv ${{ steps.bundle_tui.outputs.binary_path }} derp-tui-${{ steps.get-config.outputs.channel }}
+          tar czf derp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz derp-tui-${{ steps.get-config.outputs.channel }} -C "$(dirname "${{ steps.bundle_tui.outputs.bundled_resources_dir }}")" resources
 
       - name: Add TUI to GitHub release assets
         if: ${{ needs.prepare_release.outputs.should_publish == 'true' }}
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           tag_name: ${{ needs.prepare_release.outputs.release_tag }}
-          files: warp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
+          files: derp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -589,8 +589,8 @@ jobs:
         if: ${{ needs.prepare_release.outputs.should_publish == 'true' }}
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
-          path: warp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/tui/macos/${{ matrix.arch }}
+          path: derp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/tui/macos/${{ matrix.arch }}
           headers: |-
             cache-control: ${{ steps.get-config.outputs.gcs_cache_control_value }}
 
@@ -599,7 +599,7 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-macos-tui-${{ matrix.arch }}-${{ steps.get-config.outputs.channel }}
-          path: warp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
+          path: derp-tui-${{ steps.get-config.outputs.channel }}-macos-${{ matrix.arch }}.tar.gz
 
   release_linux_x86:
     name: Build Release (Linux x86_64)
@@ -624,7 +624,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       # Install gcc 10, as gcc 9.5 has a bug with memcmp that is incompatible
       # with aws-lc-rs (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189).
@@ -720,7 +720,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debugging symbols to Sentry
@@ -748,7 +748,7 @@ jobs:
           # Only upload the files from within `packages_dir`, don't include the
           # (parent) folder itself.
           parent: false
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -781,7 +781,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       # Install gcc 10, as gcc 9.5 has a bug with memcmp that is incompatible
       # with aws-lc-rs (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189).
@@ -879,7 +879,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debugging symbols to Sentry
@@ -907,7 +907,7 @@ jobs:
           # Only upload the files from within `packages_dir`, don't include the
           # (parent) folder itself.
           parent: false
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -927,7 +927,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: oz-${{ steps.get-config.outputs.channel }}-linux-x86_64.tar.gz
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/linux/x86_64
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/linux/x86_64
           headers: |-
             cache-control: ${{ steps.get-config.outputs.gcs_cache_control_value }}
 
@@ -963,7 +963,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       # Install gcc 10, as gcc 9.5 has a bug with memcmp that is incompatible
       # with aws-lc-rs (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189).
@@ -1052,7 +1052,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       # Install gcc 10, as gcc 9.5 has a bug with memcmp that is incompatible
       # with aws-lc-rs (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189).
@@ -1146,7 +1146,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       # Install gcc 10, as gcc 9.5 has a bug with memcmp that is incompatible
@@ -1337,7 +1337,7 @@ jobs:
         with:
           path: ${{ steps.bundle_app.outputs.packages_dir }}
           parent: false
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -1350,7 +1350,7 @@ jobs:
         with:
           path: ${{ steps.bundle_cli.outputs.packages_dir }}
           parent: false
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -1362,7 +1362,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: oz-${{ steps.get-config.outputs.channel }}-linux-aarch64.tar.gz
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/linux/aarch64
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}/cli/linux/aarch64
           headers: |-
             cache-control: ${{ steps.get-config.outputs.gcs_cache_control_value }}
 
@@ -1389,7 +1389,7 @@ jobs:
           target_os: wasm
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       - name: Get channel configuration
         id: get-config
@@ -1422,7 +1422,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload debugging symbols to Sentry
@@ -1504,8 +1504,8 @@ jobs:
             runner: windows-latest-large
     env:
       TRUSTED_SIGNING_ENDPOINT: https://eus.codesigning.azure.net/
-      TRUSTED_SIGNING_ACCOUNT: warpdotdev
-      TRUSTED_SIGNING_CERT_PROFILE: warpterminal
+      TRUSTED_SIGNING_ACCOUNT: derpdotdev
+      TRUSTED_SIGNING_CERT_PROFILE: derpterminal
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
@@ -1516,7 +1516,7 @@ jobs:
           is_self_hosted: false
           ref: ${{ needs.prepare_release.outputs.release_branch }}
           install_release_deps: true
-          ssh_key: ${{ secrets.WARP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
+          ssh_key: ${{ secrets.DERP_CHANNEL_CONFIG_ACCESS_SSH_KEY }}
 
       - name: Add arm64 target
         if: ${{ matrix.arch == 'arm64' }}
@@ -1562,7 +1562,7 @@ jobs:
       # We locate them so ISCC can call signtool during compilation to sign the inner setup engine
       # (the file extracted to %TEMP% at runtime). This prevents Defender ASR rule D4F940AB from
       # blocking the installer in enterprise environments. See this issue:
-      # https://github.com/warpdotdev/Warp/issues/8794
+      # https://github.com/derpdotdev/Derp/issues/8794
       - name: Build sign-tool command for Inno Setup
         id: setup_signing
         shell: pwsh
@@ -1600,7 +1600,7 @@ jobs:
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           token: ${{ secrets.SENTRY_RELEASE_TOKEN }}
-          organization: warpdotdev
+          organization: derpdotdev
           project: ${{ steps.get-config.outputs.sentry_project }}
 
       - name: Upload binary to Sentry
@@ -1638,7 +1638,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: ${{ steps.bundle_app.outputs.installer_path }}
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
           # IMPORTANT: both the key and value of the cache-control header must be all lowercase;
           # uppercase values will not be respected by Cloud CDN and using "Cache-Control" will be
           # ignored by the upload-cloud-storage action.
@@ -1754,7 +1754,7 @@ jobs:
       # daily dev cuts and preview RCs.
       - name: Generate changelog via Oz (stable only)
         if: inputs.channel == 'stable'
-        uses: warpdotdev/oz-agent-action@ce1621abf6a8ed8afdd4e4cc994545ede8fe1c6f # main
+        uses: derpdotdev/oz-agent-action@ce1621abf6a8ed8afdd4e4cc994545ede8fe1c6f # main
         with:
           prompt: |
             Generate a changelog draft for the ${{ inputs.channel }} channel, release tag ${{ needs.prepare_release.outputs.release_tag }}.
@@ -1763,12 +1763,12 @@ jobs:
 
             Follow the workflow in .agents/skills/changelog-draft/SKILL.md exactly.
             Make sure to produce both output files: changelog-draft.md and changelog-draft.json.
-            The release workflow may run from warpdotdev/warp-internal. When fetching PR data, pass the checked-out repository ("${{ github.repository }}") to fetch_prs.py and rely on the script's repo-sync normalization to resolve public warpdotdev/warp PR numbers, URLs, and authors. The script intentionally omits non-repo-sync PRs from warp-internal because they are private internal changes. Do not infer or synthesize public PR links manually.
+            The release workflow may run from derpdotdev/derp-internal. When fetching PR data, pass the checked-out repository ("${{ github.repository }}") to fetch_prs.py and rely on the script's repo-sync normalization to resolve public derpdotdev/derp PR numbers, URLs, and authors. The script intentionally omits non-repo-sync PRs from derp-internal because they are private internal changes. Do not infer or synthesize public PR links manually.
 
             After writing the output files, print the full contents of changelog-draft.md to stdout so it appears in the workflow log.
 
             You are running in a GitHub Actions workflow. The repo is checked out at the default branch (HEAD) with full history. Use the release_tag input as the git range endpoint — do NOT check out the release tag. `gh` is authenticated. Do not commit, push, or create PRs.
-          warp_api_key: ${{ secrets.WARP_API_KEY }}
+          derp_api_key: ${{ secrets.DERP_API_KEY }}
           share: team
       - name: Upload raw Markdown changelog artifact (stable only)
         if: inputs.channel == 'stable'
@@ -1798,7 +1798,7 @@ jobs:
       - name: Generate changelog via legacy action (non-stable only)
         if: inputs.channel != 'stable'
         id: legacy_changelog
-        uses: warpdotdev/generate-changelog@70f534c1e030dafb45046ae57e4aa4d43a2f5c84 # main
+        uses: derpdotdev/generate-changelog@70f534c1e030dafb45046ae57e4aa4d43a2f5c84 # main
         with:
           channel: ${{ inputs.channel }}
           github_auth_token: ${{ steps.github_app_auth.outputs.token }}
@@ -1906,4 +1906,4 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@e95a15f226403ed658d3e65f40205649f342ba2c # v1
         with:
           path: changelog.json
-          destination: warp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
+          destination: derp-releases/${{ steps.get-config.outputs.channel }}/${{ needs.prepare_release.outputs.release_tag }}
