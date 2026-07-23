@@ -806,7 +806,11 @@ pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
             "3, 3",
             "0, 0",
         ],
-        3 => &["1, 2, 3", "[], [], []", "'ab', 1, []"],
+        // `'Tea', 250, 5` is the name/unit-price/quantity shape that turns up
+        // everywhere, and it is the one that makes a units mistake obvious:
+        // a function documented to render pounds answering £1250.00 has said
+        // what is wrong with it.
+        3 => &["1, 2, 3", "[], [], []", "'ab', 1, []", "'Tea', 250, 5"],
         _ => &[],
     }
 }

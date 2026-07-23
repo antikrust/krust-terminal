@@ -2013,6 +2013,11 @@ defect. `needs_reorder(3, 3) -> False` from one documented to be true once stock
 TO the threshold is a defect. A function that answers differently the second time it is \
 called with the same arguments is keeping state between calls, which is a defect unless it \
 is meant to. \
+READ THE DIFF THE RIGHT WAY ROUND. A line starting with `-` is the OLD code and is GONE; a \
+line starting with `+` or a space is what the file says NOW. Never report a defect in a `-` \
+line, and never describe removed code as though it were still there — \"unnecessary \
+initialization of log\" about an initialization the diff deleted is a finding about a file \
+that no longer exists. \
 Respond with STRICT JSON only — an array of findings, each shaped like \
 {\"file\":\"path/as/in/diff\",\"line\":123,\"severity\":\"high\",\"title\":\"one sentence naming \
 the defect\",\"detail\":\"why it is wrong and what breaks\"} with severity one of \

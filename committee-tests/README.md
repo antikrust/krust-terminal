@@ -154,6 +154,24 @@ returning the *lowest* scores. Same instructions as test 1.
 
 ---
 
+## Running one without the app
+
+`a_real_committee` runs the whole pipeline against one of these fixtures on
+whatever models you name, and scores the verdict against what was planted:
+
+```bash
+COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock COMMITTEE_REVIEWERS=qwen2.5-coder:7b,deepseek-coder-v2:16b,qwen2.5-coder:14b COMMITTEE_JUDGE=phi4:14b cargo test -p warp --lib -- --ignored --nocapture a_real_committee
+```
+
+Everything named runs on `COMMITTEE_HOST` and every model on this machine is
+benched, so the run can't quietly seat a laptop model and measure the laptop.
+`COMMITTEE_OUT=/path/to/file.md` keeps the transcript.
+
+A word on model choice: a 32B on a box with no working GPU offload is about a
+token a second, and one review stage takes twenty minutes. Check
+`curl -s $HOST/api/ps` — if `size_vram` is 0 it's on the CPU, and a 7B/14B
+bench will tell you more per hour than the big model will.
+
 ## Scoring a run
 
 The verdict's own counts are not the score. Read a run like this:
