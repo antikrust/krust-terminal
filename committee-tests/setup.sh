@@ -44,13 +44,19 @@ plant() {
     git add "$name.py"
     git commit --quiet -m "$name: the version everyone agreed on"
     cp "$FIXTURES/$name/buggy.py" "$name.py"
-    echo "  $TARGET/$name — 3 planted defects, uncommitted"
+    case "$name" in
+    tidy) echo "  $TARGET/$name — a refactor with NOTHING wrong, uncommitted" ;;
+    *) echo "  $TARGET/$name — 3 planted defects, uncommitted" ;;
+    esac
 }
 
 echo "Building committee tests in $TARGET"
 
 plant stock
 plant payday
+# Nothing wrong with this one. Everything else here is a test of finding
+# defects; this is the test of not inventing them.
+plant tidy
 
 # The cross-file test. Both defects are in the diff and neither is visible
 # from it: what makes them wrong is pricing.py, which does not change.

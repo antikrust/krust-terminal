@@ -74,6 +74,8 @@ PLANTED = {
             ["lowest", "ascending", "reverse", "smallest"],
         ),
     ],
+    # Nothing planted: every Definite finding here is an invention.
+    "tidy": [],
     "orders": [
         (
             "render_line",

@@ -86,6 +86,13 @@ fn task(fixture: &str) -> Task {
                 defect: "sorted ascending, so the *lowest* scores come back",
             },
         ]),
+        // Nothing is planted. Every other fixture measures whether the
+        // committee finds defects; this measures whether it invents them,
+        // which is the property that decides whether it can be left running.
+        // The diff is a real refactor — a helper extracted, `partition` for
+        // `split`, a dict literal for copy-and-update — proved equivalent
+        // over four thousand random inputs.
+        "tidy" => Task::Review(&[]),
         "orders" => Task::Review(&[
             Planted {
                 function: "render_line",
