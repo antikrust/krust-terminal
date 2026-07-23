@@ -103,21 +103,21 @@ fn task(fixture: &str) -> Task {
             save_as: "durations.py",
             grade: &["python3", "test_durations.py"],
         },
-        // Nothing is planted, so the grade is the lowest bar there is: does
-        // the thing it wrote actually run? A panel that produces a traceback
-        // has failed regardless of how the prose read.
+        // Graded by a file the committee never sees, like the edit test.
+        // This asked for a terminal animation once, marked by whether the
+        // result parsed, and passed a script that referenced a local from
+        // another function and called two curses methods that don't exist.
+        // A program that has to be watched cannot be marked.
         "arcade" => Task::Make {
             ask: Some(
-                "write a python3 script that draws a fireworks animation in the terminal using \
-                 only the standard library — no pip installs. It must run for 30 seconds and \
-                 then exit cleanly, and ctrl-c must also quit cleanly.",
+                "write a python3 file called wrap.py containing a function \
+                 `wrap(text, width)` that breaks `text` into a list of lines of at most \
+                 `width` characters. Break only at spaces and never split a word; a word \
+                 longer than `width` gets a line to itself. Collapse runs of whitespace, and \
+                 return an empty list for empty text. Standard library only.",
             ),
-            save_as: "fireworks.py",
-            grade: &[
-                "python3",
-                "-c",
-                "import ast; ast.parse(open('fireworks.py').read())",
-            ],
+            save_as: "wrap.py",
+            grade: &["python3", "test_wrap.py"],
         },
         other => panic!("no bench task for fixture {other}"),
     }

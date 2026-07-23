@@ -88,23 +88,34 @@ question about what they're being fed rather than about the models.
 (try *Notes → rewrite*), and type
 
 ```
-write a python3 script that animates fireworks in the terminal using only the standard library — no pip installs, runs for 30 seconds, ctrl-c quits cleanly
+write a python3 file called wrap.py containing a function wrap(text, width) that breaks text into a list of lines of at most width characters. Break only at spaces and never split a word; a word longer than width gets a line to itself. Collapse runs of whitespace, and return an empty list for empty text. Standard library only.
 ```
 
 Then when the verdict lands:
 
 ```
-save fireworks.py
+save wrap.py
 ```
 
 ```bash
-python3 fireworks.py
+python3 test_wrap.py
 ```
 
 **What it exercises.** Panel mode, the rounds menu, the judge picking a
 winner, the winner's final revision, and `save` writing a runnable file. If
-the script crashes, `round notes` and let them fix it — that loop is the
-whole point of the rounds.
+it fails cases, `round notes` and let them fix it — that loop is the whole
+point of the rounds.
+
+**Why this and not something prettier.** This asked for a terminal fireworks
+animation for about a day, and the mark was whether the result parsed —
+which passed a script that referenced a local belonging to another function
+and called two curses methods that do not exist. It could not have run for a
+second. A program that has to be *watched* cannot be marked by a machine, so
+the creation test asks for something with an answer, and `test_wrap.py` —
+committed alongside, never shown to the committee — says whether it got it.
+
+By all means still ask it for fireworks. Just don't let a machine tell you
+that one worked.
 
 ## 4. The edit test — `~/committee-tests/durations`
 

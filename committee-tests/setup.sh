@@ -64,12 +64,15 @@ cp "$FIXTURES/orders/invoice.buggy.py" invoice.py
 cp "$FIXTURES/orders/cart.buggy.py" cart.py
 echo "  $TARGET/orders — 2 defects across 2 files, uncommitted"
 
-# The creation test needs nothing but a clean place to write into.
+# The creation test. Graded like the edit test, by a file the committee
+# never sees — a program that has to be watched cannot be marked, and the
+# first version of this asked for a terminal animation and duly accepted one
+# that could not run.
 fresh arcade
-printf '# arcade\n\nSomewhere for the panel to write a program.\n' > README.md
-git add README.md
-git commit --quiet -m "arcade: an empty stage"
-echo "  $TARGET/arcade — empty, for the creation test"
+cp "$FIXTURES/arcade/test_wrap.py" test_wrap.py
+git add test_wrap.py
+git commit --quiet -m "arcade: a grader, and nothing to grade yet"
+echo "  $TARGET/arcade — write wrap.py, graded by test_wrap.py"
 
 # The edit test, graded by a file the committee never sees. The panel can't
 # read files, so the prompt has to carry the one it is meant to fix.
