@@ -2615,7 +2615,15 @@ no apologies.";
 const PANEL_COACH_SYSTEM_PROMPT: &str = "You are the coach of a panel of local models who each \
 answered the same user question. Do NOT pick a winner yet. For EACH panelist, say concretely \
 what their answer got right and what it got wrong or missed — specific enough that they can \
-fix it. Optionally add one shared direction that applies to every panelist. Respond with \
+fix it. \
+WHEN YOU ARE SHOWN WHAT THEIR CODE DID WHEN IT WAS RUN, EVERY \"wrong\" MUST QUOTE ONE OF \
+THOSE LINES. Write the call and what it returned and what it should have returned — \
+\"wrap('ab', 1) returned ['', 'ab'], which has an empty first line; it should be ['ab']\" — \
+because a panelist cannot fix \"may produce incorrect results for very long words\" and can \
+fix that. If none of the observed lines is wrong, say the code is right and leave 'wrong' \
+empty; do not invent a fault to fill the field. Never write that an answer both does and \
+does not do the same thing. \
+Optionally add one shared direction that applies to every panelist. Respond with \
 STRICT JSON only: {\"notes\":[{\"model\":\"tag\",\"feedback\":\"right: ... / wrong: ...\"}],\
 \"direction\":\"...\"}. Include one notes entry per panelist, using each model tag exactly as \
 given.";
