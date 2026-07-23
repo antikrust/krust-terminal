@@ -24,6 +24,7 @@ use uuid::Uuid;
 use warpui::r#async::Timer;
 
 use super::claude_stream_exec::run_jsonl_stream;
+use super::ollama_committee_proof::{lost_ground, probe_source};
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -452,7 +453,44 @@ async fn dispatch_builtin_tool(
                 .and_then(Value::as_str)
                 .ok_or("write_file requires a string `content`")?;
             let target = resolve_under(working_dir, file);
+            // Overwriting a working python file is where a model quietly
+            // loses what it did not understand. Measured on a panel told
+            // precisely which case to fix: it fixed that case and broke five
+            // others, taking a draft from 7 of 8 to 3 of 8. A whole-file
+            // rewrite is the same operation with nobody watching.
+            //
+            // So a rewrite has to keep what it replaced working. Same
+            // functions, same generic battery, compared by value — a call
+            // that answered before and raises now, or returned something and
+            // returns nothing now, is behaviour going backwards, and the old
+            // file goes back. Nothing else is judged: the model is free to
+            // restructure, rename locals, change anything it likes, as long
+            // as the code still does what it did.
+            let previous = target
+                .extension()
+                .is_some_and(|extension| extension == "py")
+                .then(|| std::fs::read_to_string(&target).ok())
+                .flatten();
+            let before = match &previous {
+                Some(source) => probe_source(source, &[], working_dir, path).await,
+                None => None,
+            };
             let bytes = write_file(&target, content)?;
+            if let (Some(before), Some(source)) = (before, previous) {
+                let after = probe_source(content, &[], working_dir, path).await;
+                if let Some(loss) = after
+                    .as_deref()
+                    .and_then(|after| lost_ground(&before, after))
+                {
+                    write_file(&target, &source)?;
+                    return Err(format!(
+                        "Refused: that rewrite loses behaviour the file already had — {loss}. \
+                         {} is unchanged. Make the smallest change that fixes what you meant to \
+                         fix, and leave the rest working.",
+                        target.display()
+                    ));
+                }
+            }
             Ok(format!("Wrote {bytes} bytes to {}", target.display()))
         }
         BUILTIN_RUN_CODE => {

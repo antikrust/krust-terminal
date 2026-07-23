@@ -8,9 +8,9 @@ use uuid::Uuid;
 use serde_json::{json, Value};
 
 use super::{
-    base_url_of, execute_shell, ollama_curl_args, ollama_generate_request, ollama_model_name,
-    ollama_serve_args, run_ollama_stream_without_service_start, McpToolCaller, McpToolSpec,
-    OllamaAgentReply, OllamaResponseAccumulator, CODELLAMA_OLLAMA_MODEL_ID,
+    base_url_of, dispatch_builtin_tool, execute_shell, ollama_curl_args, ollama_generate_request,
+    ollama_model_name, ollama_serve_args, run_ollama_stream_without_service_start, McpToolCaller,
+    McpToolSpec, OllamaAgentReply, OllamaResponseAccumulator, CODELLAMA_OLLAMA_MODEL_ID,
     DEEPSEEK_CODER_OLLAMA_MODEL_ID,
 };
 
@@ -709,4 +709,95 @@ fn tool_chat_resumes_session_history_across_turns() {
     assert!(has("First answer."), "turn 1 answer retained");
     assert!(has("second question"), "turn 2 question present");
     assert!(has("Second answer."), "turn 2 answer stored");
+}
+
+#[test]
+fn a_rewrite_that_loses_behaviour_is_refused_and_the_file_kept() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir().join(format!("ollama-write-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+    let working = "def wrap(text, width):\n\
+                   \x20   lines, current = [], ''\n\
+                   \x20   for word in text.split():\n\
+                   \x20       if not current:\n\
+                   \x20           current = word\n\
+                   \x20       elif len(current) + 1 + len(word) <= width:\n\
+                   \x20           current += ' ' + word\n\
+                   \x20       else:\n\
+                   \x20           lines.append(current)\n\
+                   \x20           current = word\n\
+                   \x20   if current:\n\
+                   \x20       lines.append(current)\n\
+                   \x20   return lines\n";
+    std::fs::write(dir.join("w.py"), working).unwrap();
+
+    let write = |content: &str| {
+        block_on(dispatch_builtin_tool(
+            "write_file",
+            &serde_json::json!({ "path": "w.py", "content": content }),
+            &dir,
+            &path,
+        ))
+    };
+
+    // What the guard promises is narrow and deliberate: it catches a
+    // rewrite that LOSES behaviour, not one that changes it — an edit is
+    // usually asked to change something, and blocking that would make the
+    // tool useless. So: a call that used to answer now raises. This is the
+    // fireworks script's failure exactly, a name belonging to another
+    // function, and the commonest way a whole-file rewrite destroys a file.
+    let broken = "def wrap(text, width):\n    return joiner(text, width)\n";
+    let refused = write(broken).expect_err("a rewrite that loses behaviour is refused");
+    assert!(refused.contains("loses behaviour"), "{refused}");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("w.py")).unwrap(),
+        working,
+        "the file it refused to break is left exactly as it was"
+    );
+
+    // Restructuring freely is fine as long as the behaviour survives — the
+    // guard judges what the code does, never how it is written.
+    let tidied = "def wrap(text, width):\n\
+                  \x20   lines = []\n\
+                  \x20   current = ''\n\
+                  \x20   for word in text.split():\n\
+                  \x20       candidate = f'{current} {word}'.strip()\n\
+                  \x20       if current and len(candidate) > width:\n\
+                  \x20           lines.append(current)\n\
+                  \x20           current = word\n\
+                  \x20       else:\n\
+                  \x20           current = candidate\n\
+                  \x20   if current:\n\
+                  \x20       lines.append(current)\n\
+                  \x20   return lines\n";
+    assert!(write(tidied).is_ok(), "an equivalent rewrite goes through");
+
+    // And so does one that deliberately changes what the code does — the
+    // guard is not a spec, and an edit that was asked for is not a loss.
+    let changed = "def wrap(text, width):\n    return [w.upper() for w in text.split()]\n";
+    assert!(
+        write(changed).is_ok(),
+        "a deliberate behaviour change is allowed"
+    );
+    assert!(write(tidied).is_ok(), "and can be changed back");
+    assert_eq!(std::fs::read_to_string(dir.join("w.py")).unwrap(), tidied);
+
+    // A file that did not exist has no behaviour to lose.
+    assert!(write_new(&dir, &path));
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Writing a brand-new python file is never blocked by the guard.
+fn write_new(dir: &std::path::Path, path: &str) -> bool {
+    use futures_lite::future::block_on;
+    block_on(dispatch_builtin_tool(
+        "write_file",
+        &serde_json::json!({ "path": "fresh.py", "content": "def f():\n    return 1\n" }),
+        dir,
+        path,
+    ))
+    .is_ok()
 }

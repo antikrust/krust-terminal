@@ -1297,6 +1297,13 @@ pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
             "7, 0",
             "3, 3",
             "0, 0",
+            // A string with a space in it. Without one, anything that joins
+            // or splits words is indistinguishable from anything else that
+            // does: `wrap('ab', 1)` and `text.split()` agree exactly, so a
+            // rewrite that stopped wrapping altogether passed a guard whose
+            // whole job was to catch it.
+            "'a b c', 3",
+            "'one two three', 7",
         ],
         // `'Tea', 250, 5` is the name/unit-price/quantity shape that turns up
         // everywhere, and it is the one that makes a units mistake obvious:
