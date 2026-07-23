@@ -127,6 +127,11 @@ same baseline:
 | peers | 7 / 8 | over-long word | C |
 | exemplar | 7 / 8 | over-long word | D |
 
+Nor does model size. A bench of `deepseek-coder-v2:16b` +
+`qwen2.5-coder:14b` + `mistral-nemo:12b` scores 7 of 8 and fails the same
+case. Three levers — round kind, round presence, model size — and one
+invariant result.
+
 **Four different programs, one score, the same failure.** Every form of
 feedback moves the answer somewhere new and none of them moves it up. The
 mechanism explores perfectly well; it has no gradient, so it wanders on a
