@@ -47,7 +47,11 @@ PLANTED = {
         ),
     ],
     "payday": [
-        ("split_pot", "`/` makes whole cents into floats", ["float", "33.33", "."]),
+        (
+            "split_pot",
+            "`/` makes whole cents into floats",
+            ["float", "33.33", "not an integer", "whole cent", "//"],
+        ),
         (
             "split_pot",
             "an empty roster divides by zero",
