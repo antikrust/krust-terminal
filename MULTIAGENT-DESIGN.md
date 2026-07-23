@@ -29,7 +29,11 @@ User prompt (model picker: "Committee")
        Stage 3  Fan-out     each reviewer model runs once, sequentially
                             (twice — cold then warm — with second opinion on)
        Stage 4  Consensus   merge findings mechanically; verify file locations
-       Stage 5  Proof       the raiser writes a repro; the harness runs it
+       Stage 2e Propose     a model writes one realistic call per changed function,
+                            because a generic battery cannot build a basket
+       Stage 5  Proof       the raiser writes a repro; the harness runs it,
+                            reads the comparison it printed, and ignores the
+                            exit code it chose
        Stage 6  Judge       one model rules on survivors, narrates the argument
        Stage 7  Verdict     Definite / Might be / Rejected + leaderboard update
        Stage 8  Audit       a model that sat the run out checks the verdict cold
@@ -430,6 +434,27 @@ runner.
 - **Cross-turn committee memory.** Follow-ups that interrogate a past verdict
   ("explain finding 2") without re-running the committee.
 
+## What a verdict has to survive
+
+A finding reaches **Definite** only if execution demonstrated it AND a second
+source saw it — another reviewer that found it independently, or an oracle
+mismatch about the same function. Everything else that is still plausible
+goes to **Might be** with the reason it could not be settled, and there are
+four of those reasons, all of them real runs:
+
+| Conflict | Why neither side wins |
+| --- | --- |
+| The interpreter demonstrated it, the judge rejected it | One is wrong and the run cannot say which |
+| A proof refuted what several reviewers each found alone | One script that tested the wrong input should not delete a consensus |
+| One reviewer, and only its own script agreeing | `actual` is computed, `expected` is asserted; that is one source |
+| An oracle that changed its answer between temperatures | A slip and a reading look the same from outside |
+
+The shape is the same every time, and it is the single most useful thing
+learned from measuring this: **when two kinds of evidence disagree, a bench
+of small models is far better at saying "these disagree" than at deciding
+which is right.** Reporting the ambiguity costs a line of reading. Resolving
+it wrongly costs a real defect or invents a false one.
+
 ## Failure modes this design already answers
 
 | Failure | Answer |
@@ -456,6 +481,11 @@ runner.
 | A defect only the caller can see | The unchanged files the diff imports go in as evidence, signatures and contracts only |
 | The interpreter and the judge flatly disagreeing | Neither wins: it goes to "Might be" and says which two things conflict |
 | A fixture that tells the models the answer | Found the hard way — see below |
+| A prover that picks an input which cannot settle the question | It is told which call to reproduce, from the oracle's own mismatch |
+| A prover that writes the observed value into `expected` | It is shown the calls with results stripped, and the contract separately |
+| A rewrite round that breaks what it was fixing | The revision is run against the draft it replaces and dropped if it lost ground |
+| A judge that calls a crash "correct error handling" | Told that a function raising where it used to return has lost behaviour |
+| A clean diff reported as defective | Definite needs a second source; an uncorroborated demonstration is "Might be" |
 
 ## What the runs actually showed
 
