@@ -109,7 +109,7 @@ if ("$CHANNEL" -eq 'local') {
 } elseif ("$CHANNEL" -eq 'oss') {
     $DERP_BIN = 'derp-oss'
     $BINARY_NAME = 'derp-oss.exe'
-    $APP_NAME = 'DerpOss'
+    $APP_NAME = 'Derp'
     # The OSS channel does not ship Sentry, so drop the crash_reporting feature
     # (which would otherwise pull in the Sentry SDK as a dependency).
     $FEATURES = 'release_bundle,gui'

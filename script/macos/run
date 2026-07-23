@@ -33,7 +33,7 @@ if [ "$DERP_CHANNEL" = "local" ]; then
     DERP_APP_PATH="${TARGET_DIR}/debug/bundle/osx/DerpLocal.app"
     DERP_SCHEME_NAME="derplocal"
 else
-    DERP_APP_PATH="${TARGET_DIR}/debug/bundle/osx/DerpOss.app"
+    DERP_APP_PATH="${TARGET_DIR}/debug/bundle/osx/Derp.app"
     DERP_SCHEME_NAME="derposs"
 fi
 DONT_OPEN=false
@@ -70,7 +70,7 @@ while (( "$#" )); do
       if [ "$DERP_CHANNEL" = "local" ]; then
           DERP_APP_PATH="${TARGET_DIR}/release/bundle/osx/DerpLocal.app"
       else
-          DERP_APP_PATH="${TARGET_DIR}/release/bundle/osx/DerpOss.app"
+          DERP_APP_PATH="${TARGET_DIR}/release/bundle/osx/Derp.app"
       fi
       PARAMS="$PARAMS $1"
       shift
@@ -81,7 +81,7 @@ while (( "$#" )); do
       if [ "$DERP_CHANNEL" = "local" ]; then
           DERP_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/DerpLocal.app"
       else
-          DERP_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/DerpOss.app"
+          DERP_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/Derp.app"
       fi
       PARAMS="$PARAMS --profile $PROFILE"
       ;;

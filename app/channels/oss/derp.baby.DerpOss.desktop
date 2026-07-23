@@ -4,7 +4,7 @@ Version=1.0
 
 Type=Application
 
-Name=DerpOss
+Name=Derp
 GenericName=TerminalEmulator
 
 Exec=derp-terminal-oss %U

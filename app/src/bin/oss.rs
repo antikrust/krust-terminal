@@ -42,7 +42,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleDisplayName</key>
-    <string>DerpOss</string>
+    <string>Derp</string>
     <key>CFBundleExecutable</key>
     <string>derp-oss</string>
     <key>CFBundleIdentifier</key>
@@ -50,7 +50,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>DerpOss</string>
+    <string>Derp</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
