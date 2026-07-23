@@ -1072,3 +1072,75 @@ fn a_revision_that_goes_backwards_is_not_kept() {
         None
     );
 }
+
+#[test]
+fn a_claim_that_holds_against_the_committed_code_is_not_about_the_change() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir().join(format!("committee-head-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+    let git = |args: &str| {
+        std::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!("cd {} && git {args}", dir.display()))
+            .output()
+            .expect("git runs")
+    };
+    git("init --quiet");
+    git("config user.email t@localhost");
+    git("config user.name T");
+    std::fs::write(
+        dir.join("m.py"),
+        "def f(xs):\n    return sorted(xs)[0] if xs else None\n",
+    )
+    .unwrap();
+    git("add m.py");
+    git("commit --quiet -m first");
+    // The working tree changes it in a way that alters nothing observable.
+    std::fs::write(
+        dir.join("m.py"),
+        "def f(xs):\n    return min(xs) if len(xs) else None\n",
+    )
+    .unwrap();
+
+    // The invented kind of claim: it "demonstrates" against the new code…
+    let invented = "import m\nprint('expected:', 1)\nprint('actual:', m.f([2, 3]))\nexit(0)\n";
+    let now = block_on(run_proof_script(invented, PROOF_TIMEOUT_SECS, &dir, &path));
+    assert!(
+        demonstrates(&now),
+        "the fabricated claim looks demonstrated"
+    );
+    // …and says exactly the same thing about the committed code, because
+    // the change was behaviour-preserving. That is what makes it not a
+    // finding about this diff.
+    let before =
+        block_on(run_against_head(invented, PROOF_TIMEOUT_SECS, &dir, &path)).expect("a HEAD run");
+    assert!(
+        demonstrates(&before),
+        "and against HEAD too, which is the point"
+    );
+
+    // A real regression looks different: the working tree breaks it and the
+    // committed code does not.
+    std::fs::write(
+        dir.join("m.py"),
+        "def f(xs):\n    return max(xs) if xs else None\n",
+    )
+    .unwrap();
+    let real = "import m\nprint('expected:', 2)\nprint('actual:', m.f([2, 3]))\nexit(0)\n";
+    assert!(demonstrates(&block_on(run_proof_script(
+        real,
+        PROOF_TIMEOUT_SECS,
+        &dir,
+        &path
+    ))));
+    assert!(
+        !demonstrates(
+            &block_on(run_against_head(real, PROOF_TIMEOUT_SECS, &dir, &path)).expect("a HEAD run")
+        ),
+        "the committed code still answers 2, so the change is what broke it"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}

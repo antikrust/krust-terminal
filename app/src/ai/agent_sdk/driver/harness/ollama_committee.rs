@@ -24,11 +24,11 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
-    calls_only, classify_proof, contract_for, contracts_in, detect_suite, imported_context,
-    lost_ground, mismatch_call, observations, oracle_mismatches, parse_oracle,
-    parse_proposed_calls, probe_source, proof_script_is_fixable, run_behavior_probe,
-    run_proof_script, run_python_tests, run_suite, self_check, strip_code_fences, ProofOutcome,
-    SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
+    calls_only, classify_proof, contract_for, contracts_in, demonstrates, detect_suite,
+    imported_context, lost_ground, mismatch_call, observations, oracle_mismatches, parse_oracle,
+    parse_proposed_calls, probe_source, proof_script_is_fixable, run_against_head,
+    run_behavior_probe, run_proof_script, run_python_tests, run_suite, self_check,
+    strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -3824,6 +3824,7 @@ async fn prove_finding(
                             ))
                         },
                     });
+                    let script_for_head = script.clone();
                     finding.proof_script = Some(script);
                     let code = execution.exit_code;
                     // Nothing reaches Definite on an exit code alone. A
@@ -3831,6 +3832,36 @@ async fn prove_finding(
                     // what correct behaviour would be and shown something
                     // else; one that contradicts its own output is no
                     // verdict at all.
+                    // Did this change cause it? A defect the diff
+                    // introduced demonstrates on the working tree and not on
+                    // the committed one. A claim that demonstrates on both
+                    // is either older than the diff or invented — and an
+                    // invented one invents identically against the old code,
+                    // which is how a refactor with nothing wrong with it
+                    // stopped producing the same confident falsehood three
+                    // runs running.
+                    let older = match demonstrates(&execution) {
+                        true => {
+                            run_against_head(&script_for_head, timeout_secs, working_dir, path)
+                                .await
+                        }
+                        false => None,
+                    };
+                    if older.as_ref().is_some_and(demonstrates) {
+                        on_event(TurnEvent::Text {
+                            text: format!(
+                                "#{}: the same script says the same thing about the committed \
+                                 code, so this is not something the change did.",
+                                index + 1
+                            ),
+                        });
+                        finding.proof = Some(ProofOutcome::Inconclusive(
+                            "the script demonstrates this against the committed code too, so \
+                             the change did not cause it"
+                                .to_string(),
+                        ));
+                        break;
+                    }
                     match self_check(&execution.stdout, code) {
                         // The two values decide it. One was computed by
                         // running the code and the other read off what the

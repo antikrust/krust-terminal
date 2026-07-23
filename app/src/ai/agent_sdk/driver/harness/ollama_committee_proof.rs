@@ -888,6 +888,61 @@ pub(crate) fn lost_ground(before: &str, after: &str) -> Option<String> {
     None
 }
 
+/// Whether an execution amounts to "the defect is real", by the same rule
+/// the proof round uses: the comparison it printed decides, and a bare
+/// exit 0 with nothing compared decides nothing.
+pub(crate) fn demonstrates(execution: &ShellExecution) -> bool {
+    match self_check(&execution.stdout, execution.exit_code) {
+        SelfCheck::Compared { differ, .. } => differ,
+        SelfCheck::Unstated => false,
+    }
+}
+
+/// Runs the same proof script against the committed version of the
+/// repository, so the harness can ask the one question that decides a
+/// review: **did this change cause it?**
+///
+/// A defect the diff introduced is a script that demonstrates on the working
+/// tree and does not demonstrate on `HEAD`. If it demonstrates on both, the
+/// behaviour predates the change and the finding is not about the diff — and
+/// far more usefully, if the script's claim was invented, it will invent
+/// identically against the old code, so it says the same thing twice and
+/// certifies nothing.
+///
+/// Measured: run three times against a refactor with nothing wrong with it,
+/// the committee produced the same fabricated proof every time — `expected
+/// {'a': 1, 'b': 2}` against a docstring describing string values. The
+/// refactor is behaviour-preserving, so that script says exactly the same
+/// thing about the committed code, and this is what notices.
+///
+/// `None` when there is no committed tree to compare against — an untracked
+/// directory, or a git that will not archive — in which case the run keeps
+/// the verdict it already had rather than inventing a reason to doubt it.
+pub(crate) async fn run_against_head(
+    code: &str,
+    timeout_secs: u64,
+    working_dir: &Path,
+    path: &str,
+) -> Option<ShellExecution> {
+    let older = std::env::temp_dir().join(format!("committee-head-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&older).ok()?;
+    // The whole committed tree, so anything the changed files import is
+    // there too and resolves the way it did before the change.
+    let unpack = execute_shell(
+        &format!("git archive HEAD | tar -x -C {}", shell_quote(&older)),
+        working_dir,
+        path,
+    )
+    .await;
+    if unpack.exit_code != 0 {
+        let _ = std::fs::remove_dir_all(&older);
+        return None;
+    }
+    let execution = run_proof_script(code, timeout_secs, &older, path).await;
+    let _ = std::fs::remove_dir_all(&older);
+    Some(execution)
+}
+
 /// The call an oracle mismatch is about, so a prover can be pointed at it.
 pub(crate) fn mismatch_call(line: &str) -> Option<&str> {
     let call = line.split(" returned ").next()?;
