@@ -26,8 +26,8 @@ use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
     calls_only, classify_proof, contract_for, contracts_in, detect_suite, imported_context,
     mismatch_call, observations, oracle_mismatches, parse_oracle, parse_proposed_calls,
-    proof_script_is_fixable, run_behavior_probe, run_proof_script, run_python_tests, run_suite,
-    self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
+    probe_source, proof_script_is_fixable, run_behavior_probe, run_proof_script, run_python_tests,
+    run_suite, self_check, strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS,
     PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
@@ -2623,13 +2623,24 @@ got right and what it got wrong. Produce an improved version of YOUR answer: kee
 notes praised, fix what they criticised. You are still competing with the other panelists. \
 Output only the improved answer — no preamble, no commentary.";
 
-fn panel_coach_user_prompt(task: &str, answers: &[(String, String)]) -> String {
+fn panel_coach_user_prompt(task: &str, answers: &[(String, String)], ran: &str) -> String {
     let mut block = String::new();
     for (model, answer) in answers {
         block.push_str(&format!("\n--- Answer from {model} ---\n{answer}\n"));
     }
+    // Without this the round is opinion all the way down, and a measured
+    // one took a draft from 7 of 8 to 6 of 8 by spreading its own bug.
+    let ran = match ran.trim().is_empty() {
+        true => String::new(),
+        false => format!(
+            "\nWhat their code ACTUALLY DID when it was run. These are \
+             measurements, not opinions: a note that contradicts one of them is \
+             wrong, and a note that fixes one of them is worth more than any \
+             note about style.\n{ran}\n"
+        ),
+    };
     format!(
-        "The user asked:\n{task}\n\nThe panel's answers:\n{block}\n\
+        "The user asked:\n{task}\n\nThe panel's answers:\n{block}\n{ran}\n\
          Write your per-panelist notes as the strict JSON object."
     )
 }
@@ -3047,7 +3058,22 @@ async fn run_panel_round(
                     plan.judge.display
                 ),
             });
-            let coach_prompt = panel_coach_user_prompt(prompt, answers);
+            // Run what they wrote before anyone opines about it.
+            let mut ran = String::new();
+            for (model, answer) in answers.iter() {
+                let Some(code) = extract_code_block(answer) else {
+                    continue;
+                };
+                if let Some(report) = probe_source(&code, working_dir, path).await {
+                    ran.push_str(&format!("\n{model}:\n{report}\n"));
+                }
+            }
+            if !ran.is_empty() {
+                on_event(TurnEvent::Text {
+                    text: format!("**What the drafts do when run:**\n```text{ran}```"),
+                });
+            }
+            let coach_prompt = panel_coach_user_prompt(prompt, answers, &ran);
             let (status, outcome) = chat_once(
                 &plan.judge.name,
                 PANEL_COACH_SYSTEM_PROMPT,

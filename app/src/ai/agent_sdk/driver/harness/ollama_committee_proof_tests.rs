@@ -991,3 +991,54 @@ fn a_call_that_raised_is_an_observation_the_oracle_should_see() {
     )];
     assert!(oracle_mismatches(&agrees, &observed).is_empty());
 }
+
+#[test]
+fn a_draft_is_run_before_anybody_gives_notes_on_it() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir().join(format!("committee-draft-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    // The bug a measured rewrite round spread into a second case instead of
+    // fixing: a word too long to break is flushed after an empty
+    // accumulator, so the result carries a phantom empty first line.
+    let draft = "def wrap(text, width):\n\
+                 \x20   lines, current = [], ''\n\
+                 \x20   for word in text.split():\n\
+                 \x20       if len(current) + len(word) > width:\n\
+                 \x20           lines.append(current)\n\
+                 \x20           current = word\n\
+                 \x20       else:\n\
+                 \x20           current = (current + ' ' + word).strip()\n\
+                 \x20   if current:\n\
+                 \x20       lines.append(current)\n\
+                 \x20   return lines\n";
+    let report = block_on(probe_source(draft, &dir, &path)).expect("a report");
+    assert!(report.contains("wrap("), "{report}");
+    // The empty leading line is on the page, for a judge that until now was
+    // reading the code and guessing.
+    assert!(report.contains("['',"), "the phantom line: {report}");
+
+    // A draft that cannot even load says so rather than saying nothing —
+    // this is the fireworks script, which referenced a name belonging to
+    // another function.
+    let broken = "def draw(y, x):\n    screen.addstr(y, x)\n";
+    let complaint = block_on(probe_source(broken, &dir, &path)).expect("a report");
+    assert!(complaint.contains("NameError"), "{complaint}");
+
+    // Nothing is left behind in the user's directory.
+    let leftovers: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("committee-draft")
+        })
+        .collect();
+    assert!(leftovers.is_empty(), "a round left files behind");
+
+    let _ = std::fs::remove_dir_all(&dir);
+}

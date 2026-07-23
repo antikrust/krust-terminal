@@ -793,6 +793,50 @@ pub(crate) fn parse_proposed_calls(reply: &str, known: &[String]) -> Vec<String>
     calls
 }
 
+/// Runs whatever python a panelist wrote and reports what its functions do.
+///
+/// Panel rounds had no evidence at all. Review mode probes, asks an oracle
+/// and executes proofs; a rewrite round was the judge reading code, forming
+/// an opinion, and three small models revising on the strength of it, with
+/// nothing ever run. Measured, that made things worse — a draft scoring 7 of
+/// 8 came back scoring 6, the revision having spread its one bug into a
+/// second case. Churn on a nearly-right answer breaks it more often than it
+/// mends it.
+///
+/// A syntax error or an import that fails shows up here as "module load
+/// failed", which is the other thing a round should never have to guess at.
+pub(crate) async fn probe_source(source: &str, working_dir: &Path, path: &str) -> Option<String> {
+    let mut targets: Vec<ProbeTarget> = Vec::new();
+    for line in source.lines() {
+        let Some((function, arity)) = parse_def(line) else {
+            continue;
+        };
+        if !targets.iter().any(|target| target.function == function) {
+            targets.push(ProbeTarget {
+                file: String::new(),
+                function,
+                arity,
+            });
+        }
+    }
+    if targets.is_empty() {
+        return None;
+    }
+    targets.truncate(MAX_PROBE_FUNCTIONS);
+
+    // Staged beside the repository so anything it imports resolves the same
+    // way it will once saved, and removed afterwards — a round must not
+    // leave files in a directory the user did not ask it to write to.
+    let draft = working_dir.join(format!("committee-draft-{}.py", Uuid::new_v4()));
+    std::fs::write(&draft, source).ok()?;
+    let script = behavior_probe_script(&draft.to_string_lossy(), &targets, &[]);
+    let execution = run_proof_script(&script, PROOF_TIMEOUT_SECS, working_dir, path).await;
+    let _ = std::fs::remove_file(&draft);
+
+    let observations = execution.stdout.trim();
+    (!observations.is_empty()).then(|| observations.to_string())
+}
+
 /// The call an oracle mismatch is about, so a prover can be pointed at it.
 pub(crate) fn mismatch_call(line: &str) -> Option<&str> {
     let call = line.split(" returned ").next()?;
