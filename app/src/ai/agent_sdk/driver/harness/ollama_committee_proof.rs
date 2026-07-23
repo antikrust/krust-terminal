@@ -566,54 +566,119 @@ const MAX_REPORT_CHARS: usize = 2_400;
 pub(crate) struct ProbeTarget {
     pub(crate) file: String,
     pub(crate) function: String,
+    /// How many arguments a caller has to pass — parameters with defaults
+    /// don't count. Probing at the required arity is what lets the default
+    /// itself misbehave: `restock(item, quantity, log=[])` only shares its
+    /// list between calls when nobody passes a log, so a probe that always
+    /// fills in all three parameters can never see the defect.
     pub(crate) arity: usize,
 }
 
-/// Free functions defined on added lines of the diff's python files —
-/// single-line `def` signatures only, methods and underscore-private
-/// functions skipped (no instance to call them on, no contract to check).
+/// Parses a single-line top-level `def` into a name and its required arity.
+/// Methods and underscore-private functions are skipped — no instance to
+/// call them on, no contract to check.
+fn parse_def(source: &str) -> Option<(String, usize)> {
+    let (name, rest) = source.strip_prefix("def ")?.split_once('(')?;
+    let (params, _) = rest.split_once(')')?;
+    let name = name.trim();
+    if name.is_empty() || name.starts_with('_') {
+        return None;
+    }
+    let params: Vec<&str> = params
+        .split(',')
+        .map(str::trim)
+        .filter(|param| !param.is_empty())
+        .collect();
+    if params
+        .iter()
+        .any(|param| *param == "self" || *param == "cls")
+    {
+        return None;
+    }
+    let required = params
+        .iter()
+        .filter(|param| !param.contains('=') && !param.starts_with('*'))
+        .count();
+    Some((name.to_string(), required))
+}
+
+/// Every top-level function of the diff's python files that the change
+/// actually reaches.
+///
+/// Not just the ones whose `def` line moved. Two runs against the stock
+/// fixture probed `restock` and nothing else, because only `restock` had its
+/// signature edited — while the two defects that kept being missed were in
+/// `cheapest` and `needs_reorder`, whose bodies changed under an untouched
+/// signature. A function whose insides changed is exactly a function worth
+/// running.
+///
+/// Both places a still-standing signature shows up count: git's hunk header
+/// names the function a hunk starts inside, and a def further down the hunk
+/// arrives as an ordinary context line.
 pub(crate) fn parse_probe_targets(diff: &str) -> Vec<ProbeTarget> {
     let mut targets: Vec<ProbeTarget> = Vec::new();
     let mut current_file: Option<String> = None;
+    let mut enclosing: Option<(String, usize)> = None;
+
+    let mut touch = |file: &str, enclosing: &Option<(String, usize)>| {
+        let Some((name, arity)) = enclosing else {
+            return;
+        };
+        if targets
+            .iter()
+            .any(|target| &target.function == name && target.file == file)
+        {
+            return;
+        }
+        targets.push(ProbeTarget {
+            file: file.to_string(),
+            function: name.clone(),
+            arity: *arity,
+        });
+    };
+
     for line in diff.lines() {
         if let Some(path) = line.strip_prefix("+++ b/") {
             current_file = path.ends_with(".py").then(|| path.to_string());
+            enclosing = None;
             continue;
         }
-        let Some(file) = &current_file else { continue };
-        // Top-level defs only: an added line, no indentation before `def`.
-        let Some(rest) = line.strip_prefix("+def ") else {
+        let Some(file) = current_file.clone() else {
             continue;
         };
-        let Some((name, rest)) = rest.split_once('(') else {
+        if let Some(header) = line.strip_prefix("@@") {
+            // `@@ -8,19 +8,17 @@ def cheapest(prices):` — git says which
+            // function the hunk opened inside, for free.
+            enclosing = header
+                .split_once("@@")
+                .and_then(|(_, context)| parse_def(context.trim()));
+            continue;
+        }
+        // Removed lines describe the old file; a def among them may not
+        // exist any more, so they never set the target — only mark the
+        // enclosing function as touched.
+        let content = if let Some(rest) = line.strip_prefix('+') {
+            rest
+        } else if let Some(rest) = line.strip_prefix(' ') {
+            rest
+        } else if line.starts_with('-') {
+            touch(&file, &enclosing);
+            continue;
+        } else {
             continue;
         };
-        let Some((params, _)) = rest.split_once(')') else {
-            continue;
-        };
-        let name = name.trim();
-        if name.is_empty() || name.starts_with('_') {
-            continue;
-        }
-        let params: Vec<&str> = params
-            .split(',')
-            .map(str::trim)
-            .filter(|param| !param.is_empty())
-            .collect();
-        if params
-            .iter()
-            .any(|param| *param == "self" || *param == "cls")
-        {
+        if !content.starts_with("def ") {
+            if line.starts_with('+') {
+                touch(&file, &enclosing);
+            }
             continue;
         }
-        if targets.iter().any(|target| target.function == name) {
-            continue;
+        enclosing = parse_def(content);
+        // An added signature is a new function, which is worth probing on
+        // its own account.
+        if line.starts_with('+') {
+            touch(&file, &enclosing);
         }
-        targets.push(ProbeTarget {
-            file: file.clone(),
-            function: name.to_string(),
-            arity: params.len(),
-        });
     }
     targets.truncate(MAX_PROBE_FUNCTIONS);
     targets
@@ -622,10 +687,27 @@ pub(crate) fn parse_probe_targets(diff: &str) -> Vec<ProbeTarget> {
 /// The generic input battery per arity, as python argument lists. Broad on
 /// purpose: empty things, zero, negatives, small collections, strings —
 /// the situations code forgets.
+///
+/// Two entries are here because runs kept missing the defects they catch.
+/// `[0, 5]` is the list whose smallest member is falsy, which is how
+/// `if not best` gets away with it; `3, 3` is the pair that makes `<` and
+/// `<=` disagree, which is every off-by-one on a threshold. A prover left to
+/// invent its own inputs reaches for the empty list and for arguments that
+/// differ, and neither says anything about either defect.
 pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
     match arity {
         0 => &[""],
-        1 => &["0", "7", "-1", "[]", "[3, 1, 2]", "''", "'ab'", "None"],
+        1 => &[
+            "0",
+            "7",
+            "-1",
+            "[]",
+            "[3, 1, 2]",
+            "[0, 5]",
+            "''",
+            "'ab'",
+            "None",
+        ],
         2 => &[
             "0, []",
             "100, [1, 2, 3]",
@@ -633,8 +715,10 @@ pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
             "[], 3",
             "'ab', 1",
             "7, 0",
+            "3, 3",
+            "0, 0",
         ],
-        3 => &["1, 2, 3", "[], [], []"],
+        3 => &["1, 2, 3", "[], [], []", "'ab', 1, []"],
         _ => &[],
     }
 }
@@ -642,7 +726,23 @@ pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
 /// The probe script for one file: load the module, call each target with
 /// its battery, print one line per observation. Always exits 0 — the report
 /// is the stdout, not the exit code.
+///
+/// Every call is made twice. A function that answers differently the second
+/// time is holding state between calls, which no amount of reading the diff
+/// reliably shows and which the interpreter settles in one line. Once a
+/// function has been caught doing it the rest of its battery is dropped:
+/// its later answers describe the state it has accumulated rather than the
+/// arguments it was given, and they crowd out everything else in a report
+/// that has to fit in the models' context.
 pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]) -> String {
+    // TypeError and AttributeError are almost always the battery's own
+    // fault — it deliberately passes an int where a list goes — and showing
+    // them costs more than it pays. One run printed
+    // `restock(1, 2, 3) !! AttributeError: 'int' object has no attribute
+    // 'append'`, a reviewer copied it out as a finding, a prover reproduced
+    // it exactly, and the judge confirmed a defect that was nothing but the
+    // probe calling the function wrongly. Errors about values — dividing by
+    // zero, indexing off the end — still earn their line.
     let mut script = format!(
         "import importlib.util\n\
          spec = importlib.util.spec_from_file_location('probe_target', {absolute_file:?})\n\
@@ -652,17 +752,32 @@ pub(crate) fn behavior_probe_script(absolute_file: &str, targets: &[ProbeTarget]
          except Exception as error:\n\
          \x20   print(f'module load failed: {{type(error).__name__}}: {{error}}')\n\
          \x20   raise SystemExit(0)\n\
+         MISCALLED = (TypeError, AttributeError)\n\
+         repeats = set()\n\
          def probe(name, *args):\n\
          \x20   fn = getattr(module, name, None)\n\
          \x20   if not callable(fn):\n\
          \x20       print(f'{{name}}: not found')\n\
          \x20       return\n\
+         \x20   if name in repeats:\n\
+         \x20       return\n\
          \x20   shown = ', '.join(repr(a) for a in args)\n\
          \x20   try:\n\
          \x20       result = fn(*args)\n\
-         \x20       print(f'{{name}}({{shown}}) -> {{result!r}}'[:200])\n\
+         \x20   except MISCALLED:\n\
+         \x20       return\n\
          \x20   except Exception as error:\n\
-         \x20       print(f'{{name}}({{shown}}) !! {{type(error).__name__}}: {{error}}'[:200])\n"
+         \x20       print(f'{{name}}({{shown}}) !! {{type(error).__name__}}: {{error}}'[:200])\n\
+         \x20       return\n\
+         \x20   first = repr(result)\n\
+         \x20   print(f'{{name}}({{shown}}) -> {{first}}'[:200])\n\
+         \x20   try:\n\
+         \x20       again = repr(fn(*args))\n\
+         \x20   except Exception:\n\
+         \x20       return\n\
+         \x20   if again != first:\n\
+         \x20       repeats.add(name)\n\
+         \x20       print(f'{{name}}({{shown}}) a second time -> {{again}}'[:200])\n"
     );
     for target in targets {
         for combo in probe_combos(target.arity) {

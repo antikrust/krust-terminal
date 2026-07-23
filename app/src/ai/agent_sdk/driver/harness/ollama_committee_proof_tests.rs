@@ -504,3 +504,118 @@ fn a_proof_that_compared_nothing_is_not_a_proof() {
         SelfCheck::Unstated
     );
 }
+
+/// The stock fixture's diff, as `git diff HEAD` really prints it — hunk
+/// header, context lines and all. Two of its three defects live under
+/// signatures that never changed, which is the whole point of it being here.
+const STOCK_DIFF: &str = r#"diff --git a/stock.py b/stock.py
+index 2273b46..2d34e66 100644
+--- a/stock.py
++++ b/stock.py
+@@ -8,19 +8,17 @@ def cheapest(prices):
+     """The lowest price in the list, or None when the list is empty."""
+     best = None
+     for price in prices:
+-        if best is None or price < best:
++        if not best or price < best:
+             best = price
+     return best
+ 
+ 
+ def needs_reorder(stock, threshold):
+     """True once stock has fallen to the reorder threshold."""
+-    return stock <= threshold
++    return stock < threshold
+ 
+ 
+-def restock(item, quantity, log=None):
++def restock(item, quantity, log=[]):
+     """Records one delivery and returns the log for this call."""
+-    if log is None:
+-        log = []
+     log.append((item, quantity))
+     return log
+"#;
+
+#[test]
+fn a_function_whose_body_changed_is_probed_even_though_its_signature_did_not() {
+    let targets = parse_probe_targets(STOCK_DIFF);
+    assert_eq!(
+        targets,
+        vec![
+            // Named only by the hunk header.
+            ProbeTarget {
+                file: "stock.py".to_string(),
+                function: "cheapest".to_string(),
+                arity: 1,
+            },
+            // Its `def` arrives as an ordinary context line.
+            ProbeTarget {
+                file: "stock.py".to_string(),
+                function: "needs_reorder".to_string(),
+                arity: 2,
+            },
+            // Signature changed, and `log=[]` doesn't count towards what a
+            // caller has to pass — probing it at 3 would supply the log and
+            // hide the defect in the default.
+            ProbeTarget {
+                file: "stock.py".to_string(),
+                function: "restock".to_string(),
+                arity: 2,
+            },
+        ]
+    );
+}
+
+#[test]
+fn the_behavior_report_exposes_the_stock_defects_without_any_model() {
+    use futures_lite::future::block_on;
+
+    let dir = std::env::temp_dir().join(format!("committee-stock-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("stock.py"),
+        "def cheapest(prices):\n\
+         \x20   \"\"\"The lowest price in the list, or None when the list is empty.\"\"\"\n\
+         \x20   best = None\n\
+         \x20   for price in prices:\n\
+         \x20       if not best or price < best:\n\
+         \x20           best = price\n\
+         \x20   return best\n\n\
+         def needs_reorder(stock, threshold):\n\
+         \x20   \"\"\"True once stock has fallen to the reorder threshold.\"\"\"\n\
+         \x20   return stock < threshold\n\n\
+         def restock(item, quantity, log=[]):\n\
+         \x20   \"\"\"Records one delivery and returns the log for this call.\"\"\"\n\
+         \x20   log.append((item, quantity))\n\
+         \x20   return log\n",
+    )
+    .unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let report = block_on(run_behavior_probe(STOCK_DIFF, &dir, &path)).expect("a report");
+
+    // All three defects, stated by the interpreter, before any model has
+    // been asked anything. Every run so far missed the first two.
+    assert!(
+        report.contains("cheapest([0, 5]) -> 5"),
+        "the zero-is-falsy defect: {report}"
+    );
+    assert!(
+        report.contains("needs_reorder(3, 3) -> False"),
+        "the fallen-*to*-the-threshold defect: {report}"
+    );
+    assert!(
+        report.contains("a second time"),
+        "the shared default log: {report}"
+    );
+
+    // And none of the battery's own fumbles: `cheapest(0)` iterating over an
+    // int says nothing about the code under review.
+    assert!(
+        !report.contains("TypeError"),
+        "the probe's own mistakes are not findings: {report}"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
