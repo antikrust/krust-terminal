@@ -247,11 +247,35 @@ planted-defect fixture could ever have revealed that.
 this running unattended. It is not nothing, and it is not the four or five
 a run produced before the night's work either.
 
-Fixing it properly means requiring corroboration — an oracle mismatch or a
-second reviewer — before a single script's word promotes anything to
-Definite. That rule would have demoted at least two genuine findings here,
-so it wants measuring rather than assuming, and it is the obvious next
-experiment.
+Fixing it means requiring corroboration — an oracle mismatch or a second
+reviewer — before a single script's word promotes anything to Definite.
+Measured across all four review fixtures afterwards, it fired twice, both
+times on claims that were not planted defects, and demoted no genuine
+finding at all:
+
+| Fixture | Fired | Real findings lost |
+| --- | --- | --- |
+| tidy | once, on the invention above | — |
+| stock | never | none |
+| payday | never | none |
+| orders | once, on an extra claim | none |
+
+The worry that it would cost real detections was wrong, and wrong for a
+reassuring reason: when a defect is real the corroboration is usually
+already there. `tidy` now produces no **Definite** section at all, which is
+the correct verdict for a diff with nothing wrong with it.
+
+## These numbers move between runs
+
+Worth stating plainly, because several conclusions drawn during the night
+rested on single runs. `stock` has come in at 3/3 twice and 2/3 twice on
+effectively the same pipeline. `payday` has been 2/3, 3/3 and 2/3, and *which*
+defect it misses moves. A single run is a weak signal and a difference of one
+between two runs is usually noise.
+
+The stable results are the deterministic ones: the `tidy` invention, byte for
+byte identical three times running, and anything measured by a held-out
+grader. Where a number here comes from one run, treat it as a hint.
 
 ## What is still weak
 
