@@ -1215,6 +1215,9 @@ enum Dispute {
     /// One proof script refuted something several reviewers had each found
     /// on their own.
     ProofVersusConsensus,
+    /// One reviewer said it and its own script agreed with it, and nothing
+    /// else did.
+    Uncorroborated,
 }
 
 impl Dispute {
@@ -1227,6 +1230,10 @@ impl Dispute {
             Dispute::ProofVersusConsensus => {
                 "⚖️ every reviewer that looked found this, and one script says otherwise — \
                  check what the script actually tested before believing it"
+            }
+            Dispute::Uncorroborated => {
+                "⚖️ one reviewer raised this and its own script agreed with it — nothing else \
+                 saw it, and a script decides what it expected"
             }
         }
     }
@@ -1251,7 +1258,32 @@ impl Dispute {
 /// Neither goes to Definite and neither goes to Rejected: they go to "Might
 /// be" and say which two things conflict. Overclaiming in either direction
 /// is what this pipeline exists to stop.
-fn bucket_for(proof: Option<&ProofOutcome>, judged: Option<&str>, reviewers: usize) -> Bucket {
+/// A demonstration also needs a second source. Run three times against a
+/// refactor with nothing wrong with it, the committee produced the same
+/// invention every time:
+///
+/// ```text
+/// ✅ Incorrect handling of line splitting in parse_config
+///    DEMONSTRATED — expected {'a': 1, 'b': 2}, got {'a': '1', 'b': '', 'c': '2'}
+/// ```
+///
+/// The prover made the expectation up — integer values against a docstring
+/// describing string ones — and the rule that decides by comparing the two
+/// duly certified it. `actual` is computed; `expected` is asserted, and one
+/// model asserting both the finding and the standard it is judged against is
+/// one source, not two.
+///
+/// So Definite wants a second: another reviewer that found it
+/// independently, or an oracle that found the same function's documented
+/// answer contradicted. Without one it is still shown, still proved, and
+/// said to be unsettled — which costs a real finding its top billing and
+/// costs a false one its authority.
+fn bucket_for(
+    proof: Option<&ProofOutcome>,
+    judged: Option<&str>,
+    reviewers: usize,
+    corroborated: bool,
+) -> Bucket {
     let judged = judged.map(str::to_ascii_lowercase);
     let confirmed = matches!(judged.as_deref(), Some("confirm" | "confirmed"));
     let rejected = matches!(judged.as_deref(), Some("reject" | "rejected"));
@@ -1260,6 +1292,9 @@ fn bucket_for(proof: Option<&ProofOutcome>, judged: Option<&str>, reviewers: usi
     };
     match proof {
         Some(ProofOutcome::Demonstrated(_)) if rejected => disputed(Dispute::JudgeVersusExecution),
+        Some(ProofOutcome::Demonstrated(_)) if reviewers < 2 && !corroborated => {
+            disputed(Dispute::Uncorroborated)
+        }
         Some(ProofOutcome::Demonstrated(_)) => Bucket::Definite,
         Some(ProofOutcome::Refuted(_)) if confirmed => disputed(Dispute::JudgeVersusExecution),
         Some(ProofOutcome::Refuted(_)) if reviewers > 1 => disputed(Dispute::ProofVersusConsensus),
@@ -5337,7 +5372,25 @@ pub async fn run_ollama_committee(
             let mut disputed: Vec<(usize, Dispute)> = Vec::new();
             for (index, finding) in merged.iter().enumerate() {
                 let judged = ruling_for(index).map(|ruling| ruling.verdict.as_str());
-                match bucket_for(finding.proof.as_ref(), judged, finding.raised_by.len()) {
+                // An oracle mismatch about the same function is a second
+                // source: it was reached without ever being shown what the
+                // call returned, so it cannot be echoing the prover.
+                let subject = format!("{} {}", finding.title, finding.detail).to_ascii_lowercase();
+                let corroborated = oracle_lines.iter().any(|line| {
+                    mismatch_call(line)
+                        .and_then(|call| call.split('(').next())
+                        .is_some_and(|function| {
+                            subject
+                                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                                .any(|word| word == function.to_ascii_lowercase())
+                        })
+                });
+                match bucket_for(
+                    finding.proof.as_ref(),
+                    judged,
+                    finding.raised_by.len(),
+                    corroborated,
+                ) {
                     Bucket::Definite => definite.push(index),
                     Bucket::Possible { dispute } => {
                         if let Some(dispute) = dispute {

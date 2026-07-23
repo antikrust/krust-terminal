@@ -1772,49 +1772,61 @@ fn a_demonstration_the_judge_rejects_is_not_definite() {
     let alone = 1;
 
     // Execution beats opinion when the judge has nothing to add.
-    assert_eq!(bucket_for(Some(&shown), None, alone), Bucket::Definite);
     assert_eq!(
-        bucket_for(Some(&shown), Some("confirm"), alone),
+        bucket_for(Some(&shown), None, alone, true),
         Bucket::Definite
     );
     assert_eq!(
-        bucket_for(Some(&shown), Some("unsure"), alone),
+        bucket_for(Some(&shown), Some("confirm"), alone, true),
         Bucket::Definite
     );
-    assert_eq!(bucket_for(Some(&refuted), None, alone), Bucket::Dismissed);
+    assert_eq!(
+        bucket_for(Some(&shown), Some("unsure"), alone, true),
+        Bucket::Definite
+    );
+    assert_eq!(
+        bucket_for(Some(&refuted), None, alone, true),
+        Bucket::Dismissed
+    );
 
     // A real run printed a finding under **Definite** with `judge: reject`
     // underneath it. One of the two is wrong; the run can't say which, and
     // saying "definite" anyway is the overclaiming this pipeline is for.
     assert_eq!(
-        bucket_for(Some(&shown), Some("reject"), alone),
+        bucket_for(Some(&shown), Some("reject"), alone, true),
         Bucket::Possible {
             dispute: Some(Dispute::JudgeVersusExecution)
         }
     );
     assert_eq!(
-        bucket_for(Some(&refuted), Some("confirmed"), alone),
+        bucket_for(Some(&refuted), Some("confirmed"), alone, true),
         Bucket::Possible {
             dispute: Some(Dispute::JudgeVersusExecution)
         }
     );
 
     // With no proof at all the judge is all there is.
-    assert_eq!(bucket_for(None, Some("Confirm"), alone), Bucket::Definite);
-    assert_eq!(bucket_for(None, Some("REJECTED"), alone), Bucket::Dismissed);
     assert_eq!(
-        bucket_for(None, None, alone),
+        bucket_for(None, Some("Confirm"), alone, true),
+        Bucket::Definite
+    );
+    assert_eq!(
+        bucket_for(None, Some("REJECTED"), alone, true),
+        Bucket::Dismissed
+    );
+    assert_eq!(
+        bucket_for(None, None, alone, true),
         Bucket::Possible { dispute: None }
     );
 
     // An inconclusive proof is not evidence either way.
     let nothing = ProofOutcome::Inconclusive("compared nothing".to_string());
     assert_eq!(
-        bucket_for(Some(&nothing), None, alone),
+        bucket_for(Some(&nothing), None, alone, true),
         Bucket::Possible { dispute: None }
     );
     assert_eq!(
-        bucket_for(Some(&nothing), Some("reject"), alone),
+        bucket_for(Some(&nothing), Some("reject"), alone, true),
         Bucket::Dismissed
     );
 }
@@ -1827,14 +1839,14 @@ fn one_script_does_not_overrule_every_reviewer_that_looked() {
     // tested `cheapest([])` — comparing None to None and refuting a claim
     // about `cheapest([0, 5])`. It was Rejected, and the defect was real.
     assert_eq!(
-        bucket_for(Some(&refuted), None, 3),
+        bucket_for(Some(&refuted), None, 3, true),
         Bucket::Possible {
             dispute: Some(Dispute::ProofVersusConsensus)
         }
     );
 
     // One reviewer plus one refutation is just a refutation.
-    assert_eq!(bucket_for(Some(&refuted), None, 1), Bucket::Dismissed);
+    assert_eq!(bucket_for(Some(&refuted), None, 1, true), Bucket::Dismissed);
 
     // Agreement doesn't rescue something the interpreter demonstrated *and*
     // the judge threw out — that conflict is still the sharper one.
@@ -1842,7 +1854,8 @@ fn one_script_does_not_overrule_every_reviewer_that_looked() {
         bucket_for(
             Some(&ProofOutcome::Demonstrated("expected 0, got 5".to_string())),
             Some("reject"),
-            3
+            3,
+            true
         ),
         Bucket::Possible {
             dispute: Some(Dispute::JudgeVersusExecution)
@@ -1888,5 +1901,49 @@ fn asking_for_a_script_that_runs_is_not_asking_to_save_the_run() {
     assert_eq!(
         parse_save_transcript_command("save the run to notes.md"),
         Some(Some("notes.md".to_string()))
+    );
+}
+
+#[test]
+fn one_model_asserting_both_the_finding_and_the_standard_is_one_source() {
+    let shown = ProofOutcome::Demonstrated("expected {'a': 1}, got {'a': '1'}".to_string());
+
+    // Run three times against a refactor with nothing wrong with it, the
+    // committee produced this every time: one reviewer, its own script
+    // agreeing with it, and an `expected` the script made up — integer
+    // values against a docstring describing string ones.
+    assert_eq!(
+        bucket_for(Some(&shown), None, 1, false),
+        Bucket::Possible {
+            dispute: Some(Dispute::Uncorroborated)
+        }
+    );
+
+    // A second reviewer that found it independently is a second source.
+    assert_eq!(bucket_for(Some(&shown), None, 2, false), Bucket::Definite);
+
+    // So is an oracle mismatch about the same function: it was reached
+    // without ever being shown what the call returned, so it cannot be
+    // echoing the prover.
+    assert_eq!(bucket_for(Some(&shown), None, 1, true), Bucket::Definite);
+
+    // The judge confirming is not a second source — it read the same script.
+    assert_eq!(
+        bucket_for(Some(&shown), Some("confirm"), 1, false),
+        Bucket::Possible {
+            dispute: Some(Dispute::Uncorroborated)
+        }
+    );
+
+    // And a lone finding the judge threw out is still simply rejected;
+    // wanting corroboration must not resurrect anything.
+    assert_eq!(
+        bucket_for(
+            Some(&ProofOutcome::Refuted("same".to_string())),
+            None,
+            1,
+            false
+        ),
+        Bucket::Dismissed
     );
 }
