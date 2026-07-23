@@ -622,6 +622,105 @@ fn parse_def(source: &str) -> Option<(String, usize)> {
 /// How much of the surrounding code the reviewers are shown.
 const MAX_IMPORTED_CHARS: usize = 1_600;
 
+/// The behaviour report with every result cut off, leaving only the calls.
+///
+/// The report is the right thing to show a prover and the wrong thing to
+/// show it whole. Given the full report, every prover in a measured run
+/// picked a good input out of it — and then copied the observed output into
+/// its `expected:` line, which is the bug written down as the specification.
+/// Three defects, three refutations, `expected None, got None`.
+///
+/// So it gets the calls and not the answers. Where the input comes from and
+/// where the expectation comes from have to be two different places, or the
+/// comparison is between a value and itself.
+pub(crate) fn calls_only(report: &str) -> String {
+    let mut calls = String::new();
+    for line in report.lines() {
+        let line = line.trim();
+        // "name(args) -> result", "name(args) !! Error", and the repeat
+        // marker, which is worth keeping *as* a hint about method.
+        let call = match line.find(" a second time") {
+            Some(cut) => format!(
+                "{} — and again, to see if it answers the same",
+                &line[..cut]
+            ),
+            None => match line.find(" -> ").or_else(|| line.find(" !! ")) {
+                Some(cut) => line[..cut].to_string(),
+                None => continue,
+            },
+        };
+        if !call.contains('(') {
+            continue;
+        }
+        calls.push_str(&call);
+        calls.push('\n');
+    }
+    calls
+}
+
+/// The signature and docstring of whichever changed function a claim is
+/// about — the thing that says what "correct" would have been.
+///
+/// A prover needs this more than anything else it gets, and kept not
+/// finding it. Handed a diff containing
+///
+/// ```text
+///  def needs_reorder(stock, threshold):
+///      """True once stock has fallen to the reorder threshold."""
+/// -    return stock <= threshold
+/// +    return stock < threshold
+/// ```
+///
+/// it wrote `expected = False` for `needs_reorder(0, 0)` — copying what the
+/// code does into the place where the specification goes, so of course the
+/// two matched and of course the defect was refuted. The contract was two
+/// lines above the change and went unread, so now it arrives on its own.
+pub(crate) fn contract_for(diff: &str, subject: &str) -> Option<String> {
+    let subject = subject.to_ascii_lowercase();
+    let mut lines = diff.lines().peekable();
+    while let Some(line) = lines.next() {
+        // A signature reaches the diff two ways: as a line of its own, or —
+        // for a function whose body changed under it — as the context git
+        // writes after a hunk's `@@`.
+        let content = match line.strip_prefix("@@") {
+            Some(header) => match header.split_once("@@") {
+                Some((_, context)) => context.trim(),
+                None => continue,
+            },
+            None => match line.strip_prefix('+').or_else(|| line.strip_prefix(' ')) {
+                Some(content) => content,
+                None => continue,
+            },
+        };
+        let Some((name, _)) = parse_def(content) else {
+            continue;
+        };
+        // The claim has to actually be about this function. Word-bounded, so
+        // a title saying "restock" doesn't match a `stock` function.
+        let name = name.to_ascii_lowercase();
+        if !subject
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .any(|word| word == name)
+        {
+            continue;
+        }
+        let mut block = content.to_string();
+        if let Some(next) = lines.peek() {
+            let doc = next
+                .strip_prefix('+')
+                .or_else(|| next.strip_prefix(' '))
+                .unwrap_or("")
+                .trim();
+            if doc.starts_with("\"\"\"") || doc.starts_with('\'') {
+                block.push('\n');
+                block.push_str(doc);
+            }
+        }
+        return Some(block);
+    }
+    None
+}
+
 /// The python files the diff imports but does not change, summarised.
 ///
 /// A diff is not enough to review a diff. The `orders` fixture makes the

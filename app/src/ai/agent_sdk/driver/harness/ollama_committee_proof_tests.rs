@@ -706,3 +706,75 @@ fn the_contract_a_diff_breaks_can_be_in_a_file_the_diff_never_touches() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_prover_is_handed_the_promise_the_code_is_breaking() {
+    // The contract sits two lines above the changed line, and provers kept
+    // reading past it — writing `expected = False` for a function whose
+    // docstring says True, which is the bug copied into the specification.
+    let contract = contract_for(STOCK_DIFF, "Incorrect logic in needs_reorder()")
+        .expect("needs_reorder is in the diff");
+    assert!(
+        contract.contains("def needs_reorder(stock, threshold):"),
+        "{contract}"
+    );
+    assert!(
+        contract.contains("fallen to the reorder threshold"),
+        "{contract}"
+    );
+
+    // Named by the hunk header rather than by a context line, and its
+    // docstring is a context line too.
+    let cheapest = contract_for(STOCK_DIFF, "Incorrect handling of empty list in cheapest()")
+        .expect("cheapest");
+    assert!(
+        cheapest.contains("or None when the list is empty"),
+        "{cheapest}"
+    );
+
+    // A changed signature is found from its added line.
+    assert!(
+        contract_for(STOCK_DIFF, "Incorrect default argument in restock()")
+            .is_some_and(|block| block.contains("log=[]"))
+    );
+
+    // Word-bounded: "restock" must not resolve to a `stock` function, and a
+    // claim naming nothing in the diff gets nothing.
+    assert_eq!(
+        contract_for(STOCK_DIFF, "something is wrong somewhere"),
+        None
+    );
+}
+
+#[test]
+fn a_prover_sees_which_inputs_were_tried_and_not_what_they_returned() {
+    let report = "stock.py:\n\
+                  cheapest([0, 5]) -> 5\n\
+                  needs_reorder(3, 3) -> False\n\
+                  split_pot(100, []) !! ZeroDivisionError: division by zero\n\
+                  restock(0, []) -> [(0, [])]\n\
+                  restock(0, []) a second time -> [(0, []), (0, [])]\n";
+    let calls = calls_only(report);
+
+    // The inputs, so a prover stops inventing `cheapest([])`.
+    assert!(calls.contains("cheapest([0, 5])"), "{calls}");
+    assert!(calls.contains("needs_reorder(3, 3)"), "{calls}");
+    assert!(calls.contains("split_pot(100, [])"), "{calls}");
+
+    // And none of the answers, because a prover handed an observed value
+    // writes it into `expected:` and compares it against itself. Every proof
+    // in one measured run did exactly that.
+    assert!(!calls.contains("-> 5"), "{calls}");
+    assert!(!calls.contains("False"), "{calls}");
+    assert!(!calls.contains("ZeroDivisionError"), "{calls}");
+    assert!(!calls.contains("[(0, [])]"), "{calls}");
+
+    // The repeat is a hint about method, not a value, so it survives.
+    assert!(
+        calls.contains("and again, to see if it answers the same"),
+        "{calls}"
+    );
+
+    // The file heading isn't a call.
+    assert!(!calls.contains("stock.py:"), "{calls}");
+}
