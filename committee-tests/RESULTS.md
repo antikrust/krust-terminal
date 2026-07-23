@@ -28,7 +28,7 @@ COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock cargo test -p 
 | Review | stock | **3 / 3** (twice) | 0 | 2 | 17 min |
 | Review (cross-file) | orders | **2 / 2** | 0 | 1 | 15 min |
 | Creation | arcade | **7 / 8** held-out cases | — | — | 4½ min |
-| Review | payday | **2 / 3** | 0 | 1 | 15 min |
+| Review | payday | **3 / 3** | 0 | 2 | 19 min |
 
 The one `arcade` failure is worth quoting, because it is what a small-model
 first draft looks like when it is nearly right:
@@ -42,15 +42,22 @@ A word too long to break is flushed after an empty accumulator, so the
 result carries a phantom empty first line. Everything else — collapsed
 whitespace, exact-width fits, multi-line breaking, empty input — is right.
 
-The one `payday` miss is `if not players: return {}` having been deleted, so
-an empty roster now divides by zero. It survived every mechanism here for a
-reason worth writing down: it is not a docstring violation, so the oracle
-cannot see it (asked what an empty roster should split into, it answered one
-thing cold and another warm and was correctly discarded — the docstring
-says nothing about nobody). There is no new line to look at, only a missing
-old one, and the reviewer rubric said "never report a defect in a `-` line",
-which had been written to stop reviewers describing deleted code as though
-it were still present. One fix built the blind spot the next had to find.
+`payday`'s third defect took three attempts and is the best illustration
+here of how a defect gets lost. It is `if not players: return {}` having
+been deleted, so an empty roster now divides by zero.
+
+The oracle cannot see it: it is not a docstring violation, and asked what an
+empty roster should split into the model answered one thing cold and another
+warm and was correctly discarded — the docstring says nothing about nobody.
+There is no new line to look at, only a missing old one, and the reviewer
+rubric said "never report a defect in a `-` line", which had been written to
+stop reviewers describing deleted code as still present. Fixing that got
+reviewers raising it for the first time — and the judge rejected it, on the
+grounds that a `ZeroDivisionError` is "correctly handled by Python's runtime
+error mechanism". Only after the judge was told that a crash is not a way of
+handling something did the run reach 3/3. One prompt built the blind spot,
+the next stage down ate the fix for it, and neither was visible except by
+running the whole thing and reading the reasons.
 
 **Editing is the mode to trust.** It is the fastest, the most reliable, and
 the only one whose success is a single objective question. The task is
