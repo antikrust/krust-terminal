@@ -116,6 +116,23 @@ differ from each other. **The round reliably rewrites the answer into a
 different program that scores exactly the same**, fails the same case it was
 told to fix, and breaks nothing. It costs 284s → 632s to do it.
 
+And the round *kind* makes no difference either. Judge notes, rival critique
+(`peers`) and the judge's own rewrite (`exemplar`) were each run against the
+same baseline:
+
+| Round | Score | Failing case | Program |
+| --- | --- | --- | --- |
+| none | 7 / 8 | over-long word | A |
+| notes | 7 / 8 | over-long word | B |
+| peers | 7 / 8 | over-long word | C |
+| exemplar | 7 / 8 | over-long word | D |
+
+**Four different programs, one score, the same failure.** Every form of
+feedback moves the answer somewhere new and none of them moves it up. The
+mechanism explores perfectly well; it has no gradient, so it wanders on a
+level set. That is not "rounds are useless" — it is "rounds are
+directionless", which is a different problem with a different fix.
+
 So the earlier numbers were not noise, which is what a first reading of the
 variance suggested. They were real measurements of the pipelines that
 existed at the time, and they tell a coherent story: the rounds genuinely

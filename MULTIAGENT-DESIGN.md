@@ -455,6 +455,37 @@ of small models is far better at saying "these disagree" than at deciding
 which is right.** Reporting the ambiguity costs a line of reading. Resolving
 it wrongly costs a real defect or invents a false one.
 
+## Why the rounds do not improve anything
+
+Measured, not assumed. Against a creation task graded by a held-out file,
+with a deterministic baseline of 7 of 8:
+
+- Three paired runs of a `notes` round: 7 of 8 both arms, every time, with
+  the round producing a *different program of identical quality* and more
+  than doubling the run.
+- `peers` and `exemplar`: also 7 of 8, also the same failing case, also
+  different programs again.
+
+Four distinct programs, one score. A round moves the answer and cannot tell
+which way is up, because nothing in the loop compares a draft with the one
+it replaced against a fixed standard. The judge writes notes, the panelists
+revise, and the judge picks a winner — every step is opinion, and the winner
+is chosen by the same faculty that wrote the notes.
+
+The fix is a yardstick that does not move:
+
+```text
+task ─→ tests (written once, from the task, never revised)
+     └→ draft ─score→ notes ─→ revision ─score→ keep the higher
+```
+
+Then a round is monotone by construction, the winner is picked by number
+rather than taste, and a round that cannot raise the score can say so and
+stop. Two things it cannot do: score a task with no checkable answer — prose
+rewrites need a human and should say so rather than inventing a number — and
+survive a wrong test, though a wrong test at least penalises every draft
+identically, so the ordering holds even when the number does not.
+
 ## Failure modes this design already answers
 
 | Failure | Answer |
