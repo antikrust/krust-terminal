@@ -194,7 +194,7 @@ fn instance_list_output_serializes_empty_and_populated_lists() {
     let record = local_control::discovery::InstanceRecord::for_current_process(
         None,
         "dev",
-        "baby.derp.Derp",
+        "derp.baby.Derp",
         Some("v0.1.0".to_owned()),
         Vec::new(),
     );
@@ -203,7 +203,7 @@ fn instance_list_output_serializes_empty_and_populated_lists() {
         .expect("populated list serializes");
     assert_eq!(populated["instances"][0]["instance_id"], json!(instance_id));
     assert_eq!(populated["instances"][0]["channel"], json!("dev"));
-    assert_eq!(populated["instances"][0]["app_id"], json!("baby.derp.Derp"));
+    assert_eq!(populated["instances"][0]["app_id"], json!("derp.baby.Derp"));
     assert_eq!(populated["instances"][0]["app_version"], json!("v0.1.0"));
 }
 

@@ -4,20 +4,20 @@ Version=1.0
 
 Type=Application
 
-Name=DerpDev
+Name=DerpPreview
 GenericName=TerminalEmulator
 
-Exec=derp-terminal-dev %U
-StartupWMClass=baby.derp.DerpDev
+Exec=derp-terminal-preview %U
+StartupWMClass=derp.baby.DerpPreview
 
 Keywords=shell;prompt;command;commandline;cmd;
 
-Icon=baby.derp.DerpDev
+Icon=derp.baby.DerpPreview
 
 Categories=System;TerminalEmulator;
 
 # Don't run this application within a terminal.
 Terminal=false
 
-# Register ourselves as the handler for derpdev:// URLs.
-MimeType=x-scheme-handler/derpdev;
+# Register ourselves as the handler for derppreview:// URLs.
+MimeType=x-scheme-handler/derppreview;

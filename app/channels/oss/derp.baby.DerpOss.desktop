@@ -4,20 +4,20 @@ Version=1.0
 
 Type=Application
 
-Name=DerpLocal
+Name=DerpOss
 GenericName=TerminalEmulator
 
-Exec=derp-terminal-local %U
-StartupWMClass=baby.derp.DerpLocal
+Exec=derp-terminal-oss %U
+StartupWMClass=derp.baby.DerpOss
 
 Keywords=shell;prompt;command;commandline;cmd;
 
-Icon=baby.derp.DerpLocal
+Icon=derp.baby.DerpOss
 
 Categories=System;TerminalEmulator;
 
 # Don't run this application within a terminal.
 Terminal=false
 
-# Register ourselves as the handler for derplocal:// URLs.
-MimeType=x-scheme-handler/derplocal;
+# Register ourselves as the handler for derposs:// URLs.
+MimeType=x-scheme-handler/derposs;

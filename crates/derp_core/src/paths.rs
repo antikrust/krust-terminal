@@ -196,7 +196,7 @@ pub fn secure_state_dir() -> Option<PathBuf> {
 
     #[cfg(target_os = "macos")]
     if let Some(app_group_root) = app_group_container_path() {
-        // The macOS project_path is the bundle ID (i.e. `baby.derp.Derp-Stable`).
+        // The macOS project_path is the bundle ID (i.e. `derp.baby.Derp-Stable`).
         let project_dirs = project_dirs()?;
         return Some(
             app_group_root
@@ -318,7 +318,7 @@ pub fn app_group_container_path() -> Option<PathBuf> {
 
         let fm = NSFileManager::defaultManager();
         // Keep in sync with Entitlements.plist
-        let group_id = format!("{}.baby.derp", crate::macos::APPLE_TEAM_ID);
+        let group_id = format!("{}.derp.baby", crate::macos::APPLE_TEAM_ID);
         let group_id = NSString::from_str(&group_id);
         // containerURLForSecurityApplicationGroupIdentifier always returns a value on macOS (unlike iOS).
         // We have to double-check that the path points to a directory we can actually use. In addition to

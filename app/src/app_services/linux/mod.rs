@@ -154,7 +154,7 @@ impl ApplicationService {
 // invoking org.freedesktop.Application IPC methods.
 #[proxy(
     interface = "org.freedesktop.Application",
-    default_service = "baby.derp.DerpLocal",
+    default_service = "derp.baby.DerpLocal",
     default_path = "/dev/derp/DerpLocal",
     gen_blocking = false
 )]

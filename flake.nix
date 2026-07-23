@@ -204,16 +204,16 @@
                 install -Dm644 LICENSE-AGPL "$out/share/licenses/derp-terminal-experimental/LICENSE-AGPL"
                 install -Dm644 LICENSE-MIT "$out/share/licenses/derp-terminal-experimental/LICENSE-MIT"
 
-                install -Dm644 app/channels/oss/baby.derp.DerpOss.desktop \
-                  "$out/share/applications/baby.derp.DerpOss.desktop"
-                substituteInPlace "$out/share/applications/baby.derp.DerpOss.desktop" \
+                install -Dm644 app/channels/oss/derp.baby.DerpOss.desktop \
+                  "$out/share/applications/derp.baby.DerpOss.desktop"
+                substituteInPlace "$out/share/applications/derp.baby.DerpOss.desktop" \
                   --replace-fail "Exec=derp-terminal-oss %U" "Exec=derp-terminal-experimental %U"
 
                 for size in 16x16 32x32 64x64 128x128 256x256 512x512; do
                   icon="app/channels/oss/icon/no-padding/$size.png"
                   if [ -f "$icon" ]; then
                     install -Dm644 "$icon" \
-                      "$out/share/icons/hicolor/$size/apps/baby.derp.DerpOss.png"
+                      "$out/share/icons/hicolor/$size/apps/derp.baby.DerpOss.png"
                   fi
                 done
 

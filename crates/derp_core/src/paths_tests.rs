@@ -68,7 +68,7 @@ fn test_cache_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/baby.derp.DerpOss"));
+            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/derp.baby.DerpOss"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(cache_dir(), home_dir.join(".cache/derp-oss"));
         } else if #[cfg(windows)] {
@@ -85,7 +85,7 @@ fn test_state_dir_path() {
     cfg_if::cfg_if! {
         // ChannelState, by default, is configured for Channel::Oss.
         if #[cfg(target_os = "macos")] {
-            assert_eq!(state_dir(), home_dir.join("Library/Application Support/baby.derp.DerpOss"));
+            assert_eq!(state_dir(), home_dir.join("Library/Application Support/derp.baby.DerpOss"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(state_dir(), home_dir.join(".local/state/derp-oss"));
         } else if #[cfg(windows)] {
@@ -115,7 +115,7 @@ fn test_project_path_for_derp_app_id() {
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "baby.derp.Derp");
+            assert_eq!(project_dirs.project_path(), "derp.baby.Derp");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(project_dirs.project_path(), "derp-terminal");
         } else if #[cfg(windows)] {
@@ -132,7 +132,7 @@ fn test_project_path_for_derp_dev_app_id() {
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "baby.derp.DerpDev");
+            assert_eq!(project_dirs.project_path(), "derp.baby.DerpDev");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(project_dirs.project_path(), "derp-terminal-dev");
         } else if #[cfg(windows)] {
@@ -149,7 +149,7 @@ fn test_project_path_for_oss_app_id() {
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "baby.derp.DerpOss");
+            assert_eq!(project_dirs.project_path(), "derp.baby.DerpOss");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(project_dirs.project_path(), "derp-oss");
         } else if #[cfg(windows)] {

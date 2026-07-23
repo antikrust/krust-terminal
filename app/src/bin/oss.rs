@@ -46,7 +46,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleExecutable</key>
     <string>derp-oss</string>
     <key>CFBundleIdentifier</key>
-    <string>baby.derp.DerpOss</string>
+    <string>derp.baby.DerpOss</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

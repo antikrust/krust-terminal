@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>baby.derp.DerpDockTilePlugin</string>
+    <string>derp.baby.DerpDockTilePlugin</string>
     <key>CFBundleExecutable</key>
     <string>DerpDockTilePlugin</string>
     <key>CFBundleName</key>

@@ -2,10 +2,10 @@ use super::is_derp_bundle;
 
 #[test]
 fn is_derp_bundle_recognises_derp_channels() {
-    assert!(is_derp_bundle("baby.derp.Derp"));
-    assert!(is_derp_bundle("baby.derp.DerpDev"));
-    assert!(is_derp_bundle("baby.derp.DerpPreview"));
-    assert!(is_derp_bundle("baby.derp.DerpOss"));
+    assert!(is_derp_bundle("derp.baby.Derp"));
+    assert!(is_derp_bundle("derp.baby.DerpDev"));
+    assert!(is_derp_bundle("derp.baby.DerpPreview"));
+    assert!(is_derp_bundle("derp.baby.DerpOss"));
 }
 
 #[test]

@@ -35,7 +35,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleExecutable</key>
     <string>derp</string>
     <key>CFBundleIdentifier</key>
-    <string>baby.derp.Derp-Local</string>
+    <string>derp.baby.Derp-Local</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

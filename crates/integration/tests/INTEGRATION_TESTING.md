@@ -102,7 +102,7 @@ This has helped us catch a lot of existing bugs in the system.
 Note that for `async_assert` to actually work, the `set_assertion` needs to **return** with the `async_assert`.
 
 ## How to add a sqlite snapshot?
-* You can copy over a derp.sqlite file from ~/Library/Application\ Support/{derp, baby.derp.Derp-(Dev|Preview|Stable)} directly
+* You can copy over a derp.sqlite file from ~/Library/Application\ Support/{derp, derp.baby.Derp-(Dev|Preview|Stable)} directly
 * You may want to sanitize some info that is specific to you (i.e. cwd https://staging.derp.baby/block/FNBafyVtxvjmdNIx6HxUM5)
 
 

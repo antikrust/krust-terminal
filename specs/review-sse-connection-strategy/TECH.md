@@ -187,7 +187,7 @@ Log lines to watch for, all at info level unless noted:
 
 Where to tail:
 
-- GUI process: the Derp app log for the active build flavor (e.g. `~/Library/Logs/baby.derp.Derp-Stable/derp.log` on macOS).
+- GUI process: the Derp app log for the active build flavor (e.g. `~/Library/Logs/derp.baby.Derp-Stable/derp.log` on macOS).
 - Local CLI driver subprocess: the subprocess's stderr or its dedicated log file. `start_agent` with `execution_mode: local` runs `derp_cli` as a subprocess; tail wherever that subprocess writes logs.
 - Cloud Oz worker: the worker logs surfaced by the Oz UI / cloud logging tool for the run.
 - Server-side: `stream_agent_events` requests in the dev `derp-server` access log — one request per active SSE; new requests on reconnect; disconnects when the client closes the stream.
