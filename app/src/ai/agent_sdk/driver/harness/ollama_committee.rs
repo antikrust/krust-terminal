@@ -520,7 +520,7 @@ const PERSONA_NAMES: [&str; 33] = [
     "Rufus Marmalade",
     "Seraphina Bunthorpe",
     "Ambrose Kerfuffle",
-    "Guybrush Threepwood",
+    "Barnaby Sniffleworth",
 ];
 
 /// The persona for a model tag: the same tag always draws the same name.
