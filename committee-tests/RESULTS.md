@@ -24,11 +24,33 @@ COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock cargo test -p 
 
 | Mode | Fixture | Found | Invented | Doubled | Time |
 | --- | --- | --- | --- | --- | --- |
-| Review | stock | **3 / 3** | 0 | 2 | 17 min |
+| Edit | durations | **12 / 12** held-out cases | — | — | 7½ min |
+| Review | stock | **3 / 3** (twice) | 0 | 2 | 17 min |
 | Review (cross-file) | orders | **2 / 2** | 0 | 1 | 15 min |
-| Edit | durations | **pass** — 12/12 held-out cases | — | — | 7½ min |
-| Creation | arcade | see below | — | — | 8 min |
-| Review | payday | see below | — | — | 11 min |
+| Creation | arcade | **7 / 8** held-out cases | — | — | 4½ min |
+| Review | payday | **2 / 3** | 0 | 1 | 15 min |
+
+The one `arcade` failure is worth quoting, because it is what a small-model
+first draft looks like when it is nearly right:
+
+```text
+FAIL  wrap('supercalifragilistic', 5) -> ['', 'supercalifragilistic'],
+                                  wanted ['supercalifragilistic']
+```
+
+A word too long to break is flushed after an empty accumulator, so the
+result carries a phantom empty first line. Everything else — collapsed
+whitespace, exact-width fits, multi-line breaking, empty input — is right.
+
+The one `payday` miss is `if not players: return {}` having been deleted, so
+an empty roster now divides by zero. It survived every mechanism here for a
+reason worth writing down: it is not a docstring violation, so the oracle
+cannot see it (asked what an empty roster should split into, it answered one
+thing cold and another warm and was correctly discarded — the docstring
+says nothing about nobody). There is no new line to look at, only a missing
+old one, and the reviewer rubric said "never report a defect in a `-` line",
+which had been written to stop reviewers describing deleted code as though
+it were still present. One fix built the blind spot the next had to find.
 
 **Editing is the mode to trust.** It is the fastest, the most reliable, and
 the only one whose success is a single objective question. The task is
