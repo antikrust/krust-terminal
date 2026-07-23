@@ -209,6 +209,14 @@ fn a_real_committee() {
         .filter(|tag| !tag.is_empty())
         .collect();
     let judge = std::env::var("COMMITTEE_JUDGE").unwrap_or_else(|_| "phi4:14b".to_string());
+    // Roles are keyed by model tag, so a model named as both a reviewer and
+    // the judge silently becomes only the judge: a bench asked for three
+    // reviewers quietly seats two, and the run measures something nobody
+    // chose. It cost one matrix before anyone noticed.
+    assert!(
+        !reviewers.contains(&judge),
+        "{judge} is named as a reviewer and as the judge; a model holds one seat"
+    );
     let rounds: Vec<PanelRoundKind> = std::env::var("COMMITTEE_ROUNDS")
         .unwrap_or_default()
         .split(',')
