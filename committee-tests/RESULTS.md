@@ -90,15 +90,29 @@ edit test.
 `COMMITTEE_ROUNDS=notes` runs a round where the judge writes each panelist
 notes and everyone revises. Measured against the same graders:
 
-| Fixture | No rounds | One notes round | Cost |
-| --- | --- | --- | --- |
-| arcade (creation) | 7 / 8 | **6 / 8** | +4½ min |
-| durations (edit) | 12 / 12 | 12 / 12 | +6½ min |
+| arcade (creation) | Score |
+| --- | --- |
+| No round | **7 / 8** |
+| Round, vague notes | 6 / 8 |
+| Round, notes quoting the failing call | **3 / 8** |
+| ↳ plus a lose-ground guard on battery calls | 5 / 8 |
+| ↳ plus task-shaped calls to compare on | 7 / 8, guard never fired |
 
-One made it worse and one changed nothing, for eleven minutes between them.
-The regression is the interesting half: the revision took the draft's single
-bug — a word too long to break flushed after an empty accumulator — and
-spread it into a second case.
+`durations` (edit) stayed 12 / 12 through every one of those, and cost
+6½ extra minutes to do it.
+
+Nothing here has ever made a result better. Three configurations made it
+worse, one made it less worse, and the last one merely failed to do damage —
+with no revert logged, so the guard was never tested, only unexercised.
+
+The middle row is the one to look at. Told exactly which call was wrong, a
+7B fixed exactly that call and broke five others doing it: **making the
+feedback more precise made the outcome worse**, because a model this size
+rewrites a function around the case it is shown rather than patching it.
+
+**The recommendation is to leave rounds off.** They cost a model call per
+panelist per round and the best outcome observed is the one you get without
+them.
 
 The cause was that panel rounds had no evidence at all. Review mode probes
 the code, asks an oracle what each call should have returned, and executes a
