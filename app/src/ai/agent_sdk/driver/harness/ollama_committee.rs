@@ -1882,8 +1882,18 @@ pub fn parse_save_command(prompt: &str) -> Option<Option<String>> {
 /// "save the output" after a review means the run they just watched.
 pub fn parse_save_transcript_command(prompt: &str) -> Option<Option<String>> {
     let lower = prompt.trim().trim_start_matches('/').to_ascii_lowercase();
-    let mut words = lower.split_whitespace();
-    let verb = words.next()?;
+    let words: Vec<&str> = lower.split_whitespace().collect();
+    // A save is a command, not a task. "write a python3 script that draws a
+    // fireworks animation … it must run for 30 seconds" starts with a verb
+    // this accepts and contains the word "run", and was read as "write the
+    // run [to a file]" — so the panel never happened and the request came
+    // back "nothing to save yet". Asking for a script that runs for a while
+    // is about the most ordinary thing anyone types here.
+    const LONGEST_COMMAND: usize = 9;
+    if words.len() > LONGEST_COMMAND {
+        return None;
+    }
+    let verb = *words.first()?;
     if !matches!(verb, "save" | "write" | "dump" | "keep" | "export") {
         return None;
     }
@@ -1901,10 +1911,32 @@ pub fn parse_save_transcript_command(prompt: &str) -> Option<Option<String>> {
         "test",
         "tests",
     ];
-    let subject_named = words
+    // Words that only ever name the run itself, and words that need
+    // something pointing at them first: "the run" is the run, "must run" is
+    // a verb in somebody's sentence.
+    // "a test suite" is not a request to save tests, so `test` earns its
+    // place the same way `run` does — by being pointed at, or by being the
+    // first thing after the verb.
+    const UNAMBIGUOUS: [&str; 2] = ["transcript", "everything"];
+    const POINTERS: [&str; 9] = [
+        "the", "this", "that", "it", "all", "whole", "entire", "my", "our",
+    ];
+    let cleaned: Vec<&str> = words
+        .iter()
+        .skip(1)
         .filter(|word| !looks_like_filename(word))
         .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
-        .any(|word| SUBJECTS.contains(&word));
+        .collect();
+    let subject_named = cleaned.iter().enumerate().any(|(index, word)| {
+        if !SUBJECTS.contains(word) {
+            return false;
+        }
+        UNAMBIGUOUS.contains(word)
+            || index == 0
+            || cleaned
+                .get(index.wrapping_sub(1))
+                .is_some_and(|before| POINTERS.contains(before))
+    });
     if !subject_named {
         return None;
     }

@@ -1849,3 +1849,44 @@ fn one_script_does_not_overrule_every_reviewer_that_looked() {
         }
     );
 }
+
+#[test]
+fn asking_for_a_script_that_runs_is_not_asking_to_save_the_run() {
+    // The one that broke a whole creation run: it starts with a verb the
+    // parser accepts and contains the word "run", so it was read as "write
+    // the run [to a file]", the panel never happened, and the reply was
+    // "nothing to save yet — run a panel to a verdict first".
+    assert_eq!(
+        parse_save_transcript_command(
+            "write a python3 script that draws a fireworks animation in the terminal using only \
+             the standard library. It must run for 30 seconds and then exit cleanly."
+        ),
+        None
+    );
+    // Same shape, shorter, still a task.
+    assert_eq!(
+        parse_save_transcript_command("write a program that runs a test suite"),
+        None
+    );
+    assert_eq!(parse_save_transcript_command("write me a log parser"), None);
+
+    // And the commands it exists for still work.
+    assert_eq!(parse_save_transcript_command("save transcript"), Some(None));
+    assert_eq!(
+        parse_save_transcript_command("save the transcript"),
+        Some(None)
+    );
+    assert_eq!(parse_save_transcript_command("dump everything"), Some(None));
+    assert_eq!(
+        parse_save_transcript_command("save the whole run"),
+        Some(None)
+    );
+    assert_eq!(
+        parse_save_transcript_command("write the output to review.md"),
+        Some(Some("review.md".to_string()))
+    );
+    assert_eq!(
+        parse_save_transcript_command("save the run to notes.md"),
+        Some(Some("notes.md".to_string()))
+    );
+}
