@@ -630,6 +630,13 @@ pub(crate) struct Observation {
 }
 
 /// Splits a behaviour report back into its observations.
+///
+/// Including the ones that raised. A call that blew up is a call with an
+/// answer — "it raised ZeroDivisionError" — and the docstring usually says
+/// it shouldn't have: `split_pot(0, [])` on a roster of nobody should hand
+/// back an empty split, not divide by zero. Skipping those lines meant the
+/// oracle was never asked about them, and a planted defect sat in the
+/// behaviour report, in plain sight, unexamined.
 pub(crate) fn observations(report: &str) -> Vec<Observation> {
     report
         .lines()
@@ -640,14 +647,27 @@ pub(crate) fn observations(report: &str) -> Vec<Observation> {
             if line.contains(" a second time") {
                 return None;
             }
-            let (call, result) = line.split_once(" -> ")?;
+            let (call, result) = match line.split_once(" -> ") {
+                Some((call, result)) => (call, result.trim().to_string()),
+                None => {
+                    let (call, error) = line.split_once(" !! ")?;
+                    // The type alone. The message is often the arguments
+                    // read back, which would hand the oracle the answer.
+                    let kind = error.split(':').next().unwrap_or(error).trim();
+                    (call, format!("{RAISED} {kind}"))
+                }
+            };
             call.contains('(').then(|| Observation {
                 call: call.trim().to_string(),
-                result: result.trim().to_string(),
+                result,
             })
         })
         .collect()
 }
+
+/// How an observation records an exception, so the mismatch line can read
+/// like English rather than like "returned raised ValueError".
+pub(crate) const RAISED: &str = "raised";
 
 /// Reads an oracle's `call -> literal` reply, keeping only the calls that
 /// were actually asked about. A model that invents a call, answers in prose,
@@ -711,10 +731,15 @@ pub(crate) fn oracle_mismatches(
         if normalise(expected).eq_ignore_ascii_case(&normalise(&observation.result)) {
             continue;
         }
-        mismatches.push(format!(
-            "{call} returned {}, but its docstring says it should return {expected}",
-            observation.result
-        ));
+        mismatches.push(match observation.result.strip_prefix(RAISED) {
+            Some(kind) => {
+                format!("{call} raised{kind}, but its docstring says it should return {expected}")
+            }
+            None => format!(
+                "{call} returned {}, but its docstring says it should return {expected}",
+                observation.result
+            ),
+        });
     }
     mismatches
 }

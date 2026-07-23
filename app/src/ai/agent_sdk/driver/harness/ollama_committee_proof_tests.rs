@@ -954,3 +954,40 @@ fn a_proposed_call_reaches_the_report_and_shows_what_a_battery_could_not() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_call_that_raised_is_an_observation_the_oracle_should_see() {
+    // Straight from a payday run: both planted split_pot defects were in
+    // the behaviour report, and only one reached the oracle, because
+    // `observations` split on " -> " and dropped every "!!" line. The
+    // division by zero sat there in plain sight, unexamined, and the run
+    // scored 1 of 3.
+    let report = "payday.py:\n\
+                  split_pot(0, []) !! ZeroDivisionError: division by zero\n\
+                  split_pot(100, [1, 2, 3]) -> {1: 33.333333333333336}\n";
+    let observed = observations(report);
+    assert_eq!(observed.len(), 2, "the raising call counts");
+    assert_eq!(observed[0].call, "split_pot(0, [])");
+    // The type only — the message is often the arguments read back, which
+    // would hand the oracle the answer it is supposed to work out.
+    assert_eq!(observed[0].result, "raised ZeroDivisionError");
+
+    // An oracle that says an empty roster should split into nothing has
+    // found the defect, and the line reads like English.
+    let answers = vec![("split_pot(0, [])".to_string(), "{}".to_string())];
+    assert_eq!(
+        oracle_mismatches(&answers, &observed),
+        vec![
+            "split_pot(0, []) raised ZeroDivisionError, but its docstring says it should \
+             return {}"
+                .to_string()
+        ]
+    );
+
+    // And a call the docstring agrees should raise is not a defect.
+    let agrees = vec![(
+        "split_pot(0, [])".to_string(),
+        "raised ZeroDivisionError".to_string(),
+    )];
+    assert!(oracle_mismatches(&agrees, &observed).is_empty());
+}
