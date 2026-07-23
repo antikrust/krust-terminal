@@ -22,6 +22,11 @@ COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock cargo test -p 
 
 ## By mode
 
+Measured at `1bdc2e5`. Run `./committee-tests/stale.sh` to see whether the
+pipeline has moved since — a score is a fact about the commit that produced
+it, and this one changed by five of eight in a single night.
+
+
 | Mode | Fixture | Found | Invented | Doubled | Time |
 | --- | --- | --- | --- | --- | --- |
 | Edit | durations | **12 / 12** held-out cases | — | — | 7½ min |
@@ -86,6 +91,10 @@ now asks for `wrap(text, width)` and is graded by a held-out file like the
 edit test.
 
 ## The rewrite rounds
+
+Measured at `1bdc2e5`, except the five-row table below, which is the record
+of a pipeline being repaired and is dated by its own rows.
+
 
 `COMMITTEE_ROUNDS=notes` runs a round where the judge writes each panelist
 notes and everyone revises. Measured against the same graders:

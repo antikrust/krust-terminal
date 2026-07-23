@@ -353,10 +353,21 @@ fn a_real_committee() {
 
     let seconds = started.elapsed().as_secs();
     let rounds: Vec<&str> = rounds.iter().map(|round| round.as_str()).collect();
+    // The commit the pipeline was at. A score is only a fact about the code
+    // that produced it, and this one moved thirty times in a night — a table
+    // of numbers with no commit against them is a table nobody can tell is
+    // out of date, which is worse than no table.
+    let commit = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
     // One line per run, so a session's worth greps back into a table.
     println!(
         "\nBENCH fixture={fixture} reviewers={} judge={judge} rounds={} found={found}/{wanted} \
-         extra={extra} seconds={seconds}",
+         extra={extra} seconds={seconds} commit={commit}",
         reviewers.join("+"),
         if rounds.is_empty() {
             "none".to_string()
