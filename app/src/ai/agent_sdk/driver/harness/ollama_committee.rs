@@ -1197,33 +1197,74 @@ fn issues_match(a: (&str, Option<u64>, &str), b: (&str, Option<u64>, &str)) -> b
 enum Bucket {
     /// Shown as **Definite**.
     Definite,
-    /// Shown as **Might be**. `disputed` when it got there because the
-    /// interpreter and the judge said opposite things.
-    Possible { disputed: bool },
+    /// Shown as **Might be**, with the reason when it got there because two
+    /// kinds of evidence disagreed.
+    Possible { dispute: Option<Dispute> },
     /// Shown as **Rejected**.
     Dismissed,
+}
+
+/// Why a finding couldn't be settled. Both of these are real runs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Dispute {
+    /// The interpreter demonstrated it and the judge rejected it, or the
+    /// reverse.
+    JudgeVersusExecution,
+    /// One proof script refuted something several reviewers had each found
+    /// on their own.
+    ProofVersusConsensus,
+}
+
+impl Dispute {
+    fn note(self) -> &'static str {
+        match self {
+            Dispute::JudgeVersusExecution => {
+                "⚖️ the interpreter and the judge disagree — one of them is wrong and this run \
+                 can't say which"
+            }
+            Dispute::ProofVersusConsensus => {
+                "⚖️ every reviewer that looked found this, and one script says otherwise — \
+                 check what the script actually tested before believing it"
+            }
+        }
+    }
 }
 
 /// Certainty first: execution beats opinion, and the judge settles what the
 /// interpreter couldn't.
 ///
-/// Except when the two flatly disagree. A run put a finding under
-/// **Definite** with `judge: reject` printed beneath it, which is not a
-/// verdict so much as a shrug written twice. One of the two is wrong and the
-/// run has no way to tell which, so it goes to "Might be" and says so —
-/// overclaiming is the thing this whole pipeline exists to stop.
-fn bucket_for(proof: Option<&ProofOutcome>, judged: Option<&str>) -> Bucket {
+/// Except where two kinds of evidence flatly disagree, and there are two
+/// ways that happens.
+///
+/// A run put a finding under **Definite** with `judge: reject` printed
+/// beneath it, which is not a verdict so much as a shrug written twice.
+///
+/// And a run rejected `cheapest` — which all three reviewers had found
+/// independently — because the proof script tested `cheapest([])`, compared
+/// None to None, and refuted a claim about `cheapest([0, 5])`. Independent
+/// agreement is the entire reason for running several models, and one script
+/// that exercised the wrong input should not quietly delete it. A proof
+/// against a consensus is a reason to look, not a reason to close.
+///
+/// Neither goes to Definite and neither goes to Rejected: they go to "Might
+/// be" and say which two things conflict. Overclaiming in either direction
+/// is what this pipeline exists to stop.
+fn bucket_for(proof: Option<&ProofOutcome>, judged: Option<&str>, reviewers: usize) -> Bucket {
     let judged = judged.map(str::to_ascii_lowercase);
     let confirmed = matches!(judged.as_deref(), Some("confirm" | "confirmed"));
     let rejected = matches!(judged.as_deref(), Some("reject" | "rejected"));
+    let disputed = |dispute| Bucket::Possible {
+        dispute: Some(dispute),
+    };
     match proof {
-        Some(ProofOutcome::Demonstrated(_)) if rejected => Bucket::Possible { disputed: true },
+        Some(ProofOutcome::Demonstrated(_)) if rejected => disputed(Dispute::JudgeVersusExecution),
         Some(ProofOutcome::Demonstrated(_)) => Bucket::Definite,
-        Some(ProofOutcome::Refuted(_)) if confirmed => Bucket::Possible { disputed: true },
+        Some(ProofOutcome::Refuted(_)) if confirmed => disputed(Dispute::JudgeVersusExecution),
+        Some(ProofOutcome::Refuted(_)) if reviewers > 1 => disputed(Dispute::ProofVersusConsensus),
         Some(ProofOutcome::Refuted(_)) => Bucket::Dismissed,
         _ if confirmed => Bucket::Definite,
         _ if rejected => Bucket::Dismissed,
-        _ => Bucket::Possible { disputed: false },
+        _ => Bucket::Possible { dispute: None },
     }
 }
 
@@ -4858,14 +4899,14 @@ pub async fn run_ollama_committee(
             let mut definite: Vec<usize> = Vec::new();
             let mut possible: Vec<usize> = Vec::new();
             let mut dismissed: Vec<usize> = Vec::new();
-            let mut disputed: Vec<usize> = Vec::new();
+            let mut disputed: Vec<(usize, Dispute)> = Vec::new();
             for (index, finding) in merged.iter().enumerate() {
                 let judged = ruling_for(index).map(|ruling| ruling.verdict.as_str());
-                match bucket_for(finding.proof.as_ref(), judged) {
+                match bucket_for(finding.proof.as_ref(), judged, finding.raised_by.len()) {
                     Bucket::Definite => definite.push(index),
-                    Bucket::Possible { disputed: conflict } => {
-                        if conflict {
-                            disputed.push(index);
+                    Bucket::Possible { dispute } => {
+                        if let Some(dispute) = dispute {
+                            disputed.push((index, dispute));
                         }
                         possible.push(index);
                     }
@@ -4897,11 +4938,10 @@ pub async fn run_ollama_committee(
                             ));
                         }
                     }
-                    if disputed.contains(&index) {
-                        text.push_str(
-                            "   ⚖️ the interpreter and the judge disagree — one of them is \
-                             wrong and this run can't say which\n",
-                        );
+                    if let Some((_, dispute)) =
+                        disputed.iter().find(|(disputed, _)| *disputed == index)
+                    {
+                        text.push_str(&format!("   {}\n", dispute.note()));
                     }
                 }
                 text.push('\n');

@@ -1767,41 +1767,85 @@ fn a_model_on_another_machine_is_read_as_the_model_not_the_address() {
 
 #[test]
 fn a_demonstration_the_judge_rejects_is_not_definite() {
-    let shown = ProofOutcome::Demonstrated("expected 0, actual 5".to_string());
-    let refuted = ProofOutcome::Refuted("expected 90, actual 90".to_string());
+    let shown = ProofOutcome::Demonstrated("expected 0, got 5".to_string());
+    let refuted = ProofOutcome::Refuted("expected 90, got 90".to_string());
+    let alone = 1;
 
     // Execution beats opinion when the judge has nothing to add.
-    assert_eq!(bucket_for(Some(&shown), None), Bucket::Definite);
-    assert_eq!(bucket_for(Some(&shown), Some("confirm")), Bucket::Definite);
-    assert_eq!(bucket_for(Some(&shown), Some("unsure")), Bucket::Definite);
-    assert_eq!(bucket_for(Some(&refuted), None), Bucket::Dismissed);
+    assert_eq!(bucket_for(Some(&shown), None, alone), Bucket::Definite);
+    assert_eq!(
+        bucket_for(Some(&shown), Some("confirm"), alone),
+        Bucket::Definite
+    );
+    assert_eq!(
+        bucket_for(Some(&shown), Some("unsure"), alone),
+        Bucket::Definite
+    );
+    assert_eq!(bucket_for(Some(&refuted), None, alone), Bucket::Dismissed);
 
     // A real run printed a finding under **Definite** with `judge: reject`
     // underneath it. One of the two is wrong; the run can't say which, and
     // saying "definite" anyway is the overclaiming this pipeline is for.
     assert_eq!(
-        bucket_for(Some(&shown), Some("reject")),
-        Bucket::Possible { disputed: true }
+        bucket_for(Some(&shown), Some("reject"), alone),
+        Bucket::Possible {
+            dispute: Some(Dispute::JudgeVersusExecution)
+        }
     );
     assert_eq!(
-        bucket_for(Some(&refuted), Some("confirmed")),
-        Bucket::Possible { disputed: true }
+        bucket_for(Some(&refuted), Some("confirmed"), alone),
+        Bucket::Possible {
+            dispute: Some(Dispute::JudgeVersusExecution)
+        }
     );
 
     // With no proof at all the judge is all there is.
-    assert_eq!(bucket_for(None, Some("Confirm")), Bucket::Definite);
-    assert_eq!(bucket_for(None, Some("REJECTED")), Bucket::Dismissed);
-    assert_eq!(bucket_for(None, None), Bucket::Possible { disputed: false });
+    assert_eq!(bucket_for(None, Some("Confirm"), alone), Bucket::Definite);
+    assert_eq!(bucket_for(None, Some("REJECTED"), alone), Bucket::Dismissed);
+    assert_eq!(
+        bucket_for(None, None, alone),
+        Bucket::Possible { dispute: None }
+    );
 
-    // An inconclusive proof is not evidence either way — the self-check
-    // sends contradictory scripts here, and they must not carry a finding.
+    // An inconclusive proof is not evidence either way.
     let nothing = ProofOutcome::Inconclusive("compared nothing".to_string());
     assert_eq!(
-        bucket_for(Some(&nothing), None),
-        Bucket::Possible { disputed: false }
+        bucket_for(Some(&nothing), None, alone),
+        Bucket::Possible { dispute: None }
     );
     assert_eq!(
-        bucket_for(Some(&nothing), Some("reject")),
+        bucket_for(Some(&nothing), Some("reject"), alone),
         Bucket::Dismissed
+    );
+}
+
+#[test]
+fn one_script_does_not_overrule_every_reviewer_that_looked() {
+    let refuted = ProofOutcome::Refuted("expected None, got None".to_string());
+
+    // The real one: all three reviewers found `cheapest`, and the proof
+    // tested `cheapest([])` — comparing None to None and refuting a claim
+    // about `cheapest([0, 5])`. It was Rejected, and the defect was real.
+    assert_eq!(
+        bucket_for(Some(&refuted), None, 3),
+        Bucket::Possible {
+            dispute: Some(Dispute::ProofVersusConsensus)
+        }
+    );
+
+    // One reviewer plus one refutation is just a refutation.
+    assert_eq!(bucket_for(Some(&refuted), None, 1), Bucket::Dismissed);
+
+    // Agreement doesn't rescue something the interpreter demonstrated *and*
+    // the judge threw out — that conflict is still the sharper one.
+    assert_eq!(
+        bucket_for(
+            Some(&ProofOutcome::Demonstrated("expected 0, got 5".to_string())),
+            Some("reject"),
+            3
+        ),
+        Bucket::Possible {
+            dispute: Some(Dispute::JudgeVersusExecution)
+        }
     );
 }
