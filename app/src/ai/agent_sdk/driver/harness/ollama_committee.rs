@@ -24,9 +24,9 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::ollama_committee_proof::{
-    classify_proof, detect_suite, proof_script_is_fixable, run_behavior_probe, run_proof_script,
-    run_python_tests, run_suite, self_check, strip_code_fences, ProofOutcome, SelfCheck,
-    SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
+    classify_proof, detect_suite, imported_context, proof_script_is_fixable,
+    run_behavior_probe, run_proof_script, run_python_tests, run_suite, self_check,
+    strip_code_fences, ProofOutcome, SelfCheck, SuiteOutcome, MAX_PROOFS, PROOF_TIMEOUT_SECS,
 };
 use super::ollama_stream_exec::{
     base_url_of, emit_failed_turn, ensure_ollama_service, execute_shell, new_ollama_chat_command,
@@ -2004,6 +2004,15 @@ Report defects in what the code DOES with the arguments it is written for. \"It 
 TypeError if you pass an int instead of a list\" is not a defect — every function in every \
 language does that, and reporting it buries the real bug. Wrong values of the right type are \
 different and do count: empty collections, zero, negatives, duplicates, one element. \
+WHEN YOU ARE GIVEN MACHINE EVIDENCE, START THERE. Those lines are what happened when the \
+changed functions were really called — they are facts, not claims for you to check. Read each \
+one against what that function's name and docstring PROMISE, and where the two disagree you \
+have found a defect and need only write it down: the interpreter has already done the hard \
+part. `cheapest([0, 5]) -> 5` from a function documented to return the lowest price is a \
+defect. `needs_reorder(3, 3) -> False` from one documented to be true once stock has fallen \
+TO the threshold is a defect. A function that answers differently the second time it is \
+called with the same arguments is keeping state between calls, which is a defect unless it \
+is meant to. \
 Respond with STRICT JSON only — an array of findings, each shaped like \
 {\"file\":\"path/as/in/diff\",\"line\":123,\"severity\":\"high\",\"title\":\"one sentence naming \
 the defect\",\"detail\":\"why it is wrong and what breaks\"} with severity one of \
@@ -2012,10 +2021,15 @@ An empty array [] is a perfectly good answer when the diff is genuinely clean �
 problems to seem useful. Output the JSON array and nothing else.";
 
 const JUDGE_SYSTEM_PROMPT: &str = "You are the judge of a code-review committee of local \
-models. You receive a git diff and the committee's numbered findings. Rule on each finding \
-using ONLY the diff as evidence: \"confirm\" when the diff really shows the defect, \
-\"reject\" when the finding misreads the diff or is a style nit, \"unsure\" when the diff \
-alone cannot settle it. You also re-read the diff yourself, function by function. Committees \
+models. You receive a git diff, the committee's numbered findings, and what the interpreter \
+observed. Weigh that evidence in this order: a line marked \"execution:\" or given as machine \
+evidence is what the code REALLY DID and outranks anything you can reason from reading; the \
+diff shows what changed; the names and docstrings say what the code is FOR, and a defect is a \
+gap between those two. Rule \"confirm\" when the evidence shows the defect, \"reject\" when \
+the finding misreads it or is a style nit, \"unsure\" when nothing available settles it. \
+Rejecting a finding the interpreter DEMONSTRATED means claiming the observation itself is \
+wrong — only do that when you can say what the script did wrong, and say it in the reason. \
+You also re-read the diff yourself, function by function. Committees \
 routinely miss defects in functions that NO finding mentions — before deciding, name each \
 function the diff touches, check whether any finding covers it, and inspect uncovered ones \
 for defects (wrong sort direction: sorted() is ascending, a name implying best or top needs \
@@ -4423,6 +4437,21 @@ pub async fn run_ollama_committee(
                         .to_string(),
                 });
             }
+            // The unchanged files the diff calls into. Without these a
+            // reviewer cannot see that `line_total` returns pence, and so
+            // cannot see that the changed line prints it with a pound sign —
+            // the defect is in the relationship, and only one half of it is
+            // in the diff.
+            let imported = imported_context(&diff, working_dir);
+            if let Some(context) = &imported {
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "**What the diff calls into** — unchanged, shown for its \
+                         contract:\n```text\n{context}```"
+                    ),
+                });
+            }
+
             let mut evidence_lines: Vec<String> = Vec::new();
             if let Some(line) = &suite_line {
                 evidence_lines.push(line.clone());
@@ -4430,6 +4459,12 @@ pub async fn run_ollama_committee(
             if let Some(report) = &behavior_report {
                 evidence_lines.push(format!(
                     "Observed behavior of the changed functions (generic probe):\n{report}"
+                ));
+            }
+            if let Some(context) = &imported {
+                evidence_lines.push(format!(
+                    "Code the diff calls but does not change — this is the contract the \
+                     changed lines have to honour:\n{context}"
                 ));
             }
             let machine_evidence = (!evidence_lines.is_empty()).then(|| evidence_lines.join("\n"));

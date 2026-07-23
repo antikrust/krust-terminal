@@ -602,6 +602,94 @@ fn parse_def(source: &str) -> Option<(String, usize)> {
     Some((name.to_string(), required))
 }
 
+/// How much of the surrounding code the reviewers are shown.
+const MAX_IMPORTED_CHARS: usize = 1_600;
+
+/// The python files the diff imports but does not change, summarised.
+///
+/// A diff is not enough to review a diff. The `orders` fixture makes the
+/// point: one file formats pence with a pounds sign, another hands a
+/// percentage to something that wants a fraction, and *neither changed file
+/// is wrong on its own reading*. What makes them wrong is `pricing.py` —
+/// "money is pence, always pence", "a fifth off is 0.2" — which doesn't
+/// change and so never appears in `git diff HEAD`. Reviewers shown only the
+/// diff cannot pass that review, and no amount of prompting fixes it,
+/// because the information is not in the room.
+///
+/// Signatures and their first docstring line only. The contract is what's
+/// needed; the bodies would crowd out the diff itself.
+pub(crate) fn imported_context(diff: &str, working_dir: &Path) -> Option<String> {
+    let mut changed: Vec<String> = Vec::new();
+    for line in diff.lines() {
+        if let Some(path) = line.strip_prefix("+++ b/") {
+            changed.push(path.to_string());
+        }
+    }
+    let mut modules: Vec<String> = Vec::new();
+    for line in diff.lines() {
+        let content = match line.strip_prefix('+').or_else(|| line.strip_prefix(' ')) {
+            Some(content) => content,
+            None => continue,
+        };
+        // Top-level `import x` and `from x import y`. A dotted path is a
+        // package, which is more than a summary can usefully carry.
+        let module = content
+            .strip_prefix("import ")
+            .or_else(|| content.strip_prefix("from "))
+            .map(|rest| rest.split_whitespace().next().unwrap_or("").trim_end_matches(','))
+            .filter(|module| !module.is_empty() && !module.contains('.'));
+        let Some(module) = module else { continue };
+        let file = format!("{module}.py");
+        if changed.iter().any(|path| path.ends_with(&file)) {
+            continue;
+        }
+        if !modules.iter().any(|known| known == module) {
+            modules.push(module.to_string());
+        }
+    }
+
+    let mut summary = String::new();
+    for module in modules {
+        let Ok(source) = std::fs::read_to_string(working_dir.join(format!("{module}.py"))) else {
+            continue;
+        };
+        let mut lines = source.lines().peekable();
+        let mut block = String::new();
+        while let Some(line) = lines.next() {
+            if !line.starts_with("def ") {
+                continue;
+            }
+            block.push_str(&format!("{line}\n"));
+            // The docstring's first line is the contract, when there is one.
+            if let Some(doc) = lines.peek() {
+                let doc = doc.trim();
+                if let Some(text) = doc.strip_prefix("\"\"\"").or_else(|| doc.strip_prefix('\'')) {
+                    let text = text.trim_end_matches("\"\"\"").trim_end_matches('\'').trim();
+                    if !text.is_empty() {
+                        block.push_str(&format!("    {text}\n"));
+                    }
+                }
+            }
+        }
+        if block.is_empty() {
+            continue;
+        }
+        summary.push_str(&format!("{module}.py (unchanged):\n{block}\n"));
+    }
+    if summary.is_empty() {
+        return None;
+    }
+    if summary.len() > MAX_IMPORTED_CHARS {
+        let mut cut = MAX_IMPORTED_CHARS;
+        while !summary.is_char_boundary(cut) {
+            cut -= 1;
+        }
+        summary.truncate(cut);
+        summary.push_str("…\n");
+    }
+    Some(summary)
+}
+
 /// Every top-level function of the diff's python files that the change
 /// actually reaches.
 ///

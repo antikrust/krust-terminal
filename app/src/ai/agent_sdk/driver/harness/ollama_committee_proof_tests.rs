@@ -619,3 +619,52 @@ fn the_behavior_report_exposes_the_stock_defects_without_any_model() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_contract_a_diff_breaks_can_be_in_a_file_the_diff_never_touches() {
+    let dir = std::env::temp_dir().join(format!("committee-orders-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("pricing.py"),
+        "\"\"\"Money is pence.\"\"\"\n\n\
+         def line_total(unit_pence, quantity):\n\
+         \x20   \"\"\"What `quantity` of an item at `unit_pence` each costs, in pence.\"\"\"\n\
+         \x20   return unit_pence * quantity\n\n\
+         def apply_discount(total_pence, fraction):\n\
+         \x20   \"\"\"`total_pence` with `fraction` of it taken off, rounded to whole pence.\"\"\"\n\
+         \x20   return round(total_pence * (1 - fraction))\n",
+    )
+    .unwrap();
+
+    // A raw literal, because a diff's leading space is what marks a context
+    // line and `\`-continuation eats it.
+    let diff = r#"+++ b/invoice.py
+@@ -1,6 +1,6 @@
+ import pricing
+
+ def render_line(name, unit_pence, quantity):
+     total = pricing.line_total(unit_pence, quantity)
+-    return f"{name}: £{total / 100:.2f}"
++    return f"{name}: £{total:.2f}"
+"#;
+
+    let context = imported_context(diff, &dir).expect("pricing.py is reachable");
+
+    // The units contract, which is the only thing that makes the changed
+    // line wrong, and which `git diff HEAD` will never show.
+    assert!(context.contains("def line_total(unit_pence, quantity)"), "{context}");
+    assert!(context.contains("in pence"), "{context}");
+    assert!(context.contains("def apply_discount(total_pence, fraction)"), "{context}");
+    // Signatures and contracts, not bodies — the diff has to stay readable.
+    assert!(!context.contains("return unit_pence * quantity"), "{context}");
+
+    // A module that isn't in the repository contributes nothing, and neither
+    // does one the diff already shows.
+    assert_eq!(imported_context("+++ b/a.py\n+import os\n", &dir), None);
+    assert_eq!(
+        imported_context("+++ b/pricing.py\n+import pricing\n", &dir),
+        None
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
