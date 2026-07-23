@@ -171,6 +171,33 @@ from the model and leave it the reading.** The oracle asks only what a call
 comparing. The contract supplies the expectation, the report supplies the
 input, execution supplies the answer.
 
+## The funnel is the fragile part, not the fan-out
+
+The design premise was that several small models with decorrelated blind
+spots would notice more than one would. That half works. What kept going
+wrong is everything *after* the noticing — five separate places where a
+correctly-found defect died on its way to the verdict:
+
+| Stage | How it lost one |
+| --- | --- |
+| Prover | refuted a real defect with an input that could not settle it |
+| Judge | rejected a finding the interpreter had demonstrated |
+| Judge | called a `ZeroDivisionError` "correctly handled by Python's runtime" |
+| Oracle | right answer discarded by its own cold/warm double-check |
+| Notes | shown the failing call, wrote "may produce incorrect results" |
+
+Every one had to be found by running the thing and reading what it wrote,
+and every one needed its own fix. Getting a small model to *notice* a defect
+is the easy half; the expensive half is not losing it again over the next
+four stages.
+
+Two related lessons, both of which cost a run before they were understood.
+**Evidence reaching a stage is not the same as a stage using it** — the
+auditor contradicted observations it had never been given, and then the
+notes pass ignored observations it had. And **a fix at one stage does not
+carry to the result**; twice a change that demonstrably worked showed no
+improvement at all, because the next stage down ate it.
+
 ## What is still weak
 
 - **Doubles.** Every run carries one or two: "restock() does not clear the
