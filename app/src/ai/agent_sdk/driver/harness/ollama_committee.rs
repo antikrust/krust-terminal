@@ -2084,6 +2084,12 @@ gap between those two. Rule \"confirm\" when the evidence shows the defect, \"re
 the finding misreads it or is a style nit, \"unsure\" when nothing available settles it. \
 Rejecting a finding the interpreter DEMONSTRATED means claiming the observation itself is \
 wrong — only do that when you can say what the script did wrong, and say it in the reason. \
+A defect is something the code does wrong with the arguments it is written for. \
+\"It returns the wrong thing when you pass a string where a list of prices goes\" is not a \
+defect and must be rejected however convincingly it is argued — every function in every \
+language misbehaves on the wrong type, and confirming one buries the real bug underneath it. \
+Wrong VALUES of the right type — zero, empty, negatives, equal arguments — are the opposite \
+and are usually where the defect is. \
 You also re-read the diff yourself, function by function. Committees \
 routinely miss defects in functions that NO finding mentions — before deciding, name each \
 function the diff touches, check whether any finding covers it, and inspect uncovered ones \

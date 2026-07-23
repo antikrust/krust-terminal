@@ -1034,17 +1034,7 @@ pub(crate) fn parse_probe_targets(diff: &str) -> Vec<ProbeTarget> {
 pub(crate) fn probe_combos(arity: usize) -> &'static [&'static str] {
     match arity {
         0 => &[""],
-        1 => &[
-            "0",
-            "7",
-            "-1",
-            "[]",
-            "[3, 1, 2]",
-            "[0, 5]",
-            "''",
-            "'ab'",
-            "None",
-        ],
+        1 => &["0", "7", "-1", "[]", "[3, 1, 2]", "[0, 5]", "None"],
         2 => &[
             "0, []",
             "100, [1, 2, 3]",
