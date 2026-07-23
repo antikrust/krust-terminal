@@ -219,6 +219,40 @@ notes pass ignored observations it had. And **a fix at one stage does not
 carry to the result**; twice a change that demonstrably worked showed no
 improvement at all, because the next stage down ate it.
 
+## What it does to code that is fine
+
+`tidy` is a refactor with nothing wrong with it — proved equivalent over
+four thousand random inputs. Every other fixture here measures whether the
+committee finds defects; this one measures whether it invents them, and it
+invented one:
+
+```text
+✅ tidy.py:25 — Incorrect handling of line splitting in parse_config
+   DEMONSTRATED — expected {'a': 1, 'b': 2}, got {'a': '1', 'b': '', 'c': '2'}
+```
+
+The prover made the expectation up. It wrote integer values against a
+docstring that describes string ones, and its own observed dict has a third
+key, so the expectation does not even match the input it used. The values
+differ, so the rule that decides by comparing them certified it.
+
+That is the residual hole in the change that fixed more than any other
+tonight. **`actual` is computed; `expected` is asserted.** Against code with
+a real defect a fabricated expectation still usually lands on the right
+function, which is why it never showed up in five fixtures full of planted
+bugs. Against clean code it manufactures a defect out of nothing, and no
+planted-defect fixture could ever have revealed that.
+
+**One invention per clean review is the number to weigh** before leaving
+this running unattended. It is not nothing, and it is not the four or five
+a run produced before the night's work either.
+
+Fixing it properly means requiring corroboration — an oracle mismatch or a
+second reviewer — before a single script's word promotes anything to
+Definite. That rule would have demoted at least two genuine findings here,
+so it wants measuring rather than assuming, and it is the obvious next
+experiment.
+
 ## What is still weak
 
 - **Doubles.** Every run carries one or two: "restock() does not clear the
