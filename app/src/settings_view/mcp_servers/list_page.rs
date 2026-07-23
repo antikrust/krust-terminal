@@ -1177,7 +1177,7 @@ impl MCPServersListPageView {
                 ),
                 FormattedTextFragment::hyperlink(
                     "See supported providers.",
-                    "https://docs.warp.dev/agent-platform/capabilities/mcp#file-based-mcp-servers",
+                    "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
                 ),
             ]
         });
@@ -1215,7 +1215,7 @@ impl MCPServersListPageView {
             FormattedTextFragment::plain_text(DESCRIPTION_TEXT),
             FormattedTextFragment::hyperlink(
                 "Learn more.",
-                "https://docs.warp.dev/agent-platform/capabilities/mcp",
+                "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp",
             ),
         ];
 
@@ -1613,16 +1613,29 @@ impl MCPServersListPageView {
             let paths = FileBasedMCPManager::as_ref(ctx)
                 .directory_paths_for_installation_and_provider(uuid, provider);
             for path in paths {
-                if let Some(text) = Self::file_based_root_chip_text(&path) {
-                    title_chips.push(TitleChip::with_icon(text, provider.icon()));
+                if let Some(scope) = Self::file_based_root_chip_text(&path) {
+                    // Name the application the server was imported FROM, not
+                    // just where it was found. These are picked up
+                    // automatically from other tools' config files, so a card
+                    // can appear that the user never added, cannot edit — the
+                    // file belongs to another application — and has no way of
+                    // placing. The icon alone said Codex; the words said
+                    // "global", which answers a question nobody asked.
+                    title_chips.push(TitleChip::with_icon(
+                        format!("{} · {scope}", provider.display_name()),
+                        provider.icon(),
+                    ));
                 }
             }
         }
 
         // If global is present, only show global chips (global scope implies project-scope
         // chips are redundant).
-        if title_chips.iter().any(|chip| chip.text == "global") {
-            title_chips.retain(|chip| chip.text == "global");
+        if title_chips
+            .iter()
+            .any(|chip| chip.text.ends_with("· global"))
+        {
+            title_chips.retain(|chip| chip.text.ends_with("· global"));
         }
 
         title_chips

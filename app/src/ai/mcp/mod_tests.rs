@@ -985,3 +985,40 @@ fn test_apply_secrets_missing_secret_leaves_placeholder() {
         "{{nonexistent_secret}}"
     );
 }
+
+#[test]
+fn codex_servers_switched_off_in_codex_are_not_imported() {
+    // Verbatim shape from a real ~/.codex/config.toml. `computer-use` is
+    // disabled by Codex and its command is relative, so importing it gave a
+    // permanently errored card for a server the user never enabled and
+    // could not edit — the config belongs to another application.
+    let toml = r#"
+[mcp_servers.node_repl]
+command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
+args = []
+
+[mcp_servers.computer-use]
+command = "./Codex Computer Use.app/Contents/MacOS/SkyComputerUseClient"
+args = ["mcp"]
+cwd = "."
+enabled = false
+"#;
+    let json = normalize_codex_toml_to_json(toml).expect("normalization should succeed");
+    assert!(json.contains("node_repl"), "{json}");
+    assert!(
+        !json.contains("computer-use"),
+        "a disabled server is not imported: {json}"
+    );
+
+    // Absent means enabled, which is how every other entry behaves.
+    let implied = normalize_codex_toml_to_json("[mcp_servers.kept]\ncommand = \"/bin/echo\"\n")
+        .expect("normalization should succeed");
+    assert!(implied.contains("kept"), "{implied}");
+
+    // And an explicit true is still imported.
+    let explicit = normalize_codex_toml_to_json(
+        "[mcp_servers.kept]\ncommand = \"/bin/echo\"\nenabled = true\n",
+    )
+    .expect("normalization should succeed");
+    assert!(explicit.contains("kept"), "{explicit}");
+}

@@ -165,6 +165,16 @@ pub(crate) fn normalize_codex_toml_to_json(file_contents: &str) -> Result<String
             table
                 .iter()
                 .filter_map(|(name, val)| {
+                    // A server the source tool has switched off stays off.
+                    // Codex ships `computer-use` with `enabled = false` and a
+                    // relative `command`, so importing it anyway produced a
+                    // permanently red card — "Failed to establish connection:
+                    // No such file or directory" — for a server the user
+                    // never enabled and cannot fix, because the file it comes
+                    // from is not theirs to edit.
+                    if val.get("enabled").and_then(toml::Value::as_bool) == Some(false) {
+                        return None;
+                    }
                     val.clone()
                         .try_into::<CodexServerEntry>()
                         .ok()
