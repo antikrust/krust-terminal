@@ -11,7 +11,68 @@ use super::capability;
 use super::catalog::{self, CatalogEntry};
 
 /// Ollama's local HTTP API. Fixed port — Ollama does not advertise itself.
-const API_BASE: &str = "http://127.0.0.1:11434";
+pub const API_BASE: &str = "http://127.0.0.1:11434";
+
+/// How long to wait on a host across the network before calling it
+/// unreachable. Generous enough for a machine that has to wake up, short
+/// enough that a wrong address does not hang the settings page.
+const REMOTE_PROBE_TIMEOUT_SECS: u64 = 6;
+
+/// What a remote host answered when we asked what it had.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProbeResult {
+    /// Reachable, with the models it reported (possibly none).
+    Reachable { models: Vec<InstalledModel> },
+    /// Not reachable, with a reason worth showing the user.
+    Unreachable { reason: String },
+}
+
+/// Asks a remote Ollama what it has. Unlike the local listing there is no
+/// disk to fall back on, so an unreachable host is simply reported as such —
+/// the settings page turns this into a message rather than an empty list that
+/// looks like "no models installed".
+pub async fn probe_host(client: &reqwest::Client, base_url: &str) -> ProbeResult {
+    let response = client
+        .get(format!("{base_url}/api/tags"))
+        .timeout(std::time::Duration::from_secs(REMOTE_PROBE_TIMEOUT_SECS))
+        .send()
+        .await;
+    let response = match response {
+        Ok(response) if response.status().is_success() => response,
+        Ok(response) => {
+            return ProbeResult::Unreachable {
+                reason: format!("answered {}", response.status()),
+            };
+        }
+        Err(error) if error.is_timeout() => {
+            return ProbeResult::Unreachable {
+                reason: "timed out — is Ollama listening on the network there?".to_owned(),
+            };
+        }
+        Err(_) => {
+            return ProbeResult::Unreachable {
+                reason: "could not connect".to_owned(),
+            };
+        }
+    };
+    match response.json::<TagsResponse>().await {
+        Ok(tags) => {
+            let mut models: Vec<InstalledModel> = tags
+                .models
+                .into_iter()
+                .map(|entry| InstalledModel {
+                    name: entry.name,
+                    size_bytes: entry.size,
+                })
+                .collect();
+            models.sort_by(|a, b| a.name.cmp(&b.name));
+            ProbeResult::Reachable { models }
+        }
+        Err(_) => ProbeResult::Unreachable {
+            reason: "replied, but not with a model list — is that really Ollama?".to_owned(),
+        },
+    }
+}
 
 /// The library page is ~800 KB of HTML; a slow link shouldn't wedge the UI.
 const LIBRARY_FETCH_TIMEOUT_SECS: u64 = 20;
@@ -150,13 +211,17 @@ pub fn with_model_disabled(disabled_json: Option<&str>, model: &str, disabled: b
 /// Queries `/api/show` for a model's capabilities. `None` if the server is
 /// unreachable or the response can't be read — callers should degrade to
 /// "unknown / chat-only" rather than block.
+/// `model` may be host-qualified (see [`super::remote`]), in which case the
+/// question is put to the machine that actually holds it.
 pub async fn fetch_capabilities(
     client: &reqwest::Client,
     model: &str,
 ) -> Option<ModelCapabilities> {
+    let (name, host) = super::remote::split(model);
+    let base = host.unwrap_or(API_BASE);
     let response = client
-        .post(format!("{API_BASE}/api/show"))
-        .json(&serde_json::json!({ "model": model }))
+        .post(format!("{base}/api/show"))
+        .json(&serde_json::json!({ "model": name }))
         .send()
         .await
         .ok()?;

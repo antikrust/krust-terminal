@@ -12,4 +12,5 @@
 
 pub mod capability;
 pub mod catalog;
+pub mod remote;
 pub mod service;

@@ -8,9 +8,10 @@ use uuid::Uuid;
 use serde_json::{json, Value};
 
 use super::{
-    execute_shell, ollama_curl_args, ollama_generate_request, ollama_model_name, ollama_serve_args,
-    run_ollama_stream_without_service_start, McpToolCaller, McpToolSpec, OllamaAgentReply,
-    OllamaResponseAccumulator, CODELLAMA_OLLAMA_MODEL_ID, DEEPSEEK_CODER_OLLAMA_MODEL_ID,
+    base_url_of, execute_shell, ollama_curl_args, ollama_generate_request, ollama_model_name,
+    ollama_serve_args, run_ollama_stream_without_service_start, McpToolCaller, McpToolSpec,
+    OllamaAgentReply, OllamaResponseAccumulator, CODELLAMA_OLLAMA_MODEL_ID,
+    DEEPSEEK_CODER_OLLAMA_MODEL_ID,
 };
 
 struct FakeToolCaller;
@@ -54,7 +55,7 @@ fn headless_service_uses_the_cli_without_opening_ollama_app() {
 #[test]
 fn curl_posts_structured_streaming_request_body_from_stdin() {
     assert_eq!(
-        ollama_curl_args(),
+        ollama_curl_args(crate::ai::ollama::service::API_BASE),
         vec![
             "--silent",
             "--show-error",
@@ -65,6 +66,12 @@ fn curl_posts_structured_streaming_request_body_from_stdin() {
             "@-",
             "http://127.0.0.1:11434/api/generate",
         ]
+    );
+
+    // A model on another machine is reached at that machine's address.
+    assert_eq!(
+        ollama_curl_args(base_url_of("codellama:13b@@http://192.168.1.150:11434")).last(),
+        Some(&"http://192.168.1.150:11434/api/generate".to_string())
     );
 
     let request: serde_json::Value = serde_json::from_str(&ollama_generate_request(
@@ -647,7 +654,10 @@ fn tool_chat_resumes_session_history_across_turns() {
         })
         .to_string();
         let mut command = Command::new("sh");
-        command.args(["-c", "cat >/dev/null; printf '%s\\n' \"$OLLAMA_TEST_RESPONSE\""]);
+        command.args([
+            "-c",
+            "cat >/dev/null; printf '%s\\n' \"$OLLAMA_TEST_RESPONSE\"",
+        ]);
         command.env("OLLAMA_TEST_RESPONSE", response);
         command
     };
@@ -692,7 +702,10 @@ fn tool_chat_resumes_session_history_across_turns() {
             .any(|m| m["content"].as_str().is_some_and(|c| c.contains(needle)))
     };
     // Both turns' questions and answers are retained → context carries over.
-    assert!(has("first question"), "turn 1 question retained: {messages:?}");
+    assert!(
+        has("first question"),
+        "turn 1 question retained: {messages:?}"
+    );
     assert!(has("First answer."), "turn 1 answer retained");
     assert!(has("second question"), "turn 2 question present");
     assert!(has("Second answer."), "turn 2 answer stored");

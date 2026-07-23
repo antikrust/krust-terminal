@@ -378,10 +378,10 @@ use crate::settings::import::view::{SettingsImportEvent, SettingsImportView};
 use crate::settings::{
     AISettings, AISettingsChangedEvent, AliasExpansionSettings, AppEditorSettings,
     BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings,
-    EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent,
-    InputModeSettings, InputModeSettingsChangedEvent, InputSettings, PaneSettings,
-    PaneSettingsChangedEvent, PrivacySettings, PrivacySettingsChangedEvent,
-    PrivacySettingsSnapshot, SelectionSettings, VimBannerSettings,
+    EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, InputModeSettings,
+    InputModeSettingsChangedEvent, InputSettings, PaneSettings, PaneSettingsChangedEvent,
+    PrivacySettings, PrivacySettingsChangedEvent, PrivacySettingsSnapshot, SelectionSettings,
+    VimBannerSettings,
 };
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
@@ -655,15 +655,15 @@ const BOOTSTRAP_FAILED_DURATION: Duration = Duration::from_secs(7);
 /// during the bootstrap period.
 const ENV_VAR_BOOTSTRAP_FAILED_DURATION: Duration = Duration::from_secs(60);
 const KNOWN_ISSUES_URL: &str =
-    "https://docs.warp.dev/support-and-community/troubleshooting-and-support/known-issues";
+    "https://therob.lol/derp-terminal/help/support-and-community/troubleshooting-and-support/known-issues";
 
 /// Link to supported custom prompts.
 const PROMPT_COMPATIBILITY_URL: &str =
-    "https://docs.warp.dev/terminal/appearance/prompt#custom-prompt-compatibility-table";
+    "https://therob.lol/derp-terminal/help/terminal/appearance/prompt#custom-prompt-compatibility-table";
 
 /// Link to troubleshooting steps for ControlMaster errors.
 const CONTROLMASTER_ISSUES_URL: &str =
-    "https://docs.warp.dev/terminal/warpify/ssh-legacy#troubleshooting";
+    "https://therob.lol/derp-terminal/help/terminal/warpify/ssh-legacy#troubleshooting";
 
 /// Link to instructions on how to update p10k.
 const P10K_UPDATE_INSTRUCTIONS_URL: &str =
@@ -679,9 +679,9 @@ const MIN_DELTA_FOR_TEXT_SELECTION: f32 = 0.5;
 /// Notifications-specific info
 /// TODO (suraj): add documentation for notifications in gitbook
 const NOTIFICATIONS_LEARN_MORE_URL: &str =
-    "https://docs.warp.dev/terminal/more-features/notifications";
+    "https://therob.lol/derp-terminal/help/terminal/more-features/notifications";
 pub const NOTIFICATIONS_TROUBLESHOOT_URL: &str =
-    "https://docs.warp.dev/terminal/more-features/notifications#troubleshooting-notifications";
+    "https://therob.lol/derp-terminal/help/terminal/more-features/notifications#troubleshooting-notifications";
 
 const DEBOUNCE_PERIOD: Duration = Duration::from_millis(40);
 
@@ -3696,7 +3696,6 @@ impl TerminalView {
                 ctx.notify();
             }
         });
-
 
         ctx.subscribe_to_model(&UserWorkspaces::handle(ctx), |me, _, event, ctx| {
             if matches!(event, UserWorkspacesEvent::TeamsChanged) {
@@ -20376,7 +20375,7 @@ impl TerminalView {
                     ctx.emit(Event::OpenWarpDriveObjectInPane(uid.clone()));
                 }
                 AIAgentCitation::WarpDocumentation { path } => {
-                    ctx.open_url(&format!("https://docs.warp.dev/{path}"));
+                    ctx.open_url(&format!("https://therob.lol/derp-terminal/help/{path}"));
                 }
                 AIAgentCitation::WebPage { url } => {
                     ctx.open_url(url);
@@ -23586,6 +23585,12 @@ impl TerminalView {
         // The committee pseudo-model routes to the multi-model runner, with
         // its knobs snapshotted here for the same no-`ctx`-in-the-pump
         // reason as the override above.
+        // Models on other machines, snapshotted here for the same
+        // no-`ctx`-in-the-pump reason as the config: the committee seats them
+        // exactly as it seats local ones.
+        let ollama_remote_models: Vec<String> = crate::ai::ollama::remote::qualified_models(
+            &crate::ai::ollama::remote::configured(ctx),
+        );
         let ollama_committee_config =
             (ollama_model.as_deref() == Some(COMMITTEE_MODEL_NAME)).then(|| {
                 let mut config = OllamaCommitteeConfig::from_settings_json(
@@ -23596,9 +23601,18 @@ impl TerminalView {
                 );
                 // A model switched off on the Ollama page is off here too:
                 // the committee reads the live server, so it would otherwise
-                // seat a model the user has taken out of every menu.
-                for tag in crate::ai::ollama::service::disabled_models_for(ctx) {
-                    config.roles.insert(tag, CommitteeRole::Benched);
+                // seat a model the user has taken out of every menu. A tag
+                // switched off is off on every machine that has it, which is
+                // why the qualified copies are benched alongside it.
+                let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
+                for tag in &disabled {
+                    config.roles.insert(tag.clone(), CommitteeRole::Benched);
+                }
+                for model in &ollama_remote_models {
+                    let (bare, _) = crate::ai::ollama::remote::split(model);
+                    if disabled.iter().any(|off| off == bare) {
+                        config.roles.insert(model.clone(), CommitteeRole::Benched);
+                    }
                 }
                 config
             });
@@ -23638,7 +23652,19 @@ impl TerminalView {
             }
             LocalHarnessKind::Ollama => {
                 let mut command = command::r#async::Command::new("curl");
-                command.args(ollama_curl_args());
+                // A model on another machine carries its address; anything
+                // else is served by the Ollama on this one.
+                command.args(ollama_curl_args(
+                    ollama_model
+                        .as_deref()
+                        .map(|model| {
+                            crate::ai::ollama::remote::base_url_for(
+                                model,
+                                crate::ai::ollama::service::API_BASE,
+                            )
+                        })
+                        .unwrap_or(crate::ai::ollama::service::API_BASE),
+                ));
                 command
             }
         };
@@ -23693,11 +23719,12 @@ impl TerminalView {
                 // because weak local models misuse general-purpose or stateful
                 // tools (e.g. a persistent js REPL). Built-in file/code tools
                 // are added in-harness (see `ollama_stream_exec`), not here.
-                let exposed = manager
-                    .server_from_tool(name.clone())
-                    .is_some_and(|installation_uuid| {
-                        manager.is_exposed_to_local_models(*installation_uuid, ctx)
-                    });
+                let exposed =
+                    manager
+                        .server_from_tool(name.clone())
+                        .is_some_and(|installation_uuid| {
+                            manager.is_exposed_to_local_models(*installation_uuid, ctx)
+                        });
                 if !exposed {
                     continue;
                 }
@@ -23929,12 +23956,12 @@ impl TerminalView {
                                 &pump_working_dir,
                                 &pump_path,
                                 config,
+                                ollama_remote_models,
                                 on_event,
                             )
                             .await
                         } else {
-                            let model =
-                                ollama_model.unwrap_or_else(|| "codellama:13b".to_string());
+                            let model = ollama_model.unwrap_or_else(|| "codellama:13b".to_string());
                             run_ollama_stream(
                                 command,
                                 &pump_prompt,

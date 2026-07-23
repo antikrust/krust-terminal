@@ -78,6 +78,7 @@ fn default_harnesses(disabled: &[String]) -> Vec<HarnessAvailability> {
             enabled: local_cli_on_path("codex"),
             available_models: append_available_ollama_models(
                 codex_models_from_local_state(),
+                &[],
                 disabled,
             ),
         },
@@ -95,15 +96,23 @@ fn default_harnesses(disabled: &[String]) -> Vec<HarnessAvailability> {
 /// display name so the warning follows it into the menu.
 fn append_available_ollama_models(
     mut models: Vec<HarnessModelInfo>,
+    remotes: &[crate::ai::ollama::remote::RemoteHost],
     disabled: &[String],
 ) -> Vec<HarnessModelInfo> {
-    if !local_cli_on_path("ollama") {
+    // A machine with no local Ollama can still borrow another one's models,
+    // so the absence of the binary only rules out the local listing.
+    if !local_cli_on_path("ollama") && remotes.is_empty() {
         return models;
     }
 
     let total_memory = crate::ai::ollama::capability::total_system_memory_bytes();
     let mut ollama_model_count = 0_usize;
-    for installed in crate::ai::ollama::service::installed_models_from_disk() {
+    let local_installed = if local_cli_on_path("ollama") {
+        crate::ai::ollama::service::installed_models_from_disk()
+    } else {
+        Vec::new()
+    };
+    for installed in local_installed {
         // A user model literally named "committee" can't be listed: its id
         // would be the committee pseudo-entry's id, which the harness routes
         // to the committee runner, never to the model.
@@ -129,6 +138,28 @@ fn append_available_ollama_models(
         });
         ollama_model_count += 1;
     }
+
+    // Models on other machines. Their fit is that machine's problem, not this
+    // one's, so no memory badge — borrowing a 32B from a box with the RAM for
+    // it is the entire point.
+    for model in crate::ai::ollama::remote::qualified_models(remotes) {
+        let (bare, _) = crate::ai::ollama::remote::split(&model);
+        if bare == COMMITTEE_MODEL_NAME {
+            continue;
+        }
+        // A tag switched off here is off wherever it runs — the user's
+        // objection is to the model, not to the machine holding it.
+        if disabled.iter().any(|off| off == bare || off == &model) {
+            continue;
+        }
+        models.push(HarnessModelInfo {
+            display_name: crate::ai::ollama::remote::display_name(&model, remotes),
+            id: format!("{OLLAMA_MODEL_ID_PREFIX}{model}"),
+            reasoning_level: None,
+        });
+        ollama_model_count += 1;
+    }
+
     // The multi-model committee needs someone to argue with: offered only
     // when at least two real models are installed. See MULTIAGENT-DESIGN.md.
     if ollama_model_count >= 2 {
@@ -483,9 +514,13 @@ impl HarnessAvailabilityModel {
                         return;
                     }
                 };
+                let remotes = crate::ai::ollama::remote::configured(ctx);
                 let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
-                let models =
-                    append_available_ollama_models(parse_codex_catalog(&output), &disabled);
+                let models = append_available_ollama_models(
+                    parse_codex_catalog(&output),
+                    &remotes,
+                    &disabled,
+                );
                 if models.is_empty() {
                     return;
                 }
@@ -525,8 +560,9 @@ impl HarnessAvailabilityModel {
             .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
             .cloned()
             .collect();
+        let remotes = crate::ai::ollama::remote::configured(ctx);
         let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
-        let rebuilt = append_available_ollama_models(codex_only, &disabled);
+        let rebuilt = append_available_ollama_models(codex_only, &remotes, &disabled);
         if row.available_models != rebuilt {
             row.available_models = rebuilt;
             ctx.emit(HarnessAvailabilityEvent::Changed);

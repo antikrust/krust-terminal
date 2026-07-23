@@ -1834,6 +1834,21 @@ define_settings_group!(AISettings, settings: [
         description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts and a \"panel_plan\" round list.",
     },
 
+    // Fork: Ollama instances on other machines. Holds each host's address
+    // alongside the models it had when last checked — the model menu is built
+    // synchronously and cannot wait on a machine that may be asleep, so the
+    // listing is a cache refreshed when the user checks a host.
+    ollama_remote_hosts: OllamaRemoteHosts {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.warp_agent.other.ollama_remote_hosts",
+        description: "Ollama servers on other machines, as a JSON array of objects with a \"url\", an optional \"label\", and the \"models\" found there when last checked.",
+    },
+
     // Fork: misery mode — an escalation of swear mode in which the terminal
     // annotates your commands with contempt. Implemented by
     // `crate::terminal::misery`. Has no effect unless swear mode is also on.

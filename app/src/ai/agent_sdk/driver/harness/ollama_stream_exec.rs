@@ -185,7 +185,13 @@ fn wants_web_search(prompt: &str) -> bool {
     // regression: "…its in the current directory. does the key exist in my
     // .ssh folder" was thrown wholesale at DuckDuckGo via the "current " cue.)
     const LOCAL_VETOES: [&str; 7] = [
-        "directory", "folder", " cwd", "~/", "./", "/users/", "/home/",
+        "directory",
+        "folder",
+        " cwd",
+        "~/",
+        "./",
+        "/users/",
+        "/home/",
     ];
     if LOCAL_VETOES.iter().any(|veto| lower.contains(veto)) {
         return false;
@@ -486,24 +492,43 @@ async fn dispatch_builtin_tool(
     }
 }
 
+/// The model an `ollama/…` id refers to. May carry a host suffix when the
+/// model lives on another machine (see [`crate::ai::ollama::remote`]); it is
+/// kept attached so every layer below knows where the model is without an
+/// extra parameter threaded through it. Use [`wire_name`] when writing the
+/// model into a request body and [`base_url_of`] when choosing where to send
+/// that body.
 pub fn ollama_model_name(model_id: &str) -> Option<&str> {
     model_id
         .strip_prefix(OLLAMA_MODEL_ID_PREFIX)
         .filter(|model| !model.is_empty())
 }
 
+/// The name Ollama itself expects — the host suffix removed.
+pub(crate) fn wire_name(model: &str) -> &str {
+    crate::ai::ollama::remote::split(model).0
+}
+
+/// Which Ollama instance a model belongs to: the machine named in the model,
+/// or this one.
+pub(crate) fn base_url_of(model: &str) -> &str {
+    crate::ai::ollama::remote::split(model)
+        .1
+        .unwrap_or(crate::ai::ollama::service::API_BASE)
+}
+
 /// Arguments for the system curl binary. The JSON request is sent over stdin,
 /// avoiding prompt quoting and argument-length issues.
-pub fn ollama_curl_args() -> Vec<String> {
-    ollama_curl_args_for("http://127.0.0.1:11434/api/generate")
+pub fn ollama_curl_args(base_url: &str) -> Vec<String> {
+    ollama_curl_args_for(&format!("{base_url}/api/generate"))
 }
 
 /// Curl args for the `/api/chat` endpoint, used by the native tool-calling
 /// path. Distinct from [`ollama_curl_args`] (which targets `/api/generate`):
 /// posting a chat body — `messages` + `tools` — to `/api/generate` silently
 /// returns an empty completion, so the two must not be swapped.
-pub fn ollama_chat_curl_args() -> Vec<String> {
-    ollama_curl_args_for("http://127.0.0.1:11434/api/chat")
+pub fn ollama_chat_curl_args(base_url: &str) -> Vec<String> {
+    ollama_curl_args_for(&format!("{base_url}/api/chat"))
 }
 
 fn ollama_curl_args_for(url: &str) -> Vec<String> {
@@ -585,7 +610,7 @@ fn ollama_generate_request(
     system: &str,
 ) -> String {
     let mut request = json!({
-        "model": model,
+        "model": wire_name(model),
         "system": system,
         "prompt": prompt,
         // Stream from Ollama so Warp can transition from Sending to Thinking
@@ -780,18 +805,18 @@ fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
     HISTORIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn new_ollama_command(working_dir: &Path, path: &str) -> Command {
+fn new_ollama_command(working_dir: &Path, path: &str, base_url: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
-    command.args(ollama_curl_args());
+    command.args(ollama_curl_args(base_url));
     command.current_dir(working_dir);
     command.env("PATH", path);
     command
 }
 
 /// A curl command targeting `/api/chat`, for the native tool-calling loop.
-pub(crate) fn new_ollama_chat_command(working_dir: &Path, path: &str) -> Command {
+pub(crate) fn new_ollama_chat_command(working_dir: &Path, path: &str, base_url: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
-    command.args(ollama_chat_curl_args());
+    command.args(ollama_chat_curl_args(base_url));
     command.current_dir(working_dir);
     command.env("PATH", path);
     command
@@ -1127,7 +1152,7 @@ async fn run_ollama_stream_inner(
     if native_tools {
         // Build a fresh `/api/chat` command here — `first_command` targets
         // `/api/generate` and is reserved for the fallback loop below.
-        let chat_command = new_ollama_chat_command(working_dir, path);
+        let chat_command = new_ollama_chat_command(working_dir, path, base_url_of(model));
         match run_ollama_chat_with_tools(
             chat_command,
             prompt,
@@ -1226,7 +1251,7 @@ async fn run_ollama_chat(
     messages.push(json!({ "role": "user", "content": user_content }));
 
     let mut request = json!({
-        "model": model,
+        "model": wire_name(model),
         "messages": messages,
         "stream": true,
         "options": { "temperature": 0, "num_ctx": 8192 },
@@ -1241,7 +1266,7 @@ async fn run_ollama_chat(
     let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
     let parser_accumulator = Arc::clone(&accumulator);
     let status = run_jsonl_stream(
-        new_ollama_chat_command(working_dir, path),
+        new_ollama_chat_command(working_dir, path, base_url_of(model)),
         &request,
         move |line| {
             parser_accumulator
@@ -1322,7 +1347,7 @@ async fn run_ollama_generate_loop(
         let request = ollama_generate_request(model, &next_prompt, context.as_deref(), system);
         let command = next_command
             .take()
-            .unwrap_or_else(|| new_ollama_command(working_dir, path));
+            .unwrap_or_else(|| new_ollama_command(working_dir, path, base_url_of(model)));
         let (status, response) = run_ollama_call(command, &request, model, &mut on_event).await?;
 
         if !status.success() {
@@ -1659,7 +1684,7 @@ async fn run_ollama_chat_with_tools(
     let mut next_command = Some(first_command);
     for call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
         let request = json!({
-            "model": model,
+            "model": wire_name(model),
             "messages": messages,
             "tools": tool_defs,
             "stream": true,
@@ -1669,7 +1694,7 @@ async fn run_ollama_chat_with_tools(
 
         let command = next_command
             .take()
-            .unwrap_or_else(|| new_ollama_chat_command(working_dir, path));
+            .unwrap_or_else(|| new_ollama_chat_command(working_dir, path, base_url_of(model)));
         let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
         let status = run_jsonl_stream(
