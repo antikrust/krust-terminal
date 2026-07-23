@@ -5264,6 +5264,40 @@ pub async fn run_ollama_committee(
                 text.push('\n');
             };
             render_group(&mut text, "Definite", "✅", &definite);
+            // Small models describe one defect several ways —
+            // "restock() does not clear the log between calls" and "restock
+            // initializes log with an empty list instead of None" are the
+            // same bug, and consensus can't merge them because they share
+            // barely a word. Every measured run has carried one or two, and
+            // "Definite (5)" over three real defects reads as five. Nothing
+            // is dropped, because two findings about one function are
+            // sometimes two defects; the count is just told the truth.
+            let functions: Vec<String> = contracts.iter().map(|(name, _)| name.clone()).collect();
+            let named: Vec<&String> = definite
+                .iter()
+                .filter_map(|index| {
+                    let subject = format!("{} {}", merged[*index].title, merged[*index].detail)
+                        .to_ascii_lowercase();
+                    functions.iter().find(|function| {
+                        subject
+                            .split(|c: char| !c.is_alphanumeric() && c != '_')
+                            .any(|word| &word == function)
+                    })
+                })
+                .collect();
+            let distinct = named
+                .iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len();
+            if named.len() == definite.len() && distinct > 0 && distinct < definite.len() {
+                text.push_str(&format!(
+                    "_({} findings above, but only {distinct} function{} between them — some of                      these are one defect written twice.)_
+
+",
+                    definite.len(),
+                    if distinct == 1 { "" } else { "s" },
+                ));
+            }
             render_group(&mut text, "Might be", "❔", &possible);
             render_group(&mut text, "Rejected", "❌", &dismissed);
 
