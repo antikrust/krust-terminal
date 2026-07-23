@@ -17,6 +17,10 @@ FIXTURES="$(cd "$(dirname "$0")/fixtures" && pwd)"
 TARGET="${1:-$HOME/committee-tests}"
 
 mkdir -p "$TARGET"
+# Absolute from here on: building each repo means `cd`-ing into it, so a
+# relative target resolves against the previous repo and the second one
+# lands somewhere nobody asked for.
+TARGET="$(cd "$TARGET" && pwd)"
 
 # Every repo starts the same way, and none of them may mention that they are
 # a test: a fixture that says "three planted defects" in a docstring is a
