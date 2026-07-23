@@ -805,7 +805,12 @@ pub(crate) fn parse_proposed_calls(reply: &str, known: &[String]) -> Vec<String>
 ///
 /// A syntax error or an import that fails shows up here as "module load
 /// failed", which is the other thing a round should never have to guess at.
-pub(crate) async fn probe_source(source: &str, working_dir: &Path, path: &str) -> Option<String> {
+pub(crate) async fn probe_source(
+    source: &str,
+    calls: &[String],
+    working_dir: &Path,
+    path: &str,
+) -> Option<String> {
     let mut targets: Vec<ProbeTarget> = Vec::new();
     for line in source.lines() {
         let Some((function, arity)) = parse_def(line) else {
@@ -829,7 +834,7 @@ pub(crate) async fn probe_source(source: &str, working_dir: &Path, path: &str) -
     // leave files in a directory the user did not ask it to write to.
     let draft = working_dir.join(format!("committee-draft-{}.py", Uuid::new_v4()));
     std::fs::write(&draft, source).ok()?;
-    let script = behavior_probe_script(&draft.to_string_lossy(), &targets, &[]);
+    let script = behavior_probe_script(&draft.to_string_lossy(), &targets, calls);
     let execution = run_proof_script(&script, PROOF_TIMEOUT_SECS, working_dir, path).await;
     let _ = std::fs::remove_file(&draft);
 
@@ -846,10 +851,16 @@ pub(crate) async fn probe_source(source: &str, working_dir: &Path, path: &str) -
 /// AND made the collateral damage worse, because a model this size rewrites
 /// the function around the case it was shown.
 ///
-/// So a round may not lose ground. Same calls, same battery, compared by
-/// value: a call that answered before and raises now, or returned something
-/// and returns nothing now, is behaviour going backwards, and the revision
-/// is dropped rather than kept.
+/// So a round may not lose ground: a call that answered before and raises
+/// now, or returned something and returns nothing now, is behaviour going
+/// backwards and the revision is dropped.
+///
+/// Which calls it compares on matters as much as the rule. Run against the
+/// generic battery alone it caught one revision and let another through
+/// that had destroyed word-joining entirely — `wrap('a b c', 3)` coming
+/// back as `['a', 'b', 'c']` — because nothing in a battery of zeros, empty
+/// lists and two-character strings ever joins two words. The calls have to
+/// look like the task.
 pub(crate) fn lost_ground(before: &str, after: &str) -> Option<String> {
     let answers = |report: &str| {
         report

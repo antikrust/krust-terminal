@@ -1014,7 +1014,7 @@ fn a_draft_is_run_before_anybody_gives_notes_on_it() {
                  \x20   if current:\n\
                  \x20       lines.append(current)\n\
                  \x20   return lines\n";
-    let report = block_on(probe_source(draft, &dir, &path)).expect("a report");
+    let report = block_on(probe_source(draft, &[], &dir, &path)).expect("a report");
     assert!(report.contains("wrap("), "{report}");
     // The empty leading line is on the page, for a judge that until now was
     // reading the code and guessing.
@@ -1024,7 +1024,7 @@ fn a_draft_is_run_before_anybody_gives_notes_on_it() {
     // this is the fireworks script, which referenced a name belonging to
     // another function.
     let broken = "def draw(y, x):\n    screen.addstr(y, x)\n";
-    let complaint = block_on(probe_source(broken, &dir, &path)).expect("a report");
+    let complaint = block_on(probe_source(broken, &[], &dir, &path)).expect("a report");
     assert!(complaint.contains("NameError"), "{complaint}");
 
     // Nothing is left behind in the user's directory.

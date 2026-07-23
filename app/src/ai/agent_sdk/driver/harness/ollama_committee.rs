@@ -2873,6 +2873,10 @@ struct ReworkJob {
 #[allow(clippy::too_many_arguments)]
 async fn rework_answers(
     answers: &mut Vec<(String, String)>,
+    // Calls that look like the task, for judging whether a revision kept
+    // what it replaced — a generic battery never joins two words, so it
+    // waved through a revision that had stopped joining them.
+    realistic: &[String],
     jobs: Vec<Option<ReworkJob>>,
     round: usize,
     plan: &CommitteePlan,
@@ -2926,8 +2930,8 @@ async fn rework_answers(
                 let regression = match (extract_code_block(answer), extract_code_block(&reworked)) {
                     (Some(before), Some(after)) => {
                         match (
-                            probe_source(&before, working_dir, path).await,
-                            probe_source(&after, working_dir, path).await,
+                            probe_source(&before, realistic, working_dir, path).await,
+                            probe_source(&after, realistic, working_dir, path).await,
                         ) {
                             (Some(before), Some(after)) => lost_ground(&before, &after),
                             _ => None,
@@ -3101,13 +3105,45 @@ async fn run_panel_round(
                     plan.judge.display
                 ),
             });
+            // Calls that look like the task, proposed once from the drafts'
+            // own signatures, and used both for the notes and for judging
+            // whether a revision kept what it replaced.
+            let mut realistic: Vec<String> = Vec::new();
+            let shapes: Vec<(String, String)> = answers
+                .iter()
+                .filter_map(|(_, answer)| extract_code_block(answer))
+                .flat_map(|code| {
+                    contracts_in(&code.lines().map(|l| format!("+{l}\n")).collect::<String>())
+                })
+                .collect();
+            if !shapes.is_empty() {
+                let asker = plan.reviewers.first().unwrap_or(&plan.judge).clone();
+                let blocks: Vec<String> = shapes.iter().map(|(_, b)| b.clone()).collect();
+                let names: Vec<String> = shapes.iter().map(|(n, _)| n.clone()).collect();
+                if let (_, Ok(stage)) = chat_once(
+                    &asker.name,
+                    PROPOSE_SYSTEM_PROMPT,
+                    &propose_user_prompt(&blocks.join("\n\n")),
+                    asker.thinking,
+                    keep_alive,
+                    working_dir,
+                    path,
+                    on_event,
+                )
+                .await?
+                {
+                    add_usage(total_usage, &stage.usage);
+                    realistic = parse_proposed_calls(&stage.content, &names);
+                }
+            }
+
             // Run what they wrote before anyone opines about it.
             let mut ran = String::new();
             for (model, answer) in answers.iter() {
                 let Some(code) = extract_code_block(answer) else {
                     continue;
                 };
-                if let Some(report) = probe_source(&code, working_dir, path).await {
+                if let Some(report) = probe_source(&code, &realistic, working_dir, path).await {
                     ran.push_str(&format!("\n{model}:\n{report}\n"));
                 }
             }
@@ -3180,6 +3216,7 @@ async fn run_panel_round(
                 .collect();
             rework_answers(
                 answers,
+                &realistic,
                 jobs,
                 round,
                 plan,
@@ -3275,6 +3312,7 @@ async fn run_panel_round(
                 .collect();
             rework_answers(
                 answers,
+                &[],
                 jobs,
                 round,
                 plan,
@@ -3366,6 +3404,7 @@ async fn run_panel_round(
                 .collect();
             rework_answers(
                 answers,
+                &[],
                 jobs,
                 round,
                 plan,
@@ -3454,6 +3493,7 @@ async fn run_panel_round(
                 .collect();
             rework_answers(
                 answers,
+                &[],
                 jobs,
                 round,
                 plan,
