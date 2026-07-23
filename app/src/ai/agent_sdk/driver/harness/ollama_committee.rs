@@ -2262,9 +2262,13 @@ script — no commentary, no code fences.";
 const PROPOSE_SYSTEM_PROMPT: &str = "You are given some python functions with their \
 signatures and docstrings. For each one, write ONE realistic call to it — the way the program \
 that uses it would call it, with arguments of the shapes the docstring describes. \
-Prefer the values that most often go wrong: zero, an empty collection, two equal numbers, a \
-single-element list, a boundary. Build structured arguments properly — if a docstring says a \
-parameter is a list of (name, price, quantity) triples, write one. \
+The call must be POPULATED and realistic. Zero, empty lists and empty strings are already \
+being tried by something else, and an empty basket says nothing about what a basket does — so \
+a parameter documented as a list of (name, price, quantity) triples gets a list with a real \
+triple in it, and a parameter documented as a count gets a number a caller would really pass. \
+Build the structure the docstring describes; that is the whole reason you are being asked. \
+Where a boundary is realistic — two equal numbers for a threshold, a single-element list — \
+prefer it. \
 Answer one call per line and nothing else: no explanation, no assignment, no print, no code \
 fences, no imports. Just `function(arguments)`.";
 
