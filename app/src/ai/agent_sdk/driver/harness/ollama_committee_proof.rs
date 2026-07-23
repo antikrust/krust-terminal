@@ -849,31 +849,45 @@ pub(crate) fn imported_context(diff: &str, working_dir: &Path) -> Option<String>
             changed.push(path.to_string());
         }
     }
+    // Read the imports out of the changed FILES, not out of the diff.
+    //
+    // Imports live at the top of a file and a hunk is three lines of
+    // context, so they are almost never in it. The `orders` fixture proved
+    // the point: its whole reason for existing is that `cart.py` and
+    // `invoice.py` both `import pricing`, and in the diff git actually
+    // produces, one of those lines appears only inside a `@@` header and the
+    // other does not appear at all. The feature was inert on the exact case
+    // it was written for. The diff says which files changed; the files say
+    // what they import.
     let mut modules: Vec<String> = Vec::new();
-    for line in diff.lines() {
-        let content = match line.strip_prefix('+').or_else(|| line.strip_prefix(' ')) {
-            Some(content) => content,
-            None => continue,
-        };
-        // Top-level `import x` and `from x import y`. A dotted path is a
-        // package, which is more than a summary can usefully carry.
-        let module = content
-            .strip_prefix("import ")
-            .or_else(|| content.strip_prefix("from "))
-            .map(|rest| {
-                rest.split_whitespace()
-                    .next()
-                    .unwrap_or("")
-                    .trim_end_matches(',')
-            })
-            .filter(|module| !module.is_empty() && !module.contains('.'));
-        let Some(module) = module else { continue };
-        let file = format!("{module}.py");
-        if changed.iter().any(|path| path.ends_with(&file)) {
+    for file in &changed {
+        let Ok(source) = std::fs::read_to_string(working_dir.join(file)) else {
             continue;
-        }
-        if !modules.iter().any(|known| known == module) {
-            modules.push(module.to_string());
+        };
+        for line in source.lines() {
+            // Top-level only: an indented import is inside a function and
+            // usually a fallback. A dotted path is a package, which is more
+            // than a summary can usefully carry.
+            let module = line
+                .strip_prefix("import ")
+                .or_else(|| line.strip_prefix("from "))
+                .map(|rest| {
+                    rest.split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim_end_matches(',')
+                })
+                .filter(|module| !module.is_empty() && !module.contains('.'));
+            let Some(module) = module else { continue };
+            if changed
+                .iter()
+                .any(|path| path.ends_with(&format!("{module}.py")))
+            {
+                continue;
+            }
+            if !modules.iter().any(|known| known == module) {
+                modules.push(module.to_string());
+            }
         }
     }
 

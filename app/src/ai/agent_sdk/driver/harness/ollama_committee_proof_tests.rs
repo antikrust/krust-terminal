@@ -667,10 +667,22 @@ fn the_contract_a_diff_breaks_can_be_in_a_file_the_diff_never_touches() {
 
     // A raw literal, because a diff's leading space is what marks a context
     // line and `\`-continuation eats it.
+    // The diff git really produces for this change. `import pricing` is
+    // NOT in it — imports are at the top of a file and a hunk is three
+    // lines of context — which is why reading imports out of the diff left
+    // the whole feature inert on the one fixture built to exercise it.
+    std::fs::write(
+        dir.join("invoice.py"),
+        "\"\"\"Rendering an invoice.\"\"\"\n\n\
+         import pricing\n\n\
+         def render_line(name, unit_pence, quantity):\n\
+         \x20   \"\"\"One line of an invoice, money shown in pounds.\"\"\"\n\
+         \x20   total = pricing.line_total(unit_pence, quantity)\n\
+         \x20   return f\"{name}: £{total:.2f}\"\n",
+    )
+    .unwrap();
     let diff = r#"+++ b/invoice.py
-@@ -1,6 +1,6 @@
- import pricing
-
+@@ -6,4 +6,4 @@ import pricing
  def render_line(name, unit_pence, quantity):
      total = pricing.line_total(unit_pence, quantity)
 -    return f"{name}: £{total / 100:.2f}"
@@ -696,13 +708,10 @@ fn the_contract_a_diff_breaks_can_be_in_a_file_the_diff_never_touches() {
         "{context}"
     );
 
-    // A module that isn't in the repository contributes nothing, and neither
-    // does one the diff already shows.
-    assert_eq!(imported_context("+++ b/a.py\n+import os\n", &dir), None);
-    assert_eq!(
-        imported_context("+++ b/pricing.py\n+import pricing\n", &dir),
-        None
-    );
+    // A module that isn't in the repository contributes nothing, and
+    // neither does one the diff already shows in full.
+    assert_eq!(imported_context("+++ b/missing.py\n", &dir), None);
+    assert_eq!(imported_context("+++ b/pricing.py\n", &dir), None);
 
     let _ = std::fs::remove_dir_all(&dir);
 }

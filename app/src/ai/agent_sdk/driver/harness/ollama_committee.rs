@@ -4639,21 +4639,57 @@ pub async fn run_ollama_committee(
                     });
                     let calls: Vec<String> =
                         observed.iter().map(|entry| entry.call.clone()).collect();
-                    let (_, outcome) = chat_once(
-                        &oracle.name,
-                        ORACLE_SYSTEM_PROMPT,
-                        &oracle_user_prompt(&contracts, &calls),
-                        oracle.thinking,
-                        keep_alive,
-                        working_dir,
-                        path,
-                        &mut on_event,
-                    )
-                    .await?;
-                    if let Ok(stage) = outcome {
-                        add_usage(&mut total_usage, &stage.usage);
-                        let answers = parse_oracle(&stage.content, &observed);
-                        oracle_lines = oracle_mismatches(&answers, &observed);
+                    let question = oracle_user_prompt(&contracts, &calls);
+                    // Twice, once cold and once warm, and only what it says
+                    // both times counts. A 7B oracle got two of four answers
+                    // wrong on the stock fixture — including insisting that
+                    // `needs_reorder(7, 0)` should be True, which is the
+                    // argument order misread — and a wrong answer here is
+                    // worse than no answer, because it goes to every
+                    // reviewer as established fact. A slip does not survive
+                    // being asked again at a different temperature; a
+                    // reading of the docstring does.
+                    let mut readings: Vec<Vec<(String, String)>> = Vec::new();
+                    for temperature in [COLD_TEMPERATURE, WARM_TEMPERATURE] {
+                        let (_, outcome) = chat_once_at(
+                            &oracle.name,
+                            ORACLE_SYSTEM_PROMPT,
+                            &question,
+                            oracle.thinking,
+                            temperature,
+                            keep_alive,
+                            working_dir,
+                            path,
+                            &mut on_event,
+                        )
+                        .await?;
+                        match outcome {
+                            Ok(stage) => {
+                                add_usage(&mut total_usage, &stage.usage);
+                                readings.push(parse_oracle(&stage.content, &observed));
+                            }
+                            Err(_) => break,
+                        }
+                    }
+                    if let [cold, warm] = readings.as_slice() {
+                        let agreed: Vec<(String, String)> = cold
+                            .iter()
+                            .filter(|(call, expected)| {
+                                warm.iter().any(|(again, also)| {
+                                    again == call && also.eq_ignore_ascii_case(expected)
+                                })
+                            })
+                            .cloned()
+                            .collect();
+                        let dropped = cold.len().saturating_sub(agreed.len());
+                        if dropped > 0 {
+                            on_event(TurnEvent::Text {
+                                text: format!(
+                                    "({dropped} answer(s) changed when asked a second time, and                                      were dropped)"
+                                ),
+                            });
+                        }
+                        oracle_lines = oracle_mismatches(&agreed, &observed);
                     }
                 }
                 on_event(TurnEvent::Text {
