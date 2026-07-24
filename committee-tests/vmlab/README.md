@@ -49,6 +49,41 @@ wrote to no longer exists. A live-snapshot reset (seconds instead of a
 reboot) is a follow-up; the reboot version is slower and impossible to get
 subtly wrong.
 
+## The committee here needs no judge
+
+The code committee has to make several models argue toward a verdict because
+there is no oracle for "is this code correct". Here there is: the running
+system. So the ops committee is just **fan-out and grade** — each model
+proposes a plan, each plan runs in its own fresh guest, and `check.sh` reads
+the real end state. No model ever judges another's work, because the machine
+already knows the answer. `ops_committee.py` with `MODELS=a,b,c` does exactly
+this and reports each independently.
+
+## What's proven
+
+Validated on the real guest, on the PC:
+
+- **Containment, at the limit.** A clean guest (176 `/etc` entries, a planted
+  marker) was hit with `rm -rf /etc /usr /var /bin /sbin`. It ate itself —
+  afterwards it couldn't run `ls`. `reset` restored it to a pristine
+  176-entry `/etc` with the marker gone, because reset kills qemu and drops
+  the overlay from the *host* and needs nothing from the destroyed guest.
+  This is the whole safety case in one test: the worst a mis-ordered model
+  command can do is wreck a disposable guest, and the wreck costs one reset.
+- **User management.** "create `deploy` in the sudo group with a bash shell" —
+  passes, graded by `id`/`getent` on the guest.
+- **Package + service + port.** "install nginx, serve 200 on :8080, enable at
+  boot" — passes in ~46s, graded by `systemctl is-enabled` and a real `curl`.
+- **Fan-out.** `qwen2.5-coder:7b` (6s) and `mistral-nemo:12b` (37s) both graded
+  independently on the same task.
+
+Getting there shook out two harness traps worth knowing: piping a plan into
+`bash -s` lets an interactive `adduser`/`apt` eat the following commands as
+its answers (stage the plan as a file, run with stdin from `/dev/null`); and
+`sudo` scrubs `DEBIAN_FRONTEND`, so Ubuntu's needrestart hangs apt unless the
+env is set *inside* the script. Both were caught by grading the end state
+rather than trusting the plan.
+
 ## Safety invariants
 
 - Model commands run **only** inside the guest, via `vmlab.sh run` (ssh).
