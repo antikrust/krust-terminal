@@ -1,0 +1,4 @@
+Our app needs to reach an internal database server by name. Add a static host
+entry on this machine so that the name db.internal resolves to the address
+10.0.0.5. After you've done it, looking up db.internal on this box should come
+back as 10.0.0.5.

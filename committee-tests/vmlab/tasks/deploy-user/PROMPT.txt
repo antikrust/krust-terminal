@@ -1,0 +1,8 @@
+We're onboarding a CI deploy account on this box. Please create a user called
+deploy that belongs to the www-data group, and install this SSH public key so
+the account can log in with it:
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2wJ3qk9r7Z1nQm4Xc0Vb8yT5sL6pA2dF3gH1jK9lQ deploy@ci
+
+They'll only ever log in over SSH with that key, so make sure the key is in the
+right place for the deploy account and that sshd will actually accept it.
