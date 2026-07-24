@@ -2,7 +2,7 @@
 # Builds the two-ended fixture a move can be tested against: a source tree
 # here and an empty destination on another machine, both disposable.
 #
-#   ./committee-tests/ops/setup.sh [remote-host]
+#   ./agent-tests/ops/setup.sh [remote-host]
 #
 # The remote defaults to `sentience`. Both ends are wiped and rebuilt, so a
 # run that mangles either of them costs one command to undo — which is the
@@ -15,12 +15,12 @@
 set -eu
 
 REMOTE="${1:-sentience}"
-ROOT="$HOME/committee-ops"
+ROOT="$HOME/agent-ops"
 
 # A `rm -rf` built from variables is worth one guard. This only ever removes
-# a directory called committee-ops directly under a home directory.
+# a directory called agent-ops directly under a home directory.
 case "$ROOT" in
-    "$HOME"/committee-ops) ;;
+    "$HOME"/agent-ops) ;;
     *) echo "refusing to touch $ROOT" >&2; exit 1 ;;
 esac
 
@@ -47,12 +47,12 @@ dd if=/dev/urandom of="$ROOT/source/nested/blob.bin" bs=1024 count=2048 2>/dev/n
 # directions and both need catching.
 printf 'stale content that must not survive a correct move\n' > "$ROOT/dest/plain.txt"
 
-echo "Remote end: $REMOTE:~/committee-ops"
+echo "Remote end: $REMOTE:~/agent-ops"
 ssh -o BatchMode=yes "$REMOTE" '
     set -eu
-    root="$HOME/committee-ops"
+    root="$HOME/agent-ops"
     case "$root" in
-        "$HOME"/committee-ops) ;;
+        "$HOME"/agent-ops) ;;
         *) echo "refusing to touch $root" >&2; exit 1 ;;
     esac
     rm -rf "$root"
@@ -63,6 +63,6 @@ ssh -o BatchMode=yes "$REMOTE" '
 echo
 echo "Source:      $ROOT/source"
 echo "Local dest:  $ROOT/dest"
-echo "Remote dest: $REMOTE:~/committee-ops/dest"
+echo "Remote dest: $REMOTE:~/agent-ops/dest"
 echo
-echo "Check a move with:  ./committee-tests/ops/verify.sh [remote-host]"
+echo "Check a move with:  ./agent-tests/ops/verify.sh [remote-host]"

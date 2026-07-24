@@ -40,7 +40,7 @@ CDN.) User `lab`, passwordless sudo, reached over ssh on a forwarded port.
 Networking is qemu user-mode: the guest has NAT egress so `apt` works, but no
 route to the LAN — it cannot see `192.168.x`, only the qemu gateway. A
 sysadmin task that "moves something to another server" is pointed at the
-`committee-tests/ops` fixture's `~/committee-ops`, not at anything real.
+`agent-tests/ops` fixture's `~/agent-ops`, not at anything real.
 
 ## Why reset is trustworthy
 

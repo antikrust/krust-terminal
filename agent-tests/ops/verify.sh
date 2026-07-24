@@ -2,7 +2,7 @@
 # Did the move actually move it? Compares the source tree here against the
 # destination on the other machine, by manifest.
 #
-#   ./committee-tests/ops/verify.sh [remote-host]
+#   ./agent-tests/ops/verify.sh [remote-host]
 #
 # Read-only at both ends, so it is safe to run at any point, including
 # before deciding whether anything may be deleted — which is the point. A
@@ -12,7 +12,7 @@ set -eu
 
 REMOTE="${1:-sentience}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$HOME/committee-ops"
+ROOT="$HOME/agent-ops"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -20,8 +20,8 @@ python3 "$HERE/manifest.py" "$ROOT/source" > "$WORK/source.txt"
 
 # The manifest script goes over with the request, so the remote needs
 # nothing installed and cannot drift out of step with this copy of it.
-ssh -o BatchMode=yes "$REMOTE" 'cat > /tmp/committee-manifest.py' < "$HERE/manifest.py"
-ssh -o BatchMode=yes "$REMOTE" 'python3 /tmp/committee-manifest.py "$HOME/committee-ops/dest"' \
+ssh -o BatchMode=yes "$REMOTE" 'cat > /tmp/ops-manifest.py' < "$HERE/manifest.py"
+ssh -o BatchMode=yes "$REMOTE" 'python3 /tmp/ops-manifest.py "$HOME/agent-ops/dest"' \
     > "$WORK/dest.txt" || {
         echo "Could not read the destination on $REMOTE — has anything arrived?" >&2
         exit 1

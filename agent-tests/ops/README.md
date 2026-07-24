@@ -1,18 +1,24 @@
-# The two-ended fixture
+# The two-ended move fixture
 
-Everything else in `committee-tests/` measures the committee against code.
-This measures it against a **move** — files going from one machine to
-another, which is a different problem, because you cannot run it a hundred
-times and throw the results away.
+A **single-agent** fixture, sibling to `vmlab/` — it grades a **move** (files
+going from one machine to another), not code. It lives here and not under
+`committee-tests/` for the reason that whole design turns on: a committee is
+what you build when there is no oracle for "is this correct", and a move *has*
+one. You manifest the source, manifest the destination, and diff them. One
+agent proposes the transfer, the manifest grades it — no panel and no judge,
+because there is nothing to argue about.
+
+A move is still its own problem, and not one you can run a hundred times and
+throw the results away: it crosses real machines.
 
 ```bash
-./committee-tests/ops/setup.sh [remote-host]     # default: sentience
-./committee-tests/ops/verify.sh [remote-host]
+./agent-tests/ops/setup.sh [remote-host]     # default: sentience
+./agent-tests/ops/verify.sh [remote-host]
 ```
 
-`setup.sh` builds `~/committee-ops/source` here and an empty
-`~/committee-ops/dest` at both ends, wiping whatever was there. `verify.sh`
-compares the two by manifest and says whether the move arrived.
+`setup.sh` builds `~/agent-ops/source` here and an empty `~/agent-ops/dest` at
+both ends, wiping whatever was there. `verify.sh` compares the two by manifest
+and says whether the move arrived.
 
 ## Why a scratch directory and not a jail
 
@@ -23,7 +29,7 @@ directory nothing else owns**, rebuilt by one command — exactly why the code
 fixtures could be run ninety times without anyone caring what they did.
 
 The `rm -rf` is built from variables, so both ends refuse to touch anything
-that isn't literally `$HOME/committee-ops`.
+that isn't literally `$HOME/agent-ops`.
 
 ## What's planted
 

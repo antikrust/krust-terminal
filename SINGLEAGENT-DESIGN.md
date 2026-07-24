@@ -162,7 +162,7 @@ the script or Ubuntu's needrestart wedges apt.
 | | |
 | --- | --- |
 | `committee-tests/` | the committee's code fixtures + `score.py` + `stale.sh` |
-| `committee-tests/ops/` | the file-move manifest grader (single-agent; a candidate to move here) |
 | `agent-tests/vmlab/` | this — the single-agent sysadmin eval |
+| `agent-tests/ops/` | the single-agent two-ended move fixture |
 | [MULTIAGENT-DESIGN.md](MULTIAGENT-DESIGN.md) | the committee |
 | this file | the single agent |
