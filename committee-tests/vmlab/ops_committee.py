@@ -154,6 +154,16 @@ def run_one(task_dir, model):
     preamble = "export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1\n"
     vmlab("run", "cat > /tmp/ops_plan.sh", stdin=preamble + plan + "\n")
     execution = vmlab("run", "sudo timeout 420 bash /tmp/ops_plan.sh </dev/null")
+    # Some end states only exist after time passes — a minutely timer has to
+    # actually fire once before its log line is there to grade. A task that
+    # needs this carries a `settle` file with the seconds to wait; everything
+    # else grades immediately.
+    settle = task_dir / "settle"
+    if settle.exists():
+        try:
+            time.sleep(int(settle.read_text().strip()))
+        except ValueError:
+            pass
     passed, report = grade(task_dir)
     seconds = int(time.time() - started)
 
