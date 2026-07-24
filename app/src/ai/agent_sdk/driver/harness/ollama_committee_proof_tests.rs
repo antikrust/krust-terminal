@@ -1166,3 +1166,71 @@ fn a_round_that_moved_nothing_has_finished() {
     assert!(!round_changed_nothing(&[], &[]));
     assert!(!round_changed_nothing(&one, &one[..1].to_vec()));
 }
+
+#[test]
+fn a_draft_is_scored_by_how_many_suite_tests_it_passes() {
+    use futures_lite::future::block_on;
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    // The shape a generated suite takes: it imports the draft by module name
+    // and exercises it. Small enough to read; the real arcade grader is the
+    // same idea at eight cases.
+    let suite = r#"import wrap
+def test_empty():
+    assert wrap.wrap('', 10) == []
+def test_single():
+    assert wrap.wrap('hello', 10) == ['hello']
+def test_join():
+    assert wrap.wrap('a b c', 3) == ['a b', 'c']
+def test_longword():
+    assert wrap.wrap('supercali', 5) == ['supercali']
+"#;
+    let correct = r#"def wrap(text, width):
+    out = []
+    cur = ''
+    for w in text.split():
+        nxt = (cur + ' ' + w).strip()
+        if cur and len(nxt) > width:
+            out.append(cur)
+            cur = w
+        else:
+            cur = nxt
+    if cur:
+        out.append(cur)
+    return out
+"#;
+    let splitter = "def wrap(text, width):\n    return text.split()\n";
+
+    let c = block_on(score_against_suite(correct, "wrap", suite, 15, &path));
+    let s = block_on(score_against_suite(splitter, "wrap", suite, 15, &path));
+    assert_eq!(c, Some(4), "the correct wrap passes every test");
+    assert_eq!(s, Some(3), "the splitter loses only the join case");
+
+    // The gate the rewrite rounds never had: strictly higher is kept, equal is
+    // churn and refused, lower is a regression and refused.
+    assert!(
+        revision_improves(s.unwrap(), c.unwrap()),
+        "3 -> 4 is a real gain"
+    );
+    assert!(
+        !revision_improves(c.unwrap(), c.unwrap()),
+        "4 -> 4 is churn"
+    );
+    assert!(
+        !revision_improves(c.unwrap(), s.unwrap()),
+        "4 -> 3 is a regression"
+    );
+
+    // A draft that cannot be imported scores nothing knowable, not zero — zero
+    // would read as "failed everything" and reject it over a staging fault.
+    assert_eq!(
+        block_on(score_against_suite(
+            "def wrap(:\n",
+            "wrap",
+            suite,
+            15,
+            &path
+        )),
+        None
+    );
+}

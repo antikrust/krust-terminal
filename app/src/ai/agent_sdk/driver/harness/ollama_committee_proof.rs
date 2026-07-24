@@ -415,6 +415,59 @@ pub(crate) fn parse_test_output(execution: &ShellExecution) -> TestRun {
     run
 }
 
+/// How many of a generated suite's tests a draft passes — the fixed yardstick
+/// a rewrite round has never had.
+///
+/// The suite imports the draft by `module` name (the task's `save_as` without
+/// `.py`), so the draft is staged as `<module>.py` with its directory on the
+/// path the runner imports from, and [`run_python_tests`] does the rest.
+///
+/// `None` when the draft could not even be imported — a syntax error, or not
+/// Python at all. That is *unknowable*, not zero: scoring it zero would read
+/// as "failed every test" and reject a draft over a staging fault, which is
+/// exactly the kind of false signal the whole pipeline exists to avoid.
+///
+/// Validated against the real arcade grader before it was wired to anything:
+/// a correct wrap scores 8, the phantom-empty-line bug 6, a splitter 4. That
+/// separation is the point — a revision is kept only when it raises the number.
+pub(crate) async fn score_against_suite(
+    draft: &str,
+    module: &str,
+    suite: &str,
+    timeout_secs: u64,
+    path: &str,
+) -> Option<usize> {
+    let dir = std::env::temp_dir().join(format!("derp-score-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).ok()?;
+    let run = match std::fs::write(dir.join(format!("{module}.py")), draft) {
+        Ok(()) => run_python_tests(suite, timeout_secs, &dir, path).await,
+        Err(_) => TestRun {
+            passed: Vec::new(),
+            failed: Vec::new(),
+            broken: Some("could not stage the draft".to_string()),
+        },
+    };
+    let _ = std::fs::remove_dir_all(&dir);
+    // `broken` already subsumes total == 0 (see `parse_test_output`), so a
+    // clean `None` here means "the suite never ran against this draft".
+    if run.broken.is_some() {
+        return None;
+    }
+    Some(run.passed.len())
+}
+
+/// Whether a revised draft earns its place over the one it replaced: only when
+/// it scores strictly higher.
+///
+/// Equal is churn — a different program of the same quality — and keeping
+/// exactly those is the measured failure of the rewrite rounds: a 7/8 became a
+/// different 7/8 three times over, and a *sharper* note took 7/8 to 3/8.
+/// Strictly higher makes a round monotone: a floor it can never fall below,
+/// and a ratchet for any real gain.
+pub(crate) fn revision_improves(before: usize, after: usize) -> bool {
+    after > before
+}
+
 // ---------------------------------------------------------------------------
 // The project's own suite
 // ---------------------------------------------------------------------------
