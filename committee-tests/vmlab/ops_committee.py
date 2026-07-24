@@ -35,6 +35,26 @@ RUNGUEST = str(HERE / "runguest.sh")
 HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 MODELS = [m.strip() for m in os.environ.get("MODELS", "qwen2.5-coder:7b").split(",") if m.strip()]
 
+
+def _commit():
+    # When run from a deploy dir that isn't a git checkout (the PC), the caller
+    # passes the real revision in OPS_COMMIT; git is the fallback for local runs.
+    if os.environ.get("OPS_COMMIT"):
+        return os.environ["OPS_COMMIT"]
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(HERE), "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return out.stdout.strip() or "unknown" if out.returncode == 0 else "unknown"
+    except Exception:
+        return "unknown"
+
+
+COMMIT = _commit()
+
 PLAN_SYSTEM = (
     "You are a careful Linux sysadmin working at a root shell on Ubuntu 22.04 "
     "(systemd, apt). Given a task, output ONLY the shell commands that accomplish "
@@ -131,6 +151,13 @@ def run_one(task_dir, model):
     seconds = int(time.time() - started)
 
     verdict = "PASS" if passed else "FAIL"
+    # One greppable line per run, stamped with the commit that produced it —
+    # an ops score is a fact about this pipeline at this revision, same as the
+    # code bench's BENCH line, so a table of them can be told when it is stale.
+    print(
+        f"OPSBENCH task={task_dir.name} model={model} passed={int(bool(passed))} "
+        f"seconds={seconds} commit={COMMIT}"
+    )
     print(f"  {verdict}  {task_dir.name}  [{model}]  {seconds}s")
     for line in report.splitlines():
         print(f"       {line}")
