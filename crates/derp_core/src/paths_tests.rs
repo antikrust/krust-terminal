@@ -8,11 +8,11 @@ fn test_data_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(data_dir(), home_dir.join(".derp-oss"));
+            assert_eq!(data_dir(), home_dir.join(".derp"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(data_dir(), home_dir.join(".local/share/derp-oss"));
+            assert_eq!(data_dir(), home_dir.join(".local/share/derp"));
         } else if #[cfg(windows)] {
-            assert_eq!(data_dir(), home_dir.join("AppData\\Roaming\\derp\\DerpOss\\data"));
+            assert_eq!(data_dir(), home_dir.join("AppData\\Roaming\\derp\\Derp\\data"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -25,11 +25,11 @@ fn test_config_local_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(config_local_dir(), home_dir.join(".derp-oss"));
+            assert_eq!(config_local_dir(), home_dir.join(".derp"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(config_local_dir(), home_dir.join(".config/derp-oss"));
+            assert_eq!(config_local_dir(), home_dir.join(".config/derp"));
         } else if #[cfg(windows)] {
-            assert_eq!(config_local_dir(), home_dir.join("AppData\\Local\\derp\\DerpOss\\config"));
+            assert_eq!(config_local_dir(), home_dir.join("AppData\\Local\\derp\\Derp\\config"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -40,8 +40,8 @@ fn test_config_local_dir_path() {
 fn test_derp_home_config_dir_path() {
     let home_dir = home_dir().expect("Should be able to compute home directory");
     let expected_dir_name = match ChannelState::data_profile() {
-        Some(data_profile) => format!(".derp-oss-{data_profile}"),
-        None => ".derp-oss".to_string(),
+        Some(data_profile) => format!(".derp-{data_profile}"),
+        None => ".derp".to_string(),
     };
 
     assert_eq!(
@@ -68,11 +68,11 @@ fn test_cache_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/derp.baby.DerpOss"));
+            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/derp.baby.Derp"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(cache_dir(), home_dir.join(".cache/derp-oss"));
+            assert_eq!(cache_dir(), home_dir.join(".cache/derp"));
         } else if #[cfg(windows)] {
-            assert_eq!(cache_dir(), home_dir.join("AppData\\Local\\derp\\DerpOss\\cache"));
+            assert_eq!(cache_dir(), home_dir.join("AppData\\Local\\derp\\Derp\\cache"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -85,11 +85,11 @@ fn test_state_dir_path() {
     cfg_if::cfg_if! {
         // ChannelState, by default, is configured for Channel::Oss.
         if #[cfg(target_os = "macos")] {
-            assert_eq!(state_dir(), home_dir.join("Library/Application Support/derp.baby.DerpOss"));
+            assert_eq!(state_dir(), home_dir.join("Library/Application Support/derp.baby.Derp"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(state_dir(), home_dir.join(".local/state/derp-oss"));
+            assert_eq!(state_dir(), home_dir.join(".local/state/derp"));
         } else if #[cfg(windows)] {
-            assert_eq!(state_dir(), home_dir.join("AppData\\Local\\derp\\DerpOss\\data"));
+            assert_eq!(state_dir(), home_dir.join("AppData\\Local\\derp\\Derp\\data"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -145,15 +145,15 @@ fn test_project_path_for_derp_dev_app_id() {
 
 #[test]
 fn test_project_path_for_oss_app_id() {
-    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "derp", "DerpOss"), None)
+    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "derp", "Derp"), None)
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "derp.baby.DerpOss");
+            assert_eq!(project_dirs.project_path(), "derp.baby.Derp");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(project_dirs.project_path(), "derp-oss");
+            assert_eq!(project_dirs.project_path(), "derp");
         } else if #[cfg(windows)] {
-            assert_eq!(project_dirs.project_path(), "derp\\DerpOss");
+            assert_eq!(project_dirs.project_path(), "derp\\Derp");
         } else {
             unimplemented!("Need to update tests for current platform!");
         }

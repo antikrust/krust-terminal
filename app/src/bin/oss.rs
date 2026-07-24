@@ -11,8 +11,8 @@ fn main() -> Result<()> {
     let mut state = ChannelState::new(
         Channel::Oss,
         ChannelConfig {
-            app_id: AppId::new("dev", "derp", "DerpOss"),
-            logfile_name: "derp-oss.log".into(),
+            app_id: AppId::new("dev", "derp", "Derp"),
+            logfile_name: "derp.log".into(),
             server_config: DerpServerConfig::production(),
             oz_config: OzConfig::production(),
             telemetry_config: None,
@@ -44,9 +44,9 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleDisplayName</key>
     <string>Derp</string>
     <key>CFBundleExecutable</key>
-    <string>derp-oss</string>
+    <string>derp</string>
     <key>CFBundleIdentifier</key>
-    <string>derp.baby.DerpOss</string>
+    <string>derp.baby.Derp</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

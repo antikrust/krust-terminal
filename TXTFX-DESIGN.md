@@ -165,7 +165,7 @@ Start with:
 
 ```sh
 cargo test -p derp text_effects
-cargo build --bin derp-oss
+cargo build --bin derp
 ```
 
 For a code change that will be pushed, also run the repository's required formatting and Clippy checks. Visual validation, when explicitly authorized, must cover ligatures on and off, normal and alternate terminal screens, output split across multiple reads, large output, secrets, Unicode/wide glyphs, Agent streaming, restored Agent messages, selection/copy, and the disabled state.

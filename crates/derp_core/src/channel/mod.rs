@@ -55,7 +55,7 @@ impl Channel {
             Channel::Preview => "oz-preview",
             Channel::Local => "oz-local",
             Channel::Integration => "oz-integration",
-            Channel::Oss => "derp-oss",
+            Channel::Oss => "derp",
         }
     }
 
@@ -67,7 +67,7 @@ impl Channel {
             Channel::Preview => "derpctrl-preview",
             Channel::Local => "derpctrl-local",
             Channel::Integration => "derpctrl-integration",
-            Channel::Oss => "derpctrl-oss",
+            Channel::Oss => "derpctrl",
         }
     }
 }
@@ -80,7 +80,7 @@ impl fmt::Display for Channel {
             Channel::Dev => "dev",
             Channel::Integration => "integration",
             Channel::Local => "local",
-            Channel::Oss => "derp-oss",
+            Channel::Oss => "derp",
         })
     }
 }

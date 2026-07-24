@@ -670,7 +670,7 @@ fn package_name(channel: Channel) -> &'static str {
         Channel::Dev => "derp-terminal-dev",
         Channel::Integration => "derp-terminal-integration",
         Channel::Local => "derp-terminal-local",
-        Channel::Oss => "derp-oss",
+        Channel::Oss => "derp",
     }
 }
 

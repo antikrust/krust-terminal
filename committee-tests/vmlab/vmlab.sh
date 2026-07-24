@@ -73,6 +73,7 @@ write_files:
     content: |
       Dpkg::Use-Pty "0";
       APT::Get::Assume-Yes "true";
+      Acquire::ForceIPv4 "true";
 runcmd:
   - [ sh, -c, "echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections" ]
   - [ sh, -c, "echo DEBIAN_FRONTEND=noninteractive >> /etc/environment" ]
@@ -141,6 +142,26 @@ cmd_run() {
   ssh_guest "$@"
 }
 
+cmd_prime() {
+  # Fetching apt indices over qemu's user-mode NAT is slow — the jammy
+  # `universe` Packages file alone is 14 MB at ~50 KB/s — so a plan that runs
+  # `apt-get update` before installing anything blew past the execution cap.
+  # Prime the base ONCE: boot it, cache the indices and the .debs the tasks
+  # need, shut down cleanly, and commit that state into the backing image. A
+  # task's overlay then inherits fresh indices (so its `apt-get update` mostly
+  # Hits) and pre-downloaded packages (so `apt-get install` needs no network).
+  cmd_up >/dev/null
+  echo "priming apt cache into the base image (one-off, slow)…"
+  ssh_guest "sudo apt-get update && sudo apt-get install -y --download-only nginx nftables" \
+    >/dev/null 2>&1 || { echo "prime: apt failed" >&2; }
+  ssh_guest "sudo systemctl poweroff" 2>/dev/null || true
+  i=0
+  while running && [ "$i" -lt 45 ]; do sleep 2; i=$((i + 1)); done
+  running && { kill "$(cat "$PIDFILE")" 2>/dev/null; sleep 2; }
+  qemu-img commit "$OVERLAY" >/dev/null && echo "base primed"
+  rm -f "$OVERLAY" "$PIDFILE"
+}
+
 cmd_selftest() {
   # The sandbox's own grader: prove that a change made in the guest does not
   # survive a reset. If this ever fails, nothing built on top of vmlab is
@@ -175,6 +196,7 @@ case "${1:-}" in
   down)   cmd_down ;;
   reset)  cmd_reset ;;
   status) cmd_status ;;
+  prime)  cmd_prime ;;
   selftest) cmd_selftest ;;
   run)    shift; cmd_run "$@" ;;
   *) echo "usage: vmlab.sh {setup|up|run 'cmd'|reset|down|status}" >&2; exit 1 ;;

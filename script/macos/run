@@ -7,7 +7,7 @@
 # This script is invoked by `./script/run`, which handles cross-platform
 # setup (install_channel_config, binary name detection, feature-to-env-var
 # mapping). The following env vars are expected to be set by the caller:
-#   DERP_BIN_NAME  — "derp" (internal local build) or "derp-oss"
+#   DERP_BIN_NAME  — "derp" (internal local build) or "derp"
 #   DERP_CHANNEL   — "local" or "oss"
 #   FEATURES       — comma-separated cargo features (already normalized)
 # Must be called from the root directory of the derp repo.
@@ -154,10 +154,10 @@ if [ "$DONT_OPEN" = false ] ; then
         if [ "$DERP_CHANNEL" = "local" ]; then
             LOG_FILE=~/Library/Logs/derp_local.log
         elif [ "$DERP_CHANNEL" = "oss" ]; then
-            LOG_FILE=~/Library/Logs/derp-oss.log
+            LOG_FILE=~/Library/Logs/derp.log
         else
             echo "Warning: unrecognized DERP_CHANNEL '$DERP_CHANNEL', defaulting to OSS log path" >&2
-            LOG_FILE=~/Library/Logs/derp-oss.log
+            LOG_FILE=~/Library/Logs/derp.log
         fi
         tail -F "$LOG_FILE"
     else

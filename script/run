@@ -26,14 +26,9 @@ COMMON_SKILLS_TARGET="${DERP_COMMON_SKILLS_INSTALL_TARGET:-}"
 ./script/install_channel_config || echo "Skipping internal channel config installation (no repo access)."
 
 
-# If derp_channel_config is on PATH, build the Local channel binary; otherwise build the OSS channel.
-if command -v derp-channel-config &>/dev/null; then
-    DERP_BIN_NAME="derp"
-    DERP_CHANNEL="local"
-else
-    DERP_BIN_NAME="derp-oss"
-    DERP_CHANNEL="oss"
-fi
+# The `derp` binary is the sole app build (OSS channel).
+DERP_BIN_NAME="derp"
+DERP_CHANNEL="oss"
 
 # Shared argument parsing. macOS-specific flags (--dont-open,
 # --open_with_launchd, --generate-schema) are forwarded through MAC_ARGS and

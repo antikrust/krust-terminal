@@ -317,7 +317,7 @@ fn app_name_prefix(channel: Channel) -> &'static str {
         Channel::Local => "derp",
         Channel::Integration => "integration",
         Channel::Dev => "DerpDev",
-        Channel::Oss => "derp-oss",
+        Channel::Oss => "derp",
     }
 }
 

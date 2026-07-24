@@ -261,12 +261,12 @@ Two further wiring details worth knowing:
 
 ### Verified end to end
 
-With `MOLOCH_URL`/`MOLOCH_TOKEN` set and a live server, the real `derp-oss`
+With `MOLOCH_URL`/`MOLOCH_TOKEN` set and a live server, the real `derp`
 binary:
 
 - logs `server_root_url: "http://127.0.0.1:18104"` — pointed at Moloch;
 - completes its auth handshake against Moloch's GraphQL bootstrap;
-- runs `derp-oss agent skills` and `agent list` successfully against
+- runs `derp agent skills` and `agent list` successfully against
   `/api/v1/agent` and `/api/v1/agent/identities`;
 - reads back a run that an external worker claimed, streamed a transcript
   for, and completed (`state: SUCCEEDED, executed_by: worker`).

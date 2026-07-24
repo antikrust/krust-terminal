@@ -32,7 +32,7 @@ pub(crate) fn ensure_derp_watch_roots_exist() {}
 ///
 /// Only fires when the new path does not yet exist and the legacy path does; the
 /// legacy path is derived by mapping `derp` -> `warp` in the final path
-/// component (e.g. `~/.derp` <- `~/.warp`, `~/.derp-oss` <- `~/.warp-oss`).
+/// component (e.g. `~/.derp` <- `~/.warp`, `~/.derp` <- `~/.warp-oss`).
 #[cfg(not(target_family = "wasm"))]
 fn migrate_legacy_warp_dir(target: &Path) {
     if target.exists() {

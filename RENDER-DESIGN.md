@@ -240,7 +240,7 @@ Run the narrow tests first, then broaden according to the risk of the change:
 cargo test -p derp turn_events_to_conversation
 
 # Build this fork's GUI binary
-cargo build --bin derp-oss
+cargo build --bin derp
 
 # Repository-wide formatting, linting, and tests before review/push
 ./script/presubmit

@@ -69,8 +69,8 @@ rules from it:
   `cargo test -p derp turn_events_to_conversation` — a malformed injected
   message wedges its conversation permanently.
 
-Build/run for this fork: `cargo build --bin derp-oss`, binary at
-`target/debug/derp-oss`. Fake-auth mechanics are in
+Build/run for this fork: `cargo build --bin derp`, binary at
+`target/debug/derp`. Fake-auth mechanics are in
 [ACCOUNTS.md](ACCOUNTS.md).
 
 ## Development Commands

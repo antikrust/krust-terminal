@@ -41,7 +41,7 @@
 - [Windows] Symlink traversal fixed. ([#9863](https://github.com/derpdotdev/derp/pull/9863))
 - Fixed a crash on Windows when handing off a Web conversation to the native client. ([#9987](https://github.com/derpdotdev/derp/pull/9987))
 - Fixed a bug where multiple 'open skill' buttons shared hover state. ([#9437](https://github.com/derpdotdev/derp/pull/9437))
-- Fixed the OSS Linux desktop entry so DerpOss launches through the packaged `derp-terminal-oss` command. ([#9424](https://github.com/derpdotdev/derp/pull/9424))
+- Fixed the OSS Linux desktop entry so Derp launches through the packaged `derp-terminal-oss` command. ([#9424](https://github.com/derpdotdev/derp/pull/9424))
 - Fixed Ctrl/Cmd shortcuts (e.g. copy, paste) failing on Windows when a non-Latin keyboard layout was active. ([#9476](https://github.com/derpdotdev/derp/pull/9476))
 - Fixed background colour bleeding in alt screen programs (e.g. delta, diff-so-fancy). ([#9852](https://github.com/derpdotdev/derp/pull/9852))
 - Clip the derping indicator's action chips onto a new line on narrow panes instead of overflowing. ([#9297](https://github.com/derpdotdev/derp/pull/9297))

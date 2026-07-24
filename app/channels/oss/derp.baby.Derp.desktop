@@ -8,11 +8,11 @@ Name=Derp
 GenericName=TerminalEmulator
 
 Exec=derp-terminal-oss %U
-StartupWMClass=derp.baby.DerpOss
+StartupWMClass=derp.baby.Derp
 
 Keywords=shell;prompt;command;commandline;cmd;
 
-Icon=derp.baby.DerpOss
+Icon=derp.baby.Derp
 
 Categories=System;TerminalEmulator;
 

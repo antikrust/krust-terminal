@@ -83,9 +83,9 @@ No new event, no new state on `FileTreeState`, no UI plumbing in the view.
   `Indexed` with all top-level files present.
 - Manual: use the existing fixture at
   `~/code-fixtures/derp-10207-large-repo` (150,001 files). Build with
-  `./script/run --dont-open` and `open -a target/debug/bundle/osx/DerpOss.app
+  `./script/run --dont-open` and `open -a target/debug/bundle/osx/Derp.app
   ~/code-fixtures/derp-10207-large-repo`. Verify:
-  1. `~/Library/Logs/derp-oss.log` contains the "indexed in degraded
+  1. `~/Library/Logs/derp.log` contains the "indexed in degraded
      mode" warn line (or whatever the implementation logs — non-empty,
      non-error).
   2. `.agents`, `src`, etc. expand and show their contents.

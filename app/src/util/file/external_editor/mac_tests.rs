@@ -5,7 +5,7 @@ fn is_derp_bundle_recognises_derp_channels() {
     assert!(is_derp_bundle("derp.baby.Derp"));
     assert!(is_derp_bundle("derp.baby.DerpDev"));
     assert!(is_derp_bundle("derp.baby.DerpPreview"));
-    assert!(is_derp_bundle("derp.baby.DerpOss"));
+    assert!(is_derp_bundle("derp.baby.Derp"));
 }
 
 #[test]

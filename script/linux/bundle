@@ -201,8 +201,8 @@ elif [[ $RELEASE_CHANNEL = "stable" ]]; then
   BINARY_NAME="derp"
   APP_NAME="Derp"
 elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-  DERP_BIN="derp-oss"
-  BINARY_NAME="derp-oss"
+  DERP_BIN="derp"
+  BINARY_NAME="derp"
   APP_NAME="Derp"
   # The OSS channel does not ship Sentry, so drop the crash_reporting feature
   # (which would otherwise pull in the Sentry SDK as a dependency).
@@ -212,7 +212,7 @@ fi
 # Artifact-specific binary naming
 if [[ "$ARTIFACT" == "cli" ]]; then
   # For CLI artifacts, use oz instead of derp as the binary name.  The OSS
-  # channel is an exception: its CLI command name is `derp-oss`, matching
+  # channel is an exception: its CLI command name is `derp`, matching
   # `Channel::cli_command_name` in the Rust source.
   if [[ $RELEASE_CHANNEL != "oss" ]]; then
     BINARY_NAME="${BINARY_NAME/derp/oz}"

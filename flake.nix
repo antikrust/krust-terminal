@@ -154,7 +154,7 @@
               "-p"
               "derp"
               "--bin"
-              "derp-oss"
+              "derp"
               "--bin"
               "generate_settings_schema"
             ];
@@ -165,7 +165,7 @@
             doCheck = false;
 
             env = {
-              APPIMAGE_NAME = "DerpOss-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
+              APPIMAGE_NAME = "Derp-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
               LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
               PROTOC = "${pkgs.protobuf}/bin/protoc";
               PROTOC_INCLUDE = "${pkgs.protobuf}/include";
@@ -180,8 +180,8 @@
                 executablePath = lib.makeBinPath (with pkgs; [ xdg-utils ]);
               in
               ''
-                install -Dm755 "$out/bin/derp-oss" "${installDir}/derp-oss"
-                rm -f "$out/bin/derp-oss"
+                install -Dm755 "$out/bin/derp" "${installDir}/derp"
+                rm -f "$out/bin/derp"
 
                 patchShebangs \
                   ./script/prepare_bundled_resources \
@@ -204,30 +204,30 @@
                 install -Dm644 LICENSE-AGPL "$out/share/licenses/derp-terminal-experimental/LICENSE-AGPL"
                 install -Dm644 LICENSE-MIT "$out/share/licenses/derp-terminal-experimental/LICENSE-MIT"
 
-                install -Dm644 app/channels/oss/derp.baby.DerpOss.desktop \
-                  "$out/share/applications/derp.baby.DerpOss.desktop"
-                substituteInPlace "$out/share/applications/derp.baby.DerpOss.desktop" \
+                install -Dm644 app/channels/oss/derp.baby.Derp.desktop \
+                  "$out/share/applications/derp.baby.Derp.desktop"
+                substituteInPlace "$out/share/applications/derp.baby.Derp.desktop" \
                   --replace-fail "Exec=derp-terminal-oss %U" "Exec=derp-terminal-experimental %U"
 
                 for size in 16x16 32x32 64x64 128x128 256x256 512x512; do
                   icon="app/channels/oss/icon/no-padding/$size.png"
                   if [ -f "$icon" ]; then
                     install -Dm644 "$icon" \
-                      "$out/share/icons/hicolor/$size/apps/derp.baby.DerpOss.png"
+                      "$out/share/icons/hicolor/$size/apps/derp.baby.Derp.png"
                   fi
                 done
 
-                wrapProgram "${installDir}/derp-oss" \
+                wrapProgram "${installDir}/derp" \
                   --prefix LD_LIBRARY_PATH : "${libraryPath}" \
                   --prefix PATH : "${executablePath}"
 
                 mkdir -p "$out/bin"
-                ln -s "${installDir}/derp-oss" "$out/bin/derp-oss"
-                ln -s "${installDir}/derp-oss" "$out/bin/derp-terminal-experimental"
+                ln -s "${installDir}/derp" "$out/bin/derp"
+                ln -s "${installDir}/derp" "$out/bin/derp-terminal-experimental"
               '';
 
             postFixup = lib.optionalString pkgs.stdenv.isLinux ''
-              wrapped="/opt/derpdotdev/derp-terminal-experimental/.derp-oss-wrapped"
+              wrapped="/opt/derpdotdev/derp-terminal-experimental/.derp-wrapped"
               if [ -e "$out$wrapped" ] && ! patchelf --print-needed "$out$wrapped" | grep -q '^libfontconfig\.so\.1$'; then
                 patchelf --add-needed libfontconfig.so.1 "$out$wrapped"
               fi
@@ -303,7 +303,7 @@
         {
           default = pkgs.mkShell {
             inherit nativeBuildInputs buildInputs;
-            APPIMAGE_NAME = "DerpOss-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
+            APPIMAGE_NAME = "Derp-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
             PROTOC = "${pkgs.protobuf}/bin/protoc";
             PROTOC_INCLUDE = "${pkgs.protobuf}/include";

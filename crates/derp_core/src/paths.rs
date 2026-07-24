@@ -37,7 +37,7 @@ fn base_derp_config_dir_name() -> String {
         // Preview shares the same directory as Stable for backward
         // compatibility — existing users already have config in `.derp`.
         Channel::Stable | Channel::Preview => DERP_CONFIG_DIR.to_owned(),
-        Channel::Oss => format!("{DERP_CONFIG_DIR}-oss"),
+        Channel::Oss => DERP_CONFIG_DIR.to_owned(),
         Channel::Dev => format!("{DERP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{DERP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{DERP_CONFIG_DIR}-local"),
@@ -86,7 +86,7 @@ fn macos_config_dir_name() -> String {
     match ChannelState::channel() {
         Channel::Stable => DERP_CONFIG_DIR.to_owned(),
         Channel::Preview => format!("{DERP_CONFIG_DIR}-preview"),
-        Channel::Oss => format!("{DERP_CONFIG_DIR}-oss"),
+        Channel::Oss => DERP_CONFIG_DIR.to_owned(),
         Channel::Dev => format!("{DERP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{DERP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{DERP_CONFIG_DIR}-local"),
@@ -286,7 +286,6 @@ fn project_dirs_for_app_id(
             // match our Linux package name.
             let base_app_name = match app_id.application_name() {
                 "Derp" => "Derp-Terminal".to_owned(),
-                "DerpOss" => "Derp-Oss".to_owned(),
                 other if other.starts_with("Derp") => other.replace("Derp", "Derp-Terminal-"),
                 _ => app_id.application_name().to_owned(),
             };

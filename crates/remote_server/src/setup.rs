@@ -339,7 +339,7 @@ pub fn parse_uname_output(
 /// - dev:         `~/.derp-dev/remote-server`
 /// - local:       `~/.derp-local/remote-server`
 /// - integration: `~/.derp-dev/remote-server`
-/// - derp-oss:    `~/.derp-oss/remote-server`
+/// - derp:    `~/.derp/remote-server`
 pub fn remote_server_dir() -> String {
     let derp_dir = match ChannelState::channel() {
         Channel::Stable => ".derp",
@@ -347,7 +347,7 @@ pub fn remote_server_dir() -> String {
         Channel::Dev | Channel::Integration => ".derp-dev",
         Channel::Local => ".derp-local",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with derp-oss
+            // TODO(alokedesai): need to figure out how remote server works with derp
             // For now, return what Dev returns.
             ".derp-dev"
         }
@@ -618,7 +618,7 @@ fn download_channel() -> &'static str {
         Channel::Preview => "preview",
         Channel::Dev | Channel::Local | Channel::Integration => "dev",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with derp-oss
+            // TODO(alokedesai): need to figure out how remote server works with derp
             // For now, return what Dev returns.
             "dev"
         }
