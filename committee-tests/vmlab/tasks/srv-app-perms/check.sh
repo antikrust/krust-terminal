@@ -36,6 +36,11 @@ check_entry() {
     g=$(printf '%s' "$info" | cut -d: -f2)
     m=$(printf '%s' "$info" | cut -d: -f3)
     k=$(printf '%s' "$info" | cut -d: -f4)
+    # GNU stat calls a zero-byte file "regular empty file", not "regular file".
+    # A `touch`ed config.yml is a perfectly good regular file; the distinction
+    # is stat's, not the task's. (Only the live guest showed this — the mock
+    # the fixture was tested against returned "regular file".)
+    [ "$k" = "regular empty file" ] && k="regular file"
 
     if [ "$k" = "$wantkind" ]; then
         pass "$path is a $wantkind"

@@ -76,6 +76,12 @@ write_files:
 runcmd:
   - [ sh, -c, "echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections" ]
   - [ sh, -c, "echo DEBIAN_FRONTEND=noninteractive >> /etc/environment" ]
+  # Stop the guest running apt on its own. Ubuntu's apt-daily/unattended-upgrades
+  # fire on boot and hold /var/lib/dpkg/lock; a model's `apt-get install` then
+  # waits the whole lock timeout — one nginx task sat for 420s and hit the cap.
+  # A disposable guest has no need to auto-update, so silence it and free apt.
+  - [ sh, -c, "systemctl disable --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true" ]
+  - [ sh, -c, "systemctl mask apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true" ]
 EOF
   genisoimage -quiet -output "$SEED" -volid cidata -joliet -rock \
     "$LAB/user-data" "$LAB/meta-data"
