@@ -107,6 +107,24 @@ cmd_run() {
   ssh_guest "$@"
 }
 
+cmd_selftest() {
+  # The sandbox's own grader: prove that a change made in the guest does not
+  # survive a reset. If this ever fails, nothing built on top of vmlab is
+  # safe, because a task's damage would leak into the next.
+  cmd_up >/dev/null 2>&1 || true
+  running || { echo "selftest: guest would not boot" >&2; exit 1; }
+  ssh_guest 'sudo useradd -m _vmlab_probe 2>/dev/null; echo probe | sudo tee /etc/_vmlab_probe >/dev/null' >/dev/null
+  cmd_reset >/dev/null 2>&1
+  u=$(ssh_guest 'id _vmlab_probe >/dev/null 2>&1 && echo survived || echo gone')
+  f=$(ssh_guest 'test -e /etc/_vmlab_probe && echo survived || echo gone')
+  if [ "$u" = gone ] && [ "$f" = gone ]; then
+    echo "selftest OK — a planted user and file did not survive reset"
+  else
+    echo "selftest FAIL — reset did not revert (user=$u file=$f)" >&2
+    exit 1
+  fi
+}
+
 cmd_status() {
   if running; then
     echo "up (pid $(cat "$PIDFILE"), port $PORT)"
@@ -123,6 +141,7 @@ case "${1:-}" in
   down)   cmd_down ;;
   reset)  cmd_reset ;;
   status) cmd_status ;;
+  selftest) cmd_selftest ;;
   run)    shift; cmd_run "$@" ;;
   *) echo "usage: vmlab.sh {setup|up|run 'cmd'|reset|down|status}" >&2; exit 1 ;;
 esac
