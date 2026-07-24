@@ -47,6 +47,13 @@ cmd_setup() {
   # A fresh overlay has an empty /var/lib/cloud, so cloud-init runs in full on
   # every `up` and configures the `lab` user from scratch — the constant
   # instance-id is fine precisely because the state that keys off it is gone.
+  # apt is made non-interactive at the guest level, not by environment. A
+  # model writes `sudo apt-get install ...`, and that inner sudo scrubs any
+  # DEBIAN_FRONTEND the harness set, so Ubuntu's needrestart/debconf then hang
+  # on a tty that isn't there. Setting the debconf frontend in the guest's own
+  # database and needrestart to automatic makes every apt run quiet regardless
+  # of how the plan invokes it — $nrconf is escaped so the shell heredoc leaves
+  # it for needrestart.
   cat > "$LAB/user-data" <<EOF
 #cloud-config
 users:
@@ -59,6 +66,16 @@ users:
 ssh_pwauth: false
 package_update: false
 package_upgrade: false
+write_files:
+  - path: /etc/needrestart/conf.d/90-vmlab.conf
+    content: "\$nrconf{restart} = 'a';\n\$nrconf{kernelhints} = -1;\n"
+  - path: /etc/apt/apt.conf.d/90-vmlab
+    content: |
+      Dpkg::Use-Pty "0";
+      APT::Get::Assume-Yes "true";
+runcmd:
+  - [ sh, -c, "echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections" ]
+  - [ sh, -c, "echo DEBIAN_FRONTEND=noninteractive >> /etc/environment" ]
 EOF
   genisoimage -quiet -output "$SEED" -volid cidata -joliet -rock \
     "$LAB/user-data" "$LAB/meta-data"

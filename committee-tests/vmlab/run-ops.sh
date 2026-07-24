@@ -23,6 +23,9 @@ ssh -o BatchMode=yes "$REMOTE" "
   cd $DEST
   tasks=\$(find tasks -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
   [ -n \"\$tasks\" ] || { echo 'no tasks/ to run — merge the fixtures first'; exit 1; }
+  # Regenerate the cloud-init seed so any guest-config change here takes effect
+  # on the next boot; idempotent, keeps the existing ssh key.
+  ./vmlab.sh setup >/dev/null
   VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' \
     python3 ops_committee.py \$tasks
 "

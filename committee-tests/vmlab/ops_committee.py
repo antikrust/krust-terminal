@@ -32,6 +32,14 @@ import urllib.request
 VMLAB = os.environ.get("VMLAB", "/mnt/terra/vmlab/vmlab.sh")
 HERE = pathlib.Path(__file__).resolve().parent
 RUNGUEST = str(HERE / "runguest.sh")
+# The graders invoke this as a bare executable — `"$RUN" 'cmd'` — so it has to
+# carry its execute bit. A commit or an rsync that drops it makes every grader
+# fail with "Permission denied", empty output, and a uniform 0/N that looks
+# like the models failed when nothing even ran. Guarantee it here.
+try:
+    os.chmod(RUNGUEST, 0o755)
+except OSError:
+    pass
 HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 MODELS = [m.strip() for m in os.environ.get("MODELS", "qwen2.5-coder:7b").split(",") if m.strip()]
 
@@ -131,8 +139,12 @@ def run_one(task_dir, model):
             text=True,
             env={**os.environ, "VMLAB": VMLAB},
         )
-        if pre.returncode == 0:
-            print(f"  ! precheck already satisfied on a pristine guest — task is trivial")
+        # The precheck passes (exit 0) when the task is genuinely not yet done,
+        # which is the expected state on a pristine guest. A non-zero here means
+        # the guest already satisfies the task before the model touched it —
+        # a sign the fixture or the reset is wrong, worth flagging.
+        if pre.returncode != 0:
+            print("  ! precheck: task already looks done on a pristine guest — check the fixture")
 
     started = time.time()
     reply = ollama(model, PLAN_SYSTEM, prompt)
