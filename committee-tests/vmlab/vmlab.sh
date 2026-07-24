@@ -106,7 +106,18 @@ cmd_up() {
   printf 'booting'
   i=0
   while [ "$i" -lt 60 ]; do
-    ssh_guest true 2>/dev/null && { echo " — ready"; return 0; }
+    if ssh_guest true 2>/dev/null; then
+      # ssh answers well before cloud-init has finished, and until it does the
+      # guest is still running its own apt (unattended-upgrades) and hasn't
+      # applied our config — so a plan's `apt-get` collides with boot-time apt
+      # and waits out the whole lock timeout. One nginx task sat for 420s on
+      # exactly this. Wait for cloud-init to actually complete before calling
+      # the guest ready.
+      printf ' settling'
+      ssh_guest "cloud-init status --wait >/dev/null 2>&1 || true" 2>/dev/null
+      echo " — ready"
+      return 0
+    fi
     printf '.'; sleep 3; i=$((i + 1))
   done
   echo " — TIMED OUT after 3 min (see $LAB/console.log)" >&2
