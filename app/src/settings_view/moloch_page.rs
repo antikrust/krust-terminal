@@ -49,9 +49,19 @@ enum Reachability {
     Down(String),
 }
 
+/// One agent run as shown in the in-app list.
+#[derive(Clone)]
+struct RunRow {
+    id: String,
+    title: String,
+    state: String,
+}
+
 pub struct MolochPageView {
     page: PageType<Self>,
     reachability: Reachability,
+    /// Agent runs this Moloch is brokering, newest first.
+    runs: Vec<RunRow>,
     /// Tail of the server's log, most recent last.
     log_lines: Vec<String>,
     state_handles: RefCell<StateHandles>,
@@ -60,6 +70,16 @@ pub struct MolochPageView {
 #[derive(Default)]
 struct StateHandles {
     refresh_link: MouseStateHandle,
+    /// One per run row, for its Stop link; resized when the run list changes.
+    stop_links: Vec<MouseStateHandle>,
+}
+
+/// The run states worth offering a Stop control for — the ones still going.
+fn is_active(state: &str) -> bool {
+    matches!(
+        state.to_ascii_uppercase().as_str(),
+        "QUEUED" | "RUNNING" | "CLAIMED"
+    )
 }
 
 impl MolochPageView {
@@ -67,11 +87,13 @@ impl MolochPageView {
         let widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
             Box::new(PageTitleWidget::new("Moloch", true)),
             Box::new(ServerWidget),
+            Box::new(RunsWidget),
             Box::new(LogWidget),
         ];
         let mut view = Self {
             page: PageType::new_uncategorized(widgets, None),
             reachability: Reachability::Unknown,
+            runs: Vec::new(),
             log_lines: Vec::new(),
             state_handles: RefCell::new(StateHandles::default()),
         };
@@ -111,9 +133,13 @@ impl MolochPageView {
                         response.json::<serde_json::Value>().await.ok()
                     }
                 };
-                (get("/api/v1/status").await, get("/api/v1/logs").await)
+                (
+                    get("/api/v1/status").await,
+                    get("/api/v1/agent/runs").await,
+                    get("/api/v1/logs").await,
+                )
             },
-            |me, (status, logs), ctx| {
+            |me, (status, runs, logs), ctx| {
                 me.reachability = match status {
                     Some(status) => Reachability::Up {
                         gateway: status["gateway"].as_str().map(str::to_owned),
@@ -126,6 +152,20 @@ impl MolochPageView {
                         "Couldn't reach it. Is the server running at the address below?".to_owned(),
                     ),
                 };
+                me.runs = runs
+                    .and_then(|runs| runs["runs"].as_array().cloned())
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|run| {
+                        Some(RunRow {
+                            id: run["task_id"].as_str()?.to_owned(),
+                            title: run["title"].as_str().unwrap_or("Untitled run").to_owned(),
+                            state: run["state"].as_str().unwrap_or("?").to_owned(),
+                        })
+                    })
+                    .collect();
+                me.state_handles.borrow_mut().stop_links =
+                    (0..me.runs.len()).map(|_| MouseStateHandle::default()).collect();
                 me.log_lines = logs
                     .and_then(|logs| logs["lines"].as_array().cloned())
                     .unwrap_or_default()
@@ -134,6 +174,29 @@ impl MolochPageView {
                     .collect();
                 ctx.notify();
             },
+        );
+    }
+
+    /// Cancels a run from the in-app list, then refreshes so its row updates.
+    /// Best-effort — a failed cancel just leaves the run as it was.
+    fn stop_run(&mut self, id: String, ctx: &mut ViewContext<Self>) {
+        let Some(config) = crate::moloch::config() else {
+            return;
+        };
+        let base = config.url.clone();
+        let token = config.token.clone().unwrap_or_default();
+        let client = reqwest::Client::new();
+        ctx.spawn(
+            async move {
+                let _ = client
+                    .post(format!("{base}/api/v1/agent/runs/{id}/cancel"))
+                    .bearer_auth(&token)
+                    .json(&serde_json::json!({}))
+                    .timeout(std::time::Duration::from_secs(5))
+                    .send()
+                    .await;
+            },
+            |me, _result, ctx| me.refresh(ctx),
         );
     }
 }
@@ -155,6 +218,7 @@ impl View for MolochPageView {
 #[derive(Clone, Debug, PartialEq)]
 pub enum MolochPageAction {
     Refresh,
+    StopRun(String),
 }
 
 impl TypedActionView for MolochPageView {
@@ -163,6 +227,7 @@ impl TypedActionView for MolochPageView {
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
             MolochPageAction::Refresh => self.refresh(ctx),
+            MolochPageAction::StopRun(id) => self.stop_run(id.clone(), ctx),
         }
     }
 }
@@ -298,6 +363,89 @@ impl SettingsWidget for ServerWidget {
         );
 
         let _ = app;
+        column.finish()
+    }
+}
+
+/// Agent runs this Moloch is brokering — monitor them, and stop one without
+/// leaving the app for the web panel.
+#[derive(Default)]
+struct RunsWidget;
+
+impl SettingsWidget for RunsWidget {
+    type View = MolochPageView;
+
+    fn search_terms(&self) -> &str {
+        "moloch runs agents cloud agent stop cancel monitor tasks"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        column.add_child(section_break(appearance));
+        column.add_child(
+            Container::new(render_sub_header(appearance, "Runs", None))
+                .with_margin_top(VERTICAL_MARGIN)
+                .with_padding_bottom(HEADER_PADDING)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(body_text(
+                "Agent runs this Moloch is brokering, newest first. Stop one here without \
+                 opening the web panel.",
+                appearance,
+            ))
+            .with_margin_bottom(12.)
+            .finish(),
+        );
+
+        if view.runs.is_empty() {
+            column.add_child(sub_text("No runs yet.", appearance));
+            return column.finish();
+        }
+
+        let handles = view.state_handles.borrow();
+        for (index, run) in view.runs.iter().enumerate() {
+            let mut line = Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    Container::new(sub_text(&run.state, appearance))
+                        .with_margin_right(12.)
+                        .finish(),
+                )
+                .with_child(body_text(&run.title, appearance));
+            if is_active(&run.state) {
+                if let Some(handle) = handles.stop_links.get(index) {
+                    let id = run.id.clone();
+                    line = line.with_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .link(
+                                    "Stop".into(),
+                                    None,
+                                    Some(Box::new(move |ctx| {
+                                        ctx.dispatch_typed_action(MolochPageAction::StopRun(
+                                            id.clone(),
+                                        ));
+                                    })),
+                                    handle.clone(),
+                                )
+                                .soft_wrap(false)
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_left(12.)
+                        .finish(),
+                    );
+                }
+            }
+            column.add_child(Container::new(line.finish()).with_margin_top(6.).finish());
+        }
         column.finish()
     }
 }
