@@ -143,10 +143,17 @@ def run_one(task_dir, model):
     # asking to confirm) reads from the same stdin and swallows the *following*
     # commands as its answers. That silently dropped a `usermod -aG sudo` once
     # and the grade caught it — the plan was right, the execution ate it.
-    vmlab("run", "cat > /tmp/ops_plan.sh", stdin=plan + "\n")
-    execution = vmlab(
-        "run", "sudo DEBIAN_FRONTEND=noninteractive bash /tmp/ops_plan.sh </dev/null"
-    )
+    #
+    # The env that keeps apt non-interactive has to be set INSIDE the script:
+    # sudo scrubs the environment, so a DEBIAN_FRONTEND on the outer command is
+    # gone by the time apt runs, and Ubuntu 22.04's needrestart then pops a
+    # dialog that wedges the whole plan (it once ran for ten minutes). And
+    # `timeout` bounds a genuinely stuck plan — a foregrounded daemon, a slow
+    # mirror — into a clean failure the grade can read instead of a wall-clock
+    # hang.
+    preamble = "export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1\n"
+    vmlab("run", "cat > /tmp/ops_plan.sh", stdin=preamble + plan + "\n")
+    execution = vmlab("run", "sudo timeout 420 bash /tmp/ops_plan.sh </dev/null")
     passed, report = grade(task_dir)
     seconds = int(time.time() - started)
 
