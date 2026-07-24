@@ -21,6 +21,7 @@ use crate::coding_entrypoints::project_buttons::{ProjectButtons, ProjectButtonsE
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
 use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
+use crate::settings::AISettings;
 use crate::terminal::TerminalView;
 use crate::util::bindings::{keybinding_name_to_display_string, BindingGroup, CustomAction};
 use crate::view_components::DismissibleToast;
@@ -208,6 +209,13 @@ impl GetStartedView {
             }
         }
 
+        let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
+        let (welcome_title, welcome_subtitle) = if swear_mode {
+            ("right, let's fucking go", "The Agentic Dev Environment — now shut up and type")
+        } else {
+            ("Welcome to Derp", "The Agentic Development Environment")
+        };
+
         Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_children([
@@ -223,7 +231,7 @@ impl GetStartedView {
                 .finish(),
                 appearance
                     .ui_builder()
-                    .paragraph("Welcome to Derp")
+                    .paragraph(welcome_title)
                     .with_style(UiComponentStyles {
                         font_size: Some(20.),
                         ..Default::default()
@@ -233,7 +241,7 @@ impl GetStartedView {
                 Container::new(
                     appearance
                         .ui_builder()
-                        .paragraph("The Agentic Development Environment")
+                        .paragraph(welcome_subtitle)
                         .with_style(UiComponentStyles {
                             font_size: Some(14.),
                             font_family_id: Some(appearance.monospace_font_family()),
