@@ -1,0 +1,3 @@
+Give this box a small RAM-backed scratch area: a tmpfs of 32M mounted at
+/srv/cache. It should be mounted and usable right now, and it should come back
+automatically on every boot.

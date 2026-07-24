@@ -1,0 +1,5 @@
+Set up the home for a service that runs as its own user, app. Create the
+directory /srv/app, and inside it a subdirectory data holding a file
+config.yml. The whole tree — /srv/app and everything underneath it — must end
+up owned by app:app and set to mode 750. Make sure the ownership and the
+permissions apply all the way down, not just to the top-level directory.
