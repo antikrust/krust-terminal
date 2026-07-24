@@ -130,6 +130,9 @@ pub enum FileTreeAction {
     CDToDirectory {
         id: FileTreeIdentifier,
     },
+    RemoveProjectFolder {
+        id: FileTreeIdentifier,
+    },
     DismissEditor,
     ItemDroppedOnInput {
         id: FileTreeIdentifier,
@@ -260,6 +263,11 @@ pub struct FileTreeView {
     context_menu: ViewHandle<Menu<FileTreeAction>>,
     /// State for the context menu, if one is currently open.
     context_menu_state: Option<ContextMenuState>,
+    /// Fork: root paths pinned as "project folders" via the left panel's
+    /// Add-project-folder control. Only these roots offer a "Remove project
+    /// folder" context-menu action; the pane group's own working-directory
+    /// roots do not.
+    pinned_project_folders: Vec<StandardizedPath>,
     /// Unique ID used to position this view.
     position_id: String,
     /// The pending edit, if any
@@ -716,6 +724,7 @@ impl FileTreeView {
             view_handle: ctx.handle(),
             context_menu,
             context_menu_state: None,
+            pinned_project_folders: Vec::new(),
             position_id: format!("file_tree_{}", ctx.view_id()),
             pending_edit: None,
             editor_view,
@@ -992,6 +1001,20 @@ impl FileTreeView {
     /// can still see their focus. Explicitly-collapsed folders are not
     /// re-expanded.
     #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
+    /// Fork: records which roots are pinned project folders, so their context
+    /// menu can offer "Remove project folder". Paths that fail local
+    /// standardization are dropped, mirroring `set_root_directories`.
+    pub fn set_pinned_project_folders(
+        &mut self,
+        paths: Vec<PathBuf>,
+        _ctx: &mut ViewContext<Self>,
+    ) {
+        self.pinned_project_folders = paths
+            .iter()
+            .filter_map(|p| StandardizedPath::try_from_local(p).ok())
+            .collect();
+    }
+
     pub fn set_root_directories(&mut self, paths: Vec<PathBuf>, ctx: &mut ViewContext<Self>) {
         // Convert PathBuf inputs to StandardizedPath at this entry point.
         let std_paths: Vec<StandardizedPath> = paths
@@ -2394,6 +2417,18 @@ impl FileTreeView {
                             .with_on_select_action(FileTreeAction::OpenInNewTab { id: id.clone() })
                             .into_item(),
                     );
+                    // Fork: only roots pinned as project folders can be
+                    // un-pinned; working-directory roots have no such action.
+                    if self.pinned_project_folders.contains(item.path()) {
+                        items.push(MenuItem::Separator);
+                        items.push(
+                            MenuItemFields::new("Remove project folder")
+                                .with_on_select_action(FileTreeAction::RemoveProjectFolder {
+                                    id: id.clone(),
+                                })
+                                .into_item(),
+                        );
+                    }
                 }
             };
 
@@ -2537,6 +2572,19 @@ impl FileTreeView {
         } else {
             self.open_file(&path, Some(EditorLayout::NewTab), ctx);
         }
+    }
+
+    /// Fork: reports the pinned root the user asked to remove back up to the
+    /// left panel, which owns the pinned-folder list.
+    fn remove_project_folder_root(&mut self, id: &FileTreeIdentifier, ctx: &mut ViewContext<Self>) {
+        let Some(root_dir) = self.root_directories.get(&id.root) else {
+            return;
+        };
+        let Some(item) = root_dir.items.get(id.index) else {
+            return;
+        };
+        let path = item.path().to_local_path_lossy();
+        ctx.emit(FileTreeEvent::RemoveProjectFolder { path });
     }
 
     fn cd_to_directory(&mut self, id: &FileTreeIdentifier, ctx: &mut ViewContext<Self>) {
@@ -2937,6 +2985,8 @@ pub enum FileTreeEvent {
     CDToDirectory { path: PathBuf },
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     OpenDirectoryInNewTab { path: PathBuf },
+    #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    RemoveProjectFolder { path: PathBuf },
 }
 
 impl Entity for FileTreeView {
@@ -3123,6 +3173,12 @@ impl TypedActionView for FileTreeView {
             FileTreeAction::CDToDirectory { id } => {
                 if !self.is_remote_item(id) {
                     self.cd_to_directory(id, ctx);
+                }
+                self.context_menu_state.take();
+            }
+            FileTreeAction::RemoveProjectFolder { id } => {
+                if !self.is_remote_item(id) {
+                    self.remove_project_folder_root(id, ctx);
                 }
                 self.context_menu_state.take();
             }

@@ -11,7 +11,7 @@ use derpui::elements::{
     Element, Empty, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     Resizable, ResizableStateHandle, Shrinkable,
 };
-use derpui::platform::Cursor;
+use derpui::platform::{Cursor, FilePickerConfiguration};
 use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use derpui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
@@ -75,6 +75,7 @@ struct MouseStateHandles {
     tabs_button: MouseStateHandle,
     chat_button: MouseStateHandle,
     chat_detach_button: MouseStateHandle,
+    add_project_folder_button: MouseStateHandle,
 }
 
 #[derive(Clone, Debug)]
@@ -89,6 +90,9 @@ pub enum LeftPanelAction {
     /// Fork: the global chat room, embedded in the panel (detachable into its
     /// own tab via the header button).
     Chat,
+    /// Fork: open a directory picker and pin the chosen folder as an extra
+    /// root in the project explorer (multi-root "project folders").
+    AddProjectFolder,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -199,6 +203,14 @@ pub struct LeftPanelView {
     working_directories_model: ModelHandle<WorkingDirectoriesModel>,
     is_agent_management_view_open: bool,
     panel_position: super::PanelPosition,
+    /// Fork: extra project-folder roots the user pinned into the explorer via
+    /// "Add project folder", unioned with the active pane group's working
+    /// directories so the explorer can show several projects at once.
+    project_folders: Vec<PathBuf>,
+    /// The most recent base roots (this pane group's working directories),
+    /// cached so pinning a folder can re-root the tree immediately without
+    /// recomputing them from the working-directories model.
+    last_local_directories: Vec<PathBuf>,
 }
 
 fn toolbelt_tooltip_keybinding(binding_names: &[&'static str], app: &AppContext) -> Option<String> {
@@ -325,14 +337,22 @@ impl LeftPanelView {
                 });
 
                 // Directories are already in display order (most recent first) from the model
-                let local_directories = deduplicate_by_directory_name(local_paths);
+                let base_directories = deduplicate_by_directory_name(local_paths);
+                // Fork: cache this pane group's base roots, then add any pinned
+                // project folders so the explorer is multi-root. Pinning a
+                // folder re-roots the tree from the cached base without waiting
+                // for the next working-directory change.
+                me.last_local_directories = base_directories.clone();
+                let local_directories = me.explorer_root_directories(base_directories);
                 let file_tree_view =
                     me.get_or_create_file_tree_view_for_pane_group(active_pane_group.id(), ctx);
 
                 let is_visible =
                     active_pane_group.as_ref(ctx).left_panel_open && me.is_file_tree_active();
+                let pinned_folders = me.project_folders.clone();
                 file_tree_view.update(ctx, |view, ctx| {
                     view.set_root_directories(local_directories, ctx);
+                    view.set_pinned_project_folders(pinned_folders, ctx);
                     #[cfg(feature = "local_fs")]
                     view.set_remote_root_directories(&remote_repos, ctx);
                     view.set_has_terminal_session(has_terminal_session, ctx);
@@ -359,6 +379,8 @@ impl LeftPanelView {
             working_directories_model,
             is_agent_management_view_open: false,
             panel_position: super::PanelPosition::Left,
+            project_folders: load_persisted_project_folders(),
+            last_local_directories: Vec::new(),
         };
         view.update_button_active_states();
 
@@ -686,7 +708,13 @@ impl LeftPanelView {
             view.set_root_directories(all_directories, view_ctx);
         });
 
-        let local_directories = deduplicate_by_directory_name(local_paths);
+        // Fork: cache base roots and union pinned project folders, matching the
+        // working-directories subscription, so this activation path is
+        // multi-root too and never drops pinned folders.
+        let base_directories = deduplicate_by_directory_name(local_paths);
+        self.last_local_directories = base_directories.clone();
+        let local_directories = self.explorer_root_directories(base_directories);
+        let pinned_folders = self.project_folders.clone();
         let active_file_model = pane_group.as_ref(ctx).active_file_model().clone();
 
         let file_tree_view = self.get_or_create_file_tree_view_for_pane_group(pane_group_id, ctx);
@@ -694,6 +722,7 @@ impl LeftPanelView {
         let is_visible = left_panel_open && self.is_file_tree_active();
         file_tree_view.update(ctx, |view, ctx| {
             view.set_root_directories(local_directories, ctx);
+            view.set_pinned_project_folders(pinned_folders, ctx);
             #[cfg(feature = "local_fs")]
             view.set_remote_root_directories(&remote_repos, ctx);
             view.set_has_terminal_session(has_terminal_session, ctx);
@@ -879,6 +908,9 @@ impl LeftPanelView {
                     pane_group::Event::OpenDirectoryInNewTab { path: path.clone() },
                 ));
             }
+            FileTreeEvent::RemoveProjectFolder { path } => {
+                self.remove_project_folder(path.clone(), ctx);
+            }
         }
     }
 }
@@ -939,6 +971,8 @@ impl LeftPanelView {
                 }
                 LeftPanelAction::Tabs => self.active_view.get() == ToolPanelView::Tabs,
                 LeftPanelAction::Chat => self.active_view.get() == ToolPanelView::Chat,
+                // Not a toolbelt view button; never rendered with active state.
+                LeftPanelAction::AddProjectFolder => false,
             };
         }
     }
@@ -955,6 +989,9 @@ impl LeftPanelView {
             LeftPanelAction::ConversationListView => WorkspaceAction::OpenConversationListView,
             LeftPanelAction::Tabs => WorkspaceAction::OpenVerticalTabsPanel,
             LeftPanelAction::Chat => WorkspaceAction::OpenChatPanel,
+            // Not a toolbelt button — it is dispatched straight to
+            // handle_action, so this mapping is never reached in practice.
+            LeftPanelAction::AddProjectFolder => WorkspaceAction::OpenProjectExplorer,
         };
         let ui_builder = appearance.ui_builder().clone();
         let tooltip_keybinding = button_config.tooltip_keybinding.clone();
@@ -1087,6 +1124,9 @@ impl LeftPanelView {
                 active_view_state::set(self, ToolPanelView::ConversationListView, ctx);
                 send_telemetry_from_ctx!(TelemetryEvent::ConversationListViewOpened, ctx);
             }
+            LeftPanelAction::AddProjectFolder => {
+                self.add_project_folder(ctx);
+            }
             LeftPanelAction::Tabs => {
                 active_view_state::set(self, ToolPanelView::Tabs, ctx);
             }
@@ -1163,6 +1203,80 @@ impl LeftPanelView {
     }
 }
 
+impl LeftPanelView {
+    /// The explorer's roots: this pane group's working directories plus any
+    /// pinned project folders. `set_root_directories` does the ancestor-dedup,
+    /// so a folder that is an ancestor of a working directory (or vice-versa)
+    /// still collapses into one displayed root.
+    fn explorer_root_directories(&self, base: Vec<PathBuf>) -> Vec<PathBuf> {
+        let mut roots = base;
+        for folder in &self.project_folders {
+            if !roots.contains(folder) {
+                roots.push(folder.clone());
+            }
+        }
+        roots
+    }
+
+    /// Opens the native directory picker and pins the chosen folder as an
+    /// extra explorer root.
+    fn add_project_folder(&mut self, ctx: &mut ViewContext<Self>) {
+        let handle = ctx.handle();
+        ctx.open_file_picker(
+            move |result, ctx| {
+                if let Ok(paths) = result {
+                    if let Some(directory_path) = paths.first() {
+                        let path = PathBuf::from(directory_path);
+                        if let Some(view) = handle.upgrade(ctx) {
+                            view.update(ctx, |view, ctx| view.pin_project_folder(path, ctx));
+                        }
+                    }
+                }
+            },
+            FilePickerConfiguration::new().folders_only(),
+        );
+    }
+
+    /// Adds `path` as a project-folder root and re-roots the explorer to show
+    /// it right away, reusing the cached base roots for this pane group.
+    fn pin_project_folder(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
+        if self.project_folders.contains(&path) {
+            return;
+        }
+        self.project_folders.push(path);
+        save_project_folders(&self.project_folders);
+        let roots = self.explorer_root_directories(self.last_local_directories.clone());
+        let pinned = self.project_folders.clone();
+        if let Some(file_tree_view) = self.active_file_tree_view(ctx) {
+            file_tree_view.update(ctx, |view, ctx| {
+                view.set_root_directories(roots, ctx);
+                view.set_pinned_project_folders(pinned, ctx);
+            });
+        }
+        ctx.notify();
+    }
+
+    /// Removes a pinned project folder (via the "Remove project folder"
+    /// context-menu action) and re-roots the explorer without it.
+    fn remove_project_folder(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
+        let before = self.project_folders.len();
+        self.project_folders.retain(|folder| folder != &path);
+        if self.project_folders.len() == before {
+            return;
+        }
+        save_project_folders(&self.project_folders);
+        let roots = self.explorer_root_directories(self.last_local_directories.clone());
+        let pinned = self.project_folders.clone();
+        if let Some(file_tree_view) = self.active_file_tree_view(ctx) {
+            file_tree_view.update(ctx, |view, ctx| {
+                view.set_root_directories(roots, ctx);
+                view.set_pinned_project_folders(pinned, ctx);
+            });
+        }
+        ctx.notify();
+    }
+}
+
 impl TypedActionView for LeftPanelView {
     type Action = LeftPanelAction;
 
@@ -1219,13 +1333,51 @@ impl LeftPanelView {
                 .clone(),
             LeftPanelAction::Tabs => self.mouse_state_handles.tabs_button.clone(),
             LeftPanelAction::Chat => self.mouse_state_handles.chat_button.clone(),
+            LeftPanelAction::AddProjectFolder => {
+                self.mouse_state_handles.add_project_folder_button.clone()
+            }
         }
     }
 
     fn render_active_content(&self, app: &AppContext) -> Box<dyn Element> {
         match self.active_view.get() {
             ToolPanelView::ProjectExplorer => {
-                if let Some(file_tree_view) = self.active_file_tree_view(app) {
+                // Fork: a slim header carrying the "Add project folder" control,
+                // then the file tree — which is already multi-root, so pinned
+                // folders appear alongside the current directory.
+                let appearance = Appearance::as_ref(app);
+                let icon_color = appearance
+                    .theme()
+                    .sub_text_color(appearance.theme().background());
+                let tooltip = appearance
+                    .ui_builder()
+                    .tool_tip("Add project folder".to_string())
+                    .build()
+                    .finish();
+                let add_button = icon_button_with_color(
+                    appearance,
+                    Icon::Plus,
+                    false,
+                    self.mouse_state_handles.add_project_folder_button.clone(),
+                    icon_color,
+                )
+                .with_tooltip(move || tooltip)
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(LeftPanelAction::AddProjectFolder);
+                })
+                .with_cursor(Cursor::PointingHand)
+                .finish();
+                let header = Container::new(
+                    Flex::row()
+                        .with_main_axis_size(MainAxisSize::Max)
+                        .with_main_axis_alignment(MainAxisAlignment::End)
+                        .with_child(add_button)
+                        .finish(),
+                )
+                .with_padding_right(4.)
+                .finish();
+                let body = if let Some(file_tree_view) = self.active_file_tree_view(app) {
                     Shrinkable::new(
                         1.0,
                         Container::new(ChildView::new(&file_tree_view).finish())
@@ -1236,7 +1388,16 @@ impl LeftPanelView {
                     .finish()
                 } else {
                     Shrinkable::new(1.0, Container::new(Empty::new().finish()).finish()).finish()
-                }
+                };
+                Shrinkable::new(
+                    1.0,
+                    Flex::column()
+                        .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+                        .with_child(header)
+                        .with_child(body)
+                        .finish(),
+                )
+                .finish()
             }
             ToolPanelView::GlobalSearch { .. } => {
                 if let Some(global_search_view) = self.active_global_search_view(app) {
@@ -1402,6 +1563,33 @@ impl LeftPanelView {
                 (min_width, max_width.max(min_width))
             }))
             .finish()
+    }
+}
+
+/// Where the pinned project folders are stored between sessions — a small
+/// JSON list in the app state directory, alongside the other GUI state.
+fn project_folders_store_path() -> PathBuf {
+    derp_core::paths::state_dir().join("project_folders.json")
+}
+
+/// Loads the pinned project folders saved by a previous session. Best-effort:
+/// a missing or unreadable file just means "no pinned folders", never an error.
+fn load_persisted_project_folders() -> Vec<PathBuf> {
+    let Ok(text) = std::fs::read_to_string(project_folders_store_path()) else {
+        return Vec::new();
+    };
+    serde_json::from_str::<Vec<PathBuf>>(&text).unwrap_or_default()
+}
+
+/// Persists the pinned project folders. Best-effort — a failed write must
+/// never take down the panel, so the result is deliberately ignored.
+fn save_project_folders(folders: &[PathBuf]) {
+    let path = project_folders_store_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(text) = serde_json::to_string_pretty(folders) {
+        let _ = std::fs::write(&path, text);
     }
 }
 
