@@ -1,8 +1,8 @@
 # The sysadmin task fixtures
 
-Everything else in `committee-tests/` measures a model against code. This
-measures it against a **machine** — a fresh Debian 12 guest that a small model
-is asked to configure, and that is then graded on the state it left behind.
+The fixtures in `committee-tests/` measure a model against code. These measure
+it against a **machine** — a fresh guest that a small model is asked to
+configure, and that is then graded on the state it left behind.
 
 The guest is disposable and isolated: a KVM sandbox that `vmlab.sh` boots
 clean, hands to the model, and rolls back with one command. That rollback is

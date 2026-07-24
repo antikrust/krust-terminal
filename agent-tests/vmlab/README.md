@@ -1,9 +1,11 @@
 # vmlab — a disposable Linux sandbox for model-planned sysadmin
 
-The code fixtures in `committee-tests/` measure a committee against code. This
-measures it against **sysadmin work** — create a user, stand up a service,
-set a mount — where the thing that goes wrong is not a wrong value but a
-wrong *command*, run against a real system.
+The fixtures in `committee-tests/` measure a *committee* against code. This is
+a different thing living in a different place — a **single-agent** eval against
+**sysadmin work** — create a user, stand up a service, set a mount — where what
+goes wrong is not a wrong value but a wrong *command*, run against a real
+system. One model plans, the machine grades; there is no panel and no judge
+(see [why](#this-is-not-a-committee)).
 
 That is exactly why it needs a VM and not a scratch directory. A small model
 gets argument order wrong — I watched one insist `needs_reorder(7, 0)` should
@@ -24,8 +26,8 @@ from a throwaway overlay, and nothing a model writes ever touches the host.
   ```
 - **`tasks/`** — sysadmin jobs, each a `PROMPT.txt` and a held-out `check.sh`
   that grades the guest's end state by value, never by the commands used. The
-  committee never sees `check.sh`, same discipline as the code fixtures'
-  graders.
+  model never sees `check.sh`, the same held-out discipline as the code
+  fixtures' graders.
 
 ## The guest
 
@@ -49,15 +51,21 @@ wrote to no longer exists. A live-snapshot reset (seconds instead of a
 reboot) is a follow-up; the reboot version is slower and impossible to get
 subtly wrong.
 
-## The committee here needs no judge
+## This is not a committee
 
-The code committee has to make several models argue toward a verdict because
-there is no oracle for "is this code correct". Here there is: the running
-system. So the ops committee is just **fan-out and grade** — each model
-proposes a plan, each plan runs in its own fresh guest, and `check.sh` reads
-the real end state. No model ever judges another's work, because the machine
-already knows the answer. `ops_committee.py` with `MODELS=a,b,c` does exactly
-this and reports each independently.
+The code committee makes several models argue toward a verdict for exactly one
+reason: there is no oracle for "is this code correct", so the panel and the
+judge stand in for the checker you wish you had. Here that checker exists — the
+running system — so none of that apparatus has anything to do. There is no
+consensus and no judge; each model's plan runs in its own fresh guest and
+`check.sh` reads the real end state. **A committee is what you build when you
+can't grade the answer; where you can, one agent and a checker is the whole of
+it.**
+
+So `ops_bench.py` with `MODELS=a,b,c` is a **benchmark** — three independent
+graded rows, "which model does sysadmin best" — not a panel converging on one
+answer. (Loop a single model until `check.sh` passes and you have best-of-N
+against the grader; also not a committee.) It reports each model independently.
 
 ## What's proven
 

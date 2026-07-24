@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
 """Point local models at a sysadmin task, run their plans in the vmlab guest,
-and grade the guest's end state — the committee, for sysadmin.
+and grade the guest's end state — a single-agent sysadmin eval.
 
-    ops_committee.py <task-dir>...        # one or more tasks/<name>/
-    ops_committee.py --demo               # a built-in task, to prove the loop
+    ops_bench.py <task-dir>...        # one or more tasks/<name>/
+    ops_bench.py --demo               # a built-in task, to prove the loop
 
 Per task, per model: reset the guest to pristine, ask the model for a plan
 (shell commands only), run the whole plan inside the guest, then run the
 task's held-out check.sh against the guest's end state. Reset again. Nothing
 a model writes runs anywhere but the disposable guest.
 
-The split that made the code committee work applies here unchanged: the model
-proposes, the machine checks. A model is good at proposing commands and bad at
-judging whether they worked — so the grade is never the model's opinion, it is
-check.sh reading the real system by value.
+This is NOT a committee, and naming matters: there is no consensus, no judge,
+no model ever seeing another's work. Each model is graded on its own, so
+several models is a benchmark (which one does sysadmin best), not a panel. A
+committee exists to fake an oracle you don't have — "is this code correct?"
+has no ground truth to run — and here the oracle is real: the running machine.
+Where you can check the answer you need one agent and a checker, not a panel
+arguing toward a verdict.
+
+What does carry over from the code committee is the one split underneath all
+of it: the model proposes, the machine checks. A model is good at proposing
+commands and bad at judging whether they worked — so the grade is never the
+model's opinion, it is check.sh reading the real system by value.
 
 Environment:
     VMLAB        path to vmlab.sh          (default /mnt/terra/vmlab/vmlab.sh)

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Deploy the vmlab harness + tasks to the KVM host and run the ops committee
+# Deploy the vmlab harness + tasks to the KVM host and run the sysadmin eval
 # across every task, for the named models. Run from the repo side (the Mac);
 # it ships the scripts and reports the results back.
 #
@@ -27,5 +27,5 @@ ssh -o BatchMode=yes "$REMOTE" "
   # on the next boot; idempotent, keeps the existing ssh key.
   ./vmlab.sh setup >/dev/null
   VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' \
-    python3 ops_committee.py \$tasks
+    python3 ops_bench.py \$tasks
 "
