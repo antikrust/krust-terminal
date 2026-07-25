@@ -57,11 +57,23 @@ struct RunRow {
     state: String,
 }
 
+/// One cell of the vmlab eval leaderboard: how a model did on one task.
+#[derive(Clone)]
+struct LeaderCell {
+    task: String,
+    model: String,
+    passed: i64,
+    total: i64,
+    median_seconds: Option<i64>,
+}
+
 pub struct MolochPageView {
     page: PageType<Self>,
     reachability: Reachability,
     /// Agent runs this Moloch is brokering, newest first.
     runs: Vec<RunRow>,
+    /// The vmlab eval leaderboard, one cell per (task, model).
+    leaderboard: Vec<LeaderCell>,
     /// Tail of the server's log, most recent last.
     log_lines: Vec<String>,
     state_handles: RefCell<StateHandles>,
@@ -88,12 +100,14 @@ impl MolochPageView {
             Box::new(PageTitleWidget::new("Moloch", true)),
             Box::new(ServerWidget),
             Box::new(RunsWidget),
+            Box::new(LeaderboardWidget),
             Box::new(LogWidget),
         ];
         let mut view = Self {
             page: PageType::new_uncategorized(widgets, None),
             reachability: Reachability::Unknown,
             runs: Vec::new(),
+            leaderboard: Vec::new(),
             log_lines: Vec::new(),
             state_handles: RefCell::new(StateHandles::default()),
         };
@@ -137,9 +151,10 @@ impl MolochPageView {
                     get("/api/v1/status").await,
                     get("/api/v1/agent/runs").await,
                     get("/api/v1/logs").await,
+                    get("/api/v1/agent/leaderboard").await,
                 )
             },
-            |me, (status, runs, logs), ctx| {
+            |me, (status, runs, logs, leaderboard), ctx| {
                 me.reachability = match status {
                     Some(status) => Reachability::Up {
                         gateway: status["gateway"].as_str().map(str::to_owned),
@@ -171,6 +186,20 @@ impl MolochPageView {
                     .unwrap_or_default()
                     .iter()
                     .filter_map(|line| line.as_str().map(str::to_owned))
+                    .collect();
+                me.leaderboard = leaderboard
+                    .and_then(|board| board["cells"].as_array().cloned())
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|cell| {
+                        Some(LeaderCell {
+                            task: cell["task"].as_str()?.to_owned(),
+                            model: cell["model"].as_str().unwrap_or("?").to_owned(),
+                            passed: cell["passed"].as_i64().unwrap_or(0),
+                            total: cell["total"].as_i64().unwrap_or(0),
+                            median_seconds: cell["median_seconds"].as_i64(),
+                        })
+                    })
                     .collect();
                 ctx.notify();
             },
@@ -445,6 +474,106 @@ impl SettingsWidget for RunsWidget {
                 }
             }
             column.add_child(Container::new(line.finish()).with_margin_top(6.).finish());
+        }
+        column.finish()
+    }
+}
+
+/// How the local models do on the vmlab sysadmin eval — the runs the eval
+/// streamed in, grouped by task and ranked best-first. Each run was graded by
+/// the machine it left behind, never its own opinion.
+#[derive(Default)]
+struct LeaderboardWidget;
+
+impl SettingsWidget for LeaderboardWidget {
+    type View = MolochPageView;
+
+    fn search_terms(&self) -> &str {
+        "moloch leaderboard eval vmlab benchmark sysadmin models pass rate tasks scores"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        column.add_child(section_break(appearance));
+        column.add_child(
+            Container::new(render_sub_header(appearance, "Leaderboard", None))
+                .with_margin_top(VERTICAL_MARGIN)
+                .with_padding_bottom(HEADER_PADDING)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(body_text(
+                "How the local models do on the vmlab sysadmin eval, per task, best first. \
+                 Each run is graded by the machine it leaves behind, not its own opinion.",
+                appearance,
+            ))
+            .with_margin_bottom(12.)
+            .finish(),
+        );
+
+        if view.leaderboard.is_empty() {
+            column.add_child(sub_text(
+                "No eval runs yet — run the vmlab eval and they land here.",
+                appearance,
+            ));
+            return column.finish();
+        }
+
+        let mut tasks: Vec<String> = view.leaderboard.iter().map(|c| c.task.clone()).collect();
+        tasks.sort();
+        tasks.dedup();
+
+        for task in tasks {
+            column.add_child(
+                Container::new(body_text(&task, appearance))
+                    .with_margin_top(12.)
+                    .finish(),
+            );
+            let mut cells: Vec<&LeaderCell> =
+                view.leaderboard.iter().filter(|c| c.task == task).collect();
+            // Best first: higher pass-rate, then faster.
+            cells.sort_by(|a, b| {
+                let rate = |c: &LeaderCell| c.passed as f64 / c.total.max(1) as f64;
+                rate(b)
+                    .partial_cmp(&rate(a))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then(
+                        a.median_seconds
+                            .unwrap_or(i64::MAX)
+                            .cmp(&b.median_seconds.unwrap_or(i64::MAX)),
+                    )
+            });
+            for cell in cells {
+                let score = format!("{}/{}", cell.passed, cell.total);
+                let time = cell
+                    .median_seconds
+                    .map(|s| format!("~{s}s"))
+                    .unwrap_or_default();
+                let line = Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(
+                        Container::new(sub_text(&score, appearance))
+                            .with_margin_right(12.)
+                            .finish(),
+                    )
+                    .with_child(body_text(&cell.model, appearance))
+                    .with_child(
+                        Container::new(sub_text(&time, appearance))
+                            .with_margin_left(12.)
+                            .finish(),
+                    );
+                column.add_child(
+                    Container::new(line.finish())
+                        .with_margin_left(16.)
+                        .with_margin_top(4.)
+                        .finish(),
+                );
+            }
         }
         column.finish()
     }
