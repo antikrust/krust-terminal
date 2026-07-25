@@ -13,10 +13,6 @@ license.workspace = true
 name = "derp"
 path = "src/lib.rs"
 
-# We define separate targets for each channel (stable, preview, dev) so that we can
-# bundle with its own icon, app name, and channel-specific configuration (such as
-# flag overrides). Otherwise these binaries are exactly identical to our main binary.
-
 [[bin]]
 name = "derp"
 path = "src/bin/oss.rs"
@@ -25,22 +21,6 @@ test = false
 [[bin]]
 name = "integration"
 path = "src/bin/integration.rs"
-test = false
-
-[[bin]]
-name = "stable"
-path = "src/bin/stable.rs"
-test = false
-
-[[bin]]
-name = "dev"
-path = "src/bin/dev.rs"
-test = false
-
-[[bin]]
-name = "preview"
-path = "src/bin/preview.rs"
-required-features = ["preview_channel"]
 test = false
 
 [[bin]]
@@ -893,7 +873,6 @@ code_find_replace = []
 command_palette_file_search = []
 conversation_filter = []
 ai_context_menu_commands = []
-preview_channel = []
 ai_context_menu_code = []
 expand_edit_to_pane = []
 fallback_model_load_output_messaging = []
@@ -1025,39 +1004,6 @@ name = "Derp"
 resources = ["assets/onboarding"]
 icon = ["channels/oss/icon/no-padding/512x512.png", "channels/oss/icon/no-padding/icon.ico"]
 short_description = "The open-source, cloud-backed terminal for individuals and teams."
-
-[package.metadata.bundle.bin.stable]
-category = "public.app-category.developer-tools"
-copyright = "© 2025, Denver Technologies, Inc"
-identifier = "derp.baby.Derp-Stable"
-name = "Derp"
-osx_frameworks = [
-    "frameworks/default/Sentry-Dynamic-WithARM64e.xcframework/macos-arm64_arm64e_x86_64/Sentry.framework",
-]
-resources = ["assets/onboarding"]
-short_description = "The cloud-backed terminal for individuals and teams, stable build."
-
-[package.metadata.bundle.bin.preview]
-category = "public.app-category.developer-tools"
-copyright = "© 2025, Denver Technologies, Inc"
-identifier = "derp.baby.Derp-Preview"
-name = "DerpPreview"
-osx_frameworks = [
-    "frameworks/default/Sentry-Dynamic-WithARM64e.xcframework/macos-arm64_arm64e_x86_64/Sentry.framework",
-]
-resources = ["assets/onboarding"]
-short_description = "The cloud-backed terminal for individuals and teams, feature preview build."
-
-[package.metadata.bundle.bin.dev]
-category = "public.app-category.developer-tools"
-copyright = "© 2025, Denver Technologies, Inc"
-identifier = "derp.baby.Derp-Dev"
-name = "DerpDev"
-osx_frameworks = [
-    "frameworks/dev/Sentry-Dynamic-WithARM64e.xcframework/macos-arm64_arm64e_x86_64/Sentry.framework",
-]
-resources = ["assets/onboarding"]
-short_description = "The cloud-backed terminal for individuals and teams, developer build."
 
 [package.metadata.cargo-udeps.ignore]
 normal = ["embed_plist"]
