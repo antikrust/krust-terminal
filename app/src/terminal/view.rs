@@ -9015,11 +9015,30 @@ impl TerminalView {
         self.ctrl_c_to_active_block(active_block_state, ctx);
     }
 
+    /// The conversation this view is currently running, if any. Used to make ctrl-c and the
+    /// stop button interrupt an agent mid-response.
+    fn in_progress_conversation_id(&self, ctx: &AppContext) -> Option<AIConversationId> {
+        self.ai_context_model
+            .as_ref(ctx)
+            .selected_conversation(ctx)
+            .filter(|conversation| conversation.status().is_in_progress())
+            .map(|conversation| conversation.id())
+    }
+
     fn ctrl_c_to_active_block(
         &mut self,
         active_block_state: CtrlCActiveBlockState,
         ctx: &mut ViewContext<Self>,
     ) {
+        // Stop a running agent first. The branches below all reason about a long-running
+        // *command*; an agent that is simply generating a response matches none of them and
+        // used to fall through to the rich-content handler, which does nothing — so ctrl-c
+        // and the stop button both appeared to be ignored for the one case they exist for.
+        if let Some(conversation_id) = self.in_progress_conversation_id(ctx) {
+            self.stop_local_agent_conversation(conversation_id, ctx);
+            return;
+        }
+
         if active_block_state.is_agent_in_control_of_command {
             self.cli_subagent_controller.update(ctx, |controller, ctx| {
                 controller.switch_control_to_user(
