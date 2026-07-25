@@ -33,6 +33,42 @@ pub enum InputBoxType {
     Classic,
 }
 
+/// How the prompt to the left of the terminal input reads.
+///
+/// This is Derp's own prompt, not the shell's `PS1`: it always ends in `$`, or `#` when you
+/// are root, so the privilege you are typing with is visible at a glance. The variants differ
+/// only in how much location they put in front of that sigil.
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    Default,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[schemars(
+    description = "The prompt shown to the left of the terminal input.",
+    rename_all = "snake_case"
+)]
+pub enum TerminalPromptStyle {
+    /// Just the sigil: `$`
+    Sigil,
+
+    /// The current directory's name, then the sigil: `dest $`
+    #[default]
+    Directory,
+
+    /// The full path with `~` for home, then the sigil: `~/committee-ops/dest $`
+    Path,
+
+    /// User, host, directory, then the sigil: `blah@mac dest $`
+    UserHost,
+}
+
 define_settings_group!(InputSettings,
     settings: [
         show_hint_text: ShowHintText {
@@ -44,6 +80,16 @@ define_settings_group!(InputSettings,
             private: false,
             toml_path: "terminal.input.show_hint_text",
             description: "Whether hint text is shown in the terminal input.",
+        },
+        terminal_prompt_style: TerminalPromptStyleSetting {
+            type: TerminalPromptStyle,
+            default: TerminalPromptStyle::default(),
+            supported_platforms: SupportedPlatforms::ALL,
+            sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+            surface: settings::SettingSurfaces::GUI,
+            private: false,
+            toml_path: "terminal.input.terminal_prompt_style",
+            description: "The prompt shown to the left of the terminal input.",
         },
         classic_completions_mode: ClassicCompletionsMode {
             type: bool,
@@ -190,19 +236,6 @@ define_settings_group!(InputSettings,
             toml_path: "terminal.input.show_terminal_input_message_bar",
             description: "Whether the terminal input message bar is shown.",
         },
-        // Whether to render the terminal input in compact single-line mode: the editor and the
-        // folder chip share one row (chip pushed to the right) and the message bar hint is hidden.
-        // Only applicable when FeatureFlag::AgentView is enabled.
-        compact_terminal_input: CompactTerminalInput {
-            type: bool,
-            default: false,
-            supported_platforms: SupportedPlatforms::ALL,
-            sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
-            surface: settings::SettingSurfaces::GUI,
-            private: false,
-            toml_path: "terminal.input.compact_terminal_input",
-            description: "Whether the terminal input is shown in compact single-line mode.",
-        },
         // Per-menu custom content heights set by drag-to-resize. Not user-visible.
         inline_menu_custom_content_heights: InlineMenuCustomContentHeights {
             type: HashMap<InlineMenuType, f32>,
@@ -260,9 +293,5 @@ impl InputSettings {
 
     pub fn is_terminal_input_message_bar_enabled(&self) -> bool {
         *self.show_terminal_input_message_bar
-    }
-
-    pub fn is_compact_terminal_input_enabled(&self) -> bool {
-        *self.compact_terminal_input
     }
 }

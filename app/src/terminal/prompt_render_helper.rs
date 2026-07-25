@@ -25,13 +25,14 @@ use crate::appearance::Appearance;
 use crate::context_chips::display::PromptDisplay;
 use crate::context_chips::spacing;
 use crate::features::FeatureFlag;
-use crate::settings::{FontSettings, InputSettings};
+use derp_util::path::user_friendly_path;
+use crate::settings::{FontSettings, InputSettings, TerminalPromptStyle};
 use crate::terminal::blockgrid_element::BlockGridElement;
 use crate::terminal::grid_size_util::grid_compute_baseline_position_fn;
 use crate::terminal::input::get_input_box_top_border_width;
 use crate::terminal::ligature_settings::should_use_ligature_rendering;
 use crate::terminal::model::blockgrid::BlockGrid;
-use crate::terminal::model::session::Sessions;
+use crate::terminal::model::session::{Session, Sessions};
 use crate::terminal::model::ObfuscateSecrets;
 use crate::terminal::view::{TerminalAction, PADDING_LEFT as TERMINAL_VIEW_PADDING_LEFT};
 use crate::themes::theme::PromptColors;
@@ -54,7 +55,14 @@ fn prompt_marker_grace_period(shell_type: Option<ShellType>, is_msys2: bool) -> 
     }
 }
 
+#[cfg(test)]
+#[path = "prompt_render_helper_tests.rs"]
+mod tests;
+
 pub const LPROMPT_RIGHT_PADDING_SAME_LINE_PROMPT: f32 = 4.;
+
+/// Gap between the shell prompt and the command the user is typing after it.
+const TERMINAL_PROMPT_GAP: f32 = 6.;
 
 pub fn should_render_ps1_prompt(terminal_model: &TerminalModel, app: &AppContext) -> bool {
     let is_classic_input_enabled = InputSettings::as_ref(app).is_classic_input_enabled(app);
@@ -661,11 +669,92 @@ impl PromptRenderHelper {
         )
     }
 
+    /// Renders Derp's own prompt for the single-line terminal input, to sit to the left of the
+    /// editor the way a real terminal does.
+    ///
+    /// Deliberately not the shell's `PS1`. A default `PS1` is mostly noise on a personal
+    /// machine — `blah@blahs-Mac-mini` tells you nothing you did not know — where the two facts
+    /// actually worth a permanent line are *where you are* and *what you can do*: the location,
+    /// and `$` versus `#` for root. [`TerminalPromptStyle`] chooses how much location to show.
+    ///
+    /// Building it as text rather than reusing the PS1 grid also keeps it on the editor's own
+    /// font and baseline, so the prompt and what you type sit on one line.
+    ///
+    /// `None` before the shell has reported a directory — a prompt that appears late is better
+    /// than one that appears wrong and then moves.
+    pub(in crate::terminal) fn render_terminal_prompt(
+        &self,
+        model: &TerminalModel,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Option<Box<dyn Element>> {
+        let style = *InputSettings::as_ref(app).terminal_prompt_style.value();
+        let block = model.block_list().active_block();
+        let session = block
+            .session_id()
+            .and_then(|session_id| self.sessions.as_ref(app).get(session_id));
+
+        let metadata = block.metadata();
+        let text = terminal_prompt_text(
+            style,
+            session.as_deref().map(Session::user),
+            session.as_deref().map(Session::hostname),
+            session.as_deref().and_then(Session::home_dir),
+            metadata.current_working_directory(),
+        );
+
+        Some(
+            Container::new(
+                Text::new_inline(
+                    text,
+                    appearance.monospace_font_family(),
+                    appearance.monospace_font_size(),
+                )
+                // Match the app's own prompt text exactly — same family, size, weight and
+                // colour — or the prompt reads as a different font from the command beside it.
+                .with_color(PromptColors::from(appearance.theme().clone()).input_prompt_pwd)
+                .with_style(Properties::default().weight(Weight::Bold))
+                .with_line_height_ratio(appearance.line_height_ratio())
+                .with_compute_baseline_position_fn(grid_compute_baseline_position_fn(
+                    appearance.monospace_font_family(),
+                ))
+                .finish(),
+            )
+            .with_margin_right(TERMINAL_PROMPT_GAP)
+            .finish(),
+        )
+    }
+
     pub(in crate::terminal) fn render_universal_developer_input_prompt(
         &self,
         model: &TerminalModel,
         appearance: &Appearance,
         app: &AppContext,
+    ) -> Box<dyn Element> {
+        self.render_udi_prompt_inner(model, appearance, app, true)
+    }
+
+    /// The folder chip for the single-line terminal input, where it sits at the right-hand end
+    /// of the row rather than above the editor.
+    ///
+    /// The stacked layout's top padding aligns the chip with the first text line *below* it; on
+    /// a vertically centred row that same padding just shoves the chip to the bottom, so it is
+    /// dropped here and the row's own centring does the work.
+    pub(in crate::terminal) fn render_terminal_folder_chip(
+        &self,
+        model: &TerminalModel,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        self.render_udi_prompt_inner(model, appearance, app, false)
+    }
+
+    fn render_udi_prompt_inner(
+        &self,
+        model: &TerminalModel,
+        appearance: &Appearance,
+        app: &AppContext,
+        with_stacked_top_padding: bool,
     ) -> Box<dyn Element> {
         let element = {
             if model.block_list().is_bootstrapped() {
@@ -684,10 +773,12 @@ impl PromptRenderHelper {
             .terminal_input_spacing(appearance.line_height_ratio(), app);
 
         let prompt_with_padding_container = Container::new(element.render())
-            .with_padding_top({
+            .with_padding_top(if with_stacked_top_padding {
                 (terminal_spacing.block_padding.padding_top * size_info.cell_height_px().as_f32()
                     - get_input_box_top_border_width())
                     * spacing::UDI_PROMPT_TOP_PADDING_FACTOR
+            } else {
+                0.
             })
             .finish();
 
@@ -789,5 +880,56 @@ impl PromptRenderHelper {
     pub fn git_branch(&self, ctx: &AppContext) -> Option<String> {
         self.prompt_view
             .read(ctx, |prompt_display, ctx| prompt_display.git_branch(ctx))
+    }
+}
+
+/// Builds the prompt string for `style`: a location, then `$` — or `#` when the session's user
+/// is root, the long-standing Unix signal that a mistake here is expensive.
+///
+/// Free-standing and over plain strings so it can be tested without a live terminal.
+pub(in crate::terminal) fn terminal_prompt_text(
+    style: TerminalPromptStyle,
+    user: Option<&str>,
+    hostname: Option<&str>,
+    home_dir: Option<&str>,
+    cwd: Option<&str>,
+) -> String {
+    let sigil = if user == Some("root") { '#' } else { '$' };
+
+    let friendly = |cwd: &str| user_friendly_path(cwd, home_dir).into_owned();
+
+    let location = match style {
+        TerminalPromptStyle::Sigil => String::new(),
+        TerminalPromptStyle::Directory => cwd
+            .map(|cwd| {
+                // The last component only — but `~` and `/` have no last component worth
+                // showing, so they stay whole rather than rendering as an empty name.
+                let friendly = friendly(cwd);
+                match friendly.rsplit('/').next() {
+                    Some(name) if !name.is_empty() => name.to_owned(),
+                    _ => friendly,
+                }
+            })
+            .unwrap_or_default(),
+        TerminalPromptStyle::Path => cwd.map(friendly).unwrap_or_default(),
+        TerminalPromptStyle::UserHost => {
+            let who = match (user, hostname) {
+                (Some(user), Some(host)) => format!("{user}@{host}"),
+                (Some(user), None) => user.to_owned(),
+                _ => String::new(),
+            };
+            let dir = cwd.map(friendly).unwrap_or_default();
+            [who, dir]
+                .into_iter()
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+    };
+
+    if location.is_empty() {
+        sigil.to_string()
+    } else {
+        format!("{location} {sigil}")
     }
 }

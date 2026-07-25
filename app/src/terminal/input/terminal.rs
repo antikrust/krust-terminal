@@ -1,6 +1,6 @@
 use derp_core::settings::Setting;
 use derpui::elements::{
-    Border, Clipped, Container, CrossAxisAlignment, DropTarget, Element, Expanded, Flex, Hoverable,
+    Border, Container, CrossAxisAlignment, DropTarget, Element, Empty, Expanded, Flex, Hoverable,
     ParentElement, SavePosition, Stack,
 };
 use derpui::presenter::ChildView;
@@ -8,18 +8,32 @@ use derpui::{AppContext, SingletonEntity};
 
 use super::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay,
-    add_workflow_info_overlay, should_show_terminal_input_message_bar,
-    wrap_input_with_terminal_padding_and_focus_handler,
+    add_workflow_info_overlay, wrap_input_with_terminal_padding_and_focus_handler,
 };
 use super::{Input, InputAction, InputDropTargetData};
+
 use crate::appearance::Appearance;
 use crate::context_chips::spacing;
 use crate::features::FeatureFlag;
-use crate::settings::{AppEditorSettings, InputModeSettings, InputSettings};
+use crate::settings::{AppEditorSettings, InputModeSettings};
 use crate::terminal::block_list_settings::BlockListSettings;
 use crate::terminal::block_list_viewport::InputMode;
-use crate::terminal::settings::TerminalSettings;
 use crate::terminal::view::TerminalAction;
+
+/// Vertical space above the input row, balancing the editor's own bottom padding so the
+/// text sits centred on its line rather than hard against the divider above it.
+const COMPACT_ROW_TOP_PADDING: f32 = 6.;
+
+/// Extra drop applied to the prompt and editor only. They read a touch high against the
+/// chips at the same top alignment, and the chips are already where they should be.
+const COMMAND_LINE_TOP_NUDGE: f32 = 5.;
+
+/// Below this pane width the context chips move to their own line beneath the command
+/// rather than crowd it. Roughly where the chips plus a usable command line stop fitting.
+const MIN_PANE_WIDTH_FOR_CHIPS: f32 = 700.;
+
+/// Space between the command line and the chips when they have dropped below it.
+const CHIPS_BELOW_COMMAND_GAP: f32 = 4.;
 
 impl Input {
     /// Renders the terminal mode input when `FeatureFlag::AgentView` is enabled and there is no
@@ -51,59 +65,79 @@ impl Input {
             }
         }
 
-        let is_compact_input = InputSettings::as_ref(app).is_compact_terminal_input_enabled();
-
-        let prompt_elements = self
+        // The compact single-line layout is the design of this terminal, not a preference:
+        // the shell prompt sits on the left, the editor fills the row and grows downwards as
+        // the command wraps, and the folder chip is pushed to the far right. No hint bar.
+        let shell_prompt = self
             .prompt_render_helper
-            .render_universal_developer_input_prompt(&model, appearance, app);
+            .render_terminal_prompt(&model, appearance, app);
+
+        // The chips take their natural width, so beside a command line in a narrow pane they
+        // squeeze it to nothing and spill past the edge. The prompt and what you are typing
+        // must never lose that fight — but the chips carry real information, so rather than
+        // dropping them they drop *down*, onto their own line beneath the command, where the
+        // full pane width is theirs.
+        let chips_fit_beside_the_command =
+            self.size_info(app).pane_width_px().as_f32() >= MIN_PANE_WIDTH_FOR_CHIPS;
+        let folder_chip = self
+            .prompt_render_helper
+            .render_terminal_folder_chip(&model, appearance, app);
 
         let input_box = self.render_input_box(show_vim_status, appearance, app);
 
-        if is_compact_input {
-            // Compact single-line layout: the editor fills the row and the folder chip is pushed
-            // to the far right, giving a normal-terminal feel. The message bar hint is omitted.
-            column.add_child(
-                Flex::row()
-                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                    .with_child(Expanded::new(1., input_box).finish())
-                    .with_child(
-                        Container::new(prompt_elements)
-                            .with_margin_right(8.)
-                            .finish(),
-                    )
+        // Everything is top-aligned rather than centred: a wrapped command grows the editor
+        // downwards, and centring would float the prompt into the middle of that block and
+        // let the chips drift upwards as you type. Top alignment keeps the prompt welded to
+        // the command's first line, the way it is in any terminal, and holds the chips still.
+        //
+        // Prompt and editor then travel together as one child so they share a baseline and
+        // can be nudged as a pair; the chips are a separate child and stay where they are.
+        let mut command_line = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Start);
+        if let Some(shell_prompt) = shell_prompt {
+            command_line.add_child(shell_prompt);
+        }
+        command_line.add_child(Expanded::new(1., input_box).finish());
+
+        let mut input_row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Start);
+        input_row.add_child(
+            Expanded::new(
+                1.,
+                Container::new(command_line.finish())
+                    .with_padding_top(COMMAND_LINE_TOP_NUDGE)
                     .finish(),
-            );
+            )
+            .finish(),
+        );
+        let chips_below = if chips_fit_beside_the_command {
+            input_row.add_child(Container::new(folder_chip).with_margin_right(8.).finish());
+            None
         } else {
-            column.add_child(prompt_elements);
+            Some(folder_chip)
+        };
 
-            let terminal_spacing = TerminalSettings::as_ref(app)
-                .terminal_input_spacing(appearance.line_height_ratio(), app);
+        // The editor carries bottom padding for the stacked layout it was built for; on one
+        // row that lands all the slack under the text and jams it against the top border, so
+        // give the row matching space above.
+        column.add_child(
+            Container::new(input_row.finish())
+                .with_padding_top(COMPACT_ROW_TOP_PADDING)
+                .finish(),
+        );
+
+        // Pinned under the command line, still hugging the right edge so the chips sit
+        // where the eye already looks for them.
+        if let Some(folder_chip) = chips_below {
             column.add_child(
-                Container::new(input_box)
-                    .with_margin_top(
-                        terminal_spacing.prompt_to_editor_padding
-                            * spacing::UDI_PROMPT_BOTTOM_PADDING_FACTOR,
-                    )
-                    .finish(),
+                Container::new(
+                    Flex::row()
+                        .with_child(Expanded::new(1., Empty::new().finish()).finish())
+                        .with_child(folder_chip)
+                        .finish(),
+                )
+                .with_margin_right(8.)
+                .with_margin_top(CHIPS_BELOW_COMMAND_GAP)
+                .finish(),
             );
-
-            if should_show_terminal_input_message_bar(&model, app) {
-                column.add_child(
-                    Clipped::new(ChildView::new(&self.terminal_input_message_bar).finish())
-                        .finish(),
-                );
-            } else if !(matches!(input_mode, InputMode::PinnedToTop)
-                && self
-                    .suggestions_mode_model
-                    .as_ref(app)
-                    .is_inline_menu_open())
-            {
-                column.add_child(
-                    Container::new(Flex::row().finish())
-                        .with_margin_bottom(8.)
-                        .finish(),
-                );
-            }
         }
 
         if matches!(input_mode, InputMode::PinnedToTop) {
@@ -316,7 +350,12 @@ pub mod styles {
     use pathfinder_color::ColorU;
     use derp_core::ui::theme::DerpTheme;
 
+    use crate::ui_components::blended_colors;
+
+    /// The rule between the blocks above and the input below. `outline()` is a UI-chrome
+    /// weight that reads as a hard edge across the full width of a terminal; a 5% blend of
+    /// the foreground into the background separates the two areas without drawing the eye.
     pub fn default_border_color(theme: &DerpTheme) -> ColorU {
-        theme.outline().into()
+        blended_colors::neutral_1(theme)
     }
 }

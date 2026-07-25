@@ -6972,6 +6972,17 @@ impl Input {
             }
         });
 
+        // A shell command line is a terminal prompt, not a chat box: the rotating "Derp
+        // anything e.g. …" hint is written for the agent input, and showing it after a real
+        // PS1 prompt reads as text the shell is about to run. Leave the line empty.
+        if self.ai_input_model.as_ref(ctx).input_type() == InputType::Shell {
+            self.editor.update(ctx, |editor, ctx| {
+                editor.clear_placeholder_text(ctx);
+                ctx.notify();
+            });
+            return;
+        }
+
         // Now handle the default (empty prefix) placeholder
         if toggled_on && AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
             if FeatureFlag::AgentMode.is_enabled() {
