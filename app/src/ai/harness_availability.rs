@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use command::blocking::Command;
-use instant::Instant;
-use serde::{Deserialize, Serialize};
-use settings::Setting as _;
 use derp_cli::agent::Harness;
 use derp_core::features::FeatureFlag;
 use derp_errors::report_error;
 use derp_managed_secrets::client::SecretOwner;
 use derp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
 use derpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
+use instant::Instant;
+use serde::{Deserialize, Serialize};
+use settings::Setting as _;
 
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, OLLAMA_COMMITTEE_MODEL_ID,
@@ -95,23 +95,45 @@ fn default_harnesses(disabled: &[String]) -> Vec<HarnessAvailability> {
 /// leaves. A model too big for this machine carries its fit badge in the
 /// display name so the warning follows it into the menu.
 fn append_available_ollama_models(
-    mut models: Vec<HarnessModelInfo>,
+    models: Vec<HarnessModelInfo>,
     remotes: &[crate::ai::ollama::remote::RemoteHost],
     disabled: &[String],
 ) -> Vec<HarnessModelInfo> {
-    // A machine with no local Ollama can still borrow another one's models,
-    // so the absence of the binary only rules out the local listing.
-    if !local_cli_on_path("ollama") && remotes.is_empty() {
-        return models;
-    }
-
-    let total_memory = crate::ai::ollama::capability::total_system_memory_bytes();
-    let mut ollama_model_count = 0_usize;
     let local_installed = if local_cli_on_path("ollama") {
         crate::ai::ollama::service::installed_models_from_disk()
     } else {
         Vec::new()
     };
+    append_available_ollama_models_from(models, local_installed, remotes, disabled)
+}
+
+/// As [`append_available_ollama_models`], but told what is installed rather
+/// than guessing from disk.
+///
+/// The disk guess is wrong more often than it looks. `models_dir()` resolves
+/// `OLLAMA_MODELS` **from this process's environment**, and a server the user
+/// started from their own shell has whatever that shell exported — so a
+/// machine serving sixteen models out of `/Volumes/…/Ollama/models` reads as
+/// having none, the committee pseudo-entry (which needs two) never appears,
+/// and both the model picker's committee row and the new-tab menu's
+/// **Committee** item silently vanish. The running server is authoritative;
+/// see `ollama_committee::fetch_installed_model_names`, which learned this
+/// first.
+fn append_available_ollama_models_from(
+    mut models: Vec<HarnessModelInfo>,
+    local_installed: Vec<crate::ai::ollama::service::InstalledModel>,
+    remotes: &[crate::ai::ollama::remote::RemoteHost],
+    disabled: &[String],
+) -> Vec<HarnessModelInfo> {
+    // Nothing installed here and nothing to borrow means nothing to add.
+    // Keyed off the list rather than the binary: a server can be answering on
+    // a machine whose `ollama` is not on *this* process's PATH.
+    if local_installed.is_empty() && remotes.is_empty() {
+        return models;
+    }
+
+    let total_memory = crate::ai::ollama::capability::total_system_memory_bytes();
+    let mut ollama_model_count = 0_usize;
     for installed in local_installed {
         // A user model literally named "committee" can't be listed: its id
         // would be the committee pseudo-entry's id, which the harness routes
@@ -452,6 +474,15 @@ pub struct HarnessAvailabilityModel {
 
 impl HarnessAvailabilityModel {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
+        // Honour the models folder the user set *in the app* before listing
+        // anything. This was only ever applied by the Ollama settings page, so
+        // on a fresh launch `models_dir()` fell back to `~/.ollama/models` —
+        // and a machine keeping its models on another volume read as having
+        // none. Every Ollama entry went missing from the picker, and with
+        // fewer than two models the committee pseudo-entry with it, so the
+        // new-tab menu's **Committee** item vanished too. Opening the Ollama
+        // page fixed it by side effect, which is not a fix.
+        crate::ai::ollama::service::apply_models_dir_override(ctx);
         // Availability is derived locally from PATH detection on every
         // launch; the old server-list cache could only serve stale data.
         let harnesses = default_harnesses(&crate::ai::ollama::service::disabled_models_for(ctx));
@@ -567,6 +598,48 @@ impl HarnessAvailabilityModel {
             row.available_models = rebuilt;
             ctx.emit(HarnessAvailabilityEvent::Changed);
         }
+
+        // Then ask the server, which knows what it can actually load. The disk
+        // read above is only a guess at the models folder (see
+        // `append_available_ollama_models_from`), so on a machine whose Ollama
+        // was started with its own `OLLAMA_MODELS` it finds nothing and the
+        // committee entry never appears. Asynchronous because the answer is an
+        // HTTP round trip, and self-correcting: whichever list is right, the
+        // row ends up matching it, and an unchanged list emits nothing.
+        let client = reqwest::Client::new();
+        ctx.spawn(
+            async move {
+                crate::ai::ollama::service::list_installed(&client)
+                    .await
+                    .ok()
+            },
+            |me, installed, ctx| {
+                let Some(installed) = installed else {
+                    return;
+                };
+                let remotes = crate::ai::ollama::remote::configured(ctx);
+                let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
+                let Some(row) = me
+                    .harnesses
+                    .iter_mut()
+                    .find(|h| h.harness == Harness::Codex)
+                else {
+                    return;
+                };
+                let codex_only: Vec<HarnessModelInfo> = row
+                    .available_models
+                    .iter()
+                    .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
+                    .cloned()
+                    .collect();
+                let rebuilt =
+                    append_available_ollama_models_from(codex_only, installed, &remotes, &disabled);
+                if row.available_models != rebuilt {
+                    row.available_models = rebuilt;
+                    ctx.emit(HarnessAvailabilityEvent::Changed);
+                }
+            },
+        );
     }
 
     pub fn available_harnesses(&self) -> &[HarnessAvailability] {
