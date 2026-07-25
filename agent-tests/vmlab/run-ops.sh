@@ -16,9 +16,23 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 COMMIT="$(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DEST=/mnt/terra/vmlab/harness
 
+# Mirror each run into the Mac's Moloch so the sweep is watchable in the app,
+# not just this log. Moloch binds to localhost, so a reverse tunnel gives the
+# PC-side eval a local port that forwards back to it — no LAN exposure. With no
+# token found the mirror stays off and the eval runs exactly as before.
+MOLOCH_PORT="${MOLOCH_PORT:-10102}"
+MOLOCH_TOKEN="${MOLOCH_TOKEN:-$(cat "$HOME/.moloch/api-token" 2>/dev/null || true)}"
+TUNNEL=""
+MOLOCH_ENVS=""
+if [ -n "$MOLOCH_TOKEN" ]; then
+  TUNNEL="-R ${MOLOCH_PORT}:127.0.0.1:${MOLOCH_PORT}"
+  MOLOCH_ENVS="MOLOCH_URL=http://127.0.0.1:${MOLOCH_PORT} MOLOCH_TOKEN='${MOLOCH_TOKEN}'"
+fi
+
 rsync -a --delete --exclude='tasks/_demo' "$HERE"/ "$REMOTE:$DEST/"
 
-ssh -o BatchMode=yes "$REMOTE" "
+# shellcheck disable=SC2086  # $TUNNEL must word-split into ssh's args
+ssh -o BatchMode=yes $TUNNEL "$REMOTE" "
   set -eu
   cd $DEST
   tasks=\$(find tasks -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
@@ -26,6 +40,6 @@ ssh -o BatchMode=yes "$REMOTE" "
   # Regenerate the cloud-init seed so any guest-config change here takes effect
   # on the next boot; idempotent, keeps the existing ssh key.
   ./vmlab.sh setup >/dev/null
-  VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' \
-    python3 ops_bench.py \$tasks
+  VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' $MOLOCH_ENVS \
+    python3 -u ops_bench.py \$tasks
 "

@@ -135,6 +135,21 @@ def grade(task_dir):
     return result.returncode == 0, result.stdout.strip()
 
 
+def moloch_mirror(task, model, prompt):
+    """A MolochRun mirroring this eval run into Moloch, or None when none is
+    configured (MOLOCH_URL unset). Best-effort: a missing module or an
+    unreachable server just means no mirror, never a failed eval."""
+    if not os.environ.get("MOLOCH_URL"):
+        return None
+    try:
+        import moloch_stream
+
+        run = moloch_stream.MolochRun(f"vmlab:{task}", model, prompt)
+        return run if run.ok else None
+    except Exception:
+        return None
+
+
 def run_one(task_dir, model):
     prompt = (task_dir / "PROMPT.txt").read_text().strip()
     vmlab("reset")
@@ -154,9 +169,39 @@ def run_one(task_dir, model):
         if pre.returncode != 0:
             print("  ! precheck: task already looks done on a pristine guest — check the fixture")
 
+    # Mirror the run into Moloch, so it is a watchable agent run in the app
+    # rather than a line in this log. Best-effort — no Moloch, no mirror.
+    mirror = moloch_mirror(task_dir.name, model, prompt)
+
     started = time.time()
-    reply = ollama(model, PLAN_SYSTEM, prompt)
+    if mirror:
+        mirror.append([f"asking {model} for a plan…"])
+    # A big model can drop the connection while loading into memory, and that
+    # must fail THIS run rather than abort the sweep: one qwen2.5-coder:32b
+    # RemoteDisconnected once killed all 48 runs because this call was unguarded.
+    try:
+        reply = ollama(model, PLAN_SYSTEM, prompt)
+    except Exception as e:
+        seconds = int(time.time() - started)
+        if mirror:
+            mirror.append([f"model error: {e}"])
+            mirror.complete(False, "model error", str(e))
+        print(
+            f"OPSBENCH task={task_dir.name} model={model} passed=0 "
+            f"seconds={seconds} commit={COMMIT} error=model"
+        )
+        print(f"  ERROR  {task_dir.name}  [{model}]  {type(e).__name__}: {e}")
+        return {
+            "task": task_dir.name,
+            "model": model,
+            "passed": False,
+            "seconds": seconds,
+            "plan": "",
+            "report": f"model error: {e}",
+        }
     plan = clean_plan(reply)
+    if mirror:
+        mirror.append(["--- plan ---"] + [f"$ {line}" for line in plan.splitlines()])
     # Stage the plan as a file and run it with stdin from /dev/null. Piping the
     # plan straight into `bash -s` looks equivalent but is a trap: an
     # interactive command in the plan (adduser asking for a full name, apt
@@ -186,6 +231,18 @@ def run_one(task_dir, model):
             pass
     passed, report = grade(task_dir)
     seconds = int(time.time() - started)
+
+    if mirror:
+        err_tail = execution.stderr.strip().splitlines()[-6:] if execution.stderr.strip() else []
+        if err_tail:
+            mirror.append(["--- guest stderr (tail) ---"] + err_tail)
+        mirror.append(["--- grade ---"] + report.splitlines(), event="grade")
+        summary = (
+            report.splitlines()[-1].strip()
+            if report.strip()
+            else ("passed" if passed else "failed")
+        )
+        mirror.complete(passed, summary, None if passed else report[:800])
 
     verdict = "PASS" if passed else "FAIL"
     # One greppable line per run, stamped with the commit that produced it —
