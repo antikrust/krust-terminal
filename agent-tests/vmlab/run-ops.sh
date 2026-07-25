@@ -11,6 +11,10 @@
 set -eu
 
 REMOTE="${1:-sentience}"
+# Recommended sweep set (pass via MODELS): qwen2.5-coder:7b, mistral-nemo:12b,
+# qwen2.5-coder:14b, deepseek-coder-v2:16b, phi4:14b. Leave out
+# qwen2.5-coder:32b — the 19GB model OOMs Ollama on this box (measured 0/8, all
+# HTTP 500 / RemoteDisconnected); run it on its own if the box ever has the RAM.
 MODELS="${MODELS:-qwen2.5-coder:7b}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 COMMIT="$(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo unknown)"
