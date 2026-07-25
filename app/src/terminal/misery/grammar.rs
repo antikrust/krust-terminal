@@ -87,6 +87,8 @@ fn resolve<R: Rng + ?Sized>(
         "NOUN_TASK" => pick(vocab::NOUN_TASK, rng),
         "NOUN_USER" => pick(noun_user_list(ctx), rng),
         "COMPLAINT" => pick(vocab::COMPLAINT, rng),
+        "COUNTRY" => pick(vocab::COUNTRY, rng),
+        "DESPAIR" => pick(vocab::DESPAIR, rng),
         "VERDICT" => {
             let list = if ctx.succeeded.unwrap_or(true) {
                 vocab::VERDICT_SUCCESS

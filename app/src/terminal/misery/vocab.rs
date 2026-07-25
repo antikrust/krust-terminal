@@ -190,6 +190,50 @@ pub const COMPLAINT: &[&str] = &[
     "the machine is fine. it's you",
 ];
 
+/// Somewhere for the offstage witness to be. Deliberately mundane places: the
+/// joke is that the despair is global, not that the country is funny.
+pub const COUNTRY: &[&str] = &[
+    "Belgium",
+    "Finland",
+    "Peru",
+    "South Korea",
+    "Portugal",
+    "New Zealand",
+    "Estonia",
+    "Uruguay",
+    "Slovenia",
+    "Japan",
+    "Ireland",
+    "Chile",
+    "Denmark",
+    "Malaysia",
+    "Iceland",
+    "Argentina",
+    "Austria",
+    "Vietnam",
+];
+
+/// What the offstage computer scientist does about it. Escalating: each one
+/// out-facepalms the last, and the tail end stops pretending to be plausible.
+pub const DESPAIR: &[&str] = &[
+    "smashed themselves in the face with a lump hammer",
+    "pulled all their teeth out",
+    "dislocated their arm so they could facepalm harder",
+    "moved on from facepalming and tried to plant their face underground",
+    "planted their face so hard another one grew, and now they're the talk of the town",
+    "facepalmed through the desk, the floor, and a colleague",
+    "resigned mid-facepalm",
+    "went to look for their life's work, and could not find it",
+    "started facepalming preemptively, for tomorrow",
+    "removed their own glasses so as not to see it twice",
+    "walked into the sea, notes and all",
+    "began quietly dismantling the lab",
+    "asked to be reassigned to literally anything else",
+    "took up farming, and was happier",
+    "wrote a strongly worded paper nobody will read",
+    "set fire to a whiteboard and watched it burn",
+];
+
 /// Post-completion verdicts for a command that succeeded.
 pub const VERDICT_SUCCESS: &[&str] = &[
     "congratulations, I suppose",

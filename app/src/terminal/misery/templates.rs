@@ -133,6 +133,40 @@ pub const TEMPLATES: &[Template] = &[
     // ── Submit, universal ────────────────────────────────────────────────
     t("{EXCLAIM}. {COMPLAINT}.", Submit, &[], 6),
     t("{EXCLAIM}, {AGAIN}.", Submit, &[], 6),
+    // The offstage witness: somewhere a serious person is reacting badly to
+    // this. Low weight — it lands hardest when it's rare.
+    t(
+        "a computer scientist in {COUNTRY} just {DESPAIR}.",
+        Submit,
+        &[],
+        3,
+    ),
+    t(
+        "{EXCLAIM}. a computer scientist in {COUNTRY} just {DESPAIR}.",
+        Submit,
+        &[],
+        2,
+    ),
+    t(
+        "somewhere in {COUNTRY}, a computer scientist {DESPAIR}.",
+        Complete,
+        &[],
+        3,
+    ),
+    tc(
+        "it worked, and a computer scientist in {COUNTRY} {DESPAIR}.",
+        Complete,
+        &[],
+        Cond::Success,
+        2,
+    ),
+    tc(
+        "it failed. a computer scientist in {COUNTRY} {DESPAIR}.",
+        Complete,
+        &[],
+        Cond::Failure,
+        2,
+    ),
     t(
         "{A_ADJECTIVE} little {NOUN_TASK}. delighted.",
         Submit,
