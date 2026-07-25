@@ -26,7 +26,11 @@ pass() { printf 'PASS  %s\n' "$1"; }
 fail() { printf 'FAIL  %s\n' "$1"; fails=$((fails + 1)); }
 
 # --- nginx is installed -----------------------------------------------------
-if "$RUN" 'command -v nginx' >/dev/null 2>&1; then
+# `which`, not `command -v`: the run-helper wraps every probe in `sudo -n`, and
+# sudo execs a binary — it cannot run the `command` shell builtin, so
+# `command -v nginx` fails even when nginx is installed and serving. `which` is
+# a real binary and sudo's secure_path includes /usr/sbin, where nginx lives.
+if "$RUN" 'which nginx' >/dev/null 2>&1; then
     pass 'nginx is installed'
 else
     fail 'nginx is installed'
