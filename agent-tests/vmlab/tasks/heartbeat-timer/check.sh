@@ -39,45 +39,43 @@ else
 fi
 
 # --- 2 & 3. cadence and reboot-safety, by scanning the loaded timers --------
+# Read each timer's next fire as an absolute wall-clock date and convert it with
+# `date -d`. systemd renders an absolute NEXT even for monotonic
+# OnBootSec/OnUnitActiveSec timers, so this sidesteps `systemctl show`'s
+# NextElapseUSec* fields entirely — which on Ubuntu 22.04's systemd come back
+# HUMAN-FORMATTED ("NextElapseUSecMonotonic=2min 514.166ms"). The old
+# raw-microsecond math (`value/1000000`) misread that as the integer 2 and so
+# failed every correct minute-timer; and because "enabled" was only credited
+# inside that same branch, reboot-safety failed with it. That was a grader bug,
+# not a model error.
 now_epoch=$("$RUN" 'date +%s' 2>/dev/null)
-now_up=$("$RUN" 'cat /proc/uptime' 2>/dev/null | awk '{print $1}' | cut -d. -f1)
 case "$now_epoch" in ''|*[!0-9]*) now_epoch=0 ;; esac
-case "$now_up" in ''|*[!0-9]*) now_up=0 ;; esac
 
 # First field ending in .timer on each row — robust to a leading status glyph.
 names=$("$RUN" 'systemctl list-units --type=timer --all --no-legend --no-pager' 2>/dev/null \
-        | awk '{for(i=1;i<=NF;i++) if($i ~ /\.timer$/){print $i; break}}' \
-        | tr '\n' ' ')
+        | awk '{for(i=1;i<=NF;i++) if($i ~ /\.timer$/){print $i; break}}')
 
 soon=0
 enabled_soon=0
-if [ -n "${names# }" ]; then
-    records=$("$RUN" "systemctl show $names -p Id -p NextElapseUSecRealtime -p NextElapseUSecMonotonic -p UnitFileState -p ActiveState --no-pager" 2>/dev/null)
-    result=$(printf '%s\n' "$records" | awk -v now="$now_epoch" -v up="$now_up" '
-      function ev() {
-        if (as == "active") {
-          if ((er+0) > 0) {
-            d = (er+0)/1000000.0 - now
-            if (d >= -5 && d <= 130) { soon=1; if (ufs=="enabled") es=1 }
-          }
-          if ((em+0) > 0) {
-            d = (em+0)/1000000.0 - up
-            if (d >= -5 && d <= 130) { soon=1; if (ufs=="enabled") es=1 }
-          }
-        }
-        er=0; em=0; as=""; ufs=""
-      }
-      BEGIN { er=0; em=0; as=""; ufs=""; soon=0; es=0 }
-      /^NextElapseUSecRealtime=/  { er=substr($0, index($0,"=")+1) }
-      /^NextElapseUSecMonotonic=/ { em=substr($0, index($0,"=")+1) }
-      /^UnitFileState=/           { ufs=substr($0, index($0,"=")+1) }
-      /^ActiveState=/             { as=substr($0, index($0,"=")+1) }
-      /^$/ { ev() }
-      END  { ev(); print soon "," es }
-    ')
-    soon=$(printf '%s' "$result" | cut -d, -f1)
-    enabled_soon=$(printf '%s' "$result" | cut -d, -f2)
-fi
+for t in $names; do
+    # This timer's next elapse: the leading "YYYY-MM-DD HH:MM:SS TZ" on its
+    # list-timers row, or empty when it has none scheduled (shown as "n/a").
+    next=$("$RUN" "systemctl list-timers $t --all --no-legend --no-pager" 2>/dev/null \
+           | awk '$2 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ { print $2, $3, $4; exit }')
+    [ -n "$next" ] || continue
+    next_epoch=$(date -d "$next" +%s 2>/dev/null)
+    case "$next_epoch" in ''|*[!0-9]*) continue ;; esac
+    d=$((next_epoch - now_epoch))
+    # Fires within ~2 minutes -> minute cadence, not hourly/daily.
+    if [ "$d" -ge -5 ] && [ "$d" -le 130 ]; then
+        soon=1
+        # ON BOOT: the timer that actually ticks must itself be enabled, so it
+        # returns after a reboot — judged on that timer, not on any enabled one.
+        if [ "$("$RUN" "systemctl is-enabled $t" 2>/dev/null)" = enabled ]; then
+            enabled_soon=1
+        fi
+    fi
+done
 
 if [ "${soon:-0}" = "1" ]; then
     pass 'a timer is scheduled to fire within ~2 minutes (minute cadence)'
