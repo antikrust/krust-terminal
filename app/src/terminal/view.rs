@@ -8767,6 +8767,22 @@ impl TerminalView {
         conversation_id: AIConversationId,
         ctx: &mut ViewContext<Self>,
     ) {
+        // Stop the work, not just the UI. Cancelling the response stream below marks the
+        // conversation cancelled, but a local harness turn is a separate process the stream
+        // knows nothing about — left alone it keeps generating and answers into a
+        // conversation the user already stopped, holding the model (and a GPU) the whole
+        // time. The harness session id is recorded when the turn starts.
+        if let Some((_, session_id, thread_conversation_id)) = self.local_claude_thread.as_ref() {
+            if *thread_conversation_id == conversation_id {
+                let session_id = *session_id;
+                if crate::ai::agent_sdk::driver::harness::claude_stream_exec::cancel_harness_session(
+                    &session_id,
+                ) {
+                    log::info!("stop: signalled local harness session {session_id} to stop");
+                }
+            }
+        }
+
         let had_active_stream = self
             .ai_controller
             .as_ref(ctx)

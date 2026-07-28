@@ -23,7 +23,10 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 use derpui::r#async::Timer;
 
-use super::claude_stream_exec::run_jsonl_stream;
+use super::claude_stream_exec::{
+    harness_cancel_for, register_harness_session, finish_harness_session, run_jsonl_stream,
+    run_jsonl_stream_cancellable, HarnessCancel,
+};
 use super::ollama_committee_proof::{lost_ground, probe_source};
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
@@ -864,13 +867,15 @@ async fn run_ollama_call(
     command: Command,
     request: &str,
     model: &str,
+    cancel: Option<HarnessCancel>,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<(ExitStatus, Result<OllamaCallResult, String>)> {
     let accumulator = Arc::new(Mutex::new(OllamaResponseAccumulator::default()));
     let parser_accumulator = Arc::clone(&accumulator);
-    let status = run_jsonl_stream(
+    let status = run_jsonl_stream_cancellable(
         command,
         request,
+        cancel,
         move |line| {
             parser_accumulator
                 .lock()
@@ -1111,6 +1116,17 @@ async fn run_ollama_stream_without_service_start(
 }
 
 #[allow(clippy::too_many_arguments)]
+
+/// Deregisters a harness session however the turn ends — normally, on an early return, or
+/// on an error path — so the registry cannot leak entries.
+struct HarnessSessionGuard(Uuid);
+
+impl Drop for HarnessSessionGuard {
+    fn drop(&mut self) {
+        finish_harness_session(&self.0);
+    }
+}
+
 async fn run_ollama_stream_inner(
     first_command: Command,
     prompt: &str,
@@ -1124,6 +1140,12 @@ async fn run_ollama_stream_inner(
     start_service: bool,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
+    // Publish a stop signal for the whole turn, so a cancel arriving mid-flight can find
+    // this run — including while a tool is executing between model calls, not just while
+    // the model is streaming.
+    register_harness_session(*session_id);
+    let _session_guard = HarnessSessionGuard(*session_id);
+
     // Open the Derp exchange before a cold model has loaded. This metadata
     // event is intentionally non-rendering: it makes the user's message and
     // Sending... shimmer appear immediately. The first streamed model chunk
@@ -1303,9 +1325,10 @@ async fn run_ollama_chat(
 
     let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
     let parser_accumulator = Arc::clone(&accumulator);
-    let status = run_jsonl_stream(
+    let status = run_jsonl_stream_cancellable(
         new_ollama_chat_command(working_dir, path, base_url_of(model)),
         &request,
+        harness_cancel_for(session_id),
         move |line| {
             parser_accumulator
                 .lock()
@@ -1315,6 +1338,14 @@ async fn run_ollama_chat(
         &mut on_event,
     )
     .await?;
+
+    // A cancelled turn exits non-zero because we killed the process. That is the stop the
+    // user asked for, not a failure — reporting it as one would put "could not reach Ollama"
+    // on screen every time they press stop.
+    if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
+        log::info!("ollama_stream: chat turn cancelled");
+        return Ok(status);
+    }
 
     if !status.success() {
         emit_failed_turn(
@@ -1369,6 +1400,7 @@ async fn run_ollama_generate_loop(
     system: &str,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
+    let cancel = harness_cancel_for(session_id);
     let mut context = contexts()
         .lock()
         .ok()
@@ -1386,7 +1418,15 @@ async fn run_ollama_generate_loop(
         let command = next_command
             .take()
             .unwrap_or_else(|| new_ollama_command(working_dir, path, base_url_of(model)));
-        let (status, response) = run_ollama_call(command, &request, model, &mut on_event).await?;
+        let (status, response) =
+            run_ollama_call(command, &request, model, cancel.clone(), &mut on_event).await?;
+
+        // A stop raised while the model was generating (or while a tool ran) ends the turn
+        // here rather than letting the loop start another round.
+        if cancel.as_ref().is_some_and(HarnessCancel::is_cancelled) {
+            log::info!("ollama_stream: turn cancelled");
+            return Ok(status);
+        }
 
         if !status.success() {
             emit_failed_turn(
@@ -1735,9 +1775,10 @@ async fn run_ollama_chat_with_tools(
             .unwrap_or_else(|| new_ollama_chat_command(working_dir, path, base_url_of(model)));
         let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
-        let status = run_jsonl_stream(
+        let status = run_jsonl_stream_cancellable(
             command,
             &request,
+            harness_cancel_for(session_id),
             move |line| {
                 parser_accumulator
                     .lock()
@@ -1747,6 +1788,12 @@ async fn run_ollama_chat_with_tools(
             &mut *on_event,
         )
         .await?;
+
+        // Killed by a stop, not broken — see the note in `run_ollama_chat`.
+        if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
+            log::info!("ollama_stream: tool chat turn cancelled");
+            return Ok(ToolChatOutcome::Completed(status));
+        }
 
         if !status.success() {
             emit_failed_turn(

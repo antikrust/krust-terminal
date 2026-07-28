@@ -9,15 +9,100 @@
 //! and letting Claude Code draw its own full-screen UI, we capture structured
 //! output so Derp can render the conversation with its own components.
 
+use std::collections::HashMap;
 use std::process::{ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use ai::agent::TurnEvent;
+use derpui::r#async::Timer;
 use command::r#async::Command;
 use futures::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use uuid::Uuid;
 use derp_core::safe_warn;
 
 use super::claude_stream::parse_stream_json_line;
+
+
+// ---------------------------------------------------------------------------
+// Cancellation
+// ---------------------------------------------------------------------------
+
+/// A stop signal for one harness session.
+///
+/// Cancelling an agent has to stop the *work*, not just the UI. Marking a
+/// conversation cancelled while the model keeps generating means the answer
+/// still lands, in a conversation the user already abandoned — and on a local
+/// model it also keeps a GPU busy for nothing.
+#[derive(Clone, Default)]
+pub struct HarnessCancel(Arc<AtomicBool>);
+
+impl HarnessCancel {
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
+/// Live harness sessions, so a stop arriving from the UI can find the run it
+/// belongs to. Keyed by session id, which is what the driver already threads
+/// through every harness call.
+fn sessions() -> &'static Mutex<HashMap<Uuid, HarnessCancel>> {
+    static SESSIONS: OnceLock<Mutex<HashMap<Uuid, HarnessCancel>>> = OnceLock::new();
+    SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Registers a session and returns its stop signal. Replacing any previous
+/// entry is deliberate: a new turn supersedes whatever the last one left.
+pub fn register_harness_session(session_id: Uuid) -> HarnessCancel {
+    let cancel = HarnessCancel::default();
+    if let Ok(mut sessions) = sessions().lock() {
+        sessions.insert(session_id, cancel.clone());
+    }
+    cancel
+}
+
+/// Drops a finished session so the map does not grow for the life of the app.
+pub fn finish_harness_session(session_id: &Uuid) {
+    if let Ok(mut sessions) = sessions().lock() {
+        sessions.remove(session_id);
+    }
+}
+
+/// The stop signal for a live session, if it has one.
+pub fn harness_cancel_for(session_id: &Uuid) -> Option<HarnessCancel> {
+    sessions().lock().ok()?.get(session_id).cloned()
+}
+
+/// Signals a running harness turn to stop. Returns whether one was listening.
+pub fn cancel_harness_session(session_id: &Uuid) -> bool {
+    let Ok(sessions) = sessions().lock() else {
+        return false;
+    };
+    match sessions.get(session_id) {
+        Some(cancel) => {
+            cancel.cancel();
+            true
+        }
+        None => false,
+    }
+}
+
+/// Resolves once `cancel` is raised. Polled rather than pushed because the
+/// flag is set from a UI thread with no runtime handle; 50ms is well under
+/// the threshold where a stop feels sluggish.
+async fn cancelled(cancel: HarnessCancel) {
+    loop {
+        if cancel.is_cancelled() {
+            return;
+        }
+        Timer::after(Duration::from_millis(50)).await;
+    }
+}
 
 /// Builds the argument vector for a headless streaming `claude` run.
 ///
@@ -81,15 +166,35 @@ pub async fn run_claude_stream(
 /// Each harness pairs this with its own parser ([`run_claude_stream`],
 /// [`super::codex_stream_exec::run_codex_stream`]).
 pub async fn run_jsonl_stream(
+    command: Command,
+    prompt: &str,
+    parse_line: impl Fn(&str) -> Vec<TurnEvent>,
+    on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    run_jsonl_stream_cancellable(command, prompt, None, parse_line, on_event).await
+}
+
+/// As [`run_jsonl_stream`], but a raised `cancel` kills the child mid-turn.
+///
+/// Killing is the point: the model is a separate process (and, for a local
+/// model, a busy GPU). Letting the future drop would eventually reap it, but
+/// only once something drops it — so the stop is issued here, explicitly, the
+/// moment the flag is seen.
+pub async fn run_jsonl_stream_cancellable(
     mut command: Command,
     prompt: &str,
+    cancel: Option<HarnessCancel>,
     parse_line: impl Fn(&str) -> Vec<TurnEvent>,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::piped())
+        // Cancelling a turn drops this future, and without `kill_on_drop` that leaves the
+        // child running: the model carries on generating and answers into a conversation
+        // the user already stopped. Stopping the UI has to stop the work.
+        .kill_on_drop(true);
 
     let mut child = command.spawn()?;
 
@@ -137,7 +242,27 @@ pub async fn run_jsonl_stream(
         buffer
     };
 
-    let ((), stderr_output) = futures::join!(pump_stdout, drain_stderr);
+    let pumps = async {
+        let ((), stderr_output) = futures::join!(pump_stdout, drain_stderr);
+        stderr_output
+    };
+
+    let stderr_output = match cancel {
+        Some(cancel) => {
+            futures::pin_mut!(pumps);
+            match futures::future::select(pumps, Box::pin(cancelled(cancel))).await {
+                futures::future::Either::Left((stderr_output, _)) => stderr_output,
+                futures::future::Either::Right(((), _)) => {
+                    // Stop now rather than waiting for the stream to end on its own.
+                    log::info!("agent_stream_exec: cancelled, killing the model process");
+                    let _ = child.kill();
+                    String::new()
+                }
+            }
+        }
+        None => pumps.await,
+    };
+
     let status = child.status().await;
 
     let failed = status.as_ref().map(|s| !s.success()).unwrap_or(true);
