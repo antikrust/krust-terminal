@@ -1,0 +1,57 @@
+# CI: compile-check Bork per platform on every push.
+#
+# Runs on the same self-hosted runners as bob3/snd (user-scope registration):
+#   linux   -> host-mode runner on the PC
+#   windows -> host-mode runner in the winbuild VM (VS 2022 build tools)
+# macOS is intentionally absent: it's the local main build (no Forgejo mac runner).
+#
+# Checkout is plain git (no JS actions), matching bob3/snd, so the runners need
+# only: git, a Rust toolchain (rustup), and Bork's system build deps
+# (see script/{linux,windows}/install_build_deps). Rust is installed on demand
+# below if missing. A full release build + bundling happens in release.yml on tags;
+# here we only `cargo check` so per-push CI stays reasonably quick.
+name: build
+on: [push]
+
+jobs:
+  linux:
+    runs-on: linux
+    steps:
+      - name: checkout
+        run: |
+          git init -q .
+          git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
+          git checkout -q --force FETCH_HEAD
+      - name: ensure rust
+        run: |
+          command -v cargo >/dev/null || {
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          }
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH" || export PATH="$HOME/.cargo/bin:$PATH"
+      - name: check
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo check --bin bork --locked
+
+  windows:
+    runs-on: windows
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: checkout
+        run: |
+          git init -q .
+          git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
+          git checkout -q --force FETCH_HEAD
+      - name: ensure rust
+        run: |
+          if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+            .\rustup-init.exe -y --default-toolchain stable
+          }
+          echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: check
+        run: |
+          $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          cargo check --bin bork --locked

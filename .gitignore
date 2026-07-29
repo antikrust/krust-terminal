@@ -72,3 +72,4 @@ __pycache__/
 
 # Codex CLI worktrees (local tooling)
 .codex/
+/dist/

@@ -1,0 +1,110 @@
+# Release: fires on a version tag (v*). Each lane builds Release and bundles
+# with Bork's existing script/{linux,windows}/bundle tooling, attaches its
+# artifacts to a Forgejo release on the tag, and the linux lane finally rsyncs
+# everything (incl. the locally-built macOS dmg, if present) to the website.
+#
+# macOS note: there is no Forgejo mac runner -- the mac is the local main build.
+# Build the dmg locally with `script/macos/bundle -c oss` and either attach it to
+# the release in the UI, or drop it under dist/macos/ on the linux runner's
+# checkout before the upload step (see BORK_MAC_DMG below).
+#
+# A tag containing "-test" does everything EXCEPT the website upload -- use e.g.
+# v0.0.1-test to rehearse a release without touching the live site.
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  windows:
+    runs-on: windows
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: checkout
+        run: |
+          git init -q .
+          git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
+          git checkout -q --force FETCH_HEAD
+      - name: ensure rust
+        run: |
+          if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+            .\rustup-init.exe -y --default-toolchain stable
+          }
+      - name: bundle
+        run: |
+          $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          .\script\windows\bundle.ps1 -CHANNEL oss -RELEASE_TAG "$env:GITHUB_REF_NAME"
+      - name: attach to release
+        run: |
+          $T = "${{ github.token }}"
+          $H = @{ Authorization = "token $T" }
+          $api = "https://shithub.space/api/v1/repos/${{ github.repository }}"
+          # Create the release if it does not exist yet (first lane to finish wins).
+          try { Invoke-RestMethod -Method Post -Headers $H -ContentType "application/json" `
+                -Body (@{ tag_name = $env:GITHUB_REF_NAME; name = $env:GITHUB_REF_NAME } | ConvertTo-Json) `
+                -Uri "$api/releases" | Out-Null } catch {}
+          $rel = Invoke-RestMethod -Headers $H -Uri "$api/releases/tags/$env:GITHUB_REF_NAME"
+          Get-ChildItem -Recurse -File | Where-Object { $_.Extension -in ".exe",".msi",".zip" -and $_.FullName -match "\\(dist|bundle|installer)\\" } | ForEach-Object {
+            curl.exe -sf -X POST -H "Authorization: token $T" -F "attachment=@$($_.FullName)" `
+              "$api/releases/$($rel.id)/assets?name=$($_.Name)" | Out-Null
+            $_.Name
+          }
+
+  linux:
+    runs-on: linux
+    needs: windows
+    steps:
+      - name: checkout
+        run: |
+          git init -q .
+          git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
+          git checkout -q --force FETCH_HEAD
+      - name: ensure rust
+        run: |
+          command -v cargo >/dev/null || {
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          }
+      - name: bundle
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage
+      - name: attach linux artifacts to release
+        run: |
+          T="${{ github.token }}"
+          api="https://shithub.space/api/v1/repos/${{ github.repository }}"
+          # Create the release if the windows lane somehow hasn't yet.
+          curl -sf -H "Authorization: token $T" "$api/releases/tags/$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            curl -sf -X POST -H "Authorization: token $T" -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"$GITHUB_REF_NAME\",\"name\":\"$GITHUB_REF_NAME\"}" "$api/releases" >/dev/null
+          rid=$(curl -sf -H "Authorization: token $T" "$api/releases/tags/$GITHUB_REF_NAME" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+          mkdir -p dist/linux
+          # Collect whatever the bundler produced, wherever it landed.
+          find . -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.pkg.tar.zst' \) \
+            -not -path '*/vendor/*' -exec cp -n {} dist/linux/ \; 2>/dev/null || true
+          for f in dist/linux/*; do
+            [ -f "$f" ] || continue
+            curl -sf -X POST -H "Authorization: token $T" -F "attachment=@$f" "$api/releases/$rid/assets?name=$(basename "$f")" >/dev/null
+            echo "attached $(basename "$f")"
+          done
+      - name: gather windows + mac artifacts for the website
+        run: |
+          T="${{ github.token }}"
+          api="https://shithub.space/api/v1/repos/${{ github.repository }}"
+          mkdir -p dist/windows dist/macos
+          # Pull the windows assets the other lane attached.
+          curl -sf -H "Authorization: token $T" "$api/releases/tags/$GITHUB_REF_NAME" | python3 -c "
+          import json,sys
+          for a in json.load(sys.stdin).get('assets',[]):
+              n=a.get('name','')
+              if n.endswith(('.exe','.msi','.zip')): print(a['browser_download_url'], n)" | while read -r url name; do
+            curl -sfL -H "Authorization: token $T" -o "dist/windows/$name" "$url" && echo "fetched $name"
+          done
+          # If a locally-built mac dmg was staged on this runner, keep it.
+          [ -n "${BORK_MAC_DMG:-}" ] && [ -f "$BORK_MAC_DMG" ] && cp "$BORK_MAC_DMG" dist/macos/ || true
+      - name: upload to derp.baby
+        if: ${{ !contains(github.ref_name, '-test') }}
+        run: ./tools/upload-bork-packages.sh
