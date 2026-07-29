@@ -26,7 +26,9 @@ use crate::ai::custom_model_routers::{
     PromptRule,
 };
 use crate::ai::execution_profiles::model_menu_items::available_model_menu_items;
-use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
+use crate::ai::llms::{
+    LLMContextWindow, LLMInfo, LLMPreferences, LLMPreferencesEvent, LLMProvider, LLMUsageMetadata,
+};
 use crate::appearance::Appearance;
 use crate::auth::AuthStateProvider;
 use crate::editor::{EditorView, SingleLineEditorOptions, TextOptions};
@@ -1048,11 +1050,21 @@ fn fill_filterable_dropdown<F>(
     // `set_filtered_items` keeps an empty selection blank rather than
     // auto-selecting the first model.
     dropdown.set_placeholder(MODEL_PLACEHOLDER, ctx);
+    let ollama = ollama_model_choices(ctx);
+    // Mirror the model list the agent picker shows: the base agent-mode choices
+    // unioned with the CLI-agent choices (de-duped by id), so Claude / GPT and
+    // everything else you see under "agents" are selectable here too.
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut choices: Vec<&LLMInfo> = LLMPreferences::as_ref(ctx)
+        .get_base_llm_choices_for_agent_mode(ctx)
+        .chain(LLMPreferences::as_ref(ctx).get_cli_agent_llm_choices(ctx))
+        .filter(|llm| !is_auto_target(llm.id.as_str()))
+        .filter(|llm| seen.insert(llm.id.to_string()))
+        .collect_vec();
+    // Plus the local Ollama tags the app's cloud model list never carries.
+    choices.extend(ollama.iter());
     let items = available_model_menu_items(
-        LLMPreferences::as_ref(ctx)
-            .get_base_llm_choices_for_agent_mode(ctx)
-            .filter(|llm| !is_auto_target(llm.id.as_str()))
-            .collect_vec(),
+        choices,
         |llm| DropdownAction::select_action_and_close(make_action(llm.id.to_string())),
         None,
         None,
@@ -1067,6 +1079,59 @@ fn fill_filterable_dropdown<F>(
         dropdown.set_selected_by_action(make_action(selected_id.to_string()), ctx);
     }
     let _ = upgrade_mouse_state; // reserved for future upgrade footer
+}
+
+/// The local Ollama models this machine can reach, as synthetic [`LLMInfo`]s so
+/// the router's model menus can offer them. The app's cloud model list never
+/// includes Ollama (it lives in a separate subsystem), which is why the menus
+/// were empty on a machine whose only models are local. Remote hosts' cached
+/// tags are host-qualified so a pick routes to the right box; models installed
+/// on this machine are offered by their bare tag.
+fn ollama_model_choices(app: &AppContext) -> Vec<LLMInfo> {
+    use crate::ai::ollama::{remote, service};
+
+    let hosts = remote::configured(app);
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut out: Vec<LLMInfo> = Vec::new();
+    for host in &hosts {
+        for model in &host.models {
+            let id = remote::qualify(model, &host.url);
+            if seen.insert(id.clone()) {
+                let label = remote::display_name(&id, &hosts);
+                out.push(ollama_llm_info(id, label));
+            }
+        }
+    }
+    for installed in service::installed_models_from_disk() {
+        if seen.insert(installed.name.clone()) {
+            out.push(ollama_llm_info(installed.name.clone(), installed.name));
+        }
+    }
+    out
+}
+
+/// A minimal [`LLMInfo`] standing in for an Ollama model tag — enough for the
+/// model menu to display and select it. `id` is the tag the router stores and
+/// routes to (host-qualified for a remote model).
+fn ollama_llm_info(id: String, display_name: String) -> LLMInfo {
+    LLMInfo {
+        display_name,
+        base_model_name: id.clone(),
+        id: id.into(),
+        reasoning_level: None,
+        usage_metadata: LLMUsageMetadata {
+            request_multiplier: 1,
+            credit_multiplier: None,
+        },
+        description: Some("Ollama (local)".to_owned()),
+        disable_reason: None,
+        vision_supported: false,
+        spec: None,
+        provider: LLMProvider::Unknown,
+        host_configs: Default::default(),
+        discount_percentage: None,
+        context_window: LLMContextWindow::default(),
+    }
 }
 
 fn make_prompt_rule_row(

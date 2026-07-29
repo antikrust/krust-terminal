@@ -80,6 +80,7 @@ mod billing_and_usage_page;
 mod billing_and_usage_page_v2;
 mod code_page;
 pub(crate) mod custom_inference_modal;
+mod custom_router_page;
 mod custom_router_view;
 mod delete_environment_confirmation_dialog;
 mod directory_color_add_picker;
@@ -288,6 +289,9 @@ pub enum SettingsSection {
     MolochStatus,
     CloudEnvironments,
     OzCloudAPIKeys,
+    /// Custom model routers — user-defined "auto" models that forward each task
+    /// to a concrete model by complexity or prompt rules. Its own top-level page.
+    CustomRouters,
 }
 
 use std::fmt::{self, Display};
@@ -319,6 +323,7 @@ impl Display for SettingsSection {
             SettingsSection::MolochStatus => write!(f, "Status"),
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
             SettingsSection::OzCloudAPIKeys => write!(f, "Moloch API keys"),
+            SettingsSection::CustomRouters => write!(f, "Custom routers"),
             _ => write!(f, "{self:?}"),
         }
     }
@@ -356,6 +361,7 @@ impl SettingsSection {
                 | Self::BringYourOwnKey
                 | Self::Ollama
                 | Self::Grok
+                | Self::CustomRouters
         )
     }
 
@@ -380,6 +386,8 @@ impl SettingsSection {
             Self::AgentMCPServers => Self::MCPServers,
             // Ollama is its own backing page rather than a mode of the AI page.
             Self::Ollama => Self::Ollama,
+            // Custom routers is its own backing page too, not a mode of the AI page.
+            Self::CustomRouters => Self::CustomRouters,
             // All other AI subpages render within the AI page.
             s if s.is_ai_subpage() => Self::AI,
             // Code subpages render within the Code page.
@@ -404,6 +412,7 @@ impl SettingsSection {
             Self::AgentMCPServers,
             Self::Ollama,
             Self::Grok,
+            Self::CustomRouters,
         ]
     }
 
@@ -474,6 +483,7 @@ impl FromStr for SettingsSection {
             "Moloch API keys" | "Server and keys" | "Oz Cloud API Keys" | "OzCloudAPIKeys" => {
                 Ok(Self::OzCloudAPIKeys)
             }
+            "Custom routers" | "CustomRouters" => Ok(Self::CustomRouters),
             _ => Err(()),
         }
     }
@@ -1167,6 +1177,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::Code(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::MCPServers(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Ollama(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::CustomRouters(handle) => $ctx.update_view(handle, $update),
         }
     };
 }
@@ -1291,6 +1302,15 @@ impl SettingsView {
         // Moloch page (what the broker is doing)
         let moloch_page_handle = ctx.add_typed_action_view(moloch_page::MolochPageView::new);
 
+        // Custom routers page — its own page now, lifted out of the AI Manager
+        // page. It emits editor/open-file events which we forward to the shared
+        // handlers (the same ones the AI page's router section used).
+        let custom_router_page_handle =
+            ctx.add_typed_action_view(custom_router_page::CustomRouterPageView::new);
+        ctx.subscribe_to_view(&custom_router_page_handle, |me, _, event, ctx| {
+            me.handle_custom_router_page_event(event, ctx);
+        });
+
         // MCP Servers page
         let mcp_servers_page_handle = ctx.add_typed_action_view(MCPServersSettingsPageView::new);
         ctx.subscribe_to_view(&mcp_servers_page_handle, |me, _, event, ctx| {
@@ -1328,6 +1348,7 @@ impl SettingsView {
         let mut settings_pages = vec![
             SettingsPage::new(main_page_handle),
             SettingsPage::new(ai_page_handle),
+            SettingsPage::new(custom_router_page_handle),
             SettingsPage::new(code_page_handle),
             SettingsPage::new(appearance_page_handle),
             SettingsPage::new(features_page_handle),
@@ -1973,6 +1994,25 @@ impl SettingsView {
         }
     }
 
+    /// Forwards the custom-routers page's requests to the shared editor/opener
+    /// events `SettingsView` already handles (the workspace turns these into the
+    /// router-editor pane and the reveal-file action).
+    fn handle_custom_router_page_event(
+        &mut self,
+        event: &custom_router_page::CustomRouterPageEvent,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        match event {
+            custom_router_page::CustomRouterPageEvent::OpenEditor(router) => {
+                ctx.emit(SettingsViewEvent::OpenCustomRouterEditor(router.clone()));
+            }
+            #[cfg(feature = "local_fs")]
+            custom_router_page::CustomRouterPageEvent::OpenFile(path) => {
+                ctx.emit(SettingsViewEvent::OpenCustomRouterFile(path.clone()));
+            }
+        }
+    }
+
     fn handle_ai_page_event(&mut self, event: &AISettingsPageEvent, ctx: &mut ViewContext<Self>) {
         match event {
             AISettingsPageEvent::FocusModal => ctx.focus(&self.search_editor),
@@ -2211,6 +2251,7 @@ impl SettingsView {
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Ollama(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Code(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::CustomRouters(v) => v.as_ref(app).should_render(app),
         }
     }
 

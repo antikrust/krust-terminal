@@ -50,6 +50,10 @@ except OSError:
     pass
 HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 MODELS = [m.strip() for m in os.environ.get("MODELS", "qwen2.5-coder:7b").split(",") if m.strip()]
+# Optional guidance prepended to the task the model is handed — the same knob
+# watch_run.py exposes. Empty by default so a bare sweep is unaided; set
+# OPS_PREAMBLE to run the "with preamble" arm of the A/B.
+OPS_PREAMBLE = os.environ.get("OPS_PREAMBLE", "").strip()
 
 
 def _commit():
@@ -152,6 +156,9 @@ def moloch_mirror(task, model, prompt):
 
 def run_one(task_dir, model):
     prompt = (task_dir / "PROMPT.txt").read_text().strip()
+    # OPS_PREAMBLE, when set, rides at the top of the task (matching watch_run.py)
+    # so the sweep can measure its lift; empty preamble means an unaided run.
+    task = f"{OPS_PREAMBLE}\n\n{prompt}" if OPS_PREAMBLE else prompt
     vmlab("reset")
 
     precheck = task_dir / "precheck.sh"
@@ -180,7 +187,7 @@ def run_one(task_dir, model):
     # must fail THIS run rather than abort the sweep: one qwen2.5-coder:32b
     # RemoteDisconnected once killed all 48 runs because this call was unguarded.
     try:
-        reply = ollama(model, PLAN_SYSTEM, prompt)
+        reply = ollama(model, PLAN_SYSTEM, task)
     except Exception as e:
         seconds = int(time.time() - started)
         if mirror:

@@ -33,6 +33,15 @@ if [ -n "$MOLOCH_TOKEN" ]; then
   MOLOCH_ENVS="MOLOCH_URL=http://127.0.0.1:${MOLOCH_PORT} MOLOCH_TOKEN='${MOLOCH_TOKEN}'"
 fi
 
+# Optional model preamble — the "with preamble" arm of the A/B. Forwarded to
+# ops_bench.py when OPS_PREAMBLE is set. It rides inside the double-quoted ssh
+# command below (so it is not word-split locally) and is single-quoted for the
+# remote shell — keep the preamble text free of single quotes. Empty -> unaided.
+PREAMBLE_ENV=""
+if [ -n "${OPS_PREAMBLE:-}" ]; then
+  PREAMBLE_ENV="OPS_PREAMBLE='${OPS_PREAMBLE}'"
+fi
+
 rsync -a --delete --exclude='tasks/_demo' "$HERE"/ "$REMOTE:$DEST/"
 
 # shellcheck disable=SC2086  # $TUNNEL must word-split into ssh's args
@@ -44,6 +53,6 @@ ssh -o BatchMode=yes $TUNNEL "$REMOTE" "
   # Regenerate the cloud-init seed so any guest-config change here takes effect
   # on the next boot; idempotent, keeps the existing ssh key.
   ./vmlab.sh setup >/dev/null
-  VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' $MOLOCH_ENVS \
+  VMLAB=$DEST/vmlab.sh OPS_COMMIT=$COMMIT MODELS='$MODELS' $MOLOCH_ENVS $PREAMBLE_ENV \
     python3 -u ops_bench.py \$tasks
 "

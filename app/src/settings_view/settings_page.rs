@@ -112,6 +112,7 @@ pub enum SettingsPageViewHandle {
     CloudEnvironments(ViewHandle<EnvironmentsPageView>),
     MCPServers(ViewHandle<MCPServersSettingsPageView>),
     Ollama(ViewHandle<super::ollama_page::OllamaPageView>),
+    CustomRouters(ViewHandle<super::custom_router_page::CustomRouterPageView>),
 }
 
 impl SettingsPageViewHandle {
@@ -134,6 +135,7 @@ impl SettingsPageViewHandle {
             CloudEnvironments(view_handle) => ChildView::new(view_handle).finish(),
             MCPServers(view_handle) => ChildView::new(view_handle).finish(),
             Ollama(view_handle) => ChildView::new(view_handle).finish(),
+            CustomRouters(view_handle) => ChildView::new(view_handle).finish(),
         }
     }
 }

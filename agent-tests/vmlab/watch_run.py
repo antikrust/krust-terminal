@@ -7,8 +7,14 @@ emit any), then the plan running in the guest, then each held-out check — all
 into the run's Moloch transcript, so you watch it unfold in the web panel
 instead of reading a post-mortem.
 
-    watch_run.py <task-dir> <model>
+    watch_run.py <task-dir> <model> [preamble]
     watch_run.py tasks/heartbeat-timer qwen2.5-coder:14b
+
+An optional 3rd arg (or $OPS_PREAMBLE, which threads multi-line text through ssh
+more cleanly) is prepended to the top of the task the model is handed — the
+router-preamble idea, tried here before the app grows a field for it. Pass a
+short environment+rules note and watch whether it changes the plan. PLAN_SYSTEM
+stays the fixed system prompt; the preamble is the extra, per-run guidance.
 
 Needs MOLOCH_URL/MOLOCH_TOKEN (the mirror), VMLAB (the guest), OLLAMA_HOST.
 """
@@ -124,11 +130,19 @@ def stream_generation(model, system, user, mirror):
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         raise SystemExit(__doc__)
     task_dir = pathlib.Path(sys.argv[1]).resolve()
     model = sys.argv[2]
+    # Optional per-run preamble: a positional 3rd arg, else $OPS_PREAMBLE (far
+    # easier to thread multi-line text through over ssh). It rides at the top of
+    # the task the model is handed — PLAN_SYSTEM stays the fixed system prompt;
+    # this is the extra, per-run guidance we're testing.
+    preamble = (
+        sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OPS_PREAMBLE", "")
+    ).strip()
     prompt = (task_dir / "PROMPT.txt").read_text().strip()
+    task = f"{preamble}\n\n{prompt}" if preamble else prompt
 
     # `watch:` not `vmlab:` on purpose — a one-off stare shouldn't count toward
     # the benchmark leaderboard (which aggregates only `vmlab:%` runs).
@@ -138,10 +152,14 @@ def main():
     print(f"run {mirror.run_id} — watch it in the Moloch web panel")
 
     vmlab("reset")
-    mirror.append(["── the job ──", prompt, f"── {model} is writing a plan ──"])
+    job = ["── the job ──", prompt]
+    if preamble:
+        job += ["── preamble (injected at the top of the task) ──", preamble]
+    job.append(f"── {model} is writing a plan ──")
+    mirror.append(job)
 
     try:
-        reply = stream_generation(model, PLAN_SYSTEM, prompt, mirror)
+        reply = stream_generation(model, PLAN_SYSTEM, task, mirror)
     except Exception as e:
         mirror.append([f"model error: {e}"])
         mirror.complete(False, "model error", str(e))
