@@ -1,24 +1,24 @@
 #!/bin/bash
 #
 # macOS-specific implementation of `./script/run`. Runs a local version of
-# Derp as a real 'app' instead of a bare executable, so macOS can treat it
+# Bork as a real 'app' instead of a bare executable, so macOS can treat it
 # like a real signed app (custom URL schemes, user notifications, etc.).
 #
 # This script is invoked by `./script/run`, which handles cross-platform
 # setup (install_channel_config, binary name detection, feature-to-env-var
 # mapping). The following env vars are expected to be set by the caller:
-#   DERP_BIN_NAME  — "derp" (internal local build) or "derp"
-#   DERP_CHANNEL   — "local" or "oss"
+#   BORK_BIN_NAME  — "bork" (internal local build) or "bork"
+#   BORK_CHANNEL   — "local" or "oss"
 #   FEATURES       — comma-separated cargo features (already normalized)
-# Must be called from the root directory of the derp repo.
+# Must be called from the root directory of the bork repo.
 
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
 cd "${REPO_ROOT}"
 
-: "${DERP_BIN_NAME:?DERP_BIN_NAME must be set (invoke via ./script/run)}"
-: "${DERP_CHANNEL:?DERP_CHANNEL must be set (invoke via ./script/run)}"
+: "${BORK_BIN_NAME:?BORK_BIN_NAME must be set (invoke via ./script/run)}"
+: "${BORK_CHANNEL:?BORK_CHANNEL must be set (invoke via ./script/run)}"
 : "${FEATURES:?FEATURES must be set (invoke via ./script/run)}"
 
 # Resolve Cargo's actual target directory rather than assuming ./target. This
@@ -29,25 +29,25 @@ if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "null" ]; then
     TARGET_DIR="${REPO_ROOT}/target"
 fi
 
-if [ "$DERP_CHANNEL" = "local" ]; then
-    DERP_APP_PATH="${TARGET_DIR}/debug/bundle/osx/DerpLocal.app"
-    DERP_SCHEME_NAME="derplocal"
+if [ "$BORK_CHANNEL" = "local" ]; then
+    BORK_APP_PATH="${TARGET_DIR}/debug/bundle/osx/BorkLocal.app"
+    BORK_SCHEME_NAME="borklocal"
 else
-    DERP_APP_PATH="${TARGET_DIR}/debug/bundle/osx/Derp.app"
-    DERP_SCHEME_NAME="derposs"
+    BORK_APP_PATH="${TARGET_DIR}/debug/bundle/osx/Bork.app"
+    BORK_SCHEME_NAME="borkoss"
 fi
 DONT_OPEN=false
-# Launches the binary with "open", meaning the Derp process is
+# Launches the binary with "open", meaning the Bork process is
 # launched by the MacOS application launcher instead of a shell session.
-# Note that since Derp isn't launched as a child process, using ctrl+c
+# Note that since Bork isn't launched as a child process, using ctrl+c
 # won't kill the app (but will kill the tail process displaying output).
-# tl;dr better simulates running Derp Dev/Stable
+# tl;dr better simulates running Bork Dev/Stable
 OPEN_WITH_LAUNCHD=false
 
-# Arguments to pass directly Derp (specified after --)
+# Arguments to pass directly Bork (specified after --)
 # This is not supported when opening with launchd, as passing CLI arguments to
 # an application doesn't make sense.
-DERP_ARGS=()
+BORK_ARGS=()
 
 # Export this variable so it can be referenced by app/build.rs later when
 # running `cargo bundle`.
@@ -58,7 +58,7 @@ while (( "$#" )); do
   case "$1" in
     --)
       shift
-      DERP_ARGS=("$@")
+      BORK_ARGS=("$@")
       break
       ;;
     --dont-open)
@@ -67,10 +67,10 @@ while (( "$#" )); do
       ;;
     --release)
       echo "Detected release build, pointing at release bundle under ${TARGET_DIR}/release/bundle"
-      if [ "$DERP_CHANNEL" = "local" ]; then
-          DERP_APP_PATH="${TARGET_DIR}/release/bundle/osx/DerpLocal.app"
+      if [ "$BORK_CHANNEL" = "local" ]; then
+          BORK_APP_PATH="${TARGET_DIR}/release/bundle/osx/BorkLocal.app"
       else
-          DERP_APP_PATH="${TARGET_DIR}/release/bundle/osx/Derp.app"
+          BORK_APP_PATH="${TARGET_DIR}/release/bundle/osx/Bork.app"
       fi
       PARAMS="$PARAMS $1"
       shift
@@ -78,10 +78,10 @@ while (( "$#" )); do
     --profile)
       PROFILE="$2"
       shift 2
-      if [ "$DERP_CHANNEL" = "local" ]; then
-          DERP_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/DerpLocal.app"
+      if [ "$BORK_CHANNEL" = "local" ]; then
+          BORK_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/BorkLocal.app"
       else
-          DERP_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/Derp.app"
+          BORK_APP_PATH="${TARGET_DIR}/${PROFILE}/bundle/osx/Bork.app"
       fi
       PARAMS="$PARAMS --profile $PROFILE"
       ;;
@@ -100,68 +100,68 @@ while (( "$#" )); do
   esac
 done
 
-rm -rf "$DERP_APP_PATH"
+rm -rf "$BORK_APP_PATH"
 
 pushd app > /dev/null
-echo "Bundling app (bin: $DERP_BIN_NAME)..."
-cargo bundle --bin "$DERP_BIN_NAME" --features "$FEATURES" $PARAMS
+echo "Bundling app (bin: $BORK_BIN_NAME)..."
+cargo bundle --bin "$BORK_BIN_NAME" --features "$FEATURES" $PARAMS
 echo "Successfully bundled..."
 popd > /dev/null
 
 if [[ ",$FEATURES," =~ ",cocoa_sentry," ]]; then
   echo "Copying Sentry framework into app bundle..."
   SENTRY_FRAMEWORK="app/frameworks/dev/Sentry-Dynamic-WithARM64e.xcframework/macos-arm64_arm64e_x86_64/Sentry.framework"
-  mkdir -p "$DERP_APP_PATH/Contents/Frameworks"
-  cp -a "$SENTRY_FRAMEWORK" "$DERP_APP_PATH/Contents/Frameworks/"
+  mkdir -p "$BORK_APP_PATH/Contents/Frameworks"
+  cp -a "$SENTRY_FRAMEWORK" "$BORK_APP_PATH/Contents/Frameworks/"
 fi
 echo "Adding rpath to support mac frameworks (e.g. Sentry)"
-install_name_tool -add_rpath "@executable_path/../Frameworks" "$DERP_APP_PATH/Contents/MacOS/$DERP_BIN_NAME"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$BORK_APP_PATH/Contents/MacOS/$BORK_BIN_NAME"
 
-export DERP_SCHEME_NAME
-export DERP_PLIST_PATH="$DERP_APP_PATH/Contents/Info.plist"
+export BORK_SCHEME_NAME
+export BORK_PLIST_PATH="$BORK_APP_PATH/Contents/Info.plist"
 ./script/update_plist
 
 echo "Preparing bundled resources..."
 if [ "${GENERATE_SCHEMA:-false}" != "true" ]; then
   export SKIP_SETTINGS_SCHEMA=1
 fi
-NO_LICENSES=1 "${REPO_ROOT}/script/prepare_bundled_resources" "$DERP_APP_PATH/Contents/Resources" "$DERP_CHANNEL"
+NO_LICENSES=1 "${REPO_ROOT}/script/prepare_bundled_resources" "$BORK_APP_PATH/Contents/Resources" "$BORK_CHANNEL"
 
-"${REPO_ROOT}/script/compile_icon" "$DERP_CHANNEL" "$DERP_APP_PATH"
+"${REPO_ROOT}/script/compile_icon" "$BORK_CHANNEL" "$BORK_APP_PATH"
 
 if [[ ",$FEATURES," =~ ",heap_usage_tracking," ]]; then
   echo "Bundling pprof..."
-  HELPERS_DIR="$DERP_APP_PATH/Contents/Helpers"
+  HELPERS_DIR="$BORK_APP_PATH/Contents/Helpers"
   "${REPO_ROOT}/script/prepare_bundled_pprof" "$HELPERS_DIR"
 fi
 
-if [[ ",$FEATURES," =~ ",derp_control_cli," ]]; then
-  DERPCTRL_SCRIPT_PATH="$DERP_APP_PATH/Contents/Resources/bin/derpctrl-$DERP_CHANNEL"
-  echo "Creating derpctrl wrapper script at $DERPCTRL_SCRIPT_PATH..."
-  "${REPO_ROOT}/script/macos/create_derpctrl_wrapper" \
-    "$DERPCTRL_SCRIPT_PATH" \
-    "../../MacOS/$DERP_BIN_NAME"
+if [[ ",$FEATURES," =~ ",bork_control_cli," ]]; then
+  BORKCTRL_SCRIPT_PATH="$BORK_APP_PATH/Contents/Resources/bin/borkctrl-$BORK_CHANNEL"
+  echo "Creating borkctrl wrapper script at $BORKCTRL_SCRIPT_PATH..."
+  "${REPO_ROOT}/script/macos/create_borkctrl_wrapper" \
+    "$BORKCTRL_SCRIPT_PATH" \
+    "../../MacOS/$BORK_BIN_NAME"
 fi
 
 echo "Codesigning app..."
 SIGNING_CERT="$(security find-identity -p codesigning -v | grep "Apple Development" | awk '{print $2}' | head -1)"
-codesign --force --deep --options runtime --sign "${SIGNING_CERT:--}" "$DERP_APP_PATH" --entitlements script/Debug-Entitlements.plist
+codesign --force --deep --options runtime --sign "${SIGNING_CERT:--}" "$BORK_APP_PATH" --entitlements script/Debug-Entitlements.plist
 
 if [ "$DONT_OPEN" = false ] ; then
     if  [ "$OPEN_WITH_LAUNCHD" = true ]; then
         echo "Launching with MacOS application launcher"
-        PATH="" /usr/bin/open "$DERP_APP_PATH"
-        if [ "$DERP_CHANNEL" = "local" ]; then
-            LOG_FILE=~/Library/Logs/derp_local.log
-        elif [ "$DERP_CHANNEL" = "oss" ]; then
-            LOG_FILE=~/Library/Logs/derp.log
+        PATH="" /usr/bin/open "$BORK_APP_PATH"
+        if [ "$BORK_CHANNEL" = "local" ]; then
+            LOG_FILE=~/Library/Logs/bork_local.log
+        elif [ "$BORK_CHANNEL" = "oss" ]; then
+            LOG_FILE=~/Library/Logs/bork.log
         else
-            echo "Warning: unrecognized DERP_CHANNEL '$DERP_CHANNEL', defaulting to OSS log path" >&2
-            LOG_FILE=~/Library/Logs/derp.log
+            echo "Warning: unrecognized BORK_CHANNEL '$BORK_CHANNEL', defaulting to OSS log path" >&2
+            LOG_FILE=~/Library/Logs/bork.log
         fi
         tail -F "$LOG_FILE"
     else
-        echo "Opening app at $DERP_APP_PATH/Contents/MacOS/$DERP_BIN_NAME"
-        "$DERP_APP_PATH/Contents/MacOS/$DERP_BIN_NAME" "${DERP_ARGS[@]}"
+        echo "Opening app at $BORK_APP_PATH/Contents/MacOS/$BORK_BIN_NAME"
+        "$BORK_APP_PATH/Contents/MacOS/$BORK_BIN_NAME" "${BORK_ARGS[@]}"
     fi
 fi

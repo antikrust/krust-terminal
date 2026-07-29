@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use derpui_core::geometry::vector::{Vector2F, vec2f};
-use derpui_core::text_layout::Line;
-use derpui_core::{AppContext, LayoutContext};
+use borkui_core::geometry::vector::{Vector2F, vec2f};
+use borkui_core::text_layout::Line;
+use borkui_core::{AppContext, LayoutContext};
 
 use super::{CursorData, RenderContext};
 use crate::content::text::BufferBlockStyle;

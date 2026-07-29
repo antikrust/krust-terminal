@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::icons::Icon;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::icons::Icon;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use borkui_core::elements::{
     Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text,
 };
-use derpui_core::fonts::{Properties, Weight};
-use derpui_core::platform::Cursor;
-use derpui_core::Element;
+use borkui_core::fonts::{Properties, Weight};
+use borkui_core::platform::Cursor;
+use borkui_core::Element;
 
 use super::agent_slide::AgentSlideAction;
 
@@ -95,7 +95,7 @@ pub(super) fn render_two_line_button(
         // Build title row with optional icon
         let title_el: Box<dyn Element> = if let Some(icon) = icon {
             const ICON_SIZE: f32 = 14.;
-            let icon_el = ConstrainedBox::new(Box::new(icon.to_derpui_icon(title_fill)))
+            let icon_el = ConstrainedBox::new(Box::new(icon.to_borkui_icon(title_fill)))
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish();

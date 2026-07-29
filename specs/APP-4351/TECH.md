@@ -1,6 +1,6 @@
 # Remote DiffStateModel
 
-Linear: [APP-4351](https://linear.app/derpdotdev/issue/APP-4351/update-diffstatemodel-api)
+Linear: [APP-4351](https://linear.app/borkdotdev/issue/APP-4351/update-diffstatemodel-api)
 
 ## Context
 

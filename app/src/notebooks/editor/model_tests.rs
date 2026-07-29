@@ -12,19 +12,19 @@ use markdown_parser::{
 use pathfinder_geometry::vector::Vector2F;
 use string_offset::CharOffset;
 use vec1::vec1;
-use derp_core::features::FeatureFlag;
-use derp_editor::content::buffer::{AutoScrollBehavior, BufferSelectAction, SelectionOffsets};
-use derp_editor::content::text::{BlockType, BufferBlockStyle, CodeBlockType, TextStyles};
-use derp_editor::model::{CoreEditorModel, RichTextEditorModel};
-use derp_editor::render::model::viewport::SizeInfo;
-use derp_editor::render::model::{BlockItem, RenderEvent};
-use derp_editor::selection::{TextDirection, TextUnit};
-use derpui::elements::ListIndentLevel;
-use derpui::platform::WindowStyle;
-use derpui::presenter::ChildView;
-use derpui::r#async::{block_on, FutureId, Timer};
-use derpui::text::word_boundaries::WordBoundariesPolicy;
-use derpui::{
+use bork_core::features::FeatureFlag;
+use bork_editor::content::buffer::{AutoScrollBehavior, BufferSelectAction, SelectionOffsets};
+use bork_editor::content::text::{BlockType, BufferBlockStyle, CodeBlockType, TextStyles};
+use bork_editor::model::{CoreEditorModel, RichTextEditorModel};
+use bork_editor::render::model::viewport::SizeInfo;
+use bork_editor::render::model::{BlockItem, RenderEvent};
+use bork_editor::selection::{TextDirection, TextUnit};
+use borkui::elements::ListIndentLevel;
+use borkui::platform::WindowStyle;
+use borkui::presenter::ChildView;
+use borkui::r#async::{block_on, FutureId, Timer};
+use borkui::text::word_boundaries::WordBoundariesPolicy;
+use borkui::{
     AddSingletonModel, App, AppContext, Element, Entity, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewHandle,
 };
@@ -69,7 +69,7 @@ impl View for TestView {
         "TestView"
     }
 
-    fn render(&self, _app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         ChildView::new(&self.editor).finish()
     }
 }
@@ -399,13 +399,13 @@ fn test_inline_markdown() {
         editor.update(&mut app, |editor, ctx| {
             editor.cursor_at(CharOffset::from(6), ctx);
             editor.active_text_style = TextStyles::default();
-            editor.user_insert("[abc](https://derp.baby", ctx);
+            editor.user_insert("[abc](https://bork.baby", ctx);
         });
 
         editor.read(&app, |editor, ctx| {
             assert_eq!(
                 editor.content.as_ref(ctx).debug(),
-                "<text>First[abc](https://derp.baby <b_s>bold<b_e>"
+                "<text>First[abc](https://bork.baby <b_s>bold<b_e>"
             );
         });
 
@@ -417,7 +417,7 @@ fn test_inline_markdown() {
             assert_eq!(editor.active_text_style, TextStyles::default());
             assert_eq!(
                 editor.content.as_ref(ctx).debug(),
-                "<text>First<a_https://derp.baby>abc<a> <b_s>bold<b_e>"
+                "<text>First<a_https://bork.baby>abc<a> <b_s>bold<b_e>"
             );
         });
 
@@ -431,7 +431,7 @@ fn test_inline_markdown() {
 
             assert_eq!(
                 editor.content.as_ref(ctx).debug(),
-                "<text>First<a_https://derp.baby>abc<a> <b_s>bold`abc<b_e>"
+                "<text>First<a_https://bork.baby>abc<a> <b_s>bold`abc<b_e>"
             );
 
             editor.user_insert("`", ctx);
@@ -441,7 +441,7 @@ fn test_inline_markdown() {
             assert_eq!(editor.active_text_style, TextStyles::default().bold());
             assert_eq!(
                 editor.content.as_ref(ctx).debug(),
-                "<text>First<a_https://derp.baby>abc<a> <b_s>bold<b_e><c_s>abc<c_e>"
+                "<text>First<a_https://bork.baby>abc<a> <b_s>bold<b_e><c_s>abc<c_e>"
             );
         });
     })
@@ -788,7 +788,7 @@ fn test_pasting_link_on_selected_text() {
     App::test((), |mut app| async move {
         initialize_deps(&mut app);
         let editor = model_from_markdown("First text\nSecond line", &mut app, true);
-        let clipboard_content = "https://derp.baby";
+        let clipboard_content = "https://bork.baby";
 
         layout_model(&mut app, &editor).await;
 
@@ -803,7 +803,7 @@ fn test_pasting_link_on_selected_text() {
 
             assert_eq!(
                 editor.debug_buffer(ctx),
-                "<text><a_https://derp.baby>First text<a>\\nSecond line"
+                "<text><a_https://bork.baby>First text<a>\\nSecond line"
             );
         });
     });
@@ -1879,11 +1879,11 @@ fn test_interleaving_command_and_embedding() {
 
         let model_handle = model_from_markdown(
             r#"Text
-```derp-embedded-object
+```bork-embedded-object
 id: Workflow-test_uid00000000000123
 ```
 More text
-```derp-embedded-object
+```bork-embedded-object
 id: Workflow-test_uid00000000000245
 ```
 ```Python
@@ -2603,7 +2603,7 @@ fn test_cut_code_block() {
             assert_eq!(clipboard.plain_text, "command");
             assert_eq!(
                 clipboard.html.unwrap(),
-                r#"<pre><code class="language-derp-runnable-command">command</code></pre>"#
+                r#"<pre><code class="language-bork-runnable-command">command</code></pre>"#
             );
         })
     });
@@ -3000,7 +3000,7 @@ fn test_multiselect_pasting() {
         });
 
         // Pasting a URL for multiple selections should paste as text.
-        let url_clipboard_content = "https://derp.baby";
+        let url_clipboard_content = "https://bork.baby";
 
         editor.update(&mut app, |editor, ctx| {
             editor.cursor_at(CharOffset::from(1), ctx);
@@ -3014,7 +3014,7 @@ fn test_multiselect_pasting() {
             editor.insert_formatted_from_paste(markdown, url_clipboard_content, ctx);
             assert_eq!(
                 editor.debug_buffer(ctx),
-                "<text><a_https://derp.baby>https://derp.baby<a>\\nSecond line\\n<a_https://derp.baby>https://derp.baby<a><code:Shell><c_#b4fa72>code<c><text>"
+                "<text><a_https://bork.baby>https://bork.baby<a>\\nSecond line\\n<a_https://bork.baby>https://bork.baby<a><code:Shell><c_#b4fa72>code<c><text>"
             );
         });
 
@@ -3031,7 +3031,7 @@ fn test_multiselect_pasting() {
             editor.insert_formatted_from_paste(markdown, "echo test", ctx);
             assert_eq!(
                 editor.debug_buffer(ctx),
-                "<text>echo test<a_https://derp.baby>https://derp.baby<a>\\nSecond line\\n<a_https://derp.baby>https://derp.baby<a><code:Shell><c_#b4fa72>coecho testde<c><text>"
+                "<text>echo test<a_https://bork.baby>https://bork.baby<a>\\nSecond line\\n<a_https://bork.baby>https://bork.baby<a><code:Shell><c_#b4fa72>coecho testde<c><text>"
             );
         });
     });

@@ -7,8 +7,8 @@ pub use entry::*;
 pub use harness_session_header::*;
 pub use setup_command::*;
 pub use setup_command_text::*;
-use derpui::prelude::Container;
-use derpui::{AppContext, Element, ModelHandle};
+use borkui::prelude::Container;
+use borkui::{AppContext, Element, ModelHandle};
 
 use super::AmbientAgentViewModel;
 use crate::ai::blocklist::block::view_impl::{

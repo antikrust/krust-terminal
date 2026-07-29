@@ -1,9 +1,9 @@
 use ai::skills::SkillReference;
 use input_classifier::InputType;
 use settings::Setting as _;
-use derp_core::features::FeatureFlag;
-use derp_search_core::inline_menu::InputDrivenInlineMenuLifecycle;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_search_core::inline_menu::InputDrivenInlineMenuLifecycle;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::blocklist::{
     BlocklistAIInputEvent, BlocklistAIInputModel, InputTypeAutoDetectionSource,

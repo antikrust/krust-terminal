@@ -1,9 +1,9 @@
-use derp_core::ui::appearance::Appearance;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui_core::elements::{
     Align, ClippedScrollStateHandle, ClippedScrollable, Container, CrossAxisAlignment, Flex,
     MainAxisSize, ParentElement, ScrollbarWidth, Shrinkable,
 };
-use derpui_core::Element;
+use borkui_core::Element;
 
 pub fn onboarding_slide_content(
     children: Vec<Box<dyn Element>>,

@@ -1,8 +1,8 @@
-use derpui::elements::{
+use borkui::elements::{
     ChildView, Container, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Text,
 };
-use derpui::{
+use borkui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
     WeakViewHandle,
 };

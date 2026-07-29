@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
-use derpui::AppContext;
+use borkui::AppContext;
 
 use crate::experiments::{BucketRange, Experiment, Layer};
 

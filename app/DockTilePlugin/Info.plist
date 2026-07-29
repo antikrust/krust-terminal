@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>derp.baby.DerpDockTilePlugin</string>
+    <string>bork.baby.BorkDockTilePlugin</string>
     <key>CFBundleExecutable</key>
-    <string>DerpDockTilePlugin</string>
+    <string>BorkDockTilePlugin</string>
     <key>CFBundleName</key>
-    <string>DerpDockTilePlugin</string>
+    <string>BorkDockTilePlugin</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>
@@ -15,7 +15,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>NSPrincipalClass</key>
-    <string>DerpDockTilePlugin</string>
+    <string>BorkDockTilePlugin</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
 </dict>

@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use fuzzy_match::match_indices_case_insensitive;
 use itertools::Itertools;
-use derpui::{AppContext, ModelHandle};
+use borkui::{AppContext, ModelHandle};
 
 use crate::pane_group::PaneId;
 use crate::search::command_palette::navigation::render::CommandRenderInfo;
@@ -247,8 +247,8 @@ mod full_text_searcher {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use derp_search_core::define_search_schema;
-    use derpui::{AppContext, ModelHandle};
+    use bork_search_core::define_search_schema;
+    use borkui::{AppContext, ModelHandle};
 
     use crate::pane_group::PaneId;
     use crate::search::command_palette::navigation::search::{

@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 
-use derp_core::ui::appearance::Appearance;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::elements::{
     Align, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CrossAxisAlignment, Expanded, Flex, MainAxisAlignment, MainAxisSize, ParentElement,
     ScrollbarWidth,
 };
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -193,7 +193,7 @@ impl AIFactView {
                 .with_child(
                     ConstrainedBox::new(
                         Icon::CloudOffline
-                            .to_derpui_icon(
+                            .to_borkui_icon(
                                 appearance
                                     .theme()
                                     .sub_text_color(appearance.theme().surface_2()),
@@ -278,7 +278,7 @@ impl View for AIFactView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish()
     }
@@ -308,16 +308,16 @@ impl BackingView for AIFactView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         _action: &Self::PaneHeaderOverflowMenuAction,
-        _ctx: &mut derpui::ViewContext<Self>,
+        _ctx: &mut borkui::ViewContext<Self>,
     ) {
         self.handle_action(_action, _ctx)
     }
 
-    fn close(&mut self, ctx: &mut derpui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut borkui::ViewContext<Self>) {
         ctx.emit(AIFactViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut derpui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut borkui::ViewContext<Self>) {
         self.focus(ctx);
     }
 

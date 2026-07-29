@@ -1,5 +1,5 @@
 pub use cloud_object_models::EnvVarSecretCommand;
-use derpui::ViewContext;
+use borkui::ViewContext;
 
 use super::env_var_collection::{EnvVarCollectionView, VariableRowIndex};
 use crate::env_vars::active_env_var_collection_data::SavingStatus;

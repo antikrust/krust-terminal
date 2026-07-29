@@ -1,6 +1,6 @@
 # TECH.md — Restore Open Files and Markdown Editors
 
-**GitHub Issue:** [derpdotdev/derp-external#371](https://github.com/derpdotdev/derp-external/issues/371)
+**GitHub Issue:** [borkdotdev/bork-external#371](https://github.com/borkdotdev/bork-external/issues/371)
 **Product Spec:** `specs/GH371/product.md`
 
 ## Problem

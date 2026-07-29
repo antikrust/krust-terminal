@@ -1,4 +1,4 @@
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 #[derive(Clone)]
 pub struct TeamTesterStatus {}

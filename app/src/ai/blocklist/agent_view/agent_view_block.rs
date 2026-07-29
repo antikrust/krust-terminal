@@ -1,18 +1,18 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
 use settings::Setting;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon;
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Empty, Expanded, Flex, Hoverable, MainAxisSize,
     MouseStateHandle, ParentElement, SavePosition, Shrinkable, Text,
 };
-use derpui::fonts::Weight::Bold;
-use derpui::fonts::{Properties, Style};
-use derpui::platform::Cursor;
-use derpui::prelude::{Border, CornerRadius, Radius};
-use derpui::text_layout::ClipConfig;
-use derpui::{
+use borkui::fonts::Weight::Bold;
+use borkui::fonts::{Properties, Style};
+use borkui::platform::Cursor;
+use borkui::prelude::{Border, CornerRadius, Radius};
+use borkui::text_layout::ClipConfig;
+use borkui::{
     AppContext, Element, Entity, EntityId, EventContext, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext,
 };
@@ -180,7 +180,7 @@ where
 {
     Hoverable::new(mouse_state, move |state| {
         let container = Container::new(
-            ConstrainedBox::new(icon.to_derpui_icon(icon_color.into()).finish())
+            ConstrainedBox::new(icon.to_borkui_icon(icon_color.into()).finish())
                 .with_height(20.)
                 .with_width(20.)
                 .finish(),
@@ -244,7 +244,7 @@ impl View for AgentViewEntryBlock {
         "EnterAgentBlock"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         if self.agent_view_controller.as_ref(app).is_fullscreen() {
             return Empty::new().finish();
         }

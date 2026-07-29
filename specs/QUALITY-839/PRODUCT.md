@@ -1,6 +1,6 @@
 # Auto-queue prompts during agent-requested long-running commands
 
-Linear: [QUALITY-839](https://linear.app/derpdotdev/issue/QUALITY-839/auto-enable-prompt-queueing-during-lrc)
+Linear: [QUALITY-839](https://linear.app/borkdotdev/issue/QUALITY-839/auto-enable-prompt-queueing-during-lrc)
 
 ## Summary
 
@@ -33,7 +33,7 @@ Today, a prompt submitted while an agent controls an agent-requested LRC is deli
 
 ### Status chip and ghost text
 
-12. While auto-queue is active, the prompt-queue chip in the derping indicator renders in its active (accent-colored) state, identical to when the user enables queue mode manually.
+12. While auto-queue is active, the prompt-queue chip in the borking indicator renders in its active (accent-colored) state, identical to when the user enables queue mode manually.
 13. While auto-queue is active and the input is in AI mode with an empty buffer, the ghost text shows the existing queue hint copy ("Queue a follow up for the running agent", with the classic-input "or backspace to exit" variant), replacing the steer hint shown today during an LRC.
 
 ### Reverting and manual override

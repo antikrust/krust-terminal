@@ -1,10 +1,10 @@
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ChildView, Clipped, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex,
     MouseStateHandle, Padding, ParentElement, Radius, Text,
 };
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -195,7 +195,7 @@ impl View for SpendingLimitModal {
         let theme = appearance.theme();
 
         let description_text = Text::new(
-            "Derp will prevent use of premium models when this dollar limit is reached. Resets on a monthly basis.",
+            "Bork will prevent use of premium models when this dollar limit is reached. Resets on a monthly basis.",
             appearance.ui_font_family(),
             14.,
         )

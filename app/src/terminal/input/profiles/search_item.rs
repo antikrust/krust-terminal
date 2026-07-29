@@ -1,12 +1,12 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::Icon;
-use derpui::elements::{ConstrainedBox, Container, Flex, Highlight, ParentElement as _, Text};
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::prelude::CrossAxisAlignment;
-use derpui::text_layout::ClipConfig;
-use derpui::{AppContext, Element, SingletonEntity as _};
+use bork_core::ui::theme::Fill;
+use bork_core::ui::Icon;
+use borkui::elements::{ConstrainedBox, Container, Flex, Highlight, ParentElement as _, Text};
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::prelude::CrossAxisAlignment;
+use borkui::text_layout::ClipConfig;
+use borkui::{AppContext, Element, SingletonEntity as _};
 
 use crate::ai::execution_profiles::profiles::ClientProfileId;
 use crate::appearance::Appearance;
@@ -81,7 +81,7 @@ impl SearchItem for ProfileSearchItem {
             ProfileSearchItemKind::Profile { .. } => Icon::Psychology,
             ProfileSearchItemKind::ManageProfiles => Icon::Gear,
         }
-        .to_derpui_icon(inline_styles::icon_color(appearance));
+        .to_borkui_icon(inline_styles::icon_color(appearance));
 
         Container::new(
             ConstrainedBox::new(icon.finish())

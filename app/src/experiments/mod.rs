@@ -1,9 +1,9 @@
-//! A framework for running A/B tests within Derp.
+//! A framework for running A/B tests within Bork.
 //!
 //! Before starting, please read the usage guide on Notion. The guide explains
 //! some important constraints that are required for proper use of the framework
 //! that we are not able to assert through automated testing.
-//! https://www.notion.so/derpdev/Experiment-Framework-Guide-88954c36a0c3469ea57b427b58249d5f?pvs=4
+//! https://www.notion.so/borkdev/Experiment-Framework-Guide-88954c36a0c3469ea57b427b58249d5f?pvs=4
 
 mod block_onboarding_layer;
 mod login_layer;
@@ -21,9 +21,9 @@ use dashmap::DashMap;
 pub use improved_palette_search_layer::{ImprovedPaletteSearch, IMPROVED_PALETTE_SEARCH_LAYER};
 use lazy_static::lazy_static;
 pub use login_layer::{AuthFlowInstructions, LOGIN_LAYER};
-use derp_core::user_preferences::GetUserPreferences as _;
-use derp_errors::report_error;
-use derpui::{AppContext, SingletonEntity};
+use bork_core::user_preferences::GetUserPreferences as _;
+use bork_errors::report_error;
+use borkui::{AppContext, SingletonEntity};
 
 use crate::auth::auth_state::AuthStateProvider;
 use crate::channel::{Channel, ChannelState};
@@ -352,7 +352,7 @@ pub trait Experiment<T: Experiment<T>>: FromStr {
 
             #[cfg(feature = "crash_reporting")]
             {
-                let tag_name = format!("derp.experiments.{}", Self::name());
+                let tag_name = format!("bork.experiments.{}", Self::name());
                 crate::crash_reporting::set_tag(&tag_name, group.variant());
             }
         }

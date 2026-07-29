@@ -1,6 +1,6 @@
 use settings::macros::define_settings_group;
 use settings::{SupportedPlatforms, SyncToCloud};
-use derpui::platform::GraphicsBackend;
+use borkui::platform::GraphicsBackend;
 
 define_settings_group!(GPUSettings, settings: [
    prefer_low_power_gpu: PreferLowPowerGPU {

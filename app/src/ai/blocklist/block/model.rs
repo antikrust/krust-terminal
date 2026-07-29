@@ -5,8 +5,8 @@ use chrono::TimeDelta;
 pub use helper::AIBlockModelHelper;
 pub use model_impl::*;
 use session_sharing_protocol::common::ParticipantId;
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, ViewContext};
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -218,7 +218,7 @@ pub trait AIBlockModel {
 
 #[cfg(any(test, feature = "integration_tests"))]
 pub mod testing {
-    use derpui::{AppContext, ViewContext};
+    use borkui::{AppContext, ViewContext};
 
     use super::{AIBlockModel, AIBlockOutputStatus, OutputStatusUpdateCallback};
     use crate::ai::agent::conversation::AIConversationId;

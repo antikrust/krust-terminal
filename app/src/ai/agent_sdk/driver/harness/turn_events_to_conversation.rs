@@ -1,21 +1,21 @@
-//! Maps a run's [`TurnEvent`]s into an [`api::ConversationData`] that Derp can
+//! Maps a run's [`TurnEvent`]s into an [`api::ConversationData`] that Bork can
 //! render as inline AI blocks via
 //! `TerminalView::load_conversation_from_tasks`.
 //!
 //! This is the bridge between a local CLI harness's structured output and
-//! Derp's own conversation UI — the thing that replaces the CLI's full-screen
+//! Bork's own conversation UI — the thing that replaces the CLI's full-screen
 //! TUI with inline blocks. Assistant prose and reasoning map to their native
 //! `AgentOutput`/`AgentReasoning` message types. Tool calls map to native
 //! `ToolCall`/`ToolCallResult` messages. Harness shell calls intentionally use
 //! the generic, read-only `CallMcpTool` card too: representing an already-run
-//! transcript as `RunShellCommand` makes Derp create a second terminal block
+//! transcript as `RunShellCommand` makes Bork create a second terminal block
 //! below the conversation card. See docs/local-harness-lifecycle.md.
 
 use std::collections::HashMap;
 
 use ai::agent::{ToolCallOutcome, TurnEvent};
 use uuid::Uuid;
-use derp_multi_agent_api as api;
+use bork_multi_agent_api as api;
 
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult};

@@ -1,7 +1,7 @@
-use derp_core::ui::appearance::Appearance;
-use derp_server_client::auth::AgentIdentity;
-use derpui::platform::WindowStyle;
-use derpui::App;
+use bork_core::ui::appearance::Appearance;
+use bork_server_client::auth::AgentIdentity;
+use borkui::platform::WindowStyle;
+use borkui::App;
 
 use super::CreateApiKeyModal;
 use crate::auth::AuthStateProvider;

@@ -46,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: Generate changelog draft
-        uses: derpdotdev/oz-agent-action@ce1621abf6a8ed8afdd4e4cc994545ede8fe1c6f # main
+        uses: borkdotdev/oz-agent-action@ce1621abf6a8ed8afdd4e4cc994545ede8fe1c6f # main
         with:
           prompt: |
             Generate a changelog draft for the ${{ inputs.channel }} channel, release tag ${{ inputs.release_tag }}.
@@ -55,12 +55,12 @@ jobs:
             Output directory: ${{ runner.temp }}/changelog-draft
 
             Follow the workflow in .agents/skills/changelog-draft/SKILL.md exactly.
-            When fetching PR data, pass the checked-out repository ("${{ github.repository }}") to fetch_prs.py and rely on the script's repo-sync normalization to resolve public derpdotdev/derp PR numbers, URLs, and authors. The script intentionally omits non-repo-sync PRs from derp-internal because they are private internal changes. Do not infer or synthesize public PR links manually.
+            When fetching PR data, pass the checked-out repository ("${{ github.repository }}") to fetch_prs.py and rely on the script's repo-sync normalization to resolve public borkdotdev/bork PR numbers, URLs, and authors. The script intentionally omits non-repo-sync PRs from bork-internal because they are private internal changes. Do not infer or synthesize public PR links manually.
 
             After writing the output files, print the full contents of changelog-draft.md to stdout so it appears in the workflow log.
 
             You are running in a GitHub Actions workflow. The repo is checked out at the default branch (HEAD). Use the release_tag input as the git range endpoint — do NOT check out the release tag. `gh` is authenticated. Do not commit, push, or create PRs.
-          derp_api_key: ${{ secrets.DERP_API_KEY }}
+          bork_api_key: ${{ secrets.BORK_API_KEY }}
           share: team
 
       - name: Upload changelog artifacts

@@ -2,7 +2,7 @@
 
 #import "services.h"
 
-@implementation DerpServicesProvider
+@implementation BorkServicesProvider
 
 // Opens a new tab for each file URL in the pasteboard, with the initial
 // directory set to the provided path (or parent directory, if the path
@@ -32,30 +32,30 @@
             [filePaths addObject:url.path];
         }
 
-        NSMutableArray<NSURL *> *derpUrls = [NSMutableArray array];
+        NSMutableArray<NSURL *> *borkUrls = [NSMutableArray array];
         for (NSString *path in filePaths) {
             NSURLComponents *components = [[[NSURLComponents alloc] init] autorelease];
-            NSString *scheme = derp_services_provider_custom_url_scheme();
+            NSString *scheme = bork_services_provider_custom_url_scheme();
             [components setScheme:scheme];
             [components setHost:@"action"];
             [components setPath:action];
             NSMutableArray *queryItems = [NSMutableArray array];
             [queryItems addObject:[NSURLQueryItem queryItemWithName:@"path" value:path]];
             [components setQueryItems:queryItems];
-            [derpUrls addObject:components.URL];
+            [borkUrls addObject:components.URL];
         };
 
         NSApplication *app = [NSApplication sharedApplication];
-        derp_app_open_urls(app, derpUrls);
+        bork_app_open_urls(app, borkUrls);
     }
 }
 
 @end
 
-// Creates a new DerpServicesProvider and registers it as the global services
+// Creates a new BorkServicesProvider and registers it as the global services
 // provider for the application
-void derp_register_services_provider() {
-    DerpServicesProvider *provider = [[DerpServicesProvider alloc] init];
+void bork_register_services_provider() {
+    BorkServicesProvider *provider = [[BorkServicesProvider alloc] init];
 
     // Set the global NSServices provider for the application.  This holds a
     // strong reference to the provider, so we don't have to worry about it

@@ -2,15 +2,15 @@
 
 This document catalogs every public `is_..._enabled` / `is_..._disabled` gating
 function on the `AISettings` struct in `app/src/settings/ai.rs`. It exists because
-this repo is a fork of Derp being stripped of account/cloud-gated features for
-solo local use: some of these gates only ever unlock a network call to Derp's
+this repo is a fork of Bork being stripped of account/cloud-gated features for
+solo local use: some of these gates only ever unlock a network call to Bork's
 own servers (account, quota, and org-policy dependent) and have no local
 equivalent, while others gate purely on-device behavior (local models, local
 file/process spawning, or simple local booleans) that can keep working with no
 account and no cloud backend at all. A few are genuinely hybrid, falling back
 to a local path when the cloud path isn't available. Knowing which is which
 matters for deciding what can be routed through local CLI harnesses (Claude
-Code, Codex, etc.) versus what would need a real Derp backend to do anything.
+Code, Codex, etc.) versus what would need a real Bork backend to do anything.
 
 This is a point-in-time snapshot of one commit (`5f52cf1`) of `app/src/settings/ai.rs`.
 Line numbers and call sites will drift as the code changes; treat this as a
@@ -25,22 +25,22 @@ Returns `true` (disabling AI) when the focused terminal contains remote
 AI in remote sessions. **Hybrid**: the check itself is a local boolean
 read off `FocusedTerminalInfo` and `UserWorkspaces::is_ai_allowed_in_remote_sessions()`
 (`app/src/workspaces/user_workspaces.rs:1517`), but the org policy value it
-reads was itself synced down from Derp's cloud team-management backend, so
-without a Derp account/team this simply defaults to `true` (allowed) via the
+reads was itself synced down from Bork's cloud team-management backend, so
+without a Bork account/team this simply defaults to `true` (allowed) via the
 `.unwrap_or(true)` fallback when there's no current team.
 
 ## `is_any_ai_enabled` (line 1798)
 
 The master AI kill switch: `*self.is_any_ai_enabled && !self.is_ai_disabled_due_to_remote_session_org_policy(app)`.
 **Local.** Notably, this previously also required `!is_anonymous_or_logged_out`
-(i.e. being logged into a Derp account) — that check has just been removed
+(i.e. being logged into a Bork account) — that check has just been removed
 from this function as part of this fork's work, so login is no longer a
 precondition for any AI feature gated behind this function.
 
 ## `is_active_ai_enabled` (line 1850)
 
 Composes `is_any_ai_enabled(app) && *self.is_active_ai_enabled_internal && AppExecutionMode::allows_active_ai()`.
-**Local.** `allows_active_ai()` (`crates/derp_core/src/execution_mode.rs:56`) just
+**Local.** `allows_active_ai()` (`crates/bork_core/src/execution_mode.rs:56`) just
 checks `self.is_app()` — i.e. "is this the real desktop app," unrelated to
 auth or cloud connectivity.
 
@@ -60,7 +60,7 @@ Gates whether the agent suggests new "rules" (memory-like facts) after a
 conversation. **Cloud.** Checked at `app/src/ai/blocklist/block.rs:2533`,
 and the suggestions are read back from `CloudModel::as_ref(ctx).get_all_objects_of_type::<_, CloudAIFactModel>()`
 (`app/src/ai/blocklist/block.rs:2543-2544`) — `CloudAIFactModel` lives in
-Derp's cloud object store (`app/src/ai/facts/mod.rs:1`, `crate::cloud_object::model::persistence::CloudModel`).
+Bork's cloud object store (`app/src/ai/facts/mod.rs:1`, `crate::cloud_object::model::persistence::CloudModel`).
 
 ## `is_code_suggestions_enabled` (line 1864)
 
@@ -84,7 +84,7 @@ Gates auto-generating a title when a user opens the "share block" dialog.
 **Cloud.** `app/src/terminal/share_block_modal.rs:1160-1163` (`should_send_title_gen_request`)
 guards a call to `block_client.generate_shared_block_title(request)`
 (`app/src/terminal/share_block_modal.rs:459-460`), where `BlockClient` is a
-trait implemented against Derp's server API (`app/src/server/server_api/block.rs:28,43`).
+trait implemented against Bork's server API (`app/src/server/server_api/block.rs:28,43`).
 Sharing a block is itself an inherently cloud feature (it produces a public
 URL), so this has no local equivalent.
 
@@ -118,7 +118,7 @@ requires the `voice_input` Cargo feature to be compiled in
 **Cloud** for the actual transcription: `app/src/editor/view/voice.rs:18`
 imports `crate::server::server_api::TranscribeError`, and the transcription
 result handling at `app/src/editor/view/voice.rs:486-501` matches on
-`TranscribeError::QuotaLimit`, confirming audio is sent to Derp's servers to
+`TranscribeError::QuotaLimit`, confirming audio is sent to Bork's servers to
 be transcribed (local mic capture, but no local speech-to-text path).
 
 ## `is_ai_autodetection_enabled` (line 1895)
@@ -155,11 +155,11 @@ building agent request context, and the underlying storage type is
 (`cloud_object_models`). The Rules view also shows a "disabled" banner when
 this is off (`app/src/ai/facts/view/rule.rs:966`).
 
-## `is_derp_drive_context_enabled` (line 1912)
+## `is_bork_drive_context_enabled` (line 1912)
 
-Gates whether Derp Drive objects (shared notebooks, workflows, env-var
+Gates whether Bork Drive objects (shared notebooks, workflows, env-var
 collections, etc.) are pulled in as agent context. **Cloud.** Consumed
-alongside `is_memory_enabled` at `app/src/ai/agent/api.rs:209`. Derp Drive
+alongside `is_memory_enabled` at `app/src/ai/agent/api.rs:209`. Bork Drive
 items are backed by `CloudObject`/`cloud_object` machinery
 (`app/src/drive/mod.rs:19,26-27`, `CloudObjectTypeAndId`, `CloudViewModel`) —
 Drive is fundamentally a cloud-synced workspace feature with no local
@@ -173,7 +173,7 @@ requires `FeatureFlag::FileBasedMcp`. Consumed in
 `app/src/ai/mcp/file_based_manager.rs:317,357,423` to decide auto-start
 eligibility for `TemplatableMCPServerInstallation`s; the servers themselves are
 spawned as local child processes (`FileBasedMCPManagerEvent::SpawnServers`,
-`app/src/ai/mcp/file_based_manager.rs:335-343`). Global first-party ("Derp")
+`app/src/ai/mcp/file_based_manager.rs:335-343`). Global first-party ("Bork")
 servers always auto-spawn regardless of this toggle; only global third-party
 servers are gated by it, and project-scoped servers always require explicit
 opt-in regardless. A code comment (`app/src/settings/ai.rs:1917-1929`) notes
@@ -197,7 +197,7 @@ agent driving the orchestration is typically the main cloud-backed agent.
 ## `is_cloud_handoff_enabled` (line 1938)
 
 Gates whether a local conversation can be "handed off" to continue running in
-Derp's cloud. **Cloud by definition** — the whole feature is
+Bork's cloud. **Cloud by definition** — the whole feature is
 local-to-cloud handoff. Requires `FeatureFlag::OzHandoff`,
 `FeatureFlag::HandoffLocalCloud`, the `local_fs` Cargo feature, non-wasm
 target, `PrivacySettings::is_cloud_conversation_storage_enabled`, and that the
@@ -241,7 +241,7 @@ Consumed in `app/src/workspace/auto_handoff.rs:245,268,408`.
 | `is_ai_autodetection_enabled` | Local (on-device ONNX/heuristic classifier) |
 | `is_nld_in_terminal_enabled` | Local (same classifier, AgentView path) |
 | `is_memory_enabled` | Cloud |
-| `is_derp_drive_context_enabled` | Cloud |
+| `is_bork_drive_context_enabled` | Cloud |
 | `is_file_based_mcp_enabled` | Local |
 | `is_orchestration_enabled` | Hybrid (enables child agents; cloud vs. local harness decided elsewhere) |
 | `is_cloud_handoff_enabled` | Cloud |

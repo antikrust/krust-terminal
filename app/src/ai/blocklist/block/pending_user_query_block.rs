@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use derp_core::features::FeatureFlag;
-use derp_core::semantic_selection::SemanticSelection;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::semantic_selection::SemanticSelection;
+use borkui::elements::{
     get_rich_content_position_id, ChildView, Container, CrossAxisAlignment, Expanded, Flex,
     ParentElement, SavePosition, SelectableArea, SelectionHandle, Text,
 };
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::{
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

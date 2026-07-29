@@ -1,8 +1,8 @@
 //! End-to-end editor tests.
 
 use string_offset::CharOffset;
-use derp_core::features::FeatureFlag;
-use derpui_core::{App, ModelHandle, ReadModel};
+use bork_core::features::FeatureFlag;
+use borkui_core::{App, ModelHandle, ReadModel};
 
 use super::model::test_utils::{TEST_STYLES, init_logging};
 use super::model::{BlockItem, RenderEvent, RenderState};

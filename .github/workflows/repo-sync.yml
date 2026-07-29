@@ -15,16 +15,16 @@ on:
 
 jobs:
   sync:
-    if: (github.event_name == 'push' || inputs.action == 'sync') && github.repository_owner == 'derpdotdev'
-    uses: derpdotdev/repo-sync/.github/workflows/sync.yml@main
+    if: (github.event_name == 'push' || inputs.action == 'sync') && github.repository_owner == 'borkdotdev'
+    uses: borkdotdev/repo-sync/.github/workflows/sync.yml@main
     with:
       repo_sync_ref: main
       app_id: ${{ vars.REPO_SYNC_APP_ID }}
-      public_repo: derpdotdev/derp
-      private_repo: derpdotdev/derp-internal
+      public_repo: borkdotdev/bork
+      private_repo: borkdotdev/bork-internal
     secrets:
       app_private_key: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
-      derp_api_key: ${{ secrets.DERP_API_KEY }}
+      bork_api_key: ${{ secrets.BORK_API_KEY }}
 
   restack:
     # Run the restack workflow on PRs for `repo-sync/`-prefixed branches
@@ -36,40 +36,40 @@ jobs:
        github.event.pull_request.merged == true ||
        (github.event.action == 'labeled' && github.event.label.name == 'repo-sync:needs-restack')
       ) &&
-      github.repository_owner == 'derpdotdev'
-    uses: derpdotdev/repo-sync/.github/workflows/restack.yml@main
+      github.repository_owner == 'borkdotdev'
+    uses: borkdotdev/repo-sync/.github/workflows/restack.yml@main
     with:
       repo_sync_ref: main
       app_id: ${{ vars.REPO_SYNC_APP_ID }}
-      public_repo: derpdotdev/derp
-      private_repo: derpdotdev/derp-internal
+      public_repo: borkdotdev/bork
+      private_repo: borkdotdev/bork-internal
     secrets:
       app_private_key: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
-      derp_api_key: ${{ secrets.DERP_API_KEY }}
+      bork_api_key: ${{ secrets.BORK_API_KEY }}
 
   approve:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
       startsWith(github.event.pull_request.head.ref, 'repo-sync/') &&
-      github.repository_owner == 'derpdotdev'
-    uses: derpdotdev/repo-sync/.github/workflows/approve.yml@main
+      github.repository_owner == 'borkdotdev'
+    uses: borkdotdev/repo-sync/.github/workflows/approve.yml@main
     with:
       repo_sync_ref: main
       approver_app_id: ${{ vars.REPO_SYNC_APPROVER_APP_ID }}
-      public_repo: derpdotdev/derp
-      private_repo: derpdotdev/derp-internal
+      public_repo: borkdotdev/bork
+      private_repo: borkdotdev/bork-internal
     secrets:
       approver_app_private_key: ${{ secrets.REPO_SYNC_APPROVER_APP_PRIVATE_KEY }}
 
   escalation:
-    if: inputs.action == 'escalation' && github.repository_owner == 'derpdotdev'
-    uses: derpdotdev/repo-sync/.github/workflows/escalation.yml@main
+    if: inputs.action == 'escalation' && github.repository_owner == 'borkdotdev'
+    uses: borkdotdev/repo-sync/.github/workflows/escalation.yml@main
     with:
       repo_sync_ref: main
       app_id: ${{ vars.REPO_SYNC_APP_ID }}
-      public_repo: derpdotdev/derp
-      private_repo: derpdotdev/derp-internal
+      public_repo: borkdotdev/bork
+      private_repo: borkdotdev/bork-internal
       escalate_to: "@oncall-client-primary"
       escalate_after: "30m"
     secrets:

@@ -43,8 +43,8 @@ impl RenderableBlock for RenderableParagraph {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut derpui_core::LayoutContext,
-        app: &derpui_core::AppContext,
+        ctx: &mut borkui_core::LayoutContext,
+        app: &borkui_core::AppContext,
     ) {
         self.placeholder
             .layout(&self.viewport_item, model, ctx, app, |_| {
@@ -59,7 +59,7 @@ impl RenderableBlock for RenderableParagraph {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        _app: &derpui_core::AppContext,
+        _app: &borkui_core::AppContext,
     ) {
         let content = model.content();
         let paragraph = extract_block!(self.viewport_item, content, (block, BlockItem::Paragraph(inner)) => block.paragraph(inner));

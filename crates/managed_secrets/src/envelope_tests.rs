@@ -11,7 +11,7 @@ use crate::ManagedSecretValue;
 fn test_import_public_keyset() {
     super::init();
 
-    // A base64-encoded public keyset as returned by derp-server.
+    // A base64-encoded public keyset as returned by bork-server.
     let public_key = "COvInMIBEnAKZAo0dHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuSHBrZVB1YmxpY0tleRIqEgYIARABGAIaIHRaibhtYbpEfh2CSpdDPhh/6lCBnfoO3nqBmZ3VQGJyGAMQARjryJzCASAB";
     let upload_key =
         UploadKey::import_public_keyset(public_key).expect("unable to import public keyset");

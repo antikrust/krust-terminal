@@ -4,19 +4,19 @@ use std::sync::Arc;
 
 use markdown_parser::markdown_parser::CODE_BLOCK_DEFAULT_MARKDOWN_LANG;
 use pathfinder_color::ColorU;
-use derp_core::ui::builder::CHECK_SVG_PATH;
-use derp_core::ui::theme::color::internal_colors;
-use derp_editor::content::text::{
+use bork_core::ui::builder::CHECK_SVG_PATH;
+use bork_core::ui::theme::color::internal_colors;
+use bork_editor::content::text::{
     BlockHeaderSize, BlockType as ContentBlockType, BufferBlockStyle, CodeBlockType,
 };
-use derp_editor::render::model::{
+use bork_editor::render::model::{
     BrokenLinkStyle, CheckBoxStyle, EmbeddedItem, HorizontalRuleStyle, InlineCodeStyle,
     ParagraphStyles, RichTextStyles, TableStyle,
 };
-use derp_util::user_input::UserInput;
-use derpui::elements::{Border, ListIndentLevel};
-use derpui::fonts::FamilyId;
-use derpui::ui_components::checkbox::HOVER_BACKGROUND_COLOR;
+use bork_util::user_input::UserInput;
+use borkui::elements::{Border, ListIndentLevel};
+use borkui::fonts::FamilyId;
+use borkui::ui_components::checkbox::HOVER_BACKGROUND_COLOR;
 
 use crate::appearance::Appearance;
 use crate::notebooks::editor::embedded_item::EmbeddedWorkflow;
@@ -332,7 +332,7 @@ impl<'a> From<&'a BufferBlockStyle> for BlockType {
 /// Wrapper around the shared [`Workflow`] type with additional context for workflows contained
 /// within a notebook.
 ///
-/// This may be a command block that's part of the notebook text, or an embedded Derp Drive workflow.
+/// This may be a command block that's part of the notebook text, or an embedded Bork Drive workflow.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NotebookWorkflow {
     /// Definition of the workflow itself.

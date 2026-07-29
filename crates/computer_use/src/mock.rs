@@ -1,8 +1,8 @@
 //! Mock recorder for exercising the recording UI on macOS, where real capture
 //! is unsupported.
 //!
-//! Enabled by setting `DERP_MOCK_RECORDER`; `stop` publishes a copy of the MP4
-//! at `DERP_MOCK_RECORDING_FIXTURE`, and `DERP_MOCK_RECORDING_STOPPED_EARLY`
+//! Enabled by setting `BORK_MOCK_RECORDER`; `stop` publishes a copy of the MP4
+//! at `BORK_MOCK_RECORDING_FIXTURE`, and `BORK_MOCK_RECORDING_STOPPED_EARLY`
 //! exercises the partial-recording copy.
 
 use std::sync::{Arc, Mutex, OnceLock};
@@ -49,19 +49,19 @@ impl crate::Recorder for Recorder {
             .map(|started| started.elapsed())
             .unwrap_or_default();
 
-        let fixture = std::env::var("DERP_MOCK_RECORDING_FIXTURE").map_err(|_| {
+        let fixture = std::env::var("BORK_MOCK_RECORDING_FIXTURE").map_err(|_| {
             RecordingError::Environment {
-                reason: "DERP_MOCK_RECORDING_FIXTURE is not set".to_string(),
+                reason: "BORK_MOCK_RECORDING_FIXTURE is not set".to_string(),
             }
         })?;
         let path =
-            std::env::temp_dir().join(format!("derp-mock-recording-{}.mp4", std::process::id()));
+            std::env::temp_dir().join(format!("bork-mock-recording-{}.mp4", std::process::id()));
         std::fs::copy(&fixture, &path).map_err(|e| RecordingError::Finalize {
             reason: format!("failed to copy mock fixture '{fixture}': {e}"),
         })?;
         let size_bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
 
-        let completion_status = if std::env::var_os("DERP_MOCK_RECORDING_STOPPED_EARLY").is_some() {
+        let completion_status = if std::env::var_os("BORK_MOCK_RECORDING_STOPPED_EARLY").is_some() {
             RecordingCompletionStatus::StoppedEarly
         } else {
             RecordingCompletionStatus::Completed

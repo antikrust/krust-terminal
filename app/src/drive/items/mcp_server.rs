@@ -1,7 +1,7 @@
-use derpui::elements::MouseStateHandle;
-use derpui::{AppContext, Element};
+use borkui::elements::MouseStateHandle;
+use borkui::{AppContext, Element};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::ai::mcp::CloudMCPServer;
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
@@ -10,18 +10,18 @@ use crate::drive::{CloudObjectTypeAndId, DriveObjectType};
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct DerpDriveMCPServer {
+pub struct BorkDriveMCPServer {
     id: CloudObjectTypeAndId,
     mcp_server: CloudMCPServer,
 }
 
-impl DerpDriveMCPServer {
+impl BorkDriveMCPServer {
     pub fn new(id: CloudObjectTypeAndId, mcp_server: CloudMCPServer) -> Self {
         Self { id, mcp_server }
     }
 }
 
-impl DerpDriveItem for DerpDriveMCPServer {
+impl BorkDriveItem for BorkDriveMCPServer {
     fn display_name(&self) -> Option<String> {
         Some(self.mcp_server.model().string_model.name.clone())
     }
@@ -46,8 +46,8 @@ impl DerpDriveItem for DerpDriveMCPServer {
         None
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -66,7 +66,7 @@ impl DerpDriveItem for DerpDriveMCPServer {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }

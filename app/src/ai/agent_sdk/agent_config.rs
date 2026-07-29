@@ -1,10 +1,10 @@
 //! Commands to interact with available agents via the public API.
 
-use derp_cli::agent::ListAgentSkillsArgs;
-use derp_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use derp_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::agent::ListAgentSkillsArgs;
+use bork_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use bork_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::oauth_flow::poll_oauth_until_terminal;
 use crate::ai::cloud_environments::GithubRepo;
@@ -219,7 +219,7 @@ impl AgentConfigRunner {
         if repo.is_some() {
             println!("Fetching agent skills from the specified repository...");
         } else {
-            println!("Fetching agent skills from your Derp environments...");
+            println!("Fetching agent skills from your Bork environments...");
         }
 
         let list_future = async move { ai_client.list_skills(repo).await };
@@ -306,7 +306,7 @@ impl AgentConfigRunner {
     }
 }
 
-impl derpui::Entity for AgentConfigRunner {
+impl borkui::Entity for AgentConfigRunner {
     type Event = ();
 }
 

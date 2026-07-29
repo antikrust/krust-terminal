@@ -1,0 +1,23 @@
+[Desktop Entry]
+# The version of the desktop entry spec this conforms to.
+Version=1.0
+
+Type=Application
+
+Name=BorkLocal
+GenericName=TerminalEmulator
+
+Exec=bork-terminal-local %U
+StartupWMClass=bork.baby.BorkLocal
+
+Keywords=shell;prompt;command;commandline;cmd;
+
+Icon=bork.baby.BorkLocal
+
+Categories=System;TerminalEmulator;
+
+# Don't run this application within a terminal.
+Terminal=false
+
+# Register ourselves as the handler for borklocal:// URLs.
+MimeType=x-scheme-handler/borklocal;

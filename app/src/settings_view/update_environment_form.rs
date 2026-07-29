@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use instant::{Duration, Instant};
 use log::debug;
 use url::Url;
-use derp_core::send_telemetry_from_ctx;
-use derp_editor::editor::NavigationKey;
-use derp_graphql::queries::user_github_info::UserGithubInfoResult;
-use derpui::elements::{
+use bork_core::send_telemetry_from_ctx;
+use bork_editor::editor::NavigationKey;
+use bork_graphql::queries::user_github_info::UserGithubInfoResult;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Empty, Expanded,
     Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
@@ -15,13 +15,13 @@ use derpui::elements::{
     PositionedElementOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode,
     ScrollbarWidth, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::geometry::vector::vec2f;
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::prelude::Coords;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::geometry::vector::vec2f;
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::prelude::Coords;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -54,7 +54,7 @@ use crate::ChannelState;
 const SUBMIT_BUTTON_FOCUSED: &str = "SubmitButtonFocused";
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -1537,7 +1537,7 @@ impl UpdateEnvironmentForm {
 
                 match result {
                     Ok(result) => match result {
-                        derp_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::SuggestCloudEnvironmentImageOutput(output) => {
+                        bork_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::SuggestCloudEnvironmentImageOutput(output) => {
                             let image = output.image;
                             let needs_custom_image = output.needs_custom_image;
                             let reason = output.reason;
@@ -1549,7 +1549,7 @@ impl UpdateEnvironmentForm {
                                 ctx,
                             );
                         }
-                        derp_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::SuggestCloudEnvironmentImageAuthRequiredOutput(output) => {
+                        bork_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::SuggestCloudEnvironmentImageAuthRequiredOutput(output) => {
                             me.suggest_image_cache.insert(
                                 key.clone(),
                                 CachedSuggestImageResult::AuthRequired {
@@ -1561,7 +1561,7 @@ impl UpdateEnvironmentForm {
                                 auth_url: output.auth_url,
                             };
                         }
-                        derp_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::UserFacingError(_) => {
+                        bork_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::UserFacingError(_) => {
                             let error_message = "Failed to suggest a Docker image".to_string();
                             send_telemetry_from_ctx!(
                                 CloudAgentTelemetryEvent::ImageSuggestionFailed {
@@ -1574,7 +1574,7 @@ impl UpdateEnvironmentForm {
                                 message: error_message,
                             };
                         }
-                        derp_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::Unknown => {
+                        bork_graphql::queries::suggest_cloud_environment_image::SuggestCloudEnvironmentImageResult::Unknown => {
                             let error_message = "Unknown response from suggestCloudEnvironmentImage".to_string();
                             send_telemetry_from_ctx!(
                                 CloudAgentTelemetryEvent::ImageSuggestionFailed {
@@ -2110,7 +2110,7 @@ impl UpdateEnvironmentForm {
                         .with_child(
                             ConstrainedBox::new(
                                 Icon::Github
-                                    .to_derpui_icon(theme.active_ui_text_color())
+                                    .to_borkui_icon(theme.active_ui_text_color())
                                     .finish(),
                             )
                             .with_width(icon_size)
@@ -2224,7 +2224,7 @@ impl UpdateEnvironmentForm {
                             .with_child(
                                 ConstrainedBox::new(
                                     Icon::Refresh
-                                        .to_derpui_icon(theme.active_ui_text_color())
+                                        .to_borkui_icon(theme.active_ui_text_color())
                                         .finish(),
                                 )
                                 .with_width(icon_size)
@@ -3104,7 +3104,7 @@ impl UpdateEnvironmentForm {
             "Suggest image"
         };
 
-        let tooltip_text = "Derp will suggest a Docker image based on your selected repositories.";
+        let tooltip_text = "Bork will suggest a Docker image based on your selected repositories.";
 
         let button = Hoverable::new(
             self.suggest_image_button_mouse_state.clone(),
@@ -3126,7 +3126,7 @@ impl UpdateEnvironmentForm {
                 };
 
                 let icon_size = appearance.ui_font_size();
-                let icon = ConstrainedBox::new(Icon::Lightbulb.to_derpui_icon(text_fill).finish())
+                let icon = ConstrainedBox::new(Icon::Lightbulb.to_borkui_icon(text_fill).finish())
                     .with_width(icon_size)
                     .with_height(icon_size)
                     .finish();
@@ -3495,8 +3495,8 @@ impl TypedActionView for UpdateEnvironmentForm {
         &mut self,
         _action: &Self::Action,
         _ctx: &mut ViewContext<Self>,
-    ) -> derpui::accessibility::ActionAccessibilityContent {
-        derpui::accessibility::ActionAccessibilityContent::default()
+    ) -> borkui::accessibility::ActionAccessibilityContent {
+        borkui::accessibility::ActionAccessibilityContent::default()
     }
 }
 
@@ -3505,7 +3505,7 @@ impl View for UpdateEnvironmentForm {
         "UpdateEnvironmentForm"
     }
 
-    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if self.submit_button.is_focused(app) {
             context.set.insert(SUBMIT_BUTTON_FOCUSED);

@@ -6,14 +6,14 @@
 use std::collections::HashMap;
 
 use settings::Setting as _;
-use derp::features::FeatureFlag;
-use derp::integration_testing::input::{
+use bork::features::FeatureFlag;
+use bork::integration_testing::input::{
     open_cli_agent_rich_input, rich_input_buffer_contains_newline,
     rich_input_buffer_does_not_contain_newline, rich_input_buffer_text_is_empty,
 };
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use derp::settings::SubmitRichInputOnCtrlEnter;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use bork::settings::SubmitRichInputOnCtrlEnter;
 
 use super::new_builder;
 use crate::Builder;

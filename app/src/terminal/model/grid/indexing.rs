@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo};
 
-use derp_terminal::model::grid::cell::Cell;
-use derp_terminal::model::grid::row::Row;
+use bork_terminal::model::grid::cell::Cell;
+use bork_terminal::model::grid::row::Row;
 
 use super::grid_handler::GridHandler;
 use super::GridStorage;

@@ -1,6 +1,6 @@
 # Client-Side Wiring for Remote File Tree — Tech Spec
 
-Linear: [APP-3788](https://linear.app/derpdotdev/issue/APP-3788)
+Linear: [APP-3788](https://linear.app/borkdotdev/issue/APP-3788)
 
 ## 1. Problem
 
@@ -78,7 +78,7 @@ The client parses these in `push_message_to_event()` and delivers them as `Clien
 
 Currently `RemoteRepositoryIdentifier` is `(SessionId, StandardizedPath)`. Multiple SSH sessions to the same host share one remote server, so keying by session would duplicate repo metadata N times.
 
-**Move `HostId`** from `crates/remote_server/src/host_id.rs` to `crates/derp_core/src/host_id.rs` (same pattern as `SessionId` in `derp_core/src/session_id.rs`). Re-export from `remote_server` for backward compatibility.
+**Move `HostId`** from `crates/remote_server/src/host_id.rs` to `crates/bork_core/src/host_id.rs` (same pattern as `SessionId` in `bork_core/src/session_id.rs`). Re-export from `remote_server` for backward compatibility.
 
 **Update `RemoteRepositoryIdentifier`**:
 

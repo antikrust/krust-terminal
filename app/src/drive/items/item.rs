@@ -1,20 +1,20 @@
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
-use derpui::elements::{
+use borkui::elements::{
     AcceptedByDropTarget, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Draggable, DraggableState, DropShadow, Empty, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::presenter::PositionCache;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::ui_components::text::Span;
-use derpui::{AppContext, Element, SingletonEntity, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::presenter::PositionCache;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::text::Span;
+use borkui::{AppContext, Element, SingletonEntity, ViewHandle};
 
-use super::DerpDriveItemId;
+use super::BorkDriveItemId;
 use crate::appearance::Appearance;
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::model::view::CloudViewModel;
@@ -24,8 +24,8 @@ use crate::drive::index::{
     DRIVE_INDEX_VIEW_POSITION_ID, FOLDER_DEPTH_INDENT, INDEX_CONTENT_MARGIN_LEFT, ITEM_FONT_SIZE,
     ITEM_MARGIN_BOTTOM, ITEM_PADDING_HORIZONTAL, ITEM_PADDING_VERTICAL,
 };
-use crate::drive::items::DerpDriveItem;
-use crate::drive::panel::DERP_DRIVE_POSITION_ID;
+use crate::drive::items::BorkDriveItem;
+use crate::drive::panel::BORK_DRIVE_POSITION_ID;
 use crate::drive::CloudObjectTypeAndId;
 use crate::menu::Menu;
 use crate::ui_components::blended_colors;
@@ -62,10 +62,10 @@ pub struct ItemStates {
     pub item_sync_icon_hover_state: MouseStateHandle,
 }
 
-struct DerpDriveItemStyles {
+struct BorkDriveItemStyles {
     // Height of each item
     item_height: f32,
-    /// Default styles of the DerpDriveItem
+    /// Default styles of the BorkDriveItem
     default: UiComponentStyles,
     /// On top of the default styles, active contains extra styling for when the item is being dragged
     dragged: UiComponentStyles,
@@ -73,7 +73,7 @@ struct DerpDriveItemStyles {
     hovered: UiComponentStyles,
 }
 
-impl DerpDriveItemStyles {
+impl BorkDriveItemStyles {
     fn merge(self, style: UiComponentStyles) -> Self {
         Self {
             default: self.default.merge(style),
@@ -81,11 +81,11 @@ impl DerpDriveItemStyles {
         }
     }
 
-    fn default(appearance: &Appearance) -> DerpDriveItemStyles {
+    fn default(appearance: &Appearance) -> BorkDriveItemStyles {
         let theme = appearance.theme();
         let item_height = ITEM_FONT_SIZE * 2.0 - ITEM_MARGIN_BOTTOM;
         let background = theme.background();
-        DerpDriveItemStyles {
+        BorkDriveItemStyles {
             item_height,
             default: UiComponentStyles::default()
                 .set_font_color(blended_colors::text_sub(theme, background))
@@ -96,7 +96,7 @@ impl DerpDriveItemStyles {
                 .set_font_size(ITEM_FONT_SIZE)
                 .set_font_color(theme.foreground().into())
                 .set_background(
-                    derp_core::ui::theme::color::internal_colors::fg_overlay_4(theme).into(),
+                    bork_core::ui::theme::color::internal_colors::fg_overlay_4(theme).into(),
                 )
                 .set_border_color(theme.accent().into()),
             hovered: UiComponentStyles::default()
@@ -104,19 +104,19 @@ impl DerpDriveItemStyles {
                 .set_font_size(ITEM_FONT_SIZE)
                 .set_font_color(blended_colors::text_main(theme, background))
                 .set_background(
-                    derp_core::ui::theme::color::internal_colors::fg_overlay_2(theme).into(),
+                    bork_core::ui::theme::color::internal_colors::fg_overlay_2(theme).into(),
                 ),
         }
     }
 }
 
-/// A UI wrapper around a row in derp drive that holds important UI state for the row and implements
-/// a unified look for all rows in derp drive, like padding and hover states.
+/// A UI wrapper around a row in bork drive that holds important UI state for the row and implements
+/// a unified look for all rows in bork drive, like padding and hover states.
 ///
 /// The item-specific information like icon, name, click_action, and preview modal are abstracted as much as
-/// possible into the DerpDriveType enum.
-pub struct DerpDriveRow<'a> {
-    item: Box<dyn DerpDriveItem>,
+/// possible into the BorkDriveType enum.
+pub struct BorkDriveRow<'a> {
+    item: Box<dyn BorkDriveItem>,
     space: Space,
     item_states: ItemStates,
     overflow_button: Box<dyn Element>,
@@ -125,7 +125,7 @@ pub struct DerpDriveRow<'a> {
     folder_depth: usize,
     sync_icon: Option<Box<dyn Element>>,
     can_move: bool,
-    styles: DerpDriveItemStyles,
+    styles: BorkDriveItemStyles,
     menu_open: bool,
     share_dialog_open: bool,
     is_selected: bool,
@@ -134,10 +134,10 @@ pub struct DerpDriveRow<'a> {
     appearance: &'a Appearance,
 }
 
-impl<'a> DerpDriveRow<'a> {
+impl<'a> BorkDriveRow<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        item: Box<dyn DerpDriveItem>,
+        item: Box<dyn BorkDriveItem>,
         item_states: ItemStates,
         space: Space,
         folder_depth: usize,
@@ -152,7 +152,7 @@ impl<'a> DerpDriveRow<'a> {
         menu_direction: MenuDirection,
         appearance: &'a Appearance,
     ) -> Option<Self> {
-        let derp_drive_item_id = item.derp_drive_id();
+        let bork_drive_item_id = item.bork_drive_id();
         let overflow_button = match has_menu_items {
             true => {
                 if is_focused || item_states.draggable_state.is_dragging() {
@@ -163,7 +163,7 @@ impl<'a> DerpDriveRow<'a> {
                                 ctx.dispatch_typed_action(
                                     DriveIndexAction::ToggleItemOverflowMenu {
                                         space,
-                                        derp_drive_item_id,
+                                        bork_drive_item_id,
                                     },
                                 );
                             },
@@ -186,7 +186,7 @@ impl<'a> DerpDriveRow<'a> {
                                 ctx.dispatch_typed_action(
                                     DriveIndexAction::ToggleItemOverflowMenu {
                                         space,
-                                        derp_drive_item_id,
+                                        bork_drive_item_id,
                                     },
                                 );
                             },
@@ -221,7 +221,7 @@ impl<'a> DerpDriveRow<'a> {
             folder_depth,
             sync_icon,
             can_move,
-            styles: DerpDriveItemStyles::default(appearance),
+            styles: BorkDriveItemStyles::default(appearance),
             menu_open,
             share_dialog_open,
             is_selected,
@@ -248,7 +248,7 @@ impl<'a> DerpDriveRow<'a> {
         menu_direction: MenuDirection,
         appearance: &'a Appearance,
     ) -> Option<Self> {
-        let item = object.to_derp_drive_item(appearance)?;
+        let item = object.to_bork_drive_item(appearance)?;
         Self::new(
             item,
             item_states,
@@ -415,7 +415,7 @@ impl<'a> DerpDriveRow<'a> {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
-        let DerpDriveItemId::Object(object_id) = self.item.derp_drive_id() else {
+        let BorkDriveItemId::Object(object_id) = self.item.bork_drive_id() else {
             return None;
         };
 
@@ -447,7 +447,7 @@ impl<'a> DerpDriveRow<'a> {
         let text_color = appearance.theme().sub_text_color(background);
 
         let icon = Container::new(
-            ConstrainedBox::new(Icon::Users.to_derpui_icon(text_color).finish())
+            ConstrainedBox::new(Icon::Users.to_borkui_icon(text_color).finish())
                 .with_height(15.)
                 .with_width(15.)
                 .finish(),
@@ -495,7 +495,7 @@ impl<'a> DerpDriveRow<'a> {
                             Container::new(
                                 ConstrainedBox::new(
                                     Icon::Clock
-                                        .to_derpui_icon(
+                                        .to_borkui_icon(
                                             appearance
                                                 .theme()
                                                 .sub_text_color(appearance.theme().surface_2()),
@@ -573,7 +573,7 @@ impl<'a> DerpDriveRow<'a> {
             });
 
             Container::new(
-                ConstrainedBox::new(chevron_icon.to_derpui_icon(icon_color.into()).finish())
+                ConstrainedBox::new(chevron_icon.to_borkui_icon(icon_color.into()).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish(),
@@ -593,9 +593,9 @@ impl<'a> DerpDriveRow<'a> {
     }
 
     fn render_icon(&self, style: UiComponentStyles) -> Box<dyn Element> {
-        let icon_to_render = match self.item.derp_drive_id() {
+        let icon_to_render = match self.item.bork_drive_id() {
             // This sets the icon color of folders correctly in color contrast cases, e.g. being dragged or focused
-            DerpDriveItemId::Object(CloudObjectTypeAndId::Folder(_))
+            BorkDriveItemId::Object(CloudObjectTypeAndId::Folder(_))
                 if style == self.styles.dragged =>
             {
                 self.item
@@ -619,8 +619,8 @@ impl<'a> DerpDriveRow<'a> {
     }
 
     fn render_secondary_icon(&self, style: UiComponentStyles) -> Box<dyn Element> {
-        let icon_to_render = match self.item.derp_drive_id() {
-            DerpDriveItemId::Object(CloudObjectTypeAndId::Folder(_)) => self
+        let icon_to_render = match self.item.bork_drive_id() {
+            BorkDriveItemId::Object(CloudObjectTypeAndId::Folder(_)) => self
                 .item
                 .secondary_icon(Some(style.font_color.unwrap().into())),
             _ => self.item.secondary_icon(None),
@@ -665,11 +665,11 @@ impl<'a> DerpDriveRow<'a> {
 
         let action = self.item.click_action();
         let space = self.space;
-        let derp_drive_item_id = self.item.derp_drive_id();
-        match derp_drive_item_id {
-            DerpDriveItemId::Object(_)
-            | DerpDriveItemId::AIFactCollection
-            | DerpDriveItemId::MCPServerCollection => {
+        let bork_drive_item_id = self.item.bork_drive_id();
+        match bork_drive_item_id {
+            BorkDriveItemId::Object(_)
+            | BorkDriveItemId::AIFactCollection
+            | BorkDriveItemId::MCPServerCollection => {
                 Hoverable::new(self.item_states.item_mouse_state.clone(), move |_| {
                     Container::new(
                         Flex::row()
@@ -691,7 +691,7 @@ impl<'a> DerpDriveRow<'a> {
                 .on_right_click(move |ctx, _, _| {
                     ctx.dispatch_typed_action(DriveIndexAction::ToggleItemOverflowMenu {
                         space,
-                        derp_drive_item_id,
+                        bork_drive_item_id,
                     });
                 })
                 .finish()
@@ -701,10 +701,10 @@ impl<'a> DerpDriveRow<'a> {
     }
 }
 
-/// Generate a callback for calculating the Drag bounds within Derp Drive
+/// Generate a callback for calculating the Drag bounds within Bork Drive
 fn drag_bounds_callback() -> impl Fn(&PositionCache, Vector2F) -> Option<RectF> {
     move |position_cache, window: Vector2F| {
-        let drive_index = position_cache.get_position(DERP_DRIVE_POSITION_ID)?;
+        let drive_index = position_cache.get_position(BORK_DRIVE_POSITION_ID)?;
 
         let top_left = drive_index.origin();
 
@@ -712,7 +712,7 @@ fn drag_bounds_callback() -> impl Fn(&PositionCache, Vector2F) -> Option<RectF> 
     }
 }
 
-impl UiComponent for DerpDriveRow<'_> {
+impl UiComponent for BorkDriveRow<'_> {
     type ElementType = SavePosition;
 
     fn build(self) -> Self::ElementType {
@@ -813,8 +813,8 @@ impl UiComponent for DerpDriveRow<'_> {
         .with_cursor(Cursor::PointingHand)
         .finish();
 
-        match self.item.derp_drive_id() {
-            DerpDriveItemId::Object(item) => {
+        match self.item.bork_drive_id() {
+            BorkDriveItemId::Object(item) => {
                 let save_position_child = match self.can_move {
                     true => {
                         Draggable::new(self.item_states.draggable_state, hoverable_item)
@@ -908,13 +908,13 @@ impl UiComponent for DerpDriveRow<'_> {
                 };
                 SavePosition::new(
                     save_position_child,
-                    &self.item.derp_drive_id().drive_row_position_id(),
+                    &self.item.bork_drive_id().drive_row_position_id(),
                 )
             }
-            DerpDriveItemId::AIFactCollection | DerpDriveItemId::MCPServerCollection => {
+            BorkDriveItemId::AIFactCollection | BorkDriveItemId::MCPServerCollection => {
                 SavePosition::new(
                     hoverable_item,
-                    &self.item.derp_drive_id().drive_row_position_id(),
+                    &self.item.bork_drive_id().drive_row_position_id(),
                 )
             }
             _ => unreachable!(),

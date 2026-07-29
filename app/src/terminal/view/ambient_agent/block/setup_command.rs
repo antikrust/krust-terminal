@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use derp_core::ui::appearance::Appearance;
-use derp_terminal::model::BlockId;
-use derpui::prelude::{Container, Empty, MouseStateHandle};
-use derpui::scene::{CornerRadius, Radius};
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use bork_terminal::model::BlockId;
+use borkui::prelude::{Container, Empty, MouseStateHandle};
+use borkui::scene::{CornerRadius, Radius};
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 

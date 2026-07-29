@@ -3,7 +3,7 @@
 use ai::agent::convert::ConvertToAPITypeError;
 use anyhow::anyhow;
 use chrono::{DateTime, Local, Timelike};
-use derp_multi_agent_api as api;
+use bork_multi_agent_api as api;
 
 use crate::ai::agent::{
     AIAgentActionResult, AIAgentActionResultType, AIAgentAttachment, AIAgentContext, AIAgentInput,
@@ -476,15 +476,15 @@ impl From<PassiveSuggestionTrigger> for api::request::input::generate_passive_su
     }
 }
 
-impl From<UserQueryMode> for derp_multi_agent_api::UserQueryMode {
+impl From<UserQueryMode> for bork_multi_agent_api::UserQueryMode {
     fn from(value: UserQueryMode) -> Self {
         match value {
-            UserQueryMode::Normal => derp_multi_agent_api::UserQueryMode { r#type: None },
-            UserQueryMode::Plan => derp_multi_agent_api::UserQueryMode {
-                r#type: Some(derp_multi_agent_api::user_query_mode::Type::Plan(())),
+            UserQueryMode::Normal => bork_multi_agent_api::UserQueryMode { r#type: None },
+            UserQueryMode::Plan => bork_multi_agent_api::UserQueryMode {
+                r#type: Some(bork_multi_agent_api::user_query_mode::Type::Plan(())),
             },
-            UserQueryMode::Orchestrate => derp_multi_agent_api::UserQueryMode {
-                r#type: Some(derp_multi_agent_api::user_query_mode::Type::Orchestrate(())),
+            UserQueryMode::Orchestrate => bork_multi_agent_api::UserQueryMode {
+                r#type: Some(bork_multi_agent_api::user_query_mode::Type::Orchestrate(())),
             },
         }
     }
@@ -644,16 +644,16 @@ impl TryFrom<AIAgentActionResult> for api::request::input::user_inputs::user_inp
                 Some(suggest_prompt_result.try_into()?)
             }
             AIAgentActionResultType::OpenCodeReview => Some(
-                derp_multi_agent_api::request::input::tool_call_result::Result::OpenCodeReview(
-                    derp_multi_agent_api::OpenCodeReviewResult {},
+                bork_multi_agent_api::request::input::tool_call_result::Result::OpenCodeReview(
+                    bork_multi_agent_api::OpenCodeReviewResult {},
                 ),
             ),
             AIAgentActionResultType::InsertReviewComments(insert_review_comments_result) => {
                 Some(insert_review_comments_result.try_into()?)
             }
             AIAgentActionResultType::InitProject => Some(
-                derp_multi_agent_api::request::input::tool_call_result::Result::InitProject(
-                    derp_multi_agent_api::InitProjectResult {},
+                bork_multi_agent_api::request::input::tool_call_result::Result::InitProject(
+                    bork_multi_agent_api::InitProjectResult {},
                 ),
             ),
             AIAgentActionResultType::ReadDocuments(read_documents_result) => {

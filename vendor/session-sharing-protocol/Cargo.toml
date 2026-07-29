@@ -1,7 +1,7 @@
 [package]
 name = "session-sharing-protocol"
 edition = "2024"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 license = "AGPL-3.0-only"
 publish = false
 

@@ -30,7 +30,7 @@
     },
     "needs-mocks": {
       "color": "f48c06",
-      "description": "The issue requires UI mocks from from Derp's design team before implementation can begin."
+      "description": "The issue requires UI mocks from from Bork's design team before implementation can begin."
     },
     "ready-to-implement": {
       "color": "0e8a16",
@@ -150,11 +150,11 @@
     },
     "area:ui-framework": {
       "color": "5319e7",
-      "description": "Core Derp UI framework, rendering, layout, and windowing infrastructure."
+      "description": "Core Bork UI framework, rendering, layout, and windowing infrastructure."
     },
-    "area:derp-drive": {
+    "area:bork-drive": {
       "color": "0e8a16",
-      "description": "Derp Drive objects, sync, sharing, cloud object management, and persisted artifacts."
+      "description": "Bork Drive objects, sync, sharing, cloud object management, and persisted artifacts."
     },
     "area:window-tabs-panes": {
       "color": "fef2c0",

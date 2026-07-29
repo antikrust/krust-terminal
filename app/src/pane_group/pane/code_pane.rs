@@ -1,5 +1,5 @@
-use derp_util::path::LineAndColumnArg;
-use derpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use bork_util::path::LineAndColumnArg;
+use borkui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use super::{
     DetachType, PaneConfiguration, PaneContent, PaneId, PaneView, ShareableLink, ShareableLinkError,

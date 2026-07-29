@@ -12,7 +12,7 @@ pub(super) enum PluginLoadError {
     MissingBuiltin(BuiltInPluginType),
 }
 
-/// Represents "Built-in" plugins. Each variant corresponds to a plugin bundled with Derp by
+/// Represents "Built-in" plugins. Each variant corresponds to a plugin bundled with Bork by
 /// default (e.g. Completions/Command Signatures)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum BuiltInPluginType {
@@ -42,7 +42,7 @@ pub(super) enum PluginRef {
     /// Refers to plugin source on disk.
     Path(PathBuf),
 
-    /// Refers to a "built-in" plugin bundled with the Derp binary.
+    /// Refers to a "built-in" plugin bundled with the Bork binary.
     BuiltIn(BuiltInPluginType),
 }
 

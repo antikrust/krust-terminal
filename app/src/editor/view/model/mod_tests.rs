@@ -1,7 +1,7 @@
 use string_offset::{ByteOffset, CharOffset};
 use vec1::vec1;
-use derpui::text_layout::TextStyle;
-use derpui::App;
+use borkui::text_layout::TextStyle;
+use borkui::App;
 
 use super::{EditOrigin, EditorModel, Edits, InteractionState, UpdateBufferOption};
 use crate::editor::{EditorSnapshot, PlainTextEditorViewAction, TextRun, ValidInputType};

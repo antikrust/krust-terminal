@@ -2,18 +2,18 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use pathfinder_color::ColorU;
-use derpui::elements::{
+use borkui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, Element, Fill, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition, Stack,
 };
-use derpui::fonts::FamilyId;
-use derpui::geometry::vector::vec2f;
-use derpui::scene::DropShadow;
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::FamilyId;
+use borkui::geometry::vector::vec2f;
+use borkui::scene::DropShadow;
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     Action, AppContext, BlurContext, Entity, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };

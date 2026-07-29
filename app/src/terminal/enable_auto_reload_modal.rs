@@ -3,16 +3,16 @@ use std::sync::Arc;
 use enclose::enclose;
 use itertools::Itertools as _;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use derp_core::ui::appearance::Appearance;
-use derp_graphql::billing::AddonCreditsOption;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_graphql::billing::AddonCreditsOption;
+use borkui::elements::{
     Border, ChildView, Container, CrossAxisAlignment, Empty, Flex, HighlightedHyperlink,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
 
 use crate::features::FeatureFlag;
 use crate::menu::MenuItemFields;
@@ -223,10 +223,10 @@ impl EnableAutoReloadModalBody {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://therob.lol/derp-terminal/help/support-and-community/plans-and-billing/add-on-credits#id-2.-enable-auto-reload",
+                "https://therob.lol/bork-terminal/help/support-and-community/plans-and-billing/add-on-credits#id-2.-enable-auto-reload",
             ),
         ];
-        let explanation_text = derpui::elements::FormattedTextElement::new(
+        let explanation_text = borkui::elements::FormattedTextElement::new(
             FormattedText::new([FormattedTextLine::Line(explanation_fragments)]),
             appearance.ui_font_size(),
             appearance.ui_font_family(),
@@ -237,10 +237,10 @@ impl EnableAutoReloadModalBody {
         .with_hyperlink_font_color(theme.accent().into_solid())
         .register_default_click_handlers_with_action_support(|hyperlink_lens, _event, ctx| {
             match hyperlink_lens {
-                derpui::elements::HyperlinkLens::Url(url) => {
+                borkui::elements::HyperlinkLens::Url(url) => {
                     ctx.open_url(url);
                 }
-                derpui::elements::HyperlinkLens::Action(_action_ref) => {}
+                borkui::elements::HyperlinkLens::Action(_action_ref) => {}
             }
         })
         .finish();
@@ -374,7 +374,7 @@ pub enum Action {
     Enable,
 }
 
-impl derpui::TypedActionView for EnableAutoReloadModalBody {
+impl borkui::TypedActionView for EnableAutoReloadModalBody {
     type Action = Action;
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
@@ -494,7 +494,7 @@ impl Entity for EnableAutoReloadModal {
     type Event = EnableAutoReloadModalEvent;
 }
 
-impl derpui::TypedActionView for EnableAutoReloadModal {
+impl borkui::TypedActionView for EnableAutoReloadModal {
     type Action = ();
 }
 

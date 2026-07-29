@@ -1,17 +1,17 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, Empty, Fill, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Shrinkable, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::fonts::Weight;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
 #[cfg(not(target_family = "wasm"))]
-use derpui::SingletonEntity;
-use derpui::{Element, ViewContext};
+use borkui::SingletonEntity;
+use borkui::{Element, ViewContext};
 
 use super::env_var_collection::{
     EnvVarCollectionAction, EnvVarCollectionView, VariableRowIndex, CORE_MAX_WIDTH, ROW_SPACING,
@@ -166,7 +166,7 @@ impl EnvVarCollectionView {
         let text_and_icon = TextAndIcon::new(
             TextAndIconAlignment::IconFirst,
             display_name,
-            icon.to_derpui_icon(appearance.theme().active_ui_text_color()),
+            icon.to_borkui_icon(appearance.theme().active_ui_text_color()),
             MainAxisSize::Max,
             MainAxisAlignment::Center,
             vec2f(16., 16.),

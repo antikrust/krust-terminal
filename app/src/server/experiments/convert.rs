@@ -3,7 +3,7 @@
 use std::fmt::{Display, Formatter};
 
 use anyhow::{Ok, Result};
-use derp_graphql::experiment::Experiment;
+use bork_graphql::experiment::Experiment;
 
 use super::ServerExperiment;
 

@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use derp_core::safe_warn;
-use derp_util::git::run_git_command;
+use bork_core::safe_warn;
+use bork_util::git::run_git_command;
 #[cfg(feature = "local_fs")]
-use derp_util::git::run_git_command_with_env;
+use bork_util::git::run_git_command_with_env;
 
 #[cfg(test)]
 #[path = "git_tests.rs"]
@@ -622,7 +622,7 @@ pub async fn get_diff_for_commit_message(
                     continue;
                 }
                 let check_len = bytes.len().min(BINARY_CHECK_BYTES);
-                if derp_util::file_type::is_buffer_binary(&bytes[..check_len]) {
+                if bork_util::file_type::is_buffer_binary(&bytes[..check_len]) {
                     continue;
                 }
                 let Ok(content) = std::str::from_utf8(&bytes) else {
@@ -1264,7 +1264,7 @@ fn count_lines_if_text_file(path: &Path) -> u32 {
         return 0;
     };
     let check_len = content.len().min(BINARY_CHECK_SIZE);
-    if derp_util::file_type::is_buffer_binary(&content[..check_len]) {
+    if bork_util::file_type::is_buffer_binary(&content[..check_len]) {
         return 0;
     }
     bytecount::count(&content, b'\n') as u32

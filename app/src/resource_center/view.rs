@@ -1,17 +1,17 @@
 use vec1::{vec1, Vec1};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::builder::AnimatedButtonOptions;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::builder::AnimatedButtonOptions;
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::presenter::ChildView;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::windowing::{StateEvent, WindowManager};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::presenter::ChildView;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::windowing::{StateEvent, WindowManager};
+use borkui::{
     AppContext, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity, TypedActionView,
     View, ViewContext, ViewHandle, WindowId,
 };
@@ -315,7 +315,7 @@ impl ResourceCenterView {
                 if FeatureFlag::AvatarInTabBar.is_enabled() {
                     String::new()
                 } else {
-                    "Derp Essentials".to_string()
+                    "Bork Essentials".to_string()
                 }
             }
         };

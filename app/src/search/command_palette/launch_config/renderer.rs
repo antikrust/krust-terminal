@@ -1,11 +1,11 @@
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, Flex, Highlight, ParentElement, Radius,
     Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::text::Span;
-use derpui::Element;
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::text::Span;
+use borkui::Element;
 
 use crate::appearance::Appearance;
 use crate::launch_configs::launch_config::LaunchConfig;

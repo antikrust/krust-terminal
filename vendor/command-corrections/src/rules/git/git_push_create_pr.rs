@@ -83,14 +83,14 @@ mod tests {
                 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
                 remote:
                 remote: Create a pull request for 'my-change' on GitHub by visiting:
-                remote:      https://github.com/derpdotdev/some-repo/pull/new/my-change
+                remote:      https://github.com/borkdotdev/some-repo/pull/new/my-change
                 remote:
-                To github.com:derpdotdev/some-repo.git
+                To github.com:borkdotdev/some-repo.git
                 * [new branch]      my-change -> my-change
                 branch 'my-change' set up to track 'origin/my-change'.
                 "
             ),
-            vec!["open https://github.com/derpdotdev/some-repo/pull/new/my-change"]
+            vec!["open https://github.com/borkdotdev/some-repo/pull/new/my-change"]
         )
     }
 
@@ -107,12 +107,12 @@ mod tests {
                 Total 4 (delta 2), reused 0 (delta 0), pack-reused 0
                 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
                 remote: To create a merge request for my-new-branch, visit:
-                remote:   https://gitlab.derp.baby/my-group/my-project/merge_requests/new?merge_request%5Bsource_branch%5D=my-new-branch
+                remote:   https://gitlab.bork.baby/my-group/my-project/merge_requests/new?merge_request%5Bsource_branch%5D=my-new-branch
                 remote:
-                To gitlab.derp.baby:my-group/my-project.git
+                To gitlab.bork.baby:my-group/my-project.git
                 * [new branch]      my-new-branch -> my-new-branch
                 "), 
-            vec!["open 'https://gitlab.derp.baby/my-group/my-project/merge_requests/new?merge_request%5Bsource_branch%5D=my-new-branch'"])
+            vec!["open 'https://gitlab.bork.baby/my-group/my-project/merge_requests/new?merge_request%5Bsource_branch%5D=my-new-branch'"])
     }
 
     #[test]
@@ -130,9 +130,9 @@ mod tests {
             remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
             remote:
             remote: Create a pull request for 'my-change' on GitHub by visiting:
-            remote:      https://github.com/derpdotdev/some-repo/pull/new/my-change
+            remote:      https://github.com/borkdotdev/some-repo/pull/new/my-change
             remote:
-            To github.com:derpdotdev/some-repo.git
+            To github.com:borkdotdev/some-repo.git
             * [new branch]      my-change -> my-change
             branch 'my-change' set up to track 'origin/my-change'.
             ",
@@ -160,9 +160,9 @@ mod tests {
             remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
             remote:
             remote: Create a pull request for 'my-change' on GitHub by visiting:
-            remote:      https://github.com/derpdotdev/some-repo/pull/new/my-change
+            remote:      https://github.com/borkdotdev/some-repo/pull/new/my-change
             remote:
-            To github.com:derpdotdev/some-repo.git
+            To github.com:borkdotdev/some-repo.git
             * [new branch]      my-change -> my-change
             branch 'my-change' set up to track 'origin/my-change'.
             ",
@@ -170,7 +170,7 @@ mod tests {
         );
         assert_eq!(
             corrections_given_metadata(command, &metadata),
-            vec!["xdg-open https://github.com/derpdotdev/some-repo/pull/new/my-change"]
+            vec!["xdg-open https://github.com/borkdotdev/some-repo/pull/new/my-change"]
         );
     }
 
@@ -183,12 +183,12 @@ mod tests {
                 Resolving deltas: 100% (2/2), completed with 2 local objects.
 
                 Create a pull request for 'my-change' on GitHub by visiting:
-                      https://github.com/derpdotdev/some-repo/pull/new/my-change
+                      https://github.com/borkdotdev/some-repo/pull/new/my-change
 
                 branch 'my-change' set up to track 'origin/my-change'.
                 "
             ),
-            vec!["open https://github.com/derpdotdev/some-repo/pull/new/my-change"]
+            vec!["open https://github.com/borkdotdev/some-repo/pull/new/my-change"]
         )
     }
 
@@ -205,7 +205,7 @@ mod tests {
                 Writing objects: 100% (4/4), 402 bytes | 402.00 KiB/s, done.
                 Total 4 (delta 2), reused 0 (delta 0), pack-reused 0
                 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
-                To github.com:derpdotdev/some-repo.git
+                To github.com:borkdotdev/some-repo.git
                 * [new branch]      my-change -> my-change
                 branch 'my-change' set up to track 'origin/my-change'.
                 "

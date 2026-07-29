@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use itertools::Itertools as _;
-use derp_terminal::shell::ShellLaunchData;
+use bork_terminal::shell::ShellLaunchData;
 
 use crate::agent::action_result::FileContext;
 use crate::index::locations::CodeContextLocation;

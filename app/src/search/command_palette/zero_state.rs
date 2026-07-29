@@ -2,10 +2,10 @@ mod items;
 use std::collections::HashMap;
 
 pub use items::Items;
-use derp_core::context_flag::ContextFlag;
-use derp_core::features::FeatureFlag;
-use derpui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
-use derpui::{
+use bork_core::context_flag::ContextFlag;
+use bork_core::features::FeatureFlag;
+use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     WindowId,
 };

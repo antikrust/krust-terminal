@@ -3,16 +3,16 @@
 //! Queries are not rendered in blocks corresponding to requested command or requested action responses.
 
 use pathfinder_color::ColorU;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Container, CornerRadius, DispatchEventResult, EventHandler, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Radius, Shrinkable, Wrap,
 };
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::ui_components::chip::Chip;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::ui_components::chip::Chip;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::common::{render_query_text, render_user_avatar, FindContext};
 use crate::ai::blocklist::block::view_impl::common::UserQueryProps;
@@ -111,7 +111,7 @@ pub(crate) fn render_query(
     }
 
     Flex::row()
-        .with_cross_axis_alignment(derpui::elements::CrossAxisAlignment::Start)
+        .with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Start)
         .with_child(avatar)
         .with_child(Shrinkable::new(1., query.finish()).finish())
         .finish()
@@ -148,7 +148,7 @@ fn render_attachments(
                 ..Default::default()
             },
         )
-        .with_icon(icon.to_derpui_icon(
+        .with_icon(icon.to_borkui_icon(
             blended_colors::text_sub(appearance.theme(), appearance.theme().background()).into(),
         ))
         .build()

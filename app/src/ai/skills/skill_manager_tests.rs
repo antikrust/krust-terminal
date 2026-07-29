@@ -6,18 +6,18 @@ use ai::skills::{get_provider_for_path, ParsedSkill, SkillProvider, SkillReferen
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::{DirectoryWatcher, RepoMetadataModel};
 use tempfile::TempDir;
-use derp_core::channel::ChannelState;
-use derp_core::features::FeatureFlag;
-use derp_util::host_id::HostId;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::App;
+use bork_core::channel::ChannelState;
+use bork_core::features::FeatureFlag;
+use bork_util::host_id::HostId;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::App;
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
 use crate::settings::AISettings;
-use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
+use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
 
 // ============================================================================
 // Tests for get_skills_for_working_directory subdirectory scoping
@@ -87,12 +87,12 @@ fn get_skills_for_working_directory_scopes_subdirectory_skills() {
         let repo_handle = app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let skill_manager_handle = app.add_singleton_model(SkillManager::new);
 
         // Register the repo root so get_root_for_path returns Some.
         let canonical_repo =
-            derp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                 .unwrap();
         repo_handle.update(&mut app, |repos, _ctx| {
             repos.insert_test_repo_root(canonical_repo);
@@ -179,7 +179,7 @@ fn remote_home_provider_variants_are_available_for_provider_selection() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -231,7 +231,7 @@ fn remote_home_provider_variants_are_scoped_to_the_descriptor_host() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -287,7 +287,7 @@ fn remote_home_skill_replaces_an_overlapping_index_entry() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -373,12 +373,12 @@ fn get_skills_for_working_directory_name_collision_returns_both() {
         let repo_handle = app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let skill_manager_handle = app.add_singleton_model(SkillManager::new);
 
         // Register the repo root so get_root_for_path returns Some.
         let canonical_repo =
-            derp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                 .unwrap();
         repo_handle.update(&mut app, |repos, _ctx| {
             repos.insert_test_repo_root(canonical_repo);
@@ -477,11 +477,11 @@ fn cloud_environment_skills_always_included() {
         let repo_handle = app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let skill_manager_handle = app.add_singleton_model(SkillManager::new);
 
         let canonical_repo_a =
-            derp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_a)
+            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_a)
                 .unwrap();
         repo_handle.update(&mut app, |repos, _ctx| {
             repos.insert_test_repo_root(canonical_repo_a);
@@ -544,8 +544,8 @@ name: test-skill
 description: Test skill with variables
 ---
 
-Run `{{derp_cli_binary_name}}` to connect to {{derp_server_url}}.
-Use `{{derpctrl_binary_name}}` from {{derpctrl_wrapper_path}}.
+Run `{{bork_cli_binary_name}}` to connect to {{bork_server_url}}.
+Use `{{borkctrl_binary_name}}` from {{borkctrl_wrapper_path}}.
 "#,
     )
     .unwrap();
@@ -560,10 +560,10 @@ Use `{{derpctrl_binary_name}}` from {{derpctrl_wrapper_path}}.
     assert!(skill.content.contains(&format!(
         "Run `{expected_cli}` to connect to {expected_url}."
     )));
-    let expected_derpctrl = ChannelState::channel().derpctrl_command_name();
-    let expected_wrapper = resources_dir.join("bin").join(expected_derpctrl);
+    let expected_borkctrl = ChannelState::channel().borkctrl_command_name();
+    let expected_wrapper = resources_dir.join("bin").join(expected_borkctrl);
     assert!(skill.content.contains(&format!(
-        "Use `{expected_derpctrl}` from {}.",
+        "Use `{expected_borkctrl}` from {}.",
         expected_wrapper.display()
     )));
 }
@@ -611,7 +611,7 @@ fn test_read_bundled_skills_preserves_other_content() {
     let resources_dir = temp_dir.path();
     let skills_dir = resources_dir.join("bundled/skills");
 
-    // Create a test skill with both derp and non-derp variables
+    // Create a test skill with both bork and non-bork variables
     let skill_dir = skills_dir.join("test-skill");
     fs::create_dir_all(&skill_dir).unwrap();
     let skill_file = skill_dir.join("SKILL.md");
@@ -622,7 +622,7 @@ name: test-skill
 description: Test skill with mixed variables
 ---
 
-Use {{other_var}}, {{derp_cli_binary_name}}, and {{skill_dir}} together.
+Use {{other_var}}, {{bork_cli_binary_name}}, and {{skill_dir}} together.
 "#,
     )
     .unwrap();
@@ -676,11 +676,11 @@ fn test_build_bundled_skill_context() {
     let context = build_bundled_skill_context(resources_dir, &skill_dir);
 
     assert_eq!(context.len(), 9);
-    assert!(context.contains_key("derp_server_url"));
-    assert!(context.contains_key("derp_cli_binary_name"));
-    assert!(context.contains_key("derpctrl_binary_name"));
-    assert!(context.contains_key("derpctrl_wrapper_path"));
-    assert!(context.contains_key("derp_url_scheme"));
+    assert!(context.contains_key("bork_server_url"));
+    assert!(context.contains_key("bork_cli_binary_name"));
+    assert!(context.contains_key("borkctrl_binary_name"));
+    assert!(context.contains_key("borkctrl_wrapper_path"));
+    assert!(context.contains_key("bork_url_scheme"));
     assert!(context.contains_key("settings_file_path"));
     assert!(context.contains_key("keybindings_file_path"));
     assert_eq!(
@@ -696,27 +696,27 @@ fn test_build_bundled_skill_context() {
     );
 
     assert_eq!(
-        context.get("derp_server_url").unwrap(),
+        context.get("bork_server_url").unwrap(),
         &ChannelState::server_root_url().to_string()
     );
     assert_eq!(
-        context.get("derp_cli_binary_name").unwrap(),
+        context.get("bork_cli_binary_name").unwrap(),
         ChannelState::channel().cli_command_name()
     );
     assert_eq!(
-        context.get("derpctrl_binary_name").unwrap(),
-        ChannelState::channel().derpctrl_command_name()
+        context.get("borkctrl_binary_name").unwrap(),
+        ChannelState::channel().borkctrl_command_name()
     );
     assert_eq!(
-        context.get("derpctrl_wrapper_path").unwrap(),
+        context.get("borkctrl_wrapper_path").unwrap(),
         &resources_dir
             .join("bin")
-            .join(ChannelState::channel().derpctrl_command_name())
+            .join(ChannelState::channel().borkctrl_command_name())
             .display()
             .to_string()
     );
     assert_eq!(
-        context.get("derp_url_scheme").unwrap(),
+        context.get("bork_url_scheme").unwrap(),
         ChannelState::url_scheme()
     );
     assert_eq!(
@@ -740,7 +740,7 @@ fn bundled_test_skill(id: &str, description: &str) -> ParsedSkill {
         path: LocalOrRemotePath::Local(format!("/bundled/skills/{id}/SKILL.md").into()),
         content: format!("# {id}"),
         line_range: None,
-        provider: SkillProvider::Derp,
+        provider: SkillProvider::Bork,
         scope: SkillScope::Bundled,
     }
 }
@@ -827,13 +827,13 @@ fn get_skills_for_working_directory_respects_location() {
         path: LocalOrRemotePath::Remote(RemotePath::new(
             same_host_id.clone(),
             StandardizedPath::try_new(
-                "/home/user/.derp/remote-server/bundled_resources/bundled/skills/remote-bundled/SKILL.md",
+                "/home/user/.bork/remote-server/bundled_resources/bundled/skills/remote-bundled/SKILL.md",
             )
             .unwrap(),
         )),
         content: "# remote-bundled".to_string(),
         line_range: None,
-        provider: SkillProvider::Derp,
+        provider: SkillProvider::Bork,
         scope: SkillScope::Bundled,
     };
 
@@ -860,7 +860,7 @@ fn get_skills_for_working_directory_respects_location() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
         let _bundled_skills = FeatureFlag::BundledSkills.override_enabled(true);
 
@@ -1021,16 +1021,16 @@ fn feature_gated_bundled_skill_is_listed_only_when_enabled() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
         let bundled_skills_guard = FeatureFlag::BundledSkills.override_enabled(true);
-        let derp_control_cli = FeatureFlag::DerpControlCli.override_enabled(false);
+        let bork_control_cli = FeatureFlag::BorkControlCli.override_enabled(false);
 
         handle.update(&mut app, |manager, _| {
             manager.add_bundled_skill_for_testing(
-                "derpctrl",
-                bundled_test_skill("derpctrl", "Control Derp"),
-                BundledSkillActivation::RequiresFeature(FeatureFlag::DerpControlCli),
+                "borkctrl",
+                bundled_test_skill("borkctrl", "Control Bork"),
+                BundledSkillActivation::RequiresFeature(FeatureFlag::BorkControlCli),
             );
             manager.add_bundled_skill_for_testing(
                 "always",
@@ -1046,11 +1046,11 @@ fn feature_gated_bundled_skill_is_listed_only_when_enabled() {
                 .map(|skill| skill.name)
                 .collect::<HashSet<_>>()
         });
-        assert!(!disabled_names.contains("derpctrl"));
+        assert!(!disabled_names.contains("borkctrl"));
         assert!(disabled_names.contains("always"));
 
-        drop(derp_control_cli);
-        let derp_control_cli_enabled = FeatureFlag::DerpControlCli.override_enabled(true);
+        drop(bork_control_cli);
+        let bork_control_cli_enabled = FeatureFlag::BorkControlCli.override_enabled(true);
         let enabled_names = handle.read(&app, |manager, ctx| {
             manager
                 .get_skills_for_working_directory(None, ctx)
@@ -1058,36 +1058,36 @@ fn feature_gated_bundled_skill_is_listed_only_when_enabled() {
                 .map(|skill| skill.name)
                 .collect::<HashSet<_>>()
         });
-        assert!(enabled_names.contains("derpctrl"));
+        assert!(enabled_names.contains("borkctrl"));
         assert!(enabled_names.contains("always"));
-        drop(derp_control_cli_enabled);
+        drop(bork_control_cli_enabled);
         drop(bundled_skills_guard);
     });
 }
 
 #[test]
-fn derp_control_bundled_skill_activations_track_derp_control_feature() {
+fn bork_control_bundled_skill_activations_track_bork_control_feature() {
     App::test((), |app| async move {
         let settings = app.add_singleton_model(AISettings::new_with_defaults);
-        let derp_control_cli = FeatureFlag::DerpControlCli.override_enabled(false);
-        let activations = ["derpctrl"]
+        let bork_control_cli = FeatureFlag::BorkControlCli.override_enabled(false);
+        let activations = ["borkctrl"]
             .map(|skill_id| activation_for_bundled_skill(skill_id, Path::new("/resources")));
         for activation in &activations {
             assert!(!settings.read(&app, |_, ctx| activation.is_enabled(ctx)));
         }
 
-        drop(derp_control_cli);
-        let derp_control_cli_enabled = FeatureFlag::DerpControlCli.override_enabled(true);
+        drop(bork_control_cli);
+        let bork_control_cli_enabled = FeatureFlag::BorkControlCli.override_enabled(true);
         for activation in &activations {
             assert!(settings.read(&app, |_, ctx| activation.is_enabled(ctx)));
         }
-        drop(derp_control_cli_enabled);
+        drop(bork_control_cli_enabled);
     });
 }
 
 #[test]
-fn derp_control_direct_read_respects_derp_control_feature() {
-    let reference = SkillReference::BundledSkillId("derpctrl".to_owned());
+fn bork_control_direct_read_respects_bork_control_feature() {
+    let reference = SkillReference::BundledSkillId("borkctrl".to_owned());
 
     App::test((), |mut app| async move {
         app.add_singleton_model(DirectoryWatcher::new);
@@ -1095,15 +1095,15 @@ fn derp_control_direct_read_respects_derp_control_feature() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
-        let derp_control_cli = FeatureFlag::DerpControlCli.override_enabled(false);
+        let bork_control_cli = FeatureFlag::BorkControlCli.override_enabled(false);
 
         handle.update(&mut app, |manager, _| {
             manager.add_bundled_skill_for_testing(
-                "derpctrl",
-                bundled_test_skill("derpctrl", "Control Derp"),
-                BundledSkillActivation::RequiresFeature(FeatureFlag::DerpControlCli),
+                "borkctrl",
+                bundled_test_skill("borkctrl", "Control Bork"),
+                BundledSkillActivation::RequiresFeature(FeatureFlag::BorkControlCli),
             );
         });
 
@@ -1114,12 +1114,12 @@ fn derp_control_direct_read_respects_derp_control_feature() {
             .active_skill_by_reference(&reference, ctx)
             .is_none()));
 
-        drop(derp_control_cli);
-        let derp_control_cli_enabled = FeatureFlag::DerpControlCli.override_enabled(true);
+        drop(bork_control_cli);
+        let bork_control_cli_enabled = FeatureFlag::BorkControlCli.override_enabled(true);
         assert!(handle.read(&app, |manager, ctx| manager
             .active_skill_by_reference(&reference, ctx)
             .is_some()));
-        drop(derp_control_cli_enabled);
+        drop(bork_control_cli_enabled);
     });
 }
 #[test]
@@ -1133,7 +1133,7 @@ fn active_skill_by_reference_resolves_exact_remote_identity() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -1165,7 +1165,7 @@ fn active_skill_by_reference_distinguishes_remote_hosts_with_the_same_display_pa
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -1196,7 +1196,7 @@ fn active_skill_by_reference_with_origin_returns_typed_lookup_errors() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
         let reference = SkillReference::BundledSkillId("missing".to_string());
 
@@ -1246,7 +1246,7 @@ fn remote_home_skills_are_host_scoped_replaceable_and_path_invokable() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -1390,7 +1390,7 @@ fn removing_remote_home_skills_preserves_project_skills_below_home() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         handle.update(&mut app, |manager, _| {
@@ -1429,7 +1429,7 @@ fn make_skill(name: &str, provider_dir: &str) -> ParsedSkill {
         path: path.clone(),
         content: format!("# {name}"),
         line_range: None,
-        provider: get_provider_for_path(&path).unwrap_or(SkillProvider::Derp),
+        provider: get_provider_for_path(&path).unwrap_or(SkillProvider::Bork),
         scope: SkillScope::Project,
     }
 }
@@ -1443,7 +1443,7 @@ fn best_supported_provider_fast_path_returns_deduped_provider() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let claude_skill = make_skill("deploy", ".claude");
@@ -1469,7 +1469,7 @@ fn best_supported_provider_remaps_to_supported_provider() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let agents_skill = make_skill("deploy", ".agents");
@@ -1500,7 +1500,7 @@ fn best_supported_provider_falls_back_when_no_match() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let agents_skill = make_skill("deploy", ".agents");

@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use derpui::{AppContext, SingletonEntity};
+use borkui::{AppContext, SingletonEntity};
 
 use super::current_prompt::CurrentPrompt;
 use super::prompt::Prompt;
 use super::{chips_to_string, ChipResult, ChipValue};
 use crate::context_chips::ContextChipKind;
-use crate::settings::DerpPromptSeparator;
+use crate::settings::BorkPromptSeparator;
 
 /// Struct that holds a point in time snapshot of a prompt (chips are no longer interactive)
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -14,8 +14,8 @@ pub struct PromptSnapshot {
     chips: Vec<ChipResult>,
 
     same_line_prompt_enabled: bool,
-    /// The separator to use as a trailing character at the end of Derp prompt, if any.
-    separator: DerpPromptSeparator,
+    /// The separator to use as a trailing character at the end of Bork prompt, if any.
+    separator: BorkPromptSeparator,
 }
 
 impl PromptSnapshot {
@@ -58,7 +58,7 @@ impl PromptSnapshot {
     pub fn from_chips(
         chips: Vec<ChipResult>,
         same_line_prompt_enabled: bool,
-        separator: DerpPromptSeparator,
+        separator: BorkPromptSeparator,
     ) -> Self {
         Self {
             chips,
@@ -86,7 +86,7 @@ impl PromptSnapshot {
         self.same_line_prompt_enabled
     }
 
-    pub(super) fn separator(&self) -> DerpPromptSeparator {
+    pub(super) fn separator(&self) -> BorkPromptSeparator {
         self.separator
     }
 }

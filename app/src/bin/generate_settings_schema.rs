@@ -1,4 +1,4 @@
-//! Generates a JSON Schema file describing Derp's user-facing settings.
+//! Generates a JSON Schema file describing Bork's user-facing settings.
 //!
 //! Usage:
 //! ```
@@ -11,17 +11,17 @@ use std::io::Write;
 use schemars::SchemaGenerator;
 use serde_json::{Map, Value};
 use settings::schema::SettingSchemaEntry;
-use derp_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
+use bork_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
 
 /// Ensures all `inventory::submit!` registrations from the app crate's
 /// dependency tree are linked into the binary.
 ///
 /// Binary targets only link crate code that is transitively referenced.
-/// Without an explicit reference to the `derp` library, the linker will
+/// Without an explicit reference to the `bork` library, the linker will
 /// not include most of the app's object files and the `inventory`
 /// submissions they contain.
 fn ensure_settings_linked() {
-    let _ = std::hint::black_box(derp::settings::RESTORE_SESSION);
+    let _ = std::hint::black_box(bork::settings::RESTORE_SESSION);
 }
 
 /// Recursively strips `minimum`, `maximum`, and `format` from integer and
@@ -229,12 +229,12 @@ fn main() {
     );
     root.insert(
         "title".to_string(),
-        Value::String("Derp Settings".to_string()),
+        Value::String("Bork Settings".to_string()),
     );
     root.insert(
         "description".to_string(),
         Value::String(format!(
-            "JSON Schema for Derp settings ({channel} channel, {entry_count} settings)"
+            "JSON Schema for Bork settings ({channel} channel, {entry_count} settings)"
         )),
     );
     root.insert("type".to_string(), Value::String("object".to_string()));

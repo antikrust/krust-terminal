@@ -1,4 +1,4 @@
-use derpui::elements::{DraggableState, MouseStateHandle};
+use borkui::elements::{DraggableState, MouseStateHandle};
 
 use super::FileTreeItem;
 use crate::appearance::Appearance;

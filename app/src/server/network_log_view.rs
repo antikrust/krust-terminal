@@ -8,14 +8,14 @@
 //! so the user can pick up items captured since the pane was opened. The
 //! pane header also exposes a refresh icon that reloads the snapshot in
 //! place.
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_server_client::network_logging::NetworkLogModel;
-use derp_util::path::LineAndColumnArg;
-use derpui::elements::{ChildView, MouseStateHandle};
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_server_client::network_logging::NetworkLogModel;
+use bork_util::path::LineAndColumnArg;
+use borkui::elements::{ChildView, MouseStateHandle};
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

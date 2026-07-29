@@ -2,18 +2,18 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use ::ai::api_keys::CustomEndpoint;
 use url::Url;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth,
     Shrinkable, Text,
 };
-use derpui::fonts::FamilyId;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::units::Pixels;
-use derpui::{
+use borkui::fonts::FamilyId;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::units::Pixels;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -965,7 +965,7 @@ impl View for CustomEndpointModal {
             ScrollbarWidth::Custom(MODAL_SCROLLBAR_WIDTH),
             theme.nonactive_ui_text_color().into(),
             theme.active_ui_text_color().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .with_padding_start(0.)

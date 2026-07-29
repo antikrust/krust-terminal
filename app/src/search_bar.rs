@@ -1,9 +1,9 @@
-use derpui::elements::{
+use borkui::elements::{
     Border, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, EventHandler, Flex, Icon, ParentElement, Radius, Shrinkable,
 };
-use derpui::ui_components::components::{Coords, UiComponentStyles};
-use derpui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::ui_components::components::{Coords, UiComponentStyles};
+use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::EditorView;
@@ -42,7 +42,7 @@ impl View for SearchBar {
         "SearchBar"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn Element> {
         let styles = {
             let appearance = Appearance::as_ref(app);
             let context_styles = UiComponentStyles {

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use derp_core::ui::appearance::Appearance;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::ChildView;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::ChildView;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

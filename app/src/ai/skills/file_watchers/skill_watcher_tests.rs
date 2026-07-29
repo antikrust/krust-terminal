@@ -11,11 +11,11 @@ use repo_metadata::{
     StandingQueryContent, StandingQueryResults, StandingQueryResultsDelta, TargetFile,
 };
 use tempfile::TempDir;
-use derp_util::host_id::HostId;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::App;
+use bork_util::host_id::HostId;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::App;
 
 use super::super::subscribers::SkillRepositoryMessage;
 use super::{parse_project_skill_contents, SkillWatcher};

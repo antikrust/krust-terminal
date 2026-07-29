@@ -1,10 +1,10 @@
-use derp_errors::report_error;
-use derpui::elements::{
+use bork_errors::report_error;
+use borkui::elements::{
     Align, Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::auth::UserUid;

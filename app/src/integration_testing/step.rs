@@ -1,5 +1,5 @@
-use derpui::async_assert;
-use derpui::integration::{AssertionCallback, TestStep};
+use borkui::async_assert;
+use borkui::integration::{AssertionCallback, TestStep};
 
 use super::terminal::assert_no_block_executing;
 use crate::integration_testing::view_getters::terminal_view;

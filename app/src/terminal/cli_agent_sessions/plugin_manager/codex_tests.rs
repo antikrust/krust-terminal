@@ -21,7 +21,7 @@ fn can_auto_install_is_false_without_codex_plugin() {
 fn install_instructions_are_native_without_codex_plugin() {
     let _guard = FeatureFlag::CodexPlugin.override_enabled(false);
     let instructions = CodexPluginManager::new(None, None, None).install_instructions();
-    assert_eq!(instructions.title, "Enable Derp Notifications for Codex");
+    assert_eq!(instructions.title, "Enable Bork Notifications for Codex");
     assert_eq!(
         instructions.steps[1].command,
         "[tui]\nnotification_condition = \"always\""
@@ -64,11 +64,11 @@ fn install_instructions_has_marketplace_and_plugin_add_steps() {
     let instructions = CodexPluginManager::new(None, None, None).install_instructions();
     assert_eq!(
         instructions.steps[0].command,
-        "codex plugin marketplace add derpdotdev/codex-derp"
+        "codex plugin marketplace add borkdotdev/codex-bork"
     );
     assert_eq!(
         instructions.steps[1].command,
-        "codex plugin add derp@codex-derp"
+        "codex plugin add bork@codex-bork"
     );
     assert_eq!(instructions.steps.len(), 2);
     assert!(!instructions.title.is_empty());
@@ -80,11 +80,11 @@ fn update_instructions_has_marketplace_and_plugin_add_steps() {
     let instructions = CodexPluginManager::new(None, None, None).update_instructions();
     assert_eq!(
         instructions.steps[0].command,
-        "codex plugin marketplace upgrade codex-derp"
+        "codex plugin marketplace upgrade codex-bork"
     );
     assert_eq!(
         instructions.steps[1].command,
-        "codex plugin add derp@codex-derp"
+        "codex plugin add bork@codex-bork"
     );
     assert_eq!(instructions.steps.len(), 2);
     assert!(!instructions.title.is_empty());
@@ -441,7 +441,7 @@ fn write_marketplace_config(dir: &Path, source_type: &str) {
     fs::write(
         dir.join("config.toml"),
         format!(
-            "[marketplaces.codex-derp]\nsource_type = \"{source_type}\"\nsource = \"/tmp/codex-derp\"\n"
+            "[marketplaces.codex-bork]\nsource_type = \"{source_type}\"\nsource = \"/tmp/codex-bork\"\n"
         ),
     )
     .unwrap();
@@ -474,7 +474,7 @@ fn write_cache_manifest_json(
     let manifest_dir = dir
         .join("plugins")
         .join("cache")
-        .join("codex-derp")
+        .join("codex-bork")
         .join(plugin_name)
         .join(version_dir)
         .join(".codex-plugin");

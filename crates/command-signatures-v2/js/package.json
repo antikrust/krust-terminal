@@ -1,14 +1,14 @@
 {
   "name": "js",
   "version": "1.0.0",
-  "description": "Derp Command Signatures",
+  "description": "Bork Command Signatures",
   "main": "build/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "npm run build -- --watch",
     "clean": "rm -r build"
   },
-  "author": "eng@derp.baby",
+  "author": "eng@bork.baby",
   "license": "",
   "devDependencies": {
     "typescript": "^5.2.2"

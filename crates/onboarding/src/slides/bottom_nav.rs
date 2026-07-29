@@ -1,8 +1,8 @@
-use derp_core::ui::appearance::Appearance;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui_core::elements::{
     Align, CrossAxisAlignment, Empty, Flex, MainAxisSize, ParentElement, Shrinkable,
 };
-use derpui_core::Element;
+use borkui_core::Element;
 
 use crate::slides::progress_dots;
 

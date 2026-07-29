@@ -3,32 +3,32 @@ use async_trait::async_trait;
 use cynic::{MutationBuilder, QueryBuilder};
 #[cfg(test)]
 use mockall::automock;
-use derp_graphql::mutations::create_simple_integration::{
+use bork_graphql::mutations::create_simple_integration::{
     CreateSimpleIntegration, CreateSimpleIntegrationOutput, CreateSimpleIntegrationResult,
     CreateSimpleIntegrationVariables, SimpleIntegrationConfig,
 };
-use derp_graphql::queries::get_integrations_using_environment::{
+use bork_graphql::queries::get_integrations_using_environment::{
     GetIntegrationsUsingEnvironment, GetIntegrationsUsingEnvironmentInput,
     GetIntegrationsUsingEnvironmentOutput, GetIntegrationsUsingEnvironmentResult,
     GetIntegrationsUsingEnvironmentVariables,
 };
-use derp_graphql::queries::get_oauth_connect_tx_status::{
+use bork_graphql::queries::get_oauth_connect_tx_status::{
     GetOAuthConnectTxStatus, GetOAuthConnectTxStatusInput, GetOAuthConnectTxStatusResult,
     GetOAuthConnectTxStatusVariables, OauthConnectTxStatus,
 };
-use derp_graphql::queries::get_simple_integrations::{
+use bork_graphql::queries::get_simple_integrations::{
     SimpleIntegrations, SimpleIntegrationsInput, SimpleIntegrationsOutput,
     SimpleIntegrationsResult, SimpleIntegrationsVariables,
 };
-use derp_graphql::queries::suggest_cloud_environment_image::{
+use bork_graphql::queries::suggest_cloud_environment_image::{
     RepoInput as SuggestCloudEnvironmentImageRepoInput, SuggestCloudEnvironmentImage,
     SuggestCloudEnvironmentImageInput, SuggestCloudEnvironmentImageResult,
     SuggestCloudEnvironmentImageVariables,
 };
-use derp_graphql::queries::user_github_info::{
+use bork_graphql::queries::user_github_info::{
     GithubAuthRequiredOutput, UserGithubInfo, UserGithubInfoResult, UserGithubInfoVariables,
 };
-use derp_graphql::queries::user_repo_auth_status::{
+use bork_graphql::queries::user_repo_auth_status::{
     RepoInput as UserRepoAuthStatusRepoInput, UserRepoAuthStatus, UserRepoAuthStatusInput,
     UserRepoAuthStatusOutput, UserRepoAuthStatusResult, UserRepoAuthStatusVariables,
 };

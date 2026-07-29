@@ -1,1 +1,1 @@
-pub use derp_core::channel::*;
+pub use bork_core::channel::*;

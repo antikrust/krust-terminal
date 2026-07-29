@@ -1,8 +1,8 @@
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{CornerRadius, Radius};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{Coords, UiComponentStyles};
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{CornerRadius, Radius};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{Coords, UiComponentStyles};
 
 pub const HEADER_FONT_SIZE: f32 = 16.;
 pub const TEXT_FONT_SIZE: f32 = 14.;

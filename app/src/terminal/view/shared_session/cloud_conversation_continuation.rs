@@ -1,5 +1,5 @@
-use derp_cli::agent::Harness;
-use derpui::{AppContext, EntityId, ModelHandle, SingletonEntity};
+use bork_cli::agent::Harness;
+use borkui::{AppContext, EntityId, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{

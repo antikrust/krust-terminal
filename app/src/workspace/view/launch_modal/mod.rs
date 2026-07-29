@@ -8,22 +8,22 @@ use markdown_parser::{parse_markdown, FormattedText, FormattedTextLine};
 // Re-export slide types for convenience
 pub use oz_launch::OzLaunchSlide;
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::{
     Align, Border, CacheOption, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Empty, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, Hoverable, HyperlinkLens, Image, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -34,7 +34,7 @@ use crate::view_components::action_button::{ActionButton, PrimaryTheme, Secondar
 use crate::workspace::view::launch_modal::cta_button::{CTAButton, CTAButtonAction};
 
 pub fn init<S: Slide>(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new("escape", LaunchModalAction::<S>::Close, id!("LaunchModal")),
@@ -372,7 +372,7 @@ impl<S: Slide> LaunchModal<S> {
                                         .with_child(
                                             Container::new(
                                                 ConstrainedBox::new(
-                                                    icon.to_derpui_icon(Fill::Solid(
+                                                    icon.to_borkui_icon(Fill::Solid(
                                                         blended_colors::text_main(
                                                             theme,
                                                             blended_colors::neutral_2(theme),

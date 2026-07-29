@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
-use derpui::keymap::{BindingId, DescriptionContext};
-use derpui::{AppContext, Entity, ModelContext, ModelHandle};
+use borkui::keymap::{BindingId, DescriptionContext};
+use borkui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use crate::search::action::search_item::MatchedBinding;
 use crate::search::binding_source::BindingSource;
@@ -21,7 +21,7 @@ pub struct CommandBindingDataSource {
 impl CommandBindingDataSource {
     #[cfg(not(target_family = "wasm"))]
     pub fn new(binding_source: ModelHandle<BindingSource>, ctx: &mut ModelContext<Self>) -> Self {
-        if derp_core::features::FeatureFlag::UseTantivySearch.is_enabled() {
+        if bork_core::features::FeatureFlag::UseTantivySearch.is_enabled() {
             Self::new_full_text(binding_source, ctx)
         } else {
             Self::new_fuzzy(binding_source, ctx)
@@ -184,8 +184,8 @@ mod full_text_searcher {
     use std::sync::Arc;
 
     use fuzzy_match::FuzzyMatchResult;
-    use derp_search_core::define_search_schema;
-    use derpui::keymap::{BindingId, DescriptionContext};
+    use bork_search_core::define_search_schema;
+    use borkui::keymap::{BindingId, DescriptionContext};
 
     use crate::search::action::data_source::{is_excluded_binding, ActionSearcher, SearcherAction};
     use crate::search::action::search_item::MatchedBinding;
@@ -257,7 +257,7 @@ mod full_text_searcher {
 
         fn build_index(&mut self) {
             if self.rebuild_search_index().is_err() {
-                derp_errors::report_error!("Failed to create search index writer for actions");
+                bork_errors::report_error!("Failed to create search index writer for actions");
                 self.clear_search_index();
             }
         }
@@ -303,7 +303,7 @@ mod full_text_searcher {
     }
 }
 
-// Context on why the search_drive action is excluded can be seen here: https://github.com/derpdotdev/derp-internal/pull/11705
+// Context on why the search_drive action is excluded can be seen here: https://github.com/borkdotdev/bork-internal/pull/11705
 fn is_excluded_binding(binding: &CommandBinding) -> bool {
     binding.name == *"workspace:search_drive"
 }

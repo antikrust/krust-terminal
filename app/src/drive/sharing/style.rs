@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derpui::color::ColorU;
-use derpui::elements::{CornerRadius, Radius};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui::ui_components::text::Span;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use borkui::color::ColorU;
+use borkui::elements::{CornerRadius, Radius};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui::ui_components::text::Span;
 
 /// The padding around ACL items in the sharing dialog.
 pub const ACL_ITEM_PADDING: f32 = 16.;

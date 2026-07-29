@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use derp_errors::report_if_error;
-use derpui::keymap::FixedBinding;
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use bork_errors::report_if_error;
+use borkui::keymap::FixedBinding;
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::chip_configurator::{
     render_chip_editor_modal, render_chip_editor_sections, ChipConfigurator,
@@ -17,7 +17,7 @@ use crate::Appearance;
 const MODAL_TITLE: &str = "Edit toolbar";
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

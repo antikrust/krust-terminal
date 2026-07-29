@@ -5,21 +5,21 @@ use itertools::Itertools as _;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon;
-use derp_graphql::billing::AddonCreditsOption;
-use derp_graphql::error::BudgetExceededError;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon;
+use bork_graphql::billing::AddonCreditsOption;
+use bork_graphql::error::BudgetExceededError;
+use borkui::elements::{
     Align, Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Expanded, Flex, FormattedTextElement, HighlightedHyperlink,
-    Hoverable, Icon as DerpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle,
+    Hoverable, Icon as BorkUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement as _, ParentOffsetBounds, Radius, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
 
 use crate::ai::request_usage_model::{
     AIRequestUsageModel, AIRequestUsageModelEvent, BuyCreditsBannerDisplayState,
@@ -273,7 +273,7 @@ impl BuyCreditsBanner {
             move |state| {
                 let info_icon_element = Container::new(
                     ConstrainedBox::new(
-                        DerpUiIcon::new("bundled/svg/info.svg", sub_text_color).finish(),
+                        BorkUiIcon::new("bundled/svg/info.svg", sub_text_color).finish(),
                     )
                     .with_width(13.)
                     .with_height(13.)
@@ -397,7 +397,7 @@ impl BuyCreditsBanner {
         let alert_icon = Container::new(
             ConstrainedBox::new(
                 Icon::AlertCircle
-                    .to_derpui_icon(theme.foreground())
+                    .to_borkui_icon(theme.foreground())
                     .finish(),
             )
             .with_height(16.)
@@ -518,7 +518,7 @@ impl BuyCreditsBanner {
             Container::new(
                 ConstrainedBox::new(
                     Icon::AlertCircle
-                        .to_derpui_icon(theme.foreground())
+                        .to_borkui_icon(theme.foreground())
                         .finish(),
                 )
                 .with_height(16.)
@@ -592,8 +592,8 @@ impl BuyCreditsBanner {
                 .with_hyperlink_font_color(theme.accent().into_solid())
                 .register_default_click_handlers_with_action_support(
                     |hyperlink_lens, event, _ctx| match hyperlink_lens {
-                        derpui::elements::HyperlinkLens::Url(_url) => {}
-                        derpui::elements::HyperlinkLens::Action(action_ref) => {
+                        borkui::elements::HyperlinkLens::Url(_url) => {}
+                        borkui::elements::HyperlinkLens::Action(action_ref) => {
                             if let Some(action) = action_ref.as_any().downcast_ref::<Action>() {
                                 event.dispatch_typed_action(action.clone());
                             }
@@ -831,7 +831,7 @@ impl View for BuyCreditsBanner {
 
         match display_state {
             BuyCreditsBannerDisplayState::Hidden => {
-                Container::new(derpui::elements::Empty::new().finish()).finish()
+                Container::new(borkui::elements::Empty::new().finish()).finish()
             }
             BuyCreditsBannerDisplayState::OutOfCredits => {
                 self.render_out_of_credits(appearance, app)
@@ -852,7 +852,7 @@ pub enum Action {
     ToggleAutoReload,
 }
 
-impl derpui::TypedActionView for BuyCreditsBanner {
+impl borkui::TypedActionView for BuyCreditsBanner {
     type Action = Action;
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {

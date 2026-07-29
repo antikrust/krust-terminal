@@ -1,5 +1,5 @@
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::{Entity, ModelContext};
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::{Entity, ModelContext};
 
 use crate::workspace::view::global_search::view::GlobalSearchEvent;
 use crate::workspace::view::global_search::SearchConfig;

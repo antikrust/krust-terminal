@@ -171,7 +171,7 @@ returning the *lowest* scores. Same instructions as test 1.
 whatever models you name, and scores the verdict against what was planted:
 
 ```bash
-COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock COMMITTEE_REVIEWERS=qwen2.5-coder:7b,deepseek-coder-v2:16b,qwen2.5-coder:14b COMMITTEE_JUDGE=phi4:14b cargo test -p derp --lib -- --ignored --nocapture a_real_committee
+COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock COMMITTEE_REVIEWERS=qwen2.5-coder:7b,deepseek-coder-v2:16b,qwen2.5-coder:14b COMMITTEE_JUDGE=phi4:14b cargo test -p bork --lib -- --ignored --nocapture a_real_committee
 ```
 
 Everything named runs on `COMMITTEE_HOST` and every model on this machine is

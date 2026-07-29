@@ -1,19 +1,19 @@
-# Product Spec: Support 'agy' (Antigravity) CLI Agent in Derp
+# Product Spec: Support 'agy' (Antigravity) CLI Agent in Bork
 
-**Issue:** [derpdotdev/derp#11368](https://github.com/derpdotdev/derp/issues/11368)
+**Issue:** [borkdotdev/bork#11368](https://github.com/borkdotdev/bork/issues/11368)
 **Figma:** none provided
 
 ## Summary
 
-Add native support for the `agy` (Antigravity) CLI agent in Derp. This enables the terminal to automatically identify `agy` command executions and transition the active pane into "Agent Mode" (with dedicated layouts, toolbars, and branding).
+Add native support for the `agy` (Antigravity) CLI agent in Bork. This enables the terminal to automatically identify `agy` command executions and transition the active pane into "Agent Mode" (with dedicated layouts, toolbars, and branding).
 
 ## Problem
 
-The Antigravity CLI agent (`agy`) is an autonomous developer tool. While users can run it in Derp today, Derp currently lacks native support for it as a recognized agent:
+The Antigravity CLI agent (`agy`) is an autonomous developer tool. While users can run it in Bork today, Bork currently lacks native support for it as a recognized agent:
 1. Running `agy` does not trigger the terminal's Agent Mode layout or toolbar.
 2. The UI does not brand the session with the Antigravity logo or colors.
 
-Note: Richer notifications (OSC 777) and plugin installation are deferred until an official Antigravity plugin for Derp exists.
+Note: Richer notifications (OSC 777) and plugin installation are deferred until an official Antigravity plugin for Bork exists.
 
 ## Goals
 
@@ -28,7 +28,7 @@ Note: Richer notifications (OSC 777) and plugin installation are deferred until 
 
 ## Success Criteria
 
-1. Running `agy` in Derp launches Agent Mode and styles the pane with Antigravity branding.
+1. Running `agy` in Bork launches Agent Mode and styles the pane with Antigravity branding.
 2. The command is properly classified as a one-off shell command.
 
 ## Validation

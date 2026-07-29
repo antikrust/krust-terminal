@@ -12,14 +12,14 @@ use std::collections::HashMap;
 
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, Container, CrossAxisAlignment, Fill, Flex, FormattedTextElement, MainAxisSize,
     ParentElement, Shrinkable,
 };
-use derpui::keymap::Keystroke;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::keymap::Keystroke;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };

@@ -1,7 +1,7 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::Icon;
-use derpui_core::elements::Align;
-use derpui_core::Element;
+use bork_core::ui::Icon;
+use borkui_core::elements::Align;
+use borkui_core::Element;
 
 use super::onboarding_visual::{IconPct, OnboardingVisual, Pill, RectPct};
 

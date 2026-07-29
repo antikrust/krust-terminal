@@ -10,11 +10,11 @@ This required two coordinated changes:
 
 ## Relevant code
 
-- `crates/derpui_extras/src/user_preferences/toml_backed.rs` — TOML preferences backend (`new()`, `reload_from_disk()`)
-- `app/src/settings/init.rs` — `init_public_user_preferences()`, `init()`, `handle_derp_config_change()`
+- `crates/borkui_extras/src/user_preferences/toml_backed.rs` — TOML preferences backend (`new()`, `reload_from_disk()`)
+- `app/src/settings/init.rs` — `init_public_user_preferences()`, `init()`, `handle_bork_config_change()`
 - `app/src/settings/mod.rs` — `SettingsFileError` enum
 - `crates/settings/src/manager.rs` — `SettingsManager::reload_all_public_settings()`, `validate_all_public_settings()`
-- `app/src/user_config/mod.rs` — `DerpConfigUpdateEvent::SettingsErrors` / `SettingsErrorsCleared`
+- `app/src/user_config/mod.rs` — `BorkConfigUpdateEvent::SettingsErrors` / `SettingsErrorsCleared`
 - `app/src/workspace/view.rs` — `WorkspaceBanner::InvalidSettings`, `render_settings_error_banner()`, `subscribe_to_settings_errors()`
 - `app/src/workspace/action.rs` — `WorkspaceAction::OpenSettingsFile`
 - `app/src/global_resource_handles.rs` — `settings_file_error` field for startup propagation
@@ -34,7 +34,7 @@ This required two coordinated changes:
 - `TomlBackedUserPreferences::new()` returns `(Self, Option<Error>)`. It always succeeds, starting with an empty document on parse failure.
 - `reload_all_public_settings()` returns `Vec<String>` of failed storage keys.
 - `validate_all_public_settings()` provides read-only startup validation.
-- Errors are propagated via `DerpConfigUpdateEvent` to the workspace banner system.
+- Errors are propagated via `BorkConfigUpdateEvent` to the workspace banner system.
 
 ## Proposed changes (as implemented)
 
@@ -56,8 +56,8 @@ pub enum SettingsFileError {
 
 #### Error capture — hot-reload path
 
-`handle_derp_config_change()` in `app/src/settings/init.rs`:
-- On `reload_from_disk()` failure → emits `DerpConfigUpdateEvent::SettingsErrors(FileParseFailed(...))`
+`handle_bork_config_change()` in `app/src/settings/init.rs`:
+- On `reload_from_disk()` failure → emits `BorkConfigUpdateEvent::SettingsErrors(FileParseFailed(...))`
 - On success → calls `reload_all_public_settings()`. If failed keys returned → emits `SettingsErrors(InvalidSettings(...))`. If empty → emits `SettingsErrorsCleared`.
 
 #### Error capture — startup path
@@ -68,7 +68,7 @@ pub enum SettingsFileError {
 
 #### Event plumbing
 
-Two new `DerpConfigUpdateEvent` variants:
+Two new `BorkConfigUpdateEvent` variants:
 - `SettingsErrors(SettingsFileError)` — emitted when errors are detected
 - `SettingsErrorsCleared` — emitted when a reload succeeds with no errors
 
@@ -77,7 +77,7 @@ Two new `DerpConfigUpdateEvent` variants:
 - `WorkspaceBanner::InvalidSettings` variant added to the enum. Returns `true` from `is_dismissible()`.
 - `Workspace` fields: `settings_file_error: Option<SettingsFileError>`, `settings_error_banner_dismissed: bool`.
 - `render_settings_error_banner()` produces `WorkspaceBannerFields` with the appropriate message and an "Open settings file" button.
-- `subscribe_to_settings_errors()` subscribes to `DerpConfig` model for `SettingsErrors`/`SettingsErrorsCleared` events.
+- `subscribe_to_settings_errors()` subscribes to `BorkConfig` model for `SettingsErrors`/`SettingsErrorsCleared` events.
 - `WorkspaceAction::OpenSettingsFile` opens `settings.toml` in a code editor pane via `add_tab_for_code_file()`.
 
 ## End-to-end flow
@@ -106,23 +106,23 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant FileWatcher
-    participant DerpConfig
-    participant Handler as handle_derp_config_change
+    participant BorkConfig
+    participant Handler as handle_bork_config_change
     participant Workspace
 
-    FileWatcher->>DerpConfig: Settings event
-    DerpConfig->>Handler: DerpConfigUpdateEvent::Settings
+    FileWatcher->>BorkConfig: Settings event
+    BorkConfig->>Handler: BorkConfigUpdateEvent::Settings
     Handler->>Handler: reload_from_disk() → Err
-    Handler->>DerpConfig: emit SettingsErrors(FileParseFailed)
-    DerpConfig->>Workspace: SettingsErrors → banner appears
+    Handler->>BorkConfig: emit SettingsErrors(FileParseFailed)
+    BorkConfig->>Workspace: SettingsErrors → banner appears
 
     Note over FileWatcher: User fixes file
-    FileWatcher->>DerpConfig: Settings event
-    DerpConfig->>Handler: DerpConfigUpdateEvent::Settings
+    FileWatcher->>BorkConfig: Settings event
+    BorkConfig->>Handler: BorkConfigUpdateEvent::Settings
     Handler->>Handler: reload_from_disk() → Ok
     Handler->>Handler: reload_all_public_settings() → []
-    Handler->>DerpConfig: emit SettingsErrorsCleared
-    DerpConfig->>Workspace: SettingsErrorsCleared → banner disappears
+    Handler->>BorkConfig: emit SettingsErrorsCleared
+    BorkConfig->>Workspace: SettingsErrorsCleared → banner disappears
 ```
 
 ## Risks and mitigations
@@ -138,7 +138,7 @@ sequenceDiagram
 - `test_validate_detects_invalid_values` — startup validation catches bad values
 - `test_validate_returns_empty_when_all_valid` — startup validation passes for good values
 
-### Unit tests (`crates/derpui_extras/src/user_preferences/toml_backed_tests.rs`)
+### Unit tests (`crates/borkui_extras/src/user_preferences/toml_backed_tests.rs`)
 - `test_new_with_invalid_toml_returns_error_and_recovers_on_reload` — parse failure → recovery
 
 ### Integration tests (`crates/integration/src/test/settings_file_errors.rs`)

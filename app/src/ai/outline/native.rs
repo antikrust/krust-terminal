@@ -13,8 +13,8 @@ use repo_metadata::repository::{
 };
 use repo_metadata::{CanonicalizedPath, DirectoryWatcher, Repository, RepositoryUpdate};
 use settings::Setting as _;
-use derp_errors::report_error;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::OutlineStatus;
 use crate::ai::persisted_workspace::all_working_directories;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use derpui::{Entity, EntityId, ModelContext, SingletonEntity, WindowId};
+use borkui::{Entity, EntityId, ModelContext, SingletonEntity, WindowId};
 
 use crate::ai::execution_profiles::profiles::ClientProfileId;
 use crate::pane_group::{ExecutionProfileEditorPane, PaneContent};

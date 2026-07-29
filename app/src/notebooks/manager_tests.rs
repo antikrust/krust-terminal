@@ -1,8 +1,8 @@
 use std::sync::mpsc;
 
-use derp_core::ui::appearance::Appearance;
-use derpui::platform::WindowStyle;
-use derpui::{AddSingletonModel, App, EntityId, ModelHandle, ViewContext, ViewHandle};
+use bork_core::ui::appearance::Appearance;
+use borkui::platform::WindowStyle;
+use borkui::{AddSingletonModel, App, EntityId, ModelHandle, ViewContext, ViewHandle};
 
 use super::NotebookManager;
 use crate::ai::blocklist::BlocklistAIHistoryModel;

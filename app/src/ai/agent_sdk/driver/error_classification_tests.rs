@@ -1,4 +1,4 @@
-use derp_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use bork_graphql::ai::{AgentTaskState, PlatformErrorCode};
 
 use super::classify_driver_error;
 use crate::ai::agent_sdk::driver::terminal::{BootstrapError, ShareSessionError};
@@ -90,16 +90,16 @@ fn not_logged_in_is_error_with_auth_required() {
         Some(PlatformErrorCode::AuthenticationRequired)
     );
     assert!(
-        update.message.contains("DERP_API_KEY"),
-        "message should mention DERP_API_KEY: {:?}",
+        update.message.contains("BORK_API_KEY"),
+        "message should mention BORK_API_KEY: {:?}",
         update.message
     );
 }
 
 #[test]
-fn derp_drive_sync_failed_is_error() {
+fn bork_drive_sync_failed_is_error() {
     assert_state_and_code(
-        AgentDriverError::DerpDriveSyncFailed,
+        AgentDriverError::BorkDriveSyncFailed,
         AgentTaskState::Error,
         Some(PlatformErrorCode::InternalError),
     );

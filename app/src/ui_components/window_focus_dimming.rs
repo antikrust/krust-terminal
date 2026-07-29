@@ -1,9 +1,9 @@
-use derp_core::ui::color::coloru_with_opacity;
-use derpui::elements::{
+use bork_core::ui::color::coloru_with_opacity;
+use borkui::elements::{
     ConstrainedBox, Element, Fill, Hoverable, MouseStateHandle, ParentElement, Rect, Stack,
 };
-use derpui::windowing::WindowManager;
-use derpui::{AppContext, SingletonEntity, WindowId};
+use borkui::windowing::WindowManager;
+use borkui::{AppContext, SingletonEntity, WindowId};
 
 use crate::window_settings::WindowSettings;
 use crate::workspace::panel_header_corner_radius;
@@ -23,7 +23,7 @@ impl WindowFocusDimming {
     /// unreliable due to soft keyboard management.
     pub fn is_window_focused(window_id: WindowId, ctx: &AppContext) -> bool {
         #[cfg(target_family = "wasm")]
-        if derpui::platform::wasm::is_mobile_device() {
+        if borkui::platform::wasm::is_mobile_device() {
             return true;
         }
 
@@ -41,7 +41,7 @@ impl WindowFocusDimming {
         element: Box<dyn Element>,
         mouse_state: MouseStateHandle,
         height: f32,
-        background_color: derpui::color::ColorU,
+        background_color: borkui::color::ColorU,
         window_id: WindowId,
         ctx: &AppContext,
     ) -> Box<dyn Element> {

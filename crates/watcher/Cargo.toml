@@ -2,14 +2,14 @@
 name = "watcher"
 version = "0.1.0"
 edition = "2021"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 publish.workspace = true
 license.workspace = true
 
 [dependencies]
-derp_errors.workspace = true
+bork_errors.workspace = true
 async-channel.workspace = true
-derpui_core.workspace = true
+borkui_core.workspace = true
 log.workspace = true
 anyhow.workspace = true
 notify-debouncer-full.workspace = true

@@ -1,10 +1,10 @@
-# Note that DERP_SESSION_ID is expected to have been set when executing commands to
+# Note that BORK_SESSION_ID is expected to have been set when executing commands to
 # emit the InitShell payload, which includes the session ID.
 #
 # Throughout, command -p is used to call external binaries. command -p resolves the
 # given command using the system default $PATH, which ensures the shells can locate
 # the corresponding binaries even if the user has a clobbered value of $PATH.
-if [ -z "$DERP_BOOTSTRAPPED" ]; then
+if [ -z "$BORK_BOOTSTRAPPED" ]; then
     # Byte sequence used to signal the start of a DCS. ([0x1b, 0x50, 0x24] which
     # maps to <ESC>, P, $ in ASCII.)
     DCS_START="$(printf '\eP$')"
@@ -37,9 +37,9 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
     # Attempt to cd to the desired initial working directory, swallowing any
     # errors.  If this fails, the user will end up in their home directory.
-    if [[ ! -z "$DERP_INITIAL_WORKING_DIR" ]]; then
-        cd "$DERP_INITIAL_WORKING_DIR" >/dev/null 2>&1
-        unset DERP_INITIAL_WORKING_DIR
+    if [[ ! -z "$BORK_INITIAL_WORKING_DIR" ]]; then
+        cd "$BORK_INITIAL_WORKING_DIR" >/dev/null 2>&1
+        unset BORK_INITIAL_WORKING_DIR
     fi
 
     # We configure history to `ignorespace` to avoid leaking our bootstrap script
@@ -53,80 +53,80 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
     # The temporary files used to track generator PIDs.  We'll fill these in later,
     # if we execute any generator commands.
-    _DERP_GENERATOR_PIDS_STARTED_TMP_FILE=""
-    _DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE=""
+    _BORK_GENERATOR_PIDS_STARTED_TMP_FILE=""
+    _BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE=""
     # Make sure we delete generator PID files when the shell exits, if they exist.
-    __derp_generator_pid_file_cleanup() {
-      if [[ -f $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
-        command -p rm $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE
+    __bork_generator_pid_file_cleanup() {
+      if [[ -f $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
+        command -p rm $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE
       fi
-      if [[ -f $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
-        command -p rm $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE
+      if [[ -f $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
+        command -p rm $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE
       fi
     }
-    trap __derp_generator_pid_file_cleanup EXIT
+    trap __bork_generator_pid_file_cleanup EXIT
 
     # Writes a hex-encoded JSON message to the pty.
-    derp_send_json_message () {
+    bork_send_json_message () {
         # Sends a message to the controlling terminal as a DSC control sequence.
         # Note that because the JSON string may contain characters that we don't control (including
         # unicode), we encode it as hexadecimal string to avoid prematurely calling unhook if
         # one of the bytes in JSON is 9c (ST) or other (CAN, SUB, ESC).
-        encoded_message=$(derp_hex_encode_string "$1")
+        encoded_message=$(bork_hex_encode_string "$1")
         # We send the InitShell hook via OSCs when on WSL or MSYS2 or SSH from Windows and via DCSs otherwise.
-        # Note that $DERP_USING_WINDOWS_CON_PTY is set in the init shell script.
-        if [ "$DERP_USING_WINDOWS_CON_PTY" = true ]; then
+        # Note that $BORK_USING_WINDOWS_CON_PTY is set in the init shell script.
+        if [ "$BORK_USING_WINDOWS_CON_PTY" = true ]; then
           printf $OSC_START$DCS_JSON_MARKER$OSC_PARAM_SEPARATOR$encoded_message$OSC_END
         else
           printf $DCS_START$DCS_JSON_MARKER$encoded_message$DCS_END
         fi
     }
 
-    # Emit the ExitShell hook right before the remote shell exits so the Derp
+    # Emit the ExitShell hook right before the remote shell exits so the Bork
     # client can drop per-session resources (specifically the
     # `ssh … remote-server-proxy` child that holds a multiplexed channel on
     # the foreground ssh ControlMaster). This avoids a hang where the master
     # waits on orphaned slave channels when the user ends their interactive
     # session.
     #
-    # Only relevant for remote SSH shells. DERP_IS_SSH is exported to "1"
-    # by `derp_ssh_helper` on the remote side of a Derp-managed SSH session
+    # Only relevant for remote SSH shells. BORK_IS_SSH is exported to "1"
+    # by `bork_ssh_helper` on the remote side of a Bork-managed SSH session
     # and is unset everywhere else (local shells, subshells, docker
     # sandboxes, etc.), so the hook only fires where a remote-server-proxy
     # actually needs tearing down.
     #
-    # Installed after derp_send_json_message is defined so the handler is
+    # Installed after bork_send_json_message is defined so the handler is
     # callable the moment the trap is registered.
-    if [[ "$DERP_IS_SSH" == "1" ]]; then
-        __derp_emit_exit_shell() {
-            if [[ -n "$DERP_SESSION_ID" ]]; then
-                derp_send_json_message \
-                    "{\"hook\": \"ExitShell\", \"value\": {\"session_id\": $DERP_SESSION_ID}}"
+    if [[ "$BORK_IS_SSH" == "1" ]]; then
+        __bork_emit_exit_shell() {
+            if [[ -n "$BORK_SESSION_ID" ]]; then
+                bork_send_json_message \
+                    "{\"hook\": \"ExitShell\", \"value\": {\"session_id\": $BORK_SESSION_ID}}"
             fi
         }
         # Bash allows only one handler per signal, so compose with the
         # already-installed generator cleanup. Cover both normal exit (exit,
         # logout, Ctrl-D) and SIGHUP (connection drop).
-        __derp_on_exit() {
-            __derp_emit_exit_shell
-            __derp_generator_pid_file_cleanup
+        __bork_on_exit() {
+            __bork_emit_exit_shell
+            __bork_generator_pid_file_cleanup
         }
-        trap __derp_on_exit EXIT HUP
+        trap __bork_on_exit EXIT HUP
     fi
 
-    derp_maybe_send_reset_grid_osc () {
-        if [ "$DERP_USING_WINDOWS_CON_PTY" = true ]; then
+    bork_maybe_send_reset_grid_osc () {
+        if [ "$BORK_USING_WINDOWS_CON_PTY" = true ]; then
             printf $RESET_GRID_OSC
         fi
     }
 
     # Expects the first argument to be the shell hook.
-    derp_send_hook_via_kv_pairs_start () {
+    bork_send_hook_via_kv_pairs_start () {
       printf "${OSC_START}k;A;%s\a" $1
     }
 
     # Expects the first argument to be the key and the second argument to be the value.
-    derp_send_hook_kv_pair_escaped () {
+    bork_send_hook_kv_pair_escaped () {
       # Note that we only escape the value.
       if [[ -n "$2" ]]; then
         printf "${OSC_START}k;B;%s;%q\a" "$1" "$2"
@@ -137,7 +137,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     }
 
     # Expects the first argument to be the key and the second argument to be the value.
-    derp_send_hook_kv_pair () {
+    bork_send_hook_kv_pair () {
       # Note that we only escape the value.
       if [[ -n "$2" ]]; then
         printf "${OSC_START}k;B;%s;%s\a" "$1" "$2"
@@ -147,7 +147,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       fi
     }
 
-    derp_send_hook_via_kv_pairs_end () {
+    bork_send_hook_via_kv_pairs_end () {
       printf "${OSC_START}k;C\a"
     }
 
@@ -156,20 +156,20 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     #
     #
     # Usage:
-    #   derp_send_generator_output_osc $my_message
+    #   bork_send_generator_output_osc $my_message
     #
     # The payload of the OSC is "<content_length>;<hex-encoded content>".
-    derp_send_generator_output_osc () {
-        local hex_encoded_message=$(derp_hex_encode_string "$1")
-        derp_send_generator_output_osc_pre_hex_encoded "$hex_encoded_message"
+    bork_send_generator_output_osc () {
+        local hex_encoded_message=$(bork_hex_encode_string "$1")
+        bork_send_generator_output_osc_pre_hex_encoded "$hex_encoded_message"
     }
 
     # Note: If we're on windows, we send a reset grid to erase any cursor mutations caused by
     # the in-band command.
-    derp_send_generator_output_osc_pre_hex_encoded () {
+    bork_send_generator_output_osc_pre_hex_encoded () {
         local byte_count=$(LC_ALL="C"; printf "${#1}")
         printf "%b%i;%s%b" $OSC_START_GENERATOR_OUTPUT $byte_count $1 $OSC_END_GENERATOR_OUTPUT
-        derp_maybe_send_reset_grid_osc
+        bork_maybe_send_reset_grid_osc
     }
 
 
@@ -179,7 +179,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     # where command_id is the ID given as the first argument to this function,
     # exit_code is the exit code of the executed command, and command_output is
     # the output itself.
-    _derp_execute_command() {
+    _bork_execute_command() {
       local command_id=$1
       # This is shorthand to slice the 2nd-nth arguments of this function (i.e.
       # the command array) into its own array. The first argument is the
@@ -198,38 +198,38 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
         eval "$command" 2>&1;
         echo -n ";$?";
       } | command -p od -An -v -tx1 | command -p tr -d ' \n')"
-      derp_send_generator_output_osc_pre_hex_encoded "$generator_output"
+      bork_send_generator_output_osc_pre_hex_encoded "$generator_output"
     }
 
     # Runs the given command in the background, records its PID in
-    # _DERP_GENERATOR_PIDS_STARTED_TMP_FILE, and adds its PID from the file when
+    # _BORK_GENERATOR_PIDS_STARTED_TMP_FILE, and adds its PID from the file when
     # the job is completed.
-    _derp_run_generator_command_internal() {
+    _bork_run_generator_command_internal() {
       # $@ must be double-quoted to prevent word-splitting, which would cause the given command to
       # be split into a bash list on $IFS chars (spaces, tabs, newlines), which could invalidate
       # the syntactical correctness of the command.
-      _derp_execute_command "$@" &
+      _bork_execute_command "$@" &
       # $! contains the PID of the most recently backgrounded command.
       local pid=$!
-      echo $pid >> $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE
+      echo $pid >> $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE
       wait $pid 2> /dev/null
 
-      # If the exit code of the backgrounded _derp_execute_command process is non-zero,
+      # If the exit code of the backgrounded _bork_execute_command process is non-zero,
       # the call to send the generator output failed (most likely because this is being
       # executed in an old bash version that doesn't support some syntax in
-      # _derp_execute_command function itself). In this case, send empty output with
+      # _bork_execute_command function itself). In this case, send empty output with
       # exit code 1 to indicate generator execution failed.
       if [[ $? -ne 0 ]]; then
-          derp_send_generator_output_osc "$1;;1"
+          bork_send_generator_output_osc "$1;;1"
       fi
 
 
       # Add the PID to the completed generators PID file.
       # 
       # The completed generator PIDs file may not exist if this generator was (by
-      # error) left running/not cancelled properly in derp_preexec.
-      if [[ -f $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
-        echo $pid >> $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE
+      # error) left running/not cancelled properly in bork_preexec.
+      if [[ -f $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
+        echo $pid >> $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE
       fi
     }
 
@@ -241,65 +241,65 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     # not substituted until the command string is actually evaluated.
     #
     # Usage:
-    #   derp_run_generator_command <command_id> '<command> <arg1> ... <argn>'
-    derp_run_generator_command() {
-      # Setting this environment variable prevents derp_precmd from emitting the
+    #   bork_run_generator_command <command_id> '<command> <arg1> ... <argn>'
+    bork_run_generator_command() {
+      # Setting this environment variable prevents bork_precmd from emitting the
       # 'Block started' hook to the Rust app.
-      _DERP_GENERATOR_COMMAND=1
+      _BORK_GENERATOR_COMMAND=1
 
       # Ensure the started and completed generator PID files exist.
-      if [[ -z $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE || ! -f $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
-        _DERP_GENERATOR_PIDS_STARTED_TMP_FILE="$(command -p mktemp)"
+      if [[ -z $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE || ! -f $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
+        _BORK_GENERATOR_PIDS_STARTED_TMP_FILE="$(command -p mktemp)"
       fi
-      if [[ -z $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE || ! -f $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
-        _DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE="$(command -p mktemp)"
+      if [[ -z $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE || ! -f $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
+        _BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE="$(command -p mktemp)"
       fi
 
       # To minimize latency and prevent the user from being blocked from entering a command,
-      # cache the user's precmd_functions and only register derp_precmd. In the derp_precmd
+      # cache the user's precmd_functions and only register bork_precmd. In the bork_precmd
       # execution following this generator command, the user's precmd_functions are restored.
       _USER_PRECMD_FUNCTIONS=(${precmd_functions[@]})
-      precmd_functions=(derp_precmd)
+      precmd_functions=(bork_precmd)
 
       # $@ must be double-quoted to prevent word-splitting, which would cause the given command to
       # be split into a bash list on $IFS chars (spaces, tabs, newlines), which could invalidate
       # the syntactical correctness of the command.
-      (_derp_run_generator_command_internal "$@" &)
+      (_bork_run_generator_command_internal "$@" &)
     }
 
 
     # Note that this is very performance sensitive code, so try not to
     # invoke any external commands in here.
-    derp_preexec () {
+    bork_preexec () {
         # Use the $BASH_COMMAND environment variable instead of $1, which is passed in by bash_preeexec.
         #
         # Bash_preexec intends to pass the command to preexec functions (as $1), but it utilizes session
         # history to do so. This means that $1 is not the correct command if the executed command is ignored
         # by history (e.g. via $HISTCONTROL or $HISTIGNORE); for example, all in-band generators are ignored
         # by history.
-        if [ "$DERP_IN_MSYS2" = true ]; then
-          derp_send_hook_via_kv_pairs_start "Preexec"
-          derp_send_hook_kv_pair "command" "$BASH_COMMAND"
-          derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-          derp_send_hook_via_kv_pairs_end
+        if [ "$BORK_IN_MSYS2" = true ]; then
+          bork_send_hook_via_kv_pairs_start "Preexec"
+          bork_send_hook_kv_pair "command" "$BASH_COMMAND"
+          bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+          bork_send_hook_via_kv_pairs_end
         else
-          local truncated_command=$(derp_escape_json "$BASH_COMMAND")
-          derp_send_json_message "{\"hook\": \"Preexec\", \"value\": {\"command\": \"$truncated_command\", \"session_id\": $DERP_SESSION_ID}}"
+          local truncated_command=$(bork_escape_json "$BASH_COMMAND")
+          bork_send_json_message "{\"hook\": \"Preexec\", \"value\": {\"command\": \"$truncated_command\", \"session_id\": $BORK_SESSION_ID}}"
         fi
-        derp_maybe_send_reset_grid_osc
+        bork_maybe_send_reset_grid_osc
 
 
         # Since we did not early-return above, this hook is for a user-entered
         # command. Kill ongoing generator jobs so their output does not interfere
         # with the user command's output.
-        if [[ "$BASH_COMMAND" != derp_run_generator_command* ]] && [[ -f $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE ]] && [[ -f $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]
+        if [[ "$BASH_COMMAND" != bork_run_generator_command* ]] && [[ -f $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE ]] && [[ -f $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]
         then
           # Read PIDs from the started generators tmp file that are not present in
           # the completed generators tmp file into a bash array.
           #
           # The logic used to be the following:
           #
-          # pids=($(command -p comm -23 $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE))
+          # pids=($(command -p comm -23 $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE))
           #
           # However, that requires that the files are sorted, which we do not enforce (the OS can assign PIDs
           # in any order).  While we could sort the files and then compare them, the files are expected to be
@@ -308,7 +308,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
           completed_pids=()
           while IFS= read -r pid; do
             completed_pids+=("$pid")
-          done < $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE
+          done < $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE
 
           pids=()
           while IFS= read -r pid; do
@@ -322,7 +322,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             if (( found == 0 )); then
               pids+=("$pid")
             fi
-          done < $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE
+          done < $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE
 
           # If the array is not empty, kill the ongoing pids.
           if [[ ! -z $pids ]]; then
@@ -336,9 +336,9 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
     # Set terminal window and tab title to the same title value. Note that for values longer than 25
     # characters, we truncate the title and prepend "..".
-    # Usage derp_title "title"
-    # Users can disable the auto title if they chose to by setting DERP_DISABLE_AUTO_TITLE.
-    derp_title () {
+    # Usage bork_title "title"
+    # Users can disable the auto title if they chose to by setting BORK_DISABLE_AUTO_TITLE.
+    bork_title () {
       DISABLE_AUTO_TITLE="1"
 
       # truncating the title's len to 25 characters and leading ".."
@@ -351,14 +351,14 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       fi
       # Set the title. Be sure to make the title a %s argument to prevent title content from ending up
       # in the block output, see:
-      # https://linear.app/derpdotdev/issue/WAR-6064/bash-commands-having-esc-write-the-command-to-the-block-output
+      # https://linear.app/borkdotdev/issue/WAR-6064/bash-commands-having-esc-write-the-command-to-the-block-output
       printf "\033]0;%s\a" "$title"
     }
 
     # Runs before executing the command
-    derp_set_title_idle_on_precmd () {
-      # If the user wants to set the title themselves, they can set the DERP_DISABLE_AUTO_TITLE flag.
-      if [ ! -z "$DERP_DISABLE_AUTO_TITLE" ]; then
+    bork_set_title_idle_on_precmd () {
+      # If the user wants to set the title themselves, they can set the BORK_DISABLE_AUTO_TITLE flag.
+      if [ ! -z "$BORK_DISABLE_AUTO_TITLE" ]; then
         return
       fi
 
@@ -371,23 +371,23 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       new_home='~'
       bash_term_tab_title="${PWD/#$HOME/$new_home}"
 
-      if [[ $DERP_IS_LOCAL_SHELL_SESSION == "1" ]]; then
-        derp_title "$bash_term_tab_title"
+      if [[ $BORK_IS_LOCAL_SHELL_SESSION == "1" ]]; then
+        bork_title "$bash_term_tab_title"
       else
         bash_term_tab_title_remote="${HOSTNAME%%.*}:$bash_term_tab_title"
-        derp_title "$bash_term_tab_title_remote"
+        bork_title "$bash_term_tab_title_remote"
       fi
     }
 
     # Runs before executing the command
-    derp_set_title_active_on_preexec () {
-      # If the user wants to set the title themselves, they can set the DERP_DISABLE_AUTO_TITLE flag.
-      if [ ! -z "$DERP_DISABLE_AUTO_TITLE" ]; then
+    bork_set_title_active_on_preexec () {
+      # If the user wants to set the title themselves, they can set the BORK_DISABLE_AUTO_TITLE flag.
+      if [ ! -z "$BORK_DISABLE_AUTO_TITLE" ]; then
         return
       fi
 
       cmd="$1"
-      # derp_set_title_active_on_preexec is a preexec_function, which accepts 1 argument 
+      # bork_set_title_active_on_preexec is a preexec_function, which accepts 1 argument 
       #(currently invoked command)
       local this_command_spec
       read -r -a this_command_spec <<< "$1"
@@ -413,7 +413,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
         cmd="$fg_command_name"
       fi
 
-      derp_title "$cmd"
+      bork_title "$cmd"
     }
 
     # The git prompt's git commands are read-only and should not interfere with
@@ -423,49 +423,49 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     #
     # We wrap in a local function instead of exporting the variable directly in
     # order to avoid interfering with manually-run git commands by the user.
-    derp_git () {
+    bork_git () {
       GIT_OPTIONAL_LOCKS=0 command git "$@"
     }
 
     # Note that this is very performance sensitive code, so try not to
     # invoke any external commands in here.
-    derp_precmd () {
+    bork_precmd () {
         # $? is relative to the process so we MUST check this first
         # or else the exit code will correspond to the commands
         # executed within this block instead of the actual last
         # command that was run.
         local exit_code=$?
-        local next_block_id="precmd-$DERP_SESSION_ID-$((block_id++))"
-        if [ "$DERP_IN_MSYS2" = true ]; then
-          derp_send_hook_via_kv_pairs_start "CommandFinished"
-          derp_send_hook_kv_pair "exit_code" "$exit_code"
-          derp_send_hook_kv_pair "next_block_id" "$next_block_id"
-          derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-          derp_send_hook_via_kv_pairs_end
+        local next_block_id="precmd-$BORK_SESSION_ID-$((block_id++))"
+        if [ "$BORK_IN_MSYS2" = true ]; then
+          bork_send_hook_via_kv_pairs_start "CommandFinished"
+          bork_send_hook_kv_pair "exit_code" "$exit_code"
+          bork_send_hook_kv_pair "next_block_id" "$next_block_id"
+          bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+          bork_send_hook_via_kv_pairs_end
         else
-          derp_send_json_message "{\"hook\": \"CommandFinished\", \"value\": {\"exit_code\": $exit_code, \"next_block_id\": \"$next_block_id\", \"session_id\": $DERP_SESSION_ID}}"
+          bork_send_json_message "{\"hook\": \"CommandFinished\", \"value\": {\"exit_code\": $exit_code, \"next_block_id\": \"$next_block_id\", \"session_id\": $BORK_SESSION_ID}}"
         fi
 
-        derp_maybe_send_reset_grid_osc
+        bork_maybe_send_reset_grid_osc
 
         if [[ $PS1 == "" ]]; then
-          # Use the saved PS1, if we've already unset it (due to active Derp prompt).
-          DERP_PS1="$SAVED_PS1"
+          # Use the saved PS1, if we've already unset it (due to active Bork prompt).
+          BORK_PS1="$SAVED_PS1"
         else
           # If we haven't unset it yet, then we can use the current PS1 value.
-          DERP_PS1="$PS1"
+          BORK_PS1="$PS1"
         fi
 
         # If this is being called for a generator command, short circuit and send an unpopulated
         # precmd payload (except for pwd), since we don't re-render the prompt after generator commands
         # are run.
-        if [ ! -z  $_DERP_GENERATOR_COMMAND ]; then
+        if [ ! -z  $_BORK_GENERATOR_COMMAND ]; then
             # Restore the user's precmd_functions, since they were un-registered prior to executing
             # the generator.
             precmd_functions=(${_USER_PRECMD_FUNCTIONS[@]})
 
-            unset _DERP_GENERATOR_COMMAND
-            derp_send_json_message "{\"hook\": \"Precmd\", \"value\": {
+            unset _BORK_GENERATOR_COMMAND
+            bork_send_json_message "{\"hook\": \"Precmd\", \"value\": {
             \"exit_code\": $exit_code,
             \"next_block_id\": \"$next_block_id\",
             \"pwd\": \"\",
@@ -475,30 +475,30 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             \"virtual_env\": \"\",
             \"conda_env\": \"\",
             \"node_version\": \"\",
-            \"session_id\": $DERP_SESSION_ID,
+            \"session_id\": $BORK_SESSION_ID,
             \"is_after_in_band_command\": true
             }}"
             return 0
         fi
 
         # If the files for tracking generator PIDs exist, clear them.
-        if [[ -n $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE && -f $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
-          echo "" > $_DERP_GENERATOR_PIDS_STARTED_TMP_FILE
+        if [[ -n $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE && -f $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE ]]; then
+          echo "" > $_BORK_GENERATOR_PIDS_STARTED_TMP_FILE
         fi
-        if [[ -n $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE && -f $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
-          echo "" > $_DERP_GENERATOR_PIDS_COMPLETED_TMP_FILE
+        if [[ -n $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE && -f $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE ]]; then
+          echo "" > $_BORK_GENERATOR_PIDS_COMPLETED_TMP_FILE
         fi
 
-        if [[ -z $DERP_INPUT_REPORTING_SUPPORTED ]]; then
-          DERP_INPUT_REPORTING_SUPPORTED=$(derp_input_reporting_supported)
+        if [[ -z $BORK_INPUT_REPORTING_SUPPORTED ]]; then
+          BORK_INPUT_REPORTING_SUPPORTED=$(bork_input_reporting_supported)
         fi
 
         # If we haven't already, cache information about supported features.
-        if [[ -z $DERP_PS1_EXPANSION_SUPPORTED ]]; then
-          DERP_PS1_EXPANSION_SUPPORTED=$(derp_ps1_expanding_supported)
+        if [[ -z $BORK_PS1_EXPANSION_SUPPORTED ]]; then
+          BORK_PS1_EXPANSION_SUPPORTED=$(bork_ps1_expanding_supported)
         fi
 
-        if [[ $DERP_PS1_EXPANSION_SUPPORTED  == "1" ]]; then
+        if [[ $BORK_PS1_EXPANSION_SUPPORTED  == "1" ]]; then
           # When evaluating the PS1, we want to ensure that it's aware of the last exit code.
           # Since we captured it already and executed multiple other commands, the actual
           # last exit code has changed. So before the evaluation, we want to trick the shell
@@ -507,54 +507,54 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             return $1
           }
           exit_code_hack $exit_code
-          deref_ps1=${DERP_PS1@P}
+          deref_ps1=${BORK_PS1@P}
         else
           # Tricking the shell into rendering the prompt
           # Note that in more modern versions of bash we could use ${PS1@P} to achieve the same,
           # but MacOS comes by default with a much older version of bash, and we want to be compatible.
-          deref_ps1=$(echo -e "\n" | PS1="$DERP_PS1" BASH_SILENCE_DEPRECATION_WARNING=1 "$BASH" --norc -i 2>&1 | command -p head -2 | command -p tail -1)
+          deref_ps1=$(echo -e "\n" | PS1="$BORK_PS1" BASH_SILENCE_DEPRECATION_WARNING=1 "$BASH" --norc -i 2>&1 | command -p head -2 | command -p tail -1)
         fi
 
         # Escaped PS1 variable
         local escaped_ps1
-        if [ "$DERP_IN_MSYS2" = false ]; then
-          escaped_ps1=$(derp_escape_ps1 "$(echo "$deref_ps1")")
+        if [ "$BORK_IN_MSYS2" = false ]; then
+          escaped_ps1=$(bork_escape_ps1 "$(echo "$deref_ps1")")
         fi
 
         # Flush history
         history -a
 
-        # Reset the custom kill-whole-line binding as the user's bashrc (which is sourced after bashrc_derp)
+        # Reset the custom kill-whole-line binding as the user's bashrc (which is sourced after bashrc_bork)
         # could have added another bind. This won't have any user-impact because these shortcuts are only run
-        # in the context of the bash editor, which isn't displayed in Derp.
+        # in the context of the bash editor, which isn't displayed in Bork.
         bind -r '"\C-p"'
         bind "\C-p":kill-whole-line
 
         # Reset the report-input binding in case the user's bashrc modified it.
         # This is arbitrarily bound to ESC-i in all supported shells ("i" for input).
-        if [[ $DERP_INPUT_REPORTING_SUPPORTED == "1" ]]; then
+        if [[ $BORK_INPUT_REPORTING_SUPPORTED == "1" ]]; then
           bind -r '"\ei"'
-          bind -x '"\ei":"derp_report_input"'
+          bind -x '"\ei":"bork_report_input"'
         fi
         
         # We need to register bindkeys to enable intra-session switching of the prompt 
-        # (these bindkeys are used by Derp to communicate the prompt mode switch to bash).
+        # (these bindkeys are used by Bork to communicate the prompt mode switch to bash).
         # We remove any existing bindkey for ESC-P ("p" for prompt/PS1) and register the bindkey
         # to our custom function. Note that this specific keybinding is arbitrary.
         bind -r '"\ep"'
-        bind -x '"\ep":"derp_change_prompt_modes_to_ps1"'
-        # We remove any existing bindkey for ESC-P ("w" for Derp prompt) and register the bindkey
+        bind -x '"\ep":"bork_change_prompt_modes_to_ps1"'
+        # We remove any existing bindkey for ESC-P ("w" for Bork prompt) and register the bindkey
         # to our custom function. Note that this specific keybinding is arbitrary.
         bind -r '"\ew"'
-        bind -x '"\ew":"derp_change_prompt_modes_to_derp_prompt"'
+        bind -x '"\ew":"bork_change_prompt_modes_to_bork_prompt"'
 
         local escaped_pwd
-        if [ "$DERP_IN_MSYS2" = false ]; then
+        if [ "$BORK_IN_MSYS2" = false ]; then
           if [ -n "$WSL_DISTRO_NAME" ]; then
             # In WSL, avoid symlinks b/c on Windows `std::fs` is unable to resolve symlink inside WSL containers.
-            escaped_pwd=$(derp_escape_json "$(pwd -P)")
+            escaped_pwd=$(bork_escape_json "$(pwd -P)")
           else
-            escaped_pwd=$(derp_escape_json "$PWD")
+            escaped_pwd=$(bork_escape_json "$PWD")
           fi
         fi
 
@@ -570,20 +570,20 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
         # blocks created during the bootstrap process don't have visible
         # prompts, and we don't want to invoke `git` before we've sourced the
         # user's rcfiles and have a fully-populated PATH.
-        if [[ -n "$DERP_BOOTSTRAPPED" ]]; then
-          if [[ -n "$VIRTUAL_ENV" ]] && [ "$DERP_IN_MSYS2" = false ]; then
-              escaped_virtual_env=$(derp_escape_json "$VIRTUAL_ENV")
+        if [[ -n "$BORK_BOOTSTRAPPED" ]]; then
+          if [[ -n "$VIRTUAL_ENV" ]] && [ "$BORK_IN_MSYS2" = false ]; then
+              escaped_virtual_env=$(bork_escape_json "$VIRTUAL_ENV")
           fi
 
-          if [[ -n "$CONDA_DEFAULT_ENV" ]] && [ "$DERP_IN_MSYS2" = false ]; then
-              escaped_conda_env=$(derp_escape_json "$CONDA_DEFAULT_ENV")
+          if [[ -n "$CONDA_DEFAULT_ENV" ]] && [ "$BORK_IN_MSYS2" = false ]; then
+              escaped_conda_env=$(bork_escape_json "$CONDA_DEFAULT_ENV")
           fi
 
           # Get the Node.js version, but only when the Node.js Version chip is enabled.
-          # Derp sets DERP_PROMPT_NODE_VERSION_ENABLED to "0" when the chip is not in the
+          # Bork sets BORK_PROMPT_NODE_VERSION_ENABLED to "0" when the chip is not in the
           # prompt (defaulting to enabled when unset), so we avoid spawning `node` on
           # every prompt when the chip is not shown.
-          if [[ "$DERP_PROMPT_NODE_VERSION_ENABLED" != "0" ]] && command -v node > /dev/null 2>&1 && [ "$DERP_IN_MSYS2" = false ]; then
+          if [[ "$BORK_PROMPT_NODE_VERSION_ENABLED" != "0" ]] && command -v node > /dev/null 2>&1 && [ "$BORK_IN_MSYS2" = false ]; then
               # Check for package.json in current directory and parent directories
               local current_dir="$PWD"
               local found_package_json=false
@@ -620,15 +620,15 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
                       # on `nvm use`). The cache vars are global (no `local`) so they
                       # persist across precmd invocations.
                       local node_cache_key="$PWD:$PATH"
-                      if [[ "$node_cache_key" == "$_DERP_NODE_VERSION_CACHE_KEY" ]]; then
-                          escaped_node_version="$_DERP_NODE_VERSION_CACHE_VALUE"
+                      if [[ "$node_cache_key" == "$_BORK_NODE_VERSION_CACHE_KEY" ]]; then
+                          escaped_node_version="$_BORK_NODE_VERSION_CACHE_VALUE"
                       else
                           local node_version=$(node --version 2>/dev/null)
                           if [[ -n "$node_version" ]]; then
-                              escaped_node_version=$(derp_escape_json "$node_version")
+                              escaped_node_version=$(bork_escape_json "$node_version")
                           fi
-                          _DERP_NODE_VERSION_CACHE_KEY="$node_cache_key"
-                          _DERP_NODE_VERSION_CACHE_VALUE="$escaped_node_version"
+                          _BORK_NODE_VERSION_CACHE_KEY="$node_cache_key"
+                          _BORK_NODE_VERSION_CACHE_VALUE="$escaped_node_version"
                       fi
                   fi
               fi
@@ -640,13 +640,13 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
           # available to their session, it is unlikely they will be looking for git branch
           # information from the prompt.
           if command -v git >/dev/null 2>&1; then
-            git_branch=$(derp_git symbolic-ref --short HEAD 2> /dev/null)
+            git_branch=$(bork_git symbolic-ref --short HEAD 2> /dev/null)
             # The git branch the user is on, or the git commit hash if they're not on a branch.
-            git_head="${git_branch:-$(derp_git rev-parse --short HEAD 2> /dev/null)}"
+            git_head="${git_branch:-$(bork_git rev-parse --short HEAD 2> /dev/null)}"
           fi
-          if [ "$DERP_IN_MSYS2" = false ]; then
-            escaped_git_head=$(derp_escape_json "$git_head")
-            escaped_git_branch=$(derp_escape_json "$git_branch")
+          if [ "$BORK_IN_MSYS2" = false ]; then
+            escaped_git_head=$(bork_escape_json "$git_head")
+            escaped_git_branch=$(bork_escape_json "$git_branch")
           fi
         fi
 
@@ -658,34 +658,34 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
         # as JS string literals of the form \uHEX, and will include
         # ctrl characters (like ESC) in the json, which will cause a JSON
         # parse error.
-        # Note DERP_SESSION_ID doesn't need to be escaped since it's a number
-        # We also pass the shell's notion of `honor_ps1` to ensure it's synced correctly on the Derp-side for prompt handling.
+        # Note BORK_SESSION_ID doesn't need to be escaped since it's a number
+        # We also pass the shell's notion of `honor_ps1` to ensure it's synced correctly on the Bork-side for prompt handling.
         # This is passed as a "real boolean" via the JSON payload (string interpolated into JSON string below).
         local honor_ps1
-        if [[ "$DERP_HONOR_PS1" == "1" ]]; then
+        if [[ "$BORK_HONOR_PS1" == "1" ]]; then
           honor_ps1="true"
-          # The Derp prompt preview can be rendered using the active prompt in this case (which uses prompt markers).
+          # The Bork prompt preview can be rendered using the active prompt in this case (which uses prompt markers).
           escaped_ps1=""
           deref_ps1=""
         else
           honor_ps1="false"
         fi
-        # We send the escaped PS1, if we are in active Derp prompt mode, for prompt preview rendering (note the shell's PS1 is unset in this case).
-        if [ "$DERP_IN_MSYS2" = true ]; then
-          derp_send_hook_via_kv_pairs_start "Precmd"
-          derp_send_hook_kv_pair "exit_code" "$exit_code"
-          derp_send_hook_kv_pair "next_block_id" "$next_block_id"
-          derp_send_hook_kv_pair "pwd" "$PWD"
-          derp_send_hook_kv_pair_escaped "ps1" "$deref_ps1"
-          derp_send_hook_kv_pair "ps1_is_encoded" "false"
-          derp_send_hook_kv_pair "honor_ps1" "$honor_ps1"
-          derp_send_hook_kv_pair "git_head" "$git_head"
-          derp_send_hook_kv_pair "git_branch" "$git_branch"
-          derp_send_hook_kv_pair "virtual_env" "$VIRTUAL_ENV"
-          derp_send_hook_kv_pair "conda_env" "$CONDA_DEFAULT_ENV"
-          derp_send_hook_kv_pair "node_version" "$node_version"
-          derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-          derp_send_hook_via_kv_pairs_end
+        # We send the escaped PS1, if we are in active Bork prompt mode, for prompt preview rendering (note the shell's PS1 is unset in this case).
+        if [ "$BORK_IN_MSYS2" = true ]; then
+          bork_send_hook_via_kv_pairs_start "Precmd"
+          bork_send_hook_kv_pair "exit_code" "$exit_code"
+          bork_send_hook_kv_pair "next_block_id" "$next_block_id"
+          bork_send_hook_kv_pair "pwd" "$PWD"
+          bork_send_hook_kv_pair_escaped "ps1" "$deref_ps1"
+          bork_send_hook_kv_pair "ps1_is_encoded" "false"
+          bork_send_hook_kv_pair "honor_ps1" "$honor_ps1"
+          bork_send_hook_kv_pair "git_head" "$git_head"
+          bork_send_hook_kv_pair "git_branch" "$git_branch"
+          bork_send_hook_kv_pair "virtual_env" "$VIRTUAL_ENV"
+          bork_send_hook_kv_pair "conda_env" "$CONDA_DEFAULT_ENV"
+          bork_send_hook_kv_pair "node_version" "$node_version"
+          bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+          bork_send_hook_via_kv_pairs_end
         else
           local escaped_json="{\"hook\": \"Precmd\", \"value\": {
           \"exit_code\": $exit_code,
@@ -699,18 +699,18 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
           \"virtual_env\": \"$escaped_virtual_env\",
           \"conda_env\": \"$escaped_conda_env\",
           \"node_version\": \"$escaped_node_version\",
-          \"session_id\": $DERP_SESSION_ID
+          \"session_id\": $BORK_SESSION_ID
           }}"
-          derp_send_json_message "$escaped_json"
+          bork_send_json_message "$escaped_json"
         fi
     }
 
-    derp_clear_on_next_block () {
-        derp_send_json_message '{"hook": "ClearOnNextBlock"}'
+    bork_clear_on_next_block () {
+        bork_send_json_message '{"hook": "ClearOnNextBlock"}'
     }
 
     # Format a string value according to JSON syntax.
-    derp_escape_json () {
+    bork_escape_json () {
         # Explanation of the sed replacements (each command is separated by a `;`):
         # s/(["\\])/\\\1/g - Replace all double-quote (") and backslash (\) characters with the escaped versions (\" and \\)
         # s/\b/\\b/g - Replace all backspace characters with \b
@@ -737,19 +737,19 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     # and, well, the prompt itself). What is more, prompt can also include emojis - unicode characters
     # that sometimes contain special bytes (ie. ST, CAN or SUB) that are otherwise used as unhook
     # triggers for the precmd. Instead of escaping those and extracting the value of the prompt itself,
-    # we simply convert the entire data structure into a single line hex string, which Derp
+    # we simply convert the entire data structure into a single line hex string, which Bork
     # later decodes and sends to the grid to show the prompt.
     # Note: before converting the prompt to a hex string, we remove the multi-line newlines and replace
     # them with a single space (to avoid prompts that span multiple empty lines).
-    derp_escape_ps1 () {
+    bork_escape_ps1 () {
        command -p tr '\n\n' ' ' <<< "$*" | command -p od -An -v -tx1 | command -p tr -d ' \n'
     }
 
-    # derp_hex_encode_string encodes the entire DCS string (JSON) with od making it essentially
+    # bork_hex_encode_string encodes the entire DCS string (JSON) with od making it essentially
     # a very long hexadecimal string.
     # Afterwards it's decoded in rust and parsed as usual.
     # Accepts one argument: DCS JSON string
-    derp_hex_encode_string () {
+    bork_hex_encode_string () {
       echo "$1" | command -p od -An -v -tx1 | command -p tr -d ' \n'
     }
 
@@ -757,13 +757,13 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     # Accepts one argument: shell [bash, zsh, fish (future)]
     init_shell_hook () {
       init_shell="{\"hook\": \"InitShell\", \"value\": {\"shell\": \"$1\"}}"
-      echo $(derp_hex_encode_string "$init_shell")
+      echo $(bork_hex_encode_string "$init_shell")
     }
 
     # Checks whether the current version of bash is at least as high as the expected ($1) one.
     # To match rest of our codebase, it returns "1" if the bash version is higher or equal, and 
     # 0 otherwise.
-    derp_at_least_bash_version () {
+    bork_at_least_bash_version () {
       if [[ $(printf '%s\n%s\n' "$BASH_VERSION" "$1" | command -p sort -rVC ; echo $?) -eq 0 ]]; then
         echo "1"
       else 
@@ -773,27 +773,27 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
     # @P substitution was introduced in 4.4 bash version, so it returns "1" if the current bash
     # version is 4.4 or higher.
-    derp_ps1_expanding_supported () {
-      derp_at_least_bash_version "4.4"
+    bork_ps1_expanding_supported () {
+      bork_at_least_bash_version "4.4"
     }
 
     # The $READLINE_LINE variable in `bind -x` sequences was introduced in bash 4.0,
     # so we can only report the input buffer if the bash version is 4.0 or higher.
-    derp_input_reporting_supported () {
-        derp_at_least_bash_version "4.0"
+    bork_input_reporting_supported () {
+        bork_at_least_bash_version "4.0"
     }
 
-    # Report the current input buffer contents to Derp. This only works correctly
-    # if `derp_input_reporting_supported` returns "1".
-    derp_report_input () {
-        if [ "$DERP_IN_MSYS2" = true ]; then
-            derp_send_hook_via_kv_pairs_start "InputBuffer"
-            derp_send_hook_kv_pair "buffer" "$READLINE_LINE"
-            derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-            derp_send_hook_via_kv_pairs_end
+    # Report the current input buffer contents to Bork. This only works correctly
+    # if `bork_input_reporting_supported` returns "1".
+    bork_report_input () {
+        if [ "$BORK_IN_MSYS2" = true ]; then
+            bork_send_hook_via_kv_pairs_start "InputBuffer"
+            bork_send_hook_kv_pair "buffer" "$READLINE_LINE"
+            bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+            bork_send_hook_via_kv_pairs_end
         else
-            local escaped_input="$(derp_escape_json "$READLINE_LINE")"
-            derp_send_json_message "{ \"hook\": \"InputBuffer\", \"value\": { \"buffer\": \"$escaped_input\", \"session_id\": $DERP_SESSION_ID } }"
+            local escaped_input="$(bork_escape_json "$READLINE_LINE")"
+            bork_send_json_message "{ \"hook\": \"InputBuffer\", \"value\": { \"buffer\": \"$escaped_input\", \"session_id\": $BORK_SESSION_ID } }"
         fi
         # This prevents bash from re-printing typeahead after we've removed it.
         READLINE_LINE=""
@@ -802,13 +802,13 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
     # Check whether the prompt-related variables have OSC prompt marker sequences,
     # and if not, wrap them with the appropriate markers so that we can direct the
     # prompt bytes to the appropriate grids.
-    function derp_update_prompt_vars() {
+    function bork_update_prompt_vars() {
       # 133;A and 133;B are standard prompt marker OSCs.
       # See https://learn.microsoft.com/en-us/windows/terminal/tutorials/shell-integration and
       # https://gitlab.freedesktop.org/terminal-wg/specifications/-/merge_requests/6/diffs for details.
       local prompt_prefix=$'\e]133;A\a'
       local prompt_suffix=$'\e]133;B\a'
-      if [[ "$DERP_HONOR_PS1" != "1" ]] && [ "$DERP_USING_WINDOWS_CON_PTY" = true ]; then
+      if [[ "$BORK_HONOR_PS1" != "1" ]] && [ "$BORK_USING_WINDOWS_CON_PTY" = true ]; then
         local suffix="$prompt_suffix$RESET_GRID_OSC"
       else
         local suffix="$prompt_suffix"
@@ -820,20 +820,20 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       local prompt_prefix_with_cursor_marker_surrounded="\[$prompt_prefix\]"
       local suffix_with_cursor_marker_surrounded="\[$suffix\]"
 
-      # Clear the user-defined prompt again, if using Derp's built-in prompt, before the command 
+      # Clear the user-defined prompt again, if using Bork's built-in prompt, before the command 
       # is rendered as it could have been reset by the user's bashrc or by setting 
       # the variable on the command line. This is used for same-line prompt and leads to the temporary
-      # product behavior of Derp prompt switches only taking effect in new sessions.
+      # product behavior of Bork prompt switches only taking effect in new sessions.
       # Certain prompt plugins can reset the prompt to a non-empty value, after we've initially unset it.
-      # Confirm that it is unset, if using built-in Derp prompt (update prompt vars is forced to run as the last precmd fn).
-      if [[ "$DERP_HONOR_PS1" != "1" ]]; then
+      # Confirm that it is unset, if using built-in Bork prompt (update prompt vars is forced to run as the last precmd fn).
+      if [[ "$BORK_HONOR_PS1" != "1" ]]; then
         if [[ "$PS1" != "" ]]; then
           # If the PS1 has its original value, then we save it in SAVED_PS1 so we can restore to this value, if we were to unset it for
-          # the Derp prompt case, but the user wants to switch back to PS1 later.
+          # the Bork prompt case, but the user wants to switch back to PS1 later.
           SAVED_PS1=$PS1
         fi
         # Note that we DO NOT unset the PS1 here, since we want to pass it along as a "hidden left prompt" for 
-        # prompt preview purposes, if the Derp prompt is being used. Specifically, we want to show this prompt preview
+        # prompt preview purposes, if the Bork prompt is being used. Specifically, we want to show this prompt preview
         # for the Edit Prompt modal and onboarding prompt block.
       fi
 
@@ -856,8 +856,8 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
         PS1="$prompt_prefix$PS1$suffix"
       fi
 
-      # Unset the PS1, if we are using the Derp prompt.
-      if [[ "$DERP_HONOR_PS1" != "1" ]]; then
+      # Unset the PS1, if we are using the Bork prompt.
+      if [[ "$BORK_HONOR_PS1" != "1" ]]; then
         PS1=""
       # Otherwise, if we are using the PS1, we use the normal prompt markers.
       else
@@ -871,7 +871,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       # Ensure that this is always the last precmd hook. This prevents any other precmd hook, which might
       # modify $PS1, from interfering with our prompt-escaping logic.
       #
-      # Remove derp_update_prompt_vars from the precmd_functions list and then re-append it to ensure it's
+      # Remove bork_update_prompt_vars from the precmd_functions list and then re-append it to ensure it's
       # ordered last.
 
       # Initialize an empty array to hold the filtered functions.
@@ -879,8 +879,8 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
       # Loop through each function in the original precmd_functions array.
       for func in "${precmd_functions[@]}"; do
-        # Add the function to the filtered array if it's not derp_update_prompt_vars
-        if [[ "$func" != "derp_update_prompt_vars" ]]; then
+        # Add the function to the filtered array if it's not bork_update_prompt_vars
+        if [[ "$func" != "bork_update_prompt_vars" ]]; then
           filtered_precmd_functions+=("$func")
         fi
       done
@@ -888,62 +888,62 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
       # Assign the filtered array back to precmd_functions.
       precmd_functions=("${filtered_precmd_functions[@]}")
 
-      # Append derp_update_prompt_vars to the end of the precmd_functions array.
-      precmd_functions+=("derp_update_prompt_vars")
+      # Append bork_update_prompt_vars to the end of the precmd_functions array.
+      precmd_functions+=("bork_update_prompt_vars")
     }
     
-    # Changes the DERP_HONOR_PS1 variable to 1, to indicate we want to use the PS1. Restores
-    # the original PS1 value (which we unset for Derp prompt) and calls derp_update_prompt_vars
+    # Changes the BORK_HONOR_PS1 variable to 1, to indicate we want to use the PS1. Restores
+    # the original PS1 value (which we unset for Bork prompt) and calls bork_update_prompt_vars
     # to refresh the prompt. Note that we use an "empty block" workaround to achieve instant
     # prompt switching in bash, since there is no built-in methods to repaint the prompt, unlike
     # Zsh/fish.
-    function derp_change_prompt_modes_to_ps1() {
+    function bork_change_prompt_modes_to_ps1() {
       PS1="$SAVED_PS1"
-      DERP_HONOR_PS1="1"
+      BORK_HONOR_PS1="1"
 
-      derp_update_prompt_vars
+      bork_update_prompt_vars
     }
 
-    # Changes the DERP_HONOR_PS1 variable to 0, to indicate we want to use the Derp prompt. Calls 
-    # derp_update_prompt_vars to refresh the prompt (note the PS1 will be unset in this logic). 
+    # Changes the BORK_HONOR_PS1 variable to 0, to indicate we want to use the Bork prompt. Calls 
+    # bork_update_prompt_vars to refresh the prompt (note the PS1 will be unset in this logic). 
     # Note that we use an "empty block" workaround to achieve instant prompt switching in bash, 
     # since there is no built-in methods to repaint the prompt, unlike Zsh/fish.
-    function derp_change_prompt_modes_to_derp_prompt() {
-      DERP_HONOR_PS1="0"
+    function bork_change_prompt_modes_to_bork_prompt() {
+      BORK_HONOR_PS1="0"
 
-      derp_update_prompt_vars
+      bork_update_prompt_vars
     }
 
     function clear() {
-        if [ "$DERP_IN_MSYS2" = true ]; then
-            derp_send_hook_via_kv_pairs_start "Clear"
-            derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-            derp_send_hook_via_kv_pairs_end
+        if [ "$BORK_IN_MSYS2" = true ]; then
+            bork_send_hook_via_kv_pairs_start "Clear"
+            bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+            bork_send_hook_via_kv_pairs_end
         else
-            derp_send_json_message "{\"hook\": \"Clear\", \"value\": {\"session_id\": $DERP_SESSION_ID}}"
+            bork_send_json_message "{\"hook\": \"Clear\", \"value\": {\"session_id\": $BORK_SESSION_ID}}"
         fi
     }
 
-    function derp_finish_update {
+    function bork_finish_update {
       local update_id="$1"
-      if [ "$DERP_IN_MSYS2" = true ]; then
-        derp_send_hook_via_kv_pairs_start "FinishUpdate"
-        derp_send_hook_kv_pair "update_id" "$update_id"
-        derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-        derp_send_hook_via_kv_pairs_end
+      if [ "$BORK_IN_MSYS2" = true ]; then
+        bork_send_hook_via_kv_pairs_start "FinishUpdate"
+        bork_send_hook_kv_pair "update_id" "$update_id"
+        bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+        bork_send_hook_via_kv_pairs_end
       else
-        derp_send_json_message "{ \"hook\": \"FinishUpdate\", \"value\": { \"update_id\": \"$update_id\", \"session_id\": $DERP_SESSION_ID} }"
+        bork_send_json_message "{ \"hook\": \"FinishUpdate\", \"value\": { \"update_id\": \"$update_id\", \"session_id\": $BORK_SESSION_ID} }"
       fi
     }
 
-    # Check if the derp apt source file has been renamed to `derpdotdev.list.distUpgrade` due to an ubuntu version update.
-    # If this occurred, we want to rename the source file back to `derpdotdev.list` to ensure updates can proceed.
-    # We purposefully skip this if either the `derpdotdev.list` file already exists (indicating that the user has already
-    # done this themselves) _or_ if a `derpdotdev.sources` file exists (which is the new Deb822 format for source files).
+    # Check if the bork apt source file has been renamed to `borkdotdev.list.distUpgrade` due to an ubuntu version update.
+    # If this occurred, we want to rename the source file back to `borkdotdev.list` to ensure updates can proceed.
+    # We purposefully skip this if either the `borkdotdev.list` file already exists (indicating that the user has already
+    # done this themselves) _or_ if a `borkdotdev.sources` file exists (which is the new Deb822 format for source files).
     # The `.sources` file could only exist if a user manually created it; Ubuntu doesn't create one automatically for the
-    # derp source file due to a bug in its update flow where it considers our source file to be "invalid" because it
+    # bork source file due to a bug in its update flow where it considers our source file to be "invalid" because it
     # contains a `signed-by` key.
-    function derp_handle_dist_upgrade {
+    function bork_handle_dist_upgrade {
       local source_file_name="$1"
 
       eval "$(command apt-config shell APT_SOURCESDIR 'Dir::Etc::sourceparts/d')"
@@ -962,7 +962,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
 
     # The SSH logic only applies to local sessions, because we don't yet have support for bootstrapping
     # recursive SSH sessions.
-    if [[ $DERP_IS_LOCAL_SHELL_SESSION == "1" ]]; then
+    if [[ $BORK_IS_LOCAL_SHELL_SESSION == "1" ]]; then
         # This helper function determines whether the user's ssh arguments imply
         # creation of a non-interactive session or otherwise would conflict with
         # our SSH wrapper.  Returns 0 for an interactive session; >0 otherwise.
@@ -1000,7 +1000,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             fi
         }
 
-        function derp_ssh_helper() {
+        function bork_ssh_helper() {
             init_shell_bash=$(init_shell_hook "bash")
             init_shell_zsh=$(init_shell_hook "zsh")
             local remote_session_id=$(command -p od -An -N8 -tu8 /dev/urandom 2>/dev/null | command -p tr -d ' \n')
@@ -1013,7 +1013,7 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             # If the user's SSH config sets a RemoteCommand for this destination,
             # OpenSSH refuses to also run our bootstrap as a command-line remote
             # command, aborting with "Cannot execute command-line and remote
-            # command." Derpification is structurally impossible there, so fall
+            # command." Borkification is structurally impossible there, so fall
             # back to plain SSH. `ssh -G` prints `remotecommand none` when unset.
             local user_remote_command=$(command ssh -G "${@:1}" 2>/dev/null | command -p sed -n 's/^remotecommand //p')
             if [[ -n "$user_remote_command" && "$user_remote_command" != "none" ]]; then
@@ -1024,19 +1024,19 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             # Hex-encode the ZSH environment script we use to bootstrap remote zsh b/c it contains control characters
             # We decode on the SSH server using xxd if its available, otherwise fall back to a for-loop over each byte
             # and use printf to convert back to plaintext
-            local zsh_env_script=$(printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; DERP_SESSION_ID='$remote_session_id'; DERP_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@; DERP_HONOR_PS1='$DERP_HONOR_PS1'; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || command -p uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $DERP_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d '"'"' \n'"'"'); printf '"'"'\e]9278;d;%s\x07'"'"' $_msg; unset _hostname _user _msg' | command -p od -An -v -tx1 | command -p tr -d ' \n')
+            local zsh_env_script=$(printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; BORK_SESSION_ID='$remote_session_id'; BORK_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@; BORK_HONOR_PS1='$BORK_HONOR_PS1'; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || command -p uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $BORK_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d '"'"' \n'"'"'); printf '"'"'\e]9278;d;%s\x07'"'"' $_msg; unset _hostname _user _msg' | command -p od -An -v -tx1 | command -p tr -d ' \n')
 
             # Optionally attach to an existing ControlMaster the user already
             # runs for this destination instead of creating our own. Resolve
             # the user's configured ControlPath with `ssh -G` (which expands
             # tokens like %h/%p/%r/%C into a literal path), then verify the
             # master is alive with `ssh -O check`. Both probes are local-only
-            # commands. On any failure we fall back to creating a Derp-owned
+            # commands. On any failure we fall back to creating a Bork-owned
             # master, preserving the existing behavior.
-            local control_path="$SSH_SOCKET_DIR/$DERP_SESSION_ID"
+            local control_path="$SSH_SOCKET_DIR/$BORK_SESSION_ID"
             local control_master_mode="yes"
             local external_control_master="false"
-            if [[ "$DERP_SSH_REUSE_CONTROL_MASTER" == "1" ]]; then
+            if [[ "$BORK_SSH_REUSE_CONTROL_MASTER" == "1" ]]; then
                 local user_control_path=$(command ssh -G "${@:1}" 2>/dev/null | command -p sed -n 's/^controlpath //p')
                 case "$user_control_path" in
                     "" | none)
@@ -1046,12 +1046,12 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
                         # The resolved path contains characters we cannot safely
                         # embed in the SSH hook JSON below (e.g. an unexpanded %
                         # token, quotes, or whitespace); fall back to a
-                        # Derp-owned master.
+                        # Bork-owned master.
                         ;;
                     *)
                         if command ssh -O check -o ControlPath="$user_control_path" "${@:1}" >/dev/null 2>&1; then
                             # A live master exists: multiplex through it and let
-                            # the client know Derp does not own it.
+                            # the client know Bork does not own it.
                             control_path="$user_control_path"
                             control_master_mode="no"
                             external_control_master="true"
@@ -1070,20 +1070,20 @@ if [ -z "$DERP_BOOTSTRAPPED" ]; then
             command ssh -o ControlMaster=$control_master_mode -o ControlPath="$control_path" \
             -t "${@:1}" \
 "
-export TERM_PROGRAM='DerpTerminal'
-# Mark the remote side of a Derp-managed SSH session so the bootstrap
+export TERM_PROGRAM='BorkTerminal'
+# Mark the remote side of a Bork-managed SSH session so the bootstrap
 # body can distinguish it from local shells. Used to gate the ExitShell
 # hook which tears down the remote-server-proxy subprocess.
-export DERP_IS_SSH='1'
-test -n '$DERP_CLIENT_VERSION' && export DERP_CLIENT_VERSION='$DERP_CLIENT_VERSION'
+export BORK_IS_SSH='1'
+test -n '$BORK_CLIENT_VERSION' && export BORK_CLIENT_VERSION='$BORK_CLIENT_VERSION'
 # Only forward the protocol version if it was set locally (i.e. the HOANotifications feature flag is on).
-test -n '$DERP_CLI_AGENT_PROTOCOL_VERSION' && export DERP_CLI_AGENT_PROTOCOL_VERSION='$DERP_CLI_AGENT_PROTOCOL_VERSION'
+test -n '$BORK_CLI_AGENT_PROTOCOL_VERSION' && export BORK_CLI_AGENT_PROTOCOL_VERSION='$BORK_CLI_AGENT_PROTOCOL_VERSION'
 
-hook="'$(printf "{\"hook\": \"SSH\", \"value\": {\"socket_path\": \"'$control_path'\", \"remote_shell\": \"%s\", \"session_id\": '"$DERP_SESSION_ID"', \"remote_session_id\": '"$remote_session_id"', \"external_control_master\": '"$external_control_master"'}}" "${SHELL##*/}" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
+hook="'$(printf "{\"hook\": \"SSH\", \"value\": {\"socket_path\": \"'$control_path'\", \"remote_shell\": \"%s\", \"session_id\": '"$BORK_SESSION_ID"', \"remote_session_id\": '"$remote_session_id"', \"external_control_master\": '"$external_control_master"'}}" "${SHELL##*/}" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
 printf '$OSC_START$DCS_JSON_MARKER$OSC_PARAM_SEPARATOR%s$OSC_END' "'$hook'"
 
 if test "'"${SHELL##*/}" != "bash" -a "${SHELL##*/}" != "zsh"'"; then
-  # Emulate the SSHD logic to print the MotD. Because the Derp SSH wrapper passes
+  # Emulate the SSHD logic to print the MotD. Because the Bork SSH wrapper passes
   # a command to run, SSHD does a quiet login, updating utmp and other login
   # state, but not printing the MotD. For bash and zsh, this is instead handled
   # by our bootstrap script.
@@ -1114,30 +1114,30 @@ case "'${SHELL##*/}'" in
       command -p stty raw
       HISTCONTROL=ignorespace
       HISTIGNORE=" *"
-      DERP_SESSION_ID='$remote_session_id'
-      DERP_HONOR_PS1="'$DERP_HONOR_PS1'"
+      BORK_SESSION_ID='$remote_session_id'
+      BORK_HONOR_PS1="'$BORK_HONOR_PS1'"
       _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || command -p uname -n)
       _user=$(command -v whoami >/dev/null 2>&1 && command whoami 2>/dev/null || echo $USER)
-      _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $DERP_SESSION_ID, \"shell\": \"bash\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
-      DERP_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@
-      if [[ "'$OS'" == Windows_NT ]]; then DERP_IN_MSYS2=true; else DERP_IN_MSYS2=false; fi
+      _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $BORK_SESSION_ID, \"shell\": \"bash\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
+      BORK_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@
+      if [[ "'$OS'" == Windows_NT ]]; then BORK_IN_MSYS2=true; else BORK_IN_MSYS2=false; fi
       printf '\''"'\e]9278;d;%s\x07'"'\'' \""'$_msg'"\"')
       unset _hostname _user _msg
       ;;
-  zsh) DERP_TMP_DIR="'$(command -p mktemp -d derptmp.XXXXXX)'"
+  zsh) BORK_TMP_DIR="'$(command -p mktemp -d borktmp.XXXXXX)'"
 local ZSH_ENV_SCRIPT='$zsh_env_script'
 if [[ "'$?'" == 0 ]]; then
   if command -pv xxd >/dev/null 2>&1; then
-    echo "'$ZSH_ENV_SCRIPT'" | command -p xxd -p -r > "'$DERP_TMP_DIR'"/.zshenv
+    echo "'$ZSH_ENV_SCRIPT'" | command -p xxd -p -r > "'$BORK_TMP_DIR'"/.zshenv
   else
     for i in {0..\$((\${#ZSH_ENV_SCRIPT} - 1))..2}; do
       builtin printf "'"\x${ZSH_ENV_SCRIPT:$i:2}"'"
-    done > "'$DERP_TMP_DIR'"/.zshenv
+    done > "'$BORK_TMP_DIR'"/.zshenv
   fi
 else
-  echo \"Failed to bootstrap derp. Continuing with a non-bootstrapped shell.\"
+  echo \"Failed to bootstrap bork. Continuing with a non-bootstrapped shell.\"
 fi
-TMPPREFIX="'$HOME/.zshtmp-'" DERP_SSH_RCFILES="'${ZDOTDIR:-$HOME}'" ZDOTDIR="'$DERP_TMP_DIR'" exec -l zsh -g $TRACE_FLAG_IF_DERP_SHELL_DEBUG_MODE
+TMPPREFIX="'$HOME/.zshtmp-'" BORK_SSH_RCFILES="'${ZDOTDIR:-$HOME}'" ZDOTDIR="'$BORK_TMP_DIR'" exec -l zsh -g $TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE
       ;;
 esac
 "
@@ -1145,15 +1145,15 @@ esac
 
         function ssh() {
             if is_interactive_ssh_session "$@"; then
-                derp_send_json_message "{\"hook\": \"PreInteractiveSSHSession\", \"value\": {\"session_id\": $DERP_SESSION_ID}}"
+                bork_send_json_message "{\"hook\": \"PreInteractiveSSHSession\", \"value\": {\"session_id\": $BORK_SESSION_ID}}"
 
                 # If the SSH wrapper is not enabled for this session, don't use it.
-                if [ "$DERP_USE_SSH_WRAPPER" = "1" ]; then
-                    local TRACE_FLAG_IF_DERP_SHELL_DEBUG_MODE=""
-                    if [[ "$DERP_SHELL_DEBUG_MODE" == "1" ]]; then
-                        TRACE_FLAG_IF_DERP_SHELL_DEBUG_MODE="-x"
+                if [ "$BORK_USE_SSH_WRAPPER" = "1" ]; then
+                    local TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE=""
+                    if [[ "$BORK_SHELL_DEBUG_MODE" == "1" ]]; then
+                        TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE="-x"
                     fi
-                    derp_ssh_helper "$@"
+                    bork_ssh_helper "$@"
                 else
                     command ssh "$@"
                 fi
@@ -1164,14 +1164,14 @@ esac
     fi
 
 
-    # Send a precmd message to the terminal to differentiate between the derp
+    # Send a precmd message to the terminal to differentiate between the bork
     # bootstrap logic pasted into the PTY and the output of shell startup files.
-    derp_precmd
+    bork_precmd
 
     # Before calling rcfiles, print the MotD.
     # In general, login(1) or pam_motd(8) is supposed to do this. However, we don't
-    # go through the normal login flow when bootstrapping a Derp session. In
-    # addition, Derp bash shells are _not_ login shells, because bash does not
+    # go through the normal login flow when bootstrapping a Bork session. In
+    # addition, Bork bash shells are _not_ login shells, because bash does not
     # support custom rcfiles in login shells.
     if [[ ! -e "$HOME/.hushlogin" ]]; then
       for motd_file in /etc/motd /run/motd /run/motd.dynamic /usr/lib/motd /usr/lib/motd.dynamic; do
@@ -1184,10 +1184,10 @@ esac
 
 
     # This reflects the bootstrap sequence in a login shell. We want to
-    # Do other shell startup first so we can ensure Derp goes last.
+    # Do other shell startup first so we can ensure Bork goes last.
     #
     # If this is a subshell, the user and system RC files have already been sourced.
-    if [[ -z $DERP_IS_SUBSHELL ]]; then
+    if [[ -z $BORK_IS_SUBSHELL ]]; then
         # Make sure we force the locale used for number formatting to "C", to avoid
         # issues in locales that use a comma as the decimal separator.
         rcfiles_start_time="$(LC_ALL="C"; echo $EPOCHREALTIME)"
@@ -1222,15 +1222,15 @@ esac
     # completed, we want the values to be what they would have been if we hadn't
     # set initial values.
     #
-    # For more context, see: https://github.com/derpdotdev/Derp/issues/1262
-    if [[ $HISTFILESIZE == $DERP_INITIAL_HISTFILESIZE ]]; then
+    # For more context, see: https://github.com/borkdotdev/Bork/issues/1262
+    if [[ $HISTFILESIZE == $BORK_INITIAL_HISTFILESIZE ]]; then
         unset HISTFILESIZE
     fi
-    unset DERP_INITIAL_HISTFILESIZE
-    if [[ $HISTSIZE == $DERP_INITIAL_HISTSIZE ]]; then
+    unset BORK_INITIAL_HISTFILESIZE
+    if [[ $HISTSIZE == $BORK_INITIAL_HISTSIZE ]]; then
         unset HISTSIZE
     fi
-    unset DERP_INITIAL_HISTSIZE
+    unset BORK_INITIAL_HISTSIZE
 
     # Save the value of HISTCONTROL as it existed just after reading the user's
     # rcfiles.
@@ -1240,9 +1240,9 @@ esac
     # HISTIGNORE value which may been set in an RC file sourced above. It is important to
     # ensure that this happens _after_ the user's RC files have been sourced.
     if [[ ! -z $HISTIGNORE ]]; then
-        HISTIGNORE="*derp_run_generator_command*:$HISTIGNORE"
+        HISTIGNORE="*bork_run_generator_command*:$HISTIGNORE"
     else
-        HISTIGNORE="*derp_run_generator_command*"
+        HISTIGNORE="*bork_run_generator_command*"
     fi
 
     # If the user has PROMPT_COMMAND set in their bootstrap scripts,
@@ -1274,12 +1274,12 @@ esac
     # If the user's rc files turned PROMPT_COMMAND into an array, we must undo that.
     # Since Bash 5.1, the PROMPT_COMMAND variable can be an array, see:
     #   https://tiswww.case.edu/php/chet/bash/NEWS
-    # Unfortunately, doing so will break Derp because of the way it interacts with bash-preexec.
+    # Unfortunately, doing so will break Bork because of the way it interacts with bash-preexec.
     # When PROMPT_COMMAND is an array, the DEBUG signal fires for each array element, and since
     # bash-preexec uses a DEBUG trap to trigger the preexec functions, it will run our preexec
     # functions before the command at PROMPT_COMMAND[1], PROMPT_COMMAND[2], etc. This means our
     # Preexec hook gets called without the user submitting a command, putting the input block into
-    # a broken state, e.g. see https://github.com/derpdotdev/Derp/issues/2636
+    # a broken state, e.g. see https://github.com/borkdotdev/Bork/issues/2636
     # If they end up fixing this, we may be able to remove this at some point, check this:
     #   https://github.com/rcaloras/bash-preexec/issues/130
     #
@@ -1301,13 +1301,13 @@ esac
         # receive the command in preexec).
         __bp_adjust_histcontrol
     fi
-## ----- Derp initialization -----
+## ----- Bork initialization -----
     
-    # Append additional PATH entries if provided via DERP_PATH_APPEND. This is after the user's RC
+    # Append additional PATH entries if provided via BORK_PATH_APPEND. This is after the user's RC
     # files are sourced in case they reset PATH (/etc/profile on Debian does this, for example).
-    if [[ ! -z "$DERP_PATH_APPEND" ]]; then
-        export PATH="$PATH:$DERP_PATH_APPEND"
-        unset DERP_PATH_APPEND
+    if [[ ! -z "$BORK_PATH_APPEND" ]]; then
+        export PATH="$PATH:$BORK_PATH_APPEND"
+        unset BORK_PATH_APPEND
     fi
 
     # Read through shell options to determine if the user has enabled vi mode.
@@ -1338,40 +1338,40 @@ esac
     fi
   fi
 
-    precmd_functions+=(derp_precmd)
-    preexec_functions+=(derp_preexec)
+    precmd_functions+=(bork_precmd)
+    preexec_functions+=(bork_preexec)
 
-    precmd_functions+=(derp_set_title_idle_on_precmd)
-    preexec_functions+=(derp_set_title_active_on_preexec)
+    precmd_functions+=(bork_set_title_idle_on_precmd)
+    preexec_functions+=(bork_set_title_active_on_preexec)
 
     if declare -f user_prompt_command 2>&1 >/dev/null; then
         precmd_functions+=(user_prompt_command)
     fi
 
-    DERP_BOOTSTRAPPED=1
+    BORK_BOOTSTRAPPED=1
 
-    derp_update_prompt_vars
+    bork_update_prompt_vars
 
     # Set the history file to append
     shopt -s histappend
 
     shell_plugins=()
 
-    function derp_bootstrapped () {
+    function bork_bootstrapped () {
         local aliases="`alias`"
         local env_var_names="`compgen -e`"
         local function_names="`compgen -A function`"
         local builtins="`compgen -b`"
         local keywords="`compgen -k`"
-        if [ "$DERP_IN_MSYS2" = false ]; then
+        if [ "$BORK_IN_MSYS2" = false ]; then
           # Note that for now we don't support dynamically changing HISTFILE within a session.
-          local escaped_histfile="$(derp_escape_json "$HISTFILE")"
+          local escaped_histfile="$(bork_escape_json "$HISTFILE")"
           local escaped_abbrs=""
-          local escaped_aliases="$(derp_escape_json "$aliases")"
-          local escaped_env_var_names="$(derp_escape_json "$env_var_names")"
-          local escaped_function_names="$(derp_escape_json "$function_names")"
-          local escaped_builtins="$(derp_escape_json "$builtins")"
-          local escaped_keywords="$(derp_escape_json "$keywords")"
+          local escaped_aliases="$(bork_escape_json "$aliases")"
+          local escaped_env_var_names="$(bork_escape_json "$env_var_names")"
+          local escaped_function_names="$(bork_escape_json "$function_names")"
+          local escaped_builtins="$(bork_escape_json "$builtins")"
+          local escaped_keywords="$(bork_escape_json "$keywords")"
         fi
 
         local shell_options="`shopt -s | command -p cut -f 1`"
@@ -1388,48 +1388,48 @@ esac
           shell_plugins+=("starship")
         fi
 
-        if [ "$DERP_IN_MSYS2" = false ]; then
-          local escaped_shell_plugins=$(derp_escape_json "$shell_plugins")
-          local escaped_path="$(derp_escape_json "$PATH")"
-          local escaped_shell_options=$(derp_escape_json "$shell_options")
+        if [ "$BORK_IN_MSYS2" = false ]; then
+          local escaped_shell_plugins=$(bork_escape_json "$shell_plugins")
+          local escaped_path="$(bork_escape_json "$PATH")"
+          local escaped_shell_options=$(bork_escape_json "$shell_options")
         fi
 
         local _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER)
         local _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || command -p uname -n)
-        if [ "$DERP_IN_MSYS2" = true ]; then
-          derp_send_hook_via_kv_pairs_start "Bootstrapped"
-          derp_send_hook_kv_pair "histfile" "$HISTFILE"
-          derp_send_hook_kv_pair "session_id" "$DERP_SESSION_ID"
-          derp_send_hook_kv_pair "shell" "bash"
-          derp_send_hook_kv_pair "home_dir" "$HOME"
-          derp_send_hook_kv_pair "user" "$_user"
-          derp_send_hook_kv_pair "hostname" "$_hostname"
-          derp_send_hook_kv_pair "path" "$PATH"
-          derp_send_hook_kv_pair "cdpath" "$CDPATH"
-          derp_send_hook_kv_pair_escaped "env_var_names" "$env_var_names"
-          derp_send_hook_kv_pair "abbreviations" ""
-          derp_send_hook_kv_pair_escaped "aliases" "$aliases"
-          derp_send_hook_kv_pair_escaped "function_names" "$function_names"
-          derp_send_hook_kv_pair_escaped "builtins" "$builtins"
-          derp_send_hook_kv_pair_escaped "keywords" "$keywords"
-          derp_send_hook_kv_pair "shell_plugins" "$shell_plugins"
-          derp_send_hook_kv_pair "shell_version" "$BASH_VERSION"
-          derp_send_hook_kv_pair "shell_options" "$shell_options"
-          derp_send_hook_kv_pair "rcfiles_start_time" "$rcfiles_start_time"
-          derp_send_hook_kv_pair "rcfiles_end_time" "$rcfiles_end_time"
-          derp_send_hook_kv_pair "vi_mode_enabled" "$vi_mode_enabled"
-          derp_send_hook_kv_pair "os_category" "$os_category"
-          derp_send_hook_kv_pair "linux_distribution" "$linux_distribution"
-          derp_send_hook_kv_pair "wsl_name" "$WSL_DISTRO_NAME"
-          derp_send_hook_kv_pair "shell_path" "$BASH"
-          derp_send_hook_via_kv_pairs_end
+        if [ "$BORK_IN_MSYS2" = true ]; then
+          bork_send_hook_via_kv_pairs_start "Bootstrapped"
+          bork_send_hook_kv_pair "histfile" "$HISTFILE"
+          bork_send_hook_kv_pair "session_id" "$BORK_SESSION_ID"
+          bork_send_hook_kv_pair "shell" "bash"
+          bork_send_hook_kv_pair "home_dir" "$HOME"
+          bork_send_hook_kv_pair "user" "$_user"
+          bork_send_hook_kv_pair "hostname" "$_hostname"
+          bork_send_hook_kv_pair "path" "$PATH"
+          bork_send_hook_kv_pair "cdpath" "$CDPATH"
+          bork_send_hook_kv_pair_escaped "env_var_names" "$env_var_names"
+          bork_send_hook_kv_pair "abbreviations" ""
+          bork_send_hook_kv_pair_escaped "aliases" "$aliases"
+          bork_send_hook_kv_pair_escaped "function_names" "$function_names"
+          bork_send_hook_kv_pair_escaped "builtins" "$builtins"
+          bork_send_hook_kv_pair_escaped "keywords" "$keywords"
+          bork_send_hook_kv_pair "shell_plugins" "$shell_plugins"
+          bork_send_hook_kv_pair "shell_version" "$BASH_VERSION"
+          bork_send_hook_kv_pair "shell_options" "$shell_options"
+          bork_send_hook_kv_pair "rcfiles_start_time" "$rcfiles_start_time"
+          bork_send_hook_kv_pair "rcfiles_end_time" "$rcfiles_end_time"
+          bork_send_hook_kv_pair "vi_mode_enabled" "$vi_mode_enabled"
+          bork_send_hook_kv_pair "os_category" "$os_category"
+          bork_send_hook_kv_pair "linux_distribution" "$linux_distribution"
+          bork_send_hook_kv_pair "wsl_name" "$WSL_DISTRO_NAME"
+          bork_send_hook_kv_pair "shell_path" "$BASH"
+          bork_send_hook_via_kv_pairs_end
         else
-          local escaped_editor="$(derp_escape_json "$EDITOR")"
-          local escaped_shell_path="$(derp_escape_json "$BASH")"
-          local escaped_cdpath="$(derp_escape_json "$CDPATH")"
-          local escaped_json="{\"hook\": \"Bootstrapped\", \"value\": {\"histfile\": \"$escaped_histfile\", \"session_id\": $DERP_SESSION_ID, \"shell\": \"bash\",  \"home_dir\": \"$HOME\", \"user\":\"$_user\", \"host\":\"$_hostname\", \"path\": \"$escaped_path\", \"cdpath\": \"$escaped_cdpath\", \"editor\": \"$escaped_editor\", \"env_var_names\": \"$escaped_env_var_names\", \"abbreviations\": \"$escaped_abbrs\", \"aliases\": \"$escaped_aliases\", \"function_names\": \"$escaped_function_names\", \"builtins\": \"$escaped_builtins\", \"keywords\": \"$escaped_keywords\", \"shell_version\": \"$BASH_VERSION\", \"shell_options\": \"$escaped_shell_options\", \"rcfiles_start_time\": \"$rcfiles_start_time\", \"rcfiles_end_time\": \"$rcfiles_end_time\", \"vi_mode_enabled\": \"$vi_mode_enabled\", \"os_category\": \"$os_category\", \"linux_distribution\": \"$linux_distribution\", \"wsl_name\": \"$WSL_DISTRO_NAME\", \"shell_path\": \"$escaped_shell_path\"}}"
-          derp_send_json_message "$escaped_json"
+          local escaped_editor="$(bork_escape_json "$EDITOR")"
+          local escaped_shell_path="$(bork_escape_json "$BASH")"
+          local escaped_cdpath="$(bork_escape_json "$CDPATH")"
+          local escaped_json="{\"hook\": \"Bootstrapped\", \"value\": {\"histfile\": \"$escaped_histfile\", \"session_id\": $BORK_SESSION_ID, \"shell\": \"bash\",  \"home_dir\": \"$HOME\", \"user\":\"$_user\", \"host\":\"$_hostname\", \"path\": \"$escaped_path\", \"cdpath\": \"$escaped_cdpath\", \"editor\": \"$escaped_editor\", \"env_var_names\": \"$escaped_env_var_names\", \"abbreviations\": \"$escaped_abbrs\", \"aliases\": \"$escaped_aliases\", \"function_names\": \"$escaped_function_names\", \"builtins\": \"$escaped_builtins\", \"keywords\": \"$escaped_keywords\", \"shell_version\": \"$BASH_VERSION\", \"shell_options\": \"$escaped_shell_options\", \"rcfiles_start_time\": \"$rcfiles_start_time\", \"rcfiles_end_time\": \"$rcfiles_end_time\", \"vi_mode_enabled\": \"$vi_mode_enabled\", \"os_category\": \"$os_category\", \"linux_distribution\": \"$linux_distribution\", \"wsl_name\": \"$WSL_DISTRO_NAME\", \"shell_path\": \"$escaped_shell_path\"}}"
+          bork_send_json_message "$escaped_json"
         fi
     }
-    derp_bootstrapped
+    bork_bootstrapped
 fi

@@ -5,8 +5,8 @@ use std::ops::Range;
 use anyhow::{anyhow, Result};
 use string_offset::CharOffset;
 use sum_tree::{self, Cursor, Dimension, SeekBias, SumTree};
-use derpui::text_layout::TextStyle;
-use derpui::{AppContext, ModelHandle};
+use borkui::text_layout::TextStyle;
+use borkui::{AppContext, ModelHandle};
 
 use super::super::buffer::{AnchorRangeExt, TextSummary};
 use super::buffer::StylizedChar;

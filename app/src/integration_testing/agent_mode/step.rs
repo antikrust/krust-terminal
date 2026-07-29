@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use command::blocking::Command;
 use prost::Message;
-use derpui::integration::{AssertionOutcome, TestStep};
-use derpui::{async_assert, SingletonEntity};
+use borkui::integration::{AssertionOutcome, TestStep};
+use borkui::{async_assert, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversation;
 use crate::ai::agent::{AIAgentActionType, AIAgentOutputStatus, FinishedAIAgentOutput};
@@ -87,7 +87,7 @@ pub fn exit_agent_view() -> TestStep {
 /// See the agent_mode_eval README for more details.
 pub fn hydrate_ai_conversation(file_name: &str) -> TestStep {
     let file_bytes = get_input_data(file_name);
-    let Ok(request) = derp_multi_agent_api::Request::decode(file_bytes) else {
+    let Ok(request) = bork_multi_agent_api::Request::decode(file_bytes) else {
         panic!("Failed to decode request from protobuf");
     };
 
@@ -212,7 +212,7 @@ pub fn capture_impl_artifacts() -> TestStep {
                         "impl.conversation_debug_link",
                         token
                             .debug_link()
-                            .replace("host.docker.internal:8080", "staging.derp.baby"),
+                            .replace("host.docker.internal:8080", "staging.bork.baby"),
                     );
                 }
                 for usage in conversation.total_token_usage().iter() {
@@ -300,7 +300,7 @@ fn collect_edited_files(conversation: &AIConversation) -> HashSet<String> {
 /// Returns an assertion that prints the conversation ID to stdout once available.
 /// This assertion will poll until the conversation token is received from the server.
 fn print_conversation_id_assertion(
-) -> impl FnMut(&mut derpui::App, derpui::WindowId) -> derpui::integration::AssertionOutcome {
+) -> impl FnMut(&mut borkui::App, borkui::WindowId) -> borkui::integration::AssertionOutcome {
     |app, window_id| {
         let terminal_view = terminal_view(app, window_id, 0, 0);
         BlocklistAIHistoryModel::handle(app).read(app, |history_model, _| {

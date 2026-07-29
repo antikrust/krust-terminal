@@ -2,16 +2,16 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use derp_cli::agent::Harness;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_cli::agent::Harness;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };

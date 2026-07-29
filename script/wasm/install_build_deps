@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install all dependencies required to build Derp on Web.
+# Install all dependencies required to build Bork on Web.
 
 set -e
 

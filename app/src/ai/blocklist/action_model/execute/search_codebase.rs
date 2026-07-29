@@ -5,8 +5,8 @@ use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use itertools::Itertools;
-use derp_errors::report_error;
-use derpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{
     read_local_file_context, ActionExecution, AnyActionExecution, ExecuteActionInput,

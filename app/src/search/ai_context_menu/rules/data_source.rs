@@ -1,5 +1,5 @@
 use fuzzy_match::FuzzyMatchResult;
-use derpui::{AppContext, Entity, SingletonEntity};
+use borkui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::RuleSearchItem;
 use crate::ai::facts::{AIFact, CloudAIFactModel};

@@ -1,7 +1,7 @@
-use derpui::elements::MouseStateHandle;
-use derpui::Element;
+use borkui::elements::MouseStateHandle;
+use borkui::Element;
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::{CloudObjectMetadata, Space};
 use crate::drive::index::DriveIndexAction;
@@ -9,18 +9,18 @@ use crate::drive::DriveObjectType;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct DerpDriveSpace {
+pub struct BorkDriveSpace {
     space: Space,
 }
 
-impl DerpDriveSpace {
+impl BorkDriveSpace {
     #[allow(dead_code)]
     pub fn new(space: Space) -> Self {
         Self { space }
     }
 }
 
-impl DerpDriveItem for DerpDriveSpace {
+impl BorkDriveItem for BorkDriveSpace {
     fn display_name(&self) -> Option<String> {
         None
     }
@@ -45,8 +45,8 @@ impl DerpDriveItem for DerpDriveSpace {
         None
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Space(self.space)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Space(self.space)
     }
 
     fn sync_status_icon(
@@ -58,11 +58,11 @@ impl DerpDriveItem for DerpDriveSpace {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 
-    fn action_summary(&self, _app: &derpui::AppContext) -> Option<String> {
+    fn action_summary(&self, _app: &borkui::AppContext) -> Option<String> {
         None
     }
 }

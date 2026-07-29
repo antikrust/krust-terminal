@@ -11,20 +11,20 @@ use parking_lot::Mutex;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
 use uuid::Uuid;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_errors::report_error;
-use derpui::elements::{
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_errors::report_error;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack, Text,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -169,8 +169,8 @@ impl MCPServersEditPageView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                derpui::elements::new_scrollable::ScrollableAppearance::new(
-                    derpui::elements::ScrollbarWidth::Auto,
+                borkui::elements::new_scrollable::ScrollableAppearance::new(
+                    borkui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             );

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon;
-use derpui::elements::ParentElement;
-use derpui::prelude::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon;
+use borkui::elements::ParentElement;
+use borkui::prelude::{
     ConstrainedBox, Container, CrossAxisAlignment, Cursor, Flex, Hoverable, MouseStateHandle, Text,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -198,7 +198,7 @@ impl View for CloudModeSetupTextBlock {
                 .with_child(
                     Container::new(
                         ConstrainedBox::new(
-                            chevron_icon.to_derpui_icon(text_color.into()).finish(),
+                            chevron_icon.to_borkui_icon(text_color.into()).finish(),
                         )
                         .with_width(icon_size)
                         .with_height(icon_size)

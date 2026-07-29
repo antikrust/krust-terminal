@@ -20,21 +20,21 @@
 //! licence condition — it lives on the About page (see [`AVATAR_ATTRIBUTION`]).
 
 use ::settings::Setting as _;
-use derp_core::ui::icons::Icon;
-use derp_errors::report_if_error;
-use derpui::color::ColorU;
-use derpui::elements::{
+use bork_core::ui::icons::Icon;
+use bork_errors::report_if_error;
+use borkui::color::ColorU;
+use borkui::elements::{
     self, Border, CacheOption, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Element, Fill, Flex, Hoverable, Image,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
     Stack, Text, Wrap,
 };
-use derpui::platform::file_picker::FilePickerConfiguration;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::units::Pixels;
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::platform::file_picker::FilePickerConfiguration;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::units::Pixels;
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::settings::identity::{IdentitySettings, MAX_AVATAR_FAVORITES};

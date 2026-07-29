@@ -1,9 +1,9 @@
-use derpui::elements::{Container, Element, MouseStateHandle, Text};
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::UiComponent;
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::elements::{Container, Element, MouseStateHandle, Text};
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::UiComponent;
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::buttons::close_button;

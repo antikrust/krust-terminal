@@ -6,12 +6,12 @@ use ai::api_keys::{
 };
 use serde::{Deserialize, Serialize};
 use vec1::vec1;
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derp_managed_secrets::client::{IdentityTokenOptions, TaskIdentityToken};
-use derp_managed_secrets::ManagedSecretManager;
-use derpui::r#async::Timer;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use bork_managed_secrets::client::{IdentityTokenOptions, TaskIdentityToken};
+use bork_managed_secrets::ManagedSecretManager;
+use borkui::r#async::Timer;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 use crate::settings::{AISettings, AISettingsChangedEvent};
@@ -222,7 +222,7 @@ fn refresh_geap_credentials_with_options(
     manager.set_geap_credentials_state(GeapCredentialsState::Refreshing { previous }, ctx);
 
     // Leg 1: every mint — initial or re-mint, timer/trigger/forced — starts
-    // with a brand-new Derp OIDC JWT, consumed exactly once by the STS
+    // with a brand-new Bork OIDC JWT, consumed exactly once by the STS
     // exchange below and never cached across mints.
     let token_future = ManagedSecretManager::handle(ctx)
         .as_ref(ctx)
@@ -410,7 +410,7 @@ struct GenerateAccessTokenResponse {
     expire_time: String,
 }
 
-/// Legs 2 and 3 of the mint: exchanges the Derp OIDC JWT at Google STS for a
+/// Legs 2 and 3 of the mint: exchanges the Bork OIDC JWT at Google STS for a
 /// federated token, then (when configured) impersonates the workspace's
 /// service account for the final ~1h access token.
 async fn exchange_identity_token_for_geap_credentials(

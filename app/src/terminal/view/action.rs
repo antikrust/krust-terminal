@@ -8,15 +8,15 @@ pub use onboarding::OnboardingIntention;
 use pathfinder_geometry::vector::Vector2F;
 use session_sharing_protocol::common::Role;
 use session_sharing_protocol::sharer::RoleUpdateReason;
-use derp_util::user_input::UserInput;
-use derpui::elements::HyperlinkUrl;
-use derpui::event::ModifiersState;
-use derpui::units::Lines;
-use derpui::EntityId;
+use bork_util::user_input::UserInput;
+use borkui::elements::HyperlinkUrl;
+use borkui::event::ModifiersState;
+use borkui::units::Lines;
+use borkui::EntityId;
 
 use super::inline_banner::{
     AnonymousUserLoginBannerAction, AwsBedrockLoginBannerAction, AwsCliNotInstalledBannerAction,
-    OpenInDerpBannerAction, VimModeBannerAction,
+    OpenInBorkBannerAction, VimModeBannerAction,
 };
 use super::{
     AliasExpansionBannerAction, ContextMenuAction, GridHighlightedLink, InputContextMenuAction,
@@ -67,7 +67,7 @@ pub enum OnboardingVersion {
 /// This represents whether entering a subshell for a particular command should become automatic in
 /// the future, or to ask again.
 #[derive(Clone, Debug)]
-pub enum RememberForDerpification {
+pub enum RememberForBorkification {
     /// If yes, need to transmit the command itself so it can be persisted to user-defaults
     RememberSubshellCommand(String),
     RememberSSHHost(String),
@@ -75,22 +75,22 @@ pub enum RememberForDerpification {
     DoNotRememberSSHHost,
 }
 
-impl RememberForDerpification {
+impl RememberForBorkification {
     pub fn as_bool(&self) -> bool {
         match self {
-            RememberForDerpification::RememberSubshellCommand(_) => true,
-            RememberForDerpification::RememberSSHHost(_) => true,
-            RememberForDerpification::DoNotRememberSubshellCommand => false,
-            RememberForDerpification::DoNotRememberSSHHost => false,
+            RememberForBorkification::RememberSubshellCommand(_) => true,
+            RememberForBorkification::RememberSSHHost(_) => true,
+            RememberForBorkification::DoNotRememberSubshellCommand => false,
+            RememberForBorkification::DoNotRememberSSHHost => false,
         }
     }
 
     pub fn is_ssh(&self) -> bool {
         match self {
-            RememberForDerpification::RememberSSHHost(_) => true,
-            RememberForDerpification::DoNotRememberSSHHost => true,
-            RememberForDerpification::RememberSubshellCommand(_) => false,
-            RememberForDerpification::DoNotRememberSubshellCommand => false,
+            RememberForBorkification::RememberSSHHost(_) => true,
+            RememberForBorkification::DoNotRememberSSHHost => true,
+            RememberForBorkification::RememberSubshellCommand(_) => false,
+            RememberForBorkification::DoNotRememberSubshellCommand => false,
         }
     }
 }
@@ -265,12 +265,12 @@ pub enum TerminalAction {
     },
     CopyRichContentSecret(RichContentSecretTooltipInfo),
     ShowInFileExplorer(PathBuf),
-    OpenFileInDerp(PathBuf),
+    OpenFileInBork(PathBuf),
     #[cfg(feature = "local_fs")]
-    OpenCodeInDerp {
+    OpenCodeInBork {
         path: PathBuf,
         layout: crate::util::file::external_editor::settings::EditorLayout,
-        line_col: Option<derp_util::path::LineAndColumnArg>,
+        line_col: Option<bork_util::path::LineAndColumnArg>,
     },
     OpenWorkflowModal,
     OpenWorkflowModalForAIWorkflow(Workflow),
@@ -289,14 +289,14 @@ pub enum TerminalAction {
     },
     /// Starts a subshell in the active session.
     TriggerSubshellBootstrap,
-    /// If the user says "no" to Derpification, possibly requesting not to be asked again
-    DismissDerpifyBanner(RememberForDerpification),
+    /// If the user says "no" to Borkification, possibly requesting not to be asked again
+    DismissBorkifyBanner(RememberForBorkification),
     /// Triggers the banner asking to turn the running block into a subshell. The String is the
     /// command that the user entered.
     ShowSubshellBanner(String),
     InsertMostRecentCommandCorrection,
     AliasExpansionBanner(AliasExpansionBannerAction),
-    OpenInDerpBanner(OpenInDerpBannerAction),
+    OpenInBorkBanner(OpenInBorkBannerAction),
     OpenBlockFilterEditor(BlockIndex),
     OnboardingFlow(OnboardingVersion),
     ImportSettings,
@@ -347,7 +347,7 @@ pub enum TerminalAction {
     GenerateCodebaseIndex,
     /// This is for debugging, dev only for now
     LoadAgentModeConversation,
-    ShowDerpifySettings,
+    ShowBorkifySettings,
     /// Removes a pending attachment (image or file) by index in the unified list.
     DeleteAttachment {
         index: usize,
@@ -393,9 +393,9 @@ pub enum TerminalAction {
     DismissCodeToolbeltTooltip,
     /// Start a Language Server for the current working directory (if supported)
     StartLspServer,
-    /// Start the guided Derp Environment setup flow (inserts the inline setup block).
+    /// Start the guided Bork Environment setup flow (inserts the inline setup block).
     SetupCloudEnvironment(Vec<String>),
-    /// Start the guided Derp Environment setup flow immediately (no inline setup block).
+    /// Start the guided Bork Environment setup flow immediately (no inline setup block).
     SetupCloudEnvironmentAndStart(Vec<String>),
     /// Show the environment setup mode selector to choose between remote GitHub or local agent flow.
     TriggerEnvironmentSetupSelection(Vec<String>),
@@ -607,9 +607,9 @@ impl fmt::Debug for TerminalAction {
             CopyGridSecret(_) => f.write_str("CopyGridSecret"),
             CopyRichContentSecret(_) => f.write_str("CopyRichContentSecret"),
             ShowInFileExplorer(_) => f.write_str("ShowInFileExplorer"),
-            OpenFileInDerp(_) => f.write_str("OpenFileInDerp"),
+            OpenFileInBork(_) => f.write_str("OpenFileInBork"),
             #[cfg(feature = "local_fs")]
-            OpenCodeInDerp { .. } => f.write_str("OpenCodeInDerp"),
+            OpenCodeInBork { .. } => f.write_str("OpenCodeInBork"),
             OpenWorkflowModal => f.write_str("OpenWorkflowModal"),
             OpenWorkflowModalForAIWorkflow(_) => f.write_str("OpenWorkflowModalForAIWorkflow"),
             OpenWorkflowModalForBlock(block_index) => {
@@ -625,11 +625,11 @@ impl fmt::Debug for TerminalAction {
             OpenBlockListContextMenu => f.write_str("OpenBlockListContextMenu"),
             AskAIAssistant { block_index } => write!(f, "AskAIAssistant({block_index:?})"),
             TriggerSubshellBootstrap => f.write_str("TriggerSubshellBootstrap"),
-            DismissDerpifyBanner(remember) => write!(f, "DismissDerpifyBanner({remember:?})"),
+            DismissBorkifyBanner(remember) => write!(f, "DismissBorkifyBanner({remember:?})"),
             ShowSubshellBanner(_) => f.write_str("ShowSubshellBanner"),
             InsertMostRecentCommandCorrection => f.write_str("InsertMostRecentCommandCorrection"),
             AliasExpansionBanner(action) => write!(f, "AliasExpansionBanner({action:?}"),
-            OpenInDerpBanner(action) => write!(f, "OpenInDerpBanner({action:?})"),
+            OpenInBorkBanner(action) => write!(f, "OpenInBorkBanner({action:?})"),
             OpenBlockFilterEditor(block_index) => {
                 write!(f, "OpenBlockFilterEditor({block_index:?})")
             }
@@ -685,7 +685,7 @@ impl fmt::Debug for TerminalAction {
             ShowInitializationBlock => write!(f, "ShowInitializationBlock"),
             GenerateCodebaseIndex => write!(f, "GenerateIndexForRepo"),
             LoadAgentModeConversation => write!(f, "LoadAgentModeConversation"),
-            ShowDerpifySettings => write!(f, "ShowDerpifySettings"),
+            ShowBorkifySettings => write!(f, "ShowBorkifySettings"),
             DeleteAttachment { index } => write!(f, "DeleteAttachment({index:?})"),
             OpenAttachmentLightbox { index } => {
                 write!(f, "OpenAttachmentLightbox({index:?})")

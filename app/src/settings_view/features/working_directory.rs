@@ -1,9 +1,9 @@
 use itertools::Itertools;
-use derp_errors::report_if_error;
-use derpui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable};
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use bork_errors::report_if_error;
+use borkui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable};
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, Event as EditorEvent, SingleLineEditorOptions, TextOptions};
@@ -124,7 +124,7 @@ impl View for WorkingDirectoryView {
         "WorkingDirectoryView"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         let appearance = Appearance::as_ref(app);
         let ui_builder = appearance.ui_builder();
 

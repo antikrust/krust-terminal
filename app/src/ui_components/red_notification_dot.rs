@@ -1,11 +1,11 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::theme::AnsiColorIdentifier;
-use derpui::elements::{
+use bork_core::ui::theme::AnsiColorIdentifier;
+use borkui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, Empty, Fill, OffsetPositioning,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Radius, Stack,
 };
-use derpui::ui_components::components::UiComponentStyles;
-use derpui::Element;
+use borkui::ui_components::components::UiComponentStyles;
+use borkui::Element;
 
 use crate::appearance::Appearance;
 

@@ -1,4 +1,4 @@
-//! Blocking client helpers used by the standalone `derpctrl` CLI.
+//! Blocking client helpers used by the standalone `borkctrl` CLI.
 //!
 //! Authentication is a two-transport flow:
 //!
@@ -14,7 +14,7 @@
 //!    issuing a short-lived, action-scoped credential.
 //! 4. The client keeps that credential in memory and presents it as a bearer
 //!    token only to the selected instance's loopback HTTP endpoint. The running
-//!    Derp app revalidates the credential, current settings, action scope, and
+//!    Bork app revalidates the credential, current settings, action scope, and
 //!    request before dispatch.
 //!
 //! Client-side validation prevents accidental use of inconsistent discovery

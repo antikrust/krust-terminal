@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use derp_editor::content::buffer::ToBufferPoint;
-use derpui::integration::AssertionCallback;
-use derpui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
+use bork_editor::content::buffer::ToBufferPoint;
+use borkui::integration::AssertionCallback;
+use borkui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
 
 use crate::code::editor::goto_line::view::GoToLineView;
 use crate::code::editor::view::CodeEditorView;

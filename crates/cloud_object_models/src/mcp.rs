@@ -8,7 +8,7 @@ use cloud_objects::ids::GenericStringObjectId;
 use handlebars::get_arguments;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 use crate::{JsonModel, JsonSerializer};
 

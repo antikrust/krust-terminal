@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use derp_editor::content::buffer::Buffer;
-use derp_util::file::FileId;
-use derpui::{ModelContext, ModelHandle, SingletonEntity};
+use bork_editor::content::buffer::Buffer;
+use bork_util::file::FileId;
+use borkui::{ModelContext, ModelHandle, SingletonEntity};
 
 use super::server_model::{ConnectionId, ServerModel};
 use crate::code::global_buffer_model::GlobalBufferModel;

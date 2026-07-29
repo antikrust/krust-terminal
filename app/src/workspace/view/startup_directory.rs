@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use derpui::{AppContext, SingletonEntity, ViewContext, WindowId};
+use borkui::{AppContext, SingletonEntity, ViewContext, WindowId};
 
 use super::Workspace;
 use crate::terminal::available_shells::AvailableShell;

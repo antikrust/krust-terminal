@@ -127,7 +127,7 @@ Register it in `TabSettings` with the same sync behavior as the existing vertica
 - `SyncToCloud::Globally(RespectUserSyncSetting::Yes)`
 - `hierarchy: "appearance.tabs"`
 
-This setting is only used when `vertical_tabs_display_granularity == Tabs`, but it should still be persisted independently so Derp can restore the user's last chosen Tabs-mode representation.
+This setting is only used when `vertical_tabs_display_granularity == Tabs`, but it should still be persisted independently so Bork can restore the user's last chosen Tabs-mode representation.
 
 ### 2. Add a workspace action for the new setting
 

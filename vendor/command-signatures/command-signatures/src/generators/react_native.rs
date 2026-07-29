@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use serde_json::Result;
 use std::collections::HashMap;
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Suggestion, TemplateFilter,
 };
@@ -216,7 +216,7 @@ pub fn generator() -> CommandSignatureGenerators {
 #[cfg(test)]
 mod tests {
     use crate::generators::react_native::generator;
-    use derp_completion_metadata::{GeneratorName, GeneratorResults, Suggestion};
+    use bork_completion_metadata::{GeneratorName, GeneratorResults, Suggestion};
 
     #[test]
     fn test_ios_devices_generator() {

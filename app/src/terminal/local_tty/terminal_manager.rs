@@ -15,10 +15,10 @@ use nix::sys::termios::LocalFlags;
 use parking_lot::{FairMutex, Mutex};
 use pathfinder_geometry::vector::Vector2F;
 use settings::Setting as _;
-use derp_core::SessionId;
-use derp_errors::report_error;
-use derpui::r#async::executor::Background;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
+use bork_core::SessionId;
+use bork_errors::report_error;
+use borkui::r#async::executor::Background;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::event_loop::EventLoop;
 use super::shell::{ShellStarter, ShellStarterSource};
@@ -55,7 +55,7 @@ use crate::terminal::shared_session::sharer::network::Network;
 use crate::terminal::shared_session::{IsSharedSessionCreator, SharedSessionStatus};
 use crate::terminal::shell::ShellName;
 use crate::terminal::terminal_manager::BlockSpacing;
-use crate::terminal::derpify::settings::DerpifySettings;
+use crate::terminal::borkify::settings::BorkifySettings;
 use crate::terminal::writeable_pty::pty_controller::{EventLoopSendError, EventLoopSender};
 use crate::terminal::writeable_pty::terminal_manager_util::{
     init_pty_controller_model, init_remote_server_controller, wire_up_pty_controller_with_surface,
@@ -141,7 +141,7 @@ pub struct TerminalManagerInit<S> {
     pub manager: ModelHandle<Box<dyn TerminalManagerTrait>>,
     pub surface: ViewHandle<S>,
 }
-/// Adapts a TUI-owned surface manager to Derp's type-erased manager contract.
+/// Adapts a TUI-owned surface manager to Bork's type-erased manager contract.
 struct TuiTerminalManager<S>(TerminalManager<S>);
 
 impl<S: 'static> TerminalManagerTrait for TuiTerminalManager<S> {
@@ -324,7 +324,7 @@ impl<S> TerminalManager<S> {
         let colors = model.colors();
         let model = Arc::new(FairMutex::new(model));
 
-        // This is purely for measuring throughput on DerpDev.
+        // This is purely for measuring throughput on BorkDev.
         if FeatureFlag::RecordPtyThroughput.is_enabled() {
             let auth_state = AuthStateProvider::as_ref(ctx).get();
             recorder::record_pty_throughput(
@@ -683,12 +683,12 @@ impl<S> TerminalManager<S> {
         });
     }
 
-    /// Sends bindkey to notify shell process to switch to Derp prompt logic for prompt
+    /// Sends bindkey to notify shell process to switch to Bork prompt logic for prompt
     /// with the combined prompt/command grid (we unset the PS1, but save the value for potential
     /// future restoration).
-    pub fn send_switch_to_derp_prompt_bindkey(&self, app_ctx: &mut AppContext) {
+    pub fn send_switch_to_bork_prompt_bindkey(&self, app_ctx: &mut AppContext) {
         self.pty_controller.update(app_ctx, |pty_controller, ctx| {
-            pty_controller.send_switch_to_derp_prompt_bindkey(ctx);
+            pty_controller.send_switch_to_bork_prompt_bindkey(ctx);
         });
     }
 
@@ -699,7 +699,7 @@ impl<S> TerminalManager<S> {
     ) -> Result<(), SendError<Message>> {
         let shell_type = shell_starter.shell_type();
         if shell_type == crate::terminal::shell::ShellType::Zsh
-            // For more on why this is necessary on Git Bash, see https://linear.app/derpdotdev/issue/CORE-3202.
+            // For more on why this is necessary on Git Bash, see https://linear.app/borkdotdev/issue/CORE-3202.
             || shell_starter.is_msys2()
         {
             let init_shell_script = crate::terminal::bootstrap::init_shell_script_for_shell(
@@ -730,7 +730,7 @@ impl<S> TerminalManager<S> {
         let is_crash_reporting_enabled = PrivacySettings::as_ref(ctx).is_crash_reporting_enabled;
 
         // Determine whether the Node.js Version chip is enabled anywhere it could be
-        // shown (the Derp prompt, the agent footer, or the CLI agent footer). When it
+        // shown (the Bork prompt, the agent footer, or the CLI agent footer). When it
         // is not, the shell bootstrap skips the expensive per-prompt `node --version`
         // detection. The chip value is fed by the same precmd payload regardless of
         // where it is displayed, so we must check all three locations.
@@ -751,12 +751,12 @@ impl<S> TerminalManager<S> {
                     .contains(&ContextChipKind::NodeVersion)
         };
 
-        // `enable_ssh_derpification` is the single source of truth for whether the SSH
-        // wrapper is active. The bootstrap scripts check `DERP_USE_SSH_WRAPPER` (derived
-        // from this value) before invoking `derp_ssh_helper`, which spawns the ControlMaster
+        // `enable_ssh_borkification` is the single source of truth for whether the SSH
+        // wrapper is active. The bootstrap scripts check `BORK_USE_SSH_WRAPPER` (derived
+        // from this value) before invoking `bork_ssh_helper`, which spawns the ControlMaster
         // and opens agent-protocol channels.
-        let enable_ssh_wrapper = *DerpifySettings::as_ref(ctx)
-            .enable_ssh_derpification
+        let enable_ssh_wrapper = *BorkifySettings::as_ref(ctx)
+            .enable_ssh_borkification
             .value();
 
         // Only meaningful when the legacy ControlMaster wrapper is active.
@@ -928,7 +928,7 @@ pub fn get_shell_starter(
     // TODO(alokedesai): Further refactor this function to make it clear that it's expensive.
     shell_starter_or_wsl_name
         .and_then(|starter| {
-            derpui::r#async::block_on(async { starter.to_shell_starter_source().await })
+            borkui::r#async::block_on(async { starter.to_shell_starter_source().await })
         })
         .map(|starter_source| {
             get_shell_starter_internal(

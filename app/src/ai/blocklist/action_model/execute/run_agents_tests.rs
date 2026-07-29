@@ -5,9 +5,9 @@ use ai::agent::orchestration_config::{
     OrchestrationConfig, OrchestrationConfigStatus, OrchestrationExecutionMode,
 };
 use settings::Setting;
-use derp_core::execution_mode::ExecutionMode;
-use derp_core::features::FeatureFlag;
-use derpui::{App, Entity, EntityId, ModelHandle};
+use bork_core::execution_mode::ExecutionMode;
+use bork_core::features::FeatureFlag;
+use borkui::{App, Entity, EntityId, ModelHandle};
 
 use super::*;
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -83,7 +83,7 @@ fn persist_plan_config_with_harness(
                     harness_type: harness_type.to_string(),
                     execution_mode: OrchestrationExecutionMode::Remote {
                         environment_id: "env-1".to_string(),
-                        worker_host: "derp".to_string(),
+                        worker_host: "bork".to_string(),
                     },
                 },
                 status,
@@ -228,7 +228,7 @@ fn remote_run_agents_action(harness_type: &str) -> AIAgentAction {
             harness_type: harness_type.to_string(),
             execution_mode: RunAgentsExecutionMode::Remote {
                 environment_id: "env-1".to_string(),
-                worker_host: "derp".to_string(),
+                worker_host: "bork".to_string(),
                 computer_use_enabled: false,
             },
             agent_run_configs: vec![RunAgentsAgentRunConfig {
@@ -320,7 +320,7 @@ fn should_autoexecute_when_plan_has_approved_orchestration_config() {
 }
 
 #[test]
-fn should_not_autoexecute_approved_remote_non_derp_plan_without_default_auth_secret() {
+fn should_not_autoexecute_approved_remote_non_bork_plan_without_default_auth_secret() {
     App::test((), |mut app| async move {
         let state = initialize_run_agents_test(&mut app, ExecutionMode::App);
         persist_plan_config_with_harness(
@@ -616,7 +616,7 @@ fn should_not_autoexecute_without_approved_plan_or_always_allow_profile() {
 }
 
 #[test]
-fn execute_denies_remote_non_derp_harness_without_default_auth_secret() {
+fn execute_denies_remote_non_bork_harness_without_default_auth_secret() {
     App::test((), |mut app| async move {
         let state = initialize_run_agents_test(&mut app, ExecutionMode::App);
         let action = remote_run_agents_action("codex");
@@ -647,7 +647,7 @@ fn execute_denies_remote_non_derp_harness_without_default_auth_secret() {
 }
 
 #[test]
-fn should_autoexecute_remote_non_derp_harness_with_always_allow_even_without_default_auth_secret() {
+fn should_autoexecute_remote_non_bork_harness_with_always_allow_even_without_default_auth_secret() {
     App::test((), |mut app| async move {
         let state = initialize_run_agents_test(&mut app, ExecutionMode::App);
         set_run_agents_permission(&mut app, RunAgentsPermission::AlwaysAllow);
@@ -668,7 +668,7 @@ fn should_autoexecute_remote_non_derp_harness_with_always_allow_even_without_def
 }
 
 #[test]
-fn should_autoexecute_remote_non_derp_harness_with_default_auth_secret() {
+fn should_autoexecute_remote_non_bork_harness_with_default_auth_secret() {
     App::test((), |mut app| async move {
         let state = initialize_run_agents_test(&mut app, ExecutionMode::App);
         set_run_agents_permission(&mut app, RunAgentsPermission::AlwaysAllow);
@@ -690,7 +690,7 @@ fn should_autoexecute_remote_non_derp_harness_with_default_auth_secret() {
 }
 
 #[test]
-fn should_autoexecute_remote_derp_harness_without_default_auth_secret() {
+fn should_autoexecute_remote_bork_harness_without_default_auth_secret() {
     App::test((), |mut app| async move {
         let state = initialize_run_agents_test(&mut app, ExecutionMode::App);
         set_run_agents_permission(&mut app, RunAgentsPermission::AlwaysAllow);

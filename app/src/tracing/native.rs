@@ -65,8 +65,8 @@ use tracing::subscriber;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::EnvFilter;
 use url::{Host, Url};
-use derp_managed_secrets::client::ManagedSecretsClient;
-use derpui::AppContext;
+use bork_managed_secrets::client::ManagedSecretsClient;
+use borkui::AppContext;
 
 use super::cloud_agent_auth::{self, AuthContext};
 use super::Initialization;
@@ -77,7 +77,7 @@ use crate::tracing::install_no_subscriber;
 /// spans we don't care about (e.g.: ones from dependencies).
 const CLOUD_AGENT_MARKER: &str = "tags.cloud_agent";
 /// The environment variable used to configure the cloud agent OTLP endpoint.
-const CLOUD_AGENT_OTLP_ENDPOINT: &str = "DERP_CLOUD_AGENT_OTLP_ENDPOINT";
+const CLOUD_AGENT_OTLP_ENDPOINT: &str = "BORK_CLOUD_AGENT_OTLP_ENDPOINT";
 /// The environment variable used to configure the OTel service name.
 const OTEL_SERVICE_NAME: &str = "OTEL_SERVICE_NAME";
 /// The minimum interval between local export failure diagnostics.
@@ -133,7 +133,7 @@ pub fn init() -> anyhow::Result<Initialization> {
 
     let active_spans = ActiveSpanRegistry::default();
     let tracer =
-        ShutdownAwareTracer::new(provider.tracer("derp-cloud-agent"), active_spans.clone());
+        ShutdownAwareTracer::new(provider.tracer("bork-cloud-agent"), active_spans.clone());
     let subscriber = tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_opentelemetry::layer().with_tracer(tracer));
@@ -151,7 +151,7 @@ pub fn init() -> anyhow::Result<Initialization> {
 ///
 /// A batch exporter keeps network export off instrumentation call sites. The provider is retained
 /// by [`Initialization`] so application termination can explicitly shut it down after attempting
-/// to end registered active spans. Exported resources include Derp's version and channel alongside
+/// to end registered active spans. Exported resources include Bork's version and channel alongside
 /// standard environment-detected OpenTelemetry attributes, with [`OTEL_SERVICE_NAME`] taking
 /// precedence over the default service name. The exporter is built once with a dynamic HTTP client
 /// so credential refresh can update requests without reconstructing provider state.
@@ -169,13 +169,13 @@ fn build_provider(
         .context("Failed to build the OTLP span exporter")?;
 
     let resource = Resource::builder_empty()
-        .with_service_name("derp-cloud-agent")
+        .with_service_name("bork-cloud-agent")
         .with_attribute(KeyValue::new(
             "service.version",
             ChannelState::app_version().unwrap_or("<no tag>"),
         ))
         .with_attribute(KeyValue::new(
-            "derp.channel",
+            "bork.channel",
             ChannelState::channel().to_string(),
         ))
         .with_detector(Box::new(TelemetryResourceDetector))

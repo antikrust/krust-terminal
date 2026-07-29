@@ -16,7 +16,7 @@ use rmcp::ServiceExt as _;
 use simple_logger::SimpleLogger;
 use tokio::io::AsyncBufReadExt as _;
 use uuid::Uuid;
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 use super::TemplatableMCPServerInfo;
 
@@ -162,7 +162,7 @@ pub async fn spawn_server(
                 if err.kind() == std::io::ErrorKind::NotFound {
                     let cwd_display = cwd_for_log
                         .as_deref()
-                        .unwrap_or("<inherited from Derp's process cwd>");
+                        .unwrap_or("<inherited from Bork's process cwd>");
                     logger.log(format!(
                         "[error] MCP: Failed to spawn '{server_name}': command '{command_for_log}' \
                          not found (cwd: {cwd_display}). If your MCP server depends on a specific \
@@ -455,8 +455,8 @@ fn make_client_info() -> rmcp::model::ClientInfo {
     rmcp::model::ClientInfo::new(
         Default::default(),
         rmcp::model::Implementation::new(
-            derp_core::channel::ChannelState::app_id().to_string(),
-            derp_core::channel::ChannelState::app_version()
+            bork_core::channel::ChannelState::app_id().to_string(),
+            bork_core::channel::ChannelState::app_version()
                 .map(|v| v.to_string())
                 .unwrap_or_default(),
         ),

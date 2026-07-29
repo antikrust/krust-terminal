@@ -3,19 +3,19 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use command::blocking::Command;
-use derp::features::FeatureFlag;
-use derp::integration_testing::code_review::{
+use bork::features::FeatureFlag;
+use bork::integration_testing::code_review::{
     assert_code_review_anchor, assert_code_review_line_text, assert_code_review_loaded,
     assert_code_review_scroll_region, assert_min_hidden_sections,
     expand_first_hidden_section_and_assert_full_reveal, scroll_code_review_to_deleted_range,
     scroll_code_review_to_footer, scroll_code_review_to_header, scroll_code_review_to_line,
     ScrollRegion,
 };
-use derp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use derp::integration_testing::view_getters::{single_terminal_view_for_tab, workspace_view};
-use derp::workspace::WorkspaceAction;
-use derpui_core::integration::{AssertionCallback, TestStep};
-use derpui_core::{async_assert, App, WindowId};
+use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use bork::integration_testing::view_getters::{single_terminal_view_for_tab, workspace_view};
+use bork::workspace::WorkspaceAction;
+use borkui_core::integration::{AssertionCallback, TestStep};
+use borkui_core::{async_assert, App, WindowId};
 
 use super::new_builder;
 use crate::util::write_all_rc_files_for_test;
@@ -158,7 +158,7 @@ fn code_review_scroll_anchor_builder(
                 .expect("should write initial committed contents");
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", TEST_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 
@@ -316,7 +316,7 @@ pub fn test_code_review_scroll_preserved_deleted_range() -> Builder {
                 .expect("should write initial committed contents");
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", TEST_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 
@@ -396,7 +396,7 @@ pub fn test_code_review_scroll_preserved_header_range() -> Builder {
                 .expect("should write initial committed contents");
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", TEST_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 
@@ -489,7 +489,7 @@ pub fn test_code_review_scroll_preserved_footer_range() -> Builder {
 
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", FIRST_FILE_NAME, SECOND_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 
@@ -583,7 +583,7 @@ pub fn test_code_review_scroll_preserved_second_file() -> Builder {
 
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", FIRST_FILE_NAME, SECOND_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 
@@ -678,7 +678,7 @@ pub fn test_code_review_double_click_fully_expands_hidden_section() -> Builder {
                 .expect("should write initial committed contents");
             run_git(&repo_dir, &["init", "-b", "main"]);
             run_git(&repo_dir, &["config", "user.email", "test@example.com"]);
-            run_git(&repo_dir, &["config", "user.name", "Derp Integration Test"]);
+            run_git(&repo_dir, &["config", "user.name", "Bork Integration Test"]);
             run_git(&repo_dir, &["add", TEST_FILE_NAME]);
             run_git(&repo_dir, &["commit", "-m", "Initial commit"]);
 

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use ai::agent::action::{AIAgentActionType, ShellCommandDelay};
 use parking_lot::FairMutex;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{CornerRadius, Radius};
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{CornerRadius, Radius};
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, View, ViewContext,
 };
 
@@ -119,7 +119,7 @@ impl View for InlineAgentViewHeader {
         };
         if is_agent_tagged_in {
             let header_background = appearance.theme().surface_2();
-            let icon = Icon::Oz.to_derpui_icon(
+            let icon = Icon::Oz.to_borkui_icon(
                 blended_colors::text_main(appearance.theme(), header_background).into(),
             );
             let message = if let Some(command) = top_level_command.as_deref() {

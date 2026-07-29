@@ -5,9 +5,9 @@
 //! of the Account page (see `main_page::BillingAndUsageWidget`), so it renders
 //! its active child directly and leaves scrolling/padding to the host page.
 
-use derp_core::features::FeatureFlag;
-use derpui::elements::{ChildView, Element};
-use derpui::{AppContext, Entity, SingletonEntity, View, ViewContext, ViewHandle};
+use bork_core::features::FeatureFlag;
+use borkui::elements::{ChildView, Element};
+use borkui::{AppContext, Entity, SingletonEntity, View, ViewContext, ViewHandle};
 
 use super::billing_and_usage_page::{BillingAndUsagePageEvent, BillingAndUsagePageView};
 use super::billing_and_usage_page_v2::BillingAndUsagePageV2View;

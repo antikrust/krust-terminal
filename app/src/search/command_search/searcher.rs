@@ -60,11 +60,11 @@ pub enum CommandSearchItemAction {
     /// The user requested to run the AI query search item with this query text.
     RunAIQuery(String),
 
-    /// The user accepted the search item to open Derp AI.
-    OpenDerpAI,
+    /// The user accepted the search item to open Bork AI.
+    OpenBorkAI,
 
-    /// The user accepted the search item to translate the query to a command using Derp AI.
-    TranslateUsingDerpAI,
+    /// The user accepted the search item to translate the query to a command using Bork AI.
+    TranslateUsingBorkAI,
 }
 
 #[cfg(test)]

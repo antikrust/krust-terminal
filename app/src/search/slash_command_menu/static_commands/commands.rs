@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use derp_core::features::FeatureFlag;
+use bork_core::features::FeatureFlag;
 
 use super::Availability;
 use crate::search::slash_command_menu::static_commands::Argument;
@@ -70,7 +70,7 @@ pub static CREATE_NEW_PROJECT: LazyLock<StaticCommand> = LazyLock::new(|| Static
 
 pub static EDIT_SKILL: LazyLock<StaticCommand> = LazyLock::new(|| StaticCommand {
     name: "/open-skill",
-    description: "Open a skill's markdown file in Derp's built-in editor",
+    description: "Open a skill's markdown file in Bork's built-in editor",
     icon_path: "bundled/svg/file-code-02.svg",
     availability: Availability::AI_ENABLED,
     auto_enter_ai_mode: false,
@@ -110,7 +110,7 @@ pub const ADD_RULE: StaticCommand = StaticCommand {
 
 pub static EDIT: LazyLock<StaticCommand> = LazyLock::new(|| StaticCommand {
     name: "/open-file",
-    description: "Open a file in Derp's code editor",
+    description: "Open a file in Bork's code editor",
     icon_path: "bundled/svg/file-code-02.svg",
     availability: Availability::LOCAL,
     auto_enter_ai_mode: false,
@@ -212,7 +212,7 @@ pub const INDEX: StaticCommand = StaticCommand {
 pub const INIT: StaticCommand = StaticCommand {
     name: "/init",
     description: "Index this codebase and generate an AGENTS.md file",
-    icon_path: "bundled/svg/derp-2.svg",
+    icon_path: "bundled/svg/bork-2.svg",
     availability: Availability::REPOSITORY
         .union(Availability::AGENT_VIEW)
         .union(Availability::AI_ENABLED),

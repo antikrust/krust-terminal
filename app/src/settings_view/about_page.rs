@@ -1,10 +1,10 @@
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::{
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::{
     Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,
     MainAxisAlignment, MouseStateHandle, ParentElement, Wrap,
 };
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, View, ViewContext, ViewHandle};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     MatchData, PageType, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
@@ -50,7 +50,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about derp derp version"
+        "about bork bork version"
     }
 
     fn render(
@@ -61,10 +61,10 @@ impl SettingsWidget for AboutPageWidget {
     ) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
 
-        // The derp wordmark is white-filled with a heavy black outline, so a
+        // The bork wordmark is white-filled with a heavy black outline, so a
         // single asset reads correctly on both light and dark backgrounds —
-        // unlike the old Derp logo, which needed a per-scheme variant.
-        let image_path = "bundled/png/derp-logo.png";
+        // unlike the old Bork logo, which needed a per-scheme variant.
+        let image_path = "bundled/png/bork-logo.png";
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
 
@@ -112,12 +112,12 @@ impl SettingsWidget for AboutPageWidget {
                 .with_child(version_row.finish())
                 .with_child(
                     ui_builder
-                        .span("Copyright 2026 Derp")
+                        .span("Copyright 2026 Bork")
                         .build()
                         .with_margin_top(16.)
                         .finish(),
                 )
-                // Preserved upstream attribution: Derp is a rebranded fork and
+                // Preserved upstream attribution: Bork is a rebranded fork and
                 // must keep the original copyright notice.
                 .with_child(
                     ui_builder

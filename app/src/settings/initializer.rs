@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use derp_core::features::FeatureFlag;
-use derp_core::settings::Setting;
-use derp_errors::report_if_error;
-use derpui::{Entity, ModelContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_core::settings::Setting;
+use bork_errors::report_if_error;
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::auth::auth_state::AuthState;
 use crate::settings::input::InputBoxType;
@@ -67,7 +67,7 @@ impl SettingsInitializer {
                 if !settings.input_box_type.is_value_explicitly_set()
                     && *settings.input_box_type.value() == InputBoxType::Classic
                 {
-                    log::debug!("Setting default input type to Derp prompt for new user");
+                    log::debug!("Setting default input type to Bork prompt for new user");
                     report_if_error!(settings
                         .input_box_type
                         .set_value(InputBoxType::Universal, ctx));
@@ -132,7 +132,7 @@ impl SettingsInitializer {
         //
         // TODO(jefflloyd): Remove this approximately 6 weeks from 3/19/26.
         {
-            use derp_core::user_preferences::GetUserPreferences as _;
+            use bork_core::user_preferences::GetUserPreferences as _;
 
             AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                 // If the new setting already has a value in preferences, the

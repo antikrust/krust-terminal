@@ -1,10 +1,10 @@
 use std::ops::Range;
 
 use ai::diff_validation::DiffType;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derpui::elements::new_scrollable::ScrollableAppearance;
-use derpui::elements::ScrollbarWidth;
-use derpui::{AppContext, View, ViewContext, ViewHandle};
+use bork_editor::render::element::VerticalExpansionBehavior;
+use borkui::elements::new_scrollable::ScrollableAppearance;
+use borkui::elements::ScrollbarWidth;
+use borkui::{AppContext, View, ViewContext, ViewHandle};
 
 use super::editor::scroll::ScrollWheelBehavior;
 use super::editor::view::CodeEditorView;

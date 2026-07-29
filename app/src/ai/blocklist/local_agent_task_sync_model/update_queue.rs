@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use derp_graphql::ai::AgentTaskState;
+use bork_graphql::ai::AgentTaskState;
 
 use super::LocalTaskUpdate;
 use crate::ai::ambient_agents::AmbientAgentTaskId;

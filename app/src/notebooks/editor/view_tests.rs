@@ -5,21 +5,21 @@ use async_channel::TryRecvError;
 use parking_lot::Mutex;
 use string_offset::CharOffset;
 use tempfile::tempdir;
-use derp_editor::content::mermaid_diagram::mermaid_asset_source;
-use derp_editor::render::element::RichTextAction;
-use derp_editor::render::model::{
+use bork_editor::content::mermaid_diagram::mermaid_asset_source;
+use bork_editor::render::element::RichTextAction;
+use bork_editor::render::model::{
     BlockItem, BlockSpacing, HitTestBlockType, ImageBlockConfig, Location, RenderEvent,
 };
-use derp_util::user_input::UserInput;
-use derpui::assets::asset_cache::{AssetCache, AssetState};
-use derpui::event::ModifiersState;
-use derpui::image_cache::ImageType;
-use derpui::platform::WindowStyle;
-use derpui::presenter::ChildView;
-use derpui::r#async::block_on;
-use derpui::units::Pixels;
-use derpui::windowing::WindowManager;
-use derpui::{App, Element, Entity, SingletonEntity, TypedActionView, View, ViewHandle, WindowId};
+use bork_util::user_input::UserInput;
+use borkui::assets::asset_cache::{AssetCache, AssetState};
+use borkui::event::ModifiersState;
+use borkui::image_cache::ImageType;
+use borkui::platform::WindowStyle;
+use borkui::presenter::ChildView;
+use borkui::r#async::block_on;
+use borkui::units::Pixels;
+use borkui::windowing::WindowManager;
+use borkui::{App, Element, Entity, SingletonEntity, TypedActionView, View, ViewHandle, WindowId};
 
 use super::{EditorViewAction, LayoutAffectingAssetLoad, RichTextEditorConfig, RichTextEditorView};
 use crate::appearance::Appearance;
@@ -61,7 +61,7 @@ impl View for TestView {
         "TestView"
     }
 
-    fn render(&self, _app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         ChildView::new(&self.editor).finish()
     }
 }
@@ -146,7 +146,7 @@ async fn reset_editor_with_markdown(
 fn link_offset(
     editor: &RichTextEditorView,
     link_url: &str,
-    ctx: &derpui::AppContext,
+    ctx: &borkui::AppContext,
 ) -> CharOffset {
     let max_offset = editor.markdown(ctx).chars().count();
     (0..=max_offset)
@@ -164,7 +164,7 @@ fn link_offset(
 
 fn rendered_mermaid_block_range(
     editor: &RichTextEditorView,
-    ctx: &derpui::AppContext,
+    ctx: &borkui::AppContext,
 ) -> Option<std::ops::Range<CharOffset>> {
     let render_state = editor.model.as_ref(ctx).render_state().clone();
     let render_state = render_state.as_ref(ctx);
@@ -175,7 +175,7 @@ fn rendered_mermaid_block_range(
         let block_end = block_start + block.content_length();
         if matches!(
             block,
-            derp_editor::render::model::BlockItem::MermaidDiagram { .. }
+            bork_editor::render::model::BlockItem::MermaidDiagram { .. }
         ) {
             return Some(block_start..block_end);
         }
@@ -337,7 +337,7 @@ fn test_appearance_changes() {
 
         // Simulate an appearance change.
         Appearance::handle(&app).update(&mut app, |appearance, ctx| {
-            appearance.set_monospace_font_family(derpui::fonts::FamilyId(123), ctx);
+            appearance.set_monospace_font_family(borkui::fonts::FamilyId(123), ctx);
             ctx.notify()
         });
 
@@ -348,7 +348,7 @@ fn test_appearance_changes() {
             // The render model's style should be updated.
             assert_eq!(
                 model.styles().code_text.font_family,
-                derpui::fonts::FamilyId(123)
+                borkui::fonts::FamilyId(123)
             );
         });
 
@@ -611,7 +611,7 @@ fn test_link_editing() {
                 .url_editor()
                 .clone()
                 .update(ctx, |url_editor, ctx| {
-                    url_editor.user_insert("https://derp.baby", ctx);
+                    url_editor.user_insert("https://bork.baby", ctx);
                 });
 
             editor.link_editor.update(ctx, |link_editor, ctx| {
@@ -623,7 +623,7 @@ fn test_link_editing() {
         editor_view.read(&app, |editor, ctx| {
             assert_eq!(
                 editor.model.as_ref(ctx).debug_buffer(ctx),
-                "<text>Some <a_https://derp.baby>text<a>"
+                "<text>Some <a_https://bork.baby>text<a>"
             );
         });
 
@@ -654,7 +654,7 @@ fn test_link_editing() {
         editor_view.read(&app, |editor, ctx| {
             assert_eq!(
                 editor.model.as_ref(ctx).debug_buffer(ctx),
-                "<text>Some <a_https://derp.baby>text<a><a_https://example.com>new link<a>"
+                "<text>Some <a_https://bork.baby>text<a><a_https://example.com>new link<a>"
             );
         });
     });
@@ -890,7 +890,7 @@ fn test_link_editing_disabled_for_multiselect() {
                 .url_editor()
                 .clone()
                 .update(ctx, |url_editor, ctx| {
-                    url_editor.user_insert("https://derp.baby", ctx);
+                    url_editor.user_insert("https://bork.baby", ctx);
                 });
 
             editor.link_editor.update(ctx, |link_editor, ctx| {

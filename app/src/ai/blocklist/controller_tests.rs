@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use chrono::Local;
 use uuid::Uuid;
-use derp_multi_agent_api::response_event;
-use derpui::{App, SingletonEntity};
+use bork_multi_agent_api::response_event;
+use borkui::{App, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::task::TaskId;
@@ -276,7 +276,7 @@ fn mock_response_stream_updates_history_through_controller() {
 
         stream.update(&mut app, |stream, ctx| {
             stream.emit_response_event_for_test(
-                derp_multi_agent_api::ResponseEvent {
+                bork_multi_agent_api::ResponseEvent {
                     r#type: Some(response_event::Type::Init(response_event::StreamInit {
                         request_id: "test-request".to_string(),
                         conversation_id: "test-server-conversation".to_string(),
@@ -286,7 +286,7 @@ fn mock_response_stream_updates_history_through_controller() {
                 ctx,
             );
             stream.emit_response_event_for_test(
-                derp_multi_agent_api::ResponseEvent {
+                bork_multi_agent_api::ResponseEvent {
                     r#type: Some(response_event::Type::Finished(
                         response_event::StreamFinished {
                             reason: Some(response_event::stream_finished::Reason::Done(

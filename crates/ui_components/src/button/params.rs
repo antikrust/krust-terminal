@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
-use derp_core::ui::Icon;
-use derp_core::ui::appearance::Appearance;
-use derpui_core::fonts;
-use derpui_core::keymap::Keystroke;
-use derpui_core::prelude::stack;
+use bork_core::ui::Icon;
+use bork_core::ui::appearance::Appearance;
+use borkui_core::fonts;
+use borkui_core::keymap::Keystroke;
+use borkui_core::prelude::stack;
 
 use super::Theme;
 use crate::{keyboard_shortcut, tooltip};

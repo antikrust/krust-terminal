@@ -5,9 +5,9 @@ use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
 use chrono::Local;
 use lazy_static::lazy_static;
 use regex::Regex;
-use derp_core::features::FeatureFlag;
-use derp_graphql::generic_string_object::GenericStringObjectFormat as GraphQLFormat;
-use derpui::{AppContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_graphql::generic_string_object::GenericStringObjectFormat as GraphQLFormat;
+use borkui::{AppContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -34,7 +34,7 @@ lazy_static! {
     // Regex to match <block:[block_id]> patterns
     pub static ref BLOCK_CONTEXT_ATTACHMENT_REGEX: Regex = Regex::new(r"<block:([^>]+)>")
         .expect("Block context attachment regex should be parsed");
-    // Regex to match derp drive objects inserted via at-context. Ex: <notebook:[workflow_id]>
+    // Regex to match bork drive objects inserted via at-context. Ex: <notebook:[workflow_id]>
     pub static ref DRIVE_OBJECT_ATTACHMENT_REGEX: Regex = Regex::new(r"<(workflow|notebook|plan|rule):([^>]+)>")
         .expect("Drive object attachment regex should be parsed");
     // Regex to match <change:filename:line_start-line_end> patterns

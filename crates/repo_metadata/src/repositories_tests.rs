@@ -1,9 +1,9 @@
 use std::fs;
 
 use virtual_fs::{Stub, VirtualFS};
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::App;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::App;
 
 use crate::repositories::{stub_git_repository, DetectedRepositories, RepoDetectionSource};
 use crate::watcher::DirectoryWatcher;

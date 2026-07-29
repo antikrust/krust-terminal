@@ -2,20 +2,20 @@ use markdown_parser::markdown_parser::RUNNABLE_BLOCK_MARKDOWN_LANG;
 use markdown_parser::CodeBlockText;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::builder::AnimatedButtonOptions;
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::{
+use bork_core::ui::builder::AnimatedButtonOptions;
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::{
     Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, EventHandler, Fill, Flex,
     FormattedTextElement, HyperlinkUrl, Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentAnchor, ParentElement, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack, Text,
     Wrap,
 };
-use derpui::keymap::Keystroke;
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::units::{IntoPixels, Pixels};
-use derpui::{
+use borkui::keymap::Keystroke;
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::units::{IntoPixels, Pixels};
+use borkui::{
     AppContext, BlurContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, WeakViewHandle,
 };
@@ -30,7 +30,7 @@ use super::utils::{
 use super::AI_ASSISTANT_SVG_PATH;
 use crate::appearance::Appearance;
 use crate::send_telemetry_from_ctx;
-use crate::server::telemetry::{SaveAsWorkflowModalSource, TelemetryEvent, DerpAIActionType};
+use crate::server::telemetry::{SaveAsWorkflowModalSource, TelemetryEvent, BorkAIActionType};
 use crate::ui_components::blended_colors;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
@@ -57,7 +57,7 @@ const WHAT_TO_DO_NEXT_PROMPT: &str = "What should I do next?";
 const IN_FLIGHT_REQUEST_TEXT: &str = "Generating answer...";
 const ACCURACY_NOTICE_TEXT: &str = "AI responses can be inaccurate.";
 const MISSING_CONTEXT_NOTICE_TEXT: &str =
-    "Derp AI might forget earlier answers as conversations get long.";
+    "Bork AI might forget earlier answers as conversations get long.";
 
 lazy_static::lazy_static! {
     static ref SCROLL_BUFFER_OFFSET_PX: Pixels = (10.).into_pixels();
@@ -145,8 +145,8 @@ impl TypedActionView for Transcript {
                     ctx.clipboard().write(ClipboardContent::plain_text(answer));
                 }
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::DerpAIAction {
-                        action_type: DerpAIActionType::CopyAnswer
+                    TelemetryEvent::BorkAIAction {
+                        action_type: BorkAIActionType::CopyAnswer
                     },
                     ctx
                 );
@@ -202,8 +202,8 @@ impl Transcript {
         }
 
         send_telemetry_from_ctx!(
-            TelemetryEvent::DerpAIAction {
-                action_type: DerpAIActionType::CopyCode
+            TelemetryEvent::BorkAIAction {
+                action_type: BorkAIActionType::CopyCode
             },
             ctx
         );
@@ -216,8 +216,8 @@ impl Transcript {
     ) {
         ctx.emit(TranscriptEvent::PasteInTerminalInput { code_block_index });
         send_telemetry_from_ctx!(
-            TelemetryEvent::DerpAIAction {
-                action_type: DerpAIActionType::InsertIntoInput
+            TelemetryEvent::BorkAIAction {
+                action_type: BorkAIActionType::InsertIntoInput
             },
             ctx
         );
@@ -234,7 +234,7 @@ impl Transcript {
 
         send_telemetry_from_ctx!(
             TelemetryEvent::SaveAsWorkflowModal {
-                source: SaveAsWorkflowModalSource::DerpAIPanel
+                source: SaveAsWorkflowModalSource::BorkAIPanel
             },
             ctx
         );

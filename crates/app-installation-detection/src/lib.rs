@@ -32,13 +32,13 @@ pub fn make_router() -> Router {
             .on_failure(()),
     );
 
-    // We allow requests from localhost, derp.baby and any subdomain of derp.baby.
+    // We allow requests from localhost, bork.baby and any subdomain of bork.baby.
     let allow_origin_predicate =
         AllowOrigin::predicate(|origin: &HeaderValue, _request_parts: &Parts| {
             origin == "http://localhost:8080"
                 || origin == "http://localhost:8082"
-                || origin == "https://derp.baby"
-                || origin.as_bytes().ends_with(b".derp.baby")
+                || origin == "https://bork.baby"
+                || origin.as_bytes().ends_with(b".bork.baby")
         });
 
     let cors = CorsLayer::new()

@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 /// Telemetry events emitted by the third-party harness runtime layer.
 #[derive(Debug, EnumDiscriminants)]
@@ -50,7 +50,7 @@ impl TelemetryEvent for ThirdPartyHarnessTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -81,4 +81,4 @@ impl TelemetryEventDesc for ThirdPartyHarnessTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(ThirdPartyHarnessTelemetryEvent);
+bork_core::register_telemetry_event!(ThirdPartyHarnessTelemetryEvent);

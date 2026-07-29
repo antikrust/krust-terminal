@@ -1,13 +1,13 @@
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex, FormattedTextElement,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::ui_components::button::{Button, ButtonVariant};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity, ViewHandle};
+use borkui::ui_components::button::{Button, ButtonVariant};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity, ViewHandle};
 
 use super::compact_agent_input::CompactAgentInput;
 use crate::context_chips::spacing;
@@ -193,5 +193,5 @@ pub(super) fn build_text_button_content(
 pub(super) fn build_inline_input_content(
     input_view: &ViewHandle<CompactAgentInput>,
 ) -> Box<dyn Element> {
-    derpui::presenter::ChildView::new(input_view).finish()
+    borkui::presenter::ChildView::new(input_view).finish()
 }

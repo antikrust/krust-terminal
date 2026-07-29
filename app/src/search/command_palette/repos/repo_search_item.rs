@@ -3,10 +3,10 @@ use std::path::Path;
 use ai::workspace::WorkspaceMetadata;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text};
-use derpui::fonts::{Properties, Weight};
-use derpui::{AppContext, Element, SingletonEntity};
+use bork_core::ui::theme::Fill;
+use borkui::elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text};
+use borkui::fonts::{Properties, Weight};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::action::search_item::styles;

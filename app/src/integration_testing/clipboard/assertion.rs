@@ -1,5 +1,5 @@
-use derpui::async_assert_eq;
-use derpui::integration::AssertionCallback;
+use borkui::async_assert_eq;
+use borkui::integration::AssertionCallback;
 
 pub fn assert_clipboard_contains_string(string: String) -> AssertionCallback {
     Box::new(move |app, _window_id| {

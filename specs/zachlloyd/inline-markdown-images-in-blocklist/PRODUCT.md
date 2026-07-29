@@ -11,17 +11,17 @@ This feature should make AI responses easier to read when they include screensho
 - a stacked “Images N” card for consecutive block-level image references
 - a framed Mermaid block with a titled header and white diagram canvas
 
-Successfully rendered file-backed images and Mermaid diagrams should both reuse Derp’s existing fullscreen lightbox treatment for click-to-expand viewing.
+Successfully rendered file-backed images and Mermaid diagrams should both reuse Bork’s existing fullscreen lightbox treatment for click-to-expand viewing.
 
 When an image cannot be resolved or the format is unsupported, the block list should continue to show the original Markdown text rather than rendering a broken or partial image UI.
 
 ## Problem
 AI responses increasingly include Markdown image references and Mermaid diagrams. In the AI block list today, that content is more useful as source text than as rendered output, but it is much harder to read and scan when the user actually wants to view the visual result inline.
 
-Derp already supports Markdown image blocks elsewhere in the app and already has Mermaid-to-SVG rendering for notebook Markdown. The AI block list currently lacks the equivalent presentation and interaction model. That creates three problems:
+Bork already supports Markdown image blocks elsewhere in the app and already has Mermaid-to-SVG rendering for notebook Markdown. The AI block list currently lacks the equivalent presentation and interaction model. That creates three problems:
 
 - visual content in AI responses is harder to understand because users see raw Markdown instead of the image or diagram
-- rendered output is inconsistent with other Markdown-capable surfaces in Derp
+- rendered output is inconsistent with other Markdown-capable surfaces in Bork
 - copy and selection behavior for mixed text-and-image content is undefined unless we specify it explicitly
 
 ## Goals
@@ -29,15 +29,15 @@ Derp already supports Markdown image blocks elsewhere in the app and already has
 - Support both absolute file paths and relative file paths.
 - Resolve relative file paths relative to the current working directory of the session associated with the AI block.
 - Support Mermaid diagrams in the same overall rollout, rendering them inline from their Markdown source.
-- Ensure the feature works across Derp’s supported platforms, including WASM.
-- Use the same supported image format set that Derp’s existing Markdown/image rendering stack already supports today: JPEG/JPG, PNG, GIF, WebP, and SVG.
+- Ensure the feature works across Bork’s supported platforms, including WASM.
+- Use the same supported image format set that Bork’s existing Markdown/image rendering stack already supports today: JPEG/JPG, PNG, GIF, WebP, and SVG.
 - Show the referenced file link below each successfully rendered file-backed image in the AI block list.
 - Preserve stable copy behavior for rendered images and Mermaid diagrams without introducing a new cross-renderer selection model in this first release.
 - Allow right-click copy on a rendered image or Mermaid diagram, copying the underlying Markdown source rather than image bytes.
 - Fall back cleanly to the raw Markdown source when the image cannot be found, cannot be resolved, or is not a supported format.
 - Gate block list image rendering behind a dedicated block-list-specific feature flag.
 - Respect the existing Mermaid rendering flag in addition to the new block list image flag, so Mermaid diagrams render in the AI block list only when both flags are enabled.
-- Reuse Derp’s existing fullscreen lightbox treatment for both rendered file-backed images and rendered Mermaid diagrams.
+- Reuse Bork’s existing fullscreen lightbox treatment for both rendered file-backed images and rendered Mermaid diagrams.
 
 ## Non-Goals
 - Supporting remote image URLs in this first release.
@@ -45,7 +45,7 @@ Derp already supports Markdown image blocks elsewhere in the app and already has
 - Adding image editing, resizing controls, zoom controls, or image-specific toolbars.
 - Copying image bytes to the clipboard.
 - Adding drag-and-drop, save-image, or open-image actions.
-- Supporting additional image formats beyond the set Derp already renders today.
+- Supporting additional image formats beyond the set Bork already renders today.
 - Shipping file-backed images first and Mermaid later; both are part of the same implementation sequence.
 
 ## User Experience
@@ -63,7 +63,7 @@ It should work for:
 The first release should support two kinds of inline visual Markdown content:
 
 1. Standard Markdown image references that point to local files.
-2. Mermaid diagrams authored in Markdown that Derp renders into an image representation at runtime.
+2. Mermaid diagrams authored in Markdown that Bork renders into an image representation at runtime.
 
 For file-backed images, the initial supported path types are:
 - absolute filesystem paths
@@ -73,14 +73,14 @@ Relative paths resolve against the current working directory of the session asso
 That working directory should be the one recorded with the AI block when the response was rendered. Relative file paths should be re-resolved against that recorded working directory when the block is later restored or re-rendered.
 
 ### Supported formats
-For file-backed images, the AI block list should support the same image formats Derp’s existing shared image renderer already supports today:
+For file-backed images, the AI block list should support the same image formats Bork’s existing shared image renderer already supports today:
 - JPEG / JPG
 - PNG
 - GIF
 - WebP
 - SVG
 
-If the referenced file exists but is not one of those supported formats, Derp should not attempt a degraded or best-effort render. It should show the original Markdown text exactly as it does today.
+If the referenced file exists but is not one of those supported formats, Bork should not attempt a degraded or best-effort render. It should show the original Markdown text exactly as it does today.
 
 ### File-backed image rendering
 When AI output contains a valid Markdown image whose source resolves to a supported local file, the image should render inline in the normal block list flow where the Markdown image appeared.
@@ -93,12 +93,12 @@ Rendered images should behave like block content in the response:
 There are two distinct file-backed image layouts:
 
 1. Inline image runs
-When multiple parser-recognized Markdown image references appear on the same line, separated only by whitespace, Derp should render them as a horizontal image row:
+When multiple parser-recognized Markdown image references appear on the same line, separated only by whitespace, Bork should render them as a horizontal image row:
 - each image appears above its own visible source-path label
 - each item preserves aspect ratio
 - the row stays left-aligned in the response flow
 - the path label under each image keeps the existing hover highlight and click-to-open behavior for file links
-- if that path points to a binary file such as PNG, JPG, GIF, or WebP, activating the path should use the platform-default opener instead of Derp's editor or the user's configured `$EDITOR`
+- if that path points to a binary file such as PNG, JPG, GIF, or WebP, activating the path should use the platform-default opener instead of Bork's editor or the user's configured `$EDITOR`
 
 2. Block-level image groups
 When Markdown images appear as standalone block items on separate lines, consecutive successfully rendered images should be grouped into a bordered card:
@@ -108,17 +108,17 @@ When Markdown images appear as standalone block items on separate lines, consecu
 - binary file paths in that row should open with the platform-default application rather than any editor target
 - unsupported or unresolved images should fall back to raw Markdown rather than appearing inside the grouped card
 
-For file-backed images that render successfully, Derp should also show the referenced file link/path in the layout appropriate for that treatment:
+For file-backed images that render successfully, Bork should also show the referenced file link/path in the layout appropriate for that treatment:
 - the displayed link text should use the file path/source text from the Markdown image reference
 - it should participate in the normal link-highlighting and click behavior users already expect for file links in AI block content
-- binary file links should open with the operating system's default file opener; on macOS this means using `open` rather than routing through Derp's editor or `$EDITOR`
+- binary file links should open with the operating system's default file opener; on macOS this means using `open` rather than routing through Bork's editor or `$EDITOR`
 - it should remain visible in restored conversations the same way it does for newly rendered output
 
 If a Markdown image reference cannot be resolved to an existing local file, the block list should show the original Markdown image text instead of a rendered image.
 
 Rendered file-backed images should also support click-to-expand behavior:
-- clicking a rendered image opens it in Derp’s existing fullscreen lightbox treatment
-- the lightbox should reuse the same fullscreen overlay treatment already used elsewhere in Derp rather than introducing a new one-off viewer
+- clicking a rendered image opens it in Bork’s existing fullscreen lightbox treatment
+- the lightbox should reuse the same fullscreen overlay treatment already used elsewhere in Bork rather than introducing a new one-off viewer
 - when the current AI message contains multiple successfully rendered visual items, the lightbox should allow previous/next navigation across those visuals in source order
 - for file-backed images, the fullscreen viewer should keep showing the image source/path as descriptive text
 
@@ -159,9 +159,9 @@ For file-backed images, if any of the following are true:
 - the format is unsupported
 - the asset cannot be loaded successfully
 
-then Derp should show the original Markdown image syntax inline, matching current behavior, instead of rendering an error-specific image container.
+then Bork should show the original Markdown image syntax inline, matching current behavior, instead of rendering an error-specific image container.
 
-For Mermaid diagrams, if rendering fails, Derp should show the original Mermaid Markdown source instead of a rendered diagram.
+For Mermaid diagrams, if rendering fails, Bork should show the original Mermaid Markdown source instead of a rendered diagram.
 
 ### Selection and copy behavior
 This first release should keep the existing block-list selection behavior for text, code blocks, tables, and other already-supported content. It should not introduce a broader refactor to make rendered images and Mermaid diagrams participate in mixed drag-selection across multiple renderer types.
@@ -211,13 +211,13 @@ For restored responses:
 - Absolute file paths render correctly when they point to a supported local image.
 - The initial supported file format set is JPEG/JPG, PNG, GIF, WebP, and SVG.
 - Successfully rendered file-backed images show their source path in the mock-aligned position for their layout, with normal link highlighting behavior.
-- Activating the source path for a rendered binary asset opens it with the operating system's default app instead of Derp's editor or the user's configured `$EDITOR`.
+- Activating the source path for a rendered binary asset opens it with the operating system's default app instead of Bork's editor or the user's configured `$EDITOR`.
 - Mermaid diagrams in AI Markdown render inline in the AI block list only when both the existing Mermaid flag and the new block list image-rendering flag are enabled.
 - Multiple image references on the same line render as a horizontal inline image row with one path label per image.
 - Consecutive standalone image references render as a grouped `Images N` card with thumbnail-plus-path rows.
 - Rendered images and Mermaid diagrams preserve aspect ratio and use the new mock-aligned sizing treatments.
-- If a file cannot be found or the file format is unsupported, Derp shows the original Markdown text rather than a broken rendered state.
-- If Mermaid rendering fails, Derp shows the original Mermaid Markdown source.
+- If a file cannot be found or the file format is unsupported, Bork shows the original Markdown text rather than a broken rendered state.
+- If Mermaid rendering fails, Bork shows the original Mermaid Markdown source.
 - Existing block-list text/code/table selection behavior continues to work as it does today after image rendering is added.
 - Block-level copy actions write the underlying raw Markdown for rendered images and Mermaid diagrams into the clipboard.
 - Right-click copy on a rendered image or Mermaid diagram copies its underlying Markdown source.
@@ -239,7 +239,7 @@ For restored responses:
 - Manual validation with one example each for SVG, GIF, and WebP image references.
 - Manual validation that an inline image run renders as a horizontal row with the path label under each image and the expected link highlighting.
 - Manual validation that consecutive standalone image lines render as an `Images N` card with thumbnail-plus-path rows.
-- Manual validation that clicking the source path for a rendered PNG or other binary image opens it with the platform-default app rather than Derp's editor.
+- Manual validation that clicking the source path for a rendered PNG or other binary image opens it with the platform-default app rather than Bork's editor.
 - Manual validation that a missing local file falls back to the original Markdown image syntax.
 - Manual validation that an unsupported format falls back to the original Markdown image syntax.
 - Manual validation that a Mermaid diagram renders in the new framed block treatment with a white inner canvas.

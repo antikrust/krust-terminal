@@ -1,9 +1,9 @@
 use pathfinder_geometry::vector::vec2f;
 use string_offset::ByteOffset;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::model::CoreEditorModel;
-use derpui::platform::WindowStyle;
-use derpui::App;
+use bork_core::ui::appearance::Appearance;
+use bork_editor::model::CoreEditorModel;
+use borkui::platform::WindowStyle;
+use borkui::App;
 
 use super::MenuSource;
 use crate::auth::AuthStateProvider;

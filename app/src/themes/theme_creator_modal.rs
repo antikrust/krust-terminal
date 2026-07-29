@@ -1,12 +1,12 @@
 use std::default::Default;
 use std::path::PathBuf;
 
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::platform::{FilePickerConfiguration, FileType};
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{Coords, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::platform::{FilePickerConfiguration, FileType};
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{Coords, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -37,7 +37,7 @@ pub enum ThemeCreatorModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

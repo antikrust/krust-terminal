@@ -2,8 +2,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use derpui::integration::{AssertionOutcome, TestStep};
-use derpui::{async_assert, Event, SingletonEntity};
+use borkui::integration::{AssertionOutcome, TestStep};
+use borkui::{async_assert, Event, SingletonEntity};
 
 use super::util::{current_shell_starter_and_version, nonce, ExpectedExitStatus, ExpectedOutput};
 use super::{
@@ -223,7 +223,7 @@ fn switch_to_terminal_mode_and_type_command(
     pane_idx: usize,
     was_ai_mode: Arc<AtomicBool>,
     command: String,
-) -> impl Fn(&mut derpui::App, derpui::WindowId) -> Event + 'static {
+) -> impl Fn(&mut borkui::App, borkui::WindowId) -> Event + 'static {
     move |app, window_id| {
         let tv = terminal_view(app, window_id, tab_idx, pane_idx);
         let is_ai = tv.read(app, |view, ctx| {
@@ -252,7 +252,7 @@ fn restore_ai_mode_if_needed(
     tab_idx: usize,
     pane_idx: usize,
     was_ai_mode: Arc<AtomicBool>,
-) -> impl Fn(&mut derpui::App, derpui::WindowId) + 'static {
+) -> impl Fn(&mut borkui::App, borkui::WindowId) + 'static {
     move |app, window_id| {
         if was_ai_mode.load(Ordering::SeqCst) {
             let tv = terminal_view(app, window_id, tab_idx, pane_idx);
@@ -274,7 +274,7 @@ fn execute_command_step(
     tab_idx: usize,
     pane_idx: usize,
     command: String,
-    validate_output_fn: impl FnMut(&mut derpui::App, derpui::WindowId) -> AssertionOutcome + 'static,
+    validate_output_fn: impl FnMut(&mut borkui::App, borkui::WindowId) -> AssertionOutcome + 'static,
 ) -> TestStep {
     let was_ai_mode = Arc::new(AtomicBool::new(false));
     let was_ai_mode_for_restore = was_ai_mode.clone();

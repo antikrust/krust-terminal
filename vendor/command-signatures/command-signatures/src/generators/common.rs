@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::collections::HashMap;
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     CommandBuilder, Generator, GeneratorResults, GeneratorResultsCollector, Suggestion,
 };
 

@@ -1,13 +1,13 @@
 ---
 name: add-telemetry
-description: Add telemetry events to track user behavior or system events in the Derp codebase. Use when instrumenting new features, debugging issues, or measuring product metrics.
+description: Add telemetry events to track user behavior or system events in the Bork codebase. Use when instrumenting new features, debugging issues, or measuring product metrics.
 ---
 
 # add-telemetry
 
 ## Overview
 
-Derp uses a trait-based telemetry system where feature-specific enums implement the `TelemetryEvent` trait. This approach keeps telemetry events organized by domain rather than in one giant enum.
+Bork uses a trait-based telemetry system where feature-specific enums implement the `TelemetryEvent` trait. This approach keeps telemetry events organized by domain rather than in one giant enum.
 
 **Important**: Before implementing telemetry, collaborate with the user to:
 - Define what events should be tracked and when
@@ -29,7 +29,7 @@ Add a new variant to an enum that implements `TelemetryEvent`, or create a new e
 ```rust
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
@@ -86,7 +86,7 @@ impl TelemetryEvent for YourFeatureTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 ```
@@ -124,7 +124,7 @@ impl TelemetryEventDesc for YourFeatureTelemetryEventDiscriminants {
 At the end of your telemetry module, register the event:
 
 ```rust
-derp_core::register_telemetry_event!(YourFeatureTelemetryEvent);
+bork_core::register_telemetry_event!(YourFeatureTelemetryEvent);
 ```
 
 ### 6. Send telemetry events from your code
@@ -132,7 +132,7 @@ derp_core::register_telemetry_event!(YourFeatureTelemetryEvent);
 Use `send_telemetry_from_ctx!` in views or models with a `ViewContext` or `ModelContext`:
 
 ```rust
-use derp_core::send_telemetry_from_ctx;
+use bork_core::send_telemetry_from_ctx;
 
 // In a view update or model method
 send_telemetry_from_ctx!(
@@ -147,7 +147,7 @@ For code with only `AppContext`, use `send_telemetry_from_app_ctx!` instead.
 
 ### 7. Test locally
 
-Run Derp with the `log_named_telemetry_events` feature flag to see telemetry events logged to the console:
+Run Bork with the `log_named_telemetry_events` feature flag to see telemetry events logged to the console:
 
 ```bash
 cargo run --features log_named_telemetry_events

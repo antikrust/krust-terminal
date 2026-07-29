@@ -12,13 +12,13 @@ use remote_server::proto::RipgrepSearchSuccess;
 use remote_server::protocol::RequestId;
 use remote_server::HostId;
 use string_offset::ByteOffset;
-use derp_errors::report_error;
-use derp_ripgrep::search::{Match as RipgrepMatch, Submatch};
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::r#async::SpawnedFutureHandle;
-use derpui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
+use bork_errors::report_error;
+use bork_ripgrep::search::{Match as RipgrepMatch, Submatch};
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::r#async::SpawnedFutureHandle;
+use borkui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
 
 use crate::workspace::view::global_search::view::GlobalSearchEvent;
 use crate::workspace::view::global_search::{GlobalSearchMatch, SearchConfig};
@@ -224,7 +224,7 @@ impl GlobalSearch {
             search_id,
             SearchSource::Local,
             async move {
-                let result = Self::run_derp_ripgrep_cli(
+                let result = Self::run_bork_ripgrep_cli(
                     search_id,
                     pattern,
                     roots,
@@ -240,7 +240,7 @@ impl GlobalSearch {
                     }),
                     Err(err) => {
                         report_error!(
-                            err.context("GlobalSearch: derp_ripgrep CLI search failed or aborted")
+                            err.context("GlobalSearch: bork_ripgrep CLI search failed or aborted")
                         );
                         None
                     }
@@ -403,7 +403,7 @@ impl GlobalSearch {
         }
     }
 
-    async fn run_derp_ripgrep_cli(
+    async fn run_bork_ripgrep_cli(
         search_id: u32,
         pattern: String,
         roots: Vec<PathBuf>,
@@ -413,12 +413,12 @@ impl GlobalSearch {
     ) -> Result<usize> {
         let roots_display: Vec<_> = roots.iter().map(|r| r.display().to_string()).collect();
         log::info!(
-            "GlobalSearch: starting derp_ripgrep CLI search with pattern={pattern}, roots={:?}",
+            "GlobalSearch: starting bork_ripgrep CLI search with pattern={pattern}, roots={:?}",
             roots_display
         );
 
         let stream =
-            derp_ripgrep::search::search_streaming(&[pattern], &roots, ignore_case, multiline)?;
+            bork_ripgrep::search::search_streaming(&[pattern], &roots, ignore_case, multiline)?;
         futures::pin_mut!(stream);
 
         let mut total_match_count: usize = 0;

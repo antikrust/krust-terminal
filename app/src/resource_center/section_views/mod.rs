@@ -2,16 +2,16 @@ pub mod feature_section;
 pub use feature_section::FeatureSectionView;
 pub mod content_section;
 pub use content_section::ContentSectionView;
-use derp_core::features::FeatureFlag;
+use bork_core::features::FeatureFlag;
 pub mod changelog_section;
 pub use changelog_section::ChangelogSectionView;
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
     MouseStateHandle, ParentElement, ScrollbarWidth, Shrinkable,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, ViewContext, ViewHandle};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::resource_center::section_views::feature_section::FeatureSection;

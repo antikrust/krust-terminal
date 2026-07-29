@@ -1,10 +1,10 @@
-# PRODUCT: Derp TUI Conversation Management (CODE-1821)
+# PRODUCT: Bork TUI Conversation Management (CODE-1821)
 
-Linear: [CODE-1821 — Conversation management](https://linear.app/derpdotdev/issue/CODE-1821/conversation-management)
+Linear: [CODE-1821 — Conversation management](https://linear.app/borkdotdev/issue/CODE-1821/conversation-management)
 
 ## Summary
 
-The Derp TUI provides a searchable inline `/conversations` menu for switching its single conversation surface to another user-owned Oz conversation. The menu combines local and cloud history, and selection safely loads and validates the requested conversation before replacing the current transcript.
+The Bork TUI provides a searchable inline `/conversations` menu for switching its single conversation surface to another user-owned Oz conversation. The menu combines local and cloud history, and selection safely loads and validates the requested conversation before replacing the current transcript.
 
 ## Figma
 

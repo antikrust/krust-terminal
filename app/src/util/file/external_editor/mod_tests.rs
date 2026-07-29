@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use derp_util::path::LineAndColumnArg;
+use bork_util::path::LineAndColumnArg;
 
 use super::generate_editor_command;
 

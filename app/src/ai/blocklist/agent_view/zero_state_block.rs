@@ -7,21 +7,21 @@ use itertools::Itertools as _;
 use markdown_parser::{parse_markdown, FormattedText, FormattedTextFragment, FormattedTextLine};
 use parking_lot::FairMutex;
 use settings::Setting;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::Icon;
-use derp_errors::report_if_error;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::Icon;
+use bork_errors::report_if_error;
+use borkui::elements::{
     Clipped, Container, CornerRadius, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::Keystroke;
-use derpui::prelude::{
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::Keystroke;
+use borkui::prelude::{
     Align, ConstrainedBox, Cursor, Empty, Hoverable, MainAxisAlignment, SavePosition,
 };
-use derpui::scene::Border;
-use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui::{
+use borkui::scene::Border;
+use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui::{
     Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -49,7 +49,7 @@ use crate::terminal::{self, prompt, TerminalModel};
 use crate::util::time_format::format_approx_duration_from_now_utc;
 
 const CLOUD_AGENT_DOCS_URL: &str =
-    "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/overview";
+    "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/overview";
 const OZ_UPDATES_SECTION_HEADER: &str = "What's new in Oz";
 
 // The maximum number of Oz updates from the changelog rendered in-line in the 'What's new in Oz section'.
@@ -379,7 +379,7 @@ fn format_session_location(session: &Session, working_directory: Option<&str>) -
     let hostname = session.hostname();
     match session_type {
         SessionType::Local => Some(display_path),
-        SessionType::DerpifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
+        SessionType::BorkifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
     }
 }
 
@@ -598,7 +598,7 @@ fn current_working_directory_for_zero_state(terminal_model: &TerminalModel) -> O
                     .is_some_and(|pending_session_info| {
                         matches!(
                             pending_session_info.session_type,
-                            BootstrapSessionType::DerpifiedRemote
+                            BootstrapSessionType::BorkifiedRemote
                         )
                     });
             (!terminal_model.block_list().is_bootstrapped() && !is_bootstrapping_remote_shell)
@@ -641,7 +641,7 @@ fn render_title_and_description(props: HeaderProps, app: &AppContext) -> Vec<Box
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    icon.to_derpui_icon(
+                    icon.to_borkui_icon(
                         theme
                             .main_text_color(theme.background())
                             .into_solid()
@@ -1094,7 +1094,7 @@ fn render_oz_updates(props: OzUpdatesProps<'_>, app: &AppContext) -> Option<Box<
                                     } else {
                                         Icon::ChevronRight
                                     }
-                                    .to_derpui_icon(theme.sub_text_color(theme.background()))
+                                    .to_borkui_icon(theme.sub_text_color(theme.background()))
                                     .finish(),
                                 )
                                 .with_height(appearance.monospace_font_size())
@@ -1180,7 +1180,7 @@ fn render_oz_updates(props: OzUpdatesProps<'_>, app: &AppContext) -> Option<Box<
                                 .with_child(
                                     ConstrainedBox::new(
                                         Icon::Share3
-                                            .to_derpui_icon(
+                                            .to_borkui_icon(
                                                 theme.sub_text_color(theme.background()),
                                             )
                                             .finish(),
@@ -1194,7 +1194,7 @@ fn render_oz_updates(props: OzUpdatesProps<'_>, app: &AppContext) -> Option<Box<
                         .with_reset_cursor_after_click()
                         .on_click(|_, app, _| {
                             const CHANGELOG_URL: &str =
-                                "https://therob.lol/derp-terminal/help/changelog";
+                                "https://therob.lol/bork-terminal/help/changelog";
                             app.open_url(CHANGELOG_URL);
                         })
                         .with_cursor(Cursor::PointingHand)
@@ -1321,7 +1321,7 @@ where
 }
 
 mod styles {
-    use derp_core::ui::appearance::Appearance;
+    use bork_core::ui::appearance::Appearance;
 
     pub const CONTAINER_VERTICAL_PADDING: f32 = 16.;
     pub const TITLE_MARGIN_BOTTOM: f32 = 8.;

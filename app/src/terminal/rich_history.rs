@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 use std::ops::Sub;
 
-use derpui::elements::{
+use borkui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Icon, ParentElement, Shrinkable,
 };
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::HistoryEntry;
 use crate::appearance::Appearance;

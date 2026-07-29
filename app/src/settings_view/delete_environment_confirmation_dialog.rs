@@ -1,6 +1,6 @@
-use derpui::elements::{ChildView, Container, Dismiss, Empty};
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::elements::{ChildView, Container, Dismiss, Empty};
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

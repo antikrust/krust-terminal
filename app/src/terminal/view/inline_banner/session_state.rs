@@ -1,5 +1,5 @@
 use settings::Setting;
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::settings::{AISettings, AISettingsChangedEvent};
 

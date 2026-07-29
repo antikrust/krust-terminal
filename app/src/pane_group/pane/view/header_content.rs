@@ -3,11 +3,11 @@
 //! This module provides the infrastructure for backing views to declaratively
 //! specify their header content without worrying about draggable behavior.
 
-use derp_core::ui::theme::Fill;
-use derpui::elements::{DraggableState, MouseStateHandle};
-use derpui::fonts::Properties;
-use derpui::text_layout::ClipConfig;
-use derpui::{AppContext, Element};
+use bork_core::ui::theme::Fill;
+use borkui::elements::{DraggableState, MouseStateHandle};
+use borkui::fonts::Properties;
+use borkui::text_layout::ClipConfig;
+use borkui::{AppContext, Element};
 
 /// Closure that renders sharing controls (share button, view-only indicator) for a pane header.
 /// Accepts optional icon color and button size overrides.

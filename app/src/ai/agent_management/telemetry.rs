@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::json;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::ai::agent_management::cloud_setup_guide_view::SetupGuideDocs;
 
@@ -116,9 +116,9 @@ pub enum AgentManagementTelemetryEvent {
     /// User invoked the /continue-locally slash command
     #[cfg(not(target_family = "wasm"))]
     SlashCommandContinueLocally,
-    /// User clicked "Open in Derp" in the tombstone (wasm)
+    /// User clicked "Open in Bork" in the tombstone (wasm)
     #[cfg(target_family = "wasm")]
-    TombstoneOpenInDerp,
+    TombstoneOpenInBork,
     /// User cancelled a cloud run
     CloudRunCancelled { task_id: String },
     /// User forked a conversation
@@ -203,7 +203,7 @@ impl TelemetryEvent for AgentManagementTelemetryEvent {
             #[cfg(not(target_family = "wasm"))]
             AgentManagementTelemetryEvent::SlashCommandContinueLocally => None,
             #[cfg(target_family = "wasm")]
-            AgentManagementTelemetryEvent::TombstoneOpenInDerp => None,
+            AgentManagementTelemetryEvent::TombstoneOpenInBork => None,
             AgentManagementTelemetryEvent::CloudRunCancelled { task_id } => {
                 Some(json!({ "task_id": task_id }))
             }
@@ -226,7 +226,7 @@ impl TelemetryEvent for AgentManagementTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -258,7 +258,7 @@ impl TelemetryEventDesc for AgentManagementTelemetryEventDiscriminants {
             #[cfg(not(target_family = "wasm"))]
             Self::SlashCommandContinueLocally => "AgentManagement.SlashCommandContinueLocally",
             #[cfg(target_family = "wasm")]
-            Self::TombstoneOpenInDerp => "AgentManagement.TombstoneOpenInDerp",
+            Self::TombstoneOpenInBork => "AgentManagement.TombstoneOpenInBork",
             Self::CloudRunCancelled => "AgentManagement.CloudRunCancelled",
             Self::ConversationForked => "AgentManagement.ConversationForked",
         }
@@ -299,7 +299,7 @@ impl TelemetryEventDesc for AgentManagementTelemetryEventDiscriminants {
                 "User invoked /continue-locally to fork a cloud conversation locally"
             }
             #[cfg(target_family = "wasm")]
-            Self::TombstoneOpenInDerp => "User clicked Open in Derp in the tombstone",
+            Self::TombstoneOpenInBork => "User clicked Open in Bork in the tombstone",
             Self::CloudRunCancelled => "User cancelled a cloud run",
             Self::ConversationForked => "User forked a conversation",
         }
@@ -310,4 +310,4 @@ impl TelemetryEventDesc for AgentManagementTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(AgentManagementTelemetryEvent);
+bork_core::register_telemetry_event!(AgentManagementTelemetryEvent);

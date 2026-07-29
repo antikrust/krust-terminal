@@ -1,9 +1,9 @@
 use ai::skills::{SkillProvider, SkillReference, SkillScope};
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use ordered_float::OrderedFloat;
-use derp_core::ui::icons::Icon;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::{AppContext, EntityId, SingletonEntity as _};
+use bork_core::ui::icons::Icon;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::{AppContext, EntityId, SingletonEntity as _};
 
 use crate::ai::skills::SkillManager;
 use crate::terminal::cli_agent_sessions::{CLIAgentInputState, CLIAgentSessionsModel};

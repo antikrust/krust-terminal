@@ -3,16 +3,16 @@ use std::sync::Arc;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use derp_core::settings::ToggleableSetting;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::settings::ToggleableSetting;
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     SavePosition, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Text,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -169,7 +169,7 @@ impl SuggestedUnitTestsView {
     fn render_icon(&self, appearance: &Appearance) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
-                derpui::elements::Icon::new(
+                borkui::elements::Icon::new(
                     Icon::Code2.into(),
                     appearance
                         .theme()

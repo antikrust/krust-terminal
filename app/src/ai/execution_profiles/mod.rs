@@ -4,8 +4,8 @@ pub use cloud_object_models::{
     PROFILE_NAME_MAX_LENGTH,
 };
 use markdown_parser::{FormattedTextFragment, FormattedTextInline};
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, SingletonEntity};
 
 use super::llms::{LLMContextWindow, LLMInfo, LLMPreferences, LLMProvider};
 use crate::cloud_object::model::generic_string_model::StringModel;
@@ -254,7 +254,7 @@ impl StringModel for AIExecutionProfile {
             })
     }
 
-    fn renders_in_derp_drive(&self) -> bool {
+    fn renders_in_bork_drive(&self) -> bool {
         false
     }
 }

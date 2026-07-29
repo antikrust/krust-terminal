@@ -1,10 +1,10 @@
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, ChildView, Container, CornerRadius, Dismiss, Empty, Flex, ParentElement, Radius, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

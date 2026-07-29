@@ -6,16 +6,16 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use derp_cli::agent::Harness;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_errors::report_if_error;
-use derpui::elements::{
+use bork_cli::agent::Harness;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_errors::report_if_error;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -225,7 +225,7 @@ impl HarnessSelector {
             button.set_disabled(is_locked_to_oz, ctx);
             button.set_tooltip(
                 Some(if is_locked_to_oz {
-                    "This conversation is with the Derp Agent, so the cloud handoff will also use Derp"
+                    "This conversation is with the Bork Agent, so the cloud handoff will also use Bork"
                 } else {
                     BUTTON_TOOLTIP
                 }),

@@ -2,24 +2,24 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use string_offset::CharOffset;
-use derp_core::features::FeatureFlag;
-use derp_core::settings::Setting;
-use derp_errors::report_error;
-use derpui::color::ColorU;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::settings::Setting;
+use bork_errors::report_error;
+use borkui::color::ColorU;
+use borkui::elements::{
     self, Align, Border, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex, Highlight, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect, Shrinkable,
     Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::geometry::vector::Vector2F;
-use derpui::keymap::Keystroke;
-use derpui::presenter::ChildView;
-use derpui::text_layout::{ClipConfig, TextStyle};
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::geometry::vector::Vector2F;
+use borkui::keymap::Keystroke;
+use borkui::presenter::ChildView;
+use borkui::text_layout::{ClipConfig, TextStyle};
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -261,7 +261,7 @@ impl WorkflowsMoreInfoView {
             icons::Icon::Rename,
             Some(label.to_owned()),
             self.button_mouse_states.edit_cloud_workflow.clone(),
-            move |ctx: &mut derpui::EventContext<'_>, _, _| {
+            move |ctx: &mut borkui::EventContext<'_>, _, _| {
                 ctx.dispatch_typed_action(TerminalAction::OpenWorkflowModalWithCloudWorkflow(
                     workflow.id,
                 ))
@@ -421,7 +421,7 @@ impl WorkflowsMoreInfoView {
                 Container::new(
                     ConstrainedBox::new(
                         icons::Icon::AlertCircle
-                            .to_derpui_icon(
+                            .to_borkui_icon(
                                 appearance
                                     .theme()
                                     .sub_text_color(appearance.theme().surface_2()),

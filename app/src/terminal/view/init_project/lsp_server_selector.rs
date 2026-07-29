@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
 use lsp::supported_servers::LSPServerType;
-use derpui::elements::{
+use borkui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable,
 };
-use derpui::keymap::Keystroke;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use derpui::ui_components::text::Span;
-use derpui::{AppContext, Element, SingletonEntity, TypedActionView, ViewContext, ViewHandle};
+use borkui::keymap::Keystroke;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use borkui::ui_components::text::Span;
+use borkui::{AppContext, Element, SingletonEntity, TypedActionView, ViewContext, ViewHandle};
 
 use super::{InitProjectBlockAction, InitStepBlock};
 use crate::ai::agent::icons::yellow_stop_icon;

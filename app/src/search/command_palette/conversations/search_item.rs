@@ -1,19 +1,19 @@
 use ordered_float::OrderedFloat;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::color::coloru_with_opacity;
-use derp_core::ui::icons::Icon;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::color::coloru_with_opacity;
+use bork_core::ui::icons::Icon;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     AnchorPair, Container, CrossAxisAlignment, Expanded, Fill, Flex, Highlight, MainAxisSize,
     MouseStateHandle, OffsetPositioning, OffsetType, ParentElement, ParentOffsetBounds,
     PositioningAxis, Stack, Text, XAxisAnchor, YAxisAnchor,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::button::ButtonTooltipPosition;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Gradient, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::button::ButtonTooltipPosition;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Gradient, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;

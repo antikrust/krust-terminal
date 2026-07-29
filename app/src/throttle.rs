@@ -4,7 +4,7 @@ use std::{pin, task};
 use futures_lite::{ready, Stream};
 use pin::Pin;
 use task::{Context, Poll};
-use derpui::r#async::Timer;
+use borkui::r#async::Timer;
 
 pub struct Throttle<S> {
     period: Duration,

@@ -27,10 +27,10 @@ tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
 uuid.workspace = true
-derp_core.workspace = true
-derp_errors.workspace = true
-derpui.workspace = true
-derpui_extras = { workspace = true, features = ["default", "user_preferences-toml"] }
+bork_core.workspace = true
+bork_errors.workspace = true
+borkui.workspace = true
+borkui_extras = { workspace = true, features = ["default", "user_preferences-toml"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rmcp = { workspace = true, features = ["client", "client-side-sse", "auth", "transport-streamable-http-client-reqwest", "transport-child-process"] }

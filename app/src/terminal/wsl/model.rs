@@ -1,7 +1,7 @@
 use itertools::Itertools as _;
-use derp_errors::report_error;
-use derpui::{Entity, ModelContext, SingletonEntity};
-use derpui_extras::user_preferences::registry_backed::KEY_NOT_FOUND_ERR;
+use bork_errors::report_error;
+use borkui::{Entity, ModelContext, SingletonEntity};
+use borkui_extras::user_preferences::registry_backed::KEY_NOT_FOUND_ERR;
 use windows_registry::CURRENT_USER;
 use windows_result::Error as WindowsError;
 

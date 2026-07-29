@@ -7,9 +7,9 @@ pub mod theme_creator_modal;
 pub mod theme_deletion_body;
 pub mod theme_deletion_modal;
 
-use derp_core::ui::theme::DerpTheme;
+use bork_core::ui::theme::BorkTheme;
 
-pub fn onboarding_theme_picker_themes() -> [DerpTheme; 4] {
+pub fn onboarding_theme_picker_themes() -> [BorkTheme; 4] {
     [
         default_themes::phenomenon(),
         default_themes::dark_theme(),

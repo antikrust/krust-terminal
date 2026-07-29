@@ -14,33 +14,33 @@ pub use driver::AgentDriver;
 use driver::AgentDriverError;
 use telemetry::CliTelemetryEvent;
 use tracing::Instrument as _;
-use derp_cli::agent::{
+use bork_cli::agent::{
     AgentCommand, AgentProfileCommand, Harness, OutputFormat, Prompt, RunAgentArgs,
 };
-use derp_cli::api_key::ApiKeyCommand;
-use derp_cli::artifact::ArtifactCommand;
-use derp_cli::environment::{EnvironmentCommand, ImageCommand};
-use derp_cli::federate::FederateCommand;
-use derp_cli::harness_support::{HarnessSupportCommand, ReportArtifactCommand, TaskStatus};
-use derp_cli::integration::IntegrationCommand;
-use derp_cli::mcp::MCPCommand;
-use derp_cli::memory_store::{MemoryCommand, MemoryStoreCommand};
-use derp_cli::model::ModelCommand;
-use derp_cli::provider::ProviderCommand;
-use derp_cli::schedule::ScheduleSubcommand;
-use derp_cli::secret::SecretCommand;
-use derp_cli::share::ShareRequest;
-use derp_cli::task::{MessageCommand, TaskCommand};
-use derp_cli::{CliCommand, GlobalOptions, OZ_HARNESS_ENV};
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derp_graphql::object_permissions::OwnerType;
-use derp_isolation_platform::IsolationPlatformError;
+use bork_cli::api_key::ApiKeyCommand;
+use bork_cli::artifact::ArtifactCommand;
+use bork_cli::environment::{EnvironmentCommand, ImageCommand};
+use bork_cli::federate::FederateCommand;
+use bork_cli::harness_support::{HarnessSupportCommand, ReportArtifactCommand, TaskStatus};
+use bork_cli::integration::IntegrationCommand;
+use bork_cli::mcp::MCPCommand;
+use bork_cli::memory_store::{MemoryCommand, MemoryStoreCommand};
+use bork_cli::model::ModelCommand;
+use bork_cli::provider::ProviderCommand;
+use bork_cli::schedule::ScheduleSubcommand;
+use bork_cli::secret::SecretCommand;
+use bork_cli::share::ShareRequest;
+use bork_cli::task::{MessageCommand, TaskCommand};
+use bork_cli::{CliCommand, GlobalOptions, OZ_HARNESS_ENV};
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use bork_graphql::object_permissions::OwnerType;
+use bork_isolation_platform::IsolationPlatformError;
 #[cfg(not(target_family = "wasm"))]
-use derp_logging::log_file_path;
-use derp_managed_secrets::ManagedSecretManager;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelSpawner, SingletonEntity};
+use bork_logging::log_file_path;
+use bork_managed_secrets::ManagedSecretManager;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelSpawner, SingletonEntity};
 
 use crate::ai::agent::api::convert_conversation::{
     convert_conversation_data_to_ai_conversation, RestorationMode,
@@ -122,7 +122,7 @@ fn maybe_warn_team_api_key(ctx: &AppContext) {
     );
 }
 
-/// Run a Derp CLI command.
+/// Run a Bork CLI command.
 #[tracing::instrument(name = "agent_sdk::run", skip_all, err, fields(tags.cloud_agent = true))]
 pub fn run(
     ctx: &mut AppContext,
@@ -183,7 +183,7 @@ fn dispatch_command(
             schedule::run(ctx, global_options, schedule_cmd)
         }
         CliCommand::Secret(secret_cmd) => {
-            if !FeatureFlag::DerpManagedSecrets.is_enabled() {
+            if !FeatureFlag::BorkManagedSecrets.is_enabled() {
                 return Err(anyhow::anyhow!("invalid value 'secret'"));
             }
             secret::run(ctx, global_options, secret_cmd)
@@ -593,7 +593,7 @@ fn run_task(
                 ));
             }
             match conv_cmd {
-                derp_cli::task::ConversationCommand::Get(args) => {
+                bork_cli::task::ConversationCommand::Get(args) => {
                     ambient::get_conversation(ctx, args.conversation_id)
                 }
             }
@@ -607,11 +607,11 @@ fn run_task(
 /// requires spawning an async task, which requires a ModelContext.
 struct AgentDriverRunner;
 
-impl derpui::Entity for AgentDriverRunner {
+impl borkui::Entity for AgentDriverRunner {
     type Event = ();
 }
 
-impl derpui::SingletonEntity for AgentDriverRunner {}
+impl borkui::SingletonEntity for AgentDriverRunner {}
 
 impl AgentDriverRunner {
     #[tracing::instrument(skip_all, err, fields(
@@ -648,18 +648,18 @@ impl AgentDriverRunner {
             )
             .await?;
 
-        // Wait for Derp Drive to sync before building the task config, since
+        // Wait for Bork Drive to sync before building the task config, since
         // prompt resolution (SavedPrompt -> workflow lookup) and environment
         // resolution (CloudAmbientAgentEnvironment lookup) depend on it.
         setup_events
-            .record_result(SetupStep::DerpDriveSync, async {
+            .record_result(SetupStep::BorkDriveSync, async {
                 if foreground
-                    .spawn(|_, ctx| common::refresh_derp_drive(ctx))
+                    .spawn(|_, ctx| common::refresh_bork_drive(ctx))
                     .await?
                     .await
                     .is_err()
                 {
-                    return Err(AgentDriverError::DerpDriveSyncFailed);
+                    return Err(AgentDriverError::BorkDriveSyncFailed);
                 }
                 Ok(())
             })
@@ -839,7 +839,7 @@ impl AgentDriverRunner {
         task_id_str: String,
         ai_client: Arc<dyn AIClient>,
     ) -> anyhow::Result<Vec<GitCredential>> {
-        let workload_token = derp_isolation_platform::issue_workload_token(Some(
+        let workload_token = bork_isolation_platform::issue_workload_token(Some(
             std::time::Duration::from_secs(5 * 60),
         ))
         .await?
@@ -854,7 +854,7 @@ impl AgentDriverRunner {
         task_id_str: &str,
         args: &RunAgentArgs,
     ) -> Result<(), AgentDriverError> {
-        if derp_isolation_platform::detect().is_none() && args.configure_git_credentials_with_github
+        if bork_isolation_platform::detect().is_none() && args.configure_git_credentials_with_github
         {
             foreground
                 .spawn(|_, _| {
@@ -1110,7 +1110,7 @@ impl AgentDriverRunner {
     }
 
     /// Creates a new task on the server for this agent run, sets the task ID on the driver
-    /// options, and updates the Server API provider so that all subsequent requests to derp-server
+    /// options, and updates the Server API provider so that all subsequent requests to bork-server
     /// contain this new task ID.
     async fn initialize_new_task(
         foreground: &ModelSpawner<Self>,
@@ -1568,7 +1568,7 @@ fn launch_command(
         return dispatch_command(ctx, command, global_options);
     }
 
-    let cli_name = derp_cli::binary_name().unwrap_or_else(|| "derp".to_string());
+    let cli_name = bork_cli::binary_name().unwrap_or_else(|| "bork".to_string());
 
     let auth_state = AuthStateProvider::handle(ctx).as_ref(ctx).get();
     if !auth_state.is_logged_in() {
@@ -1595,7 +1595,7 @@ fn launch_command(
                 dispatched = true;
                 let auth_state = AuthStateProvider::handle(ctx).as_ref(ctx).get();
                 let message = if auth_state.is_api_key_authenticated() {
-                    "Your API key is invalid. Please provide a valid key via '--api-key' or the DERP_API_KEY environment variable.".to_string()
+                    "Your API key is invalid. Please provide a valid key via '--api-key' or the BORK_API_KEY environment variable.".to_string()
                 } else {
                     format!("Your credentials are invalid. Please log in again with `{cli_name} login`.")
                 };
@@ -1617,11 +1617,11 @@ fn launch_command(
     Ok(())
 }
 
-/// Check if we're running within Derp (for example, if this is an invocation of the Derp CLI
-/// within a Derp terminal session).
-pub fn is_running_in_derp() -> bool {
+/// Check if we're running within Bork (for example, if this is an invocation of the Bork CLI
+/// within a Bork terminal session).
+pub fn is_running_in_bork() -> bool {
     std::env::var("TERM_PROGRAM")
-        .map(|v| v == "DerpTerminal")
+        .map(|v| v == "BorkTerminal")
         .unwrap_or(false)
 }
 
@@ -1639,7 +1639,7 @@ fn report_fatal_error(err: anyhow::Error, ctx: &mut AppContext) {
         if let Ok(path) = log_file_path() {
             let _ = write!(
                 message,
-                "\n\nFor more information, check Derp logs at {}",
+                "\n\nFor more information, check Bork logs at {}",
                 path.display()
             );
         }

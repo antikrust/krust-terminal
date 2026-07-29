@@ -1,5 +1,5 @@
 [package]
-name = "derp_managed_secrets"
+name = "bork_managed_secrets"
 version = "0.1.0"
 authors.workspace = true
 publish.workspace = true
@@ -21,11 +21,11 @@ tink-proto = "0.3"
 tink-hybrid = "0.3"
 tracing.workspace = true
 zeroize = "1.8"
-derpui_core.workspace = true
-derp_core.workspace = true
-derp_graphql.workspace = true
+borkui_core.workspace = true
+bork_core.workspace = true
+bork_graphql.workspace = true
 vec1.workspace = true
-derp_isolation_platform.workspace = true
+bork_isolation_platform.workspace = true
 
 # Pure-Rust HPKE implementation (RFC 9180).
 hpke = { version = "0.13", default-features = false, features = ["alloc", "x25519"] }

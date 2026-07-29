@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use derpui::App;
+use borkui::App;
 
 use super::*;
 
 fn initialize_app(app: &App) {
-    app.add_singleton_model(DerpConfig::mock);
+    app.add_singleton_model(BorkConfig::mock);
 }
 
 #[test]

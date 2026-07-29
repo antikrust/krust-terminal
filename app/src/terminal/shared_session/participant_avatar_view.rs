@@ -3,16 +3,16 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use session_sharing_protocol::common::{ParticipantId, ParticipantInfo, Role};
 use session_sharing_protocol::sharer::RoleUpdateReason;
-use derpui::accessibility::AccessibilityContent;
-use derpui::elements::{
+use borkui::accessibility::AccessibilityContent;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Fill, Flex, Hoverable, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use derpui::platform::Cursor;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -207,7 +207,7 @@ impl ParticipantAvatarView {
         Container::new(
             ConstrainedBox::new(
                 Icon::Edit
-                    .to_derpui_icon(appearance.theme().foreground())
+                    .to_borkui_icon(appearance.theme().foreground())
                     .finish(),
             )
             .with_height(8.)
@@ -217,7 +217,7 @@ impl ParticipantAvatarView {
         .with_uniform_padding(2.)
         .with_background(background)
         .with_corner_radius(CornerRadius::with_all(
-            derpui::elements::Radius::Percentage(50.),
+            borkui::elements::Radius::Percentage(50.),
         ))
         .finish()
     }
@@ -488,10 +488,10 @@ pub fn render_revoke_all_button(
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let edit = Icon::Edit
-        .to_derpui_icon(appearance.theme().foreground())
+        .to_borkui_icon(appearance.theme().foreground())
         .finish();
     let slash = Icon::Slash
-        .to_derpui_icon(appearance.theme().terminal_colors().normal.red.into())
+        .to_borkui_icon(appearance.theme().terminal_colors().normal.red.into())
         .finish();
     let mut stack = Stack::new().with_constrain_absolute_children();
 

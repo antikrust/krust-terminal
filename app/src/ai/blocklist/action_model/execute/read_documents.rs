@@ -1,6 +1,6 @@
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::{
@@ -41,7 +41,7 @@ impl ReadDocumentsExecutor {
             return ActionExecution::<ReadDocumentsResult>::InvalidAction;
         };
 
-        // A requested plan may live in Derp Drive without being loaded into this conversation's
+        // A requested plan may live in Bork Drive without being loaded into this conversation's
         // document model (e.g. orchestration children reading parent plans, or plan IDs
         // copy-pasted from another conversation), so fall back to hydrating it on a miss.
         let mut documents = Vec::with_capacity(document_ids.len());
@@ -51,7 +51,7 @@ impl ReadDocumentsExecutor {
             if document.is_none() {
                 AIDocumentModel::handle(ctx).update(ctx, |model, ctx| {
                     if let Err(error) =
-                        model.hydrate_saved_plan_from_derp_drive(*id, conversation_id, ctx)
+                        model.hydrate_saved_plan_from_bork_drive(*id, conversation_id, ctx)
                     {
                         log::warn!(
                             "Failed to hydrate requested plan document {id} from the Library: {error}"

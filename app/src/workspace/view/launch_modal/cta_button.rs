@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use derpui::ViewContext;
+use borkui::ViewContext;
 
 use super::Slide;
 use crate::server::telemetry::TelemetryEvent;

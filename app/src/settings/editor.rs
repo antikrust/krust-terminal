@@ -4,7 +4,7 @@ use enum_iterator::{all, Sequence};
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting as _, SupportedPlatforms, SyncToCloud};
-use derpui::ModelContext;
+use borkui::ModelContext;
 
 #[derive(
     Clone,
@@ -128,8 +128,8 @@ impl TabBehavior {
     }
 }
 
-/// This enum is used to enforce options in the dropdown for selecting a separator with the Derp prompt.
-/// Note that these separators are added at the END of the Derp prompt (used in the case of same line prompt).
+/// This enum is used to enforce options in the dropdown for selecting a separator with the Bork prompt.
+/// Note that these separators are added at the END of the Bork prompt (used in the case of same line prompt).
 #[derive(
     Clone,
     Copy,
@@ -146,7 +146,7 @@ impl TabBehavior {
     description = "Trailing separator character displayed at the end of the prompt.",
     rename_all = "snake_case"
 )]
-pub enum DerpPromptSeparator {
+pub enum BorkPromptSeparator {
     /// No separator for the prompt.
     #[default]
     None,
@@ -158,7 +158,7 @@ pub enum DerpPromptSeparator {
     ChevronSymbol,
 }
 
-impl DerpPromptSeparator {
+impl BorkPromptSeparator {
     pub fn dropdown_item_label(&self) -> &'static str {
         match self {
             Self::None => "None",

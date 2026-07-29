@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use derpui::keymap::EditableBinding;
-use derpui::{AppContext, Entity, EntityId, SingletonEntity, WindowId};
+use borkui::keymap::EditableBinding;
+use borkui::{AppContext, Entity, EntityId, SingletonEntity, WindowId};
 
 use super::WorkspaceAction;
 use crate::util::bindings::{BindingGroup, CustomAction};
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_editable_bindings(vec![
         EditableBinding::new(

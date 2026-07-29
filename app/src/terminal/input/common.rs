@@ -2,18 +2,18 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use vim::vim::{VimMode, VimState};
-use derp_completer::completer::Description;
-use derp_core::features::FeatureFlag;
-use derpui::elements::{
+use bork_completer::completer::Description;
+use bork_core::features::FeatureFlag;
+use borkui::elements::{
     AnchorPair, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, EventHandler, Flex, OffsetPositioning, OffsetType, ParentAnchor,
     ParentElement, ParentOffsetBounds, PositionedElementOffsetBounds, PositioningAxis, Radius,
     Shrinkable, Stack, Text, XAxisAnchor,
 };
-use derpui::fonts::Weight;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, EntityId, SingletonEntity, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, EntityId, SingletonEntity, ViewHandle};
 
 use crate::ai::llms::{should_show_key_icon_for_model, LLMPreferences};
 use crate::ai::{AIRequestUsageModel, BuyCreditsBannerDisplayState};
@@ -47,17 +47,17 @@ pub(super) fn render_vim_status(vim_state: &VimState, appearance: &Appearance) -
     let theme = appearance.theme();
     let ansi_colors = theme.terminal_colors().bright;
     let icon = match vim_state.mode {
-        VimMode::Normal => Icon::VimNormalMode.to_derpui_icon(ansi_colors.green.into()),
+        VimMode::Normal => Icon::VimNormalMode.to_borkui_icon(ansi_colors.green.into()),
         VimMode::Insert => {
             use crate::themes::theme::Blend;
-            Icon::VimInsertMode.to_derpui_icon(
+            Icon::VimInsertMode.to_borkui_icon(
                 theme
                     .background()
                     .blend(&theme.foreground().with_opacity(50)),
             )
         }
-        VimMode::Visual(_) => Icon::VimVisualMode.to_derpui_icon(ansi_colors.blue.into()),
-        VimMode::Replace => Icon::VimReplaceMode.to_derpui_icon(ansi_colors.red.into()),
+        VimMode::Visual(_) => Icon::VimVisualMode.to_borkui_icon(ansi_colors.blue.into()),
+        VimMode::Replace => Icon::VimReplaceMode.to_borkui_icon(ansi_colors.red.into()),
     };
     Container::new(
         Flex::row()

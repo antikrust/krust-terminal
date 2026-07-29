@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use derp_core::ui::theme::DerpTheme;
-use derpui::elements::{Container, Element};
-use derpui::keymap::Keystroke;
-use derpui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
+use bork_core::ui::theme::BorkTheme;
+use borkui::elements::{Container, Element};
+use borkui::keymap::Keystroke;
+use borkui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
 use super::buffer_model::InputBufferModel;
 use super::message_bar::common::render_terminal_message;
@@ -272,7 +272,7 @@ mod internal {
 
             // When we insert rich content (including agent view blocks) we insert it immediately before
             // the active block (unless explicitly inserting below a long-running block). The active
-            // block is a special "derp input" block that often exists even when it isn't user-visible.
+            // block is a special "bork input" block that often exists even when it isn't user-visible.
             //
             // So, for dedupe we check the first visible (non-zero height) item *immediately before the
             // active block*. This avoids false negatives caused by the active block itself.
@@ -458,7 +458,7 @@ impl MessageTransformer<TerminalMessageArgs<'_>> for AttachedTextSelectionMessag
     }
 }
 
-fn message_magenta(theme: &DerpTheme) -> ColorU {
+fn message_magenta(theme: &BorkTheme) -> ColorU {
     let mut color = theme.ansi_fg_magenta();
     color.a = (255. * 0.65) as u8;
     color

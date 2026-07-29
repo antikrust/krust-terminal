@@ -4,26 +4,26 @@ use ::settings::{Setting, ToggleableSetting};
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::channel::ChannelState;
-use derp_core::context_flag::ContextFlag;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::icons::Icon;
-use derp_errors::{report_error, report_if_error};
+use bork_core::channel::ChannelState;
+use bork_core::context_flag::ContextFlag;
+use bork_core::features::FeatureFlag;
+use bork_core::ui::icons::Icon;
+use bork_errors::{report_error, report_if_error};
 #[cfg(not(target_family = "wasm"))]
-use derp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::{
+use bork_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::{
     Align, Border, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, Image, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::ContextPredicate;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::ContextPredicate;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::{
     id, Action, AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -165,7 +165,7 @@ impl From<&MainPageAction> for LoginGatedFeature {
 pub enum MainSettingsPageEvent {
     CheckForUpdate,
     #[allow(dead_code)]
-    OpenDerpDrive,
+    OpenBorkDrive,
     SignupAnonymousUser,
     /// Re-emitted from the embedded billing & usage section.
     Billing(BillingAndUsagePageEvent),
@@ -543,7 +543,7 @@ impl AccountWidget {
                         TextAndIcon::new(
                             TextAndIconAlignment::IconFirst,
                             "Compare plans",
-                            Icon::CoinsStacked.to_derpui_icon(appearance.theme().accent()),
+                            Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
                             MainAxisSize::Min,
                             MainAxisAlignment::Center,
                             vec2f(14., 14.),
@@ -681,7 +681,7 @@ impl AccountWidget {
                             .ui_builder()
                             .link(
                                 "Contact support".into(),
-                                Some("mailto:support@derp.baby".into()),
+                                Some("mailto:support@bork.baby".into()),
                                 None,
                                 self.ui_state_handles.enterprise_contact_us_link.clone(),
                             )
@@ -1048,7 +1048,7 @@ impl SettingsWidget for SettingsSyncWidget {
         let label_info = AdditionalInfo {
             mouse_state: self.tooltip_state.clone(),
             on_click_action: Some(MainPageAction::OpenUrl(
-                "https://therob.lol/derp-terminal/help/terminal/more-features/settings-sync".into(),
+                "https://therob.lol/bork-terminal/help/terminal/more-features/settings-sync".into(),
             )),
             secondary_text: None,
             tooltip_override_text: None,
@@ -1138,7 +1138,7 @@ impl VersionInfoWidget {
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Relaunch Derp",
+                            text: "Relaunch Bork",
                             action: MainPageAction::Relaunch,
                         }),
                     ),
@@ -1155,28 +1155,28 @@ impl VersionInfoWidget {
                             color: faded_text_color,
                         }),
                         Some(CallToActionContent {
-                            text: "Relaunch Derp",
+                            text: "Relaunch Bork",
                             action: MainPageAction::Relaunch,
                         }),
                     ),
                     AutoupdateStage::UnableToUpdateToNewVersion { .. } => (
                         Some(StatusContent {
-                            text: "A new version of Derp is available but can't be installed",
+                            text: "A new version of Bork is available but can't be installed",
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Update Derp manually",
+                            text: "Update Bork manually",
                             // note: the handler for this action is a no-op
                             action: MainPageAction::DownloadUpdate,
                         }),
                     ),
                     AutoupdateStage::UnableToLaunchNewVersion { .. } => (
                         Some(StatusContent {
-                            text: "A new version of Derp is installed but can't be launched.",
+                            text: "A new version of Bork is installed but can't be launched.",
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Update Derp manually",
+                            text: "Update Bork manually",
                             // note: the handler for this action is a no-op
                             action: MainPageAction::DownloadUpdate,
                         }),
@@ -1353,7 +1353,7 @@ impl SettingsWidget for IapCredentialsWidget {
             }
             IapCredentialsState::Failed { message, .. } => (format!("Failed: {message}"), ansi_red),
             IapCredentialsState::EnvInjected { .. } => {
-                ("Using injected token (DERP_IAP_TOKEN)".to_string(), active)
+                ("Using injected token (BORK_IAP_TOKEN)".to_string(), active)
             }
         };
 

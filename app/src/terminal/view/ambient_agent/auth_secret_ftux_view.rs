@@ -1,18 +1,18 @@
-use derp_cli::agent::Harness;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_editor::editor::NavigationKey;
-use derp_managed_secrets::client::SecretOwner;
-use derpui::elements::{
+use bork_cli::agent::Harness;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_editor::editor::NavigationKey;
+use bork_managed_secrets::client::SecretOwner;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement as _, ParentOffsetBounds,
     Radius, Stack, Text, Wrap,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -402,7 +402,7 @@ impl AuthSecretFtuxView {
 
         let leading_icon = ConstrainedBox::new(
             harness_display::icon_for(harness)
-                .to_derpui_icon(icon_color)
+                .to_borkui_icon(icon_color)
                 .finish(),
         )
         .with_width(16.)
@@ -420,7 +420,7 @@ impl AuthSecretFtuxView {
 
         let chevron = ConstrainedBox::new(
             UiIcon::ChevronDown
-                .to_derpui_icon(internal_colors::text_sub(theme, theme.surface_1()).into())
+                .to_borkui_icon(internal_colors::text_sub(theme, theme.surface_1()).into())
                 .finish(),
         )
         .with_width(12.)
@@ -448,7 +448,7 @@ impl AuthSecretFtuxView {
             }
             container.finish()
         })
-        .with_cursor(derpui::platform::Cursor::PointingHand)
+        .with_cursor(borkui::platform::Cursor::PointingHand)
         .on_click(|ctx, _, _| {
             ctx.dispatch_typed_action(AuthSecretFtuxAction::ToggleHarnessMenu);
         })
@@ -461,7 +461,7 @@ impl AuthSecretFtuxView {
                 stack.add_positioned_overlay_child(
                     ChildView::new(menu).finish(),
                     OffsetPositioning::offset_from_parent(
-                        derpui::geometry::vector::vec2f(0., 4.),
+                        borkui::geometry::vector::vec2f(0., 4.),
                         ParentOffsetBounds::WindowByPosition,
                         ParentAnchor::BottomLeft,
                         ChildAnchor::TopLeft,
@@ -767,7 +767,7 @@ impl AuthSecretFtuxView {
             .map(|info| info.learn_more_url)
             .unwrap_or_else(|| learn_more_url_for_harness(self.harness));
         let learn_more_label =
-            format!("Learn more about authentication for {harness_name} in Derp.");
+            format!("Learn more about authentication for {harness_name} in Bork.");
         let learn_more = Hoverable::new(self.learn_more_mouse_state.clone(), move |state| {
             let color = if state.is_hovered() {
                 accent_color
@@ -784,7 +784,7 @@ impl AuthSecretFtuxView {
             .soft_wrap(true)
             .finish()
         })
-        .with_cursor(derpui::platform::Cursor::PointingHand)
+        .with_cursor(borkui::platform::Cursor::PointingHand)
         .on_click(move |ctx, _, _| {
             ctx.dispatch_typed_action(AuthSecretFtuxAction::LearnMore(learn_more_url));
         })
@@ -868,7 +868,7 @@ impl AuthSecretFtuxView {
             .on_click(|ctx, _, _| {
                 ctx.dispatch_typed_action(AuthSecretFtuxAction::ToggleTeamScope);
             })
-            .with_cursor(derpui::platform::Cursor::PointingHand)
+            .with_cursor(borkui::platform::Cursor::PointingHand)
             .finish();
 
         let theme = appearance.theme();
@@ -968,9 +968,9 @@ impl AuthSecretFtuxView {
             inner.finish()
         })
         .with_cursor(if disabled {
-            derpui::platform::Cursor::Arrow
+            borkui::platform::Cursor::Arrow
         } else {
-            derpui::platform::Cursor::PointingHand
+            borkui::platform::Cursor::PointingHand
         })
         .on_click(move |ctx, _, _| {
             if disabled {

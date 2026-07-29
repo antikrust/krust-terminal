@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use session_sharing_protocol::common::SessionId;
-use derp_cli::agent::Harness;
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, SingletonEntity};
+use bork_cli::agent::Harness;
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, SingletonEntity};
 
 use super::{
     artifacts_match_filter, AgentManagementFilters, AgentRunDisplayStatus, ArtifactFilter,

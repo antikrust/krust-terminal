@@ -8,20 +8,20 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use settings::ToggleableSetting;
-use derp::cmd_or_ctrl_shift;
-use derp::features::FeatureFlag;
-use derp::integration_testing::clipboard::assert_clipboard_contains_string;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::{
+use bork::cmd_or_ctrl_shift;
+use bork::features::FeatureFlag;
+use bork::integration_testing::clipboard::assert_clipboard_contains_string;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::{
     assert_view_has_text_selection, clear_blocklist_to_remove_bootstrapped_blocks,
     execute_echo_str, wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::single_terminal_view_for_tab;
-use derp::settings::SelectionSettings;
-use derp_multi_agent_api as api;
-use derpui_core::integration::TestStep;
-use derpui_core::text::SelectionType;
-use derpui_core::{async_assert, Event, SingletonEntity};
+use bork::integration_testing::view_getters::single_terminal_view_for_tab;
+use bork::settings::SelectionSettings;
+use bork_multi_agent_api as api;
+use borkui_core::integration::TestStep;
+use borkui_core::text::SelectionType;
+use borkui_core::{async_assert, Event, SingletonEntity};
 
 use super::new_builder;
 use crate::util::skip_if_powershell_core_2303;
@@ -106,7 +106,7 @@ fn builder_with_setup() -> Builder {
 }
 
 fn markdown_visuals_fixture_directory() -> String {
-    let fixture_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../derpui_core/test_data");
+    let fixture_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../borkui_core/test_data");
     fixture_dir
         .canonicalize()
         .unwrap_or(fixture_dir)

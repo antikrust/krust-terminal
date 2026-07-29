@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use regex::Regex;
-use derp_core::features::FeatureFlag;
-use derp_core::settings::{ChangeEventReason, Setting};
-use derp_errors::report_error;
-use derp_graphql::workspace::FeatureModelChoice;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity, Tracked};
+use bork_core::features::FeatureFlag;
+use bork_core::settings::{ChangeEventReason, Setting};
+use bork_errors::report_error;
+use bork_graphql::workspace::FeatureModelChoice;
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity, Tracked};
 
 use super::team::{DiscoverableTeam, MembershipRole, Team};
 #[cfg(test)]
@@ -113,7 +113,7 @@ pub struct WorkspacesMetadataResponse {
 // independent queries.
 pub struct WorkspacesMetadataWithPricing {
     pub metadata: WorkspacesMetadataResponse,
-    pub pricing_info: Option<derp_graphql::billing::PricingInfo>,
+    pub pricing_info: Option<bork_graphql::billing::PricingInfo>,
 }
 
 pub struct CreateTeamResponse {
@@ -248,7 +248,7 @@ impl UserWorkspaces {
         }
     }
 
-    pub fn is_at_tier_limit_for_some_derp_drive_objects(
+    pub fn is_at_tier_limit_for_some_bork_drive_objects(
         team_uid: ServerId,
         ctx: &AppContext,
     ) -> bool {
@@ -384,7 +384,7 @@ impl UserWorkspaces {
         self.current_team().is_none_or(|team| {
             team.billing_metadata
                 .tier
-                .derp_ai_policy
+                .bork_ai_policy
                 .is_none_or(|policy| {
                     policy.is_prompt_suggestions_toggleable
                         || policy.is_next_command_enabled
@@ -396,7 +396,7 @@ impl UserWorkspaces {
 
     /// Returns `true` if the current team's enterprise status allows AI features that have an
     /// enterprise gate. Non-enterprise teams always pass; enterprise teams pass only if they
-    /// are on the Derp Plan or the build is dogfood (both our internal Derp team and dogfood
+    /// are on the Bork Plan or the build is dogfood (both our internal Bork team and dogfood
     /// team are billed as enterprise).
     pub fn ai_allowed_for_current_team(&self) -> bool {
         !self
@@ -404,7 +404,7 @@ impl UserWorkspaces {
             .is_some_and(|team| team.billing_metadata.customer_type == CustomerType::Enterprise)
             || self
                 .current_team()
-                .is_some_and(|team| team.billing_metadata.is_derp_plan())
+                .is_some_and(|team| team.billing_metadata.is_bork_plan())
             || ChannelState::channel().is_dogfood()
     }
 
@@ -416,7 +416,7 @@ impl UserWorkspaces {
             .is_none_or(|team| {
                 team.billing_metadata
                     .tier
-                    .derp_ai_policy
+                    .bork_ai_policy
                     .is_some_and(|policy| policy.is_prompt_suggestions_toggleable)
             })
     }
@@ -429,7 +429,7 @@ impl UserWorkspaces {
             .is_none_or(|team| {
                 team.billing_metadata
                     .tier
-                    .derp_ai_policy
+                    .bork_ai_policy
                     .is_some_and(|policy| policy.is_code_suggestions_toggleable)
             })
     }
@@ -442,7 +442,7 @@ impl UserWorkspaces {
             .is_none_or(|team| {
                 team.billing_metadata
                     .tier
-                    .derp_ai_policy
+                    .bork_ai_policy
                     .is_some_and(|policy| policy.is_next_command_enabled)
             })
     }
@@ -455,7 +455,7 @@ impl UserWorkspaces {
             .is_none_or(|team| {
                 team.billing_metadata
                     .tier
-                    .derp_ai_policy
+                    .bork_ai_policy
                     .is_some_and(|policy| policy.is_git_operations_ai_enabled)
             })
     }
@@ -471,7 +471,7 @@ impl UserWorkspaces {
                 .is_none_or(|team| {
                     team.billing_metadata
                         .tier
-                        .derp_ai_policy
+                        .bork_ai_policy
                         .is_some_and(|policy| policy.is_voice_enabled)
                 })
     }
@@ -480,7 +480,7 @@ impl UserWorkspaces {
     /// Note that the value may be incorrect if called before the team's billing metadata has been fetched.
     /// For solo users (no workspace), this is controlled by the `SoloUserByok` feature flag.
     /// Anonymous or logged-out users are treated as solo users (account-free BYO): they can
-    /// bring their own keys / subscriptions when `SoloUserByok` is enabled, without a Derp account.
+    /// bring their own keys / subscriptions when `SoloUserByok` is enabled, without a Bork account.
     pub fn is_byo_api_key_enabled(&self, app: &AppContext) -> bool {
         if AuthStateProvider::as_ref(app)
             .get()
@@ -623,7 +623,7 @@ impl UserWorkspaces {
 
     /// Whether Gemini Enterprise (GEAP) credentials should be minted and attached for the
     /// current user. Anonymous/logged-out guard from [`Self::is_byo_api_key_enabled`]:
-    /// a GEAP credential mint is rooted in the user's Derp session, so without one
+    /// a GEAP credential mint is rooted in the user's Bork session, so without one
     /// there is nothing to mint from.
     pub fn is_gemini_enterprise_credentials_enabled(&self, app: &AppContext) -> bool {
         if AuthStateProvider::as_ref(app)
@@ -1587,7 +1587,7 @@ impl UserWorkspaces {
     /// (`Enable`/`Disable`) or editable (`RespectUserSetting`).
     pub fn get_agent_attribution_setting(&self) -> AdminEnablementSetting {
         self.current_team()
-            .map(|team| team.organization_settings.enable_derp_attribution.clone())
+            .map(|team| team.organization_settings.enable_bork_attribution.clone())
             .unwrap_or_default()
     }
 

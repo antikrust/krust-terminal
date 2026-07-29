@@ -1,4 +1,4 @@
-use derpui::text::point::Point;
+use borkui::text::point::Point;
 
 use super::super::Buffer;
 

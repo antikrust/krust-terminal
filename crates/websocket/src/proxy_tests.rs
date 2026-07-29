@@ -179,11 +179,11 @@ fn no_proxy_suffix_with_dot() {
     let _lock = ENV_LOCK.lock();
     clear_proxy_env();
     env::set_var("HTTPS_PROXY", "http://proxy:3128");
-    env::set_var("NO_PROXY", ".derp.baby");
+    env::set_var("NO_PROXY", ".bork.baby");
 
-    assert!(resolved_proxy_tls("sessions.app.derp.baby").is_none());
+    assert!(resolved_proxy_tls("sessions.app.bork.baby").is_none());
 
-    assert!(resolved_proxy_tls("derp.baby").is_some()); // Exact "derp.baby" != ".derp.baby"
+    assert!(resolved_proxy_tls("bork.baby").is_some()); // Exact "bork.baby" != ".bork.baby"
     assert!(resolved_proxy_tls("other.com").is_some());
     clear_proxy_env();
 }
@@ -193,13 +193,13 @@ fn no_proxy_suffix_without_dot() {
     let _lock = ENV_LOCK.lock();
     clear_proxy_env();
     env::set_var("HTTPS_PROXY", "http://proxy:3128");
-    env::set_var("NO_PROXY", "derp.baby");
+    env::set_var("NO_PROXY", "bork.baby");
 
-    // "sessions.app.derp.baby" ends with ".derp.baby" → matches
-    assert!(resolved_proxy_tls("sessions.app.derp.baby").is_none());
+    // "sessions.app.bork.baby" ends with ".bork.baby" → matches
+    assert!(resolved_proxy_tls("sessions.app.bork.baby").is_none());
     // Exact match too
-    assert!(resolved_proxy_tls("derp.baby").is_none());
-    assert!(resolved_proxy_tls("notderp.baby").is_some());
+    assert!(resolved_proxy_tls("bork.baby").is_none());
+    assert!(resolved_proxy_tls("notbork.baby").is_some());
     clear_proxy_env();
 }
 

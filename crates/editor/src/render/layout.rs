@@ -5,15 +5,15 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use markdown_parser::FormattedTextInline;
-use derpui_core::color::ColorU;
-use derpui_core::fonts::TextLayoutSystem;
+use borkui_core::color::ColorU;
+use borkui_core::fonts::TextLayoutSystem;
 #[cfg(test)]
-use derpui_core::fonts::{Style, Weight};
-use derpui_core::text_layout::{
+use borkui_core::fonts::{Style, Weight};
+use borkui_core::text_layout::{
     ClipConfig, LayoutCache, Line, StyleAndFont, TextAlignment, TextBorder, TextFrame, TextStyle,
 };
-use derpui_core::units::{IntoPixels, Pixels};
-use derpui_core::{AppContext, LayoutContext};
+use borkui_core::units::{IntoPixels, Pixels};
+use borkui_core::{AppContext, LayoutContext};
 
 use super::model::{BlockSpacing, ParagraphStyles, RenderState, RichTextStyles};
 use crate::content::text::{BufferBlockStyle, TextStylesWithMetadata};

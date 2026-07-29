@@ -3,16 +3,16 @@ use std::time::Duration;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use uuid::Uuid;
-use derpui::elements::{
+use borkui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     DropShadow, EventHandler, Expanded, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning,
     Padding, ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Radius,
     SavePosition, Stack,
 };
-use derpui::keymap::Keystroke;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::keymap::Keystroke;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     WindowId,
 };
@@ -431,7 +431,7 @@ impl AgentToast {
         appearance: &Appearance,
         keystroke: Keystroke,
     ) -> Box<dyn Element> {
-        use derpui::ui_components::keyboard_shortcut::KeyboardShortcut;
+        use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
 
         use crate::ui_components::blended_colors;
 

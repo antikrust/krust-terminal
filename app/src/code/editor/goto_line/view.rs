@@ -1,10 +1,10 @@
 #![cfg_attr(target_family = "wasm", allow(dead_code, unused_imports))]
 
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, DropShadow, Flex,
     ParentElement, Radius, Text,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

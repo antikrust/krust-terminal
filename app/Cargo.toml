@@ -1,20 +1,20 @@
 [package]
-authors = ["Derp Team <dev@derp.baby>"]
-default-run = "derp"
+authors = ["Bork Team <dev@bork.baby>"]
+default-run = "bork"
 description = "The cloud-backed terminal for individuals and teams"
 edition = "2021"
 autobins = false
-name = "derp"
+name = "bork"
 version = "0.1.0"
 publish.workspace = true
 license.workspace = true
 
 [lib]
-name = "derp"
+name = "bork"
 path = "src/lib.rs"
 
 [[bin]]
-name = "derp"
+name = "bork"
 path = "src/bin/oss.rs"
 test = false
 
@@ -122,7 +122,7 @@ line-ending.workspace = true
 log.workspace = true
 log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 lsp.workspace = true
-derp_logging.workspace = true
+bork_logging.workspace = true
 sentry = { workspace = true, optional = true }
 lz4_flex = "0.11"
 markdown_parser.workspace = true
@@ -199,33 +199,33 @@ unindent = "0.1.7"
 url = { workspace = true, features = ["serde"] }
 urlocator.workspace = true
 uuid.workspace = true
-derp_cli.workspace = true
+bork_cli.workspace = true
 validator = "0.19.0"
 variant_count = "1.1.0"
 vec1.workspace = true
 version-compare.workspace = true
 vte.workspace = true
 walkdir.workspace = true
-derp-workflows.workspace = true
-derp_assets.workspace = true
-derp_channel_config.workspace = true
-derp_completer.workspace = true
-derp_core.workspace = true
-derp_errors = { workspace = true, features = ["reqwest-errors"] }
-derp_editor.workspace = true
-derp_graphql.workspace = true
-derp_js = { workspace = true, optional = true }
-derp_search_core.workspace = true
-derp_server_auth.workspace = true
-derp_server_client.workspace = true
-derp_util.workspace = true
-derpui = { workspace = true, features = ["schema_gen", "settings_value"] }
-derpui_core.workspace = true
+bork-workflows.workspace = true
+bork_assets.workspace = true
+bork_channel_config.workspace = true
+bork_completer.workspace = true
+bork_core.workspace = true
+bork_errors = { workspace = true, features = ["reqwest-errors"] }
+bork_editor.workspace = true
+bork_graphql.workspace = true
+bork_js = { workspace = true, optional = true }
+bork_search_core.workspace = true
+bork_server_auth.workspace = true
+bork_server_client.workspace = true
+bork_util.workspace = true
+borkui = { workspace = true, features = ["schema_gen", "settings_value"] }
+borkui_core.workspace = true
 voice_input = { workspace = true, optional = true }
-derpui_extras = { workspace = true, features = ["default", "user_preferences-toml"] }
+borkui_extras = { workspace = true, features = ["default", "user_preferences-toml"] }
 syntax_tree.workspace = true
 languages.workspace = true
-derp_terminal.workspace = true
+bork_terminal.workspace = true
 websocket.workspace = true
 wgpu = { workspace = true, optional = true }
 natural_language_detection.workspace = true
@@ -239,15 +239,15 @@ counter = "0.6.0"
 typed-path.workspace = true
 urlencoding = "2.1.3"
 mime_guess = "2.0"
-derp_multi_agent_api.workspace = true
+bork_multi_agent_api.workspace = true
 remote_server.workspace = true
 repo_metadata.workspace = true
 vim.workspace = true
 rmcp.workspace = true
-derp_isolation_platform.workspace = true
-derp_ripgrep.workspace = true
-derp_managed_secrets.workspace = true
-derp_multi_agent_client.workspace = true
+bork_isolation_platform.workspace = true
+bork_ripgrep.workspace = true
+bork_managed_secrets.workspace = true
+bork_multi_agent_client.workspace = true
 local_control.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -305,7 +305,7 @@ tokio.workspace = true
 tokio-util.workspace = true
 tracing-opentelemetry.workspace = true
 tracing-subscriber.workspace = true
-derp_errors = { workspace = true, features = ["tokio-errors", "websocket-errors"] }
+bork_errors = { workspace = true, features = ["tokio-errors", "websocket-errors"] }
 
 # AWS SDK (loading credentials for BYO LLM)
 aws-config = { version = "1.8.16", features = ["credentials-login"] }
@@ -318,11 +318,11 @@ rquickjs = { workspace = true, optional = true }
 rustls.workspace = true
 syntect = "5.0"
 sysinfo.workspace = true
-derp-command-signatures = { workspace = true, features = ["embed-signatures"] }
+bork-command-signatures = { workspace = true, features = ["embed-signatures"] }
 is_executable = "1.0.1"
 gethostname = "1.1.0"
 watcher.workspace = true
-derp_files.workspace = true
+bork_files.workspace = true
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 console_error_panic_hook = { version = "0.1.6" }
@@ -344,9 +344,9 @@ getrandom = { version = "0.2", features = ["js"] }
 gloo.workspace = true
 serde-wasm-bindgen = "0.6.5"
 # For wasm, we don't use the feature "embed-signatures".
-derp-command-signatures = { workspace = true }
+bork-command-signatures = { workspace = true }
 web-sys.workspace = true
-derp_web_event_bus.workspace = true
+bork_web_event_bus.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 cvt = "0.1.1"
@@ -412,16 +412,16 @@ mockito.workspace = true
 serial_test = "0.8.0"
 sum_tree = { workspace = true, features = ["test-util"] }
 virtual-fs.workspace = true
-derp_completer = { workspace = true, features = ["test-util"] }
-derp_core = { workspace = true, features = ["test-util"] }
-derp_editor = { workspace = true, features = ["test-util"] }
-derp_server_client = { workspace = true, features = ["test-util"] }
-derp_server_auth = { workspace = true, features = ["test-util"] }
-derp_terminal = { workspace = true, features = ["test-util"] }
-derpui = { workspace = true, features = ["test-util"] }
-derpui_core = { workspace = true, features = ["test-util"] }
-derpui_extras = { workspace = true, features = ["test-util"] }
-derp_files = { workspace = true, features = ["test-util"] }
+bork_completer = { workspace = true, features = ["test-util"] }
+bork_core = { workspace = true, features = ["test-util"] }
+bork_editor = { workspace = true, features = ["test-util"] }
+bork_server_client = { workspace = true, features = ["test-util"] }
+bork_server_auth = { workspace = true, features = ["test-util"] }
+bork_terminal = { workspace = true, features = ["test-util"] }
+borkui = { workspace = true, features = ["test-util"] }
+borkui_core = { workspace = true, features = ["test-util"] }
+borkui_extras = { workspace = true, features = ["test-util"] }
+bork_files = { workspace = true, features = ["test-util"] }
 repo_metadata = { workspace = true, features = ["test-util"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
@@ -435,14 +435,14 @@ prost-build.workspace = true
 sha2.workspace = true
 tempfile.workspace = true
 walkdir = "2.3.2"
-derp_util.workspace = true
+bork_util.workspace = true
 
 [target.'cfg(windows)'.build-dependencies]
 embed-resource = "3.0"
 
 # Note that we support channel-specific enables for these features
 [features]
-tui = ["derpui_core/tui"]
+tui = ["borkui_core/tui"]
 ai_resume_button = []
 autoupdate = []
 figma_detection = []
@@ -468,7 +468,7 @@ command_predictor = []
 context_line_review_comments = []
 completions_v2 = [
     "plugin_host",
-    "derp_completer/v2",
+    "bork_completer/v2",
     "dep:command-signatures-v2",
 ]
 crash_reporting = [
@@ -476,8 +476,8 @@ crash_reporting = [
     "dep:sentry-log",
     "dep:minidumper",
     "dep:crash-handler",
-    "derp_logging/crash_reporting",
-    "derp_errors/crash_reporting",
+    "bork_logging/crash_reporting",
+    "bork_errors/crash_reporting",
     "ai/crash_reporting",
 ]
 creating_shared_sessions = []
@@ -500,7 +500,7 @@ default = [
     "rect_selection",
     "reload_stale_conversation_files",
     "loginless_conversion",
-    "derp_packs",
+    "bork_packs",
     "ai_rules",
     "suggested_rules",
     "default_waterfall_mode",
@@ -576,7 +576,7 @@ default = [
     "ambient_agents_command_line",
     "ambient_agents_image_upload",
     "scheduled_ambient_agents",
-    "derp_managed_secrets",
+    "bork_managed_secrets",
     "v4a_file_diffs",
     "classic_completions",
     "force_classic_completions",
@@ -606,7 +606,7 @@ default = [
     "inline_history_menu",
     "inline_model_selector",
     "oz_launch_modal",
-    "open_derp_launch_modal",
+    "open_bork_launch_modal",
     "orchestration_launch_modal",
     "new_tab_styling",
     "richtext_multiselect",
@@ -632,7 +632,7 @@ default = [
     "revert_to_checkpoints",
     "rewind_slash_command",
     "hoa_code_review",
-    "derpify_footer",
+    "borkify_footer",
     "agent_toolbar_editor",
     "configurable_toolbar",
     "transfer_control_tool",
@@ -649,7 +649,7 @@ default = [
     "codex_notifications",
     "codex_plugin",
     "trim_trailing_blank_lines",
-    "open_derp_new_settings_modes",
+    "open_bork_new_settings_modes",
     "skip_firebase_anonymous_user",
     "settings_file",
     "directory_tab_colors",
@@ -693,9 +693,9 @@ global_ai_analytics_banner = []
 global_ai_analytics_collection = []
 grab_the_baton_editing = []
 grep_tool = []
-# This feature is enabled in graphical builds of Derp, and groups together other features
+# This feature is enabled in graphical builds of Bork, and groups together other features
 # that are not needed in headless builds. Because Cargo features are additive, the default
-# feature set is for a minimal build of Derp, and we add on GUI-specific features here.
+# feature set is for a minimal build of Bork, and we add on GUI-specific features here.
 # For the most part, including GUI code in headless builds is fine; the main use case is
 # for things that pull in external dependencies.
 gui = ["voice_input"]
@@ -713,15 +713,15 @@ github_pr_prompt_chip = []
 create_project_flow = []
 agent_mode_evals = [
     "integration_tests",
-    "derpui/defer_scene_build",
+    "borkui/defer_scene_build",
     "full_source_code_embedding",
     "cross_repo_context",
     "cloud_object_models/agent_mode_evals",
     "rust-embed/debug-embed",
-    "derpui/log_named_telemetry_events",
-    "derp_logging/agent_mode_evals",
-    "derp_multi_agent_client/agent_mode_evals",
-    "derp_server_client/agent_mode_evals",
+    "borkui/log_named_telemetry_events",
+    "bork_logging/agent_mode_evals",
+    "bork_multi_agent_client/agent_mode_evals",
+    "bork_server_client/agent_mode_evals",
 ]
 ambient_agents_command_line = []
 ambient_agents_image_upload = []
@@ -732,7 +732,7 @@ inline_slash_commands = ["agent_view"]
 # Enable this feature to track heap usage and automatically produce a heap
 # profile report when app memory usage exceeds a 10GB threshold.
 #
-# Enabled on DerpDev by default.
+# Enabled on BorkDev by default.
 heap_usage_tracking = ["jemalloc_pprof", "crash_reporting"]
 image_as_context = []
 in_band_generators_ssh = []
@@ -763,7 +763,7 @@ local_fs = [
     "lsp/local_fs",
     "persistence/local_fs",
     "repo_metadata/local_fs",
-    "derp_core/local_fs",
+    "bork_core/local_fs",
 ]
 log_expensive_frames_in_sentry = []
 jupyter_notebook_rendering = []
@@ -782,10 +782,10 @@ resize_fix = []
 pluggable_notifications = []
 # This enables `read_files` to support images.
 read_image_files = []
-# This feature enables plugin support in Derp. Note that its typically checked
+# This feature enables plugin support in Bork. Note that its typically checked
 # directly, rather than via the `FeatureFlag` enum, because its value is
 # required early in the app lifecycle prior to `FeatureFlag` initialization.
-plugin_host = ["dep:rquickjs", "dep:derp_js", "derp_cli/plugin_host"]
+plugin_host = ["dep:rquickjs", "dep:bork_js", "bork_cli/plugin_host"]
 # Enable this feature to automatically perform CPU profiling via pprof.  The
 # generated profile will be written to profile.pb in the current directory.
 # NOTE: This may slow down program execution.
@@ -799,7 +799,7 @@ remote_codebase_indexing = ["full_source_code_embedding"]
 # This feature should only be enabled when building a release bundle with
 # the bundle script, and can be used to conditionally enable functionality
 # accordingly.
-release_bundle = ["rust-embed/debug-embed", "derp_core/release_bundle"]
+release_bundle = ["rust-embed/debug-embed", "bork_core/release_bundle"]
 render_agent_mode_output_markdown = []
 render_continuous_block_selections_with_single_border = []
 rich_history = []
@@ -810,24 +810,24 @@ settings_file = []
 sequential_storage = []
 session_sharing = []
 session_sharing_acls = []
-skip_login = ["derp_server_client/skip_login"]
+skip_login = ["bork_server_client/skip_login"]
 # This feature should only be enabled when building a self-contained binary with the bundle script.
-standalone = ["derp_assets/standalone", "derp_core/standalone"]
+standalone = ["bork_assets/standalone", "bork_core/standalone"]
 prompt_suggestions_via_maa = []
 voice_input = ["dep:voice_input"]
 system_theme = []
 tab_close_button_on_left = []
 team_features_override = []
-test-util = ["cloud_object_client/test-util", "derp_server_auth/test-util"]
+test-util = ["cloud_object_client/test-util", "bork_server_auth/test-util"]
 team_workflows = ["team_features_override"]
 toggle_bootstrap_block = []
 # Feature enabled only when app is compiled for integration tests.
 integration_tests = [
-    "derp_cli/integration_tests",
-    "derpui/integration_tests",
-    "derpui/test-util",
-    "derp_core/integration_tests",
-    "derp_server_client/integration_tests",
+    "bork_cli/integration_tests",
+    "borkui/integration_tests",
+    "borkui/test-util",
+    "bork_core/integration_tests",
+    "bork_server_client/integration_tests",
 ]
 traces = []
 viewing_shared_sessions = []
@@ -855,7 +855,7 @@ drive_objects_as_context = []
 iterm_images = []
 validate_autosuggestions = []
 autoupdate_ui_revamp = []
-derp_packs = []
+bork_packs = []
 suggested_rules = []
 command_correction_key = []
 full_source_code_embedding = []
@@ -925,7 +925,7 @@ revert_to_checkpoints = []
 rewind_slash_command = []
 agent_view = []
 agent_view_block_context = ["agent_view"]
-derp_managed_secrets = []
+bork_managed_secrets = []
 v4a_file_diffs = []
 agent_tips = []
 agent_toolbar_editor = ["agent_view"]
@@ -950,7 +950,7 @@ restore_prompt_on_inline_model_selector_search = []
 oz_platform_skills = []
 oz_identity_federation = []
 oz_launch_modal = []
-open_derp_launch_modal = []
+open_bork_launch_modal = []
 orchestration_launch_modal = []
 new_tab_styling = []
 file_based_mcp = []
@@ -964,14 +964,14 @@ queue_slash_command = []
 queued_prompts_v2 = ["queue_slash_command"]
 inline_menu_headers = []
 directory_tab_colors = []
-open_derp_new_settings_modes = []
+open_bork_new_settings_modes = []
 hoa_code_review = []
 vertical_tabs = []
 vertical_tabs_summary_mode = []
 tab_configs = []
 grouped_tabs = []
 pinned_tabs = []
-derp_control_cli = []
+bork_control_cli = []
 agent_harness = []
 oz_handoff = []
 handoff_local_cloud = []
@@ -984,7 +984,7 @@ solo_user_byok = []
 billing_and_usage_page_v2 = []
 gpt_configurable_context_window = []
 configurable_toolbar = []
-derpify_footer = []
+borkify_footer = []
 hoa_onboarding_flow = []
 git_operations_in_code_review = []
 hoa_remote_control = []
@@ -996,11 +996,11 @@ handoff_cloud_cloud = ["cloud_mode_setup_v2"]
 git_credential_refresh = []
 prompt_cache_expiry_warning = []
 
-[package.metadata.bundle.bin.derp]
+[package.metadata.bundle.bin.bork]
 category = "public.app-category.developer-tools"
 copyright = "© 2025, Denver Technologies, Inc"
-identifier = "derp.baby.Derp"
-name = "Derp"
+identifier = "bork.baby.Bork"
+name = "Bork"
 resources = ["assets/onboarding"]
 icon = ["channels/oss/icon/no-padding/512x512.png", "channels/oss/icon/no-padding/icon.ico"]
 short_description = "The open-source, cloud-backed terminal for individuals and teams."

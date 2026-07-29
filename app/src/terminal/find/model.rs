@@ -18,7 +18,7 @@ use parking_lot::FairMutex;
 use rich_content::FindableRichContentHandle;
 pub use rich_content::{FindableRichContentView, RichContentMatchId};
 use settings::Setting as _;
-use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle};
+use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle};
 
 use crate::settings::InputModeSettings;
 use crate::terminal::block_list_element::GridType;

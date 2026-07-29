@@ -1,5 +1,5 @@
 [package]
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 edition = "2021"
 name = "virtual-fs"
 version = "0.1.0"

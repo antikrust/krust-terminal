@@ -3,14 +3,14 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use derp_cli::agent::Harness;
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_terminal::model::BlockId;
-use derpui::elements::Align;
-use derpui::prelude::{Empty, Vector2F};
-use derpui::{
+use bork_cli::agent::Harness;
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_terminal::model::BlockId;
+use borkui::elements::Align;
+use borkui::prelude::{Empty, Vector2F};
+use borkui::{
     AppContext, Element, EntityId, ModelHandle, SingletonEntity, ViewContext, ViewHandle,
 };
 
@@ -954,7 +954,7 @@ impl TerminalView {
     /// Prefers cloud `AmbientAgentTask` data when this terminal view has an
     /// associated task ID. Otherwise falls back to populating the panel from
     /// the active local `AIConversation`, so the same panel can surface
-    /// conversation metadata for non-cloud Derp Agent runs (APP-3595).
+    /// conversation metadata for non-cloud Bork Agent runs (APP-3595).
     pub(in crate::terminal::view) fn fetch_and_update_conversation_details_panel(
         &mut self,
         ctx: &mut ViewContext<Self>,

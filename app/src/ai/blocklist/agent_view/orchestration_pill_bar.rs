@@ -9,16 +9,16 @@ use std::hash::{Hash, Hasher};
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_cli::agent::Harness;
-use derp_core::channel::ChannelState;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::color::coloru_with_opacity;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::{Fill, DerpTheme};
-use derpui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
-use derpui::elements::{
+use bork_cli::agent::Harness;
+use bork_core::channel::ChannelState;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::color::coloru_with_opacity;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::{Fill, BorkTheme};
+use borkui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
+use borkui::elements::{
     Align, AnchorPair, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Element, Empty, Fill as ElementFill, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, OffsetType, ParentAnchor,
@@ -26,12 +26,12 @@ use derpui::elements::{
     SavePosition, ScrollbarWidth, Stack, Text, XAxisAnchor, YAxisAnchor,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::platform::{Cursor, LineStyle};
-use derpui::text_layout::{
+use borkui::fonts::{Properties, Weight};
+use borkui::platform::{Cursor, LineStyle};
+use borkui::text_layout::{
     ClipConfig, ClipDirection, ClipStyle, StyleAndFont, TextStyle, DEFAULT_TOP_BOTTOM_RATIO,
 };
-use derpui::{
+use borkui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -95,7 +95,7 @@ const PILL_BAR_SCROLLBAR_GAP: f32 = 1.;
 const PILL_BAR_SCROLLBAR_GUTTER: f32 = PILL_BAR_SCROLLBAR_GAP + PILL_BAR_SCROLLBAR_WIDTH + 2.;
 
 /// Stable palette used to color child agent avatars deterministically by name.
-fn pill_palette(theme: &DerpTheme) -> [ColorU; 6] {
+fn pill_palette(theme: &BorkTheme) -> [ColorU; 6] {
     [
         theme.ansi_fg_blue(),
         theme.ansi_fg_magenta(),
@@ -106,7 +106,7 @@ fn pill_palette(theme: &DerpTheme) -> [ColorU; 6] {
     ]
 }
 
-pub(crate) fn pill_avatar_color(name: &str, theme: &DerpTheme) -> ColorU {
+pub(crate) fn pill_avatar_color(name: &str, theme: &BorkTheme) -> ColorU {
     let palette = pill_palette(theme);
     let mut hasher = DefaultHasher::new();
     name.hash(&mut hasher);
@@ -126,7 +126,7 @@ pub(crate) fn pill_initial(name: &str) -> char {
 /// surfaces.
 pub(crate) fn render_orchestrator_avatar_disc(
     size: f32,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     render_avatar_disc(
@@ -143,7 +143,7 @@ pub(crate) fn render_orchestrator_avatar_disc(
 pub(crate) fn render_agent_avatar_disc(
     name: &str,
     size: f32,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     render_avatar_disc(
@@ -1398,7 +1398,7 @@ fn render_hover_card(
     //
     // Use `dirs::home_dir()` (cross-platform: `$HOME` on unix,
     // `%USERPROFILE%` on Windows) to find the home prefix, then defer to
-    // the shared `derp_util::path::user_friendly_path` helper so the cwd
+    // the shared `bork_util::path::user_friendly_path` helper so the cwd
     // displays as `~/foo` regardless of OS — and matches the same
     // tilde-substitution behaviour used by the tab title, prompt header,
     // and pwd chip.
@@ -1410,7 +1410,7 @@ fn render_hover_card(
         .filter(|s| !s.is_empty())
         .map(|cwd| {
             Text::new(
-                derp_util::path::user_friendly_path(&cwd, home_dir_str).into_owned(),
+                bork_util::path::user_friendly_path(&cwd, home_dir_str).into_owned(),
                 appearance.ui_font_family(),
                 appearance.monospace_font_size() - 1.,
             )
@@ -1537,7 +1537,7 @@ fn render_hover_card(
         .with_padding_top(HOVER_CARD_VERTICAL_PADDING)
         .with_padding_bottom(HOVER_CARD_VERTICAL_PADDING)
         .with_background(bg)
-        .with_border(derpui::elements::Border::all(1.).with_border_fill(outline))
+        .with_border(borkui::elements::Border::all(1.).with_border_fill(outline))
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
         .finish();
 
@@ -1555,11 +1555,11 @@ fn render_hover_card(
 /// the card and the side panel can't drift.
 fn render_status_badge(
     status: &ConversationStatus,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let (icon, color) = status.status_icon_and_color(theme, StatusColorStyle::Standard);
-    let icon_el = ConstrainedBox::new(icon.to_derpui_icon(color.into()).finish())
+    let icon_el = ConstrainedBox::new(icon.to_borkui_icon(color.into()).finish())
         .with_width(12.)
         .with_height(12.)
         .finish();
@@ -1601,10 +1601,10 @@ fn render_chip(
     label: String,
     icon_color: ColorU,
     text_color: ColorU,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
-    let icon_el = ConstrainedBox::new(icon.to_derpui_icon(icon_color.into()).finish())
+    let icon_el = ConstrainedBox::new(icon.to_borkui_icon(icon_color.into()).finish())
         .with_width(12.)
         .with_height(12.)
         .finish();
@@ -1677,7 +1677,7 @@ fn render_pin_glyph_centered(is_pinned: bool, icon_color: ColorU) -> Box<dyn Ele
         Icon::Pin
     };
     let glyph: Box<dyn Element> =
-        ConstrainedBox::new(icon_variant.to_derpui_icon(icon_color.into()).finish())
+        ConstrainedBox::new(icon_variant.to_borkui_icon(icon_color.into()).finish())
             .with_width(PILL_ICON_SIZE)
             .with_height(PILL_ICON_SIZE)
             .finish();
@@ -1707,7 +1707,7 @@ fn render_pill(
     overflow_mouse_state: MouseStateHandle,
     pin_button_mouse_state: MouseStateHandle,
     menu_is_open_for_this: bool,
-    self_terminal_view_id: derpui::EntityId,
+    self_terminal_view_id: borkui::EntityId,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
@@ -1751,7 +1751,7 @@ fn render_pill(
     let pill_text_color = internal_colors::fg_overlay_6(theme).into_solid();
 
     // `Hoverable::new`'s build closure is `FnOnce` (see
-    // `crates/derpui_core/src/elements/hoverable.rs`). We can therefore move
+    // `crates/borkui_core/src/elements/hoverable.rs`). We can therefore move
     // `label` into the closure by value rather than cloning it on every
     // build.
     let pill_body = Hoverable::new(mouse_state, move |hover_state| {
@@ -2023,7 +2023,7 @@ fn render_overflow_button(
     mouse_state: MouseStateHandle,
     conversation_id: AIConversationId,
     text_color: Fill,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
 ) -> Box<dyn Element> {
     let button = Hoverable::new(mouse_state, move |hover_state| {
         // The button's own surface gets a subtle filled background when
@@ -2034,7 +2034,7 @@ fn render_overflow_button(
         } else {
             None
         };
-        let icon = ConstrainedBox::new(Icon::DotsVertical.to_derpui_icon(text_color).finish())
+        let icon = ConstrainedBox::new(Icon::DotsVertical.to_borkui_icon(text_color).finish())
             .with_width(PILL_ICON_SIZE)
             .with_height(PILL_ICON_SIZE)
             .finish();
@@ -2079,7 +2079,7 @@ fn render_avatar_with_status_overlay(
     status: ConversationStatus,
     is_remote_child: bool,
     pill_background: ColorU,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     // Top-left anchor inside the helper's `total_size` box so the disc sits
@@ -2126,7 +2126,7 @@ fn render_avatar_disc(
     avatar_color: ColorU,
     glyph: AvatarGlyph,
     size: f32,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let disc = ConstrainedBox::new(
@@ -2151,7 +2151,7 @@ fn render_avatar_disc(
                 .finish()
         }
         AvatarGlyph::Icon(icon) => {
-            ConstrainedBox::new(icon.to_derpui_icon(theme.background()).finish())
+            ConstrainedBox::new(icon.to_borkui_icon(theme.background()).finish())
                 .with_width(glyph_size)
                 .with_height(glyph_size)
                 .finish()
@@ -2216,7 +2216,7 @@ const CRUMB_HORIZONTAL_PADDING: f32 = 6.;
 /// `parent_crumb_mouse_state` must be a `MouseStateHandle` owned by the caller
 /// (e.g. on a TerminalView field) so hover and click events persist across
 /// renders. Inline `MouseStateHandle::default()` would zero state every frame
-/// and silently break clicks (per the DerpUI mouse-state guidance).
+/// and silently break clicks (per the BorkUI mouse-state guidance).
 pub fn render_orchestration_breadcrumbs(
     agent_view_controller: &AgentViewController,
     parent_crumb_mouse_state: MouseStateHandle,
@@ -2304,7 +2304,7 @@ pub fn render_orchestration_breadcrumbs(
     let chevron_color = internal_colors::text_sub(theme, theme.background());
     let chevron = ConstrainedBox::new(
         Icon::ChevronRight
-            .to_derpui_icon(chevron_color.into())
+            .to_borkui_icon(chevron_color.into())
             .finish(),
     )
     .with_width(16.)
@@ -2383,7 +2383,7 @@ fn render_crumb(
     spec: CrumbSpec,
     mouse_state: Option<MouseStateHandle>,
     self_terminal_view_id: EntityId,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let conversation_id = spec.conversation_id;
@@ -2490,7 +2490,7 @@ fn build_crumb_inner(
     avatar_glyph: AvatarGlyph,
     is_active: bool,
     is_hovered: bool,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let text_color = if is_active || is_hovered {

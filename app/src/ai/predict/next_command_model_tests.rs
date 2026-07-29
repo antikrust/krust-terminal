@@ -1,8 +1,8 @@
 use typed_path::TypedPathBuf;
-use derp_completer::meta::SpannedItem;
-use derp_completer::parsers::ParsedToken;
-use derp_completer::signatures::CommandRegistry;
-use derpui::App;
+use bork_completer::meta::SpannedItem;
+use bork_completer::parsers::ParsedToken;
+use bork_completer::signatures::CommandRegistry;
+use borkui::App;
 
 use super::*;
 use crate::completer::SessionContext;

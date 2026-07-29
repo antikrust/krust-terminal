@@ -25,8 +25,8 @@ pub(crate) mod diff_selector;
 pub(crate) mod file_invalidation_queue;
 
 use code_review_view::CodeReviewAction;
-use derpui::keymap::{EditableBinding, FixedBinding};
-use derpui::{
+use borkui::keymap::{EditableBinding, FixedBinding};
+use borkui::{
     id, AppContext, Entity, EntityId, ModelContext, SingletonEntity, WeakViewHandle, WindowId,
 };
 

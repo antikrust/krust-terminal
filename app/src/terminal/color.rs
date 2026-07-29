@@ -1,10 +1,10 @@
 use std::fmt;
 use std::ops::{Index, IndexMut};
 
-use derpui::color::ColorU;
+use borkui::color::ColorU;
 
 use crate::terminal::model::ansi::color_index;
-use crate::themes::theme::{AnsiColors, DerpTheme};
+use crate::themes::theme::{AnsiColors, BorkTheme};
 
 pub const COUNT: usize = 269;
 
@@ -43,8 +43,8 @@ impl Colors {
     }
 }
 
-impl From<DerpTheme> for Colors {
-    fn from(theme: DerpTheme) -> Self {
+impl From<BorkTheme> for Colors {
+    fn from(theme: BorkTheme) -> Self {
         let colors = theme.terminal_colors();
         Colors::new(
             PrimaryColors::new(

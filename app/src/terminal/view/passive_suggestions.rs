@@ -1,4 +1,4 @@
-use derpui::ViewContext;
+use borkui::ViewContext;
 
 use super::TerminalView;
 use crate::server::telemetry::InteractionSource;

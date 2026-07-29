@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use derpui::elements::{
+use borkui::elements::{
     Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::geometry::vector::Vector2F;
-use derpui::{Element, EventContext};
+use borkui::fonts::{Properties, Weight};
+use borkui::geometry::vector::Vector2F;
+use borkui::{Element, EventContext};
 
 use crate::appearance::Appearance;
 use crate::tab_configs::session_config::SessionType;

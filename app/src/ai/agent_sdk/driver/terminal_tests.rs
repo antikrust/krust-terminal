@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use session_sharing_protocol::sharer::SessionRetentionReason;
-use derpui::App;
+use borkui::App;
 
 use super::TerminalDriver;
 use crate::terminal::shared_session::SharedSessionStatus;

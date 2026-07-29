@@ -5,7 +5,7 @@ use deltae::*;
 use kmeans_colors::{get_kmeans_hamerly, Calculate, CentroidData, Sort};
 use palette::{FromColor, IntoColor, Lab, Pixel, Srgb, Srgba};
 use pathfinder_color::ColorU;
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 use crate::util::color::hex_color::coloru_from_hex_string;
 

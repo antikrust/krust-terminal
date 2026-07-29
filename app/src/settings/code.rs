@@ -9,8 +9,8 @@ define_settings_group!(CodeSettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "code.editor.use_derp_as_default_editor",
-        description: "Whether Derp is used as the default code editor.",
+        toml_path: "code.editor.use_bork_as_default_editor",
+        description: "Whether Bork is used as the default code editor.",
     }
     codebase_context_enabled: CodebaseContextEnabled {
         type: bool,

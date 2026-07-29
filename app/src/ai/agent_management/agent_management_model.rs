@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use crate::ai::active_agent_views_model::{ActiveAgentViewsEvent, ActiveAgentViewsModel};
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
@@ -21,7 +21,7 @@ use crate::BlocklistAIHistoryModel;
 
 /// Singleton model responsible for triggering in-app notifications on blocking conversation
 /// status updates and tracking/storing these notifications for the notifications mailbox.
-/// Tracks and stores notifications for both derp agent conversations and other supported
+/// Tracks and stores notifications for both bork agent conversations and other supported
 /// cli agent sessions.
 pub struct AgentNotificationsModel {
     notifications: NotificationItems,
@@ -455,7 +455,7 @@ impl AgentNotificationsModel {
 
 #[derive(Clone, Debug)]
 pub enum AgentManagementEvent {
-    /// A Derp-native conversation needs attention and is not visible in the current window/tab.
+    /// A Bork-native conversation needs attention and is not visible in the current window/tab.
     ConversationNeedsAttention {
         window_id: WindowId,
         tab_index: usize,

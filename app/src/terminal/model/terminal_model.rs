@@ -14,16 +14,16 @@ use session_sharing_protocol::common::{
     AICommandMetadata, OrderedTerminalEventType, ParticipantId,
 };
 use session_sharing_protocol::sharer::SessionSourceType;
-use derp_core::command::ExitCode;
-use derp_core::features::FeatureFlag;
-use derp_core::semantic_selection::SemanticSelection;
-use derp_errors::report_error;
-pub use derp_terminal::model::BlockIndex;
-use derp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use derpui::assets::asset_cache::Asset;
-use derpui::image_cache::ImageType;
-use derpui::r#async::executor::Background;
-use derpui::AppContext;
+use bork_core::command::ExitCode;
+use bork_core::features::FeatureFlag;
+use bork_core::semantic_selection::SemanticSelection;
+use bork_errors::report_error;
+pub use bork_terminal::model::BlockIndex;
+use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use borkui::assets::asset_cache::Asset;
+use borkui::image_cache::ImageType;
+use borkui::r#async::executor::Background;
+use borkui::AppContext;
 
 use super::super::{AltScreen, BlockList};
 use super::ansi::{BootstrappedValue, FinishUpdateValue, InputBufferValue, Mode, PendingHook};
@@ -65,7 +65,7 @@ use crate::terminal::model::ansi;
 use crate::terminal::model::ansi::{
     ClearValue, CommandFinishedValue, CompletionMetadata, ExitShellValue, Handler, InitShellValue,
     InitSubshellValue, PreInteractiveSSHSessionValue, PrecmdValue, PreexecValue, PromptMetadata,
-    SSHValue, SourcedRcFileForDerpValue,
+    SSHValue, SourcedRcFileForBorkValue,
 };
 use crate::terminal::model::bootstrap::BootstrapStage;
 use crate::terminal::model::completions::{
@@ -357,7 +357,7 @@ enum IsReceivingHook {
     No,
 }
 
-/// Information needed to render a derpify "success" block upon successful subshell bootstrap.
+/// Information needed to render a borkify "success" block upon successful subshell bootstrap.
 #[derive(Debug, Clone)]
 pub struct SubshellSuccessBlockInfo {
     /// The ID of the newly bootstrapped subshell session.
@@ -555,7 +555,7 @@ pub struct SubshellInitializationInfo {
     pub spawning_command: String,
 
     /// `true` if the subshell bootstrap was triggered by an RC file snippet that emits the
-    /// `SourcedRcFileForDerp` DCS.
+    /// `SourcedRcFileForBork` DCS.
     pub was_triggered_by_rc_file_snippet: bool,
 
     /// The subshell was triggered from an EVC invocation
@@ -931,7 +931,7 @@ impl SelectedBlocks {
 pub enum TerminalInputState {
     /// Alt-screen on which programs like vim run is visible.
     AltScreen,
-    /// Derp Input View is visible.
+    /// Bork Input View is visible.
     InputEditor,
     /// Block-list is visible but input will go to the running command.
     LongRunningCommand,
@@ -1290,7 +1290,7 @@ impl TerminalModel {
     /// link the new server-assigned token to an existing conversation from historical replay.
     pub fn send_agent_response_for_shared_session(
         &mut self,
-        response: &derp_multi_agent_api::ResponseEvent,
+        response: &bork_multi_agent_api::ResponseEvent,
         response_initiator: Option<ParticipantId>,
         forked_from_conversation_token: Option<String>,
     ) {
@@ -2237,7 +2237,7 @@ impl TerminalModel {
     pub fn set_custom_title(&mut self, custom_title: Option<String>) {
         self.custom_title.clone_from(&custom_title);
         // If the custom title set by the user is None, we "reset" to whatever the title was set by
-        // the shell / Derp itself.
+        // the shell / Bork itself.
         self.send_title_event(match custom_title {
             Some(_) => custom_title,
             None => self.title.clone(),
@@ -2361,7 +2361,7 @@ impl TerminalModel {
     /// a line of output that is not a known SSH output, we consider that to be some mild evidence that
     /// login is complete. Though, because that output line might be a false alarm (i.e., it could be
     /// an SSH banner OR a line like "Permission denied."), we wait some amount of time and check again
-    /// before indicating we're ready for derpification.
+    /// before indicating we're ready for borkification.
     pub fn check_for_end_of_ssh_login(&mut self, confirmation_check: bool) {
         let Some(mut ssh_login_state) = self.notify_on_end_of_ssh_login.clone() else {
             return;
@@ -2384,7 +2384,7 @@ impl TerminalModel {
             SshLoginState::LastLogin | SshLoginState::PromptDetected => {
                 self.event_proxy
                     .send_terminal_event(Event::DetectedEndOfSshLogin(
-                        SshLoginStatus::ReadyToDerpify,
+                        SshLoginStatus::ReadyToBorkify,
                     ));
 
                 ssh_login_state.notification_state = SshLoginNotificationState::Completed;
@@ -2395,7 +2395,7 @@ impl TerminalModel {
                     if ssh_login_state.notification_state == SshLoginNotificationState::Monitoring {
                         self.event_proxy
                             .send_terminal_event(Event::DetectedEndOfSshLogin(
-                                SshLoginStatus::RecheckBeforeDerpifying,
+                                SshLoginStatus::RecheckBeforeBorkifying,
                             ));
 
                         // We want to avoid emitting redundant events for the initial check.
@@ -2405,7 +2405,7 @@ impl TerminalModel {
                 } else {
                     self.event_proxy
                         .send_terminal_event(Event::DetectedEndOfSshLogin(
-                            SshLoginStatus::ReadyToDerpify,
+                            SshLoginStatus::ReadyToBorkify,
                         ));
 
                     ssh_login_state.notification_state = SshLoginNotificationState::Completed;
@@ -2792,7 +2792,7 @@ impl ansi::Handler for TerminalModel {
         delegate!(self.configure_charset(index, charset));
     }
 
-    fn set_color(&mut self, index: usize, color: derpui::color::ColorU) {
+    fn set_color(&mut self, index: usize, color: borkui::color::ColorU) {
         self.override_colors[index] = Some(color);
     }
 
@@ -3029,7 +3029,7 @@ impl ansi::Handler for TerminalModel {
             if value.external_control_master {
                 log::info!(
                     "SSH wrapper attached to an external ControlMaster at {}; \
-                     Derp will not tear it down on session exit",
+                     Bork will not tear it down on session exit",
                     value.socket_path.display()
                 );
             }
@@ -3129,7 +3129,7 @@ impl ansi::Handler for TerminalModel {
         }
     }
 
-    fn sourced_rc_file(&mut self, data: SourcedRcFileForDerpValue) {
+    fn sourced_rc_file(&mut self, data: SourcedRcFileForBorkValue) {
         // If the blocklist is already bootstrapped, the user's RC file must be sourced in a
         // subshell.
         if self.block_list.is_bootstrapped() {
@@ -3147,7 +3147,7 @@ impl ansi::Handler for TerminalModel {
                 }
                 None => {
                     report_error!(
-                        "Received invalid shell name in SourcedRCFileForDerpValue",
+                        "Received invalid shell name in SourcedRCFileForBorkValue",
                         extra: { "shell" => %data.shell }
                     );
                 }
@@ -3619,7 +3619,7 @@ impl ModeProvider for TerminalModel {
     }
 }
 
-/// Validates and decodes in-band command output sent via `derp_send_generator_output_osc_message`.
+/// Validates and decodes in-band command output sent via `bork_send_generator_output_osc_message`.
 /// Upon success, returns the string content of the generator output. The OSC payload is expected
 /// to conform to the following format:
 ///

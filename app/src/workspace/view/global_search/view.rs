@@ -10,18 +10,18 @@ use instant::Instant;
 use pathfinder_geometry::vector::vec2f;
 use remote_server::HostId;
 use string_offset::{ByteOffset, CharCounter};
-use derp_core::r#async::debounce;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
-use derp_core::ui::Icon;
-use derp_editor::editor::NavigationKey;
-use derp_ripgrep::search::Submatch;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::elements::{
+use bork_core::r#async::debounce;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
+use bork_core::ui::Icon;
+use bork_editor::editor::NavigationKey;
+use bork_ripgrep::search::Submatch;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Fill, Flex, FormattedTextElement,
     Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
@@ -29,13 +29,13 @@ use derpui::elements::{
     Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList,
     UniformListState,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::text_layout::{TextAlignment, TextStyle};
-use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui::ui_components::text::Span;
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::text_layout::{TextAlignment, TextStyle};
+use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui::ui_components::text::Span;
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };
@@ -604,7 +604,7 @@ impl GlobalSearchView {
     }
 
     pub fn init(app: &mut AppContext) {
-        use derpui::keymap::macros::*;
+        use borkui::keymap::macros::*;
 
         app.register_fixed_bindings([
             FixedBinding::new(
@@ -1028,7 +1028,7 @@ impl GlobalSearchView {
             .iter()
             .filter_map(|root| root.to_local_path().map(Path::to_path_buf))
             .collect();
-        let deduped_local = derp_util::path::group_roots_by_common_ancestor(&local_roots).roots;
+        let deduped_local = bork_util::path::group_roots_by_common_ancestor(&local_roots).roots;
 
         let mut remote_roots_by_host: Vec<(HostId, Vec<StandardizedPath>)> = Vec::new();
         for root in &roots {
@@ -1048,7 +1048,7 @@ impl GlobalSearchView {
         let deduped_remote = remote_roots_by_host
             .into_iter()
             .flat_map(|(host_id, paths)| {
-                derp_util::path::group_roots_by_common_ancestor(&paths)
+                bork_util::path::group_roots_by_common_ancestor(&paths)
                     .roots
                     .into_iter()
                     .map(move |path| {
@@ -1150,7 +1150,7 @@ impl GlobalSearchView {
         directory_path: &LocalOrRemotePath,
         matched_path: &MatchedPath,
         appearance: &Appearance,
-        theme: &derp_core::ui::theme::DerpTheme,
+        theme: &bork_core::ui::theme::BorkTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let is_selected = self.is_row_at_index_selected(index);
@@ -1181,7 +1181,7 @@ impl GlobalSearchView {
             let icon_size = 16.0;
             let chevron_color = item_highlight_state.text_and_icon_color(appearance);
             let chevron_icon = chevron_icon_enum
-                .to_derpui_icon(ThemeFill::from(chevron_color))
+                .to_borkui_icon(ThemeFill::from(chevron_color))
                 .finish();
             let chevron_icon = ConstrainedBox::new(chevron_icon)
                 .with_width(icon_size)
@@ -1233,7 +1233,7 @@ impl GlobalSearchView {
             let icon_color = list_highlight_state.text_and_icon_color(appearance);
             let file_icon = match icon_from_file_path {
                 ImageOrIcon::Icon(icon) => {
-                    icon.to_derpui_icon(ThemeFill::from(icon_color)).finish()
+                    icon.to_borkui_icon(ThemeFill::from(icon_color)).finish()
                 }
                 ImageOrIcon::Image(image) => image,
             };
@@ -1325,7 +1325,7 @@ impl GlobalSearchView {
         matched: &Match,
         match_index: usize,
         appearance: &Appearance,
-        theme: &derp_core::ui::theme::DerpTheme,
+        theme: &bork_core::ui::theme::BorkTheme,
     ) -> Box<dyn Element> {
         let is_selected = self.is_row_at_index_selected(index);
         let line_number = matched.line_number;
@@ -1927,7 +1927,7 @@ impl GlobalSearchView {
         index: usize,
         dir_entry: &DirectoryEntry,
         appearance: &Appearance,
-        theme: &derp_core::ui::theme::DerpTheme,
+        theme: &bork_core::ui::theme::BorkTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let is_selected = self.is_row_at_index_selected(index);
@@ -1956,7 +1956,7 @@ impl GlobalSearchView {
             let icon_size = 16.0;
             let chevron_color = list_highlight_state.text_and_icon_color(appearance);
             let chevron_icon = chevron_icon_enum
-                .to_derpui_icon(ThemeFill::from(chevron_color))
+                .to_borkui_icon(ThemeFill::from(chevron_color))
                 .finish();
             let chevron_icon = ConstrainedBox::new(chevron_icon)
                 .with_width(icon_size)
@@ -1967,7 +1967,7 @@ impl GlobalSearchView {
             // Folder icon
             let icon_color = list_highlight_state.text_and_icon_color(appearance);
             let folder_icon = Icon::Folder
-                .to_derpui_icon(ThemeFill::from(icon_color))
+                .to_borkui_icon(ThemeFill::from(icon_color))
                 .finish();
             let folder_icon_element = Container::new(
                 ConstrainedBox::new(folder_icon)
@@ -2190,7 +2190,7 @@ impl View for GlobalSearchView {
         if self.capped_matches {
             let alert_icon = ConstrainedBox::new(
                 Icon::AlertTriangle
-                    .to_derpui_icon(ThemeFill::Solid(
+                    .to_borkui_icon(ThemeFill::Solid(
                         theme.terminal_colors().normal.yellow.into(),
                     ))
                     .finish(),
@@ -2266,7 +2266,7 @@ impl GlobalSearchView {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        icon.to_derpui_icon(ThemeFill::Solid(internal_colors::neutral_6(theme)))
+                        icon.to_borkui_icon(ThemeFill::Solid(internal_colors::neutral_6(theme)))
                             .finish(),
                     )
                     .with_width(24.)

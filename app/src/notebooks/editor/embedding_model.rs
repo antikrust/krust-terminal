@@ -4,20 +4,20 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use string_offset::{ByteOffset, CharOffset};
-use derp_completer::signatures::CommandRegistry;
-use derp_editor::content::anchor::Anchor;
-use derp_editor::content::buffer::Buffer;
-use derp_editor::content::selection_model::BufferSelectionModel;
-use derp_editor::editor::EmbeddedItemModel;
-use derp_util::user_input::UserInput;
-use derpui::elements::{
+use bork_completer::signatures::CommandRegistry;
+use bork_editor::content::anchor::Anchor;
+use bork_editor::content::buffer::Buffer;
+use bork_editor::content::selection_model::BufferSelectionModel;
+use bork_editor::editor::EmbeddedItemModel;
+use bork_util::user_input::UserInput;
+use borkui::elements::{
     Align, Border, Container, CrossAxisAlignment, Empty, Flex, MainAxisAlignment, MouseStateHandle,
     ParentElement, Shrinkable,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::UiComponent;
-use derpui::{AppContext, Element, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::UiComponent;
+use borkui::{AppContext, Element, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 use super::embedded_item::EmbeddedWorkflow;
 use super::keys::{custom_action_to_display, NotebookKeybindings};

@@ -3,7 +3,7 @@
 //! Code Llama and the original DeepSeek Coder do not advertise Ollama's
 //! native tool-call capability, so sending the normal tool schema is rejected
 //! before inference. This runner gives them a small structured-output protocol
-//! instead: the model chooses either assistant text or one shell command, Derp
+//! instead: the model chooses either assistant text or one shell command, Bork
 //! executes shell calls in the terminal's working directory, and the result is
 //! returned to the model until it produces a final answer.
 
@@ -21,7 +21,7 @@ use futures::io::{AsyncRead, AsyncReadExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
-use derpui::r#async::Timer;
+use borkui::r#async::Timer;
 
 use super::claude_stream_exec::{
     harness_cancel_for, register_harness_session, finish_harness_session, run_jsonl_stream,
@@ -44,7 +44,7 @@ pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 const MAX_TOOL_CALLS_PER_TURN: usize = 8;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
-const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside derp terminal.
+const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside bork terminal.
 You can inspect and modify the user's computer by requesting one shell command at a time.
 For any request involving local files, directories, processes, repositories, or the machine environment, use the shell command response instead of claiming you lack access.
 Ordinary local developer commands such as pwd, ls, find, rg, git, cat, and build/test commands are permitted.
@@ -61,7 +61,7 @@ After an action result, either request another action or answer the user."#;
 /// run commands: the coding-agent prompt made weak models *hallucinate*
 /// command output ("ls" → a made-up directory listing) instead of doing
 /// anything real. As a plain assistant they answer honestly.
-const OLLAMA_CHAT_SYSTEM_PROMPT: &str = "You are a helpful assistant running locally inside derp terminal. \
+const OLLAMA_CHAT_SYSTEM_PROMPT: &str = "You are a helpful assistant running locally inside bork terminal. \
 Answer the user's question directly, accurately, and in full. \
 You have no tools of your own: you cannot run shell commands or read the user's files. \
 When a message includes web search results, use them to answer and cite the relevant ones. \
@@ -160,7 +160,7 @@ async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
         "--max-time",
         "20",
         "--user-agent",
-        "Mozilla/5.0 (compatible; DerpWebSearch/1.0)",
+        "Mozilla/5.0 (compatible; BorkWebSearch/1.0)",
         "--data-urlencode",
         &format!("q={query}"),
         "https://html.duckduckgo.com/html/",
@@ -246,7 +246,7 @@ impl McpToolSpec {
 ///
 /// A trait rather than a concrete `TemplatableMCPServerManager` reference so
 /// the chat-with-tools loop below can be unit tested with a fake, and so this
-/// module doesn't need to know how Derp's MCP servers are spawned/reconnected
+/// module doesn't need to know how Bork's MCP servers are spawned/reconnected
 /// — only how to invoke one by name.
 #[async_trait]
 pub(crate) trait McpToolCaller: Send + Sync {
@@ -325,7 +325,7 @@ fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     format!(
-        "You are the local coding agent inside derp terminal.\n\
+        "You are the local coding agent inside bork terminal.\n\
          You have access to these tools: {tool_names}. Use them to actually inspect and change \
          the user's machine instead of guessing:\n\
          - run_code executes a short program (bash, python, javascript, or ruby) and returns its \
@@ -589,7 +589,7 @@ fn ollama_curl_args_for(url: &str) -> Vec<String> {
 }
 
 /// Starts Ollama's server directly, without launching Ollama.app or creating a
-/// Dock/menu-bar UI. Derp only uses this when the local API is not already up.
+/// Dock/menu-bar UI. Bork only uses this when the local API is not already up.
 pub fn ollama_serve_args() -> Vec<String> {
     vec!["serve".to_string()]
 }
@@ -603,7 +603,7 @@ async fn ollama_service_is_ready(path: &str) -> bool {
 
 /// Ensures the API exists as a headless background process. Dropping the child
 /// handle does not kill it (`kill_on_drop` defaults to false), so it continues
-/// serving subsequent Derp turns without exposing the commercial Ollama UI.
+/// serving subsequent Bork turns without exposing the commercial Ollama UI.
 pub(crate) async fn ensure_ollama_service(path: &str) -> std::io::Result<()> {
     static STARTING: AtomicBool = AtomicBool::new(false);
 
@@ -654,7 +654,7 @@ fn ollama_generate_request(
         "model": wire_name(model),
         "system": system,
         "prompt": prompt,
-        // Stream from Ollama so Derp can transition from Sending to Thinking
+        // Stream from Ollama so Bork can transition from Sending to Thinking
         // when inference actually begins. The accumulator below coalesces the
         // token chunks before emitting assistant text, avoiding one UI block
         // per token.
@@ -672,7 +672,7 @@ fn ollama_generate_request(
             "temperature": 0,
             // The models default to a 2048-token window (some as low as that),
             // which is the "lack of context" users hit in longer chats. 8192 is
-            // a sane floor across the local models Derp lists; models trained
+            // a sane floor across the local models Bork lists; models trained
             // shorter simply don't use the extra headroom.
             "num_ctx": 8192,
         },
@@ -931,7 +931,7 @@ async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) ->
     // source and any quoting survive intact for every interpreter, then run it
     // through the login shell so `program` resolves from the user's real PATH.
     // Passing the path as `$1` avoids re-quoting a temp dir that has spaces.
-    let script = std::env::temp_dir().join(format!("derp-ollama-{}.{ext}", Uuid::new_v4()));
+    let script = std::env::temp_dir().join(format!("bork-ollama-{}.{ext}", Uuid::new_v4()));
     if let Err(error) = std::fs::write(&script, code) {
         return ShellExecution {
             stdout: String::new(),
@@ -942,7 +942,7 @@ async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) ->
     let run = format!("{program} \"$1\"");
     let script_arg = script.to_string_lossy();
     let mut command = Command::new("/bin/zsh");
-    command.args(["-lc", run.as_str(), "derp-run-code", &*script_arg]);
+    command.args(["-lc", run.as_str(), "bork-run-code", &*script_arg]);
     command.current_dir(working_dir);
     command.env("PATH", path);
     let execution = run_captured(command).await;
@@ -1024,12 +1024,12 @@ async fn capture_bounded(mut reader: impl AsyncRead + Unpin) -> String {
         captured.extend_from_slice(&buffer[..read.min(remaining)]);
         truncated |= read > remaining;
         // Continue draining after the cap so the child never blocks on a full
-        // pipe, but retain no more bytes in Derp.
+        // pipe, but retain no more bytes in Bork.
     }
 
     let mut text = String::from_utf8_lossy(&captured).into_owned();
     if truncated {
-        text.push_str("\n[output truncated by Derp's Ollama harness]");
+        text.push_str("\n[output truncated by Bork's Ollama harness]");
     }
     text
 }
@@ -1055,7 +1055,7 @@ pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: im
 }
 
 /// Runs one Ollama agent turn, including up to eight structured shell calls,
-/// and converts the whole lifecycle into Derp's local-harness event stream.
+/// and converts the whole lifecycle into Bork's local-harness event stream.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_ollama_stream(
     first_command: Command,
@@ -1146,7 +1146,7 @@ async fn run_ollama_stream_inner(
     register_harness_session(*session_id);
     let _session_guard = HarnessSessionGuard(*session_id);
 
-    // Open the Derp exchange before a cold model has loaded. This metadata
+    // Open the Bork exchange before a cold model has loaded. This metadata
     // event is intentionally non-rendering: it makes the user's message and
     // Sending... shimmer appear immediately. The first streamed model chunk
     // then emits Thinking, switching the status shimmer to Thinking....
@@ -1674,7 +1674,7 @@ fn read_file_bounded(path: &Path) -> std::result::Result<String, String> {
     let slice = &bytes[..bytes.len().min(MAX_TOOL_OUTPUT_BYTES)];
     let mut text = String::from_utf8_lossy(slice).into_owned();
     if truncated {
-        text.push_str("\n[truncated by derp's Ollama harness]");
+        text.push_str("\n[truncated by bork's Ollama harness]");
     }
     Ok(text)
 }

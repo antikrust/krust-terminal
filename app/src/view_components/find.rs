@@ -1,18 +1,18 @@
 use pathfinder_color::ColorU;
 use serde::Serialize;
-pub use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
-use derpui::elements::{
+pub use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
+use borkui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Element, Flex, Hoverable, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentOffsetBounds, Radius, SavePosition, Shrinkable, Text,
 };
-pub use derpui::elements::{ParentElement as _, Stack};
-pub use derpui::geometry::vector::vec2f;
-use derpui::keymap::EditableBinding;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::UiComponent;
-pub use derpui::AppContext;
-use derpui::{
+pub use borkui::elements::{ParentElement as _, Stack};
+pub use borkui::geometry::vector::vec2f;
+use borkui::keymap::EditableBinding;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::UiComponent;
+pub use borkui::AppContext;
+use borkui::{
     Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -129,7 +129,7 @@ pub enum FindAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -262,10 +262,10 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
                     self.model.as_ref(ctx).match_count()
                 ),
                 "Use enter and shift-enter to navigate between matches. Escape to quit.",
-                DerpA11yRole::UserAction,
+                BorkA11yRole::UserAction,
             )
         } else {
-            AccessibilityContent::new_without_help("No results.", DerpA11yRole::UserAction)
+            AccessibilityContent::new_without_help("No results.", BorkA11yRole::UserAction)
         };
         ctx.emit_a11y_content(content);
     }
@@ -381,7 +381,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_derpui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_borkui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -445,7 +445,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(match_icon.to_derpui_icon(icon_color).finish())
+            ConstrainedBox::new(match_icon.to_borkui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -472,7 +472,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
         Container::new(
             ConstrainedBox::new(
                 Icon::X
-                    .to_derpui_icon(appearance.theme().active_ui_text_color())
+                    .to_borkui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_height(height)
@@ -522,7 +522,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> View for Find<T> {
         Some(AccessibilityContent::new(
             "Type searched phrase.",
             "Press escape to quit, use enter and shift-enter to navigate between matches",
-            DerpA11yRole::TextareaRole,
+            BorkA11yRole::TextareaRole,
         ))
     }
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use derpui::keymap::Keystroke;
-use derpui::AppContext;
+use borkui::keymap::Keystroke;
+use borkui::AppContext;
 
 pub mod tip_view;
 pub use tip_view::{TipsEvent, TipsView};

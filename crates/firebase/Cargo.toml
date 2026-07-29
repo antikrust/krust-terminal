@@ -1,6 +1,6 @@
 [package]
 name = "firebase"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 version = "0.1.0"
 edition = "2021"
 description = "Utilities for firebase client APIs"

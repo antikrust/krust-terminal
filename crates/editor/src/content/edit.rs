@@ -13,17 +13,17 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use string_offset::{ByteOffset, CharOffset};
 use urlocator::{UrlLocation, UrlLocator};
 use vec1::Vec1;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::Fill as ThemeFill;
-use derp_errors::report_error;
-use derpui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use derpui_core::fonts::Weight;
-use derpui_core::image_cache::ImageType;
-use derpui_core::text::char_slice;
-use derpui_core::text::point::Point;
-use derpui_core::text_layout::{StyleAndFont, TextAlignment};
-use derpui_core::units::{IntoPixels, Pixels};
-use derpui_core::{AppContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::Fill as ThemeFill;
+use bork_errors::report_error;
+use borkui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use borkui_core::fonts::Weight;
+use borkui_core::image_cache::ImageType;
+use borkui_core::text::char_slice;
+use borkui_core::text::point::Point;
+use borkui_core::text_layout::{StyleAndFont, TextAlignment};
+use borkui_core::units::{IntoPixels, Pixels};
+use borkui_core::{AppContext, SingletonEntity};
 
 use super::buffer::{StyledBufferBlock, StyledBufferRun, StyledTextBlock};
 use super::mermaid_diagram::{mermaid_asset_source, mermaid_diagram_layout};

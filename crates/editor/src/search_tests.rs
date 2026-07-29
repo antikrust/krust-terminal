@@ -1,4 +1,4 @@
-use derpui_core::{App, ModelHandle};
+use borkui_core::{App, ModelHandle};
 
 use super::Searcher;
 use crate::content::buffer::{

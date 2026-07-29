@@ -1,15 +1,15 @@
-use derp::cmd_or_ctrl_shift;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::util::ExpectedExitStatus;
-use derp::integration_testing::terminal::{
+use bork::cmd_or_ctrl_shift;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::util::ExpectedExitStatus;
+use bork::integration_testing::terminal::{
     assert_active_block_output, assert_command_executed, assert_long_running_block_executing,
     assert_no_block_executing, execute_command, run_alt_grid_program, wait_until_bootstrapped_pane,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::{terminal_view, workspace_view};
-use derp::workspace::WorkspaceAction;
-use derpui_core::integration::TestStep;
-use derpui_core::{async_assert, async_assert_eq};
+use bork::integration_testing::view_getters::{terminal_view, workspace_view};
+use bork::workspace::WorkspaceAction;
+use borkui_core::integration::TestStep;
+use borkui_core::{async_assert, async_assert_eq};
 
 use super::{new_builder, Builder};
 use crate::util::{get_input_buffer, skip_if_powershell_core_2303};

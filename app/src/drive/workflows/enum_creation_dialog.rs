@@ -2,18 +2,18 @@ use std::rc::Rc;
 
 use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, IntoStaticStr};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Fill, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, ScrollbarWidth, Shrinkable,
 };
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
-use derpui::{
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -596,7 +596,7 @@ impl EnumCreationDialog {
             .with_centered_text_label(label_text.to_owned())
             .with_style(UiComponentStyles {
                 font_size: Some(BUTTON_FONT_SIZE),
-                font_weight: Some(derpui::fonts::Weight::Normal),
+                font_weight: Some(borkui::fonts::Weight::Normal),
                 ..Default::default()
             });
 
@@ -607,7 +607,7 @@ impl EnumCreationDialog {
         button
             .build()
             .on_click(move |ctx, _, _| ctx.dispatch_typed_action(action.clone()))
-            .with_cursor(derpui::platform::Cursor::PointingHand)
+            .with_cursor(borkui::platform::Cursor::PointingHand)
             .finish()
     }
 

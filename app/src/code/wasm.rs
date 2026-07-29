@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use ai::diff_validation::DiffDelta;
-use derp_util::path::LineAndColumnArg;
-use derpui::elements::{DraggableState, Empty, MouseStateHandle};
-use derpui::{
+use bork_util::path::LineAndColumnArg;
+use borkui::elements::{DraggableState, Empty, MouseStateHandle};
+use borkui::{
     AppContext, Element, Entity, ModelHandle, TypedActionView, View, ViewContext, ViewHandle,
 };
 

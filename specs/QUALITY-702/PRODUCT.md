@@ -1,6 +1,6 @@
 # Inline Create-API-Key Flow on Orchestration Cards
 
-Linear: [QUALITY-702](https://linear.app/derpdotdev/issue/QUALITY-702)
+Linear: [QUALITY-702](https://linear.app/borkdotdev/issue/QUALITY-702)
 
 ## 1. Summary
 
@@ -91,7 +91,7 @@ When the user changes the harness on a card, the one-shot guard resets and the n
 
 ### Automated
 
-- `cargo check -p derp`
+- `cargo check -p bork`
 - `cargo fmt`
 - `cargo clippy --workspace --all-targets --all-features --tests -- -D warnings`
 

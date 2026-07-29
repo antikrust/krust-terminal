@@ -6,7 +6,7 @@ use crate::terminal::shell::ShellType;
 #[test]
 fn build_find_command_single_quotes_patterns_and_path() {
     let patterns = vec![
-        "$(touch /tmp/derp-poc)*.rs".to_string(),
+        "$(touch /tmp/bork-poc)*.rs".to_string(),
         "owner's*.rs".to_string(),
     ];
 
@@ -14,13 +14,13 @@ fn build_find_command_single_quotes_patterns_and_path() {
 
     assert_eq!(
         command,
-        r#"find '/tmp/repo path' -type f -name '$(touch /tmp/derp-poc)*.rs' -o -name 'owner'"'"'s*.rs'"#
+        r#"find '/tmp/repo path' -type f -name '$(touch /tmp/bork-poc)*.rs' -o -name 'owner'"'"'s*.rs'"#
     );
 }
 
 #[test]
 fn build_git_ls_files_command_single_quotes_joined_patterns() {
-    let pattern = "$(touch /tmp/derp-poc)*.rs";
+    let pattern = "$(touch /tmp/bork-poc)*.rs";
     let patterns = vec![pattern.to_string()];
     let target_path = PathBuf::from(std::path::MAIN_SEPARATOR_STR)
         .join("tmp")

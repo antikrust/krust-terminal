@@ -1,13 +1,13 @@
 use chrono::{DateTime, Local};
 use ordered_float::OrderedFloat;
-use derp_core::ui::builder::MIN_FONT_SIZE;
-use derpui::elements::{
+use bork_core::ui::builder::MIN_FONT_SIZE;
+use borkui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::blocklist::AIQueryHistoryOutputStatus;
 use crate::appearance::Appearance;

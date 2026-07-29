@@ -6,24 +6,24 @@ use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
 use settings::Setting as _;
 use uuid::Uuid;
-use derp_core::features::FeatureFlag;
-use derpui::{App, Entity, ModelHandle, SingletonEntity as _};
+use bork_core::features::FeatureFlag;
+use borkui::{App, Entity, ModelHandle, SingletonEntity as _};
 use watcher::HomeDirectoryWatcher;
 
 use super::{CloudEnvMcpScanServer, FileBasedMCPManager, FileBasedMCPManagerEvent, MCPProvider};
 use crate::ai::mcp::{FileMCPWatcher, ParsedTemplatableMCPServerResult};
 use crate::auth::AuthStateProvider;
 use crate::settings::{AISettings, FocusedTerminalInfo};
-use crate::derp_managed_paths_watcher::{derp_managed_mcp_config_path, DerpManagedPathsWatcher};
+use crate::bork_managed_paths_watcher::{bork_managed_mcp_config_path, BorkManagedPathsWatcher};
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 // Helper to initialize dependencies and return FileBasedMCPManager handle
-fn setup_app(app: &mut App) -> derpui::ModelHandle<FileBasedMCPManager> {
+fn setup_app(app: &mut App) -> borkui::ModelHandle<FileBasedMCPManager> {
     app.add_singleton_model(DirectoryWatcher::new);
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(FileMCPWatcher::new);
     app.add_singleton_model(AISettings::new_with_defaults);
     app.add_singleton_model(|_| AuthStateProvider::new_for_test());
@@ -274,27 +274,27 @@ fn test_update_file_based_servers_removes_unreferenced_servers() {
     });
 }
 
-/// A Derp-global installation detected from the managed `~/.derp*/.mcp.json`
+/// A Bork-global installation detected from the managed `~/.bork*/.mcp.json`
 /// watcher uses the home directory as its logical root and still always
 /// auto-spawns.
 #[test]
-fn test_global_derp_server_from_managed_home_root_always_spawns() {
+fn test_global_bork_server_from_managed_home_root_always_spawns() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
-    let Some(derp_mcp_config_path) = derp_managed_mcp_config_path() else {
+    let Some(bork_mcp_config_path) = bork_managed_mcp_config_path() else {
         return;
     };
-    let parsed = parse_mcp_json(r#"{"global-derp": {"command": "npx", "args": ["derp"]}}"#);
+    let parsed = parse_mcp_json(r#"{"global-bork": {"command": "npx", "args": ["bork"]}}"#);
 
     App::test((), |mut app| async move {
         let manager = setup_app(&mut app);
         let events = subscribe_events(&mut app, &manager);
 
-        // Toggle is off by default; the watcher-produced Derp root should still
-        // be classified as the global Derp config and auto-spawn.
+        // Toggle is off by default; the watcher-produced Bork root should still
+        // be classified as the global Bork config and auto-spawn.
         manager.update(&mut app, |m, ctx| {
             m.apply_parsed_servers(
-                derp_mcp_config_path.root_path.clone(),
-                MCPProvider::Derp,
+                bork_mcp_config_path.root_path.clone(),
+                MCPProvider::Bork,
                 parsed,
                 ctx,
             );
@@ -304,26 +304,26 @@ fn test_global_derp_server_from_managed_home_root_always_spawns() {
             assert_eq!(
                 e.spawned_uuids.len(),
                 1,
-                "Managed Derp MCP config should auto-spawn regardless of toggle"
+                "Managed Bork MCP config should auto-spawn regardless of toggle"
             );
         });
 
-        // Flipping the toggle must not despawn the global Derp server.
+        // Flipping the toggle must not despawn the global Bork server.
         set_file_based_mcp_enabled(&mut app, true);
         set_file_based_mcp_enabled(&mut app, false);
 
         events.update(&mut app, |e, _| {
             assert!(
                 e.despawned_uuids.is_empty(),
-                "Managed Derp MCP config should never be despawned by toggle changes, got: {:?}",
+                "Managed Bork MCP config should never be despawned by toggle changes, got: {:?}",
                 e.despawned_uuids
             );
         });
     });
 }
-/// A globally-scoped non-Derp installation only auto-spawns when the toggle is on.
+/// A globally-scoped non-Bork installation only auto-spawns when the toggle is on.
 #[test]
-fn test_global_non_derp_server_respects_toggle() {
+fn test_global_non_bork_server_respects_toggle() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
     let Some(home_dir) = dirs::home_dir() else {
         // Skip on platforms where a home dir isn't available (shouldn't happen on
@@ -343,7 +343,7 @@ fn test_global_non_derp_server_respects_toggle() {
         events.update(&mut app, |e, _| {
             assert!(
                 e.spawned_uuids.is_empty(),
-                "Global non-Derp server must not auto-spawn while toggle is off, got: {:?}",
+                "Global non-Bork server must not auto-spawn while toggle is off, got: {:?}",
                 e.spawned_uuids
             );
         });
@@ -354,37 +354,37 @@ fn test_global_non_derp_server_respects_toggle() {
             servers[0].uuid()
         });
 
-        // Toggle on: the global non-Derp server should be spawned.
+        // Toggle on: the global non-Bork server should be spawned.
         set_file_based_mcp_enabled(&mut app, true);
         events.update(&mut app, |e, _| {
             assert_eq!(
                 e.spawned_uuids,
                 vec![installation_uuid],
-                "Global non-Derp server should spawn when toggle flips on"
+                "Global non-Bork server should spawn when toggle flips on"
             );
         });
 
-        // Toggle off: the global non-Derp server should be despawned.
+        // Toggle off: the global non-Bork server should be despawned.
         set_file_based_mcp_enabled(&mut app, false);
         events.update(&mut app, |e, _| {
             assert_eq!(
                 e.despawned_uuids,
                 vec![installation_uuid],
-                "Global non-Derp server should despawn when toggle flips off"
+                "Global non-Bork server should despawn when toggle flips off"
             );
         });
     });
 }
 
-/// Project-scoped installations (both Derp and third-party) never auto-spawn on
+/// Project-scoped installations (both Bork and third-party) never auto-spawn on
 /// detection, and the toggle must not spawn or despawn them either.
 #[test]
 fn test_project_scoped_servers_never_auto_spawn() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
-    let repo_path = PathBuf::from("/tmp/derp-test-repo");
+    let repo_path = PathBuf::from("/tmp/bork-test-repo");
     let claude_parsed =
         parse_mcp_json(r#"{"proj-claude": {"command": "npx", "args": ["proj-claude"]}}"#);
-    let derp_parsed = parse_mcp_json(r#"{"proj-derp": {"command": "npx", "args": ["proj-derp"]}}"#);
+    let bork_parsed = parse_mcp_json(r#"{"proj-bork": {"command": "npx", "args": ["proj-bork"]}}"#);
 
     App::test((), |mut app| async move {
         let manager = setup_app(&mut app);
@@ -392,7 +392,7 @@ fn test_project_scoped_servers_never_auto_spawn() {
 
         manager.update(&mut app, |m, ctx| {
             m.apply_parsed_servers(repo_path.clone(), MCPProvider::Claude, claude_parsed, ctx);
-            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Derp, derp_parsed, ctx);
+            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Bork, bork_parsed, ctx);
         });
 
         // Neither detection should emit a spawn event.
@@ -435,10 +435,10 @@ fn test_project_scoped_servers_never_auto_spawn() {
 #[test]
 fn test_project_scoped_cloud_scan_has_detected_servers_but_empty_wait_set() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
-    let repo_path = PathBuf::from("/tmp/derp-test-cloud-repo");
+    let repo_path = PathBuf::from("/tmp/bork-test-cloud-repo");
     let claude_parsed =
         parse_mcp_json(r#"{"proj-claude": {"command": "npx", "args": ["proj-claude"]}}"#);
-    let derp_parsed = parse_mcp_json(r#"{"proj-derp": {"command": "npx", "args": ["proj-derp"]}}"#);
+    let bork_parsed = parse_mcp_json(r#"{"proj-bork": {"command": "npx", "args": ["proj-bork"]}}"#);
 
     App::test((), |mut app| async move {
         let manager = setup_app(&mut app);
@@ -446,7 +446,7 @@ fn test_project_scoped_cloud_scan_has_detected_servers_but_empty_wait_set() {
 
         manager.update(&mut app, |m, ctx| {
             m.apply_parsed_servers(repo_path.clone(), MCPProvider::Claude, claude_parsed, ctx);
-            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Derp, derp_parsed, ctx);
+            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Bork, bork_parsed, ctx);
             m.handle_cloud_environment_scan_complete(&repo_path, ctx);
         });
 
@@ -474,18 +474,18 @@ fn test_project_scoped_cloud_scan_has_detected_servers_but_empty_wait_set() {
 #[test]
 fn test_auto_started_cloud_scan_uuids_are_in_wait_set() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
-    let Some(derp_mcp_config_path) = derp_managed_mcp_config_path() else {
+    let Some(bork_mcp_config_path) = bork_managed_mcp_config_path() else {
         return;
     };
-    let root_path = derp_mcp_config_path.root_path;
-    let parsed = parse_mcp_json(r#"{"global-derp": {"command": "npx", "args": ["derp"]}}"#);
+    let root_path = bork_mcp_config_path.root_path;
+    let parsed = parse_mcp_json(r#"{"global-bork": {"command": "npx", "args": ["bork"]}}"#);
 
     App::test((), |mut app| async move {
         let manager = setup_app(&mut app);
         let events = subscribe_events(&mut app, &manager);
 
         manager.update(&mut app, |m, ctx| {
-            m.apply_parsed_servers(root_path.clone(), MCPProvider::Derp, parsed, ctx);
+            m.apply_parsed_servers(root_path.clone(), MCPProvider::Bork, parsed, ctx);
             m.handle_cloud_environment_scan_complete(&root_path, ctx);
         });
 
@@ -497,21 +497,21 @@ fn test_auto_started_cloud_scan_uuids_are_in_wait_set() {
             assert_eq!(scan.wait_server_uuids, e.spawned_uuids);
             assert!(
                 scan.detected_servers[0].auto_start_eligible,
-                "Global Derp server should be auto-start eligible"
+                "Global Bork server should be auto-start eligible"
             );
         });
     });
 }
 
 /// An installation referenced from both a global location and a project location
-/// is considered global (and thus gated only by the toggle for non-Derp providers).
+/// is considered global (and thus gated only by the toggle for non-Bork providers).
 #[test]
 fn test_server_referenced_from_both_global_and_project_is_global() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
     let Some(home_dir) = dirs::home_dir() else {
         return;
     };
-    let repo_path = PathBuf::from("/tmp/derp-test-repo-shared");
+    let repo_path = PathBuf::from("/tmp/bork-test-repo-shared");
     let json = r#"{"shared-claude": {"command": "npx", "args": ["shared"]}}"#;
     let global_parsed = parse_mcp_json(json);
     let project_parsed = parse_mcp_json(json);

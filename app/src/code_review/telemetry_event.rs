@@ -5,7 +5,7 @@ use serde::Serialize;
 use serde_json::json;
 use serde_with::SerializeDisplay;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::code_review::diff_state::{BackendOrigin, DiffMode, DiffOperation};
 use crate::features::FeatureFlag;
@@ -137,7 +137,7 @@ pub enum CodeReviewContextDestination {
     /// Written directly to the terminal PTY for an active CLI agent.
     #[serde(rename = "pty")]
     Pty,
-    /// Inserted into the Derp AI input buffer as plain text.
+    /// Inserted into the Bork AI input buffer as plain text.
     #[serde(rename = "agent_input")]
     AgentInput,
     /// Registered as an AI attachment and referenced from the input.
@@ -146,7 +146,7 @@ pub enum CodeReviewContextDestination {
     /// Inserted into the active command buffer while a command is running.
     #[serde(rename = "active_command_buffer")]
     ActiveCommandBuffer,
-    /// Submitted as an inline code review request through the Derp AI path.
+    /// Submitted as an inline code review request through the Bork AI path.
     #[serde(rename = "agent_review")]
     AgentReview,
     /// Inserted into CLI agent rich input.
@@ -527,7 +527,7 @@ impl TelemetryEvent for CodeReviewTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -619,4 +619,4 @@ impl TelemetryEventDesc for CodeReviewTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(CodeReviewTelemetryEvent);
+bork_core::register_telemetry_event!(CodeReviewTelemetryEvent);

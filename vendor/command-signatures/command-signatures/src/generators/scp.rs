@@ -1,5 +1,5 @@
 use super::common;
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResultsCollector, Suggestion,
 };
 
@@ -62,7 +62,7 @@ fn remote_paths_command(
     )
 }
 
-fn remote_paths_results(output: &str) -> derp_completion_metadata::GeneratorResults {
+fn remote_paths_results(output: &str) -> bork_completion_metadata::GeneratorResults {
     output
         .trim()
         .lines()

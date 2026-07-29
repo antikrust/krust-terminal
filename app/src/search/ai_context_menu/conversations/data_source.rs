@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use fuzzy_match::FuzzyMatchResult;
-use derpui::{AppContext, Entity, SingletonEntity};
+use borkui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::ConversationSearchItem;
 use super::ConversationContextItem;

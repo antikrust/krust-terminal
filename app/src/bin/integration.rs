@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
-use derp_cli::WorkerCommand;
-use derp_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, DerpServerConfig};
-use derp_core::AppId;
+use bork_cli::WorkerCommand;
+use bork_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, BorkServerConfig};
+use bork_core::AppId;
 
 #[derive(Debug, Default, Parser, Clone)]
-#[command(name = "derp-integration")]
+#[command(name = "bork-integration")]
 #[clap(args_conflicts_with_subcommands = true)]
 pub struct Args {
     #[command(subcommand)]
@@ -18,15 +18,15 @@ pub fn main() -> Result<()> {
         ChannelConfig {
             app_id: AppId::new(
                 "dev",
-                "derp",
+                "bork",
                 if cfg!(target_os = "macos") {
-                    "Derp-Integration"
+                    "Bork-Integration"
                 } else {
-                    "DerpIntegration"
+                    "BorkIntegration"
                 },
             ),
-            logfile_name: "derp_integration.log".into(),
-            server_config: DerpServerConfig {
+            logfile_name: "bork_integration.log".into(),
+            server_config: BorkServerConfig {
                 firebase_auth_api_key: "".into(),
                 // Use an IP in the IANA testing range, with the TCP discard port, to
                 // black-hole server traffic.
@@ -58,12 +58,12 @@ pub fn main() -> Result<()> {
                 // GUI application), do so.  This must occur before init_logging, as the
                 // terminal server sets up its own logger, and attempting to set a second
                 // logger leads to a panic.
-                derp::terminal::local_tty::server::run_terminal_server(args);
+                bork::terminal::local_tty::server::run_terminal_server(args);
                 return Ok(());
             }
             #[cfg(not(target_family = "wasm"))]
             WorkerCommand::RemoteServerProxy(_) | WorkerCommand::RemoteServerDaemon(_) => {
-                return derp::run();
+                return bork::run();
             }
             // This is a catch-all to handle the plugin host, which the integration test crate doesn't have a feature flag for.
             #[allow(unreachable_patterns)]
@@ -71,5 +71,5 @@ pub fn main() -> Result<()> {
         }
     }
 
-    derp::run()
+    bork::run()
 }

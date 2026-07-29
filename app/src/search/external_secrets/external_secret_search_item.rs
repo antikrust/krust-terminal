@@ -1,7 +1,7 @@
 use ordered_float::OrderedFloat;
-use derpui::elements::{ConstrainedBox, Container, Highlight, Text};
-use derpui::fonts::{Properties, Weight};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::elements::{ConstrainedBox, Container, Highlight, Text};
+use borkui::fonts::{Properties, Weight};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::external_secret_fuzzy_match::FuzzyMatchExternalSecretResult;
 use super::searcher::ExternalSecretSearchItemAction;
@@ -31,7 +31,7 @@ impl SearchItem for ExternalSecretSearchItem {
             ConstrainedBox::new(
                 self.external_secret
                     .icon()
-                    .to_derpui_icon(appearance.theme().active_ui_text_color())
+                    .to_borkui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_width(ICON_SIZE)

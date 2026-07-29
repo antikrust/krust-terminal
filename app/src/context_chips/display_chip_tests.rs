@@ -10,7 +10,7 @@ use crate::ui_components::icons::Icon;
 #[test]
 fn test_github_pr_display_text_from_url() {
     assert_eq!(
-        github_pr_display_text_from_url("https://github.com/derp/derp/pull/123"),
+        github_pr_display_text_from_url("https://github.com/bork/bork/pull/123"),
         Some("PR #123".to_string())
     );
 }
@@ -18,11 +18,11 @@ fn test_github_pr_display_text_from_url() {
 #[test]
 fn test_github_pr_display_text_from_url_rejects_non_pr_urls() {
     assert_eq!(
-        github_pr_display_text_from_url("https://github.com/derp/derp/issues/123"),
+        github_pr_display_text_from_url("https://github.com/bork/bork/issues/123"),
         None
     );
     assert_eq!(
-        github_pr_display_text_from_url("https://github.com/derp/derp/pull/not-a-number"),
+        github_pr_display_text_from_url("https://github.com/bork/bork/pull/not-a-number"),
         None
     );
 }
@@ -30,7 +30,7 @@ fn test_github_pr_display_text_from_url_rejects_non_pr_urls() {
 #[test]
 fn test_github_pr_chip_display_value_formats_url() {
     let value =
-        crate::context_chips::ChipValue::Text("https://github.com/derp/derp/pull/456".to_string());
+        crate::context_chips::ChipValue::Text("https://github.com/bork/bork/pull/456".to_string());
     assert_eq!(
         ContextChipKind::GithubPullRequest.display_value(&value),
         "PR #456"
@@ -208,7 +208,7 @@ fn test_format_git_branch_command_reports_missing_linked_worktree_path() {
     assert_eq!(
         GitBranch(value).prompt_chip_command(),
         PromptChipShellCommand::Echo {
-            message: "The branch is already checked out in another worktree, but Derp couldn't find its path."
+            message: "The branch is already checked out in another worktree, but Bork couldn't find its path."
         }
     );
 }

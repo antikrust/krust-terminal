@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds a Derp binary and bundles it up for distribution.
+# Builds a Bork binary and bundles it up for distribution.
 
 set -e
 
@@ -85,8 +85,8 @@ while (( "$#" )); do
       ;;
     --artifact)
       if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
-        if [[ "$2" != "app" && "$2" != "cli" && "$2" != "derpctrl" ]]; then
-          echo "Error: --artifact must be 'app', 'cli', or 'derpctrl', got '$2'" >&2
+        if [[ "$2" != "app" && "$2" != "cli" && "$2" != "borkctrl" ]]; then
+          echo "Error: --artifact must be 'app', 'cli', or 'borkctrl', got '$2'" >&2
           exit 1
         fi
         ARTIFACT="$2"
@@ -120,8 +120,8 @@ done
 # set positional arguments in their proper place
 eval set -- "$PARAMS"
 
-# Statically compile the CLI and derpctrl artifacts so they can run on older Linux distros.
-if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "derpctrl" ]]; then
+# Statically compile the CLI and borkctrl artifacts so they can run on older Linux distros.
+if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "borkctrl" ]]; then
   TARGET_TRIPLE="${BUILD_ARCH}-unknown-linux-musl"
   # Only configure the musl toolchain when we are actually compiling.  Packaging-only
   # runs (--skip-build) just need TARGET_TRIPLE to locate the prebuilt binary, and
@@ -144,13 +144,13 @@ elif [[ $RELEASE_CHANNEL = "local" || $RELEASE_CHANNEL = "dev" ]]; then
   # For dev bundles, we want to enable debug assertions to
   # catch violations that would otherwise silently pass in
   # a normal release build (e.g. in stable).
-  if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "derpctrl" ]]; then
+  if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "borkctrl" ]]; then
     CARGO_PROFILE="release-cli-debug_assertions"
   else
     CARGO_PROFILE="release-lto-debug_assertions"
   fi
 else
-  if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "derpctrl" ]]; then
+  if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "borkctrl" ]]; then
     CARGO_PROFILE="release-cli"
   else
     CARGO_PROFILE="release-lto"
@@ -173,37 +173,37 @@ mkdir -p "$OUT_DIR"
 # APP_NAME here must match the value used in Rust as the
 # application name; see app/src/channel.rs.
 #
-# DERP_BIN is the name of the binary produced by cargo;
+# BORK_BIN is the name of the binary produced by cargo;
 # BINARY_NAME is the desired name of the binary in the final package.
 if [[ $RELEASE_CHANNEL = "local" ]]; then
-  DERP_BIN="derp"
-  BINARY_NAME="derp-local"
-  APP_NAME="DerpLocal"
+  BORK_BIN="bork"
+  BINARY_NAME="bork-local"
+  APP_NAME="BorkLocal"
   FEATURES="$FEATURES,agent_mode_debug"
   export HANDLE_MARKDOWN=1
 elif [[ $RELEASE_CHANNEL = "dev" ]]; then
-  DERP_BIN="dev"
-  BINARY_NAME="derp-dev"
-  APP_NAME="DerpDev"
+  BORK_BIN="dev"
+  BINARY_NAME="bork-dev"
+  APP_NAME="BorkDev"
   FEATURES="$FEATURES,agent_mode_debug"
   # Enable heap usage tracking & profiling using jemalloc through pprof.
   FEATURES="$FEATURES,jemalloc_pprof,heap_usage_tracking"
   export HANDLE_MARKDOWN=1
 elif [[ $RELEASE_CHANNEL = "preview" ]]; then
-  DERP_BIN="preview"
-  BINARY_NAME="derp-preview"
-  APP_NAME="DerpPreview"
+  BORK_BIN="preview"
+  BINARY_NAME="bork-preview"
+  APP_NAME="BorkPreview"
   FEATURES="$FEATURES,preview_channel"
   # Enable heap usage tracking & profiling using jemalloc through pprof.
   FEATURES="$FEATURES,jemalloc_pprof,heap_usage_tracking"
 elif [[ $RELEASE_CHANNEL = "stable" ]]; then
-  DERP_BIN="stable"
-  BINARY_NAME="derp"
-  APP_NAME="Derp"
+  BORK_BIN="stable"
+  BINARY_NAME="bork"
+  APP_NAME="Bork"
 elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-  DERP_BIN="derp"
-  BINARY_NAME="derp"
-  APP_NAME="Derp"
+  BORK_BIN="bork"
+  BINARY_NAME="bork"
+  APP_NAME="Bork"
   # The OSS channel does not ship Sentry, so drop the crash_reporting feature
   # (which would otherwise pull in the Sentry SDK as a dependency).
   FEATURES="release_bundle"
@@ -211,22 +211,22 @@ fi
 
 # Artifact-specific binary naming
 if [[ "$ARTIFACT" == "cli" ]]; then
-  # For CLI artifacts, use oz instead of derp as the binary name.  The OSS
-  # channel is an exception: its CLI command name is `derp`, matching
+  # For CLI artifacts, use oz instead of bork as the binary name.  The OSS
+  # channel is an exception: its CLI command name is `bork`, matching
   # `Channel::cli_command_name` in the Rust source.
   if [[ $RELEASE_CHANNEL != "oss" ]]; then
-    BINARY_NAME="${BINARY_NAME/derp/oz}"
+    BINARY_NAME="${BINARY_NAME/bork/oz}"
   fi
-elif [[ "$ARTIFACT" == "derpctrl" ]]; then
-  BINARY_NAME="derpctrl"
+elif [[ "$ARTIFACT" == "borkctrl" ]]; then
+  BINARY_NAME="borkctrl"
   PACKAGES=()
 fi
 
 # Artifact-specific configuration
-if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "derpctrl" ]]; then
+if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "borkctrl" ]]; then
   FEATURES="$FEATURES,standalone"
-  if [[ "$ARTIFACT" == "derpctrl" ]]; then
-    FEATURES="$FEATURES,derp_control_cli"
+  if [[ "$ARTIFACT" == "borkctrl" ]]; then
+    FEATURES="$FEATURES,bork_control_cli"
   fi
 elif [[ "$ARTIFACT" == "app" ]]; then
   # All channels ship the v3 classifier and v2 heuristic.
@@ -236,8 +236,8 @@ if [[ -n "$EXTRA_FEATURES" ]]; then
   FEATURES="$FEATURES,$EXTRA_FEATURES"
 fi
 
-BUNDLE_ID="derp.baby.$APP_NAME"
-EXECUTABLE_PATH="$CARGO_TARGET_OUTPUT_DIR/$DERP_BIN"
+BUNDLE_ID="bork.baby.$APP_NAME"
+EXECUTABLE_PATH="$CARGO_TARGET_OUTPUT_DIR/$BORK_BIN"
 DEBUG_EXECUTABLE_PATH="$EXECUTABLE_PATH.debug"
 
 # Note that this variable must be set (and exported!) before we compile the
@@ -249,14 +249,14 @@ export APPIMAGE_NAME="$APP_NAME-$BUILD_ARCH.AppImage"
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if [[ "$CHECK_ONLY" == "true" ]]; then
-  cargo check -p derp --profile "$CARGO_PROFILE" --bin "$DERP_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
+  cargo check -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
   exit 0
 fi
 
 # Build the binary.
 if [[ "$BUILD" == "true" ]]; then
-  echo "Building and bundling Derp for channel $RELEASE_CHANNEL and bundle id $BUNDLE_ID"
-  cargo build -p derp --profile "$CARGO_PROFILE" --bin "$DERP_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
+  echo "Building and bundling Bork for channel $RELEASE_CHANNEL and bundle id $BUNDLE_ID"
+  cargo build -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
 
   echo "Making debug copy of '$EXECUTABLE_PATH' at '$DEBUG_EXECUTABLE_PATH'"
   cp "$EXECUTABLE_PATH" "$DEBUG_EXECUTABLE_PATH"
@@ -265,35 +265,35 @@ if [[ "$BUILD" == "true" ]]; then
   if [[ $RELEASE_CHANNEL = "dev" ]]; then
     # For dev builds, only strip debug symbols, as we want to keep some
     # symbols for profiling purposes.
-    "${DERP_MUSL_STRIP:-strip}" --strip-debug "$EXECUTABLE_PATH"
+    "${BORK_MUSL_STRIP:-strip}" --strip-debug "$EXECUTABLE_PATH"
   else
     # For production builds, strip all symbols, to keep the binary size
     # smaller.
-    "${DERP_MUSL_STRIP:-strip}" --strip-all "$EXECUTABLE_PATH"
+    "${BORK_MUSL_STRIP:-strip}" --strip-all "$EXECUTABLE_PATH"
   fi
 else
   echo 'Skipping `cargo build` step due to --skip-build argument'
 fi
 
-if [[ "$ARTIFACT" == "derpctrl" ]]; then
-  echo "Copying control-mode binary into $OUT_DIR/$DERP_BIN"
-  cp "$EXECUTABLE_PATH" "$OUT_DIR/$DERP_BIN"
-  DERPCTRL_SCRIPT_PATH="$OUT_DIR/derpctrl"
-  echo "Creating derpctrl wrapper script at $DERPCTRL_SCRIPT_PATH"
-  cat > "$DERPCTRL_SCRIPT_PATH" << EOF
+if [[ "$ARTIFACT" == "borkctrl" ]]; then
+  echo "Copying control-mode binary into $OUT_DIR/$BORK_BIN"
+  cp "$EXECUTABLE_PATH" "$OUT_DIR/$BORK_BIN"
+  BORKCTRL_SCRIPT_PATH="$OUT_DIR/borkctrl"
+  echo "Creating borkctrl wrapper script at $BORKCTRL_SCRIPT_PATH"
+  cat > "$BORKCTRL_SCRIPT_PATH" << EOF
 #!/usr/bin/env bash
 script_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-exec "\$script_dir/$DERP_BIN" --derpctrl "\$@"
+exec "\$script_dir/$BORK_BIN" --borkctrl "\$@"
 EOF
-  chmod +x "$DERPCTRL_SCRIPT_PATH"
+  chmod +x "$BORKCTRL_SCRIPT_PATH"
 fi
 BINARY_PATH="$EXECUTABLE_PATH"
-if [[ "$ARTIFACT" == "derpctrl" ]]; then
-  BINARY_PATH="$DERPCTRL_SCRIPT_PATH"
+if [[ "$ARTIFACT" == "borkctrl" ]]; then
+  BINARY_PATH="$BORKCTRL_SCRIPT_PATH"
 fi
 
 # Prepare bundled resources for CLI builds.
-if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "derpctrl" ]]; then
+if [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "borkctrl" ]]; then
   echo "Preparing CLI resources directory"
   BUNDLED_RESOURCES_DIR="$OUT_DIR/resources"
   "$WORKSPACE_ROOT_DIR/script/prepare_bundled_resources" "$BUNDLED_RESOURCES_DIR" "$RELEASE_CHANNEL" "$CARGO_PROFILE"

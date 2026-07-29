@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use derp_cli::agent::Harness;
-use derp_errors::report_error;
-use derpui::{EntityId, SingletonEntity, ViewContext, ViewHandle};
+use bork_cli::agent::Harness;
+use bork_errors::report_error;
+use borkui::{EntityId, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::agent::RenderableAIError;

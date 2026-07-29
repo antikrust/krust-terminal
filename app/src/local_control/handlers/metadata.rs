@@ -12,8 +12,8 @@ use ::local_control::{
 use serde::Serialize;
 use serde_json::{json, Value};
 use settings::Setting as _;
-use derp_core::channel::ChannelState;
-use derpui::{AppContext, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use bork_core::channel::ChannelState;
+use borkui::{AppContext, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use crate::features::FeatureFlag;
 use crate::local_control::resolver::{reject_target_families, require_active_window_id_for_action};
@@ -134,7 +134,7 @@ pub(crate) enum SurfaceDestination {
     CommandSearch,
     ThemePicker,
     Keybindings,
-    DerpDrive,
+    BorkDrive,
     ResourceCenter,
     AiAssistant,
     CodeReview,
@@ -154,7 +154,7 @@ impl SurfaceDestination {
         Self::CommandSearch,
         Self::ThemePicker,
         Self::Keybindings,
-        Self::DerpDrive,
+        Self::BorkDrive,
         Self::ResourceCenter,
         Self::AiAssistant,
         Self::CodeReview,
@@ -174,7 +174,7 @@ impl SurfaceDestination {
             Self::CommandSearch => "command_search",
             Self::ThemePicker => "theme_picker",
             Self::Keybindings => "keybindings",
-            Self::DerpDrive => "derp_drive",
+            Self::BorkDrive => "bork_drive",
             Self::ResourceCenter => "resource_center",
             Self::AiAssistant => "ai_assistant",
             Self::CodeReview => "code_review",
@@ -311,7 +311,7 @@ pub(crate) fn surface_unavailable_reason(
         | SurfaceDestination::ThemePicker
         | SurfaceDestination::Keybindings
         | SurfaceDestination::ResourceCenter => None,
-        SurfaceDestination::DerpDrive => None,
+        SurfaceDestination::BorkDrive => None,
         SurfaceDestination::AiAssistant if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) => {
             Some("AI features are disabled")
         }
@@ -350,7 +350,7 @@ pub(crate) fn surface_unavailable_reason(
                 && surface_unavailable_reason(SurfaceDestination::GlobalSearch, ctx).is_some()
                 && surface_unavailable_reason(SurfaceDestination::ConversationList, ctx)
                     .is_some()
-                && surface_unavailable_reason(SurfaceDestination::DerpDrive, ctx).is_some() =>
+                && surface_unavailable_reason(SurfaceDestination::BorkDrive, ctx).is_some() =>
         {
             Some("the left panel has no available views")
         }

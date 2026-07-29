@@ -2,10 +2,10 @@
 //! such as the dimensions of a grid cell and the baseline position of text within a cell.
 use num_traits::Zero;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use derp_errors::report_error;
-use derpui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
-use derpui::fonts::{Cache as FontCache, FamilyId};
-use derpui::text_layout::ComputeBaselinePositionFn;
+use bork_errors::report_error;
+use borkui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
+use borkui::fonts::{Cache as FontCache, FamilyId};
+use borkui::text_layout::ComputeBaselinePositionFn;
 
 /// Computes the grid cell size given the font and size at which the grid should
 /// be rendered. We use a similar algorithm to Alacritty to do this, where the

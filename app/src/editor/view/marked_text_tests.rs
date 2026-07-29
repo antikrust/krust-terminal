@@ -1,8 +1,8 @@
 use vim::vim::VimMode;
-use derp_core::features::FeatureFlag;
-use derpui::keymap::Keystroke;
-use derpui::platform::WindowStyle;
-use derpui::App;
+use bork_core::features::FeatureFlag;
+use borkui::keymap::Keystroke;
+use borkui::platform::WindowStyle;
+use borkui::App;
 
 use super::initialize_app;
 use crate::editor::{DisplayPoint, EditorOptions, EditorView};

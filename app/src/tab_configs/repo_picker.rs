@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use derp_util::path::user_friendly_path;
-use derpui::elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text};
-use derpui::platform::Cursor;
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::components::UiComponentStyles;
-use derpui::{
+use bork_util::path::user_friendly_path;
+use borkui::elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text};
+use borkui::platform::Cursor;
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::components::UiComponentStyles;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

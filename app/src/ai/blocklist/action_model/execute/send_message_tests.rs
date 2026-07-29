@@ -1,4 +1,4 @@
-use derpui::{App, EntityId};
+use borkui::{App, EntityId};
 
 use super::*;
 use crate::ai::blocklist::BlocklistAIHistoryModel;

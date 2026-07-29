@@ -1,5 +1,5 @@
 //! This module contains all auxiliary code for hitting the Transcribe endpoint in
-//! derp-server that serves Voice.
+//! bork-server that serves Voice.
 
 mod api;
 

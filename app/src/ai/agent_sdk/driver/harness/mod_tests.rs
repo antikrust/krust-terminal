@@ -1,4 +1,4 @@
-use derp_cli::agent::Harness;
+use bork_cli::agent::Harness;
 
 use super::{auth_check_command_for, validate_cli_installed};
 use crate::ai::agent_sdk::driver::AgentDriverError;

@@ -2,11 +2,11 @@ use std::fmt::Debug;
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use derpui::elements::{
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::cloud_object::{GenericStringObjectFormat, JsonObjectType, ObjectType};

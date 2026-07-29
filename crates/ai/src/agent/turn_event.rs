@@ -4,7 +4,7 @@
 //!
 //! Each supported CLI gets its own parser translating its native streaming
 //! format into a `Vec<TurnEvent>`; everything downstream (mapping into
-//! Derp's own `AIAgentOutputMessageType`/`AIAgentActionType` rendering
+//! Bork's own `AIAgentOutputMessageType`/`AIAgentActionType` rendering
 //! vocabulary) only ever depends on this type, not on any provider's wire
 //! format.
 

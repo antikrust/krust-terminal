@@ -1,6 +1,6 @@
-use derpui::elements::{Container, Flex, Highlight, ParentElement, Text};
-use derpui::fonts::{Properties, Weight};
-use derpui::Element;
+use borkui::elements::{Container, Flex, Highlight, ParentElement, Text};
+use borkui::fonts::{Properties, Weight};
+use borkui::Element;
 
 use super::new_session_option::NewSessionOption;
 use crate::appearance::Appearance;

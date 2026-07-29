@@ -10,12 +10,12 @@ use ai::index::full_source_code_embedding::manager::{
 use futures::channel::oneshot;
 use futures::future::join_all;
 use repo_metadata::repositories::{DetectedRepositories, RepoDetectionSource};
-use derp_cli::agent::Harness;
-use derp_completer::completer::CommandExitStatus;
-use derp_core::command::ExitCode;
-use derp_core::{safe_info, safe_warn};
-use derpui::r#async::FutureExt;
-use derpui::{ModelContext, ModelSpawner, SingletonEntity};
+use bork_cli::agent::Harness;
+use bork_completer::completer::CommandExitStatus;
+use bork_core::command::ExitCode;
+use bork_core::{safe_info, safe_warn};
+use borkui::r#async::FutureExt;
+use borkui::{ModelContext, ModelSpawner, SingletonEntity};
 
 use super::terminal::TerminalDriver;
 use super::AgentDriverError;
@@ -266,7 +266,7 @@ fn build_parallel_clone_command(repos: &[SourceRepo], shell_type: ShellType) -> 
         r#"set +e
 failed=0
 pids=""
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/derp-clone-logs.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/bork-clone-logs.XXXXXX")"
 cleanup_clone_logs() {
   rm -rf "$tmp_dir"
 }

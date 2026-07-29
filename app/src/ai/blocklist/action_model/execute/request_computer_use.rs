@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use ai::agent::action_result::{AIAgentActionResultType, RequestComputerUseResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use derpui::{Entity, EntityId, ModelContext, SingletonEntity};
+use borkui::{Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::{AIAgentActionId, AIAgentActionType};

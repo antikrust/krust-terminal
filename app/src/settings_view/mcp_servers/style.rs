@@ -1,6 +1,6 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{Coords, UiComponentStyles};
+use bork_core::ui::appearance::Appearance;
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{Coords, UiComponentStyles};
 
 pub const ICON_MARGIN: f32 = 8.;
 pub const HEADER_FONT_SIZE: f32 = 18.;

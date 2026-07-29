@@ -1,15 +1,15 @@
 use std::time::Duration;
 
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     ChildView, Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::platform::Cursor;
-use derpui::r#async::Timer;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::platform::Cursor;
+use borkui::r#async::Timer;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

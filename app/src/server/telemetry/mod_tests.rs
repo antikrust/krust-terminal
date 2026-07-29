@@ -15,22 +15,22 @@ fn test_persist_events_doesnt_include_ugc_events() {
             let user_id = Some("user".into());
             let anonymous_id = "anonymous_id".to_owned();
 
-            derpui::telemetry::record_event(
+            borkui::telemetry::record_event(
                 user_id.clone(),
                 anonymous_id.clone(),
                 "non UGC event name".into(),
                 None,  /* payload */
                 false, /* contains_ugc  */
-                derpui::time::get_current_time(),
+                borkui::time::get_current_time(),
             );
 
-            derpui::telemetry::record_event(
+            borkui::telemetry::record_event(
                 user_id.clone(),
                 anonymous_id.clone(),
                 "UGC event name".into(),
                 None, /* payload */
                 true, /* contains_ugc  */
-                derpui::time::get_current_time(),
+                borkui::time::get_current_time(),
             );
 
             let file_path = dirs.root().join("rudderstack");

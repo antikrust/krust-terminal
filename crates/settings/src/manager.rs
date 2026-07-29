@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::ops::Deref;
 
 use anyhow::{Result, anyhow};
-use derp_features::FeatureFlag;
-use derpui_core::{AppContext, Entity, ModelContext, SingletonEntity};
-use derpui_extras::user_preferences::UserPreferences;
+use bork_features::FeatureFlag;
+use borkui_core::{AppContext, Entity, ModelContext, SingletonEntity};
+use borkui_extras::user_preferences::UserPreferences;
 
 use super::{PrivatePreferences, RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
 

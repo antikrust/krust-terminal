@@ -1,8 +1,8 @@
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use derp_core::features::FeatureFlag;
-use derpui::{Entity, ModelContext};
+use bork_core::features::FeatureFlag;
+use borkui::{Entity, ModelContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{

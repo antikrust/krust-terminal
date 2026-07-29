@@ -11,9 +11,9 @@ use futures::channel::oneshot;
 use futures::executor::block_on;
 use ignore::gitignore::Gitignore;
 use virtual_fs::{Stub, VirtualFS};
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::r#async::FutureExt as _;
-use derpui_core::App;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::r#async::FutureExt as _;
+use borkui_core::App;
 #[cfg(feature = "local_fs")]
 use watcher::BulkFilesystemWatcherEvent;
 
@@ -470,7 +470,7 @@ fn test_lazy_loaded_path_does_not_build_standing_rule_results_below_shallow_tree
     VirtualFS::test("lazy_loaded_path_standing_rules", |dirs, mut vfs| {
         vfs.mkdir("workspace/src/deep")
             .with_files(vec![Stub::FileWithContent(
-                "workspace/src/deep/DERP.md",
+                "workspace/src/deep/BORK.md",
                 "project rules",
             )]);
 
@@ -479,7 +479,7 @@ fn test_lazy_loaded_path_does_not_build_standing_rule_results_below_shallow_tree
             let model_handle = app.add_model(|_| LocalRepoMetadataModel::new_for_test());
             let workspace_path = StandardizedPath::from_local_canonicalized(&workspace).unwrap();
             let rule_path =
-                StandardizedPath::try_from_local(&workspace.join("src/deep/DERP.md")).unwrap();
+                StandardizedPath::try_from_local(&workspace.join("src/deep/BORK.md")).unwrap();
 
             model_handle.update(&mut app, |model, ctx| {
                 model.index_lazy_loaded_path(&workspace_path, ctx).unwrap();
@@ -505,13 +505,13 @@ fn test_lazy_loaded_path_discovers_force_included_skills_and_emits_watcher_delta
             .mkdir("workspace/src/deep")
             .with_files(vec![
                 Stub::FileWithContent("workspace/.agents/skills/review/SKILL.md", "name: review"),
-                Stub::FileWithContent("workspace/src/deep/DERP.md", "project rules"),
+                Stub::FileWithContent("workspace/src/deep/BORK.md", "project rules"),
             ]);
 
         let workspace = dirs.tests().join("workspace");
         let skill_path = workspace.join(".agents/skills/review/SKILL.md");
         let src_path = workspace.join("src");
-        let rule_path = workspace.join("src/deep/DERP.md");
+        let rule_path = workspace.join("src/deep/BORK.md");
         App::test((), |mut app| async move {
             let model_handle = app.add_model(|_| {
                 let mut model = LocalRepoMetadataModel::new_for_test();
@@ -1943,7 +1943,7 @@ fn removed_external_symlink_target_directory_queues_lexical_removal_and_clears_m
 }
 #[test]
 fn test_canonicalized_path_functionality() {
-    use derp_util::standardized_path::StandardizedPath;
+    use bork_util::standardized_path::StandardizedPath;
     VirtualFS::test("canonicalized_path_test", |dirs, mut vfs| {
         let repo_path = dirs.tests();
 
@@ -2010,7 +2010,7 @@ fn test_canonicalized_path_functionality() {
 
 #[test]
 fn test_repository_operations_with_standardized_paths() {
-    use derp_util::standardized_path::StandardizedPath;
+    use bork_util::standardized_path::StandardizedPath;
 
     VirtualFS::test("repo_canonicalized_test", |dirs, mut vfs| {
         let test_root = dirs.tests();
@@ -2123,7 +2123,7 @@ fn test_repository_operations_with_standardized_paths() {
 
 #[test]
 fn test_standardized_path_edge_cases() {
-    use derp_util::standardized_path::StandardizedPath;
+    use bork_util::standardized_path::StandardizedPath;
 
     VirtualFS::test("canonicalized_edge_cases", |dirs, mut vfs| {
         let test_root = dirs.tests();

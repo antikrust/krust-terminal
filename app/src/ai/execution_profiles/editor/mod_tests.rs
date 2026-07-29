@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use derp_core::features::FeatureFlag;
-use derpui::App;
+use bork_core::features::FeatureFlag;
+use borkui::App;
 
 use super::ui_helpers::context_window_snap_values;
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;

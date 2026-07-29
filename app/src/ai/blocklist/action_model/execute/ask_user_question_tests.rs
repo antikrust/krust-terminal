@@ -1,6 +1,6 @@
 use ai::agent::action::AskUserQuestionItem;
 use ai::agent::action_result::{AskUserQuestionAnswerItem, AskUserQuestionResult};
-use derpui::{App, EntityId, ModelHandle};
+use borkui::{App, EntityId, ModelHandle};
 
 use super::*;
 use crate::ai::agent::conversation::AIConversationId;

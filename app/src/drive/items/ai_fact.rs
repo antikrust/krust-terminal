@@ -1,9 +1,9 @@
-use derpui::elements::{Container, Flex, MouseStateHandle, ParentElement};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element};
+use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFact};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
@@ -12,18 +12,18 @@ use crate::drive::{CloudObjectTypeAndId, DriveObjectType};
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct DerpDriveAIFact {
+pub struct BorkDriveAIFact {
     id: CloudObjectTypeAndId,
     ai_fact: CloudAIFact,
 }
 
-impl DerpDriveAIFact {
+impl BorkDriveAIFact {
     pub fn new(id: CloudObjectTypeAndId, ai_fact: CloudAIFact) -> Self {
         Self { id, ai_fact }
     }
 }
 
-impl DerpDriveItem for DerpDriveAIFact {
+impl BorkDriveItem for BorkDriveAIFact {
     fn display_name(&self) -> Option<String> {
         match &self.ai_fact.model().string_model {
             AIFact::Memory(AIMemory { content, name, .. }) => {
@@ -84,8 +84,8 @@ impl DerpDriveItem for DerpDriveAIFact {
         )
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -105,7 +105,7 @@ impl DerpDriveItem for DerpDriveAIFact {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }

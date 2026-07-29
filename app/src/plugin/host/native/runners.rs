@@ -4,9 +4,9 @@ use std::sync::Arc;
 use async_channel::Receiver;
 use futures::channel::oneshot;
 use parking_lot::Mutex;
-use derp_errors::report_error;
-use derp_js::JsFunctionId;
-use derpui::r#async::executor::Background;
+use bork_errors::report_error;
+use bork_js::JsFunctionId;
+use borkui::r#async::executor::Background;
 
 use super::plugin::{AppServiceCallers, PluginRequest, PluginResponse};
 use super::plugin_ref::PluginRef;

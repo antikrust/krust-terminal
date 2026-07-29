@@ -3,11 +3,11 @@ pub mod themes;
 
 pub use params::*;
 pub use themes::Theme;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::ContrastingColor as _;
-use derp_core::ui::color::contrast::MinimumAllowedContrast;
-use derpui_core::elements::{MouseState, MouseStateHandle};
-use derpui_core::prelude::*;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::ContrastingColor as _;
+use bork_core::ui::color::contrast::MinimumAllowedContrast;
+use borkui_core::elements::{MouseState, MouseStateHandle};
+use borkui_core::prelude::*;
 
 use crate::{keyboard_shortcut, tooltip};
 
@@ -51,7 +51,7 @@ impl crate::Component for Button {
                 Content::Icon(icon) | Content::IconAndLabel(icon, _) => {
                     let icon_size = size.icon_size();
                     row.add_child(
-                        ConstrainedBox::new(icon.to_derpui_icon(text_color.into()).finish())
+                        ConstrainedBox::new(icon.to_borkui_icon(text_color.into()).finish())
                             .with_width(icon_size)
                             .with_height(icon_size)
                             .finish(),

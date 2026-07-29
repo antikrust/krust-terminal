@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
-use derp_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use derpui::r#async::Timer;
+use bork_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use borkui::r#async::Timer;
 
 use crate::server::server_api::integrations::IntegrationsClient;
 

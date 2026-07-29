@@ -28,12 +28,12 @@ session-sharing-protocol.workspace = true
 settings.workspace = true
 settings_value = { workspace = true, features = ["derive"] }
 uuid.workspace = true
-derp-workflows.workspace = true
-derp_cli.workspace = true
-derp_core.workspace = true
-derp_errors.workspace = true
-derp_graphql.workspace = true
-derp_util.workspace = true
+bork-workflows.workspace = true
+bork_cli.workspace = true
+bork_core.workspace = true
+bork_errors.workspace = true
+bork_graphql.workspace = true
+bork_util.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 cloud_object_persistence.workspace = true

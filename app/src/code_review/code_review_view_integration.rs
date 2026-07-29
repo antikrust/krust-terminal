@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use derp_editor::model::CoreEditorModel;
-use derp_editor::render::model::{
+use bork_editor::model::CoreEditorModel;
+use bork_editor::render::model::{
     BlockItem, HitTestOptions, LineCount, Location, RenderLineLocation,
 };
-use derpui::units::Pixels;
-use derpui::{AppContext, ViewContext};
+use borkui::units::Pixels;
+use borkui::{AppContext, ViewContext};
 
 use super::{CodeReviewView, CodeReviewViewState, FILE_HEADER_HEIGHT};
 use crate::code::buffer_location::LocalOrRemotePath;

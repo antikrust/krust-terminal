@@ -5,10 +5,10 @@ use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::watcher::DirectoryWatcher;
 #[cfg(feature = "local_fs")]
 use repo_metadata::RepoMetadataModel;
-use derp_core::ui::appearance::Appearance;
-use derp_server_client::iap::IapManager;
-use derpui::platform::WindowStyle;
-use derpui::{App, SingletonEntity, ViewHandle, WindowId};
+use bork_core::ui::appearance::Appearance;
+use bork_server_client::iap::IapManager;
+use borkui::platform::WindowStyle;
+use borkui::{App, SingletonEntity, ViewHandle, WindowId};
 use watcher::HomeDirectoryWatcher;
 
 use super::settings::initialize_history_persistence_for_tests;
@@ -61,7 +61,7 @@ use crate::terminal::shared_session::permissions_manager::SessionPermissionsMana
 use crate::terminal::view::inline_banner::ByoLlmAuthBannerSessionState;
 use crate::terminal::{History, TerminalView};
 use crate::undo_close::UndoCloseStack;
-use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
+use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{ActiveSession, OneTimeModalModel, WorkspaceRegistry};
@@ -156,7 +156,7 @@ pub fn initialize_app_for_terminal_view(app: &mut App) {
     app.add_singleton_model(|_| GitRepoModels::new());
     app.add_singleton_model(RepoOutlines::new_for_test);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
     app.add_singleton_model(|ctx| {
         CodebaseIndexManager::new_for_test(ServerApiProvider::as_ref(ctx).get(), ctx)

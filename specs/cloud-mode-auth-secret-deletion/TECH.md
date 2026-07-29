@@ -24,7 +24,7 @@ The current `AuthSecretEntry` contains only `name`, but server `ManagedSecret` r
 
 1. Extend auth-secret cache entries with owner metadata.
 
-   Update `AuthSecretEntry` in `app/src/ai/harness_availability.rs` to include `owner: SecretOwner`. Convert `derp_graphql::object::Space` from fetched/created `ManagedSecret` values into `SecretOwner`:
+   Update `AuthSecretEntry` in `app/src/ai/harness_availability.rs` to include `owner: SecretOwner`. Convert `bork_graphql::object::Space` from fetched/created `ManagedSecret` values into `SecretOwner`:
 
    - `SpaceType::User` -> `SecretOwner::CurrentUser`
    - `SpaceType::Team` -> `SecretOwner::Team { team_uid: space.uid.into_inner() }`
@@ -156,7 +156,7 @@ No new helper-only unit tests are retained in this implementation pass. The foll
 5. Run focused checks:
 
    ```sh
-   cargo check -p derp
+   cargo check -p bork
    cargo fmt -- --check
    ```
 

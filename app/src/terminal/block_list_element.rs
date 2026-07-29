@@ -13,27 +13,27 @@ use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
 use session_sharing_protocol::common::{ParticipantId, Selection};
 use vec1::Vec1;
-use derp_core::semantic_selection::SemanticSelection;
-use derp_core::ui::builder::UiBuilder;
-use derp_core::ui::theme::AnsiColorIdentifier;
-use derp_util::user_input::UserInput;
-use derpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use derpui::elements::{
+use bork_core::semantic_selection::SemanticSelection;
+use bork_core::ui::builder::UiBuilder;
+use bork_core::ui::theme::AnsiColorIdentifier;
+use bork_util::user_input::UserInput;
+use borkui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use borkui::elements::{
     Axis, Border, ChildAnchor, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Point, Radius, SavePosition, ScrollData, ScrollableElement,
     Stack, Text, ZIndex,
 };
-use derpui::event::{DispatchedEvent, KeyState, ModifiersState};
-use derpui::fonts::{FamilyId, Properties, Style, Weight};
-use derpui::geometry::rect::RectF;
-use derpui::geometry::vector::{vec2f, Vector2F};
-use derpui::platform::keyboard::KeyCode;
-use derpui::platform::Cursor;
-use derpui::text::SelectionType;
-use derpui::ui_components::components::UiComponent;
-use derpui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use derpui::{
+use borkui::event::{DispatchedEvent, KeyState, ModifiersState};
+use borkui::fonts::{FamilyId, Properties, Style, Weight};
+use borkui::geometry::rect::RectF;
+use borkui::geometry::vector::{vec2f, Vector2F};
+use borkui::platform::keyboard::KeyCode;
+use borkui::platform::Cursor;
+use borkui::text::SelectionType;
+use borkui::ui_components::components::UiComponent;
+use borkui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use borkui::{
     AfterLayoutContext, AppContext, ClipBounds, Element, EntityId, Event, EventContext,
     LayoutContext, ModelHandle, PaintContext, SingletonEntity as _, SizeConstraint,
 };
@@ -59,7 +59,7 @@ use super::view::{
     BlocklistAIRenderContext, InlineBannerId, RichContentMetadata, SeparatorId,
     SharedSessionBanners, TerminalEditor, TerminalViewRenderContext, BLOCK_BANNER_HEIGHT,
 };
-use super::derpify::render::{draw_flag_pole, render_subshell_flag};
+use super::borkify::render::{draw_flag_pole, render_subshell_flag};
 use super::{heights_approx_eq, TerminalModel, HEIGHT_FUDGE_FACTOR_LINES};
 use crate::ai::blocklist::{ai_brand_color, ATTACH_AS_AGENT_MODE_CONTEXT_TEXT};
 use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
@@ -84,9 +84,9 @@ use crate::terminal::model::terminal_model::BlockIndex;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::text_effects::TextEffectSurface;
 use crate::terminal::view::TerminalAction;
-use crate::terminal::derpify::SubshellSource;
+use crate::terminal::borkify::SubshellSource;
 use crate::terminal::{grid_renderer, SizeInfo};
-use crate::themes::theme::{Fill, DerpTheme};
+use crate::themes::theme::{Fill, BorkTheme};
 use crate::ui_components::{self, icons as UIIcon};
 use crate::util::color::Opacity;
 
@@ -634,7 +634,7 @@ pub struct BlockListElement {
     font_size: f32,
     font_weight: Weight,
     line_height_ratio: f32,
-    derp_theme: DerpTheme,
+    bork_theme: BorkTheme,
     ui_builder: UiBuilder,
     block_borders_enabled: bool,
     overflow_offset: f32,
@@ -720,7 +720,7 @@ pub struct BlockListElement {
     use_ligature_rendering: bool,
 
     /// When true, suppresses cursor rendering for CLI agents when rich input is open. For agents that draw their own cursor (SHOW_CURSOR off),
-    /// the cursor cell is skipped. For agents that let Derp draw the cursor
+    /// the cursor cell is skipped. For agents that let Bork draw the cursor
     /// (SHOW_CURSOR on), the `draw_cursor` call and cursor contrast colouring
     /// are suppressed instead.
     hide_cursor_cell: bool,
@@ -934,7 +934,7 @@ impl BlockListElement {
             font_size: appearance.monospace_font_size(),
             font_weight: appearance.monospace_font_weight(),
             line_height_ratio: appearance.ui_builder().line_height_ratio(),
-            derp_theme: appearance.theme().clone(),
+            bork_theme: appearance.theme().clone(),
             ui_builder: appearance.ui_builder().clone(),
             block_borders_enabled: terminal_spacing.block_borders_enabled,
             overflow_offset: terminal_spacing.overflow_offset,
@@ -1085,8 +1085,8 @@ impl BlockListElement {
     ) -> Self {
         self.hovered_block_index = Some(block_index);
         let icon_color = self
-            .derp_theme
-            .sub_text_color(self.derp_theme.surface_2())
+            .bork_theme
+            .sub_text_color(self.bork_theme.surface_2())
             .into_solid();
 
         let icon = Container::new(
@@ -1104,7 +1104,7 @@ impl BlockListElement {
                     false,
                     true,
                     self.mouse_states.overflow_menu_button_mouse_state.clone(),
-                    &self.derp_theme,
+                    &self.bork_theme,
                     &self.ui_builder,
                     move |ctx, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::BlockListContextMenu(
@@ -1140,9 +1140,9 @@ impl BlockListElement {
                 self.mouse_states.snackbar_toggle_button_mouse_state.clone(),
                 |state| {
                     let background = if state.is_clicked() || state.is_hovered() {
-                        self.derp_theme.surface_2()
+                        self.bork_theme.surface_2()
                     } else {
-                        self.derp_theme.surface_1()
+                        self.bork_theme.surface_1()
                     };
                     icon.with_corner_radius(rounded_corners)
                         .with_background(background)
@@ -1159,11 +1159,11 @@ impl BlockListElement {
             let icon = Container::new(
                 ConstrainedBox::new(if FeatureFlag::AgentView.is_enabled() {
                     UIIcon::Icon::Paperclip
-                        .to_derpui_icon(icon_color.into())
+                        .to_borkui_icon(icon_color.into())
                         .finish()
                 } else if FeatureFlag::AgentMode.is_enabled() {
                     UIIcon::Icon::Stars
-                        .to_derpui_icon(icon_color.into())
+                        .to_borkui_icon(icon_color.into())
                         .finish()
                 } else {
                     Icon::new(AI_ASSISTANT_SVG_PATH, icon_color).finish()
@@ -1209,7 +1209,7 @@ impl BlockListElement {
                 false,
                 true,
                 self.mouse_states.ai_assistant_button_mouse_state.clone(),
-                &self.derp_theme,
+                &self.bork_theme,
                 &self.ui_builder,
                 move |ctx: &mut EventContext, _, _| {
                     if let Some(action) = ai_button_action.clone() {
@@ -1224,7 +1224,7 @@ impl BlockListElement {
             let icon = Container::new(
                 ConstrainedBox::new(
                     ui_components::icons::Icon::Save
-                        .to_derpui_icon(icon_color.into())
+                        .to_borkui_icon(icon_color.into())
                         .finish(),
                 )
                 .with_height(16.)
@@ -1252,7 +1252,7 @@ impl BlockListElement {
                     self.mouse_states
                         .save_as_workflow_button_mouse_state
                         .clone(),
-                    &self.derp_theme,
+                    &self.bork_theme,
                     &self.ui_builder,
                     move |ctx: &mut EventContext, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::OpenWorkflowModalForBlock(
@@ -1272,7 +1272,7 @@ impl BlockListElement {
                     self.mouse_states
                         .save_as_workflow_button_mouse_state
                         .clone(),
-                    &self.derp_theme,
+                    &self.bork_theme,
                     &self.ui_builder,
                     move |ctx: &mut EventContext, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::OpenWorkflowModalForBlock(
@@ -1302,7 +1302,7 @@ impl BlockListElement {
                 false,
                 true,
                 self.mouse_states.delete_block_button_mouse_state.clone(),
-                &self.derp_theme,
+                &self.bork_theme,
                 &self.ui_builder,
                 move |ctx: &mut EventContext, _, _| {
                     ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
@@ -1325,7 +1325,7 @@ impl BlockListElement {
     }
 
     /// We only want to process control characters here and return `false` for everything else.
-    /// That way, we'll receive a `derpui::Event::TypedCharacters` event for printable characters.
+    /// That way, we'll receive a `borkui::Event::TypedCharacters` event for printable characters.
     /// So `TerminalAction::KeyDown` is for control characters only while
     /// `TerminalAction::TypedCharacters` is for characters that can go into the editor.
     fn key_down(&mut self, chars: &str, ctx: &mut EventContext) -> bool {
@@ -1619,7 +1619,7 @@ impl BlockListElement {
                                 .is_some_and(|block| block.is_active_and_long_running());
 
                             // On mobile, request soft keyboard so users can input
-                            if derpui::platform::is_mobile_device() && on_long_running_block {
+                            if borkui::platform::is_mobile_device() && on_long_running_block {
                                 ctx.request_soft_keyboard();
                             }
 
@@ -2408,7 +2408,7 @@ impl BlockListElement {
         block: &Block,
         is_selected_by_anyone: bool,
         bounds: RectF,
-        derp_theme: &DerpTheme,
+        bork_theme: &BorkTheme,
         block_borders_enabled: bool,
         snackbar_header: &Option<SnackbarHeader>,
         ai_render_context: &BlocklistAIRenderContext,
@@ -2424,13 +2424,13 @@ impl BlockListElement {
                     grid_origin,
                     Vector2F::new(bounds.width(), block_height),
                 ))
-                .with_background(derp_theme.restored_blocks_overlay());
+                .with_background(bork_theme.restored_blocks_overlay());
         }
 
         let mut did_render_ai_stripe = false;
         if !FeatureFlag::AgentView.is_enabled() {
             if let Some(ai_context_stripe_color) =
-                ai_render_context.context_color_for_block(block, derp_theme)
+                ai_render_context.context_color_for_block(block, bork_theme)
             {
                 draw_flag_pole(grid_origin, block_height, ai_context_stripe_color, ctx);
                 did_render_ai_stripe = true;
@@ -2443,13 +2443,13 @@ impl BlockListElement {
                     grid_origin,
                     Vector2F::new(bounds.width(), block_height),
                 ))
-                .with_background(derp_theme.failed_block_color().with_opacity(10));
+                .with_background(bork_theme.failed_block_color().with_opacity(10));
 
             if !is_selected_by_anyone && !did_render_ai_stripe {
                 draw_flag_pole(
                     grid_origin,
                     block_height,
-                    derp_theme.failed_block_color(),
+                    bork_theme.failed_block_color(),
                     ctx,
                 );
             }
@@ -2463,7 +2463,7 @@ impl BlockListElement {
                 ctx.scene
                     .draw_rect_with_hit_recording(header_rect)
                     .with_background(
-                        derp_theme
+                        bork_theme
                             .accent_overlay()
                             .with_opacity(SNACKBAR_HOVER_OPACITY),
                     );
@@ -2477,7 +2477,7 @@ impl BlockListElement {
                         vec2f(header_rect.min_x(), header_rect.max_y() - 1.0),
                         vec2f(header_rect.width(), 1.0),
                     ))
-                    .with_background(derp_theme.outline());
+                    .with_background(bork_theme.outline());
             }
         }
     }
@@ -2492,7 +2492,7 @@ impl BlockListElement {
             vec2f(block_grid_params.bounds.width(), 1.),
         ));
 
-        rect.with_background(block_grid_params.grid_render_params.derp_theme.outline());
+        rect.with_background(block_grid_params.grid_render_params.bork_theme.outline());
     }
 
     // TODO(alokedesai): Clean this up even more by pulling out parameters into various structs.
@@ -2528,7 +2528,7 @@ impl BlockListElement {
             block,
             is_current_block_selected_by_anyone,
             block_grid_params.bounds,
-            &block_grid_params.grid_render_params.derp_theme,
+            &block_grid_params.grid_render_params.bork_theme,
             block_borders_enabled,
             snackbar_header,
             ai_render_context,
@@ -2588,7 +2588,7 @@ impl BlockListElement {
                 }
             }
 
-            // If Derp prompt (non-PS1) is being used, the command is drawn below the prompt,
+            // If Bork prompt (non-PS1) is being used, the command is drawn below the prompt,
             // hence we account for the prompt's vertical offset.
             let prompt_vertical_offset_px = if !block.honor_ps1() {
                 cell_size_height
@@ -2657,7 +2657,7 @@ impl BlockListElement {
                     None,
                     block_grid_params
                         .grid_render_params
-                        .derp_theme
+                        .bork_theme
                         .cursor()
                         .into(),
                     app,
@@ -2748,9 +2748,9 @@ impl BlockListElement {
             if block.is_active_and_long_running()
             // Check if the "hide cursor" escape sequence is present.
             && block.is_mode_set(TermMode::SHOW_CURSOR)
-            // Don't draw the Derp cursor when rich input is hiding
+            // Don't draw the Bork cursor when rich input is hiding
             // the CLI agent's cursor cell — agents like OpenCode and Codex
-            // rely on Derp's cursor, so we suppress it here too.
+            // rely on Bork's cursor, so we suppress it here too.
             && !block_grid_params.grid_render_params.hide_cursor_cell
             {
                 block.output_grid().draw_cursor(
@@ -2764,17 +2764,17 @@ impl BlockListElement {
                             .to_ansi_color(
                                 &block_grid_params
                                     .grid_render_params
-                                    .derp_theme
+                                    .bork_theme
                                     .terminal_colors()
                                     .normal,
                             )
                             .into()
                     } else if block.is_agent_in_control() {
-                        ai_brand_color(&block_grid_params.grid_render_params.derp_theme)
+                        ai_brand_color(&block_grid_params.grid_render_params.bork_theme)
                     } else {
                         block_grid_params
                             .grid_render_params
-                            .derp_theme
+                            .bork_theme
                             .cursor()
                             .into()
                     },
@@ -3396,7 +3396,7 @@ impl Element for BlockListElement {
                                             command,
                                             self.font_family,
                                             self.font_size,
-                                            &self.derp_theme,
+                                            &self.bork_theme,
                                         );
                                         flag_element.layout(constraint, ctx, app);
                                         subshell_flags.insert(block_index, flag_element);
@@ -3482,8 +3482,8 @@ impl Element for BlockListElement {
                         )
                         .with_style(Properties::default().weight(self.font_weight))
                         .with_color(
-                            self.derp_theme
-                                .main_text_color(self.derp_theme.background())
+                            self.bork_theme
+                                .main_text_color(self.bork_theme.background())
                                 .into_solid(),
                         )
                         .finish(),
@@ -3620,8 +3620,8 @@ impl Element for BlockListElement {
                     Text::new_inline(verdict.to_string(), self.ui_font_family, self.font_size)
                         .with_style(Properties::default().style(Style::Italic))
                         .with_color(
-                            self.derp_theme
-                                .sub_text_color(self.derp_theme.background())
+                            self.bork_theme
+                                .sub_text_color(self.bork_theme.background())
                                 .into(),
                         )
                         .finish(),
@@ -3658,8 +3658,8 @@ impl Element for BlockListElement {
                     Text::new_inline(text, self.ui_font_family, self.font_size)
                         .with_style(Properties::default().weight(self.font_weight))
                         .with_color(
-                            self.derp_theme
-                                .sub_text_color(self.derp_theme.background())
+                            self.bork_theme
+                                .sub_text_color(self.bork_theme.background())
                                 .into(),
                         )
                         .finish(),
@@ -3807,7 +3807,7 @@ impl Element for BlockListElement {
         let obfuscate_secrets = get_secret_obfuscation_mode(app);
 
         let grid_render_params = GridRenderParams {
-            derp_theme: self.derp_theme.clone(),
+            bork_theme: self.bork_theme.clone(),
             font_family: self.font_family,
             font_size: self.font_size,
             font_weight: self.font_weight,
@@ -3968,10 +3968,10 @@ impl Element for BlockListElement {
                                 ),
                             ))
                             .with_background(if can_be_ai_context {
-                                self.derp_theme
+                                self.bork_theme
                                     .block_selection_as_context_background_color()
                             } else {
-                                self.derp_theme.block_selection_color()
+                                self.bork_theme.block_selection_color()
                             })
                             .with_border(
                                 Border::new(border_info.border_width)
@@ -3982,9 +3982,9 @@ impl Element for BlockListElement {
                                         true,
                                     )
                                     .with_border_fill(if can_be_ai_context {
-                                        self.derp_theme.block_selection_as_context_border_color()
+                                        self.bork_theme.block_selection_as_context_border_color()
                                     } else {
-                                        self.derp_theme.accent()
+                                        self.bork_theme.accent()
                                     }),
                             );
                     }
@@ -4082,7 +4082,7 @@ impl Element for BlockListElement {
                         draw_flag_pole(
                             header_origin.min(grid_origin),
                             block_pixel_height,
-                            self.derp_theme.subshell_background(),
+                            self.bork_theme.subshell_background(),
                             ctx,
                         );
                     }
@@ -4215,7 +4215,7 @@ impl Element for BlockListElement {
                                 None => 0.,
                             },
                             // Otherwise, we need to measure the prompt grid(s). Grids
-                            // aren't derpui::Elements, and hence their width isn't
+                            // aren't borkui::Elements, and hence their width isn't
                             // straightforward to measure. We'll use the column index of the
                             // right-most non-empty cell as a proxy for width.
                             None => {
@@ -4242,7 +4242,7 @@ impl Element for BlockListElement {
                                     block_menu_rect_origin,
                                     block_menu_rect_size,
                                 ))
-                                .with_background(self.derp_theme.surface_1())
+                                .with_background(self.bork_theme.surface_1())
                                 .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
                         } else if prompt_max_x > bookmark_button_origin.x()
                             || prompt_max_x > filter_button_origin.x()
@@ -4269,7 +4269,7 @@ impl Element for BlockListElement {
                                     background_origin,
                                     background_rect_size,
                                 ))
-                                .with_background(self.derp_theme.surface_1())
+                                .with_background(self.bork_theme.surface_1())
                                 .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
                         }
                     }
@@ -4339,7 +4339,7 @@ impl Element for BlockListElement {
                         vec2f(self.bounds.unwrap().width(), 1.),
                     ));
                     if self.block_borders_enabled {
-                        rect.with_background(self.derp_theme.outline());
+                        rect.with_background(self.bork_theme.outline());
                     }
 
                     draw_border_above_block = true;
@@ -4356,13 +4356,13 @@ impl Element for BlockListElement {
                         grid_origin,
                         vec2f(bounds.width(), 1.),
                     ));
-                    border.with_background(self.derp_theme.outline());
+                    border.with_background(self.bork_theme.outline());
 
                     let rect = ctx.scene.draw_rect_with_hit_recording(RectF::new(
                         grid_origin,
                         vec2f(bounds.width(), *height),
                     ));
-                    rect.with_background(self.derp_theme.restored_blocks_overlay());
+                    rect.with_background(self.bork_theme.restored_blocks_overlay());
 
                     // Offset the text by the half of the remaining space between the separator height
                     // and the font line height to center it vertically.
@@ -4432,7 +4432,7 @@ impl Element for BlockListElement {
                             .get(view_id)
                             .and_then(|metadata| {
                                 ai_render_context
-                                    .context_color_for_rich_content(metadata, &self.derp_theme)
+                                    .context_color_for_rich_content(metadata, &self.bork_theme)
                             })
                         {
                             ctx.scene.start_layer(ClipBounds::ActiveLayer);
@@ -4470,11 +4470,11 @@ impl Element for BlockListElement {
                 .borrow()
                 .has_pending_context_selected_text
             {
-                self.derp_theme
+                self.bork_theme
                     .text_selection_as_context_color()
                     .into_solid()
             } else {
-                self.derp_theme.text_selection_color().into_solid()
+                self.bork_theme.text_selection_color().into_solid()
             };
 
             for current_range in selection_ranges {
@@ -4945,7 +4945,7 @@ pub fn render_hoverable_block_button<F>(
     should_ignore_mouse_events: bool,
     should_allow_action: bool,
     mouse_state: MouseStateHandle,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     ui_builder: &UiBuilder,
     on_click: F,
 ) -> Box<dyn Element>

@@ -1,21 +1,21 @@
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::DerpTheme;
-use derpui_core::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::BorkTheme;
+use borkui_core::elements::{
     Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Text,
 };
-use derpui_core::fonts::{Properties, Weight};
-use derpui_core::keymap::Keystroke;
-use derpui_core::platform::Cursor;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui_core::{
+use borkui_core::fonts::{Properties, Weight};
+use borkui_core::keymap::Keystroke;
+use borkui_core::platform::Cursor;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -53,11 +53,11 @@ pub enum ThemePickerSlideAction {
     PrivacySettingsClicked,
 }
 
-const TOS_URL: &str = "https://www.derp.baby/terms-of-service";
+const TOS_URL: &str = "https://www.bork.baby/terms-of-service";
 
 #[derive(Debug, Clone)]
 struct ThemeOption {
-    theme: DerpTheme,
+    theme: BorkTheme,
     mouse_state: MouseStateHandle,
 }
 
@@ -76,7 +76,7 @@ pub struct ThemePickerSlide {
 
 impl ThemePickerSlide {
     pub(crate) fn new(
-        themes: [DerpTheme; 4],
+        themes: [BorkTheme; 4],
         onboarding_state: ModelHandle<OnboardingStateModel>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -165,20 +165,20 @@ impl ThemePickerSlide {
 
         let mut content = vec![self.render_header_text(appearance), theme_options_section];
 
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             content.push(self.render_sync_with_os_section(appearance));
         }
 
         // Add the Privacy Settings / Terms of Service disclaimer block below the
         // theme options when the user has selected the terminal intention and
         // won't hit the login slide afterwards. The terminal-intent flow skips
-        // the login slide (which surfaces the same links) unless Derp Drive is
+        // the login slide (which surfaces the same links) unless Bork Drive is
         // enabled — in that case the login slide will still run after the theme
         // step and show the disclaimer, so duplicating it here is unnecessary.
         let state = self.onboarding_state.as_ref(app);
         let is_terminal = matches!(state.intention(), OnboardingIntention::Terminal);
-        let derp_drive_enabled = state.ui_customization().show_derp_drive;
-        if is_terminal && !derp_drive_enabled && FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+        let bork_drive_enabled = state.ui_customization().show_bork_drive;
+        if is_terminal && !bork_drive_enabled && FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
         {
             content.push(self.render_disclaimer_section(appearance));
         }
@@ -228,7 +228,7 @@ impl ThemePickerSlide {
     fn render_theme_options(
         &self,
         appearance: &Appearance,
-        chrome_theme: &DerpTheme,
+        chrome_theme: &BorkTheme,
     ) -> Box<dyn Element> {
         let options = (0..self.theme_options.len())
             .map(|index| {
@@ -272,9 +272,9 @@ impl ThemePickerSlide {
             },
         );
 
-        let theme_picker_last = FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
+        let theme_picker_last = FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
         let next_label = if theme_picker_last {
-            "Get Derping"
+            "Get Borking"
         } else {
             "Next"
         };
@@ -322,10 +322,10 @@ impl ThemePickerSlide {
     fn render_theme_option(
         &self,
         appearance: &Appearance,
-        chrome_theme: &DerpTheme,
+        chrome_theme: &BorkTheme,
         index: usize,
         theme_name: String,
-        option_theme: &DerpTheme,
+        option_theme: &BorkTheme,
         mouse_state: MouseStateHandle,
         interactive: bool,
     ) -> Box<dyn Element> {
@@ -487,7 +487,7 @@ impl ThemePickerSlide {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             let path = self.theme_visual_path(app);
             layout::onboarding_right_panel_with_bg(path, layout::FOREGROUND_LAYOUT_DEFAULT)
         } else {
@@ -603,7 +603,7 @@ impl ThemePickerSlide {
         let tos_line = Flex::row()
             .with_child(
                 ui_builder
-                    .span("By continuing, you agree to Derp's ")
+                    .span("By continuing, you agree to Bork's ")
                     .with_style(disclaimer_styles)
                     .build()
                     .finish(),
@@ -652,7 +652,7 @@ impl ThemePickerSlide {
 
     fn next(&mut self, ctx: &mut ViewContext<Self>) {
         self.onboarding_state.update(ctx, |model, ctx| {
-            if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+            if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
                 model.complete(ctx);
             } else {
                 model.next(ctx);

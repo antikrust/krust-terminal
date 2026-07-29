@@ -1,15 +1,15 @@
 use ordered_float::OrderedFloat;
-use derpui::elements::{
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, MainAxisAlignment,
     MainAxisSize, ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObject;
-use crate::drive::cloud_object_styling::derp_drive_icon_color;
+use crate::drive::cloud_object_styling::bork_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::notebooks::CloudNotebook;
 use crate::search::item::{IconLocation, SearchItem};
@@ -46,8 +46,8 @@ impl SearchItem for NotebookSearchItem {
         Container::new(
             ConstrainedBox::new(
                 Icon::Notebook
-                    .to_derpui_icon(
-                        derp_drive_icon_color(
+                    .to_borkui_icon(
+                        bork_drive_icon_color(
                             appearance,
                             DriveObjectType::Notebook {
                                 is_ai_document: false,
@@ -111,7 +111,7 @@ impl SearchItem for NotebookSearchItem {
                 .finish();
             let warning_icon = ConstrainedBox::new(
                 Icon::Warning
-                    .to_derpui_icon(appearance.theme().ui_warning_color().into())
+                    .to_borkui_icon(appearance.theme().ui_warning_color().into())
                     .finish(),
             )
             .with_width(warning_font_size)

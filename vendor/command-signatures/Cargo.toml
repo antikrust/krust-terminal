@@ -6,6 +6,6 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 license = "MIT"
 publish = false

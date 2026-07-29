@@ -8,7 +8,7 @@
 #   - OUT_DIR: The directory into which we should place the final package.
 #   - CARGO_TARGET_OUTPUT_DIR: The cargo target directory containing build output.
 #   - RELEASE_CHANNEL: The release channel we're bundling (e.g.: "dev").
-#   - BUNDLE_ID: The app ID for the bundle (e.g.: "derp.baby.DerpDev").
+#   - BUNDLE_ID: The app ID for the bundle (e.g.: "bork.baby.BorkDev").
 #   - EXECUTABLE_PATH: The path to the compiled executable we want to install.
 #   - BINARY_NAME: The name that the compiled executable should have on the target machine.
 #   - ARTIFACT: Which artifact to build: app or cli.
@@ -19,17 +19,17 @@ set -e
 if [ "$ARTIFACT" = "cli" ]; then
   CHANNEL_SUFFIX="${BINARY_NAME#oz}"
 else
-  CHANNEL_SUFFIX="${BINARY_NAME#derp}"
+  CHANNEL_SUFFIX="${BINARY_NAME#bork}"
 fi
 
 # On Linux, we keep the `-stable` suffix for stable to avoid package conflicts.
-# The binary name is still `oz`, and the repo name is still `derpdotdev`.
+# The binary name is still `oz`, and the repo name is still `borkdotdev`.
 if [ "$ARTIFACT" = "cli" -a "$RELEASE_CHANNEL" = "stable" ]; then
   CHANNEL_SUFFIX="-stable"
 fi
 
 if [ "$ARTIFACT" = "app" ]; then
-  PACKAGE_NAME="derp-terminal$CHANNEL_SUFFIX"
+  PACKAGE_NAME="bork-terminal$CHANNEL_SUFFIX"
 elif [ "$ARTIFACT" = "cli" ]; then
   PACKAGE_NAME="oz$CHANNEL_SUFFIX"
 else
@@ -63,7 +63,7 @@ mkdir -p "$PKGDIR"
 
 # Bundle the base filesystem into an archive to be unpacked by makepkg.
 mkdir "$PKGDIR/stage"
-OPT_DIR="/opt/derpdotdev/$PACKAGE_NAME"
+OPT_DIR="/opt/borkdotdev/$PACKAGE_NAME"
 source "$WORKSPACE_ROOT_DIR/script/linux/bundle_install" "$PKGDIR/stage"
 tar cvf "$PKGDIR/data.tar" -C "$PKGDIR/stage" .
 
@@ -79,7 +79,7 @@ sed \
 if [ "$ARTIFACT" = "app" ]; then
   sed \
       "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; s#@@BINARY_NAME@@#$BINARY_NAME#g" \
-      < "$WORKSPACE_ROOT_DIR/resources/linux/arch/$ARTIFACT/derp.sh.template" \
+      < "$WORKSPACE_ROOT_DIR/resources/linux/arch/$ARTIFACT/bork.sh.template" \
       > "$PKGDIR/$PACKAGE_NAME.sh"
 fi
 

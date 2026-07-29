@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 
 use thiserror::Error;
-use derpui_core::r#async::executor::Background;
-use derpui_core::{Entity, SingletonEntity};
+use borkui_core::r#async::executor::Background;
+use borkui_core::{Entity, SingletonEntity};
 
 use crate::{LogFileWriter, SimpleLogger};
 
@@ -38,10 +38,10 @@ pub fn resolve_log_path(namespace: &str, relative_path: impl AsRef<Path>) -> Pat
 
 /// Returns the base log directory for a given namespace name.
 fn log_directory_path(namespace: &str) -> PathBuf {
-    let base_dir = derp_core::paths::secure_state_dir().unwrap_or_else(derp_core::paths::state_dir);
+    let base_dir = bork_core::paths::secure_state_dir().unwrap_or_else(bork_core::paths::state_dir);
     if cfg!(windows) {
         base_dir
-            .join(derp_core::paths::DERP_LOGS_DIR)
+            .join(bork_core::paths::BORK_LOGS_DIR)
             .join(namespace)
     } else {
         base_dir.join(namespace)
@@ -128,7 +128,7 @@ impl LogManager {
     /// This is the entry point used by callers that produce high-volume logs
     /// over long-lived sessions — primarily MCP server stderr/stdout capture,
     /// where a single chatty server could otherwise grow its log file
-    /// unboundedly across a multi-day session (derpdotdev/derp#7723).
+    /// unboundedly across a multi-day session (borkdotdev/bork#7723).
     pub fn register_with_rotation(
         &mut self,
         namespace: &str,

@@ -1,23 +1,23 @@
 use std::path::Path;
 
-use derpui::ModelContext;
+use borkui::ModelContext;
 
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::tab_configs::{TabConfig, TabConfigError};
-use crate::themes::theme::DerpThemeConfig;
+use crate::themes::theme::BorkThemeConfig;
 use crate::workflows::workflow::Workflow;
 
-impl super::DerpConfig {
+impl super::BorkConfig {
     pub fn new(_ctx: &mut ModelContext<Self>) -> Self {
         Self {
-            theme_config: DerpThemeConfig::new(),
+            theme_config: BorkThemeConfig::new(),
             ..Default::default()
         }
     }
 }
 
 /// Loads all themes relative to the `workflow_path`.
-pub fn load_theme_configs(_theme_path: &Path) -> DerpThemeConfig {
+pub fn load_theme_configs(_theme_path: &Path) -> BorkThemeConfig {
     // There's no local filesystem for wasm, so we'll never be able to retrieve
     // themes from any path.
     Default::default()

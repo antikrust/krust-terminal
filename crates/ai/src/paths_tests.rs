@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 
 #[cfg(windows)]
-use derp_terminal::shell::{ShellLaunchData, ShellType};
+use bork_terminal::shell::{ShellLaunchData, ShellType};
 
 use super::*;
 

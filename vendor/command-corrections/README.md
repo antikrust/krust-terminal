@@ -2,9 +2,9 @@
 
 ## Testing
 
-To manually test against your local Derp instance, navigate to [`derp/Cargo.toml`](https://github.com/derpdotdev/derp/blob/master/Cargo.toml) and change the `command-corrections` dependency from:
+To manually test against your local Bork instance, navigate to [`bork/Cargo.toml`](https://github.com/borkdotdev/bork/blob/master/Cargo.toml) and change the `command-corrections` dependency from:
 
-`command-corrections = { git = "https://github.com/derpdotdev/command-corrections.git", rev = "<some git sha>" }`
+`command-corrections = { git = "https://github.com/borkdotdev/command-corrections.git", rev = "<some git sha>" }`
 
 to:
 
@@ -14,7 +14,7 @@ to:
 
 ## Publishing
 
-Once you've merged your PR here, you'll need to go to [`derp/Cargo.toml`](https://github.com/derpdotdev/derp/blob/master/Cargo.toml) and make a PR to update the SHA for the `command-corrections` dependency. `git checkout main && git rev-parse HEAD | pbcopy` will put the SHA on your clipboard.
+Once you've merged your PR here, you'll need to go to [`bork/Cargo.toml`](https://github.com/borkdotdev/bork/blob/master/Cargo.toml) and make a PR to update the SHA for the `command-corrections` dependency. `git checkout main && git rev-parse HEAD | pbcopy` will put the SHA on your clipboard.
 
 ## Guidance for cross-platform command corrections
 
@@ -66,4 +66,4 @@ ls src
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE.md) file for details.  Many of the corrections were adapted from the [thefuck](https://github.com/nvbn/thefuck) project, which is also licensed under the MIT License.
 
-Derp requires contributors to sign a contributor license agreement (CLA) before their contributions can be merged. You can read and sign our CLA at https://cla.derp.baby.
+Bork requires contributors to sign a contributor license agreement (CLA) before their contributions can be merged. You can read and sign our CLA at https://cla.bork.baby.

@@ -1,7 +1,7 @@
 # APP-4457 — Shared-session scrollback restore optional active block
 
-Linear: [APP-4457](https://linear.app/derpdotdev/issue/APP-4457/fix-shared-session-scrollback-restore-crash-when-active-block-is)
-Sentry: [7475296168](https://derpdotdev.sentry.io/issues/7475296168/?alert_rule_id=15217488&alert_type=issue&notification_uuid=93ccd349-0267-4363-90d3-925a1c8ca43f&project=5701177&referrer=slack)
+Linear: [APP-4457](https://linear.app/borkdotdev/issue/APP-4457/fix-shared-session-scrollback-restore-crash-when-active-block-is)
+Sentry: [7475296168](https://borkdotdev.sentry.io/issues/7475296168/?alert_rule_id=15217488&alert_type=issue&notification_uuid=93ccd349-0267-4363-90d3-925a1c8ca43f&project=5701177&referrer=slack)
 
 ## Context
 
@@ -56,8 +56,8 @@ Keep existing active-block-present tests unchanged so normal live-sharing behavi
 
 Validation commands:
 
-- `cargo nextest run -p derp --lib test_loading_scrollback`
-- `cargo nextest run -p derp --lib test_append_followup_scrollback`
+- `cargo nextest run -p bork --lib test_loading_scrollback`
+- `cargo nextest run -p bork --lib test_append_followup_scrollback`
 - `git --no-pager diff --check -- app/src/terminal/model/blocks.rs app/src/terminal/model/block.rs app/src/terminal/shared_session/mod.rs app/src/terminal/shared_session/mod_tests.rs app/src/terminal/shared_session/viewer/event_loop_tests.rs specs/APP-4457/TECH.md`
 
 Do not use `cargo fmt --all` or file-specific `cargo fmt`. If formatting is required before review, use the repo-standard `cargo fmt`.

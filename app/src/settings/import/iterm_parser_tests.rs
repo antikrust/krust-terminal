@@ -2,9 +2,9 @@ use async_io::block_on;
 use pathfinder_color::ColorU;
 use plist::{Dictionary, Value};
 use virtual_fs::{Stub, VirtualFS};
-use derp_core::ui::theme::{Fill, DerpTheme};
-use derpui::fonts::FontInfo;
-use derpui::keymap::Keystroke;
+use bork_core::ui::theme::{Fill, BorkTheme};
+use borkui::fonts::FontInfo;
+use borkui::keymap::Keystroke;
 
 use super::{color_dictionary_to_coloru, ITermTheme, ITermThemeType};
 use crate::settings::import::config::{
@@ -107,10 +107,10 @@ fn test_color_dictionary_to_coloru() {
 }
 
 #[test]
-fn test_into_derp_theme_valid() {
-    let theme: DerpTheme = solarized_dark_theme()
-        .into_derp_theme("", &default_dark_theme())
-        .expect("Should be able to convert into DerpTheme");
+fn test_into_bork_theme_valid() {
+    let theme: BorkTheme = solarized_dark_theme()
+        .into_bork_theme("", &default_dark_theme())
+        .expect("Should be able to convert into BorkTheme");
     assert_eq!(
         theme.accent(),
         Fill::Solid(ColorU {
@@ -141,9 +141,9 @@ fn test_into_derp_theme_valid() {
 }
 
 #[test]
-fn test_into_derp_theme_invalid() {
+fn test_into_bork_theme_invalid() {
     default_dark_theme()
-        .into_derp_theme("", &default_dark_theme())
+        .into_bork_theme("", &default_dark_theme())
         .expect_err("Should return an error if the theme is not sufficiently configured.");
 }
 
@@ -173,14 +173,14 @@ fn test_import_from_file() {
 
         let config = profile.parse(&[]);
 
-        let ThemeType::Single(ref derp_theme) =
+        let ThemeType::Single(ref bork_theme) =
             config.theme.value().as_ref().expect("Should import theme!")
         else {
             panic!("Should have read a single theme!")
         };
 
         assert_eq!(
-            derp_theme.accent(),
+            bork_theme.accent(),
             Fill::Solid(ColorU {
                 r: 255,
                 g: 165,
@@ -189,7 +189,7 @@ fn test_import_from_file() {
             })
         );
         assert_eq!(
-            derp_theme.background(),
+            bork_theme.background(),
             Fill::Solid(ColorU {
                 r: 0,
                 g: 0,
@@ -198,7 +198,7 @@ fn test_import_from_file() {
             })
         );
         assert_eq!(
-            derp_theme.foreground(),
+            bork_theme.foreground(),
             Fill::Solid(ColorU {
                 r: 187,
                 g: 187,
@@ -294,14 +294,14 @@ fn test_parse_font_without_size() {
 
 #[test]
 fn test_parse_font_with_default_size() {
-    let derp_default_profile = ITermProfile {
+    let bork_default_profile = ITermProfile {
         font_name: Some("CourierNewPSMT".to_string()),
         font_size: Some("13".to_string()),
         ..Default::default()
     };
     let fonts = courier_new();
     assert_eq!(
-        *derp_default_profile
+        *bork_default_profile
             .remove_default_values()
             .parse(&fonts)
             .font
@@ -333,7 +333,7 @@ fn test_parse_font_with_default_size() {
 
 #[test]
 fn test_parse_font_with_default_font() {
-    let derp_default_profile = ITermProfile {
+    let bork_default_profile = ITermProfile {
         font_name: Some("Hack".to_string()),
         font_size: Some("16".to_string()),
         ..Default::default()
@@ -344,7 +344,7 @@ fn test_parse_font_with_default_font() {
         is_monospace: false,
     }];
     assert_eq!(
-        *derp_default_profile
+        *bork_default_profile
             .remove_default_values()
             .parse(&fonts)
             .font

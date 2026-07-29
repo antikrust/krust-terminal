@@ -3,17 +3,17 @@
 #![cfg_attr(feature = "release_bundle", windows_subsystem = "windows")]
 
 use anyhow::Result;
-use derp_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, DerpServerConfig};
-use derp_core::AppId;
+use bork_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, BorkServerConfig};
+use bork_core::AppId;
 
-// Simple wrapper around derp::run() for Derp OSS builds.
+// Simple wrapper around bork::run() for Bork OSS builds.
 fn main() -> Result<()> {
     let mut state = ChannelState::new(
         Channel::Oss,
         ChannelConfig {
-            app_id: AppId::new("dev", "derp", "Derp"),
-            logfile_name: "derp.log".into(),
-            server_config: DerpServerConfig::production(),
+            app_id: AppId::new("dev", "bork", "Bork"),
+            logfile_name: "bork.log".into(),
+            server_config: BorkServerConfig::production(),
             oz_config: OzConfig::production(),
             telemetry_config: None,
             crash_reporting_config: None,
@@ -22,14 +22,14 @@ fn main() -> Result<()> {
         },
     );
     if cfg!(debug_assertions) {
-        state = state.with_additional_features(derp_core::features::DEBUG_FLAGS);
+        state = state.with_additional_features(bork_core::features::DEBUG_FLAGS);
     }
     // This fork renders local-harness tool calls as MCP tool cards; the JSON
     // tree view is their intended presentation (dogfood-only upstream).
-    state = state.with_additional_features(&[derp_core::features::FeatureFlag::McpJsonTreeView]);
+    state = state.with_additional_features(&[bork_core::features::FeatureFlag::McpJsonTreeView]);
     ChannelState::set(state);
 
-    derp::run()
+    bork::run()
 }
 
 // If we're not using an external plist, embed the following as the Info.plist.
@@ -42,15 +42,15 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleDisplayName</key>
-    <string>Derp</string>
+    <string>Bork</string>
     <key>CFBundleExecutable</key>
-    <string>derp</string>
+    <string>bork</string>
     <key>CFBundleIdentifier</key>
-    <string>derp.baby.Derp</string>
+    <string>bork.baby.Bork</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Derp</string>
+    <string>Bork</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -62,7 +62,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>UIDesignRequiresCompatibility</key>
     <true/>
     <key>CFBundleURLTypes</key>
-    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>derposs</string></array></dict></array>
+    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>borkoss</string></array></dict></array>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026, Denver Technologies, Inc</string>
     </dict>

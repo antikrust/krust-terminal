@@ -1,9 +1,9 @@
 ---
 name: rust-unit-tests
-description: Write, improve, and run Rust unit tests in the derp Rust codebase.
+description: Write, improve, and run Rust unit tests in the bork Rust codebase.
 ---
 
-# Rust Unit Tests in derp
+# Rust Unit Tests in bork
 
 ## Scope
 - This skill focuses on crate-level unit tests.
@@ -32,13 +32,13 @@ mod tests;
 - Prefer runtime feature checks (e.g., `FeatureFlag::X.is_enabled()`) over `#[cfg(...)]` so tests don’t require recompilation to toggle behavior.
 
 ## Quickstart harness (UI/model tests)
-- Prefer `derpui::App::test` for deterministic unit tests around views/models.
+- Prefer `borkui::App::test` for deterministic unit tests around views/models.
 - Initialize app models once, then mutate via `update` and assert via `read`.
 
 ```rust
-use derpui::App;
-// In app crate tests prefer `crate::test_util::...`; from other crates use `derp::test_util::...`.
-use derp::test_util::{terminal::initialize_app_for_terminal_view, add_window_with_terminal};
+use borkui::App;
+// In app crate tests prefer `crate::test_util::...`; from other crates use `bork::test_util::...`.
+use bork::test_util::{terminal::initialize_app_for_terminal_view, add_window_with_terminal};
 
 #[test]
 fn example() {
@@ -61,7 +61,7 @@ fn example() {
 ```
 
 ## TUI element tests
-Tests for the headless TUI render an element tree to text lines rather than drawing pixels. Use `derpui_core::elements::tui::test_support::render_to_lines` and `TuiBuffer::to_lines`, and keep them in `*_tests.rs` files next to the source in `crates/derp_tui` and `crates/derpui_core/src/elements/tui`. They are plain unit tests and do NOT use the GUI integration / real-display / `computer_use` framework. See the `tui-testing` skill for details. The `derpui::App::test` harness above still applies to shared model logic that both front-ends use.
+Tests for the headless TUI render an element tree to text lines rather than drawing pixels. Use `borkui_core::elements::tui::test_support::render_to_lines` and `TuiBuffer::to_lines`, and keep them in `*_tests.rs` files next to the source in `crates/bork_tui` and `crates/borkui_core/src/elements/tui`. They are plain unit tests and do NOT use the GUI integration / real-display / `computer_use` framework. See the `tui-testing` skill for details. The `borkui::App::test` harness above still applies to shared model logic that both front-ends use.
 
 ## Common helpers to use
 - Terminal model shortcuts: `TerminalModel::mock(..)`, `.simulate_block(..)`, `.finish_block()`, `.simulate_cmd(..)`.
@@ -76,7 +76,7 @@ VirtualFS::test("case", |_dirs, mut fs| {
 ```
 - Feature flags (scoped):
 ```rust
-use derp::features::FeatureFlag; // or `use crate::features::FeatureFlag;` inside the app crate
+use bork::features::FeatureFlag; // or `use crate::features::FeatureFlag;` inside the app crate
 let _flag = FeatureFlag::CreatingSharedSessions.override_enabled(true);
 ```
 - UI numeric assertions (lines):

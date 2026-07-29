@@ -4,7 +4,7 @@
 Uses `gh api` to check org membership — stdlib only, no pip deps.
 
 Usage:
-    python3 classify_contributors.py --org derpdotdev --authors user1,user2,user3
+    python3 classify_contributors.py --org borkdotdev --authors user1,user2,user3
 
 Outputs JSON to stdout.
 """
@@ -24,8 +24,8 @@ KNOWN_BOTS = frozenset(
         "github-actions[bot]",
         "codecov",
         "codecov[bot]",
-        "derp-bot",
-        "derp-bot[bot]",
+        "bork-bot",
+        "bork-bot[bot]",
     }
 )
 

@@ -3,12 +3,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 pub use cloud_object_models::{CloudFolder, CloudFolderModel};
-// Re-exported from derp_server_client.
-pub use derp_server_client::ids::FolderId;
+// Re-exported from bork_server_client.
+pub use bork_server_client::ids::FolderId;
 
-// Re-exported from derp_server_client.
-use super::items::folder::DerpDriveFolder;
-use super::items::DerpDriveItem;
+// Re-exported from bork_server_client.
+use super::items::folder::BorkDriveFolder;
+use super::items::BorkDriveItem;
 use super::CloudObjectTypeAndId;
 use crate::appearance::Appearance;
 use crate::cloud_object::{
@@ -120,17 +120,17 @@ impl CloudModelType for CloudFolderModel {
             .await
     }
 
-    fn renders_in_derp_drive(&self) -> bool {
+    fn renders_in_bork_drive(&self) -> bool {
         true
     }
 
-    fn to_derp_drive_item(
+    fn to_bork_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         folder: &CloudFolder,
-    ) -> Option<Box<dyn DerpDriveItem>> {
-        Some(Box::new(DerpDriveFolder::new(
+    ) -> Option<Box<dyn BorkDriveItem>> {
+        Some(Box::new(BorkDriveFolder::new(
             self.cloud_object_type_and_id(id),
             folder.clone(),
         )))

@@ -6,9 +6,9 @@ use std::time::Duration;
 use futures::channel::mpsc;
 use futures::{FutureExt as _, StreamExt as _};
 use virtual_fs::{Stub, VirtualFS};
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::r#async::Timer;
-use derpui_core::{App, ModelContext};
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::r#async::Timer;
+use borkui_core::{App, ModelContext};
 
 use super::{merge_repository_updates, Repository, RepositorySubscriber, TrackedRemoteRef};
 use crate::repositories::stub_git_repository;

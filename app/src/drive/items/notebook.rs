@@ -1,9 +1,9 @@
-use derpui::elements::{Flex, MouseStateHandle, ParentElement};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element};
+use borkui::elements::{Flex, MouseStateHandle, ParentElement};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
 use crate::drive::index::DriveIndexAction;
@@ -12,13 +12,13 @@ use crate::notebooks::CloudNotebook;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct DerpDriveNotebook {
+pub struct BorkDriveNotebook {
     id: CloudObjectTypeAndId,
     notebook: CloudNotebook,
     is_ai_document: bool,
 }
 
-impl DerpDriveNotebook {
+impl BorkDriveNotebook {
     pub fn new(id: CloudObjectTypeAndId, notebook: CloudNotebook, is_ai_document: bool) -> Self {
         Self {
             id,
@@ -28,7 +28,7 @@ impl DerpDriveNotebook {
     }
 }
 
-impl DerpDriveItem for DerpDriveNotebook {
+impl BorkDriveItem for BorkDriveNotebook {
     fn display_name(&self) -> Option<String> {
         if self.notebook.model().title.is_empty() {
             None
@@ -82,8 +82,8 @@ impl DerpDriveItem for DerpDriveNotebook {
         Some(Flex::column().with_child(title).finish())
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -103,7 +103,7 @@ impl DerpDriveItem for DerpDriveNotebook {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }

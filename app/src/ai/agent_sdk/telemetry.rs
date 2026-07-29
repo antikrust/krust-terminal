@@ -1,13 +1,13 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::features::FeatureFlag;
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
 pub(super) enum CliTelemetryEvent {
-    /// Executing `derp agent run`
+    /// Executing `bork agent run`
     AgentRun {
         gui: bool,
         requested_mcp_servers: usize,
@@ -17,137 +17,137 @@ pub(super) enum CliTelemetryEvent {
         /// Which execution harness was selected (e.g. "oz", "claude").
         harness: String,
     },
-    /// Executing `derp agent run-ambient`
+    /// Executing `bork agent run-ambient`
     AgentRunAmbient,
-    /// Executing `derp agent profile list`
+    /// Executing `bork agent profile list`
     AgentProfileList,
-    /// Executing `derp agent list`
+    /// Executing `bork agent list`
     AgentList,
-    /// Executing `derp agent get`
+    /// Executing `bork agent get`
     AgentGet,
-    /// Executing `derp agent create`
+    /// Executing `bork agent create`
     AgentCreate,
-    /// Executing `derp agent update`
+    /// Executing `bork agent update`
     AgentUpdate,
-    /// Executing `derp agent delete`
+    /// Executing `bork agent delete`
     AgentDelete,
-    /// Executing `derp agent skills`
+    /// Executing `bork agent skills`
     AgentSkills,
-    /// Executing `derp environment list`
+    /// Executing `bork environment list`
     EnvironmentList,
-    /// Executing `derp environment create`
+    /// Executing `bork environment create`
     EnvironmentCreate,
-    /// Executing `derp environment delete`
+    /// Executing `bork environment delete`
     EnvironmentDelete,
-    /// Executing `derp environment update`
+    /// Executing `bork environment update`
     EnvironmentUpdate,
-    /// Executing `derp environment get`
+    /// Executing `bork environment get`
     EnvironmentGet,
-    /// Executing `derp environment image list`
+    /// Executing `bork environment image list`
     EnvironmentImageList,
-    /// Executing `derp mcp list`
+    /// Executing `bork mcp list`
     MCPList,
-    /// Executing `derp model list`
+    /// Executing `bork model list`
     ModelList,
-    /// Executing `derp memory-store list`
+    /// Executing `bork memory-store list`
     MemoryStoreList,
-    /// Executing `derp memory list`
+    /// Executing `bork memory list`
     MemoryStoreListMemories,
-    /// Executing `derp memory create`
+    /// Executing `bork memory create`
     MemoryStoreCreateMemory,
-    /// Executing `derp memory update`
+    /// Executing `bork memory update`
     MemoryStoreUpdateMemory,
-    /// Executing `derp memory delete`
+    /// Executing `bork memory delete`
     MemoryStoreDeleteMemory,
-    /// Executing `derp memory-store get`
+    /// Executing `bork memory-store get`
     MemoryStoreGetStore,
-    /// Executing `derp memory-store update`
+    /// Executing `bork memory-store update`
     MemoryStoreUpdateStore,
-    /// Executing `derp memory-store list-store-agents`
+    /// Executing `bork memory-store list-store-agents`
     MemoryStoreListStoreAgents,
-    /// Executing `derp memory versions`
+    /// Executing `bork memory versions`
     MemoryStoreListVersions,
-    /// Executing `derp task list`
+    /// Executing `bork task list`
     TaskList,
-    /// Executing `derp task get`
+    /// Executing `bork task get`
     TaskGet,
-    /// Executing `derp run conversation get`
+    /// Executing `bork run conversation get`
     ConversationGet,
-    /// Executing `derp run get <id> --conversation`
+    /// Executing `bork run get <id> --conversation`
     RunConversationGet,
-    /// Executing `derp run message watch`
+    /// Executing `bork run message watch`
     RunMessageWatch { harness: &'static str },
-    /// Executing `derp run message send`
+    /// Executing `bork run message send`
     RunMessageSend { harness: &'static str },
-    /// Executing `derp run message list`
+    /// Executing `bork run message list`
     RunMessageList { harness: &'static str },
-    /// Executing `derp run message read`
+    /// Executing `bork run message read`
     RunMessageRead { harness: &'static str },
-    /// Executing `derp run message mark-delivered`
+    /// Executing `bork run message mark-delivered`
     RunMessageMarkDelivered { harness: &'static str },
-    /// Executing `derp login`
+    /// Executing `bork login`
     Login,
-    /// Executing `derp logout`
+    /// Executing `bork logout`
     Logout,
-    /// Executing `derp whoami`
+    /// Executing `bork whoami`
     Whoami,
-    /// Executing `derp provider setup`
+    /// Executing `bork provider setup`
     ProviderSetup,
-    /// Executing `derp provider list`
+    /// Executing `bork provider list`
     ProviderList,
-    /// Executing `derp integration create`
+    /// Executing `bork integration create`
     IntegrationCreate,
-    /// Executing `derp integration update`
+    /// Executing `bork integration update`
     IntegrationUpdate,
-    /// Executing `derp integration list`
+    /// Executing `bork integration list`
     IntegrationList,
-    /// Executing `derp artifact upload`
+    /// Executing `bork artifact upload`
     ArtifactUpload,
-    /// Executing `derp artifact get`
+    /// Executing `bork artifact get`
     ArtifactGet,
-    /// Executing `derp artifact download`
+    /// Executing `bork artifact download`
     ArtifactDownload,
-    /// Executing `derp api-key list`
+    /// Executing `bork api-key list`
     ApiKeyList,
-    /// Executing `derp api-key create`
+    /// Executing `bork api-key create`
     ApiKeyCreate,
-    /// Executing `derp api-key expire`
+    /// Executing `bork api-key expire`
     ApiKeyExpire,
-    /// Executing `derp schedule create`
+    /// Executing `bork schedule create`
     ScheduleCreate,
-    /// Executing `derp schedule list`
+    /// Executing `bork schedule list`
     ScheduleList,
-    /// Executing `derp schedule get`
+    /// Executing `bork schedule get`
     ScheduleGet,
-    /// Executing `derp schedule pause`
+    /// Executing `bork schedule pause`
     SchedulePause,
-    /// Executing `derp schedule unpause`
+    /// Executing `bork schedule unpause`
     ScheduleUnpause,
-    /// Executing `derp schedule update`
+    /// Executing `bork schedule update`
     ScheduleUpdate,
-    /// Executing `derp schedule delete`
+    /// Executing `bork schedule delete`
     ScheduleDelete,
-    /// Executing `derp secret create`
+    /// Executing `bork secret create`
     SecretCreate,
-    /// Executing `derp secret delete`
+    /// Executing `bork secret delete`
     SecretDelete,
-    /// Executing `derp secret update`
+    /// Executing `bork secret update`
     SecretUpdate,
-    /// Executing `derp secret list`
+    /// Executing `bork secret list`
     SecretList,
-    /// Executing `derp federate issue-token`
+    /// Executing `bork federate issue-token`
     FederateIssueToken,
-    /// Executing `derp federate issue-gcp-token`
+    /// Executing `bork federate issue-gcp-token`
     FederateIssueGcpToken,
-    /// Executing `derp harness-support ping`
+    /// Executing `bork harness-support ping`
     HarnessSupportPing,
-    /// Executing `derp harness-support report-artifact`
+    /// Executing `bork harness-support report-artifact`
     HarnessSupportReportArtifact { artifact_type: &'static str },
-    /// Executing `derp harness-support notify-user`
+    /// Executing `bork harness-support notify-user`
     HarnessSupportNotifyUser,
-    /// Executing `derp harness-support finish-task`
+    /// Executing `bork harness-support finish-task`
     HarnessSupportFinishTask { success: bool },
-    /// Executing `derp harness-support report-shutdown`
+    /// Executing `bork harness-support report-shutdown`
     HarnessSupportReportShutdown,
 }
 
@@ -259,7 +259,7 @@ impl TelemetryEvent for CliTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -370,160 +370,160 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
 
     fn description(&self) -> &'static str {
         match self {
-            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Bork CLI",
             CliTelemetryEventDiscriminants::AgentRunAmbient => {
-                "Ran an ambient agent from the Derp CLI"
+                "Ran an ambient agent from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::AgentProfileList => {
-                "Listed agent profiles from the Derp CLI"
+                "Listed agent profiles from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Derp CLI",
-            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Derp CLI",
-            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Derp CLI",
-            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Derp CLI",
-            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Derp CLI",
-            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Derp CLI",
+            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Bork CLI",
             CliTelemetryEventDiscriminants::EnvironmentList => {
-                "Listed cloud environments from the Derp CLI"
+                "Listed cloud environments from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentCreate => {
-                "Created a cloud environment from the Derp CLI"
+                "Created a cloud environment from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentDelete => {
-                "Deleted a cloud environment from the Derp CLI"
+                "Deleted a cloud environment from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentUpdate => {
-                "Updated a cloud environment from the Derp CLI"
+                "Updated a cloud environment from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentGet => {
-                "Got cloud environment details from the Derp CLI"
+                "Got cloud environment details from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentImageList => {
-                "Listed available base images from the Derp CLI"
+                "Listed available base images from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Derp CLI",
-            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Derp CLI",
+            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Bork CLI",
+            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Bork CLI",
             CliTelemetryEventDiscriminants::MemoryStoreList => {
-                "Listed memory stores from the Derp CLI"
+                "Listed memory stores from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListMemories => {
-                "Listed memories in a memory store from the Derp CLI"
+                "Listed memories in a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreCreateMemory => {
-                "Created a manual memory in a memory store from the Derp CLI"
+                "Created a manual memory in a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateMemory => {
-                "Updated a memory in a memory store from the Derp CLI"
+                "Updated a memory in a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreDeleteMemory => {
-                "Deleted a memory from a memory store from the Derp CLI"
+                "Deleted a memory from a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreGetStore => {
-                "Got a memory store from the Derp CLI"
+                "Got a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateStore => {
-                "Updated a memory store from the Derp CLI"
+                "Updated a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListStoreAgents => {
-                "Listed agents attached to a memory store from the Derp CLI"
+                "Listed agents attached to a memory store from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListVersions => {
-                "Listed version history of a memory from the Derp CLI"
+                "Listed version history of a memory from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Derp CLI",
-            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Derp CLI",
+            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Bork CLI",
+            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Bork CLI",
             CliTelemetryEventDiscriminants::ConversationGet => {
-                "Got conversation by ID from the Derp CLI"
+                "Got conversation by ID from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunConversationGet => {
-                "Got run conversation from the Derp CLI"
+                "Got run conversation from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageWatch => {
-                "Watched run messages from the Derp CLI"
+                "Watched run messages from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageSend => {
-                "Sent a run message from the Derp CLI"
+                "Sent a run message from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageList => {
-                "Listed run messages from the Derp CLI"
+                "Listed run messages from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageRead => {
-                "Read a run message from the Derp CLI"
+                "Read a run message from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageMarkDelivered => {
-                "Marked a run message as delivered from the Derp CLI"
+                "Marked a run message as delivered from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::Login => "Logged in via the Derp CLI",
-            CliTelemetryEventDiscriminants::Logout => "Logged out via the Derp CLI",
-            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Derp CLI",
-            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Derp CLI",
-            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Derp CLI",
+            CliTelemetryEventDiscriminants::Login => "Logged in via the Bork CLI",
+            CliTelemetryEventDiscriminants::Logout => "Logged out via the Bork CLI",
+            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Bork CLI",
+            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Bork CLI",
+            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Bork CLI",
             CliTelemetryEventDiscriminants::IntegrationCreate => {
-                "Created an integration from the Derp CLI"
+                "Created an integration from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationUpdate => {
-                "Updated an integration from the Derp CLI"
+                "Updated an integration from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationList => {
-                "Listed integrations from the Derp CLI"
+                "Listed integrations from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactUpload => {
-                "Uploaded an artifact from the Derp CLI"
+                "Uploaded an artifact from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactGet => {
-                "Got artifact metadata from the Derp CLI"
+                "Got artifact metadata from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactDownload => {
-                "Downloaded an artifact from the Derp CLI"
+                "Downloaded an artifact from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Derp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Derp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Derp CLI",
+            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Bork CLI",
+            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Bork CLI",
+            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Bork CLI",
             CliTelemetryEventDiscriminants::ScheduleCreate => {
-                "Created a scheduled agent from the Derp CLI"
+                "Created a scheduled agent from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleList => {
-                "Listed scheduled agents from the Derp CLI"
+                "Listed scheduled agents from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleGet => {
-                "Got scheduled agent configuration from the Derp CLI"
+                "Got scheduled agent configuration from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::SchedulePause => {
-                "Paused a scheduled agent from the Derp CLI"
+                "Paused a scheduled agent from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUnpause => {
-                "Unpaused a scheduled agent from the Derp CLI"
+                "Unpaused a scheduled agent from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUpdate => {
-                "Updated a scheduled agent from the Derp CLI"
+                "Updated a scheduled agent from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleDelete => {
-                "Deleted a scheduled agent from the Derp CLI"
+                "Deleted a scheduled agent from the Bork CLI"
             }
-            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Derp CLI",
-            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Derp CLI",
-            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Derp CLI",
-            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Derp CLI",
+            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Bork CLI",
+            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Bork CLI",
+            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Bork CLI",
+            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Bork CLI",
             CliTelemetryEventDiscriminants::FederateIssueToken => {
-                "Issued a federated identity token from the Derp CLI"
+                "Issued a federated identity token from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::FederateIssueGcpToken => {
-                "Issued a GCP federated identity token from the Derp CLI"
+                "Issued a GCP federated identity token from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportPing => {
-                "Pinged harness-support from the Derp CLI"
+                "Pinged harness-support from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportArtifact => {
-                "Reported an artifact via harness-support from the Derp CLI"
+                "Reported an artifact via harness-support from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportNotifyUser => {
-                "Sent a user notification via harness-support from the Derp CLI"
+                "Sent a user notification via harness-support from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportFinishTask => {
-                "Reported task completion via harness-support from the Derp CLI"
+                "Reported task completion via harness-support from the Bork CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportShutdown => {
-                "Reported agent shutdown via harness-support from the Derp CLI"
+                "Reported agent shutdown via harness-support from the Bork CLI"
             }
         }
     }
@@ -553,4 +553,4 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(CliTelemetryEvent);
+bork_core::register_telemetry_event!(CliTelemetryEvent);

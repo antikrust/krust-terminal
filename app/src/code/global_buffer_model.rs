@@ -12,29 +12,29 @@ use lsp::{LspManagerModel, LspServerLogLevel, LspServerModel};
 use remote_server::manager::RemoteServerManager;
 use string_offset::{ByteOffset, CharOffset};
 use vec1::vec1;
-use derp_core::features::FeatureFlag;
-use derp_core::safe_error;
-use derp_editor::content::buffer::{Buffer, ToBufferCharOffset};
-use derp_editor::content::diff::{text_diff, TextDiff};
-use derp_editor::content::edit::PreciseDelta;
-use derp_editor::content::version::BufferVersion;
-use derp_util::content_version::ContentVersion;
-use derp_util::file::{FileId, FileLoadError, FileSaveError};
-use derp_util::host_id::HostId;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::r#async::Timer;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
+use bork_core::features::FeatureFlag;
+use bork_core::safe_error;
+use bork_editor::content::buffer::{Buffer, ToBufferCharOffset};
+use bork_editor::content::diff::{text_diff, TextDiff};
+use bork_editor::content::edit::PreciseDelta;
+use bork_editor::content::version::BufferVersion;
+use bork_util::content_version::ContentVersion;
+use bork_util::file::{FileId, FileLoadError, FileSaveError};
+use bork_util::host_id::HostId;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::r#async::Timer;
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
 use super::buffer_location::{LocalOrRemotePath, SyncClock};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
         use lsp::LspManagerModelEvent;
-        use derp_files::{FileModelEvent, FileModel};
-        use derp_editor::content::text::IndentBehavior;
-        use derp_editor::content::text::IndentUnit;
-        use derp_editor::content::buffer::EditOrigin;
+        use bork_files::{FileModelEvent, FileModel};
+        use bork_editor::content::text::IndentBehavior;
+        use bork_editor::content::text::IndentUnit;
+        use bork_editor::content::buffer::EditOrigin;
     }
 }
 
@@ -1078,7 +1078,7 @@ impl GlobalBufferModel {
         // Subscribe to buffer events for LSP sync.
         let path_clone = path.clone();
         ctx.subscribe_to_model(&buffer, move |me, _, event, ctx| {
-            use derp_editor::content::buffer::BufferEvent;
+            use bork_editor::content::buffer::BufferEvent;
 
             let Some(state) = me.buffers.get(&file_id) else {
                 return;
@@ -1217,7 +1217,7 @@ impl GlobalBufferModel {
 
         let path_clone = path.to_path_buf();
         ctx.subscribe_to_model(&buffer, move |me, _, event, ctx| {
-            use derp_editor::content::buffer::BufferEvent;
+            use bork_editor::content::buffer::BufferEvent;
 
             let Some(state) = me.buffers.get(&file_id) else {
                 me.log_lsp_sync_debug(
@@ -1365,7 +1365,7 @@ impl GlobalBufferModel {
         line_numbers: Vec<usize>,
         ctx: &mut ModelContext<Self>,
     ) -> Option<Vec<(usize, String)>> {
-        use derp_editor::content::text::LineCount;
+        use bork_editor::content::text::LineCount;
 
         if line_numbers.is_empty() {
             return Some(Vec::new());
@@ -1701,7 +1701,7 @@ impl GlobalBufferModel {
             let client = client.clone();
             let path_for_edit = path_str.clone();
             ctx.subscribe_to_model(&buffer, move |me, _, event, ctx| {
-                use derp_editor::content::buffer::BufferEvent;
+                use bork_editor::content::buffer::BufferEvent;
                 if let BufferEvent::ContentChanged { delta, origin, .. } = event {
                     // Skip server-originated changes to prevent echo loop.
                     // Server pushes applied via insert_at_char_offset_ranges
@@ -2047,7 +2047,7 @@ impl GlobalBufferModel {
     // ── Public accessors ──────────────────────────────────────────────
 
     /// Returns the buffer text content for a given `FileId`.
-    pub fn content_for_file(&self, file_id: FileId, ctx: &derpui::AppContext) -> Option<String> {
+    pub fn content_for_file(&self, file_id: FileId, ctx: &borkui::AppContext) -> Option<String> {
         let state = self.buffers.get(&file_id)?;
         let buffer = state.buffer.upgrade(ctx)?;
         Some(buffer.as_ref(ctx).text().into_string())
@@ -2433,14 +2433,14 @@ impl GlobalBufferModel {
     pub(crate) fn seed_remote_buffer_for_test(
         &mut self,
         host_id: HostId,
-        path: derp_util::standardized_path::StandardizedPath,
+        path: bork_util::standardized_path::StandardizedPath,
         content: &str,
         server_version: u64,
         ctx: &mut ModelContext<Self>,
     ) -> BufferState {
         let remote_path = RemotePath::new(host_id, path);
         let location = LocalOrRemotePath::Remote(remote_path.clone());
-        let file_id = derp_util::file::FileId::new();
+        let file_id = bork_util::file::FileId::new();
         let buffer = ctx.add_model(|_| Buffer::default());
         let version = ContentVersion::new();
         buffer.update(ctx, |buf, ctx| {

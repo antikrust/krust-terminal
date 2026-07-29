@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use repo_metadata::repositories::DetectedRepositories;
 use string_offset::CharOffset;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derpui::elements::Empty;
-use derpui::platform::WindowStyle;
-use derpui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
+use bork_core::ui::appearance::Appearance;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use borkui::elements::Empty;
+use borkui::platform::WindowStyle;
+use borkui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::*;
 use crate::ai::request_usage_model::AIRequestUsageModel;
@@ -36,12 +36,12 @@ use crate::NotebookKeybindings;
 #[derive(Default)]
 struct TestView;
 
-impl derpui::Entity for TestView {
+impl borkui::Entity for TestView {
     type Event = ();
 }
 
-impl derpui::View for TestView {
-    fn render(&self, _: &derpui::AppContext) -> Box<dyn derpui::Element> {
+impl borkui::View for TestView {
+    fn render(&self, _: &borkui::AppContext) -> Box<dyn borkui::Element> {
         Empty::new().finish()
     }
 
@@ -50,7 +50,7 @@ impl derpui::View for TestView {
     }
 }
 
-impl derpui::TypedActionView for TestView {
+impl borkui::TypedActionView for TestView {
     type Action = ();
 }
 

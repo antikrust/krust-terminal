@@ -7,8 +7,8 @@ use futures::future::join_all;
 use futures::Future;
 use futures_lite::StreamExt;
 use itertools::Itertools;
-use derp_core::command::ExitCode;
-use derpui::{App, ModelHandle};
+use bork_core::command::ExitCode;
+use borkui::{App, ModelHandle};
 
 use super::{HistoryEntry, HistoryEvent, PersistedCommand, ShellHost};
 use crate::ai::agent::conversation::AIConversationId;
@@ -212,7 +212,7 @@ fn test_append_commands() {
                 r#"
                     ls
                     pwd
-                    derp --listen --ports=8080,8081
+                    bork --listen --ports=8080,8081
                 "#,
             )]);
 
@@ -244,7 +244,7 @@ fn test_append_commands() {
                 assert_eq!(
                     history.commands(session.id()).unwrap_or_default(),
                     vec![
-                        &HistoryEntry::command_only("derp --listen --ports=8080,8081"),
+                        &HistoryEntry::command_only("bork --listen --ports=8080,8081"),
                         &HistoryEntry::with_session_id(session.id(), "ls"),
                         &HistoryEntry::with_session_id(session.id(), "pwd"),
                         &HistoryEntry::with_session_id(session.id(), "git status"),
@@ -263,7 +263,7 @@ fn test_append_multiple_sessions() {
             sandbox.with_files(vec![Stub::FileWithContentToBeTrimmed(
                 ".bash_history",
                 r#"
-                    cd derp
+                    cd bork
                     cargo run --bin dev
                 "#,
             )]);
@@ -295,7 +295,7 @@ fn test_append_multiple_sessions() {
                 assert_eq!(
                     history.commands(session.id()).unwrap_or_default(),
                     vec![
-                        &HistoryEntry::command_only("cd derp"),
+                        &HistoryEntry::command_only("cd bork"),
                         &HistoryEntry::command_only("cargo run --bin dev"),
                         &HistoryEntry::with_session_id(session.id(), "cargo clean"),
                         &HistoryEntry::with_session_id(session.id(), "ls target/"),
@@ -321,7 +321,7 @@ fn test_append_multiple_sessions() {
                 assert_eq!(
                     history.commands(second_session.id()).unwrap_or_default(),
                     vec![
-                        &HistoryEntry::command_only("cd derp"),
+                        &HistoryEntry::command_only("cd bork"),
                         &HistoryEntry::command_only("cargo run --bin dev"),
                         &HistoryEntry::with_session_id(session.id(), "cargo clean"),
                         &HistoryEntry::with_session_id(second_session.id(), "ls target/"),
@@ -339,7 +339,7 @@ fn test_len() {
             sandbox.with_files(vec![Stub::FileWithContentToBeTrimmed(
                 ".bash_history",
                 r#"
-                    cd derp
+                    cd bork
                     cargo run --bin dev
                     touch
                 "#,
@@ -384,7 +384,7 @@ fn test_len() {
                 assert_eq!(
                     history.commands(session.id()).unwrap_or_default(),
                     vec![
-                        &HistoryEntry::command_only("cd derp"),
+                        &HistoryEntry::command_only("cd bork"),
                         &HistoryEntry::command_only("touch"),
                         &HistoryEntry::with_session_id(session.id(), "ls"),
                         &HistoryEntry::with_session_id(session.id(), "echo 'hello'"),
@@ -505,11 +505,11 @@ fn test_multiple_machines() {
             SessionInfo::new_for_test()
                 .with_id(0)
                 .with_shell_type(ShellType::Zsh)
-                .with_session_type(BootstrapSessionType::DerpifiedRemote)
+                .with_session_type(BootstrapSessionType::BorkifiedRemote)
                 .with_hostname("prod".to_string())
                 .with_user("user".to_string())
                 .with_ssh_socket_path(PathBuf::from("~/.ssh/12345"))
-                .with_home_dir("/users/derpuser".to_owned()),
+                .with_home_dir("/users/borkuser".to_owned()),
             Arc::new(TestCommandExecutor::default()),
         ));
 
@@ -517,11 +517,11 @@ fn test_multiple_machines() {
             SessionInfo::new_for_test()
                 .with_id(1)
                 .with_shell_type(ShellType::Zsh)
-                .with_session_type(BootstrapSessionType::DerpifiedRemote)
+                .with_session_type(BootstrapSessionType::BorkifiedRemote)
                 .with_hostname("dev".to_string())
                 .with_user("user2".to_string())
                 .with_ssh_socket_path(PathBuf::from("~/.ssh/12345"))
-                .with_home_dir("/users/derpuser".to_owned()),
+                .with_home_dir("/users/borkuser".to_owned()),
             Arc::new(TestCommandExecutor::default()),
         ));
 

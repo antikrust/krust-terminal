@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use parking_lot::{FairMutex, Mutex};
-use derpui::App;
+use borkui::App;
 
 use super::*;
 use crate::terminal::event_listener::ChannelEventListener;

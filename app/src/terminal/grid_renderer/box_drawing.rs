@@ -1,8 +1,8 @@
 //! Procedural geometry for supported solid Unicode box-drawing glyphs.
 
 use smallvec::SmallVec;
-use derpui::geometry::rect::RectF;
-use derpui::geometry::vector::vec2f;
+use borkui::geometry::rect::RectF;
+use borkui::geometry::vector::vec2f;
 
 /// Weight of a box-drawing stroke.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -8,7 +8,7 @@ use fuzzy_match::FuzzyMatchResult;
 use itertools::Itertools;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
-use derpui::{AppContext, SingletonEntity};
+use borkui::{AppContext, SingletonEntity};
 
 use super::search_item::FileSearchItem;
 #[cfg(feature = "local_fs")]

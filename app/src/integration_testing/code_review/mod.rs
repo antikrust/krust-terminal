@@ -1,5 +1,5 @@
-use derpui::integration::{AssertionCallback, AssertionOutcome, TestStep};
-use derpui::{async_assert, App, ViewHandle, WindowId};
+use borkui::integration::{AssertionCallback, AssertionOutcome, TestStep};
+use borkui::{async_assert, App, ViewHandle, WindowId};
 
 use crate::code_review::code_review_view::{CodeReviewView, CodeReviewVisibleAnchorForTest};
 

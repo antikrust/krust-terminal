@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 
-use derp_core::channel::ChannelState;
-use derp_errors::report_error;
+use bork_core::channel::ChannelState;
+use bork_errors::report_error;
 use windows_registry::{CURRENT_USER, HSTRING};
 
 pub(super) fn register_uri_handler() {
@@ -13,9 +13,9 @@ pub(super) fn register_uri_handler() {
         return;
     };
 
-    // The Windows Registry entry for Derp (assuming the channel is DerpLocal):
-    // derplocal
-    //   (Default) = "DerpLocal"
+    // The Windows Registry entry for Bork (assuming the channel is BorkLocal):
+    // borklocal
+    //   (Default) = "BorkLocal"
     //   URL Protocol = ""
     //   DefaultIcon
     //      (Default) = "{path_to_channel_icon},0" TODO(CORE-2860): Add icon file path here.
@@ -41,7 +41,7 @@ pub(super) fn register_uri_handler() {
             };
 
             // TODO(CORE-2861): Add the `DefaultIcon` Default value here with the file path to
-            // Derp's icon once we figure out distribution on Windows.
+            // Bork's icon once we figure out distribution on Windows.
 
             let command_key = match parent_key.create("shell\\open\\command") {
                 Ok(command_key) => command_key,

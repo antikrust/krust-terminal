@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use parking_lot::Mutex;
-use derpui::text_layout;
+use borkui::text_layout;
 
 use crate::editor::view::DisplayPoint;
 use crate::editor::Point;

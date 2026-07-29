@@ -1,5 +1,5 @@
-use derpui::elements::MouseStateHandle;
-use derpui::Element;
+use borkui::elements::MouseStateHandle;
+use borkui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerButtonState, InlineBannerCloseButton,
@@ -63,8 +63,8 @@ pub fn render_aws_bedrock_login_banner(
     });
 
     // Use sub_text_color for description to differentiate from title
-    let description_text = derpui::elements::Text::new(
-        "Your Derp admin has enabled AWS Bedrock for your team.",
+    let description_text = borkui::elements::Text::new(
+        "Your Bork admin has enabled AWS Bedrock for your team.",
         appearance.ui_font_family(),
         appearance.monospace_font_size() - 2.,
     )

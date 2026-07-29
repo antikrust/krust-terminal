@@ -1,4 +1,4 @@
-use derp_graphql::queries::get_user::UserOutput as GqlUserOutput;
+use bork_graphql::queries::get_user::UserOutput as GqlUserOutput;
 
 use super::user::User;
 use super::UserUid;

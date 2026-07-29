@@ -1,6 +1,6 @@
 # APP-3781: Tech Spec — Plugin Instructions in a Split Pane
 
-Linear: [APP-3781](https://linear.app/derpdotdev/issue/APP-3781/move-plugin-installation-settings-into-a-dedicated-pane)
+Linear: [APP-3781](https://linear.app/borkdotdev/issue/APP-3781/move-plugin-installation-settings-into-a-dedicated-pane)
 
 ## Problem
 

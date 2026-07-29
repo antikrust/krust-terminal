@@ -1,7 +1,7 @@
 use serde::Serialize;
-use derpui::elements::MouseStateHandle;
-use derpui::notification::RequestPermissionsOutcome;
-use derpui::Element;
+use borkui::elements::MouseStateHandle;
+use borkui::notification::RequestPermissionsOutcome;
+use borkui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerButtonState, InlineBannerCloseButton,
@@ -109,7 +109,7 @@ pub fn render_inline_notifications_discovery_banner(
                         learn_more_button,
                     ),
                     RequestPermissionsOutcome::PermissionsDenied => (
-                        "Derp was denied permissions to send you notifications.",
+                        "Bork was denied permissions to send you notifications.",
                         troubleshoot_button,
                     ),
                     RequestPermissionsOutcome::OtherError { .. } => (

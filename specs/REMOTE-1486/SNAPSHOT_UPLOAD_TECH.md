@@ -1,5 +1,5 @@
 # Cloud Handoff Snapshot Upload — Tech Spec
-Part of the local-to-cloud Oz handoff feature ([REMOTE-1486](https://linear.app/derpdotdev/issue/REMOTE-1486)). Full feature behavior in `PRODUCT.md`; the orchestrator that wires this together lives in `TECH.md`.
+Part of the local-to-cloud Oz handoff feature ([REMOTE-1486](https://linear.app/borkdotdev/issue/REMOTE-1486)). Full feature behavior in `PRODUCT.md`; the orchestrator that wires this together lives in `TECH.md`.
 ## Context
 The handoff flow stages the local agent's workspace into GCS *before* the cloud task exists, so the cloud sandbox can rehydrate from those files on its first turn. There's no `task_id` to scope the upload to at that point — only a server-minted initial snapshot token and a `handoff/{token}/` GCS prefix.
 The existing end-of-run snapshot pipeline (REMOTE-1332) is generic enough to reuse for the gather + upload phase, but the entry point and the URL-allocation step both need new variants that don't depend on a task. The `task_id` parameter that the existing helpers thread through purely for log context becomes a liability in the new entry point, so we drop it and re-extract a `task_id`-free upload helper that both paths share.

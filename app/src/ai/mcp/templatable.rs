@@ -2,7 +2,7 @@ pub use cloud_object_models::{
     CloudTemplatableMCPServer, CloudTemplatableMCPServerModel, GalleryData, JsonTemplate,
     TemplatableMCPServer, TemplateVariable,
 };
-use derp_core::ui::appearance::Appearance;
+use bork_core::ui::appearance::Appearance;
 
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::cloud_object::model::json_model::JsonModel;
@@ -10,7 +10,7 @@ use crate::cloud_object::{
     CloudObjectUuid, GenericStringObjectFormat, GenericStringObjectUniqueKey, JsonObjectType,
     Revision, UniquePer,
 };
-use crate::drive::items::DerpDriveItem;
+use crate::drive::items::BorkDriveItem;
 use crate::server::ids::SyncId;
 use crate::server::sync_queue::QueueItem;
 
@@ -68,16 +68,16 @@ impl StringModel for TemplatableMCPServer {
         })
     }
 
-    fn renders_in_derp_drive(&self) -> bool {
+    fn renders_in_bork_drive(&self) -> bool {
         false
     }
 
-    fn to_derp_drive_item(
+    fn to_bork_drive_item(
         &self,
         _id: SyncId,
         _appearance: &Appearance,
         _templatable_mcp_server: &CloudTemplatableMCPServer,
-    ) -> Option<Box<dyn DerpDriveItem>> {
+    ) -> Option<Box<dyn BorkDriveItem>> {
         None
     }
 }

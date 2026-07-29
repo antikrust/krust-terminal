@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use derp_util::path::ShellFamily;
-use derpui::platform::OperatingSystem;
+use bork_util::path::ShellFamily;
+use borkui::platform::OperatingSystem;
 
 #[derive(
     Debug,

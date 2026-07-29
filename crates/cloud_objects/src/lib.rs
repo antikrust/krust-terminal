@@ -1,7 +1,7 @@
-//! This crate defines the low-level, model-agnostic cloud object substrate shared by Derp crates.
+//! This crate defines the low-level, model-agnostic cloud object substrate shared by Bork crates.
 //!
 //! It owns server-facing identifiers, user identifiers, object metadata, object type and format
-//! definitions, and sharing or drive primitives that do not depend on concrete Derp object models.
+//! definitions, and sharing or drive primitives that do not depend on concrete Bork object models.
 //!
 //! It should remain independent of model-specific payloads, SQLite persistence, app runtime state,
 //! and UI rendering concerns.

@@ -1,5 +1,5 @@
-use derp_core::send_telemetry_from_ctx;
-use derpui::{SingletonEntity, UpdateView};
+use bork_core::send_telemetry_from_ctx;
+use borkui::{SingletonEntity, UpdateView};
 
 use super::{
     fork_label_for_query, mark_feature_used_and_write_to_user_defaults, AIAgentExchangeId,

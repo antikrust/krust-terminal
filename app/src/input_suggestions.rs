@@ -8,14 +8,14 @@ use chrono::{DateTime, Local};
 use fuzzy_match::match_indices;
 use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
-use derp_command_signatures::IconType;
-use derp_completer::completer::{
+use bork_command_signatures::IconType;
+use bork_completer::completer::{
     MatchType, PathSeparators, Suggestion, SuggestionResults, SuggestionType,
 };
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::AnsiColorIdentifier;
-use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::AnsiColorIdentifier;
+use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
+use borkui::elements::{
     Align, AnchorPair, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DispatchEventResult, DropShadow, Element, Empty, EventHandler, Expanded,
     Flex, Highlight, Hoverable, Icon, MouseStateHandle, OffsetPositioning, OffsetType,
@@ -24,9 +24,9 @@ use derpui::elements::{
     ScrollbarWidth, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
     UniformList, UniformListState, XAxisAnchor, YAxisAnchor,
 };
-use derpui::fonts::{Cache, Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Cache, Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WeakViewHandle,
 };
 
@@ -590,13 +590,13 @@ impl InputSuggestions {
                 ctx.emit_a11y_content(AccessibilityContent::new(
                     format!("Suggestion: {text}.\n"),
                     desc,
-                    DerpA11yRole::MenuItemRole,
+                    BorkA11yRole::MenuItemRole,
                 ));
             }
             (Some(text), None) => {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Suggestion: {text}.\n"),
-                    DerpA11yRole::MenuItemRole,
+                    BorkA11yRole::MenuItemRole,
                 ));
             }
             _ => {}
@@ -620,7 +620,7 @@ impl InputSuggestions {
         if let Some(text) = self.get_selected_item_text() {
             ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                 format!("Selected: {text}"),
-                DerpA11yRole::MenuItemRole,
+                BorkA11yRole::MenuItemRole,
             ));
         }
     }
@@ -645,7 +645,7 @@ impl InputSuggestions {
     ) {
         ctx.emit_a11y_content(AccessibilityContent::new_without_help(
             "Closed suggestions.",
-            DerpA11yRole::UserAction,
+            BorkA11yRole::UserAction,
         ));
         ctx.emit(Event::CloseSuggestion {
             should_restore_buffer_before_history_up,
@@ -809,7 +809,7 @@ impl InputSuggestions {
                                     Properties::default()
                                         .weight(appearance.monospace_font_weight()),
                                 )
-                                .autosize_text(derp_core::ui::builder::MIN_FONT_SIZE)
+                                .autosize_text(bork_core::ui::builder::MIN_FONT_SIZE)
                                 .with_color(main_text);
 
                                 let matches = item.matches.clone();
@@ -1088,7 +1088,7 @@ impl View for InputSuggestions {
             // TODO use bindings from user settings
             "Navigate with tab and shift-tab, and confirm with enter. Execute selected command \
                 with command + enter. Esc leaves the suggestions menu.",
-            DerpA11yRole::MenuRole,
+            BorkA11yRole::MenuRole,
         ))
     }
 }

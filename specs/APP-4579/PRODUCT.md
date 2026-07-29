@@ -1,6 +1,6 @@
 # APP-4579 — Local-to-cloud handoff for orchestrated agents
 
-Linear: [APP-4579](https://linear.app/derpdotdev/issue/APP-4579/support-handoff-for-orchestrators-and-orchestrated-agents-or-make-it)
+Linear: [APP-4579](https://linear.app/borkdotdev/issue/APP-4579/support-handoff-for-orchestrators-and-orchestrated-agents-or-make-it)
 
 ## Summary
 Today, local-to-cloud handoff is unconditionally disabled for any conversation that is part of an orchestration tree — either a parent that has spawned children, or a child spawned by a parent. Typing `&` does nothing, the `/handoff` slash command is hidden, the footer chip is hidden, and the workspace action shows a toast that reads "Cloud handoff isn't available for orchestrated agent conversations." This is confusing because there is no technical blocker: the existing handoff plumbing already forks the conversation, uploads a workspace snapshot, and spawns a fresh cloud agent that rehydrates from that snapshot. The only thing missing is making the cloud agent aware that its prior orchestration relationships do not survive the handoff.

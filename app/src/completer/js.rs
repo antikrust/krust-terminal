@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ipc::ServiceCaller;
-use derp_completer::completer::{JsExecutionContext, JsExecutionError};
-use derp_js::{JsFunctionId, SerializedJsValue};
+use bork_completer::completer::{JsExecutionContext, JsExecutionError};
+use bork_js::{JsFunctionId, SerializedJsValue};
 
 use crate::plugin::service::{
     CallJsFunctionRequest, CallJsFunctionResponse, CallJsFunctionService,

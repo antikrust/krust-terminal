@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, DropShadow, Radius,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, View, ViewContext,
     ViewHandle,
 };

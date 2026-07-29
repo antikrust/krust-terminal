@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use derpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{
     read_local_file_context, ActionExecution, AnyActionExecution, ExecuteActionInput,
@@ -111,7 +111,7 @@ impl ReadFilesExecutor {
         // Check if this is a remote session with a connected host.
         let session_type = self.active_session.as_ref(ctx).session_type(ctx);
         let host_request_handle = match &session_type {
-            Some(SessionType::DerpifiedRemote {
+            Some(SessionType::BorkifiedRemote {
                 host_id: Some(host_id),
             }) => Some(
                 remote_server::manager::RemoteServerManager::as_ref(ctx)
@@ -123,7 +123,7 @@ impl ReadFilesExecutor {
         // Remote session without a usable remote server connection. File reading
         // requires either local access or a connected remote server, neither
         // of which is available.
-        if matches!(session_type, Some(SessionType::DerpifiedRemote { .. }))
+        if matches!(session_type, Some(SessionType::BorkifiedRemote { .. }))
             && host_request_handle.is_none()
         {
             return ActionExecution::Sync(AIAgentActionResultType::ReadFiles(

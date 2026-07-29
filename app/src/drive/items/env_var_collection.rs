@@ -1,11 +1,11 @@
 use itertools::Itertools;
-use derp_core::context_flag::ContextFlag;
-use derpui::elements::{Clipped, Container, Flex, MouseStateHandle, ParentElement};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use bork_core::context_flag::ContextFlag;
+use borkui::elements::{Clipped, Container, Flex, MouseStateHandle, ParentElement};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::model::actions::{ObjectActionType, ObjectActions};
 use crate::cloud_object::CloudObjectMetadata;
@@ -15,12 +15,12 @@ use crate::env_vars::{CloudEnvVarCollection, EnvVarValue};
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct DerpDriveEnvVarCollection {
+pub struct BorkDriveEnvVarCollection {
     id: CloudObjectTypeAndId,
     env_var_collection: CloudEnvVarCollection,
 }
 
-impl DerpDriveEnvVarCollection {
+impl BorkDriveEnvVarCollection {
     pub fn new(id: CloudObjectTypeAndId, env_var_collection: CloudEnvVarCollection) -> Self {
         Self {
             id,
@@ -29,7 +29,7 @@ impl DerpDriveEnvVarCollection {
     }
 }
 
-impl DerpDriveItem for DerpDriveEnvVarCollection {
+impl BorkDriveItem for BorkDriveEnvVarCollection {
     fn display_name(&self) -> Option<String> {
         self.env_var_collection.model().string_model.title.clone()
     }
@@ -149,8 +149,8 @@ impl DerpDriveItem for DerpDriveEnvVarCollection {
         Some(text.finish())
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -170,7 +170,7 @@ impl DerpDriveItem for DerpDriveEnvVarCollection {
             .get_action_history_summary_for_action_type(&self.id.uid(), ObjectActionType::Execute)
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }

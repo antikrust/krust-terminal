@@ -3,10 +3,10 @@ use std::fmt::Debug;
 use std::ops::AddAssign;
 
 use pathfinder_geometry::rect::RectF;
-use derp_errors::{register_error, ErrorExt};
-use derp_util::file::FileSaveError;
-use derpui::elements::DropTargetData;
-use derpui::AppContext;
+use bork_errors::{register_error, ErrorExt};
+use bork_util::file::FileSaveError;
+use borkui::elements::DropTargetData;
+use borkui::AppContext;
 
 #[cfg(not(target_family = "wasm"))]
 pub mod find_references_view;

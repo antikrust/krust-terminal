@@ -72,7 +72,7 @@ pub struct SnapshotFileInfo {
 /// list in the request, so callers match each upload target back to the filename
 /// they requested by position. The server does not include filenames on the
 /// response entries — see the `UploadSnapshotResponse` schema in
-/// `derp-server`'s `public_api/openapi.yaml`.
+/// `bork-server`'s `public_api/openapi.yaml`.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct SnapshotUploadResponse {
     pub uploads: Vec<UploadTarget>,

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::Serialize;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::features::FeatureFlag;
-use derpui::{Entity, ModelContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 #[cfg(target_os = "macos")]
 use super::config::HotkeyError;
@@ -47,7 +47,7 @@ impl ImportedConfigModel {
         use strum::IntoEnumIterator;
         self.started = true;
 
-        let loaded_system_fonts = derpui::fonts::Cache::handle(ctx)
+        let loaded_system_fonts = borkui::fonts::Cache::handle(ctx)
             .update(ctx, |font_cache, ctx| font_cache.all_system_fonts(ctx));
         ctx.spawn(loaded_system_fonts, |_, fonts, ctx| {
             let fonts = fonts

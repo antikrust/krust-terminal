@@ -9,14 +9,14 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use tempfile::NamedTempFile;
-use derp_cli::agent::Harness;
-use derp_cli::{
+use bork_cli::agent::Harness;
+use bork_cli::{
     OZ_CLI_ENV, OZ_HARNESS_ENV, OZ_PARENT_RUN_ID_ENV, OZ_RUN_ID_ENV, SERVER_ROOT_URL_OVERRIDE_ENV,
     SESSION_SHARING_SERVER_URL_OVERRIDE_ENV, WS_SERVER_URL_OVERRIDE_ENV,
 };
-use derp_core::channel::ChannelState;
-use derp_managed_secrets::ManagedSecretValue;
-use derpui::{ModelHandle, ModelSpawner, SingletonEntity};
+use bork_core::channel::ChannelState;
+use bork_managed_secrets::ManagedSecretValue;
+use borkui::{ModelHandle, ModelSpawner, SingletonEntity};
 
 use super::terminal::{CommandHandle, TerminalDriver};
 use super::{
@@ -64,7 +64,7 @@ pub(crate) use telemetry::ThirdPartyHarnessTelemetryEvent;
 /// Which local CLI backs a local-harness run in this fork.
 ///
 /// Interim selection until the model picker drives it: fresh conversations
-/// read `DERP_LOCAL_HARNESS` (`claude` | `codex` | `ollama`, defaulting to claude);
+/// read `BORK_LOCAL_HARNESS` (`claude` | `codex` | `ollama`, defaulting to claude);
 /// follow-ups stick with the harness their thread started on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -76,7 +76,7 @@ pub(crate) enum LocalHarnessKind {
 
 impl LocalHarnessKind {
     pub(crate) fn default_from_env() -> Self {
-        match std::env::var("DERP_LOCAL_HARNESS").ok().as_deref() {
+        match std::env::var("BORK_LOCAL_HARNESS").ok().as_deref() {
             Some("codex") => Self::Codex,
             Some("ollama") => Self::Ollama,
             _ => Self::Claude,
@@ -193,7 +193,7 @@ pub(crate) trait ThirdPartyHarness: Send + Sync {
     /// Whether this harness must verify its Oz platform plugin before launch.
     /// Codex opts into this because its unattended launch command bypasses hook
     /// trust globally, so we should fail setup instead of running without the
-    /// Derp-installed orchestration hooks at the required version.
+    /// Bork-installed orchestration hooks at the required version.
     fn requires_verified_platform_plugin(&self) -> bool {
         false
     }

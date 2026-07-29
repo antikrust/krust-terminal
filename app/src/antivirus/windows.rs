@@ -1,5 +1,5 @@
-use derp_core::send_telemetry_from_ctx;
-use derpui::ModelContext;
+use bork_core::send_telemetry_from_ctx;
+use borkui::ModelContext;
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_APARTMENTTHREADED,
 };

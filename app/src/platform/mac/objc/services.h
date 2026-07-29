@@ -1,7 +1,7 @@
 // Our class for handling NSServices messages.
-@interface DerpServicesProvider : NSObject
+@interface BorkServicesProvider : NSObject
 @end
 
 // Functions implemented in Rust.
-id derp_services_provider_custom_url_scheme();
-void derp_app_open_urls(id app, id urls);
+id bork_services_provider_custom_url_scheme();
+void bork_app_open_urls(id app, id urls);

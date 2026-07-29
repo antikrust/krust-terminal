@@ -4,7 +4,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use derp_completer::signatures::CommandRegistry;
+use bork_completer::signatures::CommandRegistry;
 
 use crate::plugin::service::{
     RegisterCommandSignatureRequest, RegisterCommandSignatureResponse,

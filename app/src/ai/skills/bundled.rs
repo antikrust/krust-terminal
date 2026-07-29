@@ -3,15 +3,15 @@ use std::path::{Path, PathBuf};
 
 use ai::skills::{parse_bundled_skill, ParsedSkill, SkillPathOrigin, SkillReference};
 use futures::TryStreamExt;
-use derp_core::channel::ChannelState;
-use derp_core::features::FeatureFlag;
-use derp_core::safe_warn;
-use derp_core::ui::icons::Icon;
-use derp_errors::report_error;
-use derp_util::host_id::HostId;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derpui::{AppContext, SingletonEntity};
+use bork_core::channel::ChannelState;
+use bork_core::features::FeatureFlag;
+use bork_core::safe_warn;
+use bork_core::ui::icons::Icon;
+use bork_errors::report_error;
+use bork_util::host_id::HostId;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use borkui::{AppContext, SingletonEntity};
 
 use super::SkillDescriptor;
 use crate::ai::mcp::{McpIntegration, TemplatableMCPServerManager};
@@ -23,7 +23,7 @@ use crate::settings::user_preferences_toml_file_path;
 pub enum BundledSkillActivation {
     /// Always active.
     Always,
-    /// Active only when a specific Derp feature is enabled.
+    /// Active only when a specific Bork feature is enabled.
     RequiresFeature(FeatureFlag),
     /// Active only when a specific MCP server is running.
     RequiresMcp(McpIntegration),
@@ -171,16 +171,16 @@ struct BundledSkillDefinition {
     icon: Icon,
 }
 
-/// Skills bundled with Derp for a single host.
+/// Skills bundled with Bork for a single host.
 #[derive(Debug, Default)]
 pub struct BundledSkill {
     definitions: HashMap<String, BundledSkillDefinition>,
 }
 
 impl BundledSkill {
-    /// Detect all skill definitions bundled with Derp for the local host.
+    /// Detect all skill definitions bundled with Bork for the local host.
     pub async fn detect() -> Self {
-        let Some(resources_dir) = derp_core::paths::bundled_resources_dir() else {
+        let Some(resources_dir) = bork_core::paths::bundled_resources_dir() else {
             return Self::default();
         };
         Self::detect_in_resources_dir(resources_dir).await
@@ -191,7 +191,7 @@ impl BundledSkill {
     ///
     /// Called directly by the remote-server daemon, whose resources live at
     /// the global install location rather than inside an app bundle (which
-    /// is what [`derp_core::paths::bundled_resources_dir`] resolves).
+    /// is what [`bork_core::paths::bundled_resources_dir`] resolves).
     pub(crate) async fn detect_in_resources_dir(resources_dir: PathBuf) -> Self {
         let (mut definitions, figma_definitions) = futures::join!(
             load_bundled_skill_definitions(&resources_dir),
@@ -337,7 +337,7 @@ impl BundledSkill {
     }
 }
 
-/// Load skill definitions bundled with Derp.
+/// Load skill definitions bundled with Bork.
 async fn load_bundled_skill_definitions(
     resources_dir: &Path,
 ) -> HashMap<String, BundledSkillDefinition> {
@@ -440,11 +440,11 @@ pub(crate) async fn read_bundled_skills(
 /// Builds the context map for bundled skill variable substitution.
 ///
 /// Supported variables:
-/// - `{{derp_server_url}}` - The server root URL (e.g., `https://api.derp.baby`)
-/// - `{{derp_cli_binary_name}}` - The CLI binary name (e.g., `derp` or `derp-cli`)
-/// - `{{derpctrl_binary_name}}` - The channel-specific Derp Control command name
-/// - `{{derpctrl_wrapper_path}}` - Path to the bundled Derp Control wrapper
-/// - `{{derp_url_scheme}}` - The URL scheme (e.g., `derp`, `derpdev`, `derppreview`)
+/// - `{{bork_server_url}}` - The server root URL (e.g., `https://api.bork.baby`)
+/// - `{{bork_cli_binary_name}}` - The CLI binary name (e.g., `bork` or `bork-cli`)
+/// - `{{borkctrl_binary_name}}` - The channel-specific Bork Control command name
+/// - `{{borkctrl_wrapper_path}}` - Path to the bundled Bork Control wrapper
+/// - `{{bork_url_scheme}}` - The URL scheme (e.g., `bork`, `borkdev`, `borkpreview`)
 /// - `{{settings_schema_path}}` - Path to the bundled JSON settings schema
 /// - `{{skill_dir}}` - Path to the bundled skill's directory
 /// - `{{settings_file_path}}` - Path to the user's settings TOML file
@@ -455,27 +455,27 @@ pub(crate) fn build_bundled_skill_context(
 ) -> HashMap<String, String> {
     [
         (
-            "derp_server_url".to_owned(),
+            "bork_server_url".to_owned(),
             ChannelState::server_root_url().into_owned(),
         ),
         (
-            "derp_cli_binary_name".to_owned(),
+            "bork_cli_binary_name".to_owned(),
             ChannelState::channel().cli_command_name().to_owned(),
         ),
         (
-            "derpctrl_binary_name".to_owned(),
-            ChannelState::channel().derpctrl_command_name().to_owned(),
+            "borkctrl_binary_name".to_owned(),
+            ChannelState::channel().borkctrl_command_name().to_owned(),
         ),
         (
-            "derpctrl_wrapper_path".to_owned(),
+            "borkctrl_wrapper_path".to_owned(),
             resources_dir
                 .join("bin")
-                .join(ChannelState::channel().derpctrl_command_name())
+                .join(ChannelState::channel().borkctrl_command_name())
                 .display()
                 .to_string(),
         ),
         (
-            "derp_url_scheme".to_owned(),
+            "bork_url_scheme".to_owned(),
             ChannelState::url_scheme().to_owned(),
         ),
         (
@@ -501,11 +501,11 @@ pub(crate) fn build_bundled_skill_context(
 
 /// Returns the icon for a bundled skill, given its directory-based ID.
 /// Skills with a known brand (e.g. `pr-comments` → GitHub) get a
-/// branded icon; everything else falls back to the Derp logo.
+/// branded icon; everything else falls back to the Bork logo.
 pub(crate) fn icon_for_bundled_skill(skill_id: &str) -> Icon {
     match skill_id {
         "pr-comments" => Icon::Github,
-        _ => Icon::DerpLogoLight,
+        _ => Icon::BorkLogoLight,
     }
 }
 
@@ -521,7 +521,7 @@ pub(crate) fn activation_for_bundled_skill(
         "modify-settings" => {
             BundledSkillActivation::RequiresFile(resources_dir.join("settings_schema.json"))
         }
-        "derpctrl" => BundledSkillActivation::RequiresFeature(FeatureFlag::DerpControlCli),
+        "borkctrl" => BundledSkillActivation::RequiresFeature(FeatureFlag::BorkControlCli),
         _ => BundledSkillActivation::Always,
     }
 }

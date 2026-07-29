@@ -1,21 +1,21 @@
-use derp::integration_testing::clipboard::assert_clipboard_contains_string;
-use derp::integration_testing::secret_redaction::{
+use bork::integration_testing::clipboard::assert_clipboard_contains_string;
+use bork::integration_testing::secret_redaction::{
     assert_secret_tooltip_open, assert_secrets_redacted_for_ai,
 };
-use derp::integration_testing::settings::toggle_setting;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::util::ExpectedExitStatus;
-use derp::integration_testing::terminal::{
+use bork::integration_testing::settings::toggle_setting;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::util::ExpectedExitStatus;
+use bork::integration_testing::terminal::{
     assert_selected_block_index_is_last_renderable, execute_command_for_single_terminal_in_tab,
     initialize_secret_regexes, open_context_menu_for_selected_block, run_alt_grid_program,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::single_terminal_view;
-use derp::settings_view::{PrivacyPageAction, SettingsAction};
-use derp::terminal::model::index::Point;
-use derp::terminal::model::terminal_model::WithinModel;
-use derpui_core::async_assert;
-use derpui_core::integration::TestStep;
+use bork::integration_testing::view_getters::single_terminal_view;
+use bork::settings_view::{PrivacyPageAction, SettingsAction};
+use bork::terminal::model::index::Point;
+use bork::terminal::model::terminal_model::WithinModel;
+use borkui_core::async_assert;
+use borkui_core::integration::TestStep;
 
 use super::{new_builder, Builder};
 use crate::util::skip_if_powershell_core_2303;

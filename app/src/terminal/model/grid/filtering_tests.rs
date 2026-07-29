@@ -1,4 +1,4 @@
-use derp_terminal::model::grid::cell::Flags;
+use bork_terminal::model::grid::cell::Flags;
 
 use super::*;
 use crate::terminal::model::ansi::Handler as _;

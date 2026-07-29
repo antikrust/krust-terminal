@@ -1,9 +1,9 @@
 # Default worktree tab config
-# Stored in ~/.derp/default_tab_configs/ — you can customize this file!
+# Stored in ~/.bork/default_tab_configs/ — you can customize this file!
 # Any customizations will apply for any new worktree configs going forward that are created from the "New worktree config" flow
 #
 # This config is used by the "Worktree in" submenu to quickly create
-# worktrees under ~/.derp/worktrees/<repo-name>/<worktree-name> for your
+# worktrees under ~/.bork/worktrees/<repo-name>/<worktree-name> for your
 # known repositories.
 
 name = "Worktree"

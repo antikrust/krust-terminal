@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, IconType, Suggestion,
 };
@@ -269,7 +269,7 @@ pub fn generator() -> CommandSignatureGenerators {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use derp_completion_metadata::Shell;
+    use bork_completion_metadata::Shell;
 
     #[test]
     fn test_kubeconfig_from_flag_in_tokens() {

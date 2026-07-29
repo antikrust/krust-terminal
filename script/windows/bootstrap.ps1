@@ -2,7 +2,7 @@
 param(
     [switch]$Help,
     [switch]$InstallCommonSkills,
-    [string]$CommonSkillsTarget = $env:DERP_COMMON_SKILLS_INSTALL_TARGET
+    [string]$CommonSkillsTarget = $env:BORK_COMMON_SKILLS_INSTALL_TARGET
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +11,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 function Show-Usage {
     Write-Output 'Usage: .\script\windows\bootstrap.ps1 [-Help] [-InstallCommonSkills] [-CommonSkillsTarget <project|global>]'
     Write-Output ''
-    Write-Output 'Prepare this checkout for Derp development on Windows.'
+    Write-Output 'Prepare this checkout for Bork development on Windows.'
     Write-Output ''
     Write-Output 'Options:'
     Write-Output '  -Help                 Show this help message.'
@@ -19,15 +19,15 @@ function Show-Usage {
     Write-Output '  -CommonSkillsTarget   Install into project .agents/skills or global ~/.agents/skills.'
     Write-Output ''
     Write-Output 'Environment:'
-    Write-Output '  DERP_SKIP_COMMON_SKILLS_INSTALL=1'
+    Write-Output '  BORK_SKIP_COMMON_SKILLS_INSTALL=1'
     Write-Output '      Skip installing common agent skills.'
-    Write-Output '  DERP_COMMON_SKILLS_INSTALL_TARGET=project|global'
+    Write-Output '  BORK_COMMON_SKILLS_INSTALL_TARGET=project|global'
     Write-Output '      Choose the install target when -CommonSkillsTarget is omitted.'
-    Write-Output '      Target prompting and duplicate checks are delegated to derpdotdev/common-skills/scripts/install_common_skills.'
-    Write-Output '  DERP_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts'
+    Write-Output '      Target prompting and duplicate checks are delegated to borkdotdev/common-skills/scripts/install_common_skills.'
+    Write-Output '  BORK_COMMON_SKILLS_SCRIPTS_DIR=/path/to/common-skills/scripts'
     Write-Output '      Override where common-skills management scripts are loaded from.'
-    Write-Output '  DERP_COMMON_SKILLS_REF=<git-ref>'
-    Write-Output '      Override the remote derpdotdev/common-skills ref used when fetching scripts.'
+    Write-Output '  BORK_COMMON_SKILLS_REF=<git-ref>'
+    Write-Output '      Override the remote borkdotdev/common-skills ref used when fetching scripts.'
 }
 
 function ConvertTo-CommonSkillsTarget {
@@ -42,7 +42,7 @@ function ConvertTo-CommonSkillsTarget {
 
 
 function Show-BootstrapPreview {
-    Write-Output 'Derp bootstrap is starting for Windows.'
+    Write-Output 'Bork bootstrap is starting for Windows.'
     Write-Output 'It will:'
     Write-Output '  - Check for Git for Windows.'
     Write-Output '  - Install Rust if cargo is unavailable.'
@@ -51,8 +51,8 @@ function Show-BootstrapPreview {
 
     if (-not $InstallCommonSkills) {
         Write-Output '  - Skip common agent skills unless -InstallCommonSkills is provided.'
-    } elseif ($env:DERP_SKIP_COMMON_SKILLS_INSTALL -eq '1') {
-        Write-Output '  - Skip common agent skills because DERP_SKIP_COMMON_SKILLS_INSTALL=1.'
+    } elseif ($env:BORK_SKIP_COMMON_SKILLS_INSTALL -eq '1') {
+        Write-Output '  - Skip common agent skills because BORK_SKIP_COMMON_SKILLS_INSTALL=1.'
     } elseif ($script:ResolvedCommonSkillsTarget -eq 'global') {
         Write-Output '  - Install or update common agent skills in ~/.agents/skills if needed.'
     } elseif ($script:ResolvedCommonSkillsTarget -eq 'project') {
@@ -91,20 +91,20 @@ $env:PATH = "$gitBinDir;$env:PATH"
 function Resolve-CommonSkillsScript {
     param([string]$ScriptName)
 
-    if ($env:DERP_COMMON_SKILLS_SCRIPTS_DIR) {
-        $scriptPath = Join-Path $env:DERP_COMMON_SKILLS_SCRIPTS_DIR $ScriptName
+    if ($env:BORK_COMMON_SKILLS_SCRIPTS_DIR) {
+        $scriptPath = Join-Path $env:BORK_COMMON_SKILLS_SCRIPTS_DIR $ScriptName
         if (Test-Path -PathType Leaf $scriptPath) { return $scriptPath }
-        throw "Could not find $ScriptName in DERP_COMMON_SKILLS_SCRIPTS_DIR=$env:DERP_COMMON_SKILLS_SCRIPTS_DIR."
+        throw "Could not find $ScriptName in BORK_COMMON_SKILLS_SCRIPTS_DIR=$env:BORK_COMMON_SKILLS_SCRIPTS_DIR."
     }
 
-    $commonSkillsRef = if ($env:DERP_COMMON_SKILLS_REF) { $env:DERP_COMMON_SKILLS_REF } else { 'main' }
-    $rawBaseUrl = if ($env:DERP_COMMON_SKILLS_RAW_BASE_URL) {
-        $env:DERP_COMMON_SKILLS_RAW_BASE_URL.TrimEnd('/')
+    $commonSkillsRef = if ($env:BORK_COMMON_SKILLS_REF) { $env:BORK_COMMON_SKILLS_REF } else { 'main' }
+    $rawBaseUrl = if ($env:BORK_COMMON_SKILLS_RAW_BASE_URL) {
+        $env:BORK_COMMON_SKILLS_RAW_BASE_URL.TrimEnd('/')
     } else {
-        "https://raw.githubusercontent.com/derpdotdev/common-skills/$commonSkillsRef/scripts"
+        "https://raw.githubusercontent.com/borkdotdev/common-skills/$commonSkillsRef/scripts"
     }
     $rawUrl = "$rawBaseUrl/$ScriptName"
-    $scriptPath = Join-Path $env:TEMP "derp-$ScriptName"
+    $scriptPath = Join-Path $env:TEMP "bork-$ScriptName"
 
     Invoke-WebRequest -Uri $rawUrl -OutFile $scriptPath
     return $scriptPath
@@ -168,7 +168,7 @@ if (-not (Get-Command -Name gcloud -Type Application -ErrorAction SilentlyContin
     Start-Process "$env:Temp\GoogleCloudSDKInstaller.exe" -Wait
 }
 
-if ($env:DERP_SKIP_GCLOUD_AUTH -ne '1') {
+if ($env:BORK_SKIP_GCLOUD_AUTH -ne '1') {
     [string]$identityToken = gcloud auth print-identity-token
     if ($identityToken.Trim().Length -eq 0) {
         Write-Output 'gcloud CLI authentication missing.  Press enter to continue...'

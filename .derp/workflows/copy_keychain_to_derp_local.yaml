@@ -1,6 +1,0 @@
----
-name: "Copy DerpDev Keychain to Derp local"
-command: "security add-generic-password -a User -U -s derp -w \"$(security find-generic-password -a User -s derp.baby.Derp-Dev -w)\""
-description: "Copies the refresh token from DerpDev into the local derp app so that it can authenticate."
-author: Derp Team
-shells: []

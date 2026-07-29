@@ -1,11 +1,11 @@
-use derpui::elements::{CornerRadius, MouseStateHandle, Radius};
-use derpui::ui_components::button::Button;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::elements::{CornerRadius, MouseStateHandle, Radius};
+use borkui::ui_components::button::Button;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 use super::icons::{Icon, ICON_DIMENSIONS};
 use super::{blended_colors, BORDER_RADIUS};
 use crate::appearance::Appearance;
-use crate::themes::theme::{Fill, DerpTheme};
+use crate::themes::theme::{Fill, BorkTheme};
 
 const ICON_BUTTON_PADDING: f32 = 4.;
 
@@ -32,39 +32,39 @@ pub struct AllButtonStyles {
     disabled_styles: Option<UiComponentStyles>,
 }
 
-fn all_icon_button_styles(derp_theme: &DerpTheme, mode: ButtonMode) -> AllButtonStyles {
+fn all_icon_button_styles(bork_theme: &BorkTheme, mode: ButtonMode) -> AllButtonStyles {
     AllButtonStyles {
-        default_styles: icon_button_styles(derp_theme, mode, ButtonState::Default),
-        hovered_styles: Some(icon_button_styles(derp_theme, mode, ButtonState::Hover)),
-        clicked_styles: Some(icon_button_styles(derp_theme, mode, ButtonState::Pressed)),
-        disabled_styles: Some(icon_button_styles(derp_theme, mode, ButtonState::Disabled)),
+        default_styles: icon_button_styles(bork_theme, mode, ButtonState::Default),
+        hovered_styles: Some(icon_button_styles(bork_theme, mode, ButtonState::Hover)),
+        clicked_styles: Some(icon_button_styles(bork_theme, mode, ButtonState::Pressed)),
+        disabled_styles: Some(icon_button_styles(bork_theme, mode, ButtonState::Disabled)),
     }
 }
 
 fn icon_button_styles(
-    derp_theme: &DerpTheme,
+    bork_theme: &BorkTheme,
     mode: ButtonMode,
     state: ButtonState,
 ) -> UiComponentStyles {
-    let icon_color = icon_color(derp_theme, mode);
+    let icon_color = icon_color(bork_theme, mode);
 
     let (background_color, border_color): (Option<Fill>, Option<Fill>) = match (mode, state) {
         (ButtonMode::Base, ButtonState::Default) => (None, None),
         (ButtonMode::Base, ButtonState::Hover) => {
-            (Some(derp_theme.surface_2()), Some(derp_theme.surface_3()))
+            (Some(bork_theme.surface_2()), Some(bork_theme.surface_3()))
         }
         (ButtonMode::Base, ButtonState::Pressed) | (ButtonMode::Base, ButtonState::Disabled) => {
-            (Some(derp_theme.background()), Some(derp_theme.surface_3()))
+            (Some(bork_theme.background()), Some(bork_theme.surface_3()))
         }
         (ButtonMode::Accent, ButtonState::Default) => (None, None),
         (ButtonMode::Accent, ButtonState::Hover) => (
-            Some(derp_theme.surface_3()),
-            Some(blended_colors::accent(derp_theme)),
+            Some(bork_theme.surface_3()),
+            Some(blended_colors::accent(bork_theme)),
         ),
         (ButtonMode::Accent, ButtonState::Pressed)
         | (ButtonMode::Accent, ButtonState::Disabled) => (
-            Some(derp_theme.background()),
-            Some(blended_colors::accent_pressed(derp_theme)),
+            Some(bork_theme.background()),
+            Some(blended_colors::accent_pressed(bork_theme)),
         ),
     };
 
@@ -85,12 +85,12 @@ fn icon_button_styles(
     styles
 }
 
-fn combo_inner_button_styles(derp_theme: &DerpTheme, state: ButtonState) -> UiComponentStyles {
+fn combo_inner_button_styles(bork_theme: &BorkTheme, state: ButtonState) -> UiComponentStyles {
     let background = match state {
         ButtonState::Default => None,
-        ButtonState::Hover => Some(blended_colors::neutral_2(derp_theme)),
-        ButtonState::Pressed => Some(blended_colors::neutral_4(derp_theme)),
-        ButtonState::Disabled => Some(derp_theme.background().into()),
+        ButtonState::Hover => Some(blended_colors::neutral_2(bork_theme)),
+        ButtonState::Pressed => Some(blended_colors::neutral_4(bork_theme)),
+        ButtonState::Disabled => Some(bork_theme.background().into()),
     };
 
     UiComponentStyles {
@@ -99,7 +99,7 @@ fn combo_inner_button_styles(derp_theme: &DerpTheme, state: ButtonState) -> UiCo
         border_width: None,
         padding: Some(Coords::uniform(ICON_BUTTON_PADDING - 1.)),
         border_radius: None,
-        font_color: Some(derp_theme.foreground().into()),
+        font_color: Some(bork_theme.foreground().into()),
         border_color: None,
         background: background.map(Into::into),
         ..Default::default()
@@ -129,7 +129,7 @@ pub fn combo_inner_button(
         Some(combo_inner_button_styles(theme, ButtonState::Pressed)),
         Some(combo_inner_button_styles(theme, ButtonState::Disabled)),
     )
-    .with_icon_label(icon.to_derpui_icon(theme.foreground()));
+    .with_icon_label(icon.to_borkui_icon(theme.foreground()));
 
     if active {
         return button.active();
@@ -137,10 +137,10 @@ pub fn combo_inner_button(
     button
 }
 
-fn icon_color(derp_theme: &DerpTheme, mode: ButtonMode) -> Fill {
+fn icon_color(bork_theme: &BorkTheme, mode: ButtonMode) -> Fill {
     match mode {
-        ButtonMode::Base => derp_theme.foreground(),
-        ButtonMode::Accent => blended_colors::accent(derp_theme),
+        ButtonMode::Base => bork_theme.foreground(),
+        ButtonMode::Accent => blended_colors::accent(bork_theme),
     }
 }
 
@@ -162,7 +162,7 @@ fn icon_button_internal(
         button_styles.clicked_styles,
         button_styles.disabled_styles,
     )
-    .with_icon_label(icon.to_derpui_icon(color.unwrap_or(icon_color(theme, mode))));
+    .with_icon_label(icon.to_borkui_icon(color.unwrap_or(icon_color(theme, mode))));
 
     if let Some(color) = color.take() {
         // We also need to set the font color here to get the button to be colored correctly.

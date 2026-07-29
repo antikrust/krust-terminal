@@ -6,25 +6,25 @@ use itertools::Itertools as _;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use derp_core::settings::SyncToCloud;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::new_scrollable::{
+use bork_core::settings::SyncToCloud;
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::new_scrollable::{
     ClippedAxisConfiguration, DualAxisConfig, SingleAxisConfig,
 };
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::platform::Cursor;
-use derpui::ui_components::button::{Button, ButtonVariant};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::units::Pixels;
-use derpui::{Action, AppContext, SingletonEntity, ViewContext, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::platform::Cursor;
+use borkui::ui_components::button::{Button, ButtonVariant};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::units::Pixels;
+use borkui::{Action, AppContext, SingletonEntity, ViewContext, ViewHandle};
 
 use super::about_page::AboutPageView;
 use super::ai_page::{AISettingsPageAction, AISettingsPageView};
@@ -38,7 +38,7 @@ use super::mcp_servers_page::MCPServersSettingsPageView;
 use super::privacy_page::PrivacyPageView;
 use super::scripting_page::ScriptingSettingsPageView;
 use super::teams_page::TeamsPageView;
-use super::derpify_page::DerpifyPageView;
+use super::borkify_page::BorkifyPageView;
 use super::SettingsSection;
 use crate::appearance::Appearance;
 use crate::settings::CloudPreferencesSettings;
@@ -106,7 +106,7 @@ pub enum SettingsPageViewHandle {
     MolochStatus(ViewHandle<super::moloch_page::MolochPageView>),
     OzCloudAPIKeys(ViewHandle<super::platform_page::PlatformPageView>),
     Privacy(ViewHandle<PrivacyPageView>),
-    Derpify(ViewHandle<DerpifyPageView>),
+    Borkify(ViewHandle<BorkifyPageView>),
     Scripting(ViewHandle<ScriptingSettingsPageView>),
     AI(ViewHandle<AISettingsPageView>),
     CloudEnvironments(ViewHandle<EnvironmentsPageView>),
@@ -129,7 +129,7 @@ impl SettingsPageViewHandle {
             Teams(view_handle) => ChildView::new(view_handle).finish(),
             OzCloudAPIKeys(view_handle) => ChildView::new(view_handle).finish(),
             Privacy(view_handle) => ChildView::new(view_handle).finish(),
-            Derpify(view_handle) => ChildView::new(view_handle).finish(),
+            Borkify(view_handle) => ChildView::new(view_handle).finish(),
             Scripting(view_handle) => ChildView::new(view_handle).finish(),
             AI(view_handle) => ChildView::new(view_handle).finish(),
             CloudEnvironments(view_handle) => ChildView::new(view_handle).finish(),
@@ -427,7 +427,7 @@ pub fn render_full_pane_width_ai_button(
                 .with_child(
                     ConstrainedBox::new(
                         Icon::ChevronRight
-                            .to_derpui_icon(appearance.theme().main_text_color(icon_bg))
+                            .to_borkui_icon(appearance.theme().main_text_color(icon_bg))
                             .finish(),
                     )
                     .with_width(16.)
@@ -548,7 +548,7 @@ pub fn render_info_icon<T: Clone + Action>(
     let icon = Container::new(
         ConstrainedBox::new(
             Icon::Info
-                .to_derpui_icon(appearance.theme().active_ui_text_color())
+                .to_borkui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_width(13.)
@@ -671,7 +671,7 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
     if let Some(icon) = label_icon {
         label.add_child(
             Container::new(
-                ConstrainedBox::new(icon.to_derpui_icon(label_color).finish())
+                ConstrainedBox::new(icon.to_borkui_icon(label_color).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish(),
@@ -688,15 +688,15 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
         // `additional_info` gets moved into `render_info_icon()`.
         let secondary_text_child =
             if let Some(secondary_text) = additional_info.secondary_text.clone() {
-                let derp_theme = appearance.theme();
+                let bork_theme = appearance.theme();
                 Some(
                     appearance
                         .ui_builder()
                         .span(secondary_text)
                         .with_style(UiComponentStyles {
                             font_color: Some(
-                                derp_theme
-                                    .sub_text_color(derp_theme.surface_2())
+                                bork_theme
+                                    .sub_text_color(bork_theme.surface_2())
                                     .into_solid(),
                             ),
                             margin: Some(Coords {
@@ -775,7 +775,7 @@ impl<V> PageTitleWidget<V> {
     }
 }
 
-impl<V: derpui::View> SettingsWidget for PageTitleWidget<V> {
+impl<V: borkui::View> SettingsWidget for PageTitleWidget<V> {
     type View = V;
 
     fn search_terms(&self) -> &str {
@@ -925,14 +925,14 @@ pub fn render_dropdown_item_label(
         )
         .finish();
     let label = if let Some(secondary_text) = secondary_text {
-        let derp_theme = appearance.theme();
+        let bork_theme = appearance.theme();
         let secondary_text_child = appearance
             .ui_builder()
             .span(secondary_text)
             .with_style(UiComponentStyles {
                 font_color: Some(
                     color_override
-                        .unwrap_or(derp_theme.sub_text_color(derp_theme.surface_2()))
+                        .unwrap_or(bork_theme.sub_text_color(bork_theme.surface_2()))
                         .into_solid(),
                 ),
                 margin: Some(Coords {
@@ -1020,7 +1020,7 @@ pub(crate) fn render_settings_info_banner(
     let icon = Container::new(
         ConstrainedBox::new(
             Icon::AlertCircle
-                .to_derpui_icon(appearance.theme().active_ui_text_color())
+                .to_borkui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_width(16.)
@@ -1297,7 +1297,7 @@ where
 
 /// Structured contents of a settings tab page. This type breaks all the content into
 /// [`SettingsWidget`]s.
-pub(super) enum PageType<V: derpui::View> {
+pub(super) enum PageType<V: borkui::View> {
     /// A page where the contents cannot be separated for showing search results. If any part
     /// matches the search query, the whole page must show. The whole page is one big
     /// [`SettingsWidget`].
@@ -1377,7 +1377,7 @@ impl From<usize> for MatchData {
     }
 }
 
-impl<V: derpui::View> PageType<V> {
+impl<V: borkui::View> PageType<V> {
     /// A page where the contents cannot be separated for showing search results. If any part
     /// matches the search query, the whole page must show. The whole page is one big
     /// [`SettingsWidget`].
@@ -1798,7 +1798,7 @@ impl<V: derpui::View> PageType<V> {
                 },
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                derpui::elements::Fill::None,
+                borkui::elements::Fill::None,
             )
             .finish(),
             vec![(
@@ -1825,7 +1825,7 @@ impl<V: derpui::View> PageType<V> {
                     },
                     theme.nonactive_ui_detail().into(),
                     theme.active_ui_detail().into(),
-                    derpui::elements::Fill::None,
+                    borkui::elements::Fill::None,
                 )
                 .finish(),
             )],
@@ -1849,7 +1849,7 @@ impl<V: derpui::View> PageType<V> {
 }
 
 /// The results from a [`PageType`] with only matching [`SettingsWidget`]s.
-pub(super) enum FilteredPageType<'a, V: derpui::View> {
+pub(super) enum FilteredPageType<'a, V: borkui::View> {
     Monolith {
         widget: Option<&'a dyn SettingsWidget<View = V>>,
         title: Option<&'static str>,
@@ -1873,13 +1873,13 @@ pub(super) enum FilteredPageType<'a, V: derpui::View> {
 }
 
 /// A grouping of related [`SettingsWidget`]s that fall under the same sub-header.
-pub(super) struct Category<V: derpui::View> {
+pub(super) struct Category<V: borkui::View> {
     title: &'static str,
     subtitle: Option<&'static str>,
     widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
 }
 
-impl<V: derpui::View> Category<V> {
+impl<V: borkui::View> Category<V> {
     pub(super) fn new(
         title: &'static str,
         widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
@@ -1902,7 +1902,7 @@ impl<V: derpui::View> Category<V> {
 }
 
 /// A [`Category`] with only the results which match a search query.
-pub(super) struct FilteredCategory<'a, V: derpui::View> {
+pub(super) struct FilteredCategory<'a, V: borkui::View> {
     pub(super) title: &'static str,
     pub(super) subtitle: Option<&'static str>,
     pub(super) widgets: Vec<&'a dyn SettingsWidget<View = V>>,
@@ -1912,7 +1912,7 @@ pub(super) struct FilteredCategory<'a, V: derpui::View> {
 /// content to match against.
 pub(super) trait SettingsWidget {
     /// Which View (settings page) this widget belongs to.
-    type View: derpui::View;
+    type View: borkui::View;
 
     fn static_widget_id() -> &'static str
     where

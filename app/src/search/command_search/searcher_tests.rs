@@ -3,9 +3,9 @@ use std::time::Duration;
 
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use derpui::elements::Empty;
-use derpui::r#async::Timer;
-use derpui::{App, AppContext, Element};
+use borkui::elements::Empty;
+use borkui::r#async::Timer;
+use borkui::{App, AppContext, Element};
 
 use super::*;
 use crate::appearance::Appearance;

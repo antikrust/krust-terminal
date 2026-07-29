@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use persistence::model::ConversationUsageMetadata;
-use derp_cli::agent::Harness;
-use derp_graphql::object_permissions::AccessLevel;
-use derpui::{App, EntityId, SingletonEntity};
+use bork_cli::agent::Harness;
+use bork_graphql::object_permissions::AccessLevel;
+use borkui::{App, EntityId, SingletonEntity};
 
 use super::*;
 use crate::ai::agent::api::ServerConversationToken;

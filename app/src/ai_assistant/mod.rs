@@ -1,4 +1,4 @@
-//! AI Assistant has since been renamed to "Derp AI" in the product.
+//! AI Assistant has since been renamed to "Bork AI" in the product.
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -6,15 +6,15 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use serde::{Deserialize, Serialize};
-use derp_core::command::ExitCode;
-use derp_graphql::ai::{
+use bork_core::command::ExitCode;
+use bork_graphql::ai::{
     RequestLimitInfo as RequestLimitInfoGraphql,
     RequestLimitRefreshDuration as RequestLimitRefreshDurationGraphql,
 };
-use derp_graphql::mutations::generate_commands::{GenerateCommandsFailureType, GeneratedCommand};
+use bork_graphql::mutations::generate_commands::{GenerateCommandsFailureType, GeneratedCommand};
 
 use crate::ai::{RequestLimitInfo, RequestLimitRefreshDuration};
-use crate::server::telemetry::OpenedDerpAISource;
+use crate::server::telemetry::OpenedBorkAISource;
 use crate::terminal::model::terminal_model::BlockIndex;
 use crate::workflows::workflow::{Argument, Workflow};
 
@@ -32,8 +32,8 @@ mod test_util;
 /// This is also roughly the limit at which the editor starts degrading.
 pub const PROMPT_CHARACTER_LIMIT: usize = 1000;
 
-pub const AI_ASSISTANT_FEATURE_NAME: &str = "Derp AI";
-pub const ASK_AI_ASSISTANT_TEXT: &str = "Ask Derp AI";
+pub const AI_ASSISTANT_FEATURE_NAME: &str = "Bork AI";
+pub const ASK_AI_ASSISTANT_TEXT: &str = "Ask Bork AI";
 
 pub const AI_ASSISTANT_SVG_PATH: &str = "bundled/svg/ai-assistant.svg";
 
@@ -67,14 +67,14 @@ pub enum AskAIType {
     },
 }
 
-impl From<&AskAIType> for OpenedDerpAISource {
+impl From<&AskAIType> for OpenedBorkAISource {
     fn from(value: &AskAIType) -> Self {
         match value {
-            AskAIType::FromAICommandSearch { .. } => OpenedDerpAISource::FromAICommandSearch,
+            AskAIType::FromAICommandSearch { .. } => OpenedBorkAISource::FromAICommandSearch,
             AskAIType::FromBlock { .. } | AskAIType::FromBlocks { .. } => {
-                OpenedDerpAISource::HelpWithBlock
+                OpenedBorkAISource::HelpWithBlock
             }
-            AskAIType::FromTextSelection { .. } => OpenedDerpAISource::HelpWithTextSelection,
+            AskAIType::FromTextSelection { .. } => OpenedBorkAISource::HelpWithTextSelection,
         }
     }
 }

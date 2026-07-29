@@ -1,7 +1,7 @@
-//! Context chips built into Derp
+//! Context chips built into Bork
 
 use chrono::Local;
-use derp_util::path::user_friendly_path;
+use bork_util::path::user_friendly_path;
 
 use super::context_chip::{GeneratorContext, ShellCommand, ShellCommandGenerator};
 use super::ChipValue;
@@ -91,7 +91,7 @@ pub fn ssh_session(ctx: &GeneratorContext) -> Option<ChipValue> {
     if session.is_ssh_wrapper_session()
         || matches!(
             session.session_type(),
-            crate::terminal::model::session::SessionType::DerpifiedRemote { .. }
+            crate::terminal::model::session::SessionType::BorkifiedRemote { .. }
         )
     {
         let user = session.user();

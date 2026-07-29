@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{ChildView, Container, Fill};
-use derpui::ui_components::components::{Coords, UiComponentStyles};
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{ChildView, Container, Fill};
+use borkui::ui_components::components::{Coords, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

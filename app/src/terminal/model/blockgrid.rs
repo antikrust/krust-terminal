@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 
 use instant::Instant;
 use pathfinder_color::ColorU;
-use derp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 
 use super::find::RegexDFAs;
 use super::grid::RespectDisplayedOutput;
@@ -342,7 +342,7 @@ impl BlockGrid {
             false, /* force_secrets_obfuscated */
             RespectDisplayedOutput::No,
         );
-        // We ignore any content that only contains line editor bindkeys that Derp sends to the
+        // We ignore any content that only contains line editor bindkeys that Bork sends to the
         // shell. Specifically `^[i` (requests the shell's input buffer) and `^P` (clears the
         // shell's input buffer). There are instances where these bindkeys will show up in
         // background blocks when PTY throughput is reduced.

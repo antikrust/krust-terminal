@@ -1,6 +1,6 @@
 [package]
 name = "input_classifier"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 edition = "2024"
 publish.workspace = true
 license.workspace = true
@@ -33,7 +33,7 @@ nld_heuristic_v1 = []
 nld_heuristic_v2 = []
 
 [dependencies]
-derp_errors.workspace = true
+bork_errors.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 clap.workspace = true
@@ -56,7 +56,7 @@ rust-embed = { workspace = true, optional = true }
 serde.workspace = true
 smol_str.workspace = true
 tokenizers = { version = "0.21.4", optional = true }
-derp_completer.workspace = true
+bork_completer.workspace = true
 
 [dev-dependencies]
-derp_features.workspace = true
+bork_features.workspace = true

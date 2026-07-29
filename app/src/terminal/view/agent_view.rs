@@ -1,9 +1,9 @@
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_errors::report_error;
-use derpui::keymap::Keystroke;
-use derpui::{EntityId, SingletonEntity, ViewContext};
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_errors::report_error;
+use borkui::keymap::Keystroke;
+use borkui::{EntityId, SingletonEntity, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::{

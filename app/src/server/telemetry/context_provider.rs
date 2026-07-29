@@ -1,5 +1,5 @@
-use derp_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 

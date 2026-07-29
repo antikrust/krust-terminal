@@ -1,5 +1,5 @@
 {
-  description = "Derp is an agentic development environment, born out of the terminal (Experimental Nix Support, Linux-only).";
+  description = "Bork is an agentic development environment, born out of the terminal (Experimental Nix Support, Linux-only).";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -59,7 +59,7 @@
                     postPatch = (old.postPatch or "") + ''
                       find . -name 'Cargo.toml.orig' -delete
 
-                      ${lib.optionalString (hasCrate "derp_multi_agent_api") ''
+                      ${lib.optionalString (hasCrate "bork_multi_agent_api") ''
                         mkdir -p apis/multi_agent/v1/gen/rust/nix-vendored-protos
                         cp apis/multi_agent/v1/*.proto \
                           apis/multi_agent/v1/gen/rust/nix-vendored-protos/
@@ -69,7 +69,7 @@
                             'let proto_path = manifest_dir.join("nix-vendored-protos");'
                       ''}
 
-                      ${lib.optionalString (hasCrate "derp-workflows") ''
+                      ${lib.optionalString (hasCrate "bork-workflows") ''
                         mkdir -p workflows/nix-vendored-specs
                         cp -R specs/. workflows/nix-vendored-specs/
                         substituteInPlace workflows/build.rs \
@@ -86,7 +86,7 @@
             in
             # crane writes a root config.toml; buildRustPackage expects the
             # cargoDeps layout to include .cargo/config.toml and Cargo.lock.
-            pkgs.runCommand "derp-terminal-experimental-${version}-cargo-vendor" { } ''
+            pkgs.runCommand "bork-terminal-experimental-${version}-cargo-vendor" { } ''
               cp -R ${craneVendorDir}/. "$out"
               chmod u+w "$out"
               mkdir -p "$out/.cargo"
@@ -128,8 +128,8 @@
             "gui"
           ];
 
-          derp-terminal-experimental = rustPlatform.buildRustPackage {
-            pname = "derp-terminal-experimental";
+          bork-terminal-experimental = rustPlatform.buildRustPackage {
+            pname = "bork-terminal-experimental";
             inherit version;
 
             inherit src;
@@ -152,9 +152,9 @@
 
             cargoBuildFlags = [
               "-p"
-              "derp"
+              "bork"
               "--bin"
-              "derp"
+              "bork"
               "--bin"
               "generate_settings_schema"
             ];
@@ -165,7 +165,7 @@
             doCheck = false;
 
             env = {
-              APPIMAGE_NAME = "Derp-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
+              APPIMAGE_NAME = "Bork-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
               LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
               PROTOC = "${pkgs.protobuf}/bin/protoc";
               PROTOC_INCLUDE = "${pkgs.protobuf}/include";
@@ -173,15 +173,15 @@
             };
             postInstall =
               let
-                installDir = "$out/opt/derpdotdev/derp-terminal-experimental";
+                installDir = "$out/opt/borkdotdev/bork-terminal-experimental";
                 resourcesDir = "${installDir}/resources";
                 releaseChannel = "stable";
                 libraryPath = lib.makeLibraryPath linuxRuntimeLibraries;
                 executablePath = lib.makeBinPath (with pkgs; [ xdg-utils ]);
               in
               ''
-                install -Dm755 "$out/bin/derp" "${installDir}/derp"
-                rm -f "$out/bin/derp"
+                install -Dm755 "$out/bin/bork" "${installDir}/bork"
+                rm -f "$out/bin/bork"
 
                 patchShebangs \
                   ./script/prepare_bundled_resources \
@@ -199,52 +199,52 @@
 
                 install -Dm644 \
                   "${resourcesDir}/THIRD_PARTY_LICENSES.txt" \
-                  "$out/share/licenses/derp-terminal-experimental/THIRD_PARTY_LICENSES.txt"
+                  "$out/share/licenses/bork-terminal-experimental/THIRD_PARTY_LICENSES.txt"
 
-                install -Dm644 LICENSE-AGPL "$out/share/licenses/derp-terminal-experimental/LICENSE-AGPL"
-                install -Dm644 LICENSE-MIT "$out/share/licenses/derp-terminal-experimental/LICENSE-MIT"
+                install -Dm644 LICENSE-AGPL "$out/share/licenses/bork-terminal-experimental/LICENSE-AGPL"
+                install -Dm644 LICENSE-MIT "$out/share/licenses/bork-terminal-experimental/LICENSE-MIT"
 
-                install -Dm644 app/channels/oss/derp.baby.Derp.desktop \
-                  "$out/share/applications/derp.baby.Derp.desktop"
-                substituteInPlace "$out/share/applications/derp.baby.Derp.desktop" \
-                  --replace-fail "Exec=derp-terminal-oss %U" "Exec=derp-terminal-experimental %U"
+                install -Dm644 app/channels/oss/bork.baby.Bork.desktop \
+                  "$out/share/applications/bork.baby.Bork.desktop"
+                substituteInPlace "$out/share/applications/bork.baby.Bork.desktop" \
+                  --replace-fail "Exec=bork-terminal-oss %U" "Exec=bork-terminal-experimental %U"
 
                 for size in 16x16 32x32 64x64 128x128 256x256 512x512; do
                   icon="app/channels/oss/icon/no-padding/$size.png"
                   if [ -f "$icon" ]; then
                     install -Dm644 "$icon" \
-                      "$out/share/icons/hicolor/$size/apps/derp.baby.Derp.png"
+                      "$out/share/icons/hicolor/$size/apps/bork.baby.Bork.png"
                   fi
                 done
 
-                wrapProgram "${installDir}/derp" \
+                wrapProgram "${installDir}/bork" \
                   --prefix LD_LIBRARY_PATH : "${libraryPath}" \
                   --prefix PATH : "${executablePath}"
 
                 mkdir -p "$out/bin"
-                ln -s "${installDir}/derp" "$out/bin/derp"
-                ln -s "${installDir}/derp" "$out/bin/derp-terminal-experimental"
+                ln -s "${installDir}/bork" "$out/bin/bork"
+                ln -s "${installDir}/bork" "$out/bin/bork-terminal-experimental"
               '';
 
             postFixup = lib.optionalString pkgs.stdenv.isLinux ''
-              wrapped="/opt/derpdotdev/derp-terminal-experimental/.derp-wrapped"
+              wrapped="/opt/borkdotdev/bork-terminal-experimental/.bork-wrapped"
               if [ -e "$out$wrapped" ] && ! patchelf --print-needed "$out$wrapped" | grep -q '^libfontconfig\.so\.1$'; then
                 patchelf --add-needed libfontconfig.so.1 "$out$wrapped"
               fi
             '';
 
             meta = {
-              description = "Derp is an agentic development environment, born out of the terminal (Experimental Nix Support, Linux-only).";
-              homepage = "https://www.derp.baby";
+              description = "Bork is an agentic development environment, born out of the terminal (Experimental Nix Support, Linux-only).";
+              homepage = "https://www.bork.baby";
               license = lib.licenses.agpl3Only;
-              mainProgram = "derp-terminal-experimental";
+              mainProgram = "bork-terminal-experimental";
               platforms = systems;
               sourceProvenance = with lib.sourceTypes; [ fromSource ];
             };
           };
         in
         {
-          inherit derp-terminal-experimental;
+          inherit bork-terminal-experimental;
         }
       );
 
@@ -303,7 +303,7 @@
         {
           default = pkgs.mkShell {
             inherit nativeBuildInputs buildInputs;
-            APPIMAGE_NAME = "Derp-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
+            APPIMAGE_NAME = "Bork-${pkgs.stdenv.hostPlatform.parsed.cpu.name}.AppImage";
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
             PROTOC = "${pkgs.protobuf}/bin/protoc";
             PROTOC_INCLUDE = "${pkgs.protobuf}/include";

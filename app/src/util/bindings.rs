@@ -8,13 +8,13 @@ use fuzzy_match::match_indices_case_insensitive;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use derpui::actions::StandardAction;
-use derpui::keymap::{
+use borkui::actions::StandardAction;
+use borkui::keymap::{
     BindingDescription, BindingId, BindingLens, CustomTag, DescriptionContext, EditableBindingLens,
     IsBindingValid, Keystroke, Trigger,
 };
-use derpui::platform::OperatingSystem;
-use derpui::{Action, AppContext, SingletonEntity};
+use borkui::platform::OperatingSystem;
+use borkui::{Action, AppContext, SingletonEntity};
 
 use crate::keyboard::{remove_custom_keybinding, write_custom_keybinding, UserDefinedKeybinding};
 use crate::settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier};
@@ -27,7 +27,7 @@ pub const MAC_MENUS_CONTEXT: DescriptionContext = DescriptionContext::Custom("ma
 pub enum CustomAction {
     NewTab,
     NewFile,
-    ShowAboutDerp,
+    ShowAboutBork,
     ShowSettings,
     ConfigureKeybindings,
     ShowAccount,
@@ -95,7 +95,7 @@ pub enum CustomAction {
     ToggleSyncTerminalInputsInCurrentTab,
     DisableSyncTerminalInputs,
     ReopenClosedSession,
-    ToggleDerpDrive,
+    ToggleBorkDrive,
     AddWindow,
     CloseCurrentSession,
     CloseWindow,
@@ -113,9 +113,9 @@ pub enum CustomAction {
     WindowsPaste,
     #[cfg(windows)]
     WindowsCopy,
-    /// Also applies to legacy Derp AI (toggles the panel)
+    /// Also applies to legacy Bork AI (toggles the panel)
     NewAgentModePane,
-    /// Also applies to legacy Derp AI (attaches the selection to the panel editor)
+    /// Also applies to legacy Bork AI (attaches the selection to the panel editor)
     AttachSelectionAsAgentModeContext,
     OpenAIFactCollection,
     OpenMCPServerCollection,
@@ -133,8 +133,8 @@ pub enum CustomAction {
 lazy_static! {
     /// Maps for converting from custom tags back to the action enum
     /// This layer of indirection is necessary because the UI framework can't
-    /// know about particular Derp specific actions, so it deals with all actions
-    /// as plain isizes.  Within Derp though we want to deal with them as the enum type.
+    /// know about particular Bork specific actions, so it deals with all actions
+    /// as plain isizes.  Within Bork though we want to deal with them as the enum type.
     pub static ref CUSTOM_TAG_TO_ACTION: HashMap<isize, CustomAction> = HashMap::from_iter(all::<CustomAction>().map(|action| {
         (action as isize, action)
     }));
@@ -194,7 +194,7 @@ lazy_static! {
     /// compliant. We weren't always diligent about avoiding bindings that could conflict with
     /// character codes, unfortunately some bindings on Mac currently conflict with the PTY. We have
     /// this allowlist to special case these legacy actions for the purposes of binding validation.
-    pub static ref MAC_PTY_NON_COMPLIANT_ACTIONS: HashSet<&'static str> = HashSet::from_iter(["terminal:derpify_subshell", "terminal:open_block_list_context_menu_via_keybinding"]);
+    pub static ref MAC_PTY_NON_COMPLIANT_ACTIONS: HashSet<&'static str> = HashSet::from_iter(["terminal:borkify_subshell", "terminal:open_block_list_context_menu_via_keybinding"]);
 
     /// Set of actions on Windows that should be considered valid bindings even though they aren't
     /// PTY compliant. Windows users expect pasting to work using both `ctrl-v` and `ctrl-shift-v`,
@@ -379,7 +379,7 @@ pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
 
         // This is one of the app's hardcoded keybindings.
         CustomAction::AddWindow => Keystroke::parse(cmd_or_ctrl_shift("n")).ok(),
-        CustomAction::ToggleDerpDrive => {
+        CustomAction::ToggleBorkDrive => {
             if OperatingSystem::get().is_mac() {
                 Keystroke::parse("cmd-\\").ok()
             } else {
@@ -423,7 +423,7 @@ pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
         }
         CustomAction::NewTerminalTab
         | CustomAction::NewFile
-        | CustomAction::ShowAboutDerp
+        | CustomAction::ShowAboutBork
         | CustomAction::SplitPaneLeft
         | CustomAction::SelectAllBlocks
         | CustomAction::SplitPaneUp
@@ -783,13 +783,13 @@ fn materialize_description(desc: &BindingDescription, ctx: &AppContext) -> Bindi
 
 /// Possible groups a Binding can be part of. The string representation (produced in
 /// [`BindingGroup::as_str`]) is used as the group identifier within
-/// [`derpui::keymap::FixedBinding`] or [`EditableBinding`].
+/// [`borkui::keymap::FixedBinding`] or [`EditableBinding`].
 #[derive(Copy, Clone, Debug, Sequence)]
 pub enum BindingGroup {
     Settings,
     Close,
     Navigation,
-    DerpAi,
+    BorkAi,
     Workflow,
     Notebooks,
     Folders,
@@ -805,7 +805,7 @@ impl BindingGroup {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Settings => "settings",
-            Self::DerpAi => "derp_ai",
+            Self::BorkAi => "bork_ai",
             Self::Navigation => "navigation",
             Self::Workflow => "workflows",
             Self::Notebooks => "notebooks",
@@ -843,8 +843,8 @@ impl BindingGroup {
 /// framework and we can't easily produce the shift-modified version of the key ourselves. In this case the recommended
 /// solution is to to create separate [`Keystroke`]s for the Mac and non-Mac cases. For example:
 /// ```
-/// use derpui::keymap::Keystroke;
-/// use derpui::platform::OperatingSystem;
+/// use borkui::keymap::Keystroke;
+/// use borkui::platform::OperatingSystem;
 /// let keystroke = if OperatingSystem::get().is_mac() {
 ///    Keystroke::parse("cmd-[")
 /// } else {
@@ -871,7 +871,7 @@ pub fn cmd_or_ctrl_shift(key: &str) -> String {
             }
             // The need to uppercase the key because of the addition of the `shift`.
             // Keystroke::parse debug asserts if this the modifier is lowercase:
-            // https://github.com/derpdotdev/derp-internal/blob/c225b8cedd94fdba33e957cf1efb99d84768d193/ui/src/keymap.rs#L637/
+            // https://github.com/borkdotdev/bork-internal/blob/c225b8cedd94fdba33e957cf1efb99d84768d193/ui/src/keymap.rs#L637/
             key.to_ascii_uppercase().into()
         };
         format!("ctrl-shift-{key}")

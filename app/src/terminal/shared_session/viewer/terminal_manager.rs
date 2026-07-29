@@ -13,8 +13,8 @@ use session_sharing_protocol::common::{
 use session_sharing_protocol::sharer::SessionSourceType;
 use session_sharing_protocol::viewer::SessionEndedReason;
 use settings::Setting as _;
-use derp_errors::report_error;
-use derpui::{
+use bork_errors::report_error;
+use borkui::{
     AppContext, ModelContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle,
     WeakViewHandle, WindowId,
 };
@@ -42,7 +42,7 @@ use crate::features::FeatureFlag;
 use crate::network::{NetworkStatus, NetworkStatusEvent, NetworkStatusKind};
 use crate::pane_group::pane::DetachType;
 use crate::pane_group::TerminalViewResources;
-use crate::settings::{InputModeSettings, DerpPromptSeparator};
+use crate::settings::{InputModeSettings, BorkPromptSeparator};
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputState, CLIAgentSessionsModel, CLIAgentSessionsModelEvent,
 };
@@ -273,7 +273,7 @@ impl TerminalManager {
             ctx.add_model(|ctx| ModelEventDispatcher::new(events_rx, sessions.clone(), ctx));
         // The prompt is initially empty until we receive the update from the server.
         let prompt_type =
-            ctx.add_model(|_| PromptType::new_static(vec![], false, DerpPromptSeparator::None));
+            ctx.add_model(|_| PromptType::new_static(vec![], false, BorkPromptSeparator::None));
 
         let view = ctx.add_typed_action_view(window_id, |ctx| {
             let size_info = cloned_model.lock().block_list().size().to_owned();
@@ -894,7 +894,7 @@ impl TerminalManager {
                 });
 
                 #[cfg(target_family = "wasm")]
-                crate::platform::wasm::emit_event(crate::platform::wasm::DerpEvent::SessionJoined);
+                crate::platform::wasm::emit_event(crate::platform::wasm::BorkEvent::SessionJoined);
             }
             NetworkEvent::SessionEnded { reason } => {
                 let Some(view) = weak_view_handle.upgrade(ctx) else {
@@ -1366,8 +1366,8 @@ impl TerminalManager {
                     };
                     view.update(ctx, |terminal_view, ctx| {
                         let reason_string = match reason {
-                            session_sharing_protocol::common::FailedToAddGuestsReason::NotDerpUsers => {
-                                "One or more of the emails are not Derp users.".to_owned()
+                            session_sharing_protocol::common::FailedToAddGuestsReason::NotBorkUsers => {
+                                "One or more of the emails are not Bork users.".to_owned()
                             }
                             session_sharing_protocol::common::FailedToAddGuestsReason::GuestAlreadyAdded => {
                                 "One or more of the guests has already been added.".to_owned()
@@ -1418,7 +1418,7 @@ impl TerminalManager {
     ) {
         let mut model = model.lock();
         match active_prompt {
-            ActivePrompt::DerpPrompt(serialized_prompt_snapshot) => {
+            ActivePrompt::BorkPrompt(serialized_prompt_snapshot) => {
                 match serde_json::from_str::<PromptSnapshot>(serialized_prompt_snapshot) {
                     Ok(prompt_snapshot) => {
                         model.block_list_mut().set_honor_ps1(false);
@@ -1428,7 +1428,7 @@ impl TerminalManager {
                                 *snapshot = prompt_snapshot;
                                 ctx.notify();
                             } else {
-                                log::warn!("Received ActivePrompt::DerpPrompt updated but prompt type is not Static");
+                                log::warn!("Received ActivePrompt::BorkPrompt updated but prompt type is not Static");
                             }
                         });
                     }

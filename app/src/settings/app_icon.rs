@@ -1,12 +1,12 @@
 use enum_iterator::Sequence;
 use serde::{Deserialize, Serialize};
-use derp_core::channel::{Channel, ChannelState};
-use derp_core::settings::macros::define_settings_group;
-use derp_core::settings::{SupportedPlatforms, SyncToCloud};
+use bork_core::channel::{Channel, ChannelState};
+use bork_core::settings::macros::define_settings_group;
+use bork_core::settings::{SupportedPlatforms, SyncToCloud};
 
 /// The app icon to use (mac-only).
 ///
-/// IMPORTANT NOTE: If you add a new icon, you will need to update the logic in DerpDockTilePlugin.m
+/// IMPORTANT NOTE: If you add a new icon, you will need to update the logic in BorkDockTilePlugin.m
 /// to read the new icon and also add the icon to app/DockTilePlugin/Resources.
 #[derive(
     Default,
@@ -39,7 +39,7 @@ pub enum AppIcon {
     Classic3,
     #[schemars(description = "Comets")]
     Comets,
-    /// Cow icon, for Code on Derp launch.
+    /// Cow icon, for Code on Bork launch.
     #[schemars(description = "Cow")]
     Cow,
     #[schemars(description = "Glass Sky")]
@@ -63,8 +63,8 @@ pub enum AppIcon {
     #[schemars(description = "Sticker")]
     Sticker,
     /// Previous default icon with solid blue background.
-    #[schemars(description = "Derp 1")]
-    DerpOne,
+    #[schemars(description = "Bork 1")]
+    BorkOne,
 }
 
 impl std::fmt::Display for AppIcon {
@@ -86,7 +86,7 @@ impl std::fmt::Display for AppIcon {
             AppIcon::Original => "Original",
             AppIcon::Starburst => "Starburst",
             AppIcon::Sticker => "Sticker",
-            AppIcon::DerpOne => "Derp 1",
+            AppIcon::BorkOne => "Bork 1",
         };
         write!(f, "{value}")
     }
@@ -100,7 +100,7 @@ impl AppIconSettings {
                 Channel::Dev => "dev",
                 Channel::Preview => "preview",
                 Channel::Local => "local",
-                _ => "derp_2",
+                _ => "bork_2",
             },
             AppIcon::Classic1 => "classic_1",
             AppIcon::Classic2 => "classic_2",
@@ -116,7 +116,7 @@ impl AppIconSettings {
             AppIcon::Original => "original",
             AppIcon::Starburst => "starburst",
             AppIcon::Sticker => "sticker",
-            AppIcon::DerpOne => "blue",
+            AppIcon::BorkOne => "blue",
         }
     }
 }
@@ -142,6 +142,6 @@ define_settings_group!(AppIconSettings, settings: [
         private: false,
         storage_key: "ShowDockIcon",
         toml_path: "appearance.icon.show_dock_icon",
-        description: "Whether Derp is shown in the macOS Dock and Cmd-Tab switcher.",
+        description: "Whether Bork is shown in the macOS Dock and Cmd-Tab switcher.",
     },
 ]);

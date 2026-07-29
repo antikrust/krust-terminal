@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use command::blocking::Command;
-use derp_cli::agent::Harness;
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derp_managed_secrets::client::SecretOwner;
-use derp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use derpui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
+use bork_cli::agent::Harness;
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use bork_managed_secrets::client::SecretOwner;
+use bork_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
+use borkui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
 use instant::Instant;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
@@ -49,8 +49,8 @@ pub struct HarnessAvailability {
 }
 
 /// The harness list for this fork: local CLIs only, enabled by whether the
-/// binary is actually installed. Oz (Derp's cloud agent) is gone — it needs a
-/// Derp account and a live server; Gemini/OpenCode return if/when a local
+/// binary is actually installed. Oz (Bork's cloud agent) is gone — it needs a
+/// Bork account and a live server; Gemini/OpenCode return if/when a local
 /// runner exists for them. Model lists are curated, version-stable aliases
 /// the CLIs resolve themselves; nothing here is overwritten by a server
 /// (see [`HarnessAvailabilityModel::refresh`]).
@@ -397,7 +397,7 @@ fn local_cli_on_path(binary: &str) -> bool {
 /// install locations the GUI's launchd PATH tends to miss (mirrors the spawn
 /// path augmentation in `TerminalView::run_local_claude_query`).
 fn resolve_local_cli(binary: &str) -> Option<std::path::PathBuf> {
-    let mut path = derp_util::path::derp_shell_path()
+    let mut path = bork_util::path::bork_shell_path()
         .or_else(|| std::env::var("PATH").ok())
         .unwrap_or_default();
     let mut extra_dirs = vec![
@@ -720,7 +720,7 @@ impl HarnessAvailabilityModel {
             OUT_OF_BAND_REQUEST_RETRY_STRATEGY,
             is_transient_graphql_or_http_error,
             move |me,
-                  result: RequestState<Vec<derp_graphql::managed_secrets::ManagedSecret>>,
+                  result: RequestState<Vec<bork_graphql::managed_secrets::ManagedSecret>>,
                   ctx| match result {
                 RequestState::RequestSucceeded(secrets) => {
                     let entries = secrets
@@ -848,12 +848,12 @@ impl HarnessAvailabilityModel {
     }
 }
 
-fn secret_owner_from_space(space: &derp_graphql::object::Space) -> SecretOwner {
+fn secret_owner_from_space(space: &bork_graphql::object::Space) -> SecretOwner {
     match space.type_ {
-        derp_graphql::object::SpaceType::Team => SecretOwner::Team {
+        bork_graphql::object::SpaceType::Team => SecretOwner::Team {
             team_uid: space.uid.clone().into_inner(),
         },
-        derp_graphql::object::SpaceType::User => SecretOwner::CurrentUser,
+        bork_graphql::object::SpaceType::User => SecretOwner::CurrentUser,
     }
 }
 
@@ -864,12 +864,12 @@ fn remove_deleted_auth_secret_entry(
 ) {
     entries.retain(|entry| entry.name.as_str() != name || &entry.owner != owner);
 }
-fn harness_to_graphql_harness(harness: Harness) -> Option<derp_graphql::ai::AgentHarness> {
+fn harness_to_graphql_harness(harness: Harness) -> Option<bork_graphql::ai::AgentHarness> {
     match harness {
-        Harness::Oz => Some(derp_graphql::ai::AgentHarness::Oz),
-        Harness::Claude => Some(derp_graphql::ai::AgentHarness::ClaudeCode),
-        Harness::Gemini => Some(derp_graphql::ai::AgentHarness::Gemini),
-        Harness::Codex => Some(derp_graphql::ai::AgentHarness::Codex),
+        Harness::Oz => Some(bork_graphql::ai::AgentHarness::Oz),
+        Harness::Claude => Some(bork_graphql::ai::AgentHarness::ClaudeCode),
+        Harness::Gemini => Some(bork_graphql::ai::AgentHarness::Gemini),
+        Harness::Codex => Some(bork_graphql::ai::AgentHarness::Codex),
         Harness::OpenCode | Harness::Unknown => None,
     }
 }

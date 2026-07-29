@@ -1,6 +1,6 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::Icon;
-use derpui::Element;
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::Icon;
+use borkui::Element;
 
 use crate::search::result_renderer::ItemHighlightState;
 

@@ -1,15 +1,15 @@
 ﻿# Prevent history from being written to file, among other interactive features.
 Remove-Module -Name PSReadline
 
-$global:_derpOriginalPrompt = $function:global:prompt
+$global:_borkOriginalPrompt = $function:global:prompt
 
 if ($PSEdition -eq 'Desktop' -or $IsWindows) {
     $EP = [Microsoft.PowerShell.ExecutionPolicy]
     # MachinePolicy and UserPolicy scopes cannot be overridden. If either is Restricted, there's nothing we can do.
     if ((Get-ExecutionPolicy -Scope MachinePolicy) -eq $EP::Restricted -or (Get-ExecutionPolicy -Scope UserPolicy) -eq $EP::Restricted) {
-        Write-Error 'ExecutionPolicy is Restricted. Unable to Derpify this PowerShell session.'
+        Write-Error 'ExecutionPolicy is Restricted. Unable to Borkify this PowerShell session.'
     } elseif ((Get-ExecutionPolicy) -eq $EP::Restricted -and (Get-ExecutionPolicy -Scope MachinePolicy) -eq $EP::Undefined -and (Get-ExecutionPolicy -Scope UserPolicy) -eq $EP::Undefined) {
-        $global:_derp_PSProcessExecPolicy = $(Get-ExecutionPolicy -Scope Process)
+        $global:_bork_PSProcessExecPolicy = $(Get-ExecutionPolicy -Scope Process)
         Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
     }
 }
@@ -19,10 +19,10 @@ if ($PSEdition -eq 'Desktop' -or $IsWindows) {
 # ignores submissions prior to the first prompt.
 function prompt {
     # Reset the prompt back to the default to avoid infinite loops if sourcing the bootstrap script has an error.
-    $function:global:prompt = $global:_derpOriginalPrompt
+    $function:global:prompt = $global:_borkOriginalPrompt
     $username = [Environment]::UserName
-    $global:_derpSessionId = [uint64]@@DERP_SESSION_ID@@
-    $msg = ConvertTo-Json -Compress -InputObject @{ hook = 'InitShell'; value = @{ session_id = $_derpSessionId; shell = 'pwsh'; user = $username; hostname = [System.Net.Dns]::GetHostName() } }
+    $global:_borkSessionId = [uint64]@@BORK_SESSION_ID@@
+    $msg = ConvertTo-Json -Compress -InputObject @{ hook = 'InitShell'; value = @{ session_id = $_borkSessionId; shell = 'pwsh'; user = $username; hostname = [System.Net.Dns]::GetHostName() } }
     $encodedMsg = [BitConverter]::ToString([System.Text.Encoding]::UTF8.GetBytes($msg)).Replace('-', '')
     $oscStart = "$([char]0x1b)]9278;"
     $oscEnd = "`a"

@@ -1,6 +1,6 @@
-use derpui::elements::{ChildView, Empty, SavePosition};
-use derpui::platform::WindowStyle;
-use derpui::{App, ViewHandle};
+use borkui::elements::{ChildView, Empty, SavePosition};
+use borkui::platform::WindowStyle;
+use borkui::{App, ViewHandle};
 
 use super::*;
 

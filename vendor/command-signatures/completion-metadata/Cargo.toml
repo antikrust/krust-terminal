@@ -1,5 +1,5 @@
 [package]
-name = "derp-completion-metadata"
+name = "bork-completion-metadata"
 version = "0.0.0"
 edition = "2021"
 authors.workspace = true

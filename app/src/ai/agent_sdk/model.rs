@@ -2,10 +2,10 @@ use std::collections::BTreeSet;
 
 use comfy_table::Cell;
 use serde::Serialize;
-use derp_cli::model::ModelCommand;
-use derp_cli::GlobalOptions;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::model::ModelCommand;
+use bork_cli::GlobalOptions;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::ai::llms::LLMPreferences;
@@ -62,7 +62,7 @@ impl ModelCommandRunner {
     }
 }
 
-impl derpui::Entity for ModelCommandRunner {
+impl borkui::Entity for ModelCommandRunner {
     type Event = ();
 }
 

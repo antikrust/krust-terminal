@@ -5,9 +5,9 @@ use async_channel::Sender;
 pub use cloud_object_client::ObjectUpdateMessage;
 use futures_util::stream::AbortHandle;
 use instant::Instant;
-use derp_errors::report_error;
-use derpui::r#async::Timer;
-use derpui::{Entity, ModelContext, ModelHandle, RequestState, SingletonEntity};
+use bork_errors::report_error;
+use borkui::r#async::Timer;
+use borkui::{Entity, ModelContext, ModelHandle, RequestState, SingletonEntity};
 
 use super::update_manager::UpdateManager;
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
@@ -63,7 +63,7 @@ pub struct Listener {
     /// Since we only want to start websocket connections if we know the user is
     /// on a team or has access to cloud objects, we keep track of whether
     /// or not we should be subscribing for updates. Once we start websockets, we don't stop
-    /// so that the user gets a snappier experience once they start using Derp Drive.
+    /// so that the user gets a snappier experience once they start using Bork Drive.
     should_subscribe_to_updates: bool,
     /// Abort handle for the (retried) future that resolves when the subscription is done.
     current_subscription_abort_handle: Option<AbortHandle>,
@@ -175,7 +175,7 @@ impl Listener {
     // is finished is _not_ polled when the websocket is closed by the server and the CPU is asleep.
     // To get around this, we manually abort the future (effectively closing the websocket)
     // when the CPU goes to sleep and restart it when it's awakened.
-    // https://linear.app/derpdotdev/issue/CLD-172/websocket-hangs-when-closed-during-cpu-sleep
+    // https://linear.app/borkdotdev/issue/CLD-172/websocket-hangs-when-closed-during-cpu-sleep
     fn handle_cpu_event(
         &mut self,
         _: ModelHandle<SystemStats>,
@@ -193,7 +193,7 @@ impl Listener {
                 // this handler just restarts the websocket so that `on_subscription_ready`
                 // can decide whether to refresh based on the sleep-time gap.
                 if self.should_subscribe_to_updates {
-                    self.get_derp_drive_updates(ctx);
+                    self.get_bork_drive_updates(ctx);
                 }
             }
             SystemStatsEvent::CpuWillSleep => {
@@ -221,7 +221,7 @@ impl Listener {
                     }
 
                     if self.should_subscribe_to_updates {
-                        self.get_derp_drive_updates(ctx);
+                        self.get_bork_drive_updates(ctx);
                     }
                 }
 
@@ -248,7 +248,7 @@ impl Listener {
         }
         if !self.should_subscribe_to_updates {
             self.should_subscribe_to_updates = true;
-            self.get_derp_drive_updates(ctx);
+            self.get_bork_drive_updates(ctx);
         }
     }
 
@@ -313,7 +313,7 @@ impl Listener {
         }
     }
 
-    fn get_derp_drive_updates(&mut self, ctx: &mut ModelContext<Self>) {
+    fn get_bork_drive_updates(&mut self, ctx: &mut ModelContext<Self>) {
         let object_client = self.cloud_objects_client.clone();
         let (message_sender, message_receiver) = async_channel::unbounded();
         let subscription_ready_tx = self.subscription_ready_tx.clone();
@@ -335,7 +335,7 @@ impl Listener {
         );
 
         // Start the future that sends messages over the message_sender stream.
-        // TODO: we should investigate having get_derp_drive_updates (and in turn,
+        // TODO: we should investigate having get_bork_drive_updates (and in turn,
         // start_graphql_streaming_operation) return an `impl Stream` so that we don't
         // need to spawn and then spawn_stream_local. For this, we'll need an equivalent
         // spawn_stream (which is like spawn_stream_local but polls the futures in the stream
@@ -349,7 +349,7 @@ impl Listener {
                     let start_time = Instant::now();
                     log::info!("Attempting to start websocket connection in CloudObjects::Listener");
                     let res = object_client
-                        .get_derp_drive_updates(
+                        .get_bork_drive_updates(
                             message_sender,
                             subscription_ready_tx,
                         ).await;
@@ -374,7 +374,7 @@ impl Listener {
                         ctx.spawn(async move {
                             Timer::after(time_to_wait).await
                         }, |me, _, ctx| {
-                            me.get_derp_drive_updates(ctx);
+                            me.get_bork_drive_updates(ctx);
                         });
                     }
                     RequestState::RequestFailedRetryPending(e) => {

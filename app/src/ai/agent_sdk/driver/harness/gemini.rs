@@ -9,10 +9,10 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tempfile::NamedTempFile;
-use derp_cli::agent::Harness;
-use derp_errors::report_error;
-use derp_managed_secrets::ManagedSecretValue;
-use derpui::{ModelHandle, ModelSpawner};
+use bork_cli::agent::Harness;
+use bork_errors::report_error;
+use bork_managed_secrets::ManagedSecretValue;
+use borkui::{ModelHandle, ModelSpawner};
 
 use super::super::terminal::{CommandHandle, TerminalDriver};
 use super::super::{AgentDriver, AgentDriverError};

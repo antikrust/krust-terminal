@@ -2,10 +2,10 @@ use std::future::Future;
 
 use ai::api_keys::ApiKeyManager;
 use settings::Setting as _;
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_util::sync::Condition;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_util::sync::Condition;
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 use super::hoa_onboarding;
 use super::view::feature_intro_modal::{FeatureIntroId, FEATURE_INTROS};
@@ -37,8 +37,8 @@ pub struct OneTimeModalModel {
     is_build_plan_migration_modal_open: bool,
     /// Whether the Oz launch modal is currently being shown.
     is_oz_launch_modal_open: bool,
-    /// Whether the OpenDerp launch modal is currently being shown.
-    is_openderp_launch_modal_open: bool,
+    /// Whether the OpenBork launch modal is currently being shown.
+    is_openbork_launch_modal_open: bool,
     is_orchestration_launch_modal_open: bool,
     /// Whether the auto-handoff sleep discoverability modal is currently being shown.
     is_auto_handoff_sleep_modal_open: bool,
@@ -145,10 +145,10 @@ impl OneTimeModalModel {
                 mark_free_ai_removal_notice_seen(ctx);
                 GeneralSettings::handle(ctx).update(ctx, |settings, ctx| {
                     if let Err(e) = settings
-                        .did_check_to_trigger_openderp_launch_modal
+                        .did_check_to_trigger_openbork_launch_modal
                         .set_value(true, ctx)
                     {
-                        log::warn!("Failed to mark OpenDerp launch modal as dismissed: {e}");
+                        log::warn!("Failed to mark OpenBork launch modal as dismissed: {e}");
                     }
                 });
             }
@@ -162,7 +162,7 @@ impl OneTimeModalModel {
         Self {
             is_build_plan_migration_modal_open: false,
             is_oz_launch_modal_open: false,
-            is_openderp_launch_modal_open: false,
+            is_openbork_launch_modal_open: false,
             is_orchestration_launch_modal_open: false,
             is_auto_handoff_sleep_modal_open: false,
             auto_handoff_sleep_modal_closed,
@@ -189,13 +189,13 @@ impl OneTimeModalModel {
         self.set_oz_launch_modal_open(false, ctx);
     }
 
-    /// Returns whether the OpenDerp launch modal is currently open.
-    pub fn is_openderp_launch_modal_open(&self) -> bool {
-        self.is_openderp_launch_modal_open && self.target_window_id.is_some()
+    /// Returns whether the OpenBork launch modal is currently open.
+    pub fn is_openbork_launch_modal_open(&self) -> bool {
+        self.is_openbork_launch_modal_open && self.target_window_id.is_some()
     }
 
-    pub fn mark_openderp_launch_modal_dismissed(&mut self, ctx: &mut ModelContext<Self>) {
-        self.set_openderp_launch_modal_open(false, ctx);
+    pub fn mark_openbork_launch_modal_dismissed(&mut self, ctx: &mut ModelContext<Self>) {
+        self.set_openbork_launch_modal_open(false, ctx);
     }
 
     pub fn is_orchestration_launch_modal_open(&self) -> bool {
@@ -342,7 +342,7 @@ impl OneTimeModalModel {
     /// Returns true if any one-time modal is currently open.
     pub fn is_any_modal_open(&self) -> bool {
         (self.is_oz_launch_modal_open
-            || self.is_openderp_launch_modal_open
+            || self.is_openbork_launch_modal_open
             || self.is_orchestration_launch_modal_open
             || self.is_auto_handoff_sleep_modal_open
             || self.is_build_plan_migration_modal_open
@@ -357,8 +357,8 @@ impl OneTimeModalModel {
     }
 
     #[cfg(debug_assertions)]
-    pub fn force_open_openderp_launch_modal(&mut self, ctx: &mut ModelContext<Self>) {
-        self.set_openderp_launch_modal_open(true, ctx);
+    pub fn force_open_openbork_launch_modal(&mut self, ctx: &mut ModelContext<Self>) {
+        self.set_openbork_launch_modal_open(true, ctx);
     }
 
     #[cfg(debug_assertions)]
@@ -396,13 +396,13 @@ impl OneTimeModalModel {
         false
     }
 
-    fn set_openderp_launch_modal_open(
+    fn set_openbork_launch_modal_open(
         &mut self,
         is_open: bool,
         ctx: &mut ModelContext<Self>,
     ) -> bool {
-        if self.is_openderp_launch_modal_open != is_open {
-            self.is_openderp_launch_modal_open = is_open;
+        if self.is_openbork_launch_modal_open != is_open {
+            self.is_openbork_launch_modal_open = is_open;
             ctx.emit(OneTimeModalEvent::VisibilityChanged { is_open });
             return true;
         }
@@ -438,9 +438,9 @@ impl OneTimeModalModel {
             }
         });
 
-        // The OpenDerp launch modal takes priority over the Oz launch modal
+        // The OpenBork launch modal takes priority over the Oz launch modal
         // when both are enabled.
-        if self.check_and_trigger_openderp_launch_modal(ctx) {
+        if self.check_and_trigger_openbork_launch_modal(ctx) {
             return;
         }
 
@@ -507,9 +507,9 @@ impl OneTimeModalModel {
     }
 
     fn check_and_trigger_free_ai_removal_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
-        // Gated on the OpenDerpNewSettingsModes rollout flag (the server experiment
+        // Gated on the OpenBorkNewSettingsModes rollout flag (the server experiment
         // that previously gated this was removed in C1).
-        if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if !FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             return false;
         }
 
@@ -529,14 +529,14 @@ impl OneTimeModalModel {
         let customer_type = UserWorkspaces::as_ref(ctx)
             .current_workspace()
             .map(|workspace| workspace.billing_metadata.customer_type);
-        let is_derp_ai_enabled = *AISettings::as_ref(ctx).is_any_ai_enabled;
+        let is_bork_ai_enabled = *AISettings::as_ref(ctx).is_any_ai_enabled;
         let has_byok_or_byoe = ApiKeyManager::as_ref(ctx).has_any_key();
         let completed_new_onboarding = has_completed_local_onboarding(ctx);
         let has_zero_base_credits = AIRequestUsageModel::as_ref(ctx).request_limit() == 0;
 
         let decision = free_ai_removal_modal_decision(
             customer_type,
-            is_derp_ai_enabled,
+            is_bork_ai_enabled,
             has_byok_or_byoe,
             completed_new_onboarding,
             has_zero_base_credits,
@@ -629,33 +629,33 @@ impl OneTimeModalModel {
         should_show_oz_modal
     }
 
-    fn check_and_trigger_openderp_launch_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
+    fn check_and_trigger_openbork_launch_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         // Only show if the feature flag is enabled.
-        if !FeatureFlag::OpenDerpLaunchModal.is_enabled() {
+        if !FeatureFlag::OpenBorkLaunchModal.is_enabled() {
             return false;
         }
 
         let general_settings = GeneralSettings::as_ref(ctx);
-        let openderp_modal_shown = *general_settings
-            .did_check_to_trigger_openderp_launch_modal
+        let openbork_modal_shown = *general_settings
+            .did_check_to_trigger_openbork_launch_modal
             .value();
 
-        if openderp_modal_shown {
+        if openbork_modal_shown {
             return false;
         }
 
         GeneralSettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
-                .did_check_to_trigger_openderp_launch_modal
+                .did_check_to_trigger_openbork_launch_modal
                 .set_value(true, ctx)
             {
-                log::warn!("Failed to mark OpenDerp launch modal as dismissed: {e}");
+                log::warn!("Failed to mark OpenBork launch modal as dismissed: {e}");
             }
         });
 
-        let should_show_openderp_modal = !matches!(ChannelState::channel(), Channel::Integration);
-        self.set_openderp_launch_modal_open(should_show_openderp_modal, ctx);
-        should_show_openderp_modal
+        let should_show_openbork_modal = !matches!(ChannelState::channel(), Channel::Integration);
+        self.set_openbork_launch_modal_open(should_show_openbork_modal, ctx);
+        should_show_openbork_modal
     }
 
     fn check_and_trigger_orchestration_launch_modal(
@@ -867,13 +867,13 @@ enum FreeAiRemovalModalDecision {
 
 fn free_ai_removal_modal_decision(
     customer_type: Option<CustomerType>,
-    is_derp_ai_enabled: bool,
+    is_bork_ai_enabled: bool,
     has_byok_or_byoe: bool,
     completed_new_onboarding: bool,
     has_zero_base_credits: bool,
     workspaces_fetched: bool,
 ) -> FreeAiRemovalModalDecision {
-    if !is_derp_ai_enabled || has_byok_or_byoe || completed_new_onboarding {
+    if !is_bork_ai_enabled || has_byok_or_byoe || completed_new_onboarding {
         return FreeAiRemovalModalDecision::MarkSeenSilently;
     }
     // Restrict to a Free (or confirmed solo) user; anyone else is paid (silently

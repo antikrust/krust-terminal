@@ -1,5 +1,5 @@
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use derp_core::define_settings_group;
+use bork_core::define_settings_group;
 
 use crate::banner::BannerState;
 

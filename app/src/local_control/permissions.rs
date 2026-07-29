@@ -1,13 +1,13 @@
 //! Permission checks for local control.
 use ::local_control::{ActionKind, ControlError, ErrorCode, PROTOCOL_VERSION};
-use derpui::{ModelContext, SingletonEntity};
+use borkui::{ModelContext, SingletonEntity};
 
 use crate::features::FeatureFlag;
 use crate::local_control::LocalControlBridge;
 use crate::settings::LocalControlSettings;
 
-pub(super) fn derp_control_cli_enabled() -> bool {
-    FeatureFlag::DerpControlCli.is_enabled()
+pub(super) fn bork_control_cli_enabled() -> bool {
+    FeatureFlag::BorkControlCli.is_enabled()
 }
 
 pub(super) fn ensure_protocol_version(protocol_version: u32) -> Result<(), ControlError> {
@@ -21,12 +21,12 @@ pub(super) fn ensure_protocol_version(protocol_version: u32) -> Result<(), Contr
 }
 
 pub(super) fn ensure_feature_enabled() -> Result<(), ControlError> {
-    if derp_control_cli_enabled() {
+    if bork_control_cli_enabled() {
         return Ok(());
     }
     Err(ControlError::new(
         ErrorCode::LocalControlDisabled,
-        "Derp control CLI is disabled by feature flag",
+        "Bork control CLI is disabled by feature flag",
     ))
 }
 

@@ -1,6 +1,6 @@
-use derpui::integration::{AssertionCallback, AssertionOutcome, StepData};
-use derpui::windowing::WindowManager;
-use derpui::{async_assert_eq, SingletonEntity};
+use borkui::integration::{AssertionCallback, AssertionOutcome, StepData};
+use borkui::windowing::WindowManager;
+use borkui::{async_assert_eq, SingletonEntity};
 
 /// Saves the active window id with the given step data key.
 pub fn save_active_window_id<K>(window_key: K) -> AssertionCallback

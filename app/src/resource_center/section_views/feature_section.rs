@@ -1,11 +1,11 @@
-use derpui::elements::{
+use borkui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
     MouseState, MouseStateHandle, ParentElement, Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     Action, AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, WindowId,
 };
@@ -29,7 +29,7 @@ use crate::themes::theme::Fill;
 pub enum FeatureSection {
     WhatsNew,
     GettingStarted,
-    MaximizeDerp,
+    MaximizeBork,
     AdvancedSetup,
 }
 
@@ -38,7 +38,7 @@ impl FeatureSection {
         match self {
             FeatureSection::WhatsNew => "What's New?",
             FeatureSection::GettingStarted => "Getting Started",
-            FeatureSection::MaximizeDerp => "Maximize Derp",
+            FeatureSection::MaximizeBork => "Maximize Bork",
             FeatureSection::AdvancedSetup => "Advanced Setup",
         }
     }

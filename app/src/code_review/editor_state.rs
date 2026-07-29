@@ -1,5 +1,5 @@
-use derpui::elements::MouseStateHandle;
-use derpui::{AppContext, ViewHandle};
+use borkui::elements::MouseStateHandle;
+use borkui::{AppContext, ViewHandle};
 
 use crate::code::local_code_editor::LocalCodeEditorView;
 

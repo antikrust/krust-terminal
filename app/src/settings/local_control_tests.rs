@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use settings::{PrivatePreferences, PublicPreferences, Setting as _, SettingsManager, SyncToCloud};
-use derp_core::channel::{Channel, ChannelState};
-use derpui::SingletonEntity as _;
-use derpui_extras::secure_storage::{self, AppContextExt as _};
-use derpui_extras::user_preferences;
+use bork_core::channel::{Channel, ChannelState};
+use borkui::SingletonEntity as _;
+use borkui_extras::secure_storage::{self, AppContextExt as _};
+use borkui_extras::user_preferences;
 
 use super::{
     default_mode_for_channel, LocalControlMode, LocalControlModeSetting, LocalControlSettings,
@@ -97,7 +97,7 @@ fn unset_mode_follows_channel_default() {
 
 #[test]
 fn mode_is_persisted_to_secure_storage() {
-    derpui::App::test((), |mut app| async move {
+    borkui::App::test((), |mut app| async move {
         app.update(|ctx| {
             ctx.add_singleton_model(|_| {
                 PublicPreferences::new(
@@ -144,7 +144,7 @@ fn mode_is_persisted_to_secure_storage() {
 
 #[test]
 fn mode_does_not_migrate_from_private_preferences() {
-    derpui::App::test((), |mut app| async move {
+    borkui::App::test((), |mut app| async move {
         app.update(|ctx| {
             ctx.add_singleton_model(|_| {
                 PublicPreferences::new(
@@ -189,7 +189,7 @@ fn mode_is_private_and_never_cloud_synced() {
 
 #[test]
 fn cloud_sync_cannot_disable_local_control() {
-    derpui::App::test((), |mut app| async move {
+    borkui::App::test((), |mut app| async move {
         app.update(|ctx| {
             ctx.add_singleton_model(|_| {
                 PublicPreferences::new(

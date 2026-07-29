@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::coloru_with_opacity;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::theme::color::internal_colors;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::coloru_with_opacity;
+use bork_core::ui::theme::Fill;
+use bork_core::ui::theme::color::internal_colors;
 
 /// Theming delegate for a button.
 pub trait Theme {

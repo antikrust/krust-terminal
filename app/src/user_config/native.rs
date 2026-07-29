@@ -5,7 +5,7 @@ use std::{fs, io};
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use repo_metadata::RepositoryUpdate;
-use derpui::{ModelContext, ModelHandle, SingletonEntity};
+use borkui::{ModelContext, ModelHandle, SingletonEntity};
 
 use super::util::{
     for_each_dir_entry, has_name, is_config_file, parse_model_config_dir_entry,
@@ -14,20 +14,20 @@ use super::util::{
 };
 use super::{
     custom_model_routers_dir, launch_configs_dir, tab_configs_dir, themes_dir, workflows_dir,
-    DerpConfigUpdateEvent, LAUNCH_CONFIG_COMMENT,
+    BorkConfigUpdateEvent, LAUNCH_CONFIG_COMMENT,
 };
 use crate::ai::custom_model_routers::{CustomModelRouter, ModelConfigError};
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::tab_configs::{TabConfig, TabConfigError};
-use crate::themes::theme::DerpThemeConfig;
-use crate::derp_managed_paths_watcher::{
-    repository_update_touches_path, repository_update_touches_prefix, DerpManagedPathsWatcher,
-    DerpManagedPathsWatcherEvent,
+use crate::themes::theme::BorkThemeConfig;
+use crate::bork_managed_paths_watcher::{
+    repository_update_touches_path, repository_update_touches_prefix, BorkManagedPathsWatcher,
+    BorkManagedPathsWatcherEvent,
 };
 use crate::workflows::workflow::Workflow;
 
-impl super::DerpConfig {
+impl super::BorkConfig {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
         // Load launch configs, and workflows from disk asynchronously on a background
         // thread.
@@ -39,7 +39,7 @@ impl super::DerpConfig {
             async move { load_launch_configs(&launch_configs_dir()) },
             |me, launch_configs, ctx| {
                 me.launch_configs = launch_configs;
-                ctx.emit(DerpConfigUpdateEvent::LaunchConfigs);
+                ctx.emit(BorkConfigUpdateEvent::LaunchConfigs);
             },
         );
         if FeatureFlag::TabConfigs.is_enabled() {
@@ -48,7 +48,7 @@ impl super::DerpConfig {
                 |me, (tab_configs, tab_config_errors), ctx| {
                     me.tab_configs = tab_configs;
                     me.tab_config_errors = tab_config_errors;
-                    ctx.emit(DerpConfigUpdateEvent::TabConfigs);
+                    ctx.emit(BorkConfigUpdateEvent::TabConfigs);
                     // Don't emit TabConfigErrors on startup — the error toast
                     // should only appear when the user saves a config file,
                     // not on app restart.
@@ -59,7 +59,7 @@ impl super::DerpConfig {
             async move { load_workflows(&workflows_dir()) },
             |me, user_workflows, ctx| {
                 me.local_user_workflows = user_workflows;
-                ctx.emit(DerpConfigUpdateEvent::LocalUserWorkflows);
+                ctx.emit(BorkConfigUpdateEvent::LocalUserWorkflows);
             },
         );
         if FeatureFlag::CustomModelRouters.is_enabled() {
@@ -68,7 +68,7 @@ impl super::DerpConfig {
                 |me, (models, errors), ctx| {
                     me.custom_model_routers = models;
                     me.custom_model_router_errors = errors;
-                    ctx.emit(DerpConfigUpdateEvent::ModelConfigs);
+                    ctx.emit(BorkConfigUpdateEvent::ModelConfigs);
                     // Don't emit ModelConfigErrors on startup — like tab configs,
                     // the error toast should only appear when the user saves a
                     // file, not on app restart.
@@ -76,8 +76,8 @@ impl super::DerpConfig {
             );
         }
         ctx.subscribe_to_model(
-            &DerpManagedPathsWatcher::handle(ctx),
-            Self::handle_derp_managed_paths_event,
+            &BorkManagedPathsWatcher::handle(ctx),
+            Self::handle_bork_managed_paths_event,
         );
 
         Self {
@@ -86,13 +86,13 @@ impl super::DerpConfig {
         }
     }
 
-    fn handle_derp_managed_paths_event(
+    fn handle_bork_managed_paths_event(
         &mut self,
-        _: ModelHandle<DerpManagedPathsWatcher>,
-        event: &DerpManagedPathsWatcherEvent,
+        _: ModelHandle<BorkManagedPathsWatcher>,
+        event: &BorkManagedPathsWatcherEvent,
         ctx: &mut ModelContext<Self>,
     ) {
-        let DerpManagedPathsWatcherEvent::FilesChanged(update) = event;
+        let BorkManagedPathsWatcherEvent::FilesChanged(update) = event;
 
         if update_touches_dir(update, &themes_dir()) {
             let theme_dir = themes_dir();
@@ -100,7 +100,7 @@ impl super::DerpConfig {
                 async move { load_theme_configs(&theme_dir) },
                 |me, theme_config, ctx| {
                     me.theme_config = theme_config;
-                    ctx.emit(DerpConfigUpdateEvent::Themes);
+                    ctx.emit(BorkConfigUpdateEvent::Themes);
                 },
             );
         }
@@ -111,7 +111,7 @@ impl super::DerpConfig {
                 async move { load_workflows(&workflow_dir) },
                 |me, workflows, ctx| {
                     me.local_user_workflows = workflows;
-                    ctx.emit(DerpConfigUpdateEvent::LocalUserWorkflows);
+                    ctx.emit(BorkConfigUpdateEvent::LocalUserWorkflows);
                 },
             );
         }
@@ -122,7 +122,7 @@ impl super::DerpConfig {
                 async move { load_launch_configs(&launch_config_dir) },
                 |me, launch_configs, ctx| {
                     me.launch_configs = launch_configs;
-                    ctx.emit(DerpConfigUpdateEvent::LaunchConfigs);
+                    ctx.emit(BorkConfigUpdateEvent::LaunchConfigs);
                 },
             );
         }
@@ -134,9 +134,9 @@ impl super::DerpConfig {
                 |me, (configs, errors), ctx| {
                     me.tab_configs = configs;
                     me.tab_config_errors = errors.clone();
-                    ctx.emit(DerpConfigUpdateEvent::TabConfigs);
+                    ctx.emit(BorkConfigUpdateEvent::TabConfigs);
                     if !errors.is_empty() {
-                        ctx.emit(DerpConfigUpdateEvent::TabConfigErrors(errors));
+                        ctx.emit(BorkConfigUpdateEvent::TabConfigErrors(errors));
                     }
                 },
             );
@@ -151,9 +151,9 @@ impl super::DerpConfig {
                 |me, (models, errors), ctx| {
                     me.custom_model_routers = models;
                     me.custom_model_router_errors = errors.clone();
-                    ctx.emit(DerpConfigUpdateEvent::ModelConfigs);
+                    ctx.emit(BorkConfigUpdateEvent::ModelConfigs);
                     if !errors.is_empty() {
-                        ctx.emit(DerpConfigUpdateEvent::ModelConfigErrors(errors));
+                        ctx.emit(BorkConfigUpdateEvent::ModelConfigErrors(errors));
                     }
                 },
             );
@@ -162,7 +162,7 @@ impl super::DerpConfig {
         if FeatureFlag::SettingsFile.is_enabled()
             && update_touches_path(update, &crate::settings::user_preferences_toml_file_path())
         {
-            ctx.emit(DerpConfigUpdateEvent::Settings);
+            ctx.emit(BorkConfigUpdateEvent::Settings);
         }
     }
 
@@ -205,7 +205,7 @@ impl super::DerpConfig {
     }
 
     /// Deletes a custom model router file from disk.
-    /// The filesystem watcher in [`Self::handle_derp_managed_paths_event`] will
+    /// The filesystem watcher in [`Self::handle_bork_managed_paths_event`] will
     /// pick up the deletion and reload `custom_model_routers`.
     #[cfg(feature = "local_fs")]
     pub fn delete_custom_model_router(source_path: &std::path::Path) -> anyhow::Result<()> {
@@ -243,8 +243,8 @@ impl super::DerpConfig {
     }
 }
 
-pub fn load_theme_configs(theme_path: &Path) -> DerpThemeConfig {
-    let mut theme_configs = DerpThemeConfig::new();
+pub fn load_theme_configs(theme_path: &Path) -> BorkThemeConfig {
+    let mut theme_configs = BorkThemeConfig::new();
     for_each_dir_entry(theme_path, parse_single_theme_dir_entry)
         .into_iter()
         .for_each(|(theme_name, theme)| theme_configs.add_new_theme(theme_name, theme));
@@ -270,7 +270,7 @@ pub fn load_launch_configs(launch_config_path: &Path) -> Vec<LaunchConfig> {
 }
 
 /// Loads custom model routers from the config directory at `dir_path`
-/// (`~/.derp/custom_model_routers/`), where each file defines a single router.
+/// (`~/.bork/custom_model_routers/`), where each file defines a single router.
 /// Returns the parsed routers (sorted by display name) and any per-file
 /// parse/validation errors. If the directory does not exist, returns empty vecs.
 pub fn load_model_configs(dir_path: &Path) -> (Vec<CustomModelRouter>, Vec<ModelConfigError>) {

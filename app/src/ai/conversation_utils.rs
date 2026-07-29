@@ -1,7 +1,7 @@
 use anyhow::Context as _;
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derpui::{AppContext, EntityId, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use borkui::{AppContext, EntityId, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::AgentConversationsModel;

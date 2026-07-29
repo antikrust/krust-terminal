@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use borkui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, DropShadow, Empty, Expanded, Flex, MainAxisSize, ParentElement,
     Radius, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable, Text,
 };
-use derpui::fonts::{FamilyId, Properties, Weight};
-use derpui::keymap::FixedBinding;
-use derpui::{
+use borkui::fonts::{FamilyId, Properties, Weight};
+use borkui::keymap::FixedBinding;
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -47,7 +47,7 @@ struct Styles {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -124,9 +124,9 @@ impl AgentTodosPopupView {
 
     fn render_header(
         &self,
-        app: &derpui::AppContext,
+        app: &borkui::AppContext,
         todo_list: &AIAgentTodoList,
-    ) -> Box<dyn derpui::Element> {
+    ) -> Box<dyn borkui::Element> {
         let appearance = Appearance::as_ref(app);
         let styles = self.styles(appearance);
         let theme = appearance.theme();
@@ -159,7 +159,7 @@ impl View for AgentTodosPopupView {
         "AgentTodosPopup"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         let Some(todo_list) = self
             .ai_context_model
             .as_ref(app)
@@ -271,7 +271,7 @@ impl View for AgentTodosPopupView {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();

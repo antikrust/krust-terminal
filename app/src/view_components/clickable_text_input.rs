@@ -1,9 +1,9 @@
-use derpui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

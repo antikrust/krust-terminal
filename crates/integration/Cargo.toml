@@ -38,22 +38,22 @@ strum.workspace = true
 strum_macros.workspace = true
 sum_tree.workspace = true
 version-compare.workspace = true
-derp = { workspace = true, features = ["integration_tests"] }
-derp_cli = { workspace = true, features = ["integration_tests"] }
-derp_core.workspace = true
-derp-command-signatures.workspace = true
-derp_multi_agent_api.workspace = true
-derp-workflows.workspace = true
-derpui_core.workspace = true
-derpui_extras = { workspace = true, features = [
+bork = { workspace = true, features = ["integration_tests"] }
+bork_cli = { workspace = true, features = ["integration_tests"] }
+bork_core.workspace = true
+bork-command-signatures.workspace = true
+bork_multi_agent_api.workspace = true
+bork-workflows.workspace = true
+borkui_core.workspace = true
+borkui_extras = { workspace = true, features = [
     "user_preferences-file",
 ] }
 whoami = "1.5.2"
 
 [dev-dependencies]
 command = { workspace = true, features = ["test-util"] }
-derpui = { workspace = true, features = ["integration_tests"] }
-derp_core = { workspace = true, features = ["test-util"] }
+borkui = { workspace = true, features = ["integration_tests"] }
+bork_core = { workspace = true, features = ["test-util"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 app-installation-detection.workspace = true
@@ -65,5 +65,5 @@ nix = { workspace = true, features = ["user", "signal"] }
 
 [features]
 run_on_linux = []
-drag_tabs_to_windows = ["derp/drag_tabs_to_windows"]
+drag_tabs_to_windows = ["bork/drag_tabs_to_windows"]
 default = ["run_on_linux"]

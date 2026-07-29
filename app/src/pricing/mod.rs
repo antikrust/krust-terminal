@@ -1,7 +1,7 @@
-use derp_graphql::billing::{
+use bork_graphql::billing::{
     AddonCreditsOption, OveragesPricing, PlanPricing, PricingInfo, StripeSubscriptionPlan,
 };
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 /// A global model for maintaining pricing information from the server.
 #[derive(Debug)]

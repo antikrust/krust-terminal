@@ -1,6 +1,6 @@
 use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
-use derp_util::remote_path::RemotePath;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_util::remote_path::RemotePath;
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{GitRepoStatusEvent, GitStatusMetadata};
 use crate::remote_server::proto;
@@ -72,7 +72,7 @@ impl RemoteGitRepoStatusModel {
                 ctx.emit(GitRepoStatusEvent::MetadataChanged);
             }
             Err(error) => {
-                derp_core::safe_error!(
+                bork_core::safe_error!(
                     safe: ("RemoteGitRepoStatusModel: failed to decode git status push"),
                     full: ("RemoteGitRepoStatusModel: failed to decode git status push: {error}")
                 );

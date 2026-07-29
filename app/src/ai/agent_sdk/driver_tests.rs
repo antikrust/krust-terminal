@@ -10,21 +10,21 @@ use futures::channel::oneshot;
 use futures::executor::block_on;
 use repo_metadata::{DirectoryWatcher, RepoMetadataEvent, RepoMetadataModel, RepositoryIdentifier};
 use tempfile::TempDir;
-use derp_cli::agent::Harness;
-use derp_cli::mcp::MCPSpec;
-use derp_cli::skill::SkillSpec;
-use derp_cli::{
+use bork_cli::agent::Harness;
+use bork_cli::mcp::MCPSpec;
+use bork_cli::skill::SkillSpec;
+use bork_cli::{
     OZ_CLI_ENV, OZ_HARNESS_ENV, OZ_PARENT_RUN_ID_ENV, OZ_RUN_ID_ENV, SERVER_ROOT_URL_OVERRIDE_ENV,
     SESSION_SHARING_SERVER_URL_OVERRIDE_ENV, WS_SERVER_URL_OVERRIDE_ENV,
 };
-use derp_core::channel::ChannelState;
-use derp_graphql::mutations::create_managed_mcp_client_config::{
+use bork_core::channel::ChannelState;
+use bork_graphql::mutations::create_managed_mcp_client_config::{
     CreateManagedMcpClientConfigOutput, ManagedMcpTransportKind,
 };
-use derp_graphql::response_context::ResponseContext;
-use derp_managed_secrets::ManagedSecretValue;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::{App, SingletonEntity as _};
+use bork_graphql::response_context::ResponseContext;
+use bork_managed_secrets::ManagedSecretValue;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::{App, SingletonEntity as _};
 
 use super::{
     build_secret_env_vars, AgentDriver, AgentDriverError, IdleTimeoutSender,

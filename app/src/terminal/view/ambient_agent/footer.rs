@@ -1,11 +1,11 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     Border, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::Element;
+use borkui::fonts::{Properties, Weight};
+use borkui::Element;
 
 use crate::ui_components::blended_colors;
 
@@ -98,7 +98,7 @@ pub fn render_error_footer(error_message: &str, appearance: &Appearance) -> Box<
     let header_color = theme.ui_error_color();
     let body_color = blended_colors::text_main(theme, theme.background());
     let background: ColorU = {
-        let red: derp_core::ui::theme::Fill = theme.ui_error_color().into();
+        let red: bork_core::ui::theme::Fill = theme.ui_error_color().into();
         red.with_opacity(50).into()
     };
     let border_color = theme.ui_error_color();

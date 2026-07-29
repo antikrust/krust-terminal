@@ -1,4 +1,4 @@
-use derpui_core::{View, ViewContext};
+use borkui_core::{View, ViewContext};
 
 pub trait OnboardingSlide: View {
     fn on_up(&mut self, _ctx: &mut ViewContext<Self>) {}

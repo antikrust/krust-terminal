@@ -1,4 +1,4 @@
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResultsCollector, Suggestion,
 };
 

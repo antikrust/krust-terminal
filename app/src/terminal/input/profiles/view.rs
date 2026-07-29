@@ -1,5 +1,5 @@
-use derpui::elements::ChildView;
-use derpui::{
+use borkui::elements::ChildView;
+use borkui::{
     Element, Entity, EntityId, ModelHandle, SingletonEntity as _, View, ViewContext, ViewHandle,
 };
 
@@ -210,7 +210,7 @@ impl View for InlineProfileSelectorView {
         "InlineProfileSelectorView"
     }
 
-    fn render(&self, _app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

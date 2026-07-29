@@ -5,7 +5,7 @@ use crate::app_state::{
     AppState, BranchSnapshot, LeafContents, LeafSnapshot, NotebookPaneSnapshot, PaneFlex,
     PaneNodeSnapshot, SplitDirection, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot,
 };
-use crate::drive::OpenDerpDriveObjectSettings;
+use crate::drive::OpenBorkDriveObjectSettings;
 use crate::tab::SelectedTabColor;
 
 fn single_tab_snapshot(root: PaneNodeSnapshot) -> AppState {
@@ -25,9 +25,9 @@ fn single_tab_snapshot(root: PaneNodeSnapshot) -> AppState {
             bounds: None,
             quake_mode: false,
             universal_search_width: None,
-            derp_ai_width: None,
+            bork_ai_width: None,
             voltron_width: None,
-            derp_drive_index_width: None,
+            bork_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
             fullscreen_state: Default::default(),
@@ -50,9 +50,9 @@ fn multi_tab_snapshot(active_tab_index: usize, tabs: Vec<TabSnapshot>) -> AppSta
             bounds: None,
             quake_mode: false,
             universal_search_width: None,
-            derp_ai_width: None,
+            bork_ai_width: None,
             voltron_width: None,
-            derp_drive_index_width: None,
+            bork_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
             fullscreen_state: Default::default(),
@@ -82,7 +82,7 @@ fn test_config_from_snapshot_flattens_single_pane() {
                     custom_vertical_tabs_title: None,
                     contents: LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
                         notebook_id: None,
-                        settings: OpenDerpDriveObjectSettings::default(),
+                        settings: OpenBorkDriveObjectSettings::default(),
                     }),
                 }),
             ),
@@ -152,7 +152,7 @@ fn test_config_from_snapshot_filters_panes() {
                     custom_vertical_tabs_title: None,
                     contents: LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
                         notebook_id: None,
-                        settings: OpenDerpDriveObjectSettings::default(),
+                        settings: OpenBorkDriveObjectSettings::default(),
                     }),
                 }),
             ),
@@ -216,7 +216,7 @@ fn test_config_from_snapshot_filters_tabs() {
                 custom_vertical_tabs_title: None,
                 contents: LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
                     notebook_id: None,
-                    settings: OpenDerpDriveObjectSettings::default(),
+                    settings: OpenBorkDriveObjectSettings::default(),
                 }),
             }),
         )],
@@ -413,7 +413,7 @@ fn test_config_with_active_tab_index_and_filtered_tabs() {
                             custom_vertical_tabs_title: None,
                             contents: LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
                                 notebook_id: None,
-                                settings: OpenDerpDriveObjectSettings::default(),
+                                settings: OpenBorkDriveObjectSettings::default(),
                             }),
                         }),
                     )],
@@ -510,7 +510,7 @@ fn test_config_with_active_tab_being_filtered() {
                             custom_vertical_tabs_title: None,
                             contents: LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
                                 notebook_id: None,
-                                settings: OpenDerpDriveObjectSettings::default(),
+                                settings: OpenBorkDriveObjectSettings::default(),
                             }),
                         }),
                     )],

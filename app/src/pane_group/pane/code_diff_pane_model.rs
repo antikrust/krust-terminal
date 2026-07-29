@@ -1,4 +1,4 @@
-use derpui::{Entity, ModelContext, ViewHandle};
+use borkui::{Entity, ModelContext, ViewHandle};
 
 use crate::ai::blocklist::inline_action::code_diff_view::{CodeDiffView, CodeDiffViewEvent};
 

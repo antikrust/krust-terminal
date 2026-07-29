@@ -1,6 +1,6 @@
-use derp_core::semantic_selection::SemanticSelection;
-use derpui::text::SelectionType;
-use derpui::App;
+use bork_core::semantic_selection::SemanticSelection;
+use borkui::text::SelectionType;
+use borkui::App;
 
 use crate::terminal::block_filter::BlockFilterQuery;
 use crate::terminal::event_listener::ChannelEventListener;

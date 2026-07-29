@@ -172,7 +172,7 @@ pub struct ConversationUsageMetadata {
     pub credits_spent: f64,
     pub platform_credits_spent: f64,
     pub summarized: bool,
-    pub derp_token_usage: Vec<TokenUsage>,
+    pub bork_token_usage: Vec<TokenUsage>,
     pub byok_token_usage: Vec<TokenUsage>,
     pub tool_usage_metadata: ToolUsageMetadata,
 }
@@ -185,7 +185,7 @@ impl From<&ConversationUsageMetadata> for persistence::model::ConversationUsageM
             credits_spent: gql.credits_spent as f32,
             platform_credits_spent: gql.platform_credits_spent as f32,
             credits_spent_for_last_block: None,
-            token_usage: convert_token_usage(&gql.derp_token_usage, &gql.byok_token_usage),
+            token_usage: convert_token_usage(&gql.bork_token_usage, &gql.byok_token_usage),
             tool_usage_metadata: (&gql.tool_usage_metadata).into(),
             context_window_segments: gql.context_window_segments.iter().map(Into::into).collect(),
         }

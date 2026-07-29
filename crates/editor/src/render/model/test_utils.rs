@@ -6,12 +6,12 @@ use std::sync::Arc;
 use ordered_float::OrderedFloat;
 use parking_lot::Once;
 use vec1::{Vec1, vec1};
-use derpui_core::color::ColorU;
-use derpui_core::elements::{Border, Fill, ListIndentLevel};
-use derpui_core::fonts::{FamilyId, Weight};
-use derpui_core::geometry::vector::vec2f;
-use derpui_core::text_layout::{CaretPosition, Glyph, Line, Run, TextFrame};
-use derpui_core::units::{IntoPixels, Pixels};
+use borkui_core::color::ColorU;
+use borkui_core::elements::{Border, Fill, ListIndentLevel};
+use borkui_core::fonts::{FamilyId, Weight};
+use borkui_core::geometry::vector::vec2f;
+use borkui_core::text_layout::{CaretPosition, Glyph, Line, Run, TextFrame};
+use borkui_core::units::{IntoPixels, Pixels};
 
 use super::{
     BlockItem, BrokenLinkStyle, CheckBoxStyle, DEFAULT_BLOCK_SPACINGS, HorizontalRuleStyle,
@@ -239,7 +239,7 @@ pub fn layout(text: &str, styles: &RichTextStyles, max_width: impl IntoPixels) -
                 width: line_width.as_f32(),
                 trailing_whitespace_width: 0.,
                 runs: vec![Run {
-                    font_id: derpui_core::fonts::FontId(0),
+                    font_id: borkui_core::fonts::FontId(0),
                     styles: Default::default(),
                     glyphs: mem::take(&mut glyphs_acc),
                     width: line_width.as_f32(),
@@ -278,7 +278,7 @@ pub fn layout(text: &str, styles: &RichTextStyles, max_width: impl IntoPixels) -
             width: line_width.as_f32(),
             trailing_whitespace_width: 0.,
             runs: vec![Run {
-                font_id: derpui_core::fonts::FontId(0),
+                font_id: borkui_core::fonts::FontId(0),
                 styles: Default::default(),
                 glyphs: glyphs_acc,
                 width: line_width.as_f32(),
@@ -314,7 +314,7 @@ pub fn init_logging() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         env_logger::builder()
-            .parse_filters("derp_editor=trace")
+            .parse_filters("bork_editor=trace")
             .is_test(true)
             .init();
     });

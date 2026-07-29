@@ -7,9 +7,9 @@
 //! command's real stdout is untouched, so `ls | wc -l` still counts files
 //! rather than insults.
 
-use derpui::elements::{Container, Element, Text};
-use derpui::fonts::{Properties, Style};
-use derpui::{AppContext, Entity, SingletonEntity, View, ViewContext};
+use borkui::elements::{Container, Element, Text};
+use borkui::fonts::{Properties, Style};
+use borkui::{AppContext, Entity, SingletonEntity, View, ViewContext};
 
 use super::Phase;
 use crate::appearance::Appearance;

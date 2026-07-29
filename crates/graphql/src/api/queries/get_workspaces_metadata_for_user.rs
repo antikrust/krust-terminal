@@ -33,7 +33,7 @@ query GetWorkspacesMetadataForUser($requestContext: RequestContext!) {
             tier {
               name
               description
-              derpAiPolicy {
+              borkAiPolicy {
                 limit
                 isCodeSuggestionsToggleable
                 isPromptSuggestionsToggleable

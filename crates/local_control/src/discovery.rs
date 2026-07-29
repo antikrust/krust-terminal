@@ -1,4 +1,4 @@
-//! Private filesystem registry for discovering running local Derp instances.
+//! Private filesystem registry for discovering running local Bork instances.
 //!
 //! This module answers “which compatible instances are available, and where
 //! can a client begin authentication?” It does not listen for control requests
@@ -23,7 +23,7 @@
 //! The owner-only directory, records, and broker sockets protect against other
 //! OS users. The broker's kernel-reported peer-UID check is the authoritative
 //! same-user check before credential issuance. Neither mechanism distinguishes
-//! trusted Derp code from arbitrary software already running as that user.
+//! trusted Bork code from arbitrary software already running as that user.
 use std::collections::HashSet;
 use std::fs;
 #[cfg(unix)]
@@ -38,12 +38,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::protocol::{ActionMetadata, ControlError, ErrorCode, PROTOCOL_VERSION};
 
-const DISCOVERY_DIR_ENV: &str = "DERP_LOCAL_CONTROL_DISCOVERY_DIR";
+const DISCOVERY_DIR_ENV: &str = "BORK_LOCAL_CONTROL_DISCOVERY_DIR";
 const BROKER_SOCKET_SUFFIX: &str = ".broker.sock";
 const TEMP_RECORD_SUFFIX: &str = ".json.tmp";
 const ORPHAN_SOCKET_GRACE_PERIOD: Duration = Duration::from_secs(60);
 
-/// Stable identifier for one running Derp instance.
+/// Stable identifier for one running Bork instance.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct InstanceId(pub String);
@@ -93,7 +93,7 @@ pub struct CredentialBrokerReference {
     pub socket_path: PathBuf,
 }
 
-/// Filesystem-published routing metadata for a running Derp app process.
+/// Filesystem-published routing metadata for a running Bork app process.
 ///
 /// An enabled record connects the three stages of the protocol: filesystem
 /// discovery, Unix-socket credential issuance, and authenticated loopback HTTP
@@ -282,10 +282,10 @@ pub fn discovery_dir() -> PathBuf {
         return PathBuf::from(path);
     }
     if let Some(path) = std::env::var_os("XDG_RUNTIME_DIR") {
-        return PathBuf::from(path).join("derp").join("local-control");
+        return PathBuf::from(path).join("bork").join("local-control");
     }
     let home = std::env::var_os("HOME").unwrap_or_else(|| ".".into());
-    PathBuf::from(home).join(".derp").join("local-control")
+    PathBuf::from(home).join(".bork").join("local-control")
 }
 
 /// Returns compatible live instances from `channel` that pass an authenticated app ping.

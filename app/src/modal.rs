@@ -1,14 +1,14 @@
 use pathfinder_geometry::vector::vec2f;
-use derpui::color::ColorU;
-use derpui::elements::{
+use borkui::color::ColorU;
+use borkui::elements::{
     Align, Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, Element, Flex, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Percentage, Radius, Shrinkable, Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -99,7 +99,7 @@ pub enum ModalAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
@@ -313,7 +313,7 @@ impl<T: View> Modal<T> {
             Some(
                 Align::new(
                     Container::new(
-                        ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
+                        ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
                             .with_width(icon_size)
                             .with_height(icon_size)
                             .finish(),

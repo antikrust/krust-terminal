@@ -3,7 +3,7 @@
 use num_traits::SaturatingSub;
 use string_offset::CharOffset;
 use sum_tree::SeekBias;
-use derpui_core::units::{IntoPixels, Pixels};
+use borkui_core::units::{IntoPixels, Pixels};
 
 use super::positioned::{Positioned, PositionedCursor};
 use super::{

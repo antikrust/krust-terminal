@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use derp_core::channel::{Channel, ChannelState};
+use bork_core::channel::{Channel, ChannelState};
 
 #[cfg(not(target_family = "wasm"))]
 mod docker;
@@ -19,30 +19,30 @@ mod namespace;
 /// Environment variable set by the server to identify the isolation platform.
 /// The value should match one of the `IsolationPlatformType` variants in snake_case.
 #[cfg(not(target_family = "wasm"))]
-const DERP_ISOLATION_PLATFORM_ENV: &str = "DERP_ISOLATION_PLATFORM";
+const BORK_ISOLATION_PLATFORM_ENV: &str = "BORK_ISOLATION_PLATFORM";
 
-/// Environment variable containing the generic Derp-managed workload token that we use
+/// Environment variable containing the generic Bork-managed workload token that we use
 /// for isolation platforms that don't issue their own tokens.
 #[cfg(not(target_family = "wasm"))]
-const DERP_WORKLOAD_TOKEN_ENV: &str = "DERP_WORKLOAD_TOKEN";
+const BORK_WORKLOAD_TOKEN_ENV: &str = "BORK_WORKLOAD_TOKEN";
 
-/// A kind of isolation platform. For our usage, isolation platforms are different ways where Derp
+/// A kind of isolation platform. For our usage, isolation platforms are different ways where Bork
 /// can be sandboxed, such as VMs, containers, or cloud hosts. This may also include weaker forms
 /// of sandboxing such as Git worktrees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IsolationPlatformType {
-    /// Derp is running within a Docker container. Note that this does *not* mean this is a Derp-hosted
+    /// Bork is running within a Docker container. Note that this does *not* mean this is a Bork-hosted
     /// Docker Sandboxes environment. Instead, it's likely a self-hosted agent.
     #[cfg(not(target_family = "wasm"))]
     Docker,
-    /// Derp is running within a Docker Sandbox, likely as a Derp-hosted agent.
+    /// Bork is running within a Docker Sandbox, likely as a Bork-hosted agent.
     #[cfg(not(target_family = "wasm"))]
     DockerSandbox,
-    /// Derp is running within a Kubernetes pod, likely as a self-hosted agent.
+    /// Bork is running within a Kubernetes pod, likely as a self-hosted agent.
     #[cfg(not(target_family = "wasm"))]
     Kubernetes,
-    /// Derp is running within a Namespace instance, likely as a Derp-hosted agent.
+    /// Bork is running within a Namespace instance, likely as a Bork-hosted agent.
     #[cfg(not(target_family = "wasm"))]
     Namespace,
 }
@@ -136,11 +136,11 @@ pub async fn issue_workload_token(
     }
 }
 
-/// Read a platform-agnostic workload token from the `DERP_WORKLOAD_TOKEN` environment variable.
+/// Read a platform-agnostic workload token from the `BORK_WORKLOAD_TOKEN` environment variable.
 /// Returns a `WorkloadToken` with no expiration, or an error if the variable is missing/empty.
 #[cfg(not(target_family = "wasm"))]
 fn read_generic_workload_token() -> Result<WorkloadToken, IsolationPlatformError> {
-    let token = std::env::var(DERP_WORKLOAD_TOKEN_ENV)
+    let token = std::env::var(BORK_WORKLOAD_TOKEN_ENV)
         .map_err(|_| IsolationPlatformError::GenericWorkloadTokenMissing)?;
     if token.is_empty() {
         return Err(IsolationPlatformError::GenericWorkloadTokenMissing);
@@ -151,17 +151,17 @@ fn read_generic_workload_token() -> Result<WorkloadToken, IsolationPlatformError
     })
 }
 
-/// Parse the `DERP_ISOLATION_PLATFORM` environment variable into a platform type.
+/// Parse the `BORK_ISOLATION_PLATFORM` environment variable into a platform type.
 #[cfg(not(target_family = "wasm"))]
 fn platform_from_env() -> Option<IsolationPlatformType> {
-    let value = std::env::var(DERP_ISOLATION_PLATFORM_ENV).ok()?;
+    let value = std::env::var(BORK_ISOLATION_PLATFORM_ENV).ok()?;
     match value.as_str() {
         "docker" => Some(IsolationPlatformType::Docker),
         "docker_sandbox" => Some(IsolationPlatformType::DockerSandbox),
         "kubernetes" => Some(IsolationPlatformType::Kubernetes),
         "namespace" => Some(IsolationPlatformType::Namespace),
         other => {
-            log::warn!("Unknown {DERP_ISOLATION_PLATFORM_ENV} value: {other}");
+            log::warn!("Unknown {BORK_ISOLATION_PLATFORM_ENV} value: {other}");
             None
         }
     }

@@ -2,8 +2,8 @@ use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use derp_errors::report_error;
-use derpui::{AppContext, ModelHandle, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{AppContext, ModelHandle, SingletonEntity};
 
 use crate::persistence::{ModelEvent, StartedCommandMetadata};
 use crate::terminal::model::session::Sessions;

@@ -11,10 +11,10 @@ use std::ops::RangeInclusive;
 pub use std::ops::{Range, RangeBounds};
 
 use vec1::Vec1;
-use derp_core::semantic_selection::SemanticSelection;
-use derp_terminal::model::grid::cell;
-use derpui::text::SelectionType;
-use derpui::units::Lines;
+use bork_core::semantic_selection::SemanticSelection;
+use bork_terminal::model::grid::cell;
+use borkui::text::SelectionType;
+use borkui::units::Lines;
 
 use super::index::{Direction, VisibleRow};
 use crate::terminal::model::ansi::CursorShape;

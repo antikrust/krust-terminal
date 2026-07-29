@@ -1,7 +1,7 @@
 use std::fs;
 
 use tempfile::tempdir;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::*;
 

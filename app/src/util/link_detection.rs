@@ -3,10 +3,10 @@ use std::ops::Range;
 
 use string_offset::ByteOffset;
 use urlocator::{UrlLocation, UrlLocator};
-use derpui::elements::{MouseStateHandle, PartialClickableElement};
-use derpui::platform::Cursor;
-use derpui::text::char_slice;
-use derpui::Action;
+use borkui::elements::{MouseStateHandle, PartialClickableElement};
+use borkui::platform::Cursor;
+use borkui::text::char_slice;
+use borkui::Action;
 
 use crate::ai::agent::{AIAgentActionType, AIAgentOutput, AIAgentTextSection, ReadFilesRequest};
 use crate::ai::blocklist::block::view_impl::output::LinkActionConstructors;
@@ -20,7 +20,7 @@ cfg_if::cfg_if! {
         use std::collections::HashSet;
         use std::path::Path;
         use std::path::PathBuf;
-        use derp_util::path::CleanPathResult;
+        use bork_util::path::CleanPathResult;
     }
 }
 
@@ -128,7 +128,7 @@ pub(crate) enum DetectedLinkType {
     #[cfg(feature = "local_fs")]
     FilePath {
         absolute_path: PathBuf,
-        line_and_column_num: Option<derp_util::path::LineAndColumnArg>,
+        line_and_column_num: Option<bork_util::path::LineAndColumnArg>,
     },
 }
 
@@ -430,7 +430,7 @@ pub(crate) fn detect_file_paths(
                             // Create a new DetectedLinkType with the same file path but with the line number
                             let line_range_link = DetectedLinkType::FilePath {
                                 absolute_path: absolute_path.clone(),
-                                line_and_column_num: Some(derp_util::path::LineAndColumnArg {
+                                line_and_column_num: Some(bork_util::path::LineAndColumnArg {
                                     line_num: line_number as usize,
                                     column_num: None,
                                 }),
@@ -448,8 +448,8 @@ pub(crate) fn detect_file_paths(
 }
 
 use string_offset::CharOffset;
-use derp_editor::content::buffer::Buffer;
-use derpui::text::word_boundaries::WordBoundariesPolicy;
+use bork_editor::content::buffer::Buffer;
+use borkui::text::word_boundaries::WordBoundariesPolicy;
 
 /// Returns the range of the word surrounding the given offset.
 pub(crate) fn get_word_range_at_offset(
@@ -457,9 +457,9 @@ pub(crate) fn get_word_range_at_offset(
     offset: CharOffset,
     word_boundary_policy: Option<WordBoundariesPolicy>,
 ) -> Option<Range<CharOffset>> {
-    use derp_editor::content::buffer::{ToBufferCharOffset, ToBufferPoint};
-    use derpui::text::words::is_default_word_boundary;
-    use derpui::text::TextBuffer;
+    use bork_editor::content::buffer::{ToBufferCharOffset, ToBufferPoint};
+    use borkui::text::words::is_default_word_boundary;
+    use borkui::text::TextBuffer;
 
     let word_boundary_policy = word_boundary_policy.unwrap_or(WordBoundariesPolicy::Default);
     let mut word_found_at: Option<CharOffset> = None;

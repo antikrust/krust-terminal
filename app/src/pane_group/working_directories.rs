@@ -12,14 +12,14 @@ use indexmap::IndexSet;
 use remote_server::manager::RemoteServerManager;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
-use derp_core::SessionId;
+use bork_core::SessionId;
 #[cfg(feature = "local_fs")]
-use derp_errors::report_error;
+use bork_errors::report_error;
 #[cfg(feature = "local_fs")]
-use derp_util::remote_path::RemotePath;
+use bork_util::remote_path::RemotePath;
 #[cfg(feature = "local_fs")]
-use derpui::{AppContext, SingletonEntity as _};
-use derpui::{Entity, EntityId, ModelContext, ModelHandle, ViewHandle};
+use borkui::{AppContext, SingletonEntity as _};
+use borkui::{Entity, EntityId, ModelContext, ModelHandle, ViewHandle};
 
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]

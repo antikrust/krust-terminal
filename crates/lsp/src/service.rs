@@ -19,8 +19,8 @@ use lsp_types::{
 use serde_json::Value;
 #[cfg(not(target_arch = "wasm32"))]
 use simple_logger::SimpleLogger;
-use derp_errors::report_error;
-use derp_util::on_cancel::OnCancelFutureExt;
+use bork_errors::report_error;
+use bork_util::on_cancel::OnCancelFutureExt;
 
 use crate::config::{lsp_uri_to_path, path_to_lsp_uri, LanguageId};
 use crate::types::{
@@ -358,7 +358,7 @@ impl WatchedFilesRegistry {
             return false;
         };
 
-        let path_relative = derp_util::path::normalize_relative_path_for_glob(path_relative);
+        let path_relative = bork_util::path::normalize_relative_path_for_glob(path_relative);
 
         self.registrations
             .values()
@@ -416,7 +416,7 @@ impl WatchedFilesRegistry {
         };
 
         // Normalize to forward slashes so glob patterns and event paths are comparable across platforms (esp. Windows).
-        let prefix = derp_util::path::normalize_relative_path_for_glob(base_relative);
+        let prefix = bork_util::path::normalize_relative_path_for_glob(base_relative);
 
         if prefix.is_empty() {
             Some(pattern)

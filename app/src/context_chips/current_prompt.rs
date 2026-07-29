@@ -5,12 +5,12 @@ use std::time::Duration;
 
 use futures::{pin_mut, FutureExt as _};
 use itertools::Itertools;
-use derp_completer::completer::CommandExitStatus;
-use derp_core::r#async::debounce;
-use derp_core::user_preferences::GetUserPreferences;
-use derp_errors::report_error;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::{
+use bork_completer::completer::CommandExitStatus;
+use bork_core::r#async::debounce;
+use bork_core::user_preferences::GetUserPreferences;
+use bork_errors::report_error;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::{
     AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, ViewHandle,
     WeakModelHandle,
 };
@@ -29,7 +29,7 @@ use crate::context_chips::display_chip::GitLineChanges;
 use crate::editor::EditorView;
 use crate::features::FeatureFlag;
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::settings::{InputSettings, DerpPromptSeparator};
+use crate::settings::{InputSettings, BorkPromptSeparator};
 use crate::terminal::event::{BlockType, UserBlockCompleted};
 use crate::terminal::model::block::{Block, BlockMetadata};
 use crate::terminal::model::session::{ExecuteCommandOptions, Session, Sessions, SessionsEvent};
@@ -149,8 +149,8 @@ pub struct CurrentPrompt {
     renderable_chips: HashSet<ContextChipKind>,
 
     same_line_prompt_enabled: bool,
-    /// The separator to use as a trailing character at the end of Derp prompt, if any.
-    separator: DerpPromptSeparator,
+    /// The separator to use as a trailing character at the end of Bork prompt, if any.
+    separator: BorkPromptSeparator,
 
     latest_context: Option<PromptContext>,
     sessions: ModelHandle<Sessions>,
@@ -248,7 +248,7 @@ impl CurrentPrompt {
         // A WeakViewHandle is used here to avoid leaking the terminal model
         let weak_editor_handle = editor.downgrade();
         ctx.subscribe_to_view(&editor, move |me, _, _, ctx| {
-            // CurrentPrompt exists and this fn is called even if we're not using derp prompt.
+            // CurrentPrompt exists and this fn is called even if we're not using bork prompt.
             // We don't need to do anything if we're honoring PS1 unless universal developer input
             // or AgentView is enabled (agent view needs chips regardless of PS1 setting).
             if *SessionSettings::as_ref(ctx).honor_ps1
@@ -311,13 +311,13 @@ impl CurrentPrompt {
             .collect()
     }
 
-    /// Whether same line prompt is enabled for the Derp prompt.
+    /// Whether same line prompt is enabled for the Bork prompt.
     pub fn same_line_prompt_enabled(&self) -> bool {
         self.same_line_prompt_enabled
     }
 
-    /// The separator for the current Derp prompt.
-    pub fn separator(&self) -> DerpPromptSeparator {
+    /// The separator for the current Bork prompt.
+    pub fn separator(&self) -> BorkPromptSeparator {
         self.separator
     }
 
@@ -585,7 +585,7 @@ impl CurrentPrompt {
         current_dir_path: Option<String>,
         environment_variables: Option<HashMap<String, String>>,
         timeout: Option<Duration>,
-    ) -> (Option<derp_completer::completer::CommandOutput>, bool) {
+    ) -> (Option<bork_completer::completer::CommandOutput>, bool) {
         let command_future = session
             .execute_command(
                 &command,
@@ -1185,7 +1185,7 @@ impl CurrentPrompt {
     #[cfg(test)]
     pub fn await_generators(
         &self,
-        ctx: &mut derpui::AppContext,
+        ctx: &mut borkui::AppContext,
     ) -> futures_util::future::BoxFuture<'static, ()> {
         use futures_util::FutureExt;
         use itertools::Itertools;

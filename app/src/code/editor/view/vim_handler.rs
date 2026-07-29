@@ -3,16 +3,16 @@ use vim::vim::{
     InsertPosition, LineMotion, ModeTransition, MotionType, TextObjectType, VimHandler, VimMode,
     VimMotion, VimOperand, VimOperator, VimTextObject, WordMotion,
 };
-use derp_editor::content::buffer::{
+use bork_editor::content::buffer::{
     AutoScrollBehavior, BufferEditAction, EditOrigin, SelectionOffsets, ToBufferCharOffset as _,
     VimInsertPoint,
 };
-use derp_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use derp_editor::render::model::AutoScrollMode;
-use derp_editor::selection::{TextDirection, TextUnit};
-use derpui::text::point::Point;
-use derpui::units::IntoPixels;
-use derpui::{SingletonEntity, ViewContext};
+use bork_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use bork_editor::render::model::AutoScrollMode;
+use bork_editor::selection::{TextDirection, TextUnit};
+use borkui::text::point::Point;
+use borkui::units::IntoPixels;
+use borkui::{SingletonEntity, ViewContext};
 
 use super::{CodeEditorEvent, CodeEditorView};
 use crate::code::editor::find::view::Event as FindViewEvent;
@@ -152,7 +152,7 @@ impl VimHandler for CodeEditorView {
     ) {
         // Selection logic is almost the same for all operators, so capture that in a closure first.
         let selection_change =
-            |model: &mut CodeEditorModel, ctx: &mut derpui::ModelContext<CodeEditorModel>| {
+            |model: &mut CodeEditorModel, ctx: &mut borkui::ModelContext<CodeEditorModel>| {
                 match operand {
                     VimOperand::Motion {
                         motion,

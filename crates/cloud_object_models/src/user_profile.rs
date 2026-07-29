@@ -22,8 +22,8 @@ impl From<ProfileData> for UserProfileWithUID {
     }
 }
 
-impl From<derp_graphql::user::PublicUserProfile> for UserProfileWithUID {
-    fn from(value: derp_graphql::user::PublicUserProfile) -> Self {
+impl From<bork_graphql::user::PublicUserProfile> for UserProfileWithUID {
+    fn from(value: bork_graphql::user::PublicUserProfile) -> Self {
         UserProfileWithUID {
             firebase_uid: UserUid::new(&value.uid),
             display_name: value.display_name,

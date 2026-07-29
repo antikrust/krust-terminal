@@ -1,10 +1,10 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{Container, MouseStateHandle};
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::Element;
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{Container, MouseStateHandle};
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::Element;
 
 use super::env_var_collection::{EnvVarCollectionAction, EnvVarCollectionView};
 use crate::ui_components::dialog::{dialog_styles, Dialog};

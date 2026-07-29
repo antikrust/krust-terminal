@@ -6,19 +6,19 @@ use std::sync::Arc;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use serde_yaml::Mapping;
 use uuid::Uuid;
-use derp_editor::content::markdown::MarkdownStyle;
-use derp_editor::editor::EmbeddedItemModel;
-use derp_editor::render::element::{RenderContext, RenderableBlock};
-use derp_editor::render::layout::TextLayout;
-use derp_editor::render::model::viewport::ViewportItem;
-use derp_editor::render::model::{
+use bork_editor::content::markdown::MarkdownStyle;
+use bork_editor::editor::EmbeddedItemModel;
+use bork_editor::render::element::{RenderContext, RenderableBlock};
+use bork_editor::render::layout::TextLayout;
+use bork_editor::render::model::viewport::ViewportItem;
+use bork_editor::render::model::{
     BlockSpacing, EmbeddedItem, EmbeddedItemHTMLRepresentation, EmbeddedItemRichFormat,
     LaidOutEmbeddedItem, RenderState,
 };
-use derp_errors::report_error;
-use derpui::event::DispatchedEvent;
-use derpui::units::Pixels;
-use derpui::{AppContext, EntityId, EventContext, LayoutContext, ViewHandle, WindowId};
+use bork_errors::report_error;
+use borkui::event::DispatchedEvent;
+use borkui::units::Pixels;
+use borkui::{AppContext, EntityId, EventContext, LayoutContext, ViewHandle, WindowId};
 
 use crate::code::editor::comment_editor::CommentEditor;
 use crate::code_review::comments::CommentId;

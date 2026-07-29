@@ -6,7 +6,7 @@ app/frameworks/default/Carthage
 app/frameworks/dev/Carthage
 /target
 /app/target
-/derp.xcworkspace
+/bork.xcworkspace
 .idea/
 .DS_Store
 *.icloud
@@ -21,7 +21,7 @@ channel_versions_test.json
 profile.pb
 
 # Don't include any files that we write for testing purposes.
-crates/derp_files/test_data/test_write
+crates/bork_files/test_data/test_write
 
 # Don't include fonts downloaded by the script used to generate font fallback code.
 script/font_fallback/downloaded_fonts
@@ -40,7 +40,7 @@ script/windows/Output
 [._]sw[a-p]
 
 # Don't include the PTY recording.
-derp.pty.recording
+bork.pty.recording
 
 # Ignore all Dockerfiles. A change in the Dockerfile would otherwise be
 # considered a change in the source code requiring a rebuild.
@@ -49,8 +49,8 @@ derp.pty.recording
 # Don't include CI configuration
 .github/
 
-# Don't include the derp-server checkout in SWE-bench runs.
-derp-server/
+# Don't include the bork-server checkout in SWE-bench runs.
+bork-server/
 
 # Ignore large directories that aren't required for any current Dockerfiles.
 app/assets/windows

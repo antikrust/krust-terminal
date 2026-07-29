@@ -2,7 +2,7 @@
 name = "mermaid_to_svg"
 version = "0.1.0"
 edition = "2021"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 description = "Convert Mermaid diagram syntax to SVG"
 license = "MIT"
 

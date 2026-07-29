@@ -1,5 +1,5 @@
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui_core::ModelContext;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui_core::ModelContext;
 
 use super::model::{ProjectContextModel, ProjectRule};
 

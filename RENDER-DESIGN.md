@@ -10,7 +10,7 @@ If the change touches local Agent Mode message creation or lifecycle, read [docs
 
 ## TL;DR
 
-There are two main sources of text. They converge at DerpUI's layout and scene layers, not at the data-model layer.
+There are two main sources of text. They converge at BorkUI's layout and scene layers, not at the data-model layer.
 
 ```text
 Terminal
@@ -22,7 +22,7 @@ PTY bytes
   -> BlockGrid or alternate-screen element
   -> terminal::grid_renderer
   -> shaped glyphs and terminal cell primitives
-  -> DerpUI Scene
+  -> BorkUI Scene
   -> platform GPU renderer
 
 Agent Mode
@@ -32,8 +32,8 @@ Provider process or cloud stream
   -> conversation and exchange models
   -> AIAgentTextSection values
   -> Text or FormattedTextElement
-  -> DerpUI text layout cache and platform shaper
-  -> DerpUI Scene
+  -> BorkUI text layout cache and platform shaper
+  -> BorkUI Scene
   -> platform GPU renderer
 ```
 
@@ -46,7 +46,7 @@ For most rendering work, start here in this order:
 1. [app/src/terminal/grid_renderer.rs](app/src/terminal/grid_renderer.rs) — paints terminal cells, glyphs, decorations, images, cursor state, and search state.
 2. [app/src/terminal/model/grid/grid_handler.rs](app/src/terminal/model/grid/grid_handler.rs) — owns canonical grid-side state.
 3. [app/src/ai/blocklist/block/view_impl/common.rs](app/src/ai/blocklist/block/view_impl/common.rs) — shared Agent Mode text-section renderer.
-4. [crates/derpui_core/src/elements/gui/text.rs](crates/derpui_core/src/elements/gui/text.rs) and [crates/derpui_core/src/elements/gui/formatted_text_element.rs](crates/derpui_core/src/elements/gui/formatted_text_element.rs) — generic GUI plain-text and rich-text elements.
+4. [crates/borkui_core/src/elements/gui/text.rs](crates/borkui_core/src/elements/gui/text.rs) and [crates/borkui_core/src/elements/gui/formatted_text_element.rs](crates/borkui_core/src/elements/gui/formatted_text_element.rs) — generic GUI plain-text and rich-text elements.
 
 Then follow the narrower paths in the module map below.
 
@@ -59,7 +59,7 @@ The renderer sits downstream of several models. Keep their responsibilities sepa
 | ANSI/model | Parsed terminal state, cells, cursor, modes, images, secrets, scrollback | Per-frame visual animation |
 | Conversation model | Agent messages, tool calls, reasoning, status | Provider-specific paint hacks |
 | View element | Layout, clipping, selection, highlights, hover/click state | Protocol lifecycle or persistent message mutation |
-| DerpUI layout | Shaping, wrapping, fallback fonts, glyph positions | Terminal escape-sequence meaning |
+| BorkUI layout | Shaping, wrapping, fallback fonts, glyph positions | Terminal escape-sequence meaning |
 | Scene/renderer | Draw primitives submitted for the frame | Application semantics |
 
 Feature-specific overlay state is kept separate from these canonical models so it cannot alter their data or lifecycle.
@@ -112,17 +112,17 @@ The renderer combines several kinds of state:
 
 `render_cell_glyph` and the attributed-string path convert display content into shaped glyphs.
 
-### 5. Glyphs enter the DerpUI scene
+### 5. Glyphs enter the BorkUI scene
 
-Terminal glyph work is cached by [app/src/terminal/grid_renderer/cell_glyph_cache.rs](app/src/terminal/grid_renderer/cell_glyph_cache.rs). The grid renderer emits glyphs, rectangles, images, and decorations into the current DerpUI `Scene`; [crates/derpui_core/src/scene.rs](crates/derpui_core/src/scene.rs) defines that display list. The platform renderer consumes the scene and draws the final frame on the GPU.
+Terminal glyph work is cached by [app/src/terminal/grid_renderer/cell_glyph_cache.rs](app/src/terminal/grid_renderer/cell_glyph_cache.rs). The grid renderer emits glyphs, rectangles, images, and decorations into the current BorkUI `Scene`; [crates/borkui_core/src/scene.rs](crates/borkui_core/src/scene.rs) defines that display list. The platform renderer consumes the scene and draws the final frame on the GPU.
 
 ## Agent Mode rendering path
 
-### 1. Provider output becomes Derp messages
+### 1. Provider output becomes Bork messages
 
-For local harness conversations, provider parsers produce provider-neutral `TurnEvent` values. The mapper converts them to Derp API messages, and `LocalHarnessStream` replays those messages through Derp's normal conversation machinery. See [docs/local-harness-lifecycle.md](docs/local-harness-lifecycle.md) for the exact handshake and lifecycle ownership.
+For local harness conversations, provider parsers produce provider-neutral `TurnEvent` values. The mapper converts them to Bork API messages, and `LocalHarnessStream` replays those messages through Bork's normal conversation machinery. See [docs/local-harness-lifecycle.md](docs/local-harness-lifecycle.md) for the exact handshake and lifecycle ownership.
 
-Provider differences must stop at the parser. The renderer should receive ordinary Derp messages and must not branch on “Claude text”, “Codex text”, or local-harness content. A renderer special case usually means the message shape or feature plumbing is wrong.
+Provider differences must stop at the parser. The renderer should receive ordinary Bork messages and must not branch on “Claude text”, “Codex text”, or local-harness content. A renderer special case usually means the message shape or feature plumbing is wrong.
 
 ### 2. Conversation blocks become text sections
 
@@ -130,7 +130,7 @@ Agent blocks turn their content into `AIAgentTextSection` values. Shared renderi
 
 The section type determines the element:
 
-- plain text uses DerpUI `Text`;
+- plain text uses BorkUI `Text`;
 - parsed Markdown/rich text uses `FormattedTextElement`;
 - code, tables, images, Mermaid, tool calls, reasoning, and other structured sections have dedicated renderers or containers.
 
@@ -138,23 +138,23 @@ Relevant call sites include [app/src/ai/blocklist/block/view_impl/output.rs](app
 
 Do not flatten structured content into a string to achieve a presentation change. That loses links, inline-code styling, wrapping information, selection mappings, and block semantics. Preserve the section structure and use the appropriate element or paint layer.
 
-### 3. Plain and formatted text use DerpUI layout
+### 3. Plain and formatted text use BorkUI layout
 
-[crates/derpui_core/src/elements/gui/text.rs](crates/derpui_core/src/elements/gui/text.rs) implements the normal GUI `Text` element, including wrapping, selection, highlights, and pointer interaction.
+[crates/borkui_core/src/elements/gui/text.rs](crates/borkui_core/src/elements/gui/text.rs) implements the normal GUI `Text` element, including wrapping, selection, highlights, and pointer interaction.
 
-[crates/derpui_core/src/elements/gui/formatted_text_element.rs](crates/derpui_core/src/elements/gui/formatted_text_element.rs) implements rich text and Markdown layout, including styled spans, inline code, hyperlinks, and per-line state.
+[crates/borkui_core/src/elements/gui/formatted_text_element.rs](crates/borkui_core/src/elements/gui/formatted_text_element.rs) implements rich text and Markdown layout, including styled spans, inline code, hyperlinks, and per-line state.
 
-Both ultimately use the layout cache in [crates/derpui_core/src/text_layout.rs](crates/derpui_core/src/text_layout.rs). The cache keys layout by content and style inputs, asks the platform text system for missing-glyph fallback, and returns positioned glyph runs for scene painting.
+Both ultimately use the layout cache in [crates/borkui_core/src/text_layout.rs](crates/borkui_core/src/text_layout.rs). The cache keys layout by content and style inputs, asks the platform text system for missing-glyph fallback, and returns positioned glyph runs for scene painting.
 
-## DerpUI text and scene layers
+## BorkUI text and scene layers
 
-DerpUI elements have separate layout and paint phases. Layout establishes bounds, wrapping, line metrics, and glyph positions. Paint adds primitives to a `Scene` using those results.
+BorkUI elements have separate layout and paint phases. Layout establishes bounds, wrapping, line metrics, and glyph positions. Paint adds primitives to a `Scene` using those results.
 
 The platform shaping implementations live under:
 
-- [crates/derpui/src/platform/mac/text_layout.rs](crates/derpui/src/platform/mac/text_layout.rs) for the native macOS path;
-- [crates/derpui/src/windowing/winit/fonts.rs](crates/derpui/src/windowing/winit/fonts.rs) for the winit path;
-- [crates/derpui_core/src/fonts/text_layout_system.rs](crates/derpui_core/src/fonts/text_layout_system.rs) for the shared interface.
+- [crates/borkui/src/platform/mac/text_layout.rs](crates/borkui/src/platform/mac/text_layout.rs) for the native macOS path;
+- [crates/borkui/src/windowing/winit/fonts.rs](crates/borkui/src/windowing/winit/fonts.rs) for the winit path;
+- [crates/borkui_core/src/fonts/text_layout_system.rs](crates/borkui_core/src/fonts/text_layout_system.rs) for the shared interface.
 
 Change these only when the problem is genuinely shaping, font fallback, or glyph metrics. Terminal cell styling belongs in `grid_renderer`; Agent Markdown styling belongs in its section/element renderer. Moving a surface-specific rule into the platform shaper affects unrelated UI throughout the app.
 
@@ -168,7 +168,7 @@ Rendering bugs frequently come from crossing coordinate systems:
 | Terminal viewport | displayed row/column | pixels under grid origin and clip bounds |
 | Agent plain text | string/section indices | wrapped layout lines and glyph positions |
 | Agent rich text | parsed spans and source ranges | formatted lines, runs, and inline elements |
-| DerpUI | element-local bounds | scene/window coordinates after transforms |
+| BorkUI | element-local bounds | scene/window coordinates after transforms |
 
 Unicode adds another mapping layer. Byte indices, Rust `char` indices, grapheme clusters, shaped glyphs, and terminal cells are not interchangeable. Test combining marks, emoji variation selectors, double-width CJK characters, ligatures, RTL text where supported, and fallback fonts whenever index-to-glyph behaviour changes.
 
@@ -196,7 +196,7 @@ Ligatures on and off exercise different grid-rendering functions. Also verify no
 
 ### The TUI is a different front end
 
-The headless TUI lives in [crates/derp_tui](crates/derp_tui) and uses the cell-grid elements under [crates/derpui_core/src/elements/tui](crates/derpui_core/src/elements/tui). It does not use the GUI GPU scene, `grid_renderer`, `Text`, or `FormattedTextElement` paths described above. TUI rendering changes should follow the repository's `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills.
+The headless TUI lives in [crates/bork_tui](crates/bork_tui) and uses the cell-grid elements under [crates/borkui_core/src/elements/tui](crates/borkui_core/src/elements/tui). It does not use the GUI GPU scene, `grid_renderer`, `Text`, or `FormattedTextElement` paths described above. TUI rendering changes should follow the repository's `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills.
 
 ## Where to make a change
 
@@ -209,20 +209,20 @@ The headless TUI lives in [crates/derp_tui](crates/derp_tui) and uses the cell-g
 | Change alternate-screen layout | `app/src/terminal/alt_screen/alt_screen_element.rs` |
 | Change Agent plain/rich section presentation | `app/src/ai/blocklist/block/view_impl/common.rs` |
 | Change a specific Agent output block | `app/src/ai/blocklist/block/view_impl/output.rs` or its dedicated block renderer |
-| Change generic GUI plain text | `crates/derpui_core/src/elements/gui/text.rs` |
-| Change Markdown/rich text layout | `crates/derpui_core/src/elements/gui/formatted_text_element.rs` |
-| Change shared shaping/cache behaviour | `crates/derpui_core/src/text_layout.rs` |
+| Change generic GUI plain text | `crates/borkui_core/src/elements/gui/text.rs` |
+| Change Markdown/rich text layout | `crates/borkui_core/src/elements/gui/formatted_text_element.rs` |
+| Change shared shaping/cache behaviour | `crates/borkui_core/src/text_layout.rs` |
 | Change platform font fallback or glyph shaping | the platform text-layout implementation |
-| Change headless terminal UI rendering | `crates/derp_tui` and `crates/derpui_core/src/elements/tui` |
+| Change headless terminal UI rendering | `crates/bork_tui` and `crates/borkui_core/src/elements/tui` |
 
 ## Safe change recipes
 
 ### Change a message shape
 
 1. Make provider-specific changes in the provider parser.
-2. Map the provider-neutral event to Derp's existing message representation.
+2. Map the provider-neutral event to Bork's existing message representation.
 3. Keep lifecycle ownership in `LocalHarnessStream`.
-4. Run `cargo test -p derp turn_events_to_conversation` before building. A malformed injected message can permanently wedge the conversation.
+4. Run `cargo test -p bork turn_events_to_conversation` before building. A malformed injected message can permanently wedge the conversation.
 
 ### Change generic text shaping
 
@@ -237,10 +237,10 @@ Run the narrow tests first, then broaden according to the risk of the change:
 
 ```sh
 # Required whenever local-harness message shapes change
-cargo test -p derp turn_events_to_conversation
+cargo test -p bork turn_events_to_conversation
 
 # Build this fork's GUI binary
-cargo build --bin derp
+cargo build --bin bork
 
 # Repository-wide formatting, linting, and tests before review/push
 ./script/presubmit

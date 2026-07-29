@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use derp_cli::agent::OutputFormat;
+use bork_cli::agent::OutputFormat;
 
 use super::*;
 

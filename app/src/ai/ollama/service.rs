@@ -86,7 +86,7 @@ pub fn is_installed() -> bool {
 /// Homebrew, so consult the user's shell PATH first — same problem the agent
 /// CLI resolution has.
 pub fn resolve_binary() -> Option<std::path::PathBuf> {
-    let path = derp_util::path::derp_shell_path()
+    let path = bork_util::path::bork_shell_path()
         .or_else(|| std::env::var("PATH").ok())
         .unwrap_or_default();
 
@@ -184,10 +184,10 @@ pub fn disabled_models(disabled_json: Option<&str>) -> Vec<String> {
 
 /// The switched-off list as the settings currently hold it, for callers that
 /// have an app context rather than the raw JSON.
-pub fn disabled_models_for(app: &derpui::AppContext) -> Vec<String> {
+pub fn disabled_models_for(app: &borkui::AppContext) -> Vec<String> {
     use crate::settings::ai::AISettings;
     use settings::Setting as _;
-    use derpui::SingletonEntity as _;
+    use borkui::SingletonEntity as _;
     disabled_models(
         AISettings::as_ref(app)
             .ollama_disabled_models
@@ -281,7 +281,7 @@ struct TagEntry {
 /// manifests directory at startup, so it has no way to notice models that
 /// appeared on disk afterward — exactly what happens right after
 /// `move_models_dir` moves files into a fresh folder while an old server
-/// process (started before the move, possibly not even one Derp spawned)
+/// process (started before the move, possibly not even one Bork spawned)
 /// keeps running against its stale in-memory view. Without this, a
 /// perfectly intact move looks like every model vanished.
 pub async fn list_installed(client: &reqwest::Client) -> Result<Vec<InstalledModel>> {
@@ -356,13 +356,13 @@ pub fn default_models_dir() -> std::path::PathBuf {
 /// later spawns both pick it up.
 ///
 /// Only ever *sets* the variable, never clears it: a user who exported
-/// `OLLAMA_MODELS` in their own shell before launching Derp gets to keep
-/// that (see `models_dir`'s doc comment) when Derp has no override of its
+/// `OLLAMA_MODELS` in their own shell before launching Bork gets to keep
+/// that (see `models_dir`'s doc comment) when Bork has no override of its
 /// own opinion on the matter.
-pub fn apply_models_dir_override(app: &derpui::AppContext) {
+pub fn apply_models_dir_override(app: &borkui::AppContext) {
     use crate::settings::ai::AISettings;
     use settings::Setting as _;
-    use derpui::SingletonEntity as _;
+    use borkui::SingletonEntity as _;
     if let Some(dir) = AISettings::as_ref(app)
         .ollama_models_dir_override
         .value()
@@ -695,7 +695,7 @@ pub async fn ensure_running(client: &reqwest::Client) -> bool {
         return false;
     }
     for _ in 0..SERVER_START_POLLS {
-        derpui::r#async::Timer::after(SERVER_START_POLL_INTERVAL).await;
+        borkui::r#async::Timer::after(SERVER_START_POLL_INTERVAL).await;
         if is_running(client).await {
             return true;
         }

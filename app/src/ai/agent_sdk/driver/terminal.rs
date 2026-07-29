@@ -10,14 +10,14 @@ use std::time::Duration;
 use futures::channel::oneshot;
 use session_sharing_protocol::common::{Role, SessionId};
 use session_sharing_protocol::sharer::SessionRetentionReason;
-use derp_cli::share::{ShareAccessLevel, ShareRequest, ShareSubject};
-use derp_completer::completer::CommandOutput;
-use derp_core::command::ExitCode;
-use derp_core::features::FeatureFlag;
-use derp_terminal::model::grid::Dimensions;
-use derp_util::path::ShellFamily;
-use derpui::r#async::FutureExt;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity as _, ViewHandle};
+use bork_cli::share::{ShareAccessLevel, ShareRequest, ShareSubject};
+use bork_completer::completer::CommandOutput;
+use bork_core::command::ExitCode;
+use bork_core::features::FeatureFlag;
+use bork_terminal::model::grid::Dimensions;
+use bork_util::path::ShellFamily;
+use borkui::r#async::FutureExt;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity as _, ViewHandle};
 
 use super::AgentDriverError;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
@@ -41,9 +41,9 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 pub(crate) enum BootstrapError {
     /// The PTY or shell process failed before the bootstrap script completed.
     /// When `reason` is `Some`, the message is
-    /// "Shell spawn failed: {reason}. Check the Derp logs for details."
+    /// "Shell spawn failed: {reason}. Check the Bork logs for details."
     /// When `reason` is `None`, it is
-    /// "Shell spawn failed. Check the Derp logs for details."
+    /// "Shell spawn failed. Check the Bork logs for details."
     PtySpawnFailed { reason: Option<String> },
     /// The bootstrap script did not complete within the expected time.
     TimedOut,
@@ -58,16 +58,16 @@ impl std::fmt::Display for BootstrapError {
             BootstrapError::PtySpawnFailed { reason: Some(r) } => {
                 write!(
                     f,
-                    "Shell spawn failed: {r}. Check the Derp logs for details."
+                    "Shell spawn failed: {r}. Check the Bork logs for details."
                 )
             }
             BootstrapError::PtySpawnFailed { reason: None } => {
-                write!(f, "Shell spawn failed. Check the Derp logs for details.")
+                write!(f, "Shell spawn failed. Check the Bork logs for details.")
             }
             BootstrapError::TimedOut => write!(
                 f,
                 "Terminal session did not start within the expected time. \
-                 Check the Derp logs for details."
+                 Check the Bork logs for details."
             ),
             BootstrapError::InternalError => {
                 write!(f, "An unexpected internal error occurred during bootstrap.")
@@ -235,7 +235,7 @@ impl TerminalDriver {
         // When sharing is disabled (or running against ngrok), leave both halves
         // as None so that `wait_for_session_shared` returns immediately.
         let sharing_expected =
-            should_share && !derp_core::channel::ChannelState::server_root_url().contains("ngrok");
+            should_share && !bork_core::channel::ChannelState::server_root_url().contains("ngrok");
         let (mut session_share_tx, session_share_rx) = if sharing_expected {
             if !FeatureFlag::CreatingSharedSessions.is_enabled() {
                 // Session sharing was requested but the feature is not enabled for this
@@ -315,7 +315,7 @@ impl TerminalDriver {
     pub fn with_terminal_view(
         &self,
         ctx: &mut ModelContext<Self>,
-        f: impl FnOnce(&mut TerminalView, &mut derpui::ViewContext<TerminalView>),
+        f: impl FnOnce(&mut TerminalView, &mut borkui::ViewContext<TerminalView>),
     ) {
         self.terminal_view.update(ctx, f);
     }

@@ -4,9 +4,9 @@ use itertools::{Either, Itertools};
 use line_ending::LineEnding;
 use string_offset::{ByteOffset, CharOffset};
 use vec1::{Vec1, vec1};
-use derpui_core::clipboard::ClipboardContent;
-use derpui_core::elements::ListIndentLevel;
-use derpui_core::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle};
+use borkui_core::clipboard::ClipboardContent;
+use borkui_core::elements::ListIndentLevel;
+use borkui_core::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle};
 
 use crate::content::anchor::Anchor;
 use crate::content::buffer::{

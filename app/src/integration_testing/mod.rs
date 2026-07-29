@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use derpui::{App, AssetProvider, View, ViewHandle, WindowId};
+use borkui::{App, AssetProvider, View, ViewHandle, WindowId};
 
 pub mod agent_mode;
 pub mod ai_document;
@@ -36,7 +36,7 @@ pub mod terminal;
 pub mod themes;
 pub mod type_getters;
 pub mod view_getters;
-pub mod derp_drive;
+pub mod bork_drive;
 pub mod window;
 pub mod workflow;
 pub mod workspace;

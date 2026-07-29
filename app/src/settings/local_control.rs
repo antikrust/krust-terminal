@@ -1,15 +1,15 @@
 //! Secure local setting that gates local control.
 //!
 //! This setting is local-only, kept out of the user-visible settings file, and
-//! persisted through Derp's secure storage provider. It is the authoritative
+//! persisted through Bork's secure storage provider. It is the authoritative
 //! enablement bit for local control.
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{SecureSetting, Setting, SupportedPlatforms, SyncToCloud};
-use derp_core::channel::{Channel, ChannelState};
-use derpui::{AppContext, ModelContext};
-use derpui_extras::secure_storage;
+use bork_core::channel::{Channel, ChannelState};
+use borkui::{AppContext, ModelContext};
+use borkui_extras::secure_storage;
 
 const LOCAL_CONTROL_MODE_STORAGE_KEY: &str = "LocalControlMode";
 

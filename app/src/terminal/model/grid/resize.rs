@@ -1,11 +1,11 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/derp_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
 
 use string_offset::ByteOffset;
-use derp_errors::report_error;
-use derp_terminal::model::grid::cell::{self, LineLength as _};
-use derp_terminal::model::grid::Dimensions as _;
-use derp_terminal::model::{Point, VisiblePoint, VisibleRow};
+use bork_errors::report_error;
+use bork_terminal::model::grid::cell::{self, LineLength as _};
+use bork_terminal::model::grid::Dimensions as _;
+use bork_terminal::model::{Point, VisiblePoint, VisibleRow};
 
 use super::{FullGridClearBehavior, GridHandler};
 use crate::terminal::model::grid::Cursor;

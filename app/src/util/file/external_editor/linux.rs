@@ -5,9 +5,9 @@ use std::sync::OnceLock;
 
 use command::blocking::Command;
 use freedesktop_desktop_entry::DesktopEntry;
-use derp_errors::report_error;
-use derp_util::path::LineAndColumnArg;
-use derpui::AppContext;
+use bork_errors::report_error;
+use bork_util::path::LineAndColumnArg;
+use borkui::AppContext;
 
 use super::Editor;
 

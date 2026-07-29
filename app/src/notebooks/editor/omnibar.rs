@@ -4,21 +4,21 @@
 use itertools::Itertools;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
-use derp_editor::content::text::{
+use bork_editor::content::text::{
     BlockType as ContentBlockType, BufferBlockStyle, BufferTextStyle, TextStyles,
     TextStylesWithMetadata,
 };
-use derp_editor::model::RichTextEditorModel;
-use derp_editor::render::model::RenderState;
-use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
-use derpui::elements::{
+use bork_editor::model::RichTextEditorModel;
+use bork_editor::render::model::RenderState;
+use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
+use borkui::elements::{
     AnchorPair, Border, ConstrainedBox, Container, CornerRadius, DropShadow, Flex, MainAxisSize,
     MouseStateHandle, OffsetPositioning, OffsetType, ParentElement, Point,
     PositionedElementOffsetBounds, PositioningAxis, Radius, Rect, XAxisAnchor, YAxisAnchor,
 };
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, SizeConstraint, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -258,7 +258,7 @@ impl View for Omnibar {
         "Omnibar"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let mut actions = Flex::row().with_main_axis_size(MainAxisSize::Min);
 
@@ -442,12 +442,12 @@ impl TypedActionView for Omnibar {
             OmnibarAction::ConvertBlock(style) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Convert to {}", BlockType::from(style).label()),
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             OmnibarAction::OpenLinkEditor => ActionAccessibilityContent::from_debug(),
             OmnibarAction::UnstyleLink => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Remove link", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Remove link", BorkA11yRole::UserAction),
             ),
         }
     }
@@ -483,9 +483,9 @@ impl Compact {
 impl Element for Compact {
     fn layout(
         &mut self,
-        constraint: derpui::SizeConstraint,
-        ctx: &mut derpui::LayoutContext,
-        app: &derpui::AppContext,
+        constraint: borkui::SizeConstraint,
+        ctx: &mut borkui::LayoutContext,
+        app: &borkui::AppContext,
     ) -> Vector2F {
         self.child.layout(
             SizeConstraint {
@@ -500,8 +500,8 @@ impl Element for Compact {
     fn paint(
         &mut self,
         origin: Vector2F,
-        ctx: &mut derpui::PaintContext,
-        app: &derpui::AppContext,
+        ctx: &mut borkui::PaintContext,
+        app: &borkui::AppContext,
     ) {
         self.child.paint(origin, ctx, app)
     }
@@ -516,18 +516,18 @@ impl Element for Compact {
 
     fn dispatch_event(
         &mut self,
-        event: &derpui::event::DispatchedEvent,
-        ctx: &mut derpui::EventContext,
-        app: &derpui::AppContext,
+        event: &borkui::event::DispatchedEvent,
+        ctx: &mut borkui::EventContext,
+        app: &borkui::AppContext,
     ) -> bool {
         self.child.dispatch_event(event, ctx, app)
     }
 
-    fn after_layout(&mut self, ctx: &mut derpui::AfterLayoutContext, app: &AppContext) {
+    fn after_layout(&mut self, ctx: &mut borkui::AfterLayoutContext, app: &AppContext) {
         self.child.after_layout(ctx, app)
     }
 
-    fn z_index(&self) -> Option<derpui::elements::ZIndex> {
+    fn z_index(&self) -> Option<borkui::elements::ZIndex> {
         self.child.z_index()
     }
 

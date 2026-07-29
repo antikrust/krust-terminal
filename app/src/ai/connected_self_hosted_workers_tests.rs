@@ -10,13 +10,13 @@ fn worker(worker_host: &str) -> ConnectedSelfHostedWorker {
 }
 
 #[test]
-fn worker_hosts_excluding_sorts_dedups_and_filters_empty_and_derp_hosts() {
+fn worker_hosts_excluding_sorts_dedups_and_filters_empty_and_bork_hosts() {
     let model = ConnectedSelfHostedWorkersModel {
         workers: vec![
             worker("worker-2"),
             worker(""),
-            worker("derp"),
-            worker("DERP"),
+            worker("bork"),
+            worker("BORK"),
             worker("worker-1"),
             worker("worker-2"),
         ],

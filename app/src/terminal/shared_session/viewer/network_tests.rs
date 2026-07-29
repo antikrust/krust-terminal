@@ -6,7 +6,7 @@ use async_io::Timer;
 use instant::Instant;
 use parking_lot::FairMutex;
 use session_sharing_protocol::viewer::UpstreamMessage;
-use derpui::{App, ModelHandle};
+use borkui::{App, ModelHandle};
 
 use super::{Network, PtyBytesBatchStatus, Stage};
 use crate::terminal::event_listener::ChannelEventListener;

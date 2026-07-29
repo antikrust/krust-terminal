@@ -16,9 +16,9 @@ Param (
     [String]$RELEASE_TAG = '',
     [String]$FEATURES = 'release_bundle,crash_reporting,gui',
 
-    # Builds only the Derp binary, skips the installer.
+    # Builds only the Bork binary, skips the installer.
     [Switch]$SKIP_BUILD_INSTALLER = $False,
-    # Builds only the installer, skips the Derp binary. Use this if the Derp
+    # Builds only the installer, skips the Bork binary. Use this if the Bork
     # binary has already been built.
     [Switch]$SKIP_BUILD_BINARY = $False,
 
@@ -52,7 +52,7 @@ if ($ARCH -eq 'arm64') {
     $FILE_ENDING = 'Setup-arm64'
     $PLATFORM_TARGET = 'aarch64-pc-windows-msvc'
 } else {
-    # If x64, then we just use the filename "DerpSetup.exe" for example
+    # If x64, then we just use the filename "BorkSetup.exe" for example
     $FILE_ENDING = 'Setup'
     $PLATFORM_TARGET = 'x86_64-pc-windows-msvc'
 }
@@ -79,37 +79,37 @@ if ($CARGO_PROFILE -eq 'dev') {
 } else {
     $CARGO_TARGET_OUTPUT_DIR = "$CARGO_TARGET_DIR" + '\' + $PLATFORM_TARGET + '\' + "$CARGO_PROFILE"
 }
-$BUNDLE_ID = "derp.baby.$app_name"
+$BUNDLE_ID = "bork.baby.$app_name"
 
 # Update parameters based on the target release channel.
 #
 # APP_NAME here must match the value used in Rust as the
 # application name; see app/src/channel.rs.
 #
-# DERP_BIN is the name of the binary produced by cargo;
+# BORK_BIN is the name of the binary produced by cargo;
 # BINARY_NAME is the desired name of the binary in the final package.
 if ("$CHANNEL" -eq 'local') {
-    $DERP_BIN = 'derp'
-    $BINARY_NAME = 'derp.exe'
-    $APP_NAME = 'DerpLocal'
+    $BORK_BIN = 'bork'
+    $BINARY_NAME = 'bork.exe'
+    $APP_NAME = 'BorkLocal'
 } elseif ("$CHANNEL" -eq 'dev') {
-    $DERP_BIN = 'dev'
+    $BORK_BIN = 'dev'
     $BINARY_NAME = 'dev.exe'
-    $APP_NAME = 'DerpDev'
+    $APP_NAME = 'BorkDev'
     $FEATURES = "$FEATURES,agent_mode_debug"
 } elseif ("$CHANNEL" -eq 'preview') {
-    $DERP_BIN = 'preview'
+    $BORK_BIN = 'preview'
     $BINARY_NAME = 'preview.exe'
-    $APP_NAME = 'DerpPreview'
+    $APP_NAME = 'BorkPreview'
     $FEATURES = "$FEATURES,preview_channel"
 } elseif ("$CHANNEL" -eq 'stable') {
-    $DERP_BIN = 'stable'
-    $BINARY_NAME = 'derp.exe'
-    $APP_NAME = 'Derp'
+    $BORK_BIN = 'stable'
+    $BINARY_NAME = 'bork.exe'
+    $APP_NAME = 'Bork'
 } elseif ("$CHANNEL" -eq 'oss') {
-    $DERP_BIN = 'derp'
-    $BINARY_NAME = 'derp.exe'
-    $APP_NAME = 'Derp'
+    $BORK_BIN = 'bork'
+    $BINARY_NAME = 'bork.exe'
+    $APP_NAME = 'Bork'
     # The OSS channel does not ship Sentry, so drop the crash_reporting feature
     # (which would otherwise pull in the Sentry SDK as a dependency).
     $FEATURES = 'release_bundle,gui'
@@ -119,11 +119,11 @@ if ("$CHANNEL" -eq 'local') {
 $FEATURES = "$FEATURES,nld_classifier_v3,nld_heuristic_v2"
 
 $BINARY_PATH = "$CARGO_TARGET_OUTPUT_DIR\$BINARY_NAME"
-$BUNDLE_ID = "derp.baby.$APP_NAME"
+$BUNDLE_ID = "bork.baby.$APP_NAME"
 $INSTALLER_OUTPUT_DIR = "$WINDOWS_INSTALLER_DIR\Output"
 $INSTALLER_NAME = "$($APP_NAME)$($FILE_ENDING)"
 $INSTALLER_PATH = "$($INSTALLER_OUTPUT_DIR)\$($INSTALLER_NAME).exe"
-$PDB_PATH = "$CARGO_TARGET_OUTPUT_DIR\$DERP_BIN.pdb"
+$PDB_PATH = "$CARGO_TARGET_OUTPUT_DIR\$BORK_BIN.pdb"
 
 # The CARGO_FULL_PROFILE environment variable is read by the `cargo` build
 # script (`app/build.rs`) to determine where to place `conpty.dll`.
@@ -137,28 +137,28 @@ if ($DEBUG_BUILD) {
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if ($CHECK_ONLY) {
-    cargo check -p derp --profile "$CARGO_PROFILE" --bin "$DERP_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    cargo check -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
-        Write-Error "Failed to verify Derp $DERP_BIN compilation with profile $CARGO_PROFILE"
+        Write-Error "Failed to verify Bork $BORK_BIN compilation with profile $CARGO_PROFILE"
         exit 1
     }
     exit 0
 }
 
 if (-Not $SKIP_BUILD_BINARY) {
-    Write-Output "Building Derp for channel $CHANNEL and bundle id $BUNDLE_ID"
+    Write-Output "Building Bork for channel $CHANNEL and bundle id $BUNDLE_ID"
     $env:CARGO_BIN_NAME = $CHANNEL
-    $env:DERP_APP_NAME = $APP_NAME
-    cargo build -p derp --profile "$CARGO_PROFILE" --bin "$DERP_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    $env:BORK_APP_NAME = $APP_NAME
+    cargo build -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
-        Write-Error "Failed to build Derp $DERP_BIN binary with profile $CARGO_PROFILE"
+        Write-Error "Failed to build Bork $BORK_BIN binary with profile $CARGO_PROFILE"
         exit 1
     }
 
     # If we desire an executable name different from the cargo bin, rename it.
-    if ("$DERP_BIN.exe" -ne $BINARY_NAME) {
-        $binarySource = "$CARGO_TARGET_OUTPUT_DIR\$DERP_BIN.exe"
-        Write-Output "Renaming executable $DERP_BIN.exe to $BINARY_NAME"
+    if ("$BORK_BIN.exe" -ne $BINARY_NAME) {
+        $binarySource = "$CARGO_TARGET_OUTPUT_DIR\$BORK_BIN.exe"
+        Write-Output "Renaming executable $BORK_BIN.exe to $BINARY_NAME"
         Move-Item -Path "$binarySource" -Destination "$BINARY_PATH" -Force
     }
 }
@@ -186,7 +186,7 @@ if (-Not $?) {
     exit 1
 }
 
-Write-Output 'Building Derp installer'
+Write-Output 'Building Bork installer'
 $ISCC_ARGS = @(
     "$WINDOWS_INSTALLER_DIR\windows-installer.iss",
     "/DReleaseChannel=$CHANNEL",

@@ -1,5 +1,5 @@
-use derpui::integration::{AssertionOutcome, TestStep};
-use derpui::{App, WindowId};
+use borkui::integration::{AssertionOutcome, TestStep};
+use borkui::{App, WindowId};
 
 use crate::integration_testing::command_palette::assertions::{
     assert_command_palette_has_results, assert_command_palette_is_closed,

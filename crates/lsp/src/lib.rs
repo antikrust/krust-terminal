@@ -55,8 +55,8 @@ use std::sync::Arc;
 use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
 use simple_logger::SimpleLogger;
-use derpui_core::r#async::executor::Background;
-use derpui_core::AppContext;
+use borkui_core::r#async::executor::Background;
+use borkui_core::AppContext;
 
 pub struct LspServiceInitializationResult {
     pub service: LspService,

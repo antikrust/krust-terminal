@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use derp_core::ui::appearance::Appearance;
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::{CacheOption, Icon, Image};
-use derpui::Element;
+use bork_core::ui::appearance::Appearance;
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::{CacheOption, Icon, Image};
+use borkui::Element;
 
 /// Returns a special icon for the given file path, if any.
 pub fn icon_from_file_path(path: &str, appearance: &Appearance) -> Option<Box<dyn Element>> {

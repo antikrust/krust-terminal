@@ -5,8 +5,8 @@ use std::time::Duration;
 use chrono::{DateTime, Local, Utc};
 use itertools::Itertools;
 use uuid::Uuid;
-use derp_cli::agent::Harness;
-use derpui::{App, EntityId, ModelHandle};
+use bork_cli::agent::Harness;
+use borkui::{App, EntityId, ModelHandle};
 
 use super::{
     convert_persisted_conversation_to_ai_conversation_with_metadata, AIConversationMetadata,
@@ -75,15 +75,15 @@ fn create_user_query_message(
     task_id: &str,
     request_id: &str,
     query: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         fetched_memories: vec![],
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
-        message: Some(derp_multi_agent_api::message::Message::UserQuery(
-            derp_multi_agent_api::message::UserQuery {
+        message: Some(bork_multi_agent_api::message::Message::UserQuery(
+            bork_multi_agent_api::message::UserQuery {
                 query: query.to_string(),
                 context: None,
                 referenced_attachments: HashMap::new(),
@@ -105,7 +105,7 @@ fn persisted_agent_conversation(
     let task_id = format!("task-{conversation_id}");
     let tasks = initial_query
         .map(|query| {
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: task_id.clone(),
                 messages: vec![create_user_query_message(
                     "message-1",
@@ -202,7 +202,7 @@ fn begin_conversation_rename_updates_title_and_cached_metadata() {
         let conversation_id = AIConversationId::new();
         let conversation = AIConversation::new_restored(
             conversation_id,
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: "root-task".to_string(),
                 messages: vec![],
                 dependencies: None,
@@ -267,7 +267,7 @@ fn begin_conversation_rename_rejects_conversation_without_server_token() {
         let conversation_id = AIConversationId::new();
         let conversation = AIConversation::new_restored(
             conversation_id,
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: "root-task".to_string(),
                 messages: vec![],
                 dependencies: None,
@@ -362,7 +362,7 @@ fn complete_conversation_rename_applies_normalized_title_and_clears_in_flight_st
         let conversation_id = AIConversationId::new();
         let conversation = AIConversation::new_restored(
             conversation_id,
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: "root-task".to_string(),
                 messages: vec![],
                 dependencies: None,
@@ -431,7 +431,7 @@ fn fail_conversation_rename_reverts_title_and_cached_metadata() {
         let conversation_id = AIConversationId::new();
         let conversation = AIConversation::new_restored(
             conversation_id,
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: "root-task".to_string(),
                 messages: vec![],
                 dependencies: None,
@@ -496,7 +496,7 @@ fn begin_conversation_rename_rejects_second_rename_while_in_flight() {
         let conversation_id = AIConversationId::new();
         let conversation = AIConversation::new_restored(
             conversation_id,
-            vec![derp_multi_agent_api::Task {
+            vec![bork_multi_agent_api::Task {
                 id: "root-task".to_string(),
                 messages: vec![],
                 dependencies: None,
@@ -710,7 +710,7 @@ fn test_initialize_historical_conversations_uses_root_task_description_title() {
                 last_modified_at: now,
                 summary: None,
             },
-            tasks: vec![derp_multi_agent_api::Task {
+            tasks: vec![bork_multi_agent_api::Task {
                 id: task_id.clone(),
                 messages: vec![create_user_query_message(
                     "message-1",
@@ -2795,7 +2795,7 @@ fn test_initialize_output_for_response_stream_persists_updated_conversation_stat
                 &stream_id,
                 conversation_id,
                 terminal_view_id,
-                derp_multi_agent_api::response_event::StreamInit {
+                bork_multi_agent_api::response_event::StreamInit {
                     request_id: "request-1".to_string(),
                     conversation_id: server_token.clone(),
                     run_id: run_id.clone(),
@@ -3061,7 +3061,7 @@ fn test_find_by_token_after_initialize_output_for_response_stream() {
                 &stream_id,
                 conversation_id,
                 terminal_view_id,
-                derp_multi_agent_api::response_event::StreamInit {
+                bork_multi_agent_api::response_event::StreamInit {
                     request_id: String::new(),
                     conversation_id: server_token_str.clone(),
                     run_id: String::new(),
@@ -3145,7 +3145,7 @@ fn test_find_by_token_after_insert_forked_conversation_from_tasks() {
             last_event_sequence: None,
             pinned: false,
         };
-        let tasks = vec![derp_multi_agent_api::Task {
+        let tasks = vec![bork_multi_agent_api::Task {
             id: "root-task".to_string(),
             messages: vec![],
             dependencies: None,
@@ -3688,7 +3688,7 @@ fn test_fork_conversation_preserves_task_ids_when_requested() {
                 .fork_conversation(&source, "[Fork] ", true, None, ctx)
                 .expect("fork must succeed when sqlite sender is wired up");
 
-            let forked_tasks: Vec<&derp_multi_agent_api::Task> =
+            let forked_tasks: Vec<&bork_multi_agent_api::Task> =
                 forked.all_tasks().filter_map(|t| t.source()).collect();
             let forked_root = forked_tasks
                 .iter()
@@ -4220,15 +4220,15 @@ fn agent_output_message(
     task_id: &str,
     request_id: &str,
     text: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
         fetched_memories: vec![],
-        message: Some(derp_multi_agent_api::message::Message::AgentOutput(
-            derp_multi_agent_api::message::AgentOutput {
+        message: Some(bork_multi_agent_api::message::Message::AgentOutput(
+            bork_multi_agent_api::message::AgentOutput {
                 text: text.to_string(),
             },
         )),
@@ -4242,18 +4242,18 @@ fn subagent_tool_call_result_message(
     task_id: &str,
     tool_call_id: &str,
     request_id: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
         fetched_memories: vec![],
-        message: Some(derp_multi_agent_api::message::Message::ToolCallResult(
-            derp_multi_agent_api::message::ToolCallResult {
+        message: Some(bork_multi_agent_api::message::Message::ToolCallResult(
+            bork_multi_agent_api::message::ToolCallResult {
                 tool_call_id: tool_call_id.to_string(),
                 context: None,
-                result: Some(derp_multi_agent_api::message::tool_call_result::Result::Cancel(())),
+                result: Some(bork_multi_agent_api::message::tool_call_result::Result::Cancel(())),
             },
         )),
         request_id: request_id.to_string(),
@@ -4268,8 +4268,8 @@ fn make_subagent_call(
     task_id: &str,
     subtask_id: &str,
     request_id: &str,
-    metadata: Option<derp_multi_agent_api::message::tool_call::subagent::Metadata>,
-) -> (derp_multi_agent_api::Message, String) {
+    metadata: Option<bork_multi_agent_api::message::tool_call::subagent::Metadata>,
+) -> (bork_multi_agent_api::Message, String) {
     use crate::ai::agent::task::helper::MessageExt;
     use crate::test_util::ai_agent_tasks::create_subagent_tool_call_message;
     let mut call = create_subagent_tool_call_message(id, task_id, subtask_id, metadata);
@@ -4280,11 +4280,11 @@ fn make_subagent_call(
 
 /// Returns the flat list of user-query strings in `tasks` (root + subtasks),
 /// in linearized order.
-fn user_queries_in_tasks(tasks: &[derp_multi_agent_api::Task]) -> Vec<String> {
+fn user_queries_in_tasks(tasks: &[bork_multi_agent_api::Task]) -> Vec<String> {
     let mut queries = Vec::new();
     for task in tasks {
         for message in &task.messages {
-            if let Some(derp_multi_agent_api::message::Message::UserQuery(uq)) = &message.message {
+            if let Some(bork_multi_agent_api::message::Message::UserQuery(uq)) = &message.message {
                 queries.push(uq.query.clone());
             }
         }
@@ -4294,9 +4294,9 @@ fn user_queries_in_tasks(tasks: &[derp_multi_agent_api::Task]) -> Vec<String> {
 
 /// Returns the root task from a `compute_active_tasks()` result.
 fn find_root_task<'a>(
-    tasks: &'a [derp_multi_agent_api::Task],
+    tasks: &'a [bork_multi_agent_api::Task],
     root_task_id: &str,
-) -> &'a derp_multi_agent_api::Task {
+) -> &'a bork_multi_agent_api::Task {
     tasks
         .iter()
         .find(|t| t.id == root_task_id)
@@ -4307,7 +4307,7 @@ fn find_root_task<'a>(
 /// `tool_call_result` is absent (a dangling tool_use), or a `tool_call_result`
 /// for a sub-agent `tool_call` that is absent. Used to assert the rewind
 /// invariant that no sub-agent call/result half is ever left dangling.
-fn has_dangling_subagent_pair(task: &derp_multi_agent_api::Task) -> bool {
+fn has_dangling_subagent_pair(task: &bork_multi_agent_api::Task) -> bool {
     use crate::ai::agent::task::helper::{MessageExt, ToolCallExt};
     let subagent_call_ids: HashSet<&str> = task
         .messages
@@ -4335,11 +4335,11 @@ fn has_dangling_subagent_pair(task: &derp_multi_agent_api::Task) -> bool {
 /// `compute_active_tasks()` plus the full set of task ids that survive in the
 /// task store (so callers can assert subtask pruning).
 fn restore_truncate_and_collect(
-    app: &mut derpui::App,
-    root_task: derp_multi_agent_api::Task,
-    subtasks: Vec<derp_multi_agent_api::Task>,
+    app: &mut borkui::App,
+    root_task: bork_multi_agent_api::Task,
+    subtasks: Vec<bork_multi_agent_api::Task>,
     rewind_query: &str,
-) -> (Vec<derp_multi_agent_api::Task>, Vec<String>) {
+) -> (Vec<bork_multi_agent_api::Task>, Vec<String>) {
     let terminal_view_id = EntityId::new();
     let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
     let conversation_id = AIConversationId::new();
@@ -4600,7 +4600,7 @@ fn rewind_removes_summarized_away_user_query_from_next_request() {
             root_task_id,
             summary_subtask_id,
             "req-1",
-            Some(derp_multi_agent_api::message::tool_call::subagent::Metadata::Summarization(())),
+            Some(bork_multi_agent_api::message::tool_call::subagent::Metadata::Summarization(())),
         );
 
         let root_task = create_api_task(
@@ -4763,7 +4763,7 @@ fn straddle_rewind_followup_requests_are_clean_and_durable() {
         // Durable: capture the persisted snapshot from the rewind and restore
         // it. The persist is dispatched from a spawned future, so block until
         // the `UpdateMultiAgentConversation` event arrives.
-        let restored_tasks: Vec<derp_multi_agent_api::Task> = loop {
+        let restored_tasks: Vec<bork_multi_agent_api::Task> = loop {
             match receiver.recv_timeout(Duration::from_secs(2)) {
                 Ok(ModelEvent::UpdateMultiAgentConversation { updated_tasks, .. }) => {
                     break updated_tasks
@@ -4850,19 +4850,19 @@ fn regular_tool_call_message(
     task_id: &str,
     tool_call_id: &str,
     request_id: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
         fetched_memories: vec![],
-        message: Some(derp_multi_agent_api::message::Message::ToolCall(
-            derp_multi_agent_api::message::ToolCall {
+        message: Some(bork_multi_agent_api::message::Message::ToolCall(
+            bork_multi_agent_api::message::ToolCall {
                 tool_call_id: tool_call_id.to_string(),
                 tool: Some(
-                    derp_multi_agent_api::message::tool_call::Tool::RunShellCommand(
-                        derp_multi_agent_api::message::tool_call::RunShellCommand {
+                    bork_multi_agent_api::message::tool_call::Tool::RunShellCommand(
+                        bork_multi_agent_api::message::tool_call::RunShellCommand {
                             command: "echo hi".to_string(),
                             ..Default::default()
                         },
@@ -4881,20 +4881,20 @@ fn regular_tool_call_result_message(
     task_id: &str,
     tool_call_id: &str,
     request_id: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
         fetched_memories: vec![],
-        message: Some(derp_multi_agent_api::message::Message::ToolCallResult(
-            derp_multi_agent_api::message::ToolCallResult {
+        message: Some(bork_multi_agent_api::message::Message::ToolCallResult(
+            bork_multi_agent_api::message::ToolCallResult {
                 tool_call_id: tool_call_id.to_string(),
                 context: None,
                 result: Some(
-                    derp_multi_agent_api::message::tool_call_result::Result::RunShellCommand(
-                        derp_multi_agent_api::RunShellCommandResult::default(),
+                    bork_multi_agent_api::message::tool_call_result::Result::RunShellCommand(
+                        bork_multi_agent_api::RunShellCommandResult::default(),
                     ),
                 ),
             },
@@ -4912,18 +4912,18 @@ fn server_tool_call_message(
     task_id: &str,
     tool_call_id: &str,
     request_id: &str,
-) -> derp_multi_agent_api::Message {
-    derp_multi_agent_api::Message {
+) -> bork_multi_agent_api::Message {
+    bork_multi_agent_api::Message {
         id: id.to_string(),
         task_id: task_id.to_string(),
         server_message_data: String::new(),
         citations: vec![],
         fetched_memories: vec![],
-        message: Some(derp_multi_agent_api::message::Message::ToolCall(
-            derp_multi_agent_api::message::ToolCall {
+        message: Some(bork_multi_agent_api::message::Message::ToolCall(
+            bork_multi_agent_api::message::ToolCall {
                 tool_call_id: tool_call_id.to_string(),
-                tool: Some(derp_multi_agent_api::message::tool_call::Tool::Server(
-                    derp_multi_agent_api::message::tool_call::Server {
+                tool: Some(bork_multi_agent_api::message::tool_call::Tool::Server(
+                    bork_multi_agent_api::message::tool_call::Server {
                         payload: String::new(),
                     },
                 )),
@@ -4935,7 +4935,7 @@ fn server_tool_call_message(
 }
 
 /// Returns the non-empty forked root task from a fork result.
-fn forked_root_task(forked: &AIConversation) -> &derp_multi_agent_api::Task {
+fn forked_root_task(forked: &AIConversation) -> &bork_multi_agent_api::Task {
     forked
         .all_tasks()
         .filter_map(|t| t.source())
@@ -4946,7 +4946,7 @@ fn forked_root_task(forked: &AIConversation) -> &derp_multi_agent_api::Task {
 /// Restores `source` into the history model and returns the exchange id whose
 /// input is the given user query.
 fn restore_and_find_exchange(
-    app: &mut derpui::App,
+    app: &mut borkui::App,
     history_model: &ModelHandle<BlocklistAIHistoryModel>,
     source: AIConversation,
     query: &str,
@@ -4975,7 +4975,7 @@ fn restore_and_find_exchange(
 /// Wires up the sqlite sender the fork path requires. Returns the receiver,
 /// which the caller must keep alive so the bounded channel stays open (a
 /// dropped receiver makes the fork's persist `send` fail).
-fn install_mock_model_event_sender(app: &mut derpui::App) -> std::sync::mpsc::Receiver<ModelEvent> {
+fn install_mock_model_event_sender(app: &mut borkui::App) -> std::sync::mpsc::Receiver<ModelEvent> {
     let (sender, receiver) = std::sync::mpsc::sync_channel(8);
     let mut global_resource_handles = GlobalResourceHandles::mock(app);
     global_resource_handles.model_event_sender = Some(sender);
@@ -5049,7 +5049,7 @@ fn fork_exact_reconciles_fork_point_client_tool_calls() {
         assert!(
             matches!(
                 completed.tool_call_result().and_then(|r| r.result.as_ref()),
-                Some(derp_multi_agent_api::message::tool_call_result::Result::RunShellCommand(_))
+                Some(bork_multi_agent_api::message::tool_call_result::Result::RunShellCommand(_))
             ),
             "the pulled-forward result must be the real run_shell_command result, not a Cancel"
         );
@@ -5061,7 +5061,7 @@ fn fork_exact_reconciles_fork_point_client_tool_calls() {
         assert!(
             matches!(
                 inflight.tool_call_result().and_then(|r| r.result.as_ref()),
-                Some(derp_multi_agent_api::message::tool_call_result::Result::Cancel(_))
+                Some(bork_multi_agent_api::message::tool_call_result::Result::Cancel(_))
             ),
             "in-flight tool_call must fall back to a Cancel result"
         );

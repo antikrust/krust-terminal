@@ -10,8 +10,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use settings::EditorChoice;
-use derp_util::path::LineAndColumnArg;
-use derpui::{AppContext, SingletonEntity};
+use bork_util::path::LineAndColumnArg;
+use borkui::{AppContext, SingletonEntity};
 
 pub use self::settings::{EditorLayout, EditorSettings};
 

@@ -1,14 +1,14 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::theme::phenomenon::PhenomenonStyle;
-use derp_core::ui::theme::Fill;
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::{
+use bork_core::ui::theme::phenomenon::PhenomenonStyle;
+use bork_core::ui::theme::Fill;
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::{
     CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, Image, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::{Element, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::{Element, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -43,7 +43,7 @@ const FEATURE_ITEMS: &[FeatureItem] = &[
     FeatureItem {
         icon: Icon::MessageCheckSquare,
         title: "Native code review",
-        description: "Send inline comments from Derp's code review directly to Claude Code, Codex, or OpenCode",
+        description: "Send inline comments from Bork's code review directly to Claude Code, Codex, or OpenCode",
     },
 ];
 
@@ -105,7 +105,7 @@ pub fn render_welcome_banner(
 
     // Title
     let title = Text::new(
-        "Introducing universal agent support: level up any coding agent with Derp",
+        "Introducing universal agent support: level up any coding agent with Bork",
         appearance.ui_font_family(),
         20.,
     )
@@ -121,7 +121,7 @@ pub fn render_welcome_banner(
     for item in FEATURE_ITEMS {
         let icon_el = ConstrainedBox::new(
             item.icon
-                .to_derpui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
+                .to_borkui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
                 .finish(),
         )
         .with_width(16.)

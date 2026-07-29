@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use derp_core::context_flag::ContextFlag;
-use derp_core::features::FeatureFlag;
-use derpui::keymap::BindingId;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_core::context_flag::ContextFlag;
+use bork_core::features::FeatureFlag;
+use borkui::keymap::BindingId;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
-use super::{conversations, derp_drive};
+use super::{conversations, bork_drive};
 use crate::search::action::CommandBindingDataSource;
 use crate::search::binding_source::BindingSource;
 use crate::search::command_palette::mixer::{CommandPaletteItemAction, ItemSummary};
@@ -24,7 +24,7 @@ use crate::settings::AISettings;
 pub struct DataSourceStore {
     actions_data_source: ModelHandle<CommandBindingDataSource>,
     sessions_data_source: ModelHandle<navigation::DataSource>,
-    derp_drive_data_source: ModelHandle<derp_drive::DataSource>,
+    bork_drive_data_source: ModelHandle<bork_drive::DataSource>,
     launch_config_data_source: ModelHandle<launch_config::DataSource>,
     new_session_data_source: Option<ModelHandle<NewSessionDataSource>>,
     all_conversation_data_source: ModelHandle<conversations::DataSource>,
@@ -44,7 +44,7 @@ impl DataSourceStore {
         let sessions_data_source =
             ctx.add_model(|_| navigation::DataSource::new(active_session_handle));
 
-        let derp_drive_data_source = ctx.add_model(derp_drive::DataSource::new);
+        let bork_drive_data_source = ctx.add_model(bork_drive::DataSource::new);
 
         let launch_config_data_source = ctx.add_model(launch_config::DataSource::new);
 
@@ -60,7 +60,7 @@ impl DataSourceStore {
         Self {
             actions_data_source,
             sessions_data_source,
-            derp_drive_data_source,
+            bork_drive_data_source,
             launch_config_data_source,
             new_session_data_source,
             all_conversation_data_source,
@@ -92,19 +92,19 @@ impl DataSourceStore {
             );
 
             {
-                let mut derp_drive_filters = HashSet::from([
+                let mut bork_drive_filters = HashSet::from([
                     QueryFilter::Notebooks,
                     QueryFilter::Plans,
                     QueryFilter::Drive,
                     QueryFilter::Workflows,
                 ]);
 
-                derp_drive_filters.insert(QueryFilter::EnvironmentVariables);
+                bork_drive_filters.insert(QueryFilter::EnvironmentVariables);
 
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
-                    derp_drive_filters.insert(QueryFilter::AgentModeWorkflows);
+                    bork_drive_filters.insert(QueryFilter::AgentModeWorkflows);
                 }
-                mixer.add_sync_source(self.derp_drive_data_source.clone(), derp_drive_filters);
+                mixer.add_sync_source(self.bork_drive_data_source.clone(), bork_drive_filters);
             }
 
             mixer.add_sync_source(
@@ -209,15 +209,15 @@ impl DataSourceStore {
                 .as_ref(app)
                 .query_result(*binding_id),
             ItemSummary::Workflow { id } => self
-                .derp_drive_data_source
+                .bork_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
             ItemSummary::EnvVarCollection { id } => self
-                .derp_drive_data_source
+                .bork_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
             ItemSummary::Notebook { id } => self
-                .derp_drive_data_source
+                .bork_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
             ItemSummary::Session { pane_view_locator } => self
@@ -231,7 +231,7 @@ impl DataSourceStore {
             }
             ItemSummary::CloudObject => {
                 // We don't yet support all cloud objects in the command palette but
-                // we have a `ViewInDerpDrive` action that supports all of them, so
+                // we have a `ViewInBorkDrive` action that supports all of them, so
                 // this is necessary to make the compiler happy.
                 None
             }

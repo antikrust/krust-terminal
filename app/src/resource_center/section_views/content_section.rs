@@ -1,9 +1,9 @@
 use pathfinder_color::ColorU;
-use derpui::elements::{
+use borkui::elements::{
     ConstrainedBox, Container, Element, Empty, Flex, MouseStateHandle, ParentElement, Shrinkable,
 };
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::{
     SectionAction, SectionView, CHEVRON_ICON_SIZE, DESCRIPTION_FONT_SIZE, ICON_PADDING,

@@ -3,19 +3,19 @@ use std::sync::LazyLock;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::ui_components::text::Span;
-use derpui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
+use borkui::fonts::Weight;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::text::Span;
+use borkui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
 
-use crate::themes::theme::{AnsiColorIdentifier, Fill, DerpTheme};
+use crate::themes::theme::{AnsiColorIdentifier, Fill, BorkTheme};
 use crate::ui_components::icons::Icon;
 
 const PROVIDER_BUTTON_ICON_SIZE: f32 = 14.;
@@ -40,7 +40,7 @@ pub const CLAUDE_ORANGE: ColorU = ColorU {
 
 /// Returns the color to be used for various AI signifiers
 /// input with AI mode).
-pub fn ai_brand_color(theme: &DerpTheme) -> ColorU {
+pub fn ai_brand_color(theme: &BorkTheme) -> ColorU {
     AnsiColorIdentifier::Magenta
         .to_ansi_color(&theme.terminal_colors().normal)
         .into()
@@ -48,7 +48,7 @@ pub fn ai_brand_color(theme: &DerpTheme) -> ColorU {
 
 /// Returns the color to be used for error UI throughout Agent Mode (like the "request limit
 /// exceeded" chip).
-pub fn error_color(theme: &DerpTheme) -> ColorU {
+pub fn error_color(theme: &BorkTheme) -> ColorU {
     AnsiColorIdentifier::Red
         .to_ansi_color(&theme.terminal_colors().normal)
         .into()
@@ -81,7 +81,7 @@ pub fn render_ai_follow_up_icon(
                 .tool_tip("Follow up with existing conversation".to_owned())
                 .with_style(UiComponentStyles {
                     font_size: Some(12.),
-                    background: Some(derpui::elements::Fill::Solid(tooltip_background)),
+                    background: Some(borkui::elements::Fill::Solid(tooltip_background)),
                     font_color: Some(appearance.theme().background().into_solid()),
                     ..Default::default()
                 });
@@ -106,7 +106,7 @@ fn render_input_icon(icon: Icon, color: Fill, app: &AppContext) -> Box<dyn Eleme
     // height.
     let icon_size = ai_indicator_height(app);
     ConstrainedBox::new(
-        Container::new(icon.to_derpui_icon(color).finish())
+        Container::new(icon.to_borkui_icon(color).finish())
             .with_uniform_padding(icon_size / 8.)
             .finish(),
     )
@@ -170,7 +170,7 @@ where
 {
     let theme = appearance.theme();
     let font_color = theme.foreground().into_solid();
-    let mut label_children = vec![ConstrainedBox::new(icon.to_derpui_icon(color).finish())
+    let mut label_children = vec![ConstrainedBox::new(icon.to_borkui_icon(color).finish())
         .with_width(PROVIDER_BUTTON_ICON_SIZE)
         .with_height(PROVIDER_BUTTON_ICON_SIZE)
         .finish()];

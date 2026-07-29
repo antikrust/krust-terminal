@@ -1,13 +1,13 @@
-use derp_core::ui::appearance::Appearance;
-use derp_terminal::model::BlockId;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_terminal::model::BlockId;
+use borkui::elements::{
     ConstrainedBox, CrossAxisAlignment, Flex, Hoverable, MainAxisSize, ParentElement, Shrinkable,
     Text,
 };
-use derpui::platform::Cursor;
-use derpui::prelude::{Container, MouseStateHandle};
-use derpui::text_layout::ClipConfig;
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::platform::Cursor;
+use borkui::prelude::{Container, MouseStateHandle};
+use borkui::text_layout::ClipConfig;
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::terminal::view::PADDING_LEFT;
 use crate::terminal::CLIAgent;
@@ -87,7 +87,7 @@ impl View for HarnessSessionHeader {
                 Container::new(
                     ConstrainedBox::new(
                         chevron_icon
-                            .to_derpui_icon(theme.sub_text_color(theme.background()))
+                            .to_borkui_icon(theme.sub_text_color(theme.background()))
                             .finish(),
                     )
                     .with_width(CHEVRON_SIZE)

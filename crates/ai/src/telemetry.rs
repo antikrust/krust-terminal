@@ -3,9 +3,9 @@ use std::time::Duration;
 use serde::Serialize;
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::features::FeatureFlag;
-use derp_core::register_telemetry_event;
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::features::FeatureFlag;
+use bork_core::register_telemetry_event;
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
 #[derive(Clone, EnumDiscriminants)]
@@ -125,7 +125,7 @@ impl TelemetryEvent for AITelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 

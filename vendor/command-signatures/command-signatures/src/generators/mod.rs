@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::iter::FromIterator;
-use derp_completion_metadata::DynamicCompletionData;
+use bork_completion_metadata::DynamicCompletionData;
 
 mod common;
 

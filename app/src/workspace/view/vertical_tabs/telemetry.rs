@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::features::FeatureFlag;
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::features::FeatureFlag;
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::workspace::tab_settings::{
     VerticalTabsCompactSubtitle, VerticalTabsDisplayGranularity, VerticalTabsPrimaryInfo,
@@ -133,7 +133,7 @@ impl TelemetryEvent for VerticalTabsTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -165,4 +165,4 @@ impl TelemetryEventDesc for VerticalTabsTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(VerticalTabsTelemetryEvent);
+bork_core::register_telemetry_event!(VerticalTabsTelemetryEvent);

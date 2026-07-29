@@ -13,10 +13,10 @@ The `images/` directory contains sample images and a test markdown file (`image_
 - Images in lists
 - Empty alt text
 
-To test image rendering, open `images/image_test.md` in Derp.
+To test image rendering, open `images/image_test.md` in Bork.
 
 ## ToC Navigation
 
 `toc_anchor_test.md` covers manual validation for Markdown fragment link navigation (case-insensitive heading matching and scrolling).
 
-To test, open `toc_anchor_test.md` in Derp's Markdown viewer and click the table-of-contents links.
+To test, open `toc_anchor_test.md` in Bork's Markdown viewer and click the table-of-contents links.

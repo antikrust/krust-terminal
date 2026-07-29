@@ -13,41 +13,41 @@ use settings::Setting as _;
 use string_offset::CharOffset;
 use vec1::{vec1, Vec1};
 use vim::vim::{Direction, InsertPosition, VimMode, VimModel, VimState, VimSubscriber};
-use derp_core::platform::SessionPlatform;
-use derp_editor::content::buffer::{
+use bork_core::platform::SessionPlatform;
+use bork_editor::content::buffer::{
     Buffer, BufferEditAction, EditOrigin, InitialBufferState, ToBufferCharOffset as _,
     ToBufferPoint,
 };
-use derp_editor::content::text::IndentUnit;
-use derp_editor::content::version::BufferVersion;
-use derp_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use derp_editor::multiline::AnyMultilineString;
-use derp_editor::render::element::lens_element::RichTextElementLens;
-use derp_editor::render::element::{
+use bork_editor::content::text::IndentUnit;
+use bork_editor::content::version::BufferVersion;
+use bork_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use bork_editor::multiline::AnyMultilineString;
+use bork_editor::render::element::lens_element::RichTextElementLens;
+use bork_editor::render::element::{
     DisplayOptions, DisplayStateHandle, RichTextElement, VerticalExpansionBehavior,
 };
-use derp_editor::render::model::{
+use bork_editor::render::model::{
     AutoScrollMode, BlockSpacing, Decoration, ExpansionType, LineCount, ParagraphStyles,
     RichTextStyles, CODE_EDITOR_HIDDEN_SECTION_EXPANSION_LINES,
 };
-use derp_editor::search::{SearchEvent, Searcher, MATCH_FILL, SELECTED_MATCH_FILL};
-use derp_util::content_version::ContentVersion;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::elements::new_scrollable::{
+use bork_editor::search::{SearchEvent, Searcher, MATCH_FILL, SELECTED_MATCH_FILL};
+use bork_util::content_version::ContentVersion;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::elements::new_scrollable::{
     AxisConfiguration, DualAxisConfig, NewScrollableElement, ScrollableAppearance,
 };
-use derpui::elements::{
+use borkui::elements::{
     ChildAnchor, ChildView, Dismiss, Fill, Flex, Margin, MouseStateHandle, NewScrollable,
     OffsetPositioning, Padding, ParentAnchor, ParentElement, ParentOffsetBounds, ScrollStateHandle,
     Shrinkable, Stack,
 };
-use derpui::event::ModifiersState;
-use derpui::keymap::Keystroke;
-use derpui::platform::Cursor;
-use derpui::prelude::RectF;
-use derpui::text::point::Point;
-use derpui::units::Pixels;
-use derpui::{
+use borkui::event::ModifiersState;
+use borkui::keymap::Keystroke;
+use borkui::platform::Cursor;
+use borkui::prelude::RectF;
+use borkui::text::point::Point;
+use borkui::units::Pixels;
+use borkui::{
     AppContext, BlurContext, CursorInfo, Element, Entity, FocusContext, ModelHandle,
     SingletonEntity, View, ViewContext, ViewHandle, WeakViewHandle, WindowId,
 };
@@ -406,11 +406,11 @@ impl CodeEditorView {
                 // from truncating space for the code editor. We should not render it as an overlay
                 // for small code editors.
                 horizontal_scrollbar_appearance: ScrollableAppearance::new(
-                    derpui::elements::ScrollbarWidth::Auto,
+                    borkui::elements::ScrollbarWidth::Auto,
                     false,
                 ),
                 vertical_scrollbar_appearance: ScrollableAppearance::new(
-                    derpui::elements::ScrollbarWidth::Auto,
+                    borkui::elements::ScrollbarWidth::Auto,
                     false,
                 ),
                 gutter_hover_target: GutterHoverTarget::GutterElement,
@@ -880,21 +880,21 @@ impl CodeEditorView {
         let hidden_section_end = line_range.end.as_usize();
         let lines_to_unhide = match expansion_type {
             ExpansionType::Both => {
-                derp_editor::content::text::LineCount::from(hidden_section_start)
-                    ..derp_editor::content::text::LineCount::from(hidden_section_end)
+                bork_editor::content::text::LineCount::from(hidden_section_start)
+                    ..bork_editor::content::text::LineCount::from(hidden_section_end)
             }
             ExpansionType::ExpandDown => {
                 let end = hidden_section_end
                     .min(hidden_section_start + CODE_EDITOR_HIDDEN_SECTION_EXPANSION_LINES);
-                derp_editor::content::text::LineCount::from(hidden_section_start)
-                    ..derp_editor::content::text::LineCount::from(end)
+                bork_editor::content::text::LineCount::from(hidden_section_start)
+                    ..bork_editor::content::text::LineCount::from(end)
             }
             ExpansionType::ExpandUp => {
                 let start = hidden_section_start.max(
                     hidden_section_end.saturating_sub(CODE_EDITOR_HIDDEN_SECTION_EXPANSION_LINES),
                 );
-                derp_editor::content::text::LineCount::from(start)
-                    ..derp_editor::content::text::LineCount::from(hidden_section_end)
+                bork_editor::content::text::LineCount::from(start)
+                    ..bork_editor::content::text::LineCount::from(hidden_section_end)
             }
         };
         self.model.update(ctx, |model, ctx| {
@@ -1030,12 +1030,12 @@ impl CodeEditorView {
                 if let Some(results) = self.searcher.as_ref(ctx).results() {
                     if !results.matches.is_empty() {
                         // Convert all match ranges to selection offsets
-                        let selection_offsets: Vec<derp_editor::content::buffer::SelectionOffsets> =
+                        let selection_offsets: Vec<bork_editor::content::buffer::SelectionOffsets> =
                             results
                                 .matches
                                 .iter()
                                 .map(|match_result| {
-                                    derp_editor::content::buffer::SelectionOffsets {
+                                    bork_editor::content::buffer::SelectionOffsets {
                                         head: match_result.end,
                                         tail: match_result.start,
                                     }
@@ -1047,8 +1047,8 @@ impl CodeEditorView {
                             self.model.update(ctx, |model, ctx| {
                                 model.selection().update(ctx, |selection_model, ctx| {
                                     selection_model.update_selection(
-                                        derp_editor::content::buffer::BufferSelectAction::SetSelectionOffsets { selections },
-                                        derp_editor::content::buffer::AutoScrollBehavior::Selection,
+                                        bork_editor::content::buffer::BufferSelectAction::SetSelectionOffsets { selections },
+                                        bork_editor::content::buffer::AutoScrollBehavior::Selection,
                                         ctx,
                                     );
                                 });
@@ -1074,7 +1074,7 @@ impl CodeEditorView {
                     self.model.update(ctx, |model, ctx| {
                         model.update_content( |mut content_model, ctx| {
                             content_model.apply_edit(
-                                derp_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges { edits: &edits },
+                                bork_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges { edits: &edits },
                                 EditOrigin::UserInitiated,
                                 selection_model,
                                 ctx,
@@ -1126,7 +1126,7 @@ impl CodeEditorView {
                                 self.model.update(ctx, |model, ctx| {
                                     model.update_content(|mut content_model, ctx| {
                                         content_model.apply_edit(
-                                            derp_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges { edits: &edits },
+                                            bork_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges { edits: &edits },
                                             EditOrigin::UserInitiated,
                                             selection_model,
                                             ctx,
@@ -2069,8 +2069,8 @@ impl CodeEditorView {
                                 self.model.update(ctx, |model, ctx| {
                                     model.selection_model().update(ctx, |selection, ctx| {
                                         selection.update_selection(
-                                            derp_editor::content::buffer::BufferSelectAction::MoveRight,
-                                            derp_editor::content::buffer::AutoScrollBehavior::Selection,
+                                            bork_editor::content::buffer::BufferSelectAction::MoveRight,
+                                            bork_editor::content::buffer::AutoScrollBehavior::Selection,
                                             ctx,
                                         );
                                     });
@@ -2415,7 +2415,7 @@ impl View for CodeEditorView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self.interaction_state(app) != InteractionState::Editable {

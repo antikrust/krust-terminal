@@ -17,7 +17,7 @@ fn user_query_input(query: &str, mode: UserQueryMode) -> AIAgentInput {
     }
 }
 
-// Regression test for https://github.com/derpdotdev/derp/issues/11697.
+// Regression test for https://github.com/borkdotdev/bork/issues/11697.
 // Find match highlights on the initial agent query must be computed against the displayed
 // query (prefixed with "/agent "), not the stored query, so the ranges line up with the
 // rendered text.

@@ -1,6 +1,6 @@
 use anyhow::{Ok, Result};
 use vec1::vec1;
-use derpui::keymap::Keystroke;
+use borkui::keymap::Keystroke;
 
 use crate::keyboard::{PersistedTrigger, UserDefinedKeybinding, REMOVED_KEYBINDING_SERIALIZATION};
 

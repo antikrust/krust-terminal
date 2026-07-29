@@ -14,11 +14,11 @@
 
 use std::collections::HashMap;
 
-use derpui::elements::{
+use borkui::elements::{
     ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
-use derp_multi_agent_api as api;
+use bork_multi_agent_api as api;
 
 use crate::ai::agent::api::convert_conversation::*;
 use crate::ai::agent::api::ServerConversationToken;
@@ -63,7 +63,7 @@ fn test_skill() -> api::Skill {
                 r#type: Some(api::skill_descriptor::scope::Type::Project(())),
             }),
             provider: Some(api::skill_descriptor::Provider {
-                r#type: Some(api::skill_descriptor::provider::Type::Derp(())),
+                r#type: Some(api::skill_descriptor::provider::Type::Bork(())),
             }),
         }),
         content: Some(api::FileContent {

@@ -7,18 +7,18 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use inquire::{Confirm, InquireError, Select};
 use serde::Serialize;
-use derp_cli::agent::OutputFormat;
-use derp_cli::api_key::{
+use bork_cli::agent::OutputFormat;
+use bork_cli::api_key::{
     ApiKeyCommand, ApiKeyExpirationArgs, ApiKeySortByArg, CreateApiKeyArgs, ExpireApiKeyArgs,
     ListApiKeysArgs,
 };
-use derp_cli::{GlobalOptions, SortOrderArg};
-use derp_graphql::mutations::expire_api_key::ExpireApiKeyResult;
-use derp_graphql::mutations::generate_api_key::GenerateApiKeyResult;
-use derp_graphql::queries::api_keys::ApiKeyProperties;
-use derp_graphql::scalars::Time;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::{GlobalOptions, SortOrderArg};
+use bork_graphql::mutations::expire_api_key::ExpireApiKeyResult;
+use bork_graphql::mutations::generate_api_key::GenerateApiKeyResult;
+use bork_graphql::queries::api_keys::ApiKeyProperties;
+use bork_graphql::scalars::Time;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use super::output::{self, TableFormat};
 use crate::server::ids::ApiKeyUid;
@@ -108,7 +108,7 @@ impl ApiKeyCommandRunner {
                     },
                     GenerateApiKeyResult::UserFacingError(e) => {
                         return Err(anyhow!(
-                            derp_graphql::client::get_user_facing_error_message(e)
+                            bork_graphql::client::get_user_facing_error_message(e)
                         ));
                     }
                     GenerateApiKeyResult::Unknown => {
@@ -208,7 +208,7 @@ impl ApiKeyCommandRunner {
                             ExpireApiKeyResult::ExpireApiKeyOutput(output) => output.success,
                             ExpireApiKeyResult::UserFacingError(e) => {
                                 return Err(anyhow!(
-                                    derp_graphql::client::get_user_facing_error_message(e)
+                                    bork_graphql::client::get_user_facing_error_message(e)
                                 ));
                             }
                             ExpireApiKeyResult::Unknown => {
@@ -230,7 +230,7 @@ impl ApiKeyCommandRunner {
     }
 }
 
-impl derpui::Entity for ApiKeyCommandRunner {
+impl borkui::Entity for ApiKeyCommandRunner {
     type Event = ();
 }
 
@@ -428,7 +428,7 @@ fn expires_at_from_args(args: ApiKeyExpirationArgs) -> Result<Option<Time>> {
 fn print_created_api_key(
     result: CreatedApiKeyInfo,
     output_format: OutputFormat,
-    json_output: derp_cli::json_filter::JsonOutput,
+    json_output: bork_cli::json_filter::JsonOutput,
 ) -> Result<()> {
     if json_output.force_json_output() {
         output::print_raw_json(serde_json::to_value(&result)?, &json_output)?;
@@ -451,7 +451,7 @@ fn print_expire_api_key_result(
     key_uid: String,
     expired: bool,
     output_format: OutputFormat,
-    json_output: derp_cli::json_filter::JsonOutput,
+    json_output: bork_cli::json_filter::JsonOutput,
 ) -> Result<()> {
     let result = ExpiredApiKeyInfo { key_uid, expired };
     if json_output.force_json_output() {

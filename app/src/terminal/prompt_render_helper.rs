@@ -2,15 +2,15 @@ use std::fmt;
 use std::num::NonZeroUsize;
 
 use settings::Setting as _;
-use derp_core::semantic_selection::SemanticSelection;
-use derpui::elements::{
+use bork_core::semantic_selection::SemanticSelection;
+use borkui::elements::{
     Container, DispatchEventResult, Element, EventHandler, SavePosition, SelectableArea,
     SelectionHandle, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::presenter::ChildView;
-use derpui::units::Pixels;
-use derpui::{AppContext, EntityId, ModelAsRef, ModelHandle, SingletonEntity, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::presenter::ChildView;
+use borkui::units::Pixels;
+use borkui::{AppContext, EntityId, ModelAsRef, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::input::InputRenderStateModel;
 use super::model::block::Block;
@@ -25,7 +25,7 @@ use crate::appearance::Appearance;
 use crate::context_chips::display::PromptDisplay;
 use crate::context_chips::spacing;
 use crate::features::FeatureFlag;
-use derp_util::path::user_friendly_path;
+use bork_util::path::user_friendly_path;
 use crate::settings::{FontSettings, InputSettings, TerminalPromptStyle};
 use crate::terminal::blockgrid_element::BlockGridElement;
 use crate::terminal::grid_size_util::grid_compute_baseline_position_fn;
@@ -69,7 +69,7 @@ pub fn should_render_ps1_prompt(terminal_model: &TerminalModel, app: &AppContext
     let session_settings = SessionSettings::as_ref(app);
 
     // In the context of session sharing, these values may differ from the local settings i.e.
-    // if the sharer is using PS1 and the viewer is not (using Derp prompt in non-SLP mode).
+    // if the sharer is using PS1 and the viewer is not (using Bork prompt in non-SLP mode).
     // In this case, we still want to render the prompt on the same line (PS1 should ALWAYS be
     // rendered on the same line).
     // Note that the product behavior for session sharing is normally to respect the local settings
@@ -88,7 +88,7 @@ pub fn should_render_prompt_on_same_line(
 ) -> bool {
     // We render the prompt on the same line, in the input editor, if:
     // 1. The user is using a custom prompt (PS1)
-    // 2. The user has the same line prompt setting enabled for their Derp prompt.
+    // 2. The user has the same line prompt setting enabled for their Bork prompt.
 
     // If universal developer input is enabled, ignore PS1 rendering logic
     if is_universal_developer_input {
@@ -259,12 +259,12 @@ impl PromptRenderHelper {
                     RemoteServerSetupState::Checking => "Starting shell...".to_string(),
                     RemoteServerSetupState::Installing {
                         progress_percent: Some(p),
-                    } => format!("Installing Derp SSH Extension... ({p}%)"),
+                    } => format!("Installing Bork SSH Extension... ({p}%)"),
                     RemoteServerSetupState::Installing {
                         progress_percent: None,
-                    } => "Installing Derp SSH Extension...".to_string(),
+                    } => "Installing Bork SSH Extension...".to_string(),
                     RemoteServerSetupState::Updating => {
-                        "Updating Derp SSH Extension...".to_string()
+                        "Updating Bork SSH Extension...".to_string()
                     }
                     RemoteServerSetupState::Initializing => "Initializing...".to_string(),
                     RemoteServerSetupState::Ready => "Starting shell...".to_string(),
@@ -669,7 +669,7 @@ impl PromptRenderHelper {
         )
     }
 
-    /// Renders Derp's own prompt for the single-line terminal input, to sit to the left of the
+    /// Renders Bork's own prompt for the single-line terminal input, to sit to the left of the
     /// editor the way a real terminal does.
     ///
     /// Deliberately not the shell's `PS1`. A default `PS1` is mostly noise on a personal

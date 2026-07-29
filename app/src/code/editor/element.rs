@@ -8,27 +8,27 @@ use parking_lot::Mutex;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_editor::editor::EditorView;
-use derp_editor::render::element::lens_element::RichTextElementLens;
-use derp_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
-use derp_editor::render::model::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_editor::editor::EditorView;
+use bork_editor::render::element::lens_element::RichTextElementLens;
+use bork_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
+use bork_editor::render::model::{
     gutter_expansion_button_types, BlockLocation, ExpansionType, LineCount, RenderState,
 };
-use derpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use derpui::elements::{
+use borkui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use borkui::elements::{
     Align, Axis, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Empty, F32Ext, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Point, Radius, ScrollData, Stack, Text, ZIndex,
 };
-use derpui::event::DispatchedEvent;
-use derpui::fonts::FamilyId;
-use derpui::ui_components::components::UiComponent;
-use derpui::units::{IntoPixels, Pixels};
-use derpui::{
+use borkui::event::DispatchedEvent;
+use borkui::fonts::FamilyId;
+use borkui::ui_components::components::UiComponent;
+use borkui::units::{IntoPixels, Pixels};
+use borkui::{
     AfterLayoutContext, AppContext, ClipBounds, Element, Event, EventContext, LayoutContext,
     ModelHandle, PaintContext, SingletonEntity, SizeConstraint,
 };
@@ -944,7 +944,7 @@ impl<V: EditorView> EditorWrapper<V> {
             line_number_config.text_color
         };
         let icon = ConstrainedBox::new(
-            derpui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
+            borkui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
         )
         .with_width(16.)
         .with_height(16.)
@@ -996,7 +996,7 @@ impl<V: EditorView> EditorWrapper<V> {
 
             let container = Container::new(
                 ConstrainedBox::new(
-                    derpui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
+                    borkui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
                 )
                 .with_width(icon_size)
                 .with_height(icon_size)
@@ -1036,7 +1036,7 @@ impl<V: EditorView> EditorWrapper<V> {
         });
 
         if enabled {
-            button = button.with_cursor(derpui::platform::Cursor::PointingHand);
+            button = button.with_cursor(borkui::platform::Cursor::PointingHand);
 
             if let Some(on_click_action) = on_click_action {
                 let action = on_click_action.clone();

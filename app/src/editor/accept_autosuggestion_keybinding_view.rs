@@ -2,17 +2,17 @@
 //! shown inline in the input.
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{
+use bork_core::ui::theme::Fill;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Element, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::keymap::Keystroke;
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::keymap::Keystroke;
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::EditorElement;
 use crate::appearance::Appearance;
@@ -303,7 +303,7 @@ impl View for AcceptAutosuggestionKeybinding {
             let chevron_down = Container::new(
                 ConstrainedBox::new(
                     Icon::ArrowDropDown
-                        .to_derpui_icon(Fill::Solid(font_color))
+                        .to_borkui_icon(Fill::Solid(font_color))
                         .finish(),
                 )
                 .with_height(height_without_border)

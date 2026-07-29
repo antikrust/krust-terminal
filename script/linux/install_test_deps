@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Install all dependencies required to build, run, and test Derp on Linux.
+# Install all dependencies required to build, run, and test Bork on Linux.
 
 set -e
 
-. "$PWD/script/derp_sudo"
+. "$PWD/script/bork_sudo"
 
 # Define some control sequences for text formatting.
 red="\033[0;31m"
@@ -25,15 +25,15 @@ if [[ "$(source /etc/os-release; echo $ID $ID_LIKE)" = *"debian"* ]]; then
     # We run vim in some integration tests to test the altscreen.
     vim
   )
-  derp_sudo apt-get install -y "${PACKAGES[@]}"
+  bork_sudo apt-get install -y "${PACKAGES[@]}"
 
   # If gcloud is not already installed, install it so that we can run SSH integration tests.
   if [[ ! -x "$(command -v gcloud)" ]]; then
     echo "⬇️  Installing the gcloud CLI..."
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | derp_sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | derp_sudo gpg --dearmor --yes -o /usr/share/keyrings/cloud.google.gpg
-    derp_sudo apt-get update -y
-    derp_sudo apt-get install google-cloud-cli -y
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | bork_sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | bork_sudo gpg --dearmor --yes -o /usr/share/keyrings/cloud.google.gpg
+    bork_sudo apt-get update -y
+    bork_sudo apt-get install google-cloud-cli -y
   fi
 else
   echo -e "⚠️  ${red}Unknown Linux distribution; necessary test dependencies may not be installed!${reset}"

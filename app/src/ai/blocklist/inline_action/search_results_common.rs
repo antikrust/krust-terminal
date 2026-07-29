@@ -1,10 +1,10 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::platform::Cursor;
-use derpui::{AppContext, EventContext, SingletonEntity};
+use borkui::platform::Cursor;
+use borkui::{AppContext, EventContext, SingletonEntity};
 
 use super::inline_action_header::{
     ICON_MARGIN, INLINE_ACTION_HEADER_VERTICAL_PADDING, INLINE_ACTION_HORIZONTAL_PADDING,
@@ -16,7 +16,7 @@ pub fn render_search_results_header(
     title_text: String,
     right_label_text: String,
     is_expanded: bool,
-    mouse_state: derpui::elements::MouseStateHandle,
+    mouse_state: borkui::elements::MouseStateHandle,
     on_toggle: impl Fn(&mut EventContext) + 'static,
     app: &AppContext,
 ) -> Box<dyn Element> {
@@ -32,7 +32,7 @@ pub fn render_search_results_header(
     // Left side: icon + title
     let mut left_side = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
     let search_icon = ConstrainedBox::new(
-        derpui::elements::Icon::new(
+        borkui::elements::Icon::new(
             Icon::SearchSmall.into(),
             appearance.theme().main_text_color(header_background),
         )
@@ -69,7 +69,7 @@ pub fn render_search_results_header(
     right_side.add_child(Container::new(right_label).with_margin_right(8.).finish());
 
     let chevron_icon = ConstrainedBox::new(
-        derpui::elements::Icon::new(
+        borkui::elements::Icon::new(
             if is_expanded {
                 Icon::ChevronDown.into()
             } else {
@@ -95,7 +95,7 @@ pub fn render_search_results_header(
         })
         .finish();
 
-    derpui::elements::Hoverable::new(mouse_state, |_| inner)
+    borkui::elements::Hoverable::new(mouse_state, |_| inner)
         .on_click(move |ctx, _, _| {
             on_toggle(ctx);
         })
@@ -117,7 +117,7 @@ pub fn render_results_body_container(body: Box<dyn Element>, app: &AppContext) -
 /// error state; the caller-supplied icon conveys the status.
 pub fn render_status_header(
     text: String,
-    icon: derpui::elements::Icon,
+    icon: borkui::elements::Icon,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);

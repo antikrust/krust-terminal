@@ -4,11 +4,11 @@ use serde_yaml::Value;
 use string_offset::CharOffset;
 use sum_tree::SumTree;
 use vec1::vec1;
-use derp_core::features::FeatureFlag;
-use derpui_core::assets::asset_cache::AssetSource;
-use derpui_core::text::word_boundaries::WordBoundariesPolicy;
-use derpui_core::units::IntoPixels;
-use derpui_core::{App, ModelAsRef};
+use bork_core::features::FeatureFlag;
+use borkui_core::assets::asset_cache::AssetSource;
+use borkui_core::text::word_boundaries::WordBoundariesPolicy;
+use borkui_core::units::IntoPixels;
+use borkui_core::{App, ModelAsRef};
 
 use super::{SelectionModel, TextDirection, TextUnit};
 use crate::content::buffer::tests::TestEmbeddedItem;
@@ -34,7 +34,7 @@ impl SelectionModel {
 
 fn selection_model_with_rendered_mermaid(
     app: &mut App,
-) -> derpui_core::ModelHandle<SelectionModel> {
+) -> borkui_core::ModelHandle<SelectionModel> {
     app.add_model(|ctx| {
         let buffer = ctx.add_model(|_| Buffer::new(Box::new(|_, _| IndentBehavior::Ignore)));
         let buffer_selection = ctx.add_model(|_| BufferSelectionModel::new(buffer.clone()));
@@ -351,10 +351,10 @@ fn test_word_and_line_boundary_movement_with_block_item() {
             buffer.update(ctx, |buffer, ctx| {
                 *buffer = Buffer::from_markdown(
                     r#"text
-```derp-embedded-object
+```bork-embedded-object
 id: workflow-123
 ```
-```derp-embedded-object
+```bork-embedded-object
 id: workflow-123
 type: workflow
 author: kevin

@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use serde_json::{Map, Value};
-use derp_cli::mcp::MCPSpec;
+use bork_cli::mcp::MCPSpec;
 
 use crate::ai::mcp::TemplatableMCPServer;
 
@@ -10,7 +10,7 @@ use crate::ai::mcp::TemplatableMCPServer;
 /// If user input includes wrapper shapes like `{ "mcpServers": { ... } }`, we unpack them.
 ///
 /// Notes:
-/// - UUID specs are coerced into `{"<uuid>": {"derp_id": "<uuid>"}}`.
+/// - UUID specs are coerced into `{"<uuid>": {"bork_id": "<uuid>"}}`.
 /// - We do light validation to catch obvious config errors before sending the request.
 pub(super) fn build_mcp_servers_from_specs(
     specs: &[MCPSpec],
@@ -31,7 +31,7 @@ pub(super) fn build_mcp_servers_from_specs(
                     name.clone(),
                     Value::Object({
                         let mut obj = Map::new();
-                        obj.insert("derp_id".to_string(), Value::String(name));
+                        obj.insert("bork_id".to_string(), Value::String(name));
                         obj
                     }),
                 )?;
@@ -125,24 +125,24 @@ fn validate_server_config(server_name: &str, config: &Value) -> anyhow::Result<(
         anyhow::anyhow!("MCP server '{server_name}' config must be a JSON object")
     })?;
 
-    let has_derp_id = obj.contains_key("derp_id");
+    let has_bork_id = obj.contains_key("bork_id");
     let has_command = obj.contains_key("command");
     let has_url = obj.contains_key("url");
 
-    let kind_count = usize::from(has_derp_id) + usize::from(has_command) + usize::from(has_url);
+    let kind_count = usize::from(has_bork_id) + usize::from(has_command) + usize::from(has_url);
     if kind_count != 1 {
         anyhow::bail!(
-            "MCP server '{server_name}' must have exactly one of: 'derp_id', 'command', or 'url'"
+            "MCP server '{server_name}' must have exactly one of: 'bork_id', 'command', or 'url'"
         );
     }
 
-    if has_derp_id {
-        let derp_id = obj.get("derp_id").and_then(Value::as_str).ok_or_else(|| {
-            anyhow::anyhow!("MCP server '{server_name}' field 'derp_id' must be a string")
+    if has_bork_id {
+        let bork_id = obj.get("bork_id").and_then(Value::as_str).ok_or_else(|| {
+            anyhow::anyhow!("MCP server '{server_name}' field 'bork_id' must be a string")
         })?;
 
-        uuid::Uuid::parse_str(derp_id).with_context(|| {
-            format!("MCP server '{server_name}' field 'derp_id' must be a UUID")
+        uuid::Uuid::parse_str(bork_id).with_context(|| {
+            format!("MCP server '{server_name}' field 'bork_id' must be a UUID")
         })?;
     }
 

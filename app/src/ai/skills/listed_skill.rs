@@ -1,6 +1,6 @@
 use ai::skills::{ParsedSkill, SkillProvider, SkillReference, SkillScope};
 use serde::{Deserialize, Serialize};
-use derp_core::ui::icons::Icon;
+use bork_core::ui::icons::Icon;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct SkillDescriptor {
@@ -9,7 +9,7 @@ pub struct SkillDescriptor {
     pub description: String,
     /// The scope of the skill (home directory vs project directory).
     pub scope: SkillScope,
-    /// The provider/origin of the skill (Claude, Codex, or Derp).
+    /// The provider/origin of the skill (Claude, Codex, or Bork).
     /// None if the skill path didn't match a known provider directory.
     pub provider: SkillProvider,
     /// Override icon for this skill. When set, rendering code should use this
@@ -26,7 +26,7 @@ impl SkillDescriptor {
 
     pub fn new_bundled(id: String, skill: ParsedSkill, icon: Icon) -> Self {
         Self {
-            provider: SkillProvider::Derp,
+            provider: SkillProvider::Bork,
             scope: SkillScope::Bundled,
             reference: SkillReference::BundledSkillId(id),
             name: skill.name,

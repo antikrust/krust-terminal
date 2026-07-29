@@ -1,21 +1,21 @@
 use ui_components::{button, Component as _, Options as _};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::Icon;
-use derpui_core::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_core::ui::Icon;
+use borkui_core::elements::{
     Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Flex, FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius,
 };
-use derpui_core::fonts::Weight;
-use derpui_core::keymap::Keystroke;
-use derpui_core::platform::Cursor;
-use derpui_core::prelude::Align;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui_core::{
+use borkui_core::fonts::Weight;
+use borkui_core::keymap::Keystroke;
+use borkui_core::platform::Cursor;
+use borkui_core::prelude::Align;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -76,14 +76,14 @@ impl IntentionSlide {
         let theme = appearance.theme();
 
         let logo_fill = internal_colors::fg_overlay_4(theme);
-        let logo = ConstrainedBox::new(Icon::DerpLogoLight.to_derpui_icon(logo_fill).finish())
+        let logo = ConstrainedBox::new(Icon::BorkLogoLight.to_borkui_icon(logo_fill).finish())
             .with_width(64.)
             .with_height(64.)
             .finish();
 
         let title = appearance
             .ui_builder()
-            .paragraph("Welcome to Derp")
+            .paragraph("Welcome to Bork")
             .with_style(UiComponentStyles {
                 font_size: Some(36.),
                 font_weight: Some(Weight::Medium),
@@ -219,7 +219,7 @@ impl IntentionSlide {
                 .iter()
                 .enumerate()
             {
-                let el = ConstrainedBox::new(icon.to_derpui_icon(icon_fill).finish())
+                let el = ConstrainedBox::new(icon.to_borkui_icon(icon_fill).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish();
@@ -263,7 +263,7 @@ impl IntentionSlide {
                 .with_main_axis_size(MainAxisSize::Min)
                 .with_cross_axis_alignment(CrossAxisAlignment::Start);
             for &item in items {
-                let icon_el = ConstrainedBox::new(Icon::Check.to_derpui_icon(check_fill).finish())
+                let icon_el = ConstrainedBox::new(Icon::Check.to_borkui_icon(check_fill).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish();
@@ -399,9 +399,9 @@ impl IntentionSlide {
             },
         );
 
-        let new_settings_modes = FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
+        let new_settings_modes = FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
         let next_text = if !new_settings_modes && selected_index == 1 {
-            "Get Derping"
+            "Get Borking"
         } else {
             "Next"
         };
@@ -449,7 +449,7 @@ impl IntentionSlide {
     fn render_visual(&self, appearance: &Appearance, selected_index: usize) -> Box<dyn Element> {
         let theme = appearance.theme();
 
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             let path = if selected_index == 1 {
                 Self::VISUAL_IMAGE_PATHS[1]
             } else {
@@ -522,7 +522,7 @@ impl IntentionSlide {
 
     fn next(&mut self, ctx: &mut ViewContext<Self>) {
         self.onboarding_state.update(ctx, |model, ctx| {
-            if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+            if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
                 match model.intention() {
                     // "Just use the terminal" confirms leaving AI behind before advancing.
                     OnboardingIntention::Terminal => {

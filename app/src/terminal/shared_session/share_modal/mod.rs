@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use style::{DENIED_MODAL_WIDTH, MODAL_HEIGHT, MODAL_WIDTH};
-use derp_core::ui::appearance::Appearance;
-use derpui::keymap::FixedBinding;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::UiComponentStyles;
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use borkui::keymap::FixedBinding;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::UiComponentStyles;
+use borkui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -55,7 +55,7 @@ pub enum ShareSessionModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

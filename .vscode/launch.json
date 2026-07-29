@@ -14,11 +14,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'derp'",
+      "name": "Debug executable 'bork'",
       "cargo": {
-        "args": ["build", "--bin=derp"],
+        "args": ["build", "--bin=bork"],
         "filter": {
-          "name": "derp",
+          "name": "bork",
           "kind": "bin"
         }
       },
@@ -30,8 +30,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable",
-      "preLaunchTask": "build_derplocal",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
+      "preLaunchTask": "build_borklocal",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -39,11 +39,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'derp' with fast_dev",
+      "name": "Debug executable 'bork' with fast_dev",
       "cargo": {
-        "args": ["build", "--bin=derp", "--features=fast_dev"],
+        "args": ["build", "--bin=bork", "--features=fast_dev"],
         "filter": {
-          "name": "derp",
+          "name": "bork",
           "kind": "bin"
         }
       },
@@ -54,11 +54,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'derp' with with_local_server",
+      "name": "Debug executable 'bork' with with_local_server",
       "cargo": {
-        "args": ["build", "--bin=derp", "--features=with_local_server"],
+        "args": ["build", "--bin=bork", "--features=with_local_server"],
         "filter": {
-          "name": "derp",
+          "name": "bork",
           "kind": "bin"
         }
       },
@@ -70,8 +70,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable local session sharing server",
-      "preLaunchTask": "build_derplocal_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
+      "preLaunchTask": "build_borklocal_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -83,8 +83,8 @@
       "env": {
         "RUST_BACKTRACE": "1"
       },
-      "preLaunchTask": "build_derplocal_fastdev",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
+      "preLaunchTask": "build_borklocal_fastdev",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -93,8 +93,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable with fast_dev + local session sharing server",
-      "preLaunchTask": "build_derplocal_fastdev_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/DerpLocal.app/Contents/MacOS/derp",
+      "preLaunchTask": "build_borklocal_fastdev_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -102,11 +102,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'derp'",
+      "name": "Debug unit tests in executable 'bork'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=derp", "--package=derp"],
+        "args": ["test", "--no-run", "--bin=bork", "--package=bork"],
         "filter": {
-          "name": "derp",
+          "name": "bork",
           "kind": "bin"
         }
       },
@@ -119,9 +119,9 @@
       "request": "launch",
       "name": "Debug integration tests in executable 'integration'",
       "cargo": {
-        "args": ["build", "--bin=integration", "--package=derp"],
+        "args": ["build", "--bin=integration", "--package=bork"],
         "env": {
-          "DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
+          "BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
         },
         "filter": {
           "name": "integration",
@@ -135,11 +135,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in library 'derpui'",
+      "name": "Debug unit tests in library 'borkui'",
       "cargo": {
-        "args": ["test", "--no-run", "--lib", "--package=derpui"],
+        "args": ["test", "--no-run", "--lib", "--package=borkui"],
         "filter": {
-          "name": "derpui",
+          "name": "borkui",
           "kind": "lib"
         }
       },

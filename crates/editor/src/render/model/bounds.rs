@@ -9,9 +9,9 @@
 //! * The **reserved box** is the rectangle containing a block's content, padding, borders, and
 //!   margin - all space reserved for the block.
 
-use derpui_core::geometry::rect::RectF;
-use derpui_core::geometry::vector::{Vector2F, vec2f};
-use derpui_core::units::Pixels;
+use borkui_core::geometry::rect::RectF;
+use borkui_core::geometry::vector::{Vector2F, vec2f};
+use borkui_core::units::Pixels;
 
 use super::BlockSpacing;
 

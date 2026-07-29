@@ -21,7 +21,7 @@ impl ScratchSubkey {
                 .as_nanos(),
             name,
         );
-        let path = format!(r"Software\Derp\LoginItemTests\{suffix}");
+        let path = format!(r"Software\Bork\LoginItemTests\{suffix}");
         RegKey::predef(HKEY_CURRENT_USER)
             .create_subkey(&path)
             .expect("create scratch subkey");
@@ -45,11 +45,11 @@ impl Drop for ScratchSubkey {
 #[test]
 fn register_writes_quoted_path() {
     let scratch = ScratchSubkey::new("register_writes_quoted_path");
-    let exe = PathBuf::from(r"C:\Program Files\Derp\derp.exe");
-    register_in(HKEY_CURRENT_USER, &scratch.path, "Derp", &exe).unwrap();
+    let exe = PathBuf::from(r"C:\Program Files\Bork\bork.exe");
+    register_in(HKEY_CURRENT_USER, &scratch.path, "Bork", &exe).unwrap();
     assert_eq!(
-        scratch.read("Derp").as_deref(),
-        Some(r#""C:\Program Files\Derp\derp.exe""#)
+        scratch.read("Bork").as_deref(),
+        Some(r#""C:\Program Files\Bork\bork.exe""#)
     );
 }
 
@@ -59,20 +59,20 @@ fn register_overwrites_previous_path() {
     register_in(
         HKEY_CURRENT_USER,
         &scratch.path,
-        "Derp",
-        &PathBuf::from(r"C:\old\derp.exe"),
+        "Bork",
+        &PathBuf::from(r"C:\old\bork.exe"),
     )
     .unwrap();
     register_in(
         HKEY_CURRENT_USER,
         &scratch.path,
-        "Derp",
-        &PathBuf::from(r"C:\new\derp.exe"),
+        "Bork",
+        &PathBuf::from(r"C:\new\bork.exe"),
     )
     .unwrap();
     assert_eq!(
-        scratch.read("Derp").as_deref(),
-        Some(r#""C:\new\derp.exe""#)
+        scratch.read("Bork").as_deref(),
+        Some(r#""C:\new\bork.exe""#)
     );
 }
 
@@ -80,18 +80,18 @@ fn register_overwrites_previous_path() {
 fn unregister_is_idempotent() {
     let scratch = ScratchSubkey::new("unregister_is_idempotent");
     // Never registered: unregister should be Ok.
-    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Derp").unwrap();
+    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Bork").unwrap();
     // Register, then unregister twice.
     register_in(
         HKEY_CURRENT_USER,
         &scratch.path,
-        "Derp",
-        &PathBuf::from(r"C:\derp.exe"),
+        "Bork",
+        &PathBuf::from(r"C:\bork.exe"),
     )
     .unwrap();
-    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Derp").unwrap();
-    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Derp").unwrap();
-    assert!(scratch.read("Derp").is_none());
+    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Bork").unwrap();
+    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Bork").unwrap();
+    assert!(scratch.read("Bork").is_none());
 }
 
 #[test]
@@ -100,24 +100,24 @@ fn unregister_leaves_other_values_alone() {
     register_in(
         HKEY_CURRENT_USER,
         &scratch.path,
-        "Derp",
-        &PathBuf::from(r"C:\derp.exe"),
+        "Bork",
+        &PathBuf::from(r"C:\bork.exe"),
     )
     .unwrap();
     register_in(
         HKEY_CURRENT_USER,
         &scratch.path,
-        "DerpPreview",
-        &PathBuf::from(r"C:\derp-preview.exe"),
+        "BorkPreview",
+        &PathBuf::from(r"C:\bork-preview.exe"),
     )
     .unwrap();
 
-    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Derp").unwrap();
+    unregister_in(HKEY_CURRENT_USER, &scratch.path, "Bork").unwrap();
 
-    assert!(scratch.read("Derp").is_none());
+    assert!(scratch.read("Bork").is_none());
     assert_eq!(
-        scratch.read("DerpPreview").as_deref(),
-        Some(r#""C:\derp-preview.exe""#)
+        scratch.read("BorkPreview").as_deref(),
+        Some(r#""C:\bork-preview.exe""#)
     );
 }
 
@@ -125,8 +125,8 @@ fn unregister_leaves_other_values_alone() {
 fn unregister_missing_subkey_is_ok() {
     unregister_in(
         HKEY_CURRENT_USER,
-        r"Software\Derp\LoginItemTests\does-not-exist",
-        "Derp",
+        r"Software\Bork\LoginItemTests\does-not-exist",
+        "Bork",
     )
     .unwrap();
 }

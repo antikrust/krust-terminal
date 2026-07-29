@@ -1,7 +1,7 @@
 use chrono::Utc;
 use cloud_object_client::MockObjectClient;
 use itertools::Itertools;
-use derpui::{AddSingletonModel, App};
+use borkui::{AddSingletonModel, App};
 
 use super::*;
 use crate::auth::AuthManager;
@@ -121,7 +121,7 @@ fn test_leaving_team_removes_objects() {
             &mut app,
         );
 
-        // Add the initial Derp Drive objects.
+        // Add the initial Bork Drive objects.
         CloudModel::handle(&app).update(&mut app, |cloud_model, _| {
             cloud_model.add_object(
                 SyncId::ServerId(team_workflow_id.into()),

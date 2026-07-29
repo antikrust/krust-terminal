@@ -2,29 +2,29 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use settings::Setting as _;
-use derp::features::FeatureFlag;
-use derp::integration_testing::remote_server::{
+use bork::features::FeatureFlag;
+use bork::integration_testing::remote_server::{
     assert_command_executor_is_remote_server, assert_remote_server_connected,
     assert_remote_server_has_navigated, assert_remote_server_loaded_repo_metadata_directory,
     load_repo_metadata_directory_via_remote_server, record_remote_server_lazy_load_events,
     record_remote_server_navigation_events, wait_for_remote_server_ready,
     write_file_via_remote_server,
 };
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::subshell::{
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::subshell::{
     enter_remote_server_ssh_command, enter_ssh_password, setup_gcloud_sdk,
     wait_for_remote_server_password_prompt,
 };
-use derp::integration_testing::terminal::util::{
+use bork::integration_testing::terminal::util::{
     current_shell_starter_and_version, ExpectedExitStatus,
 };
-use derp::integration_testing::terminal::{
+use bork::integration_testing::terminal::{
     execute_command_for_single_terminal_in_tab, run_completer,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::terminal::shell::ShellType;
-use derp::terminal::derpify::settings::{SshExtensionInstallMode, SshExtensionInstallModeSetting};
-use derpui_core::integration::TestStep;
+use bork::terminal::shell::ShellType;
+use bork::terminal::borkify::settings::{SshExtensionInstallMode, SshExtensionInstallModeSetting};
+use borkui_core::integration::TestStep;
 
 use super::{new_builder, Builder};
 
@@ -101,13 +101,13 @@ pub fn test_remote_server_navigate_to_repo() -> Builder {
         .with_step(record_remote_server_navigation_events())
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "mkdir -p /tmp/derp-test-repo && cd /tmp/derp-test-repo && git init -b main && git config user.email test@test.com && git config user.name TestUser && touch file && git add file && git commit -m init".into(),
+            "mkdir -p /tmp/bork-test-repo && cd /tmp/bork-test-repo && git init -b main && git config user.email test@test.com && git config user.name TestUser && touch file && git add file && git commit -m init".into(),
             ExpectedExitStatus::Success,
             (),
         ))
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "cd /tmp/derp-test-repo".into(),
+            "cd /tmp/bork-test-repo".into(),
             ExpectedExitStatus::Success,
             (),
         ))
@@ -120,7 +120,7 @@ pub fn test_remote_server_navigate_to_repo() -> Builder {
             .set_timeout(Duration::from_secs(15))
             .add_named_assertion_with_data_from_prior_step(
                 "remote server navigated to expected repo path",
-                assert_remote_server_has_navigated(0, "/tmp/derp-test-repo"),
+                assert_remote_server_has_navigated(0, "/tmp/bork-test-repo"),
             ),
         )
         // Verify the connection is still healthy after navigation.
@@ -144,13 +144,13 @@ pub fn test_remote_server_completions() -> Builder {
     builder
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "touch /tmp/derp-rs-completion-target".into(),
+            "touch /tmp/bork-rs-completion-target".into(),
             ExpectedExitStatus::Success,
             (),
         ))
         // Trigger the actual tab-completion request path for a remote file.
         .with_step(
-            run_completer(0, "cat /tmp/derp-rs-completion-t").set_timeout(Duration::from_secs(15)),
+            run_completer(0, "cat /tmp/bork-rs-completion-t").set_timeout(Duration::from_secs(15)),
         )
         // Verify the executor is still the remote server executor after
         // completions have been triggered.
@@ -183,7 +183,7 @@ pub fn test_remote_server_lazy_load_directory() -> Builder {
         // Create a git repo with a subdirectory on the remote.
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "rm -rf /tmp/derp-lazy-repo && mkdir -p /tmp/derp-lazy-repo/subdir && cd /tmp/derp-lazy-repo && git init -b main && git config user.email test@test.com && git config user.name TestUser && touch file subdir/nested && git add . && git commit -m init".into(),
+            "rm -rf /tmp/bork-lazy-repo && mkdir -p /tmp/bork-lazy-repo/subdir && cd /tmp/bork-lazy-repo && git init -b main && git config user.email test@test.com && git config user.name TestUser && touch file subdir/nested && git add . && git commit -m init".into(),
             ExpectedExitStatus::Success,
             (),
         ))
@@ -191,7 +191,7 @@ pub fn test_remote_server_lazy_load_directory() -> Builder {
         // server indexes it.
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "cd /tmp/derp-lazy-repo".into(),
+            "cd /tmp/bork-lazy-repo".into(),
             ExpectedExitStatus::Success,
             (),
         ))
@@ -202,7 +202,7 @@ pub fn test_remote_server_lazy_load_directory() -> Builder {
             .set_timeout(Duration::from_secs(15))
             .add_named_assertion_with_data_from_prior_step(
                 "remote server navigated to expected lazy-load repo path",
-                assert_remote_server_has_navigated(0, "/tmp/derp-lazy-repo"),
+                assert_remote_server_has_navigated(0, "/tmp/bork-lazy-repo"),
             ),
         )
         // Trigger lazy-load of the subdirectory via the proto API.
@@ -210,8 +210,8 @@ pub fn test_remote_server_lazy_load_directory() -> Builder {
             TestStep::new("Load subdirectory via LoadRepoMetadataDirectory")
                 .with_action(load_repo_metadata_directory_via_remote_server(
                     0,
-                    "/tmp/derp-lazy-repo".to_string(),
-                    "/tmp/derp-lazy-repo/subdir".to_string(),
+                    "/tmp/bork-lazy-repo".to_string(),
+                    "/tmp/bork-lazy-repo/subdir".to_string(),
                 ))
                 // Give the async request a moment to complete.
                 .set_post_step_pause(Duration::from_secs(2)),
@@ -235,7 +235,7 @@ pub fn test_remote_server_lazy_load_directory() -> Builder {
         // the nested file through the remote server executor.
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "cat /tmp/derp-lazy-repo/subdir/nested && echo 'file exists'".into(),
+            "cat /tmp/bork-lazy-repo/subdir/nested && echo 'file exists'".into(),
             ExpectedExitStatus::Success,
             "file exists",
         ))
@@ -257,7 +257,7 @@ pub fn test_remote_server_file_operations() -> Builder {
             TestStep::new("Write file via RemoteServerClient proto API")
                 .with_action(write_file_via_remote_server(
                     0,
-                    "/tmp/derp-rs-test-file.txt".to_string(),
+                    "/tmp/bork-rs-test-file.txt".to_string(),
                     "hello from proto".to_string(),
                 ))
                 // Give the async write a moment to complete
@@ -267,14 +267,14 @@ pub fn test_remote_server_file_operations() -> Builder {
         // (which goes through RemoteServerCommandExecutor::run_command).
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "cat /tmp/derp-rs-test-file.txt".into(),
+            "cat /tmp/bork-rs-test-file.txt".into(),
             ExpectedExitStatus::Success,
             "hello from proto",
         ))
         // Step 3: Clean up
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
-            "rm -f /tmp/derp-rs-test-file.txt".into(),
+            "rm -f /tmp/bork-rs-test-file.txt".into(),
             ExpectedExitStatus::Success,
             (),
         ))

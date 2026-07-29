@@ -11,8 +11,8 @@ use jaq_all::fmts::Format;
 use jaq_json::{write as jaq_write, Val};
 use serde::Serialize;
 use tabwriter::TabWriter;
-use derp_cli::agent::OutputFormat;
-use derp_cli::json_filter::{JqFilter, JsonOutput};
+use bork_cli::agent::OutputFormat;
+use bork_cli::json_filter::{JqFilter, JsonOutput};
 
 pub fn standard_table() -> Table {
     let mut table = Table::new();

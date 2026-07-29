@@ -1,11 +1,11 @@
 use asset_macro::bundled_or_fetched_asset;
 use pathfinder_color::ColorU;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::color::{coloru_with_opacity, OPAQUE};
-use derp_core::ui::theme::color::CustomDetails;
-use derp_core::ui::theme::{
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::color::{coloru_with_opacity, OPAQUE};
+use bork_core::ui::theme::color::CustomDetails;
+use bork_core::ui::theme::{
     AnsiColor, AnsiColors, Details, Fill, HorizontalGradient, Image, TerminalColors,
-    VerticalGradient, DerpTheme,
+    VerticalGradient, BorkTheme,
 };
 
 const DARK_MODE_NORMAL_COLORS: AnsiColors = AnsiColors::new(
@@ -259,8 +259,8 @@ pub(super) fn adeberry_colors() -> TerminalColors {
 }
 
 /// Default bundled themes
-pub fn dark_theme() -> DerpTheme {
-    DerpTheme::new(
+pub fn dark_theme() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x050505FF)),
         ColorU::from_u32(0xffffffff),
         Fill::Solid(ColorU::from_u32(0x19AAD8FF)),
@@ -272,8 +272,8 @@ pub fn dark_theme() -> DerpTheme {
     )
 }
 
-pub fn light_theme() -> DerpTheme {
-    DerpTheme::new(
+pub fn light_theme() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::white()),
         ColorU::new(17, 17, 17, OPAQUE),
         Fill::Solid(ColorU::from_u32(0x00c2ffff)),
@@ -285,8 +285,8 @@ pub fn light_theme() -> DerpTheme {
     )
 }
 
-pub(super) fn dracula() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn dracula() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x282A36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xFF79C6FF)),
@@ -298,8 +298,8 @@ pub(super) fn dracula() -> DerpTheme {
     )
 }
 
-pub(super) fn solarized_light() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn solarized_light() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0xFDF6E3FF)),
         ColorU::from_u32(0x586E75FF),
         Fill::Solid(ColorU::from_u32(0x66B5A9FF)),
@@ -311,8 +311,8 @@ pub(super) fn solarized_light() -> DerpTheme {
     )
 }
 
-pub(super) fn solarized_dark() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn solarized_dark() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x002B36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xCB4B16FF)),
@@ -324,8 +324,8 @@ pub(super) fn solarized_dark() -> DerpTheme {
     )
 }
 
-pub(super) fn gruvbox_dark() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn gruvbox_dark() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x282828FF)),
         ColorU::from_u32(0xEBDBB2FF),
         Fill::Solid(ColorU::from_u32(0xFC802DFF)),
@@ -337,8 +337,8 @@ pub(super) fn gruvbox_dark() -> DerpTheme {
     )
 }
 
-pub(super) fn gruvbox_light() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn gruvbox_light() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBF1C7FF)),
         ColorU::from_u32(0x3C3836FF),
         Fill::Solid(ColorU::from_u32(0xAD3B14FF)),
@@ -351,8 +351,8 @@ pub(super) fn gruvbox_light() -> DerpTheme {
 }
 
 /// Bundled gradient themes
-pub(super) fn cyber_wave() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn cyber_wave() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::black().blend(&coloru_with_opacity(ColorU::from_u32(0x00C2FFFF), 20)),
             ColorU::black(),
@@ -370,8 +370,8 @@ pub(super) fn cyber_wave() -> DerpTheme {
     )
 }
 
-pub(super) fn willow_dream() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn willow_dream() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x206169FF),
             ColorU::from_u32(0x022F27FF),
@@ -389,8 +389,8 @@ pub(super) fn willow_dream() -> DerpTheme {
     )
 }
 
-pub(super) fn fancy_dracula() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn fancy_dracula() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x252630FF),
             ColorU::from_u32(0x3D3F4FFF),
@@ -408,8 +408,8 @@ pub(super) fn fancy_dracula() -> DerpTheme {
     )
 }
 
-pub(super) fn phenomenon() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn phenomenon() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x121212FF)),
         ColorU::from_u32(0xFAF9F6FF),
         Fill::Solid(ColorU::from_u32(0x2E5D9EFF)),
@@ -425,8 +425,8 @@ pub(super) fn phenomenon() -> DerpTheme {
 }
 
 /// Bundled themes with background images
-pub(super) fn jellyfish() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn jellyfish() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1718FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x538682FF)),
@@ -441,8 +441,8 @@ pub(super) fn jellyfish() -> DerpTheme {
     )
 }
 
-pub(super) fn koi() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn koi() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x211719FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0xFF3131FF)),
@@ -457,8 +457,8 @@ pub(super) fn koi() -> DerpTheme {
     )
 }
 
-pub(super) fn leafy() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn leafy() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::black()),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x55972DFF)),
@@ -473,8 +473,8 @@ pub(super) fn leafy() -> DerpTheme {
     )
 }
 
-pub(super) fn marble() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn marble() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0xE3E3E3FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0x585858FF)),
@@ -489,11 +489,11 @@ pub(super) fn marble() -> DerpTheme {
     )
 }
 
-pub(super) fn pink_city() -> DerpTheme {
+pub(super) fn pink_city() -> BorkTheme {
     let details = CustomDetails {
         ..CustomDetails::lighter_details()
     };
-    DerpTheme::new(
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBEFF6FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0xE10087FF)),
@@ -508,8 +508,8 @@ pub(super) fn pink_city() -> DerpTheme {
     )
 }
 
-pub(super) fn snowy() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn snowy() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0xFFFFFFFF),
             ColorU::from_u32(0xDEE6EBFF),
@@ -527,8 +527,8 @@ pub(super) fn snowy() -> DerpTheme {
     )
 }
 
-pub(super) fn red_rock() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn red_rock() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x211719FF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x4C3435FF), 45)),
@@ -548,8 +548,8 @@ pub(super) fn red_rock() -> DerpTheme {
     )
 }
 
-pub(super) fn dark_city() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn dark_city() -> BorkTheme {
+    BorkTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x01181FFF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x1A363FFF), 45)),
@@ -569,8 +569,8 @@ pub(super) fn dark_city() -> DerpTheme {
     )
 }
 
-pub(super) fn solar_flare() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn solar_flare() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1C18FF)),
         ColorU::from_u32(0xDDE6EEFF),
         Fill::Solid(ColorU::from_u32(0x34895CFF)),
@@ -585,8 +585,8 @@ pub(super) fn solar_flare() -> DerpTheme {
     )
 }
 
-pub(super) fn adeberry() -> DerpTheme {
-    DerpTheme::new(
+pub(super) fn adeberry() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),

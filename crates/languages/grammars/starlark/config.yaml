@@ -1,4 +1,4 @@
-# Starlark configuration for Derp
+# Starlark configuration for Bork
 # Starlark is used by Bazel and has Python-like syntax
 display_name: "Bazel (Starlark)"
 indent_unit:

@@ -10,10 +10,10 @@ use std::ops::Range;
 /// They should _not_ be able to interface with the internal
 /// details of the editor (e.g. the [`Buffer`]).
 pub use view::*;
-pub use derpui::text::point::Point;
-use derpui::AppContext;
+pub use borkui::text::point::Point;
+use borkui::AppContext;
 
-// Re-exported for use by the `derp_tui` TUI front-end, which needs to
+// Re-exported for use by the `bork_tui` TUI front-end, which needs to
 // construct and subscribe to `CodeEditorModel` in char-cell mode.
 pub use crate::code::editor::model::{CodeEditorModel, CodeEditorModelEvent};
 

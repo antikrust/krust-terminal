@@ -23,6 +23,6 @@ Add unit coverage next to existing Cloud Mode terminal-view tests. The key regre
 - assert `is_input_box_visible` remains `true`;
 - assert incoming shared-session input operations are not applied while the setup group is running, including before the first setup command block has rendered;
 - finish the setup group and assert incoming shared-session input operations apply again.
-Run the focused test by name with `cargo nextest run -p derp -E 'test(<new test name>)'`. Run `cargo fmt --manifest-path /workspace/derp/Cargo.toml -p derp --check` and a targeted `cargo clippy --manifest-path /workspace/derp/Cargo.toml -p derp --tests -- -D warnings` before updating the PR.
+Run the focused test by name with `cargo nextest run -p bork -E 'test(<new test name>)'`. Run `cargo fmt --manifest-path /workspace/bork/Cargo.toml -p bork --check` and a targeted `cargo clippy --manifest-path /workspace/bork/Cargo.toml -p bork --tests -- -D warnings` before updating the PR.
 ## Parallelization
 Parallelization is not beneficial for this revision. The implementation is a small, tightly coupled change across one setup-state helper, one shared-session input receiver path, and one regression test; splitting it across agents would add coordination overhead and merge risk without reducing wall-clock time.

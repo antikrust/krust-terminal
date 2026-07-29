@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use ai::diff_validation::DiffDelta;
 use chrono::Local;
-use derpui::{App, SingletonEntity};
+use borkui::{App, SingletonEntity};
 
 use super::*;
 use crate::ai::agent::conversation::AIConversationId;

@@ -10,16 +10,16 @@ use parking_lot::{FairMutex, RwLock};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use derp_core::features::FeatureFlag;
-use derp_core::semantic_selection::SemanticSelection;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_errors::report_error;
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::new_scrollable::SingleAxisConfig;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::semantic_selection::SemanticSelection;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_errors::report_error;
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::new_scrollable::SingleAxisConfig;
+use borkui::elements::{
     resizable_state_handle, Border, ChildAnchor, ChildView, ClippedScrollStateHandle,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DragBarSide, DropShadow, Empty,
     Expanded, Fill, Flex, FormattedTextElement, Highlight, HighlightedHyperlink, Hoverable,
@@ -28,12 +28,12 @@ use derpui::elements::{
     ResizableStateHandle, SavePosition, SelectableArea, SelectionHandle, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::keymap::{EditableBinding, Keystroke};
-use derpui::platform::{Cursor, OperatingSystem};
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::keymap::{EditableBinding, Keystroke};
+use borkui::platform::{Cursor, OperatingSystem};
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -130,8 +130,8 @@ const HAS_PENDING_NON_TRANSFER_CONTROL_ACTION_CONTEXT_KEY: &str =
 const BLOCKED_ACTION_MESSAGE_FOR_TRANSFER_CONTROL: &str = "Agent is asking you to take control.";
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
-    use derpui::keymap::FixedBinding;
+    use borkui::keymap::macros::*;
+    use borkui::keymap::FixedBinding;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -954,7 +954,7 @@ impl View for CLISubagentView {
         "CLISubagentView"
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         let terminal_model = self.terminal_model.lock();
         let Some(block) = terminal_model.block_list().block_with_id(&self.block_id) else {
             return Empty::new().finish();
@@ -1425,7 +1425,7 @@ impl View for CLISubagentView {
             .finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         let terminal_model = self.terminal_model.lock();
@@ -1549,7 +1549,7 @@ impl TypedActionView for CLISubagentView {
             }
             CLISubagentAction::OpenFeedbackDocs => {
                 ctx.open_url(
-                    "https://therob.lol/derp-terminal/help/support-and-billing/sending-us-feedback",
+                    "https://therob.lol/bork-terminal/help/support-and-billing/sending-us-feedback",
                 );
             }
         }
@@ -1597,7 +1597,7 @@ fn render_action(action: AIAgentActionType, app: &AppContext) -> Option<Box<dyn 
 
     let icon = Container::new(
         ConstrainedBox::new(
-            derpui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
+            borkui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
         )
         .with_width(icon_size(app))
         .with_height(icon_size(app))
@@ -1639,7 +1639,7 @@ fn render_web_search(query: Option<String>, app: &AppContext) -> Box<dyn Element
 
     let icon = Container::new(
         ConstrainedBox::new(
-            derpui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
+            borkui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
                 .finish(),
         )
         .with_width(icon_size(app))
@@ -1872,7 +1872,7 @@ fn render_permissions_speedbump(
     .with_hyperlink_font_color(blended_colors::accent_fg_strong(theme).into())
     .register_default_click_handlers(|_, ctx, _| {
         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPage(
-            SettingsSection::DerpAgent,
+            SettingsSection::BorkAgent,
         ));
     })
     .finish();

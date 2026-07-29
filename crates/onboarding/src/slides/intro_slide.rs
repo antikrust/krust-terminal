@@ -1,22 +1,22 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::{button, Component as _, Options as _};
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::Icon;
-use derpui_core::elements::shimmering_text::{
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::Icon;
+use borkui_core::elements::shimmering_text::{
     ShimmerConfig, ShimmeringTextElement, ShimmeringTextStateHandle,
 };
-use derpui_core::elements::{
+use borkui_core::elements::{
     Align, ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Stack,
 };
-use derpui_core::keymap::Keystroke;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui_core::{
+use borkui_core::keymap::Keystroke;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -143,7 +143,7 @@ impl IntroSlide {
         let theme = appearance.theme();
 
         let logo_fill = internal_colors::fg_overlay_4(theme);
-        let logo = ConstrainedBox::new(Icon::DerpLogoLight.to_derpui_icon(logo_fill).finish())
+        let logo = ConstrainedBox::new(Icon::BorkLogoLight.to_borkui_icon(logo_fill).finish())
             .with_width(64.)
             .with_height(64.)
             .finish();
@@ -151,7 +151,7 @@ impl IntroSlide {
         let base_color: ColorU = internal_colors::fg_overlay_4(theme).into();
         let shimmer_color: ColorU = theme.foreground().into();
         let title = ShimmeringTextElement::new(
-            "Welcome to Derp",
+            "Welcome to Bork",
             appearance.ui_font_family(),
             32.,
             base_color,

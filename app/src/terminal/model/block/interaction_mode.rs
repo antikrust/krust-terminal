@@ -1,6 +1,6 @@
 use anyhow::anyhow;
-use derp_terminal::model::grid::Dimensions;
-use derp_terminal::model::Point;
+use bork_terminal::model::grid::Dimensions;
+use bork_terminal::model::Point;
 
 use super::{Block, SerializedAIMetadata};
 use crate::ai::agent::conversation::AIConversationId;

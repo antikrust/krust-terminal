@@ -1,7 +1,7 @@
 use serde::Serialize;
-use derpui::elements::MouseStateHandle;
-use derpui::notification::NotificationSendError;
-use derpui::Element;
+use borkui::elements::MouseStateHandle;
+use borkui::notification::NotificationSendError;
+use borkui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerButtonState, InlineBannerCloseButton,

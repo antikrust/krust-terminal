@@ -1,10 +1,10 @@
 use std::default::Default;
 
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{Coords, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{Coords, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::modal::Modal;
 use crate::themes::theme::ThemeKind;
@@ -28,7 +28,7 @@ pub enum ThemeDeletionModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

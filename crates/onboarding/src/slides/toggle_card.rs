@@ -1,18 +1,18 @@
 use pathfinder_geometry::vector::Vector2F;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use borkui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text, Wrap,
 };
-use derpui_core::fonts::Weight;
-use derpui_core::platform::Cursor;
-use derpui_core::prelude::Align;
-use derpui_core::presenter::EventContext;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::{AppContext, Element};
+use borkui_core::fonts::Weight;
+use borkui_core::platform::Cursor;
+use borkui_core::prelude::Align;
+use borkui_core::presenter::EventContext;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::{AppContext, Element};
 
 pub(super) type ClickCallback = Box<dyn FnMut(&mut EventContext, &AppContext, Vector2F) + 'static>;
 pub(super) type HoverCallback =

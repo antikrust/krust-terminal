@@ -9,23 +9,23 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
 use thousands::Separable;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derp_graphql::billing::AddonCreditsOption;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use bork_graphql::billing::AddonCreditsOption;
+use borkui::elements::{
     Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Flex, FormattedTextElement, HighlightedHyperlink, Hoverable, HyperlinkUrl, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Shrinkable, Text, Wrap,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::platform::Cursor;
-use derpui::prelude::ChildView;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::platform::Cursor;
+use borkui::prelude::ChildView;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, UpdateView, View,
     ViewContext, ViewHandle,
 };
@@ -1006,7 +1006,7 @@ impl TypedActionView for BillingAndUsagePageView {
             BillingAndUsagePageAction::NavigateToByokSettings => {
                 ctx.dispatch_typed_action_deferred(WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "api".to_string(),
-                    section: Some(SettingsSection::DerpAgent),
+                    section: Some(SettingsSection::BorkAgent),
                 });
             }
         }
@@ -1479,7 +1479,7 @@ impl BillingAndUsagePageView {
         let theme = appearance.theme();
         ConstrainedBox::new(
             Icon::AlertTriangle
-                .to_derpui_icon(theme.ui_error_color().into())
+                .to_borkui_icon(theme.ui_error_color().into())
                 .finish(),
         )
         .with_height(16.)
@@ -1563,10 +1563,10 @@ impl BillingAndUsagePageView {
                             fragment.text,
                             None,
                             maybe_action.map(|act| {
-                                Box::new(move |ctx: &mut derpui::EventContext| {
+                                Box::new(move |ctx: &mut borkui::EventContext| {
                                     ctx.dispatch_typed_action(act.clone());
                                 })
-                                    as Box<dyn Fn(&mut derpui::EventContext)>
+                                    as Box<dyn Fn(&mut borkui::EventContext)>
                             }),
                             self.exceed_limit_link_mouse_state.clone(),
                         )
@@ -1629,7 +1629,7 @@ impl BillingAndUsagePageView {
         .finish();
 
         let icon = Container::new(
-            ConstrainedBox::new(Icon::Credits.to_derpui_icon(fg).finish())
+            ConstrainedBox::new(Icon::Credits.to_borkui_icon(fg).finish())
                 .with_height(16.)
                 .with_width(16.)
                 .finish(),
@@ -1693,10 +1693,10 @@ impl BillingAndUsagePageView {
                     .with_hyperlink_font_color(theme.accent().into_solid())
                     .register_default_click_handlers_with_action_support(
                         |hyperlink_lens, event, ctx| match hyperlink_lens {
-                            derpui::elements::HyperlinkLens::Url(url) => {
+                            borkui::elements::HyperlinkLens::Url(url) => {
                                 ctx.open_url(url);
                             }
-                            derpui::elements::HyperlinkLens::Action(action_ref) => {
+                            borkui::elements::HyperlinkLens::Action(action_ref) => {
                                 if let Some(action) = action_ref
                                     .as_any()
                                     .downcast_ref::<BillingAndUsagePageAction>()
@@ -2241,7 +2241,7 @@ impl BillingAndUsagePageView {
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
         prorated_request_limits_info: Option<ProratedRequestLimitsInfo>,
-    ) -> Box<dyn derpui::Element> {
+    ) -> Box<dyn borkui::Element> {
         let mut row = Flex::row();
 
         let show_alert = workspace_is_delinquent_due_to_payment_issue
@@ -2268,7 +2268,7 @@ impl BillingAndUsagePageView {
             row.add_child(
                 ConstrainedBox::new(
                     Icon::AlertTriangle
-                        .to_derpui_icon(appearance.theme().ui_error_color().into())
+                        .to_borkui_icon(appearance.theme().ui_error_color().into())
                         .finish(),
                 )
                 .with_height(16.)
@@ -2335,7 +2335,7 @@ impl BillingAndUsagePageView {
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
         prorated_request_limits_info: Option<ProratedRequestLimitsInfo>,
-    ) -> Box<dyn derpui::Element> {
+    ) -> Box<dyn borkui::Element> {
         let request_usage_details = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::End)
             .with_child(self.render_request_usage_count(
@@ -2603,7 +2603,7 @@ impl BillingAndUsagePageView {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::Conversation
-                                .to_derpui_icon(
+                                .to_borkui_icon(
                                     blended_colors::text_sub(
                                         appearance.theme(),
                                         appearance.theme().surface_1(),
@@ -2669,7 +2669,7 @@ impl BillingAndUsagePageView {
         let icon = Container::new(
             ConstrainedBox::new(
                 Icon::AlertCircle
-                    .to_derpui_icon(blended_colors::text_sub(theme, theme.surface_1()).into())
+                    .to_borkui_icon(blended_colors::text_sub(theme, theme.surface_1()).into())
                     .finish(),
             )
             .with_width(16.)
@@ -2915,7 +2915,7 @@ impl BillingAndUsagePageView {
             if t.billing_metadata.customer_type == CustomerType::Enterprise
                 && t.billing_metadata
                     .tier
-                    .derp_ai_policy
+                    .bork_ai_policy
                     .is_some_and(|p| p.limit == 0)
             {
                 usage.add_child(self.render_enterprise_usage_card(
@@ -3047,7 +3047,7 @@ impl BillingAndUsagePageView {
             .filter(|s| !s.trim().is_empty())
             .unwrap_or_else(|| current_user_email.clone());
 
-        // TODO: move sorting once per initial load or sort option change https://github.com/derpdotdev/derp-internal/pull/18288/files#r2392139761
+        // TODO: move sorting once per initial load or sort option change https://github.com/borkdotdev/bork-internal/pull/18288/files#r2392139761
         sort_user_items_in_place(
             &mut user_information,
             &current_user_display_name,
@@ -3153,13 +3153,13 @@ impl BillingAndUsagePageView {
                 vec![
                     FormattedTextFragment::hyperlink(
                         "Upgrade to Enterprise",
-                        "mailto:sales@derp.baby",
+                        "mailto:sales@bork.baby",
                     ),
                     FormattedTextFragment::plain_text(" for custom limits and dedicated support."),
                 ]
             } else if !team.billing_metadata.is_usage_based_pricing_toggleable() {
                 vec![
-                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@derp.baby"),
+                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@bork.baby"),
                     FormattedTextFragment::plain_text(" for more AI usage."),
                 ]
             } else {
@@ -3205,10 +3205,10 @@ impl BillingAndUsagePageView {
         } else {
             upgrade_cta = upgrade_cta.register_default_click_handlers_with_action_support(
                 |hyperlink_lens, event, ctx| match hyperlink_lens {
-                    derpui::elements::HyperlinkLens::Url(url) => {
+                    borkui::elements::HyperlinkLens::Url(url) => {
                         ctx.open_url(url);
                     }
-                    derpui::elements::HyperlinkLens::Action(action_ref) => {
+                    borkui::elements::HyperlinkLens::Action(action_ref) => {
                         if let Some(action) = action_ref
                             .as_any()
                             .downcast_ref::<BillingAndUsagePageAction>()
@@ -3364,7 +3364,7 @@ impl BillingAndUsagePageView {
                         TextAndIcon::new(
                             TextAndIconAlignment::IconFirst,
                             "Compare plans",
-                            Icon::CoinsStacked.to_derpui_icon(appearance.theme().accent()),
+                            Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
                             MainAxisSize::Min,
                             MainAxisAlignment::Center,
                             vec2f(14., 14.),
@@ -3429,7 +3429,7 @@ impl BillingAndUsagePageView {
                     TextAndIcon::new(
                         TextAndIconAlignment::IconFirst,
                         "Manage billing",
-                        Icon::CoinsStacked.to_derpui_icon(appearance.theme().accent()),
+                        Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(14., 14.),
@@ -3487,7 +3487,7 @@ impl BillingAndUsagePageView {
                     TextAndIcon::new(
                         TextAndIconAlignment::IconFirst,
                         "Open admin panel",
-                        Icon::Users.to_derpui_icon(appearance.theme().accent()),
+                        Icon::Users.to_borkui_icon(appearance.theme().accent()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(14., 14.),
@@ -3525,7 +3525,7 @@ impl BillingAndUsagePageView {
                     TextAndIcon::new(
                         TextAndIconAlignment::IconFirst,
                         "Compare plans",
-                        Icon::CoinsStacked.to_derpui_icon(appearance.theme().accent()),
+                        Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(14., 14.),

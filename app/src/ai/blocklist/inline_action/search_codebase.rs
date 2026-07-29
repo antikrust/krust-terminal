@@ -1,13 +1,13 @@
 use std::ops::Range;
 use std::sync::{Arc, RwLock};
 
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     Container, CornerRadius, CrossAxisAlignment, Element, Flex, FormattedTextElement,
     MainAxisAlignment, ParentElement, Radius, SelectableArea, SelectionHandle, Shrinkable,
 };
-use derpui::ui_components::components::UiComponentStyles;
-use derpui::{
+use borkui::ui_components::components::UiComponentStyles;
+use borkui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -42,7 +42,7 @@ pub enum SearchCodebaseViewEvent {
     #[cfg(feature = "local_fs")]
     OpenDetectedFilePath {
         absolute_path: std::path::PathBuf,
-        line_and_column_num: Option<derp_util::path::LineAndColumnArg>,
+        line_and_column_num: Option<bork_util::path::LineAndColumnArg>,
     },
     TextSelected,
 }
@@ -265,7 +265,7 @@ impl SearchCodebaseView {
     fn create_header_text_style(
         &self,
         appearance: &Appearance,
-        header_background: derp_core::ui::theme::Fill,
+        header_background: bork_core::ui::theme::Fill,
     ) -> UiComponentStyles {
         UiComponentStyles {
             font_family_id: Some(appearance.ui_font_family()),
@@ -283,7 +283,7 @@ impl SearchCodebaseView {
     fn create_header_container(
         &self,
         header_row: Box<dyn Element>,
-        header_background: derp_core::ui::theme::Fill,
+        header_background: bork_core::ui::theme::Fill,
         corner_radius: CornerRadius,
         app: &AppContext,
     ) -> Box<dyn Element> {
@@ -321,7 +321,7 @@ impl SearchCodebaseView {
         &self,
         _appearance: &Appearance,
         text: String,
-        icon: derpui::elements::Icon,
+        icon: borkui::elements::Icon,
         app: &AppContext,
     ) -> Box<dyn Element> {
         super::search_results_common::render_status_header(text, icon, app)

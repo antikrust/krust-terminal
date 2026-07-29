@@ -7,9 +7,9 @@ use std::sync::OnceLock;
 
 use command::r#async::Command;
 use enum_iterator::{all, cardinality};
-use derp_errors::report_error;
-use derp_util::path::LineAndColumnArg;
-use derpui::AppContext;
+use bork_errors::report_error;
+use bork_util::path::LineAndColumnArg;
+use borkui::AppContext;
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 use winreg::{RegKey, HKEY};
 

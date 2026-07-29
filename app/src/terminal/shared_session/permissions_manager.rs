@@ -1,5 +1,5 @@
 use session_sharing_protocol::common::{Guest, PendingGuest, Role, SessionId, TeamAclData};
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::drive::sharing::SharingAccessLevel;
 pub struct SessionPermissionsManager {}

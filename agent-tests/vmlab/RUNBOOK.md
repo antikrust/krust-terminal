@@ -22,7 +22,7 @@ exposed on the LAN. `run-ops.sh` sets the tunnel up for you.
   token is `~/.moloch/api-token`.
 - The app pointed at Moloch: a `moloch.env` (holding `MOLOCH_URL` +
   `MOLOCH_TOKEN`) in the app's state dir, e.g.
-  `~/Library/Application Support/derp.baby.DerpOss/moloch.env`. **The app reads
+  `~/Library/Application Support/bork.baby.BorkOss/moloch.env`. **The app reads
   this once at startup — restart the app after changing it.**
 - The PC reachable as `sentience` over ssh (key auth), with Ollama running and
   vmlab installed at `/mnt/terra/vmlab`.

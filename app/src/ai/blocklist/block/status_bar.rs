@@ -6,17 +6,17 @@ use instant::Instant;
 use markdown_parser::FormattedTextFragment;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::Icon as CoreIcon;
-use derp_multi_agent_api as api;
-use derpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use derpui::elements::{Border, Container, Empty, Flex, MouseStateHandle, ParentElement, Text};
-use derpui::keymap::Keystroke;
-use derpui::presenter::ChildView;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use bork_core::ui::Icon as CoreIcon;
+use bork_multi_agent_api as api;
+use borkui::elements::shimmering_text::ShimmeringTextStateHandle;
+use borkui::elements::{Border, Container, Empty, Flex, MouseStateHandle, ParentElement, Text};
+use borkui::keymap::Keystroke;
+use borkui::presenter::ChildView;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -24,9 +24,9 @@ use derpui::{
 use super::cli_controller::{CLISubagentController, CLISubagentEvent, UserTakeOverReason};
 use super::model::{AIBlockModel, AIBlockModelImpl, AIBlockOutputStatus};
 use super::view_impl::common::{
-    render_switch_control_to_user_button, render_derping_indicator, render_derping_indicator_base,
+    render_switch_control_to_user_button, render_borking_indicator, render_borking_indicator_base,
     AutoExecuteButtonProps, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
-    DerpingIndicatorProps, DerpingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
+    BorkingIndicatorProps, BorkingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
     SWEAR_THINKING_MESSAGE, THINKING_MESSAGE, WAITING_FOR_USER_INPUT_MESSAGE,
 };
 use crate::ai::agent::conversation::AIConversationId;
@@ -64,7 +64,7 @@ use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
 use crate::terminal::view::ambient_agent::{
     is_cloud_agent_pre_first_exchange, AmbientAgentViewModel, AmbientAgentViewModelEvent,
 };
-use crate::terminal::derpify::render::LEFT_STRIPE_WIDTH;
+use crate::terminal::borkify::render::LEFT_STRIPE_WIDTH;
 use crate::terminal::{
     TerminalModel, CANCEL_COMMAND_KEYBINDING, TOGGLE_AUTOEXECUTE_MODE_KEYBINDING,
     TOGGLE_HIDE_CLI_RESPONSES_KEYBINDING, TOGGLE_QUEUE_NEXT_PROMPT_KEYBINDING,
@@ -116,17 +116,17 @@ pub struct BlocklistAIStatusBar {
     summarization_start_time: Option<Instant>,
     /// When the in-flight run's shimmer line started, and the periodic timer
     /// that re-renders it so its rotating message advances (see
-    /// `rotating_derping_text`) — a buffered local Ollama turn produces no
+    /// `rotating_borking_text`) — a buffered local Ollama turn produces no
     /// mid-stream updates of its own, so nothing else would refresh the line.
-    derping_rotation_started_at: Option<Instant>,
-    derping_rotation_timer_handle: Option<SpawnedFutureHandle>,
+    borking_rotation_started_at: Option<Instant>,
+    borking_rotation_timer_handle: Option<SpawnedFutureHandle>,
     /// Handle for the 1-second periodic timer that refreshes the "Last read …" suffix in
-    /// the derping indicator while the active block has a recorded LRC snapshot.
+    /// the borking indicator while the active block has a recorded LRC snapshot.
     last_read_refresh_handle: Option<SpawnedFutureHandle>,
 
     latest_response_stream_id: Option<ResponseStreamId>,
 
-    /// Agent tip to display below the derping indicator.
+    /// Agent tip to display below the borking indicator.
     current_tip: Option<AgentTip>,
 
     ephemeral_message_model: ModelHandle<EphemeralMessageModel>,
@@ -377,8 +377,8 @@ impl BlocklistAIStatusBar {
             is_summarization_cancel_dialog_open: false,
             summarization_timer_handle: None,
             summarization_start_time: None,
-            derping_rotation_started_at: None,
-            derping_rotation_timer_handle: None,
+            borking_rotation_started_at: None,
+            borking_rotation_timer_handle: None,
             last_read_refresh_handle: None,
             ambient_agent_view_model: None,
             current_tip: None,
@@ -543,9 +543,9 @@ impl BlocklistAIStatusBar {
         // Keep the shimmer line's rotating message advancing while the run is
         // in flight; stop (and reset the rotation clock) once it settles.
         if is_run_in_flight {
-            self.start_derping_rotation(ctx);
+            self.start_borking_rotation(ctx);
         } else {
-            self.stop_derping_rotation();
+            self.stop_borking_rotation();
         }
 
         match status {
@@ -709,11 +709,11 @@ impl BlocklistAIStatusBar {
     /// Starts (or keeps) the periodic re-render that advances the shimmer
     /// line's rotating message while a run is in flight. Mirrors
     /// [`Self::start_summarization_timer`]'s self-rescheduling shape.
-    fn start_derping_rotation(&mut self, ctx: &mut ViewContext<Self>) {
-        if self.derping_rotation_started_at.is_none() {
-            self.derping_rotation_started_at = Some(Instant::now());
+    fn start_borking_rotation(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.borking_rotation_started_at.is_none() {
+            self.borking_rotation_started_at = Some(Instant::now());
         }
-        if self.derping_rotation_timer_handle.is_some() {
+        if self.borking_rotation_timer_handle.is_some() {
             return;
         }
         let handle = ctx.spawn(
@@ -721,19 +721,19 @@ impl BlocklistAIStatusBar {
                 Timer::after(Duration::from_millis(2500)).await;
             },
             |me, _unit, ctx| {
-                me.derping_rotation_timer_handle = None;
-                if me.derping_rotation_started_at.is_some() {
+                me.borking_rotation_timer_handle = None;
+                if me.borking_rotation_started_at.is_some() {
                     ctx.notify();
-                    me.start_derping_rotation(ctx);
+                    me.start_borking_rotation(ctx);
                 }
             },
         );
-        self.derping_rotation_timer_handle = Some(handle);
+        self.borking_rotation_timer_handle = Some(handle);
     }
 
-    fn stop_derping_rotation(&mut self) {
-        self.derping_rotation_started_at = None;
-        if let Some(handle) = self.derping_rotation_timer_handle.take() {
+    fn stop_borking_rotation(&mut self) {
+        self.borking_rotation_started_at = None;
+        if let Some(handle) = self.borking_rotation_timer_handle.take() {
             handle.abort();
         }
     }
@@ -742,7 +742,7 @@ impl BlocklistAIStatusBar {
     /// messages — one line, updating in place — because a buffered local turn
     /// otherwise sits on a single static label for its entire generation.
     /// Other harnesses keep the plain Sending/Thinking split.
-    fn rotating_derping_text(
+    fn rotating_borking_text(
         &self,
         has_output: bool,
         swear_mode: bool,
@@ -784,7 +784,7 @@ impl BlocklistAIStatusBar {
             ]
         };
         let index = self
-            .derping_rotation_started_at
+            .borking_rotation_started_at
             .map(|start| (start.elapsed().as_secs() / 3) as usize)
             .unwrap_or(0)
             % messages.len();
@@ -873,7 +873,7 @@ impl BlocklistAIStatusBar {
         }
     }
 
-    fn render_derping_indicator_for_latest_exchange(
+    fn render_borking_indicator_for_latest_exchange(
         &self,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
@@ -888,12 +888,12 @@ impl BlocklistAIStatusBar {
                 .is_some_and(|metadata| {
                     !metadata.should_hide_block() && metadata.long_running_control_state().is_none()
                 });
-        let should_render_derping = !model.request_type(app).is_passive()
+        let should_render_borking = !model.request_type(app).is_passive()
             && !has_expanded_requested_command_with_no_subagent
             && (conversation.status().is_in_progress()
                 || (active_block.is_agent_in_control() && !active_block.is_agent_blocked()));
 
-        if !should_render_derping {
+        if !should_render_borking {
             return None;
         }
 
@@ -928,7 +928,7 @@ impl BlocklistAIStatusBar {
             })
             .unwrap_or((None, None));
 
-        let fallback_derping_text = resolve_fallback_derping_message(
+        let fallback_borking_text = resolve_fallback_borking_message(
             current_is_fallback,
             current_display_name,
             model.as_ref(),
@@ -940,19 +940,19 @@ impl BlocklistAIStatusBar {
             .as_ref()
             .is_some_and(|output| !output.get().messages.is_empty());
         let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
-        let default_derping_text = fallback_derping_text
+        let default_borking_text = fallback_borking_text
             .as_deref()
             .map(str::to_owned)
-            .unwrap_or_else(|| self.rotating_derping_text(has_output, swear_mode, app));
-        let secondary_element = if fallback_derping_text.is_some() {
+            .unwrap_or_else(|| self.rotating_borking_text(has_output, swear_mode, app));
+        let secondary_element = if fallback_borking_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
             // Fork: no rotating tips under the "Sending..." shimmer.
             None
         };
 
-        Some(render_derping_indicator(
-            DerpingProps {
+        Some(render_borking_indicator(
+            BorkingProps {
                 model: model.as_ref(),
                 terminal_model: &terminal_model,
                 action_model: self.action_model.as_ref(app),
@@ -999,7 +999,7 @@ impl BlocklistAIStatusBar {
                     should_hide_responses,
                 )),
                 force_refresh_button,
-                default_derping_text,
+                default_borking_text,
                 secondary_element,
                 last_snapshot_at,
             },
@@ -1027,10 +1027,10 @@ impl BlocklistAIStatusBar {
 
         let progress = ambient_agent_model.agent_progress()?;
         let progress_text = progress.setup_status_text();
-        Some(render_derping_indicator_base(
-            DerpingIndicatorProps {
+        Some(render_borking_indicator_base(
+            BorkingIndicatorProps {
                 icon: None,
-                derping_indicator_text: MaybeShimmeringText::Shimmering {
+                borking_indicator_text: MaybeShimmeringText::Shimmering {
                     text: progress_text.into(),
                     shimmering_text_handle: self.shimmering_text_handle.clone(),
                 },
@@ -1128,7 +1128,7 @@ fn latest_model_used_before_exchange<V: View>(
 
 fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     use markdown_parser::{FormattedTextFragment, FormattedTextLine};
-    use derpui::text_layout::ClipConfig;
+    use borkui::text_layout::ClipConfig;
 
     use crate::ai::agent_tips::AITip;
 
@@ -1150,7 +1150,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
 
     let formatted_text =
         markdown_parser::FormattedText::new(vec![FormattedTextLine::Line(fragments)]);
-    derpui::elements::FormattedTextElement::new(
+    borkui::elements::FormattedTextElement::new(
         formatted_text,
         appearance.monospace_font_size() - 3.,
         appearance.ui_font_family(),
@@ -1162,7 +1162,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     .set_selectable(true)
     .with_clip(ClipConfig::ellipsis())
     .register_default_click_handlers_with_action_support(move |link, evt, app| {
-        use derpui::elements::HyperlinkLens;
+        use borkui::elements::HyperlinkLens;
         match link {
             HyperlinkLens::Url(url) => {
                 send_telemetry_from_app_ctx!(
@@ -1221,16 +1221,16 @@ fn render_fallback_explanation<V: View>(
     .finish()
 }
 
-/// If the current exchange is using a fallback model, returns the derping message to display
-/// (e.g. "Derping with Claude 3.5 Haiku."). When the current exchange's output doesn't have
+/// If the current exchange is using a fallback model, returns the borking message to display
+/// (e.g. "Borking with Claude 3.5 Haiku."). When the current exchange's output doesn't have
 /// model info yet (the ModelUsed message hasn't arrived), we check the most recent previous
 /// exchange as a best guess — if the conversation already fell back, the next exchange likely
-/// will too. This avoids a flicker from "Derping..." to "Derping with {name}." on follow-ups.
+/// will too. This avoids a flicker from "Borking..." to "Borking with {name}." on follow-ups.
 ///
 /// We skip the lookback for new user queries because the underlying model may have recovered
 /// since the previous exchange. For agent-initiated follow-up exchanges (action results, etc.)
 /// the lookback is still applied.
-fn resolve_fallback_derping_message<V: View>(
+fn resolve_fallback_borking_message<V: View>(
     current_is_fallback: Option<bool>,
     current_display_name: Option<String>,
     model: &dyn AIBlockModel<View = V>,
@@ -1260,8 +1260,8 @@ fn resolve_fallback_derping_message<V: View>(
         return None;
     }
     Some(match display_name.as_deref() {
-        Some(name) => format!("Derping with {name}."),
-        None => "Derping with another model.".to_owned(),
+        Some(name) => format!("Borking with {name}."),
+        None => "Borking with another model.".to_owned(),
     })
 }
 
@@ -1270,7 +1270,7 @@ impl View for BlocklistAIStatusBar {
         "BlocklistAIStatusBar"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
         let appearance = Appearance::as_ref(app);
         let agent_view_controller = self.agent_view_controller.as_ref(app);
         if let Some(cloud_mode_setup_terminal_message) =
@@ -1295,10 +1295,10 @@ impl View for BlocklistAIStatusBar {
                         )
                     })
             {
-                render_derping_indicator_base(
-                    DerpingIndicatorProps {
+                render_borking_indicator_base(
+                    BorkingIndicatorProps {
                         icon: None,
-                        derping_indicator_text: MaybeShimmeringText::Shimmering {
+                        borking_indicator_text: MaybeShimmeringText::Shimmering {
                             text: "Setting up environment".into(),
                             shimmering_text_handle: self.shimmering_text_handle.clone(),
                         },
@@ -1322,10 +1322,10 @@ impl View for BlocklistAIStatusBar {
                     .current_message()
                     .is_none()
             {
-                render_derping_indicator_base(
-                    DerpingIndicatorProps {
+                render_borking_indicator_base(
+                    BorkingIndicatorProps {
                         icon: Some(icons::gray_clock_icon(appearance).finish()),
-                        derping_indicator_text: MaybeShimmeringText::Static(
+                        borking_indicator_text: MaybeShimmeringText::Static(
                             WAITING_FOR_USER_INPUT_MESSAGE.into(),
                         ),
                         non_shimmering_text: None,
@@ -1345,14 +1345,14 @@ impl View for BlocklistAIStatusBar {
                     },
                     app,
                 )
-            } else if let (Some(derping_indicator), true) = (
-                self.render_derping_indicator_for_latest_exchange(app),
+            } else if let (Some(borking_indicator), true) = (
+                self.render_borking_indicator_for_latest_exchange(app),
                 self.ephemeral_message_model
                     .as_ref(app)
                     .current_message()
                     .is_none(),
             ) {
-                derping_indicator
+                borking_indicator
             } else if self.ambient_agent_view_model.as_ref().is_some_and(
                 |ambient_agent_view_model| {
                     ambient_agent_view_model
@@ -1360,7 +1360,7 @@ impl View for BlocklistAIStatusBar {
                         .is_waiting_for_session()
                 },
             ) {
-                // Don't render derping indicator - the loading screen is shown in the main view
+                // Don't render borking indicator - the loading screen is shown in the main view
                 return Empty::new().finish();
             } else if agent_view_controller.is_active() {
                 // The orchestration pill bar in the agent view header
@@ -1451,7 +1451,7 @@ pub enum BlocklistAIStatusBarAction {
     Stop,
     /// Force the agent's pending poll for a long-running command to resolve
     /// immediately with a fresh snapshot, bypassing its agent-set timer. Dispatched
-    /// by the inline `Check now` affordance in the derping indicator.
+    /// by the inline `Check now` affordance in the borking indicator.
     ForceRefreshAgentView {
         block_id: crate::terminal::model::block::BlockId,
     },

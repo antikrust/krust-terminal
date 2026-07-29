@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use derp_errors::report_if_error;
-use derpui::presenter::ChildView;
-use derpui::{
+use bork_errors::report_if_error;
+use borkui::presenter::ChildView;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

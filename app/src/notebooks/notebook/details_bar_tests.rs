@@ -1,4 +1,4 @@
-use derpui::{App, SingletonEntity};
+use borkui::{App, SingletonEntity};
 
 use super::editor_display_name;
 use crate::auth::UserUid;
@@ -18,13 +18,13 @@ fn test_editor_display_name() {
                 UserProfileWithUID {
                     firebase_uid: UserUid::new("abc123"),
                     display_name: Some("The Editor".to_string()),
-                    email: "editor@derp.baby".to_string(),
+                    email: "editor@bork.baby".to_string(),
                     photo_url: "http://example.com/profile.jpg".to_string(),
                 },
                 UserProfileWithUID {
                     firebase_uid: UserUid::new("def456"),
                     display_name: None,
-                    email: "anon@derp.baby".to_string(),
+                    email: "anon@bork.baby".to_string(),
                     photo_url: "http://example.com/profile.jpg".to_string(),
                 },
             ])
@@ -36,19 +36,19 @@ fn test_editor_display_name() {
 
             // If the editor doesn't have a profile, default to their email.
             assert_eq!(
-                &editor_display_name(Some("unknown@derp.baby"), ctx),
-                "unknown@derp.baby"
+                &editor_display_name(Some("unknown@bork.baby"), ctx),
+                "unknown@bork.baby"
             );
 
             // If the profile is missing a display name, default to the email.
             assert_eq!(
-                &editor_display_name(Some("anon@derp.baby"), ctx),
-                "anon@derp.baby"
+                &editor_display_name(Some("anon@bork.baby"), ctx),
+                "anon@bork.baby"
             );
 
             // If there's a display name available, use that.
             assert_eq!(
-                &editor_display_name(Some("editor@derp.baby"), ctx),
+                &editor_display_name(Some("editor@bork.baby"), ctx),
                 "The Editor"
             );
         });

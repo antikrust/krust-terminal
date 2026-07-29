@@ -1,17 +1,17 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use derp_core::ui::Icon;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui_core::elements::{
+use bork_core::ui::Icon;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Flex,
     ParentElement, Radius, Shrinkable,
 };
-use derpui_core::fonts::{Properties, Weight};
-use derpui_core::keymap::Keystroke;
-use derpui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
-use derpui_core::{AppContext, EventContext};
+use borkui_core::fonts::{Properties, Weight};
+use borkui_core::keymap::Keystroke;
+use borkui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
+use borkui_core::{AppContext, EventContext};
 
 use crate::{Component, Options as _, Renderable, button};
 

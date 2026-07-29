@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::{ProfileData as SessionSharingProfileData, Role};
-use derp_graphql::object_permissions::AccessLevel;
+use bork_graphql::object_permissions::AccessLevel;
 
 use crate::auth::UserUid;
 use crate::cloud_object::Owner;
@@ -132,11 +132,11 @@ pub enum Subject {
     AnyoneWithLink(LinkSharingSubjectType),
 }
 
-/// A kind of user. In all cases, there is an underlying Derp account, but it's represented
+/// A kind of user. In all cases, there is an underlying Bork account, but it's represented
 /// differently in certain cases.
 #[derive(Debug, Clone)]
 pub enum UserKind {
-    /// A Derp user account, tracked in the [`UserProfiles`] model.
+    /// A Bork user account, tracked in the [`UserProfiles`] model.
     Account(UserUid),
     /// A session-sharing participant.
     // TODO(CLD-2283): Remove this once we have Firebase UIDs for shared session participants.

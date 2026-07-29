@@ -1,6 +1,6 @@
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::conversation::AIConversationId;
@@ -17,13 +17,13 @@ use crate::terminal::model::session::active_session::ActiveSession;
 
 pub struct CreateDocumentsExecutor {
     active_session: ModelHandle<ActiveSession>,
-    terminal_view_id: derpui::EntityId,
+    terminal_view_id: borkui::EntityId,
 }
 
 impl CreateDocumentsExecutor {
     pub fn new(
         active_session: ModelHandle<ActiveSession>,
-        terminal_view_id: derpui::EntityId,
+        terminal_view_id: borkui::EntityId,
     ) -> Self {
         Self {
             active_session,
@@ -101,18 +101,18 @@ impl CreateDocumentsExecutor {
 
                 let profile = AIExecutionProfilesModel::as_ref(ctx)
                     .active_profile(Some(self.terminal_view_id), ctx);
-                let should_autosync = profile.data().autosync_plans_to_derp_drive;
+                let should_autosync = profile.data().autosync_plans_to_bork_drive;
 
                 if should_autosync {
                     model.update(ctx, |model, model_ctx| {
-                        model.sync_to_derp_drive(id, model_ctx);
+                        model.sync_to_bork_drive(id, model_ctx);
                     });
                 }
 
                 // Add plan artifact to the conversation.
                 let artifact = Artifact::Plan {
                     document_uid: id.to_string(),
-                    notebook_uid: None, // Will be updated when synced to Derp Drive
+                    notebook_uid: None, // Will be updated when synced to Bork Drive
                     title: Some(document.title.clone()),
                 };
                 let terminal_view_id = self.terminal_view_id;

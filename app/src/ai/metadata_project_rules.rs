@@ -1,7 +1,7 @@
 use ai::project_context::model::ProjectRuleContents;
 use futures::future::{BoxFuture, FutureExt as _};
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::AppContext;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::AppContext;
 
 use super::remote_context_files::read_remote_text_file_contents;
 

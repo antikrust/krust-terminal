@@ -1,11 +1,11 @@
 use serde_json::json;
-use derp_cli::agent::Harness;
-use derp_cli::artifact::{
+use bork_cli::agent::Harness;
+use bork_cli::artifact::{
     ArtifactCommand, DownloadArtifactArgs, GetArtifactArgs, UploadArtifactArgs,
 };
-use derp_cli::task::{MessageCommand, MessageSendArgs, MessageWatchArgs, TaskCommand};
-use derp_cli::CliCommand;
-use derp_core::telemetry::TelemetryEvent;
+use bork_cli::task::{MessageCommand, MessageSendArgs, MessageWatchArgs, TaskCommand};
+use bork_cli::CliCommand;
+use bork_core::telemetry::TelemetryEvent;
 
 use super::{command_requires_auth, command_to_telemetry_event, reconcile_task_harness};
 

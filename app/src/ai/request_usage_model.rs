@@ -5,11 +5,11 @@ use anyhow::Context as _;
 use chrono::{DateTime, Local, Utc};
 use instant::Instant;
 use serde::{Deserialize, Serialize};
-use derp_core::user_preferences::GetUserPreferences as _;
-use derp_errors::report_error;
-pub use derp_graphql::billing::BonusGrantType;
-use derp_graphql::scalars::time::ServerTimestamp;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use bork_core::user_preferences::GetUserPreferences as _;
+use bork_errors::report_error;
+pub use bork_graphql::billing::BonusGrantType;
+use bork_graphql::scalars::time::ServerTimestamp;
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentExchangeId;
@@ -438,7 +438,7 @@ impl AIRequestUsageModel {
         });
 
         // If you have provided your own API key or connected a Grok
-        // subscription, it doesn't matter if you are out of derp-provided requests.
+        // subscription, it doesn't matter if you are out of bork-provided requests.
         let has_byo_credentials = UserWorkspaces::as_ref(ctx).is_byo_api_key_enabled(ctx)
             && ApiKeyManager::as_ref(ctx).has_any_key();
 

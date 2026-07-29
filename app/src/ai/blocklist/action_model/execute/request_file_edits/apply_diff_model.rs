@@ -11,8 +11,8 @@
 use ai::diff_validation::AIRequestedCodeDiff;
 use futures::FutureExt;
 use vec1::Vec1;
-use derpui::r#async::BoxFuture;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity as _};
+use borkui::r#async::BoxFuture;
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity as _};
 
 use super::diff_application::{apply_edits, DiffApplicationError, FileReadResult};
 use crate::ai::agent::{AIIdentifiers, FileEdit};

@@ -1,5 +1,5 @@
-use derpui::platform::WindowStyle;
-use derpui::App;
+use borkui::platform::WindowStyle;
+use borkui::App;
 
 use super::Transcript;
 use crate::ai_assistant::requests::Requests;

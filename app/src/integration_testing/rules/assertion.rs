@@ -1,5 +1,5 @@
-use derpui::integration::{AssertionCallback, AssertionWithDataCallback};
-use derpui::{async_assert, async_assert_eq, AppContext, SingletonEntity};
+use borkui::integration::{AssertionCallback, AssertionWithDataCallback};
+use borkui::{async_assert, async_assert_eq, AppContext, SingletonEntity};
 
 use crate::ai::facts::view::AIFactPage;
 use crate::ai::facts::CloudAIFactModel;

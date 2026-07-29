@@ -1,6 +1,6 @@
 use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
-use derp_util::remote_path::RemotePath;
-use derpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_util::remote_path::RemotePath;
+use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::GitHubRepoEvent;
 use crate::remote_server::proto;

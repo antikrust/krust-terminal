@@ -94,7 +94,7 @@ pub struct Guest {
     pub direct_acl: Role,
 }
 
-/// Information about a non-Derp user who has been invited to the session.
+/// Information about a non-Bork user who has been invited to the session.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PendingGuest {
     pub email: String,
@@ -122,7 +122,7 @@ pub struct ParticipantList {
     pub absent_viewers: Vec<AbsentViewer>,
     /// Users that have a direct ACL on the session.
     pub guests: Vec<Guest>,
-    /// Non-Derp users who have been invited to the session.
+    /// Non-Bork users who have been invited to the session.
     pub pending_guests: Vec<PendingGuest>,
 }
 

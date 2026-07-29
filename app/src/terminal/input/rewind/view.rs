@@ -1,7 +1,7 @@
 //! View for the rewind menu.
 
-use derpui::elements::ChildView;
-use derpui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use borkui::elements::ChildView;
+use borkui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentExchangeId;
@@ -138,7 +138,7 @@ impl View for RewindMenuView {
         "RewindMenuView"
     }
 
-    fn render(&self, _app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

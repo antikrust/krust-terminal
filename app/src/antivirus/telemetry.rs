@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
@@ -37,7 +37,7 @@ impl TelemetryEvent for AntivirusInfoTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -65,4 +65,4 @@ impl TelemetryEventDesc for AntivirusInfoTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(AntivirusInfoTelemetryEvent);
+bork_core::register_telemetry_event!(AntivirusInfoTelemetryEvent);

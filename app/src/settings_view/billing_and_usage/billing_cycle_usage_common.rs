@@ -4,14 +4,14 @@ use std::collections::HashMap;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use thousands::Separable;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Empty,
     Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable,
     Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::Element;
+use borkui::fonts::{Properties, Weight};
+use borkui::Element;
 
 use crate::settings_view::billing_and_usage_page_v2::{
     AGGREGATE_CREDITS_DOT_COLOR, AMBIENT_CREDITS_DOT_COLOR, BASE_CREDITS_DOT_COLOR,
@@ -24,7 +24,7 @@ use crate::workspaces::workspace::{
 };
 
 // for a bunch of this (min fill ratio, cost type order, ... )
-// you will find analogous ts code in derp-server
+// you will find analogous ts code in bork-server
 pub const ROW_BORDER_RADIUS: f32 = 8.;
 pub const ROW_BORDER_WIDTH: f32 = 1.;
 pub const TOOLTIP_GAP: f32 = 6.;
@@ -175,7 +175,7 @@ pub fn aggregate_segments<'a>(
 /// limits (`VoiceRequestLimit` / `SuggestedCodeDiffsLimit`) rather than the
 /// AI/Compute base credit pool — see
 /// `model/sql/ai_credits_usage_and_cost/get_base_limits_usage.sql` and
-/// `isBaseLimitExhaustedForBucket` in derp-server. Records are written with
+/// `isBaseLimitExhaustedForBucket` in bork-server. Records are written with
 /// `cost_type = BASE_LIMIT` and `cost_cents = 0`, so surfacing them here
 /// would inflate the per-row `total_credits` and skew the `used / limit`
 /// math without contributing to anything the user is actually billed for.
@@ -348,7 +348,7 @@ fn render_tooltip_row(
     cost_cents: i64,
     label_color: ColorU,
     value_color: ColorU,
-    font_family: derpui::fonts::FamilyId,
+    font_family: borkui::fonts::FamilyId,
     bold: bool,
 ) -> Box<dyn Element> {
     let style = if bold {

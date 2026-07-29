@@ -1,6 +1,6 @@
 [package]
 name = "markdown_parser"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 version = "0.1.0"
 edition = "2024"
 publish.workspace = true

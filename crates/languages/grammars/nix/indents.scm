@@ -1,5 +1,5 @@
 ; Adapted from Helix's runtime/queries/nix/indents.scm, reduced to the plain
-; @indent / @outdent captures Derp's indent engine consumes.
+; @indent / @outdent captures Bork's indent engine consumes.
 
 ; One level per bracketed scope; the matching close token dedents.
 [

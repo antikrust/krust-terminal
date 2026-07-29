@@ -1,15 +1,15 @@
 ---
 name: review-pr-local
 specializes: review-pr
-specializes_source: derpdotdev/common-skills:.agents/skills/review-pr
-description: Repo-specific review guidance for derp. Only the categories declared overridable by the core review-pr skill may be specialized here.
+specializes_source: borkdotdev/common-skills:.agents/skills/review-pr
+description: Repo-specific review guidance for bork. Only the categories declared overridable by the core review-pr skill may be specialized here.
 ---
 
-# Repo-specific review guidance for `derp`
+# Repo-specific review guidance for `bork`
 
 ## Prerequisite: install the parent skill
 
-This skill specializes the core `review-pr` skill (named in the `specializes` frontmatter field) and is not functional on its own. Before applying its guidance, confirm the parent skill is installed and resolvable at `.agents/skills/review-pr/SKILL.md`. If it is missing, install it first by copying the skill directory from the source declared in the `specializes_source` frontmatter field (`derpdotdev/common-skills:.agents/skills/review-pr`). Then continue with the guidance below.
+This skill specializes the core `review-pr` skill (named in the `specializes` frontmatter field) and is not functional on its own. Before applying its guidance, confirm the parent skill is installed and resolvable at `.agents/skills/review-pr/SKILL.md`. If it is missing, install it first by copying the skill directory from the source declared in the `specializes_source` frontmatter field (`borkdotdev/common-skills:.agents/skills/review-pr`). Then continue with the guidance below.
 
 This file is a companion to the core `review-pr` skill. It does not
 redefine the review output schema, severity labels, safety rules, or
@@ -25,20 +25,20 @@ skill marks as overridable.
 - Avoid wildcard `_` match arms when an enum can reasonably be matched exhaustively; exhaustive matches are preferred so future variants are surfaced during review.
 - For new or changed feature flags, prefer high-level runtime checks with `FeatureFlag::YourFlag.is_enabled()` over `#[cfg(...)]` unless the code cannot compile without a compile-time gate.
 - Flag nested or redundant `TerminalModel` locking when the call stack may already hold the model lock. Prefer passing locked references down the stack and keeping lock scopes short.
-- In DerpUI code, flag inline `MouseStateHandle::default()` usage during render or event handling. Mouse state handles should be created during construction and then cloned/referenced where needed.
+- In BorkUI code, flag inline `MouseStateHandle::default()` usage during render or event handling. Mouse state handles should be created during construction and then cloned/referenced where needed.
 - For user-facing UI changes, mention missing validation only when it is tied to a concrete risk or when the PR changes behavior that should be verified visually.
 
 ## Behavioral or UI-impacting changes require visual evidence
 
-- If the PR changes anything user-visible (UI components, layout, styling, copy in surfaces users see, terminal/Derp app visuals, or other behavior a user can perceive), analyze both `pr_description.txt` and any PR comments available in the workflow context for attached screenshots, GIFs, or videos demonstrating the change end to end.
+- If the PR changes anything user-visible (UI components, layout, styling, copy in surfaces users see, terminal/Bork app visuals, or other behavior a user can perceive), analyze both `pr_description.txt` and any PR comments available in the workflow context for attached screenshots, GIFs, or videos demonstrating the change end to end.
   - Treat markdown image/video embeds (`![...](...)`, `<img ...>`, `<video ...>`), GitHub user-attachment links (e.g. `https://github.com/user-attachments/...`, `https://user-images.githubusercontent.com/...`), Loom links, and similar hosted media as valid evidence.
   - The `Screenshots / Videos` section from `.github/pull_request_template.md` being present but empty does not count as evidence.
   - Unit tests, integration tests, `git diff --check`, code-path descriptions, and other textual explanations may supplement visual evidence but do not replace it for user-visible behavior.
 - If the change is behavioral or UI-impacting and no screenshots or videos are attached in the description or comments, add an inline or summary-level comment requesting them. Use wording such as: "For this user-facing change, please include screenshots or a screen recording demonstrating it working end to end."
 - When required visual evidence is missing for a behavioral or UI-impacting change that can be manually tested, set the final recommendation in the top-level `body` `## Verdict` section to `Request changes`, even if no other blocking issues were found. The top-level `verdict` field must be `"REJECT"` to match.
-- Author environment limitations (e.g., headless runner, no desktop, environment can't capture) do not exempt UI-impacting changes from visual evidence. Suggest capturing the recording from a local desktop run or from a remote environment with desktop/computer-use support (for example, a coding agent such as Oz with [computer use](https://docs.derp.baby/agent-platform/derps-agent/capabilities-overview/computer-use) enabled). Reply with something like: _"This change is user-facing, so a screenshot or short recording is still required. If a local desktop isn't available, you can capture it from a coding agent that supports computer use (Oz is one option — see [Derp's computer use docs](https://docs.derp.baby/agent-platform/derps-agent/capabilities-overview/computer-use)) and attach it here."_ Set the verdict to `Request changes`.
+- Author environment limitations (e.g., headless runner, no desktop, environment can't capture) do not exempt UI-impacting changes from visual evidence. Suggest capturing the recording from a local desktop run or from a remote environment with desktop/computer-use support (for example, a coding agent such as Oz with [computer use](https://docs.bork.baby/agent-platform/borks-agent/capabilities-overview/computer-use) enabled). Reply with something like: _"This change is user-facing, so a screenshot or short recording is still required. If a local desktop isn't available, you can capture it from a coding agent that supports computer use (Oz is one option — see [Bork's computer use docs](https://docs.bork.baby/agent-platform/borks-agent/capabilities-overview/computer-use)) and attach it here."_ Set the verdict to `Request changes`.
 - Exempt visual evidence only when the user-visible behavior truly cannot be meaningfully shown visually (for example, changes affecting only screen readers or non-visual side effects). If so, briefly state why screenshots or recordings would not be meaningful. Never exempt based on limitations of the author's environment.
-- TUI caveat: for changes to the headless TUI (`crates/derp_tui` or the cell-grid element library at `crates/derpui_core/src/elements/tui`), acceptable "visual evidence" is a terminal transcript, a `render_to_lines` / `TuiBuffer::to_lines` snapshot diff, or a `./script/run-tui` capture — NOT a `computer_use` screenshot or real-display recording (those are for the GUI desktop app). See the `tui-verify-change` skill. The `MouseStateHandle` ownership rule still applies to TUI code: the TUI's hover/click elements (`TuiHoverable`, `tui_collapsible`) are built on the shared `MouseStateHandle` and must own the handle outside render (created once, reused) so hover/click state survives rebuilt element trees — so flag inline `MouseStateHandle::default()` there too. Only the GUI's *pixel-based hit-testing* specifics are GUI-only.
+- TUI caveat: for changes to the headless TUI (`crates/bork_tui` or the cell-grid element library at `crates/borkui_core/src/elements/tui`), acceptable "visual evidence" is a terminal transcript, a `render_to_lines` / `TuiBuffer::to_lines` snapshot diff, or a `./script/run-tui` capture — NOT a `computer_use` screenshot or real-display recording (those are for the GUI desktop app). See the `tui-verify-change` skill. The `MouseStateHandle` ownership rule still applies to TUI code: the TUI's hover/click elements (`TuiHoverable`, `tui_collapsible`) are built on the shared `MouseStateHandle` and must own the handle outside render (created once, reused) so hover/click state survives rebuilt element trees — so flag inline `MouseStateHandle::default()` there too. Only the GUI's *pixel-based hit-testing* specifics are GUI-only.
 - If the PR is not user-visible at all (e.g. pure refactor, internal tools, build scripts, backend-only code, tests, or documentation), do not request screenshots or videos.
 
 ## User-facing strings

@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use chrono::Local;
-use derp_completer::completer::{
+use bork_completer::completer::{
     EngineFileType, Match, MatchStrategy, MatchedSuggestion, Priority, Suggestion,
     SuggestionResults, SuggestionType, TopLevelCommandCaseSensitivity,
 };
-use derp_completer::meta::Span;
-use derp_core::ui::appearance::Appearance;
-use derpui::platform::WindowStyle;
-use derpui::App;
+use bork_completer::meta::Span;
+use bork_core::ui::appearance::Appearance;
+use borkui::platform::WindowStyle;
+use borkui::App;
 
 use super::{HistoryInputSuggestion, InputSuggestions, TabCompletionsPreselectOption};
 use crate::ai::blocklist::AIQueryHistory;
@@ -37,7 +37,7 @@ fn test_basic_tab_prefix() {
         prefix_matched_suggestion("stash"),
         prefix_matched_suggestion("status"),
         prefix_matched_suggestion("stats/")
-            .with_file_type(derp_completer::completer::EngineFileType::Directory),
+            .with_file_type(bork_completer::completer::EngineFileType::Directory),
     ];
 
     let suggestion_results = SuggestionResults {

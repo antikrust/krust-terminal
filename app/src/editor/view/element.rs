@@ -10,27 +10,27 @@ use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use smallvec::SmallVec;
 use vim::vim::{MotionType, VimMode};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
-use derp_errors::report_error;
-use derp_util::user_input::UserInput;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
+use bork_errors::report_error;
+use bork_util::user_input::UserInput;
+use borkui::elements::{
     AfterLayoutContext, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Element, Event, EventContext, Flex, LayoutContext, PaintContext, ParentElement, Point, Radius,
     SizeConstraint, Text, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::event::{DispatchedEvent, KeyState, ModifiersState};
-use derpui::keymap::Keystroke;
-use derpui::platform::keyboard::KeyCode;
-use derpui::text_layout::{
+use borkui::event::{DispatchedEvent, KeyState, ModifiersState};
+use borkui::keymap::Keystroke;
+use borkui::platform::keyboard::KeyCode;
+use borkui::text_layout::{
     self, ComputeBaselinePositionArgs, LayoutCache, DEFAULT_TOP_BOTTOM_RATIO,
 };
-use derpui::text_selection_utils::{
+use borkui::text_selection_utils::{
     calculate_tick_width, create_newline_tick_rect, selection_crosses_newline_row_based,
     NewlineTickParams,
 };
-use derpui::ui_components::components::UiComponent;
-use derpui::{AppContext, SingletonEntity, TaskId, ViewHandle};
+use borkui::ui_components::components::UiComponent;
+use borkui::{AppContext, SingletonEntity, TaskId, ViewHandle};
 
 use super::super::soft_wrap::{
     ClampDirection, DisplayPointAndClampDirection, FrameLayouts, SoftWrapPoint, SoftWrapState,
@@ -870,7 +870,7 @@ impl EditorElement {
                         cursor.origin.y() - cursor_height,
                     );
                     // New layer is started so avatars are rendered over text and prompt
-                    ctx.scene.start_layer(derpui::ClipBounds::None);
+                    ctx.scene.start_layer(borkui::ClipBounds::None);
                     drawable_selections_data
                         .avatar
                         .paint(avatar_origin, ctx, app);
@@ -886,7 +886,7 @@ impl EditorElement {
                     cursor.origin.y() - icon_size.y() - VOICE_INPUT_ICON_CURSOR_GAP,
                 );
                 // New layer is started so voice icon is rendered over text and prompt
-                ctx.scene.start_layer(derpui::ClipBounds::None);
+                ctx.scene.start_layer(borkui::ClipBounds::None);
                 element.paint(icon_origin, ctx, app);
                 ctx.scene.stop_layer();
             }
@@ -1481,7 +1481,7 @@ impl EditorElement {
         let cycle_next_command_hint = if self.should_show_cycle_next_command_hint(is_cycling, ctx) {
             let appearance = Appearance::as_ref(ctx);
             Some(
-                self.render_cycle_next_command_hint(derp_core::ui::theme::Fill::Solid(
+                self.render_cycle_next_command_hint(bork_core::ui::theme::Fill::Solid(
                     blended_colors::semantic_text_disabled(appearance.theme()),
                 )),
             )
@@ -1501,7 +1501,7 @@ impl EditorElement {
             .with_cross_axis_alignment(CrossAxisAlignment::End)
             .with_children([
                 Container::new(
-                    ConstrainedBox::new(Icon::ArrowDown.to_derpui_icon(color).finish())
+                    ConstrainedBox::new(Icon::ArrowDown.to_borkui_icon(color).finish())
                         .with_max_height(icon_height)
                         .with_max_width(icon_height)
                         .finish(),

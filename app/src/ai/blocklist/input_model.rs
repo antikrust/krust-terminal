@@ -16,9 +16,9 @@ use parking_lot::FairMutex;
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::{InputMode, InputType as ProtocolInputType};
 use settings::Setting as _;
-use derp_completer::completer::CompletionContext;
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use bork_completer::completer::CompletionContext;
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 /// The source of the final input type decision applied to the user input.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -88,7 +88,7 @@ impl From<InputClassifierDecisionSource> for InputTypeAutoDetectionSource {
     }
 }
 
-use derp_errors::report_if_error;
+use bork_errors::report_if_error;
 
 use super::context_model::BlocklistAIContextModel;
 use super::history_model::BlocklistAIHistoryModel;
@@ -785,7 +785,7 @@ impl BlocklistAIInputModel {
                     futures_lite::future::yield_now().await;
 
                     let input =
-                        derp_completer::util::expand_aliases(input, &completion_context).await;
+                        bork_completer::util::expand_aliases(input, &completion_context).await;
 
                     futures_lite::future::yield_now().await;
 

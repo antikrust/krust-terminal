@@ -3,16 +3,16 @@
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use derp_core::ui::color::coloru_with_opacity;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::ui::color::coloru_with_opacity;
+use bork_core::ui::theme::Fill;
+use bork_core::ui::Icon;
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, ParentElement, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::scene::{CornerRadius, Radius};
-use derpui::text_layout::ClipConfig;
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::scene::{CornerRadius, Radius};
+use borkui::text_layout::ClipConfig;
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent::AIAgentExchangeId;
 use crate::appearance::Appearance;
@@ -93,7 +93,7 @@ impl SearchItem for RewindSearchItem {
         let color = icon_color(appearance);
 
         let icon = Container::new(
-            ConstrainedBox::new(Icon::ClockRewind.to_derpui_icon(color).finish())
+            ConstrainedBox::new(Icon::ClockRewind.to_borkui_icon(color).finish())
                 .with_width(appearance.monospace_font_size())
                 .with_height(appearance.monospace_font_size())
                 .finish(),
@@ -135,7 +135,7 @@ impl SearchItem for RewindSearchItem {
         }
 
         // Line 2: Code changes summary
-        let secondary_text_color: derpui::color::ColorU =
+        let secondary_text_color: borkui::color::ColorU =
             theme.sub_text_color(theme.surface_1()).into();
 
         let changes_element: Box<dyn Element> = if self.is_current {

@@ -1,6 +1,6 @@
-use derpui_core::elements::{CacheOption, Image};
-use derpui_core::geometry::vector::vec2f;
-use derpui_core::{Element, SizeConstraint};
+use borkui_core::elements::{CacheOption, Image};
+use borkui_core::geometry::vector::vec2f;
+use borkui_core::{Element, SizeConstraint};
 
 use super::{RenderContext, RenderableBlock};
 use crate::extract_block;
@@ -33,8 +33,8 @@ impl RenderableBlock for RenderableImage {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut derpui_core::LayoutContext,
-        app: &derpui_core::AppContext,
+        ctx: &mut borkui_core::LayoutContext,
+        app: &borkui_core::AppContext,
     ) {
         let content = model.content();
         let (asset_source, config) = extract_block!(
@@ -58,7 +58,7 @@ impl RenderableBlock for RenderableImage {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        app: &derpui_core::AppContext,
+        app: &borkui_core::AppContext,
     ) {
         let content = model.content();
         let positioned_image = extract_block!(
@@ -82,7 +82,7 @@ impl RenderableBlock for RenderableImage {
         }
 
         if selected {
-            let rect_bounds = derpui_core::geometry::rect::RectF::new(screen_position, size);
+            let rect_bounds = borkui_core::geometry::rect::RectF::new(screen_position, size);
             ctx.paint
                 .scene
                 .draw_rect_with_hit_recording(rect_bounds)

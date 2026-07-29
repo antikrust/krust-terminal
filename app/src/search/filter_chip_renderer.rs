@@ -1,10 +1,10 @@
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, Icon,
     MouseStateHandle, ParentElement, Radius, Text,
 };
-use derpui::platform::Cursor;
-use derpui::{Element, EventContext};
+use borkui::platform::Cursor;
+use borkui::{Element, EventContext};
 
 use crate::appearance::Appearance;
 use crate::search::QueryFilter;

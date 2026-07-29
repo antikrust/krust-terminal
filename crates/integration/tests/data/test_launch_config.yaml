@@ -1,4 +1,4 @@
-# Derp Launch Configuration
+# Bork Launch Configuration
 #
 #
 # Use this to start a certain configuration of windows, tabs, and panes
@@ -7,7 +7,7 @@
 # This file defines your launch configuration
 # More on how to do so here: [link to docs]
 #
-# All launch configurations are stored under ~/.derp/launch_configurations/
+# All launch configurations are stored under ~/.bork/launch_configurations/
 # Edit them anytime!
 
 ---
@@ -17,12 +17,12 @@ windows:
       - layout:
           split_direction: horizontal
           panes:
-            - cwd: /Users/zhengtao/src/derp-internal/app/src/terminal
-            - cwd: /Users/zhengtao/src/derp-internal
+            - cwd: /Users/zhengtao/src/bork-internal/app/src/terminal
+            - cwd: /Users/zhengtao/src/bork-internal
       - layout:
-          cwd: /Users/zhengtao/src/derp-internal
+          cwd: /Users/zhengtao/src/bork-internal
       - layout:
-          cwd: /Users/zhengtao/src/derp-internal
+          cwd: /Users/zhengtao/src/bork-internal
   - tabs:
       - layout:
           split_direction: horizontal

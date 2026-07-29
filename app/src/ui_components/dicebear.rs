@@ -26,7 +26,7 @@ use std::sync::{Arc, LazyLock};
 
 use bytes::Bytes;
 use serde::Deserialize;
-use derpui::assets::asset_cache::{AssetSource, AsyncAssetId, AsyncAssetType};
+use borkui::assets::asset_cache::{AssetSource, AsyncAssetId, AsyncAssetType};
 
 // ---------------------------------------------------------------------------
 // Data model (matches dicebear_data.json)

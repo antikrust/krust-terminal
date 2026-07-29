@@ -1,6 +1,6 @@
 # APP-3736: Allow specifying tab-close behavior in tab configs
 
-Linear: [APP-3736](https://linear.app/derpdotdev/issue/APP-3736/allow-for-specifying-closing-of-tab-behavior)
+Linear: [APP-3736](https://linear.app/borkdotdev/issue/APP-3736/allow-for-specifying-closing-of-tab-behavior)
 
 ## Summary
 
@@ -23,7 +23,7 @@ Tab configs can already create a worktree when a tab opens, but they cannot decl
 ## Non-goals
 
 - Per-pane close hooks.
-- Guaranteeing cleanup when Derp crashes, is force-quit, or loses power.
+- Guaranteeing cleanup when Bork crashes, is force-quit, or loses power.
 - Guaranteeing cleanup after app restore or undo-close. Close behavior is resolved for the live tab instance when the tab opens and is not persisted into workspace snapshots.
 - Managing worktrees created outside the tab config flow.
 - New confirmation UI or modal flow for close cleanup.
@@ -44,7 +44,7 @@ Tab configs may optionally include a top-level `[on_close]` table.
   - `directory` (optional): working directory used for close-time commands.
   - `commands` (required when `[on_close]` is present): ordered shell commands to run when the tab closes.
 - `directory` and `commands` support the same template variables that tab configs already support for `title`, pane `directory`, and pane `commands`.
-- Close-time template expansion uses the values that were used when the tab instance was opened. Derp must not re-prompt for params when the tab closes.
+- Close-time template expansion uses the values that were used when the tab instance was opened. Bork must not re-prompt for params when the tab closes.
 - Template rendering follows the same quoting rules as open-time config rendering: `directory` receives unquoted values so paths remain valid, and `commands` receive shell-quoted values.
 
 ### Triggering close behavior
@@ -57,10 +57,10 @@ Tab configs may optionally include a top-level `[on_close]` table.
 
 ### Command execution semantics
 
-- Derp runs `on_close.commands` in order.
-- If a command fails, Derp still closes the tab. Failures are best-effort and do not block close.
-- If a command fails, Derp stops running the remaining close commands for that tab instance, logs the failure, and shows a persistent non-blocking error toast.
-- If Derp cannot access local shell state for cleanup, close commands are skipped, the tab still closes, and Derp shows a persistent non-blocking error toast.
+- Bork runs `on_close.commands` in order.
+- If a command fails, Bork still closes the tab. Failures are best-effort and do not block close.
+- If a command fails, Bork stops running the remaining close commands for that tab instance, logs the failure, and shows a persistent non-blocking error toast.
+- If Bork cannot access local shell state for cleanup, close commands are skipped, the tab still closes, and Bork shows a persistent non-blocking error toast.
 - For worktree configs, the common pattern is to set `on_close.directory` to the repo root so cleanup does not depend on the tab's live shell state.
 
 ### Worktree example: remove the worktree, keep the branch
@@ -129,10 +129,10 @@ If a worktree config relies on an auto-generated branch name, close behavior use
 
 1. A tab config without `[on_close]` closes with no behavior change from today.
 2. A tab config with `[on_close]` runs its close commands once when the user explicitly closes the tab.
-3. Close-time commands use the resolved values from the tab instance that is closing; Derp does not reopen the param modal.
+3. Close-time commands use the resolved values from the tab instance that is closing; Bork does not reopen the param modal.
 4. A worktree config can remove only the worktree on close while leaving the branch untouched.
 5. A worktree config can remove the worktree and then delete the branch on close.
-6. If the worktree removal step fails, Derp still closes the tab immediately, shows a persistent error toast, logs the cleanup failure, and does not run later branch-deletion commands.
+6. If the worktree removal step fails, Bork still closes the tab immediately, shows a persistent error toast, logs the cleanup failure, and does not run later branch-deletion commands.
 7. The default tab config template includes a commented example of close cleanup for worktrees.
 8. The bundled `tab-configs` skill documentation describes `[on_close]` and includes both worktree cleanup variants.
 

@@ -1,13 +1,13 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::contrast::MinimumAllowedContrast;
-use derp_core::ui::color::ContrastingColor;
-use derp_core::ui::theme::Fill;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::contrast::MinimumAllowedContrast;
+use bork_core::ui::color::ContrastingColor;
+use bork_core::ui::theme::Fill;
 
 use super::DriveObjectType;
 use crate::ui_components::blended_colors;
 
-pub fn derp_drive_icon_color(
+pub fn bork_drive_icon_color(
     appearance: &Appearance,
     cloud_object_type: DriveObjectType,
 ) -> ColorU {

@@ -42,10 +42,10 @@ pub(crate) use action_model::recording_controller::RecordingController;
 pub(crate) use action_model::recording_finalize::{
     finalize_recording_for_conversation, FinalizeReason,
 };
-// Consumed by `tui_export` for the `derp_tui` frontend.
+// Consumed by `tui_export` for the `bork_tui` frontend.
 #[cfg_attr(not(feature = "tui"), allow(unused_imports))]
 pub use action_model::AIActionStatus;
-// Consumed by `tui_export` for the `derp_tui` frontend.
+// Consumed by `tui_export` for the `bork_tui` frontend.
 #[cfg(feature = "tui")]
 pub use action_model::RequestFileEditsExecutor;
 #[cfg_attr(target_family = "wasm", allow(unused_imports))]

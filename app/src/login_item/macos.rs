@@ -5,8 +5,8 @@
 //! updates, but we don't try to register against a class that isn't there.
 
 use ::settings::Setting;
-use derp_errors::report_if_error;
-use derpui::{AppContext, SingletonEntity};
+use bork_errors::report_if_error;
+use borkui::{AppContext, SingletonEntity};
 
 use crate::terminal::general_settings::GeneralSettings;
 

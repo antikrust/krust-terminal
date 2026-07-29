@@ -4,12 +4,12 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use ai::diff_validation::DiffType;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::model::LineCount;
-use derp_util::file::{FileLoadError, FileSaveError};
-use derpui::elements::MouseStateHandle;
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::model::LineCount;
+use bork_util::file::{FileLoadError, FileSaveError};
+use borkui::elements::MouseStateHandle;
+use borkui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
 
@@ -112,7 +112,7 @@ impl View for LocalCodeEditorView {
         "LocalCodeEditorView"
     }
     fn render(&self, _app: &AppContext) -> Box<dyn Element> {
-        derpui::elements::Empty::new().finish()
+        borkui::elements::Empty::new().finish()
     }
 }
 
@@ -129,5 +129,5 @@ pub fn render_unsaved_circle_with_tooltip(
     _right_margin: f32,
     _appearance: &Appearance,
 ) -> Box<dyn Element> {
-    derpui::elements::Empty::new().finish()
+    borkui::elements::Empty::new().finish()
 }

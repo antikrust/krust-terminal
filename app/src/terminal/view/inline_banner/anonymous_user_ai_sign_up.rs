@@ -1,10 +1,10 @@
-use derpui::elements::{
+use borkui::elements::{
     Container, CornerRadius, CrossAxisAlignment, Flex, Icon, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::Element;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::Element;
 
 use super::{
     INLINE_BANNER_BUTTON_HOVER_OPACITY, INLINE_BANNER_BUTTON_PADDING,
@@ -79,7 +79,7 @@ fn render_three_column_inline_banner(
     let active_text_color = theme.active_ui_text_color().into_solid();
     let content_text_color = theme.nonactive_ui_text_color().into_solid();
 
-    let hover_background_fill = derpui::elements::Fill::from(
+    let hover_background_fill = borkui::elements::Fill::from(
         theme
             .active_ui_text_color()
             .with_opacity(INLINE_BANNER_BUTTON_HOVER_OPACITY),
@@ -120,7 +120,7 @@ fn render_three_column_inline_banner(
     let icon_color = active_text_color;
 
     let icon_column = Container::new(
-        derpui::elements::ConstrainedBox::new(
+        borkui::elements::ConstrainedBox::new(
             Icon::new("bundled/svg/info.svg", icon_color).finish(),
         )
         .with_width(icon_width)
@@ -177,8 +177,8 @@ fn render_three_column_inline_banner(
     let button_styles = UiComponentStyles {
         font_color: Some(active_text_color),
         font_size: Some(button_text_size),
-        font_weight: Some(derpui::fonts::Weight::Semibold),
-        border_color: Some(derpui::elements::Fill::Solid(content_text_color)),
+        font_weight: Some(borkui::fonts::Weight::Semibold),
+        border_color: Some(borkui::elements::Fill::Solid(content_text_color)),
         border_width: Some(1.0),
         border_radius: Some(CornerRadius::with_all(Radius::Pixels(
             INLINE_BANNER_BUTTON_PADDING,

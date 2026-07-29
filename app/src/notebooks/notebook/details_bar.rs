@@ -1,13 +1,13 @@
 //! Components for the notebook header.
 
-use derp_core::features::FeatureFlag;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use borkui::elements::{
     Container, CrossAxisAlignment, Flex, Highlight, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Shrinkable,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::super::active_notebook_data::ActiveNotebookData;
 use super::{NotebookAction, EDIT_BUTTON_MARGIN};
@@ -23,7 +23,7 @@ use crate::ui_components::icons::Icon;
 use crate::workspaces::user_profiles::UserProfiles;
 
 /// Component to show details about a notebook:
-/// * Interactive breadcrumbs for its location within Derp Drive
+/// * Interactive breadcrumbs for its location within Bork Drive
 /// * The current editor of the notebook
 /// * Grab-the-baton UI controls
 pub struct DetailsBar {
@@ -65,7 +65,7 @@ impl DetailsBar {
                     self.breadcrumbs.iter().cloned(),
                     appearance,
                     |ctx, _, breadcrumb| {
-                        ctx.dispatch_typed_action(NotebookAction::ViewInDerpDrive(
+                        ctx.dispatch_typed_action(NotebookAction::ViewInBorkDrive(
                             breadcrumb.kind.into_item_id(),
                         ));
                     },

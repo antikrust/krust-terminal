@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use chrono::{Duration, Utc};
-use derp_graphql::scalars::time::ServerTimestamp;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_graphql::scalars::time::ServerTimestamp;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::persistence::{CloudModel, CloudModelEvent};
 use crate::auth::{AuthStateProvider, UserUid};
@@ -156,7 +156,7 @@ impl CloudViewModel {
             .map(|object| object.space(app))
     }
 
-    /// Get the current user's access level on a Derp Drive object.
+    /// Get the current user's access level on a Bork Drive object.
     ///
     /// This is based on the client's current view of the object permissions, which may be stale. The
     /// server is the source of truth for all permission data, and it may reject a request that the
@@ -206,7 +206,7 @@ impl CloudViewModel {
         }
     }
 
-    /// Get the current user's editability state for a Derp Drive object.
+    /// Get the current user's editability state for a Bork Drive object.
     pub fn object_editability(
         &self,
         object_uid: &ObjectUid,

@@ -10,19 +10,19 @@ use onboarding::{
 };
 use pathfinder_color::ColorU;
 use rust_embed::RustEmbed;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::icons::Icon;
-use derp_core::ui::theme::{
-    AnsiColor, AnsiColors, Details, Fill, Image, TerminalColors, DerpTheme,
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::icons::Icon;
+use bork_core::ui::theme::{
+    AnsiColor, AnsiColors, Details, Fill, Image, TerminalColors, BorkTheme,
 };
-use derpui_core::assets::asset_cache::AssetSource;
-use derpui_core::elements::{
+use borkui_core::assets::asset_cache::AssetSource;
+use borkui_core::elements::{
     Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, ParentElement,
 };
-use derpui_core::fonts::{Cache, FamilyId, Weight};
-use derpui_core::presenter::ChildView;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui_core::{
+use borkui_core::fonts::{Cache, FamilyId, Weight};
+use borkui_core::presenter::ChildView;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::{
     platform, AddWindowOptions, AppContext, AssetProvider, Element, Entity, SingletonEntity as _,
     TypedActionView, View, ViewContext, ViewHandle,
 };
@@ -43,7 +43,7 @@ impl AssetProvider for Assets {
 
 fn main() -> Result<()> {
     // Initialize logging for the onboarding binary.
-    derp_logging::init(derp_logging::LogConfig {
+    bork_logging::init(bork_logging::LogConfig {
         is_cli: false,
         log_destination: None,
         ..Default::default()
@@ -53,9 +53,9 @@ fn main() -> Result<()> {
     // no channel to initialize them from, so mark them initialized (leaving
     // every flag at its default) — otherwise debug builds panic on the first
     // `is_enabled()` call.
-    derp_core::features::mark_initialized();
+    bork_core::features::mark_initialized();
 
-    let app_builder = derpui::platform::AppBuilder::new(
+    let app_builder = borkui::platform::AppBuilder::new(
         platform::AppCallbacks::default(),
         Box::new(ASSETS),
         None,
@@ -273,7 +273,7 @@ impl View for OnboardingMainView {
         }
     }
 
-    fn on_focus(&mut self, focus_ctx: &derpui_core::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, focus_ctx: &borkui_core::FocusContext, ctx: &mut ViewContext<Self>) {
         if let OnboardingMainState::Onboarding(view) = &self.state {
             if focus_ctx.is_self_focused() {
                 ctx.focus(view);
@@ -392,8 +392,8 @@ fn adeberry_colors() -> TerminalColors {
     TerminalColors::new(ADEBERRY_NORMAL_COLORS, ADEBERRY_BRIGHT_COLORS)
 }
 
-fn dark_theme() -> DerpTheme {
-    DerpTheme::new(
+fn dark_theme() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x000000FF)),
         ColorU::from_u32(0xffffffff),
         Fill::Solid(ColorU::from_u32(0x19AAD8FF)),
@@ -405,8 +405,8 @@ fn dark_theme() -> DerpTheme {
     )
 }
 
-fn light_theme() -> DerpTheme {
-    DerpTheme::new(
+fn light_theme() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::white()),
         ColorU::new(17, 17, 17, 0xFF),
         Fill::Solid(ColorU::from_u32(0x00c2ffff)),
@@ -418,8 +418,8 @@ fn light_theme() -> DerpTheme {
     )
 }
 
-fn phenomenon() -> DerpTheme {
-    DerpTheme::new(
+fn phenomenon() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x121212FF)),
         ColorU::from_u32(0xFAF9F6FF),
         Fill::Solid(ColorU::from_u32(0x2E5D9EFF)),
@@ -437,8 +437,8 @@ fn phenomenon() -> DerpTheme {
     )
 }
 
-fn adeberry() -> DerpTheme {
-    DerpTheme::new(
+fn adeberry() -> BorkTheme {
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -450,7 +450,7 @@ fn adeberry() -> DerpTheme {
     )
 }
 
-fn build_appearance(theme: DerpTheme, ctx: &mut AppContext) -> Appearance {
+fn build_appearance(theme: BorkTheme, ctx: &mut AppContext) -> Appearance {
     let ui_font_family =
         load_default_ui_font_family(ctx).expect("unable to load default ui font family");
 

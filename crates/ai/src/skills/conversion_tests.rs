@@ -1,8 +1,8 @@
-use derp_multi_agent_api as api;
-use derp_util::host_id::HostId;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
+use bork_multi_agent_api as api;
+use bork_util::host_id::HostId;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
 
 use super::{
     skill_reference_from_api_skill_ref, skill_reference_from_read_skill_ref, SkillConversionError,

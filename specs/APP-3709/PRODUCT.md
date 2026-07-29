@@ -1,6 +1,6 @@
 # APP-3709: Auto-Generate Worktree Branch Names
 
-Linear: [APP-3709](https://linear.app/derpdotdev/issue/APP-3709/auto-generate-worktree-branch-names)
+Linear: [APP-3709](https://linear.app/borkdotdev/issue/APP-3709/auto-generate-worktree-branch-names)
 
 ## Summary
 

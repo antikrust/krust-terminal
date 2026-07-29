@@ -1,16 +1,16 @@
-use derp::cmd_or_ctrl_shift;
-use derp::integration_testing::terminal::util::current_shell_starter_and_version;
-use derp::integration_testing::terminal::{
+use bork::cmd_or_ctrl_shift;
+use bork::integration_testing::terminal::util::current_shell_starter_and_version;
+use bork::integration_testing::terminal::{
     assert_context_menu_is_open, initialize_secret_regexes,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::single_terminal_view_for_tab;
-use derp::settings_view::{PrivacyPageAction, SettingsAction};
-use derp::terminal::model::index::Point;
-use derp::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
-use derp::terminal::shell::ShellType;
-use derp::terminal::GridType;
-use derpui_core::{async_assert, async_assert_eq};
+use bork::integration_testing::view_getters::single_terminal_view_for_tab;
+use bork::settings_view::{PrivacyPageAction, SettingsAction};
+use bork::terminal::model::index::Point;
+use bork::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
+use bork::terminal::shell::ShellType;
+use bork::terminal::GridType;
+use borkui_core::{async_assert, async_assert_eq};
 
 use super::new_builder;
 use crate::test::integration_testing::block_filtering::{

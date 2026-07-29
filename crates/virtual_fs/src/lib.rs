@@ -22,7 +22,7 @@ pub struct Dirs {
 impl Dirs {
     #[allow(dead_code)]
     pub fn git_repository_fixture(&self) -> PathBuf {
-        Derp::fixtures().join("git_repository")
+        Bork::fixtures().join("git_repository")
     }
 }
 
@@ -39,18 +39,18 @@ impl VirtualFS {
     pub fn test(tag: &str, test_callback: impl FnOnce(Dirs, VirtualFS)) {
         let root = tempdir().expect("failed create root directory.");
 
-        let derpbox_dir = root.path().join(tag);
+        let borkbox_dir = root.path().join(tag);
 
-        if PathBuf::from(&derpbox_dir).exists() {
-            std::fs::remove_dir_all(PathBuf::from(&derpbox_dir)).expect("can not remove directory");
+        if PathBuf::from(&borkbox_dir).exists() {
+            std::fs::remove_dir_all(PathBuf::from(&borkbox_dir)).expect("can not remove directory");
         }
 
-        std::fs::create_dir(PathBuf::from(&derpbox_dir)).expect("can not create directory");
+        std::fs::create_dir(PathBuf::from(&borkbox_dir)).expect("can not create directory");
 
-        let tests = dunce::canonicalize(&derpbox_dir).unwrap_or_else(|e| {
+        let tests = dunce::canonicalize(&borkbox_dir).unwrap_or_else(|e| {
             panic!(
                 "Couldn't canonicalize test path {}: {:?}",
-                derpbox_dir.display(),
+                borkbox_dir.display(),
                 e
             )
         });
@@ -60,13 +60,13 @@ impl VirtualFS {
             tests,
         };
 
-        let derpbox = VirtualFS {
+        let borkbox = VirtualFS {
             root,
-            cwd: derpbox_dir,
+            cwd: borkbox_dir,
             tests: tag.to_string(),
         };
 
-        test_callback(directories, derpbox);
+        test_callback(directories, borkbox);
     }
 
     pub fn back_to_root(&mut self) -> &mut Self {
@@ -157,9 +157,9 @@ impl VirtualFS {
     }
 }
 
-pub struct Derp;
+pub struct Bork;
 
-impl Derp {
+impl Bork {
     #[allow(dead_code)]
     pub fn executable() -> PathBuf {
         let mut path = {
@@ -175,7 +175,7 @@ impl Derp {
                 .unwrap_or_else(|| Self::root().join(format!("target/{}", &build)))
         };
 
-        path.push("derp");
+        path.push("bork");
         path
     }
 

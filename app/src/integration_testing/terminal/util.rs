@@ -7,9 +7,9 @@ use command::blocking::Command;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use regex::Regex;
-use derp_core::command::ExitCode;
+use bork_core::command::ExitCode;
 #[cfg(windows)]
-use derp_core::paths::base_config_dir;
+use bork_core::paths::base_config_dir;
 
 use crate::terminal::local_tty::shell::{DirectShellStarter, ShellStarter, ShellStarterSource};
 use crate::terminal::shell;

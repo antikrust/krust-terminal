@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
-use derpui::elements::{
+use borkui::elements::{
     Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Highlight,
     MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_search::searcher::{AcceptedWorkflow, CommandSearchItemAction};
@@ -115,7 +115,7 @@ impl SearchItem for WorkflowSearchItem {
                 } else {
                     Icon::Workflow
                 }
-                .to_derpui_icon(highlight_state.icon_fill(appearance))
+                .to_borkui_icon(highlight_state.icon_fill(appearance))
                 .finish(),
             )
             .with_width(appearance.monospace_font_size())

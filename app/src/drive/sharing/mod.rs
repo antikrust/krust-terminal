@@ -2,11 +2,11 @@ use std::borrow::Cow;
 
 use chrono::{DateTime, Local};
 use session_sharing_protocol::common::SessionId;
-use derp_core::channel::ChannelState;
-use derp_core::ui::appearance::Appearance;
-use derpui::color::ColorU;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, SingletonEntity, WeakViewHandle};
+use bork_core::channel::ChannelState;
+use bork_core::ui::appearance::Appearance;
+use borkui::color::ColorU;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, SingletonEntity, WeakViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::BlocklistAIHistoryModel;
@@ -29,12 +29,12 @@ pub use cloud_objects::drive::sharing::{
     LinkSharingSubjectType, SharingAccessLevel, Subject, TeamKind, UserKind,
 };
 
-/// Identifier for an object that's shareable via the Derp Drive ACL model. Not all sharing in Derp
+/// Identifier for an object that's shareable via the Bork Drive ACL model. Not all sharing in Bork
 /// is _currently_ tied into this model (e.g. block sharing).
 #[derive(Debug, Clone)]
 pub enum ShareableObject {
-    /// A shareable Derp Drive object.
-    DerpDriveObject(ServerId),
+    /// A shareable Bork Drive object.
+    BorkDriveObject(ServerId),
     /// A shared terminal session. Shared sessions are identified by the participating terminal
     /// pane.
     Session {
@@ -50,7 +50,7 @@ impl ShareableObject {
     /// The canonical link to this object.
     pub fn link(&self, app: &AppContext) -> Option<String> {
         match self {
-            ShareableObject::DerpDriveObject(id) => CloudModel::as_ref(app)
+            ShareableObject::BorkDriveObject(id) => CloudModel::as_ref(app)
                 .get_by_uid(&id.uid())
                 .and_then(|object| object.object_link()),
             ShareableObject::Session { session_id, .. } => Some(join_link(session_id)),

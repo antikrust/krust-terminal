@@ -1,4 +1,4 @@
-use derpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use borkui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use super::view::PaneView;
 use super::{

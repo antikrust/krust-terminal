@@ -1,6 +1,6 @@
 //! This module provides a mechanism to specify manually written information to merge into the
 //! auto-generated command signatures. The data structures here mirror the ones in
-//! [`derp_completion_metadata::fig_types`], but will contain a subset of the fields we care to
+//! [`bork_completion_metadata::fig_types`], but will contain a subset of the fields we care to
 //! override. We may also have differences in invariants, e.g. optionality may differ.
 use std::{fs, io, path};
 
@@ -10,7 +10,7 @@ use serde_with::{
     formats::{PreferMany, PreferOne},
     serde_as, OneOrMany,
 };
-use derp_completion_metadata::{
+use bork_completion_metadata::{
     fig_types::{Command, Template},
     GeneratorName,
 };

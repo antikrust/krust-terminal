@@ -1,18 +1,18 @@
 name: "Docubot"
-description: "Helps Derp engineers identify PRs that need documentation updates in GitBook"
+description: "Helps Bork engineers identify PRs that need documentation updates in GitBook"
 inputs:
   prompt:
-    description: "Prompt to send to Derp"
+    description: "Prompt to send to Bork"
     required: true
-  derp_api_key:
-    description: "Derp API key"
+  bork_api_key:
+    description: "Bork API key"
     required: true
-  derp_channel:
-    description: "Derp release channel (e.g., dev, preview, stable)"
+  bork_channel:
+    description: "Bork release channel (e.g., dev, preview, stable)"
     required: false
     default: "dev"
   profile_id:
-    description: "Derp profile ID"
+    description: "Bork profile ID"
     required: false
   github_token:
     description: "GitHub token for cloning private repositories"
@@ -20,14 +20,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Derp CLI
-      uses: ./.github/actions/setup_derp_cli
+    - name: Setup Bork CLI
+      uses: ./.github/actions/setup_bork_cli
       with:
-        derp_channel: ${{ inputs.derp_channel }}
-    - name: Clone Derp GitBook repository
+        bork_channel: ${{ inputs.bork_channel }}
+    - name: Clone Bork GitBook repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
-        repository: derpdotdev/gitbook
+        repository: borkdotdev/gitbook
         token: ${{ inputs.github_token }}
         path: gitbook
     - name: Create prompt file
@@ -120,19 +120,19 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        git config user.name "Derp Agent"
-        git config user.email "agent@derp.baby"
+        git config user.name "Bork Agent"
+        git config user.email "agent@bork.baby"
     
-    - name: Run Derp agent
+    - name: Run Bork agent
       shell: bash
       env:
-        DERP_API_KEY: ${{ inputs.derp_api_key }}
+        BORK_API_KEY: ${{ inputs.bork_api_key }}
         GH_TOKEN: ${{ inputs.github_token }}
         PROFILE_ID: ${{ inputs.profile_id }}
       run: |
         set -euo pipefail
         # Determine the CLI command name based on channel suffix
-        case "${{ inputs.derp_channel }}" in
+        case "${{ inputs.bork_channel }}" in
           stable|stable_release|"") suffix="" ;;
           preview|preview_release) suffix="-preview" ;;
           dev|dev_release) suffix="-dev" ;;
@@ -140,7 +140,7 @@ runs:
           integration|integration_test) suffix="-integration" ;;
           *) suffix="" ;;
         esac
-        cmd="derp-cli${suffix}"
+        cmd="bork-cli${suffix}"
 
         # Basic check the binary exists
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -151,17 +151,17 @@ runs:
         # Execute the agent run
         "$cmd" agent run \
           --prompt "$(cat prompt.output.txt)" \
-          --api-key "$DERP_API_KEY" \
+          --api-key "$BORK_API_KEY" \
           --cwd "$GITHUB_WORKSPACE" \
           ${PROFILE_ID:+--profile "$PROFILE_ID"}
-    - name: Upload Derp logs
+    - name: Upload Bork logs
       if: ${{ always() }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: derp-logs.log
-        path: /home/runner/.local/state/derp-terminal-dev/derp_dev.log
+        name: bork-logs.log
+        path: /home/runner/.local/state/bork-terminal-dev/bork_dev.log
         if-no-files-found: ignore
-    - name: Upload Derp prompt
+    - name: Upload Bork prompt
       if: ${{ always() }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:

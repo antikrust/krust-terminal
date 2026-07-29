@@ -1,19 +1,19 @@
-use derp_core::ui::theme::color::internal_colors;
-use derp_errors::report_error;
-use derpui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use bork_errors::report_error;
+use borkui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
+use borkui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, DispatchEventResult, Element, Empty, EventHandler,
     Fill as ElementFill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     NewScrollable, Padding, ParentElement, Radius, SavePosition, ScrollTarget,
     ScrollToPositionMode, ScrollbarWidth, Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::macros::id;
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::keymap::macros::id;
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::agent_management::notifications::item::NotificationFilter;
 use crate::ai::agent_management::notifications::item_rendering::{
@@ -57,7 +57,7 @@ impl Entity for NotificationMailboxView {
 
 #[derive(Debug, Clone)]
 pub enum NotificationMailboxViewEvent {
-    NavigateToTerminal { terminal_view_id: derpui::EntityId },
+    NavigateToTerminal { terminal_view_id: borkui::EntityId },
     Dismissed,
 }
 

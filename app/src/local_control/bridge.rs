@@ -1,4 +1,4 @@
-//! Bridge between protocol-level control requests and Derp application models.
+//! Bridge between protocol-level control requests and Bork application models.
 //!
 //! The bridge validates protocol version, selectors, credentials, and settings
 //! before routing each supported action to an app-side handler.
@@ -7,7 +7,7 @@ use ::local_control::auth::CredentialGrant;
 use ::local_control::{
     Action, ActionKind, ControlError, ErrorCode, InstanceId, RequestEnvelope, ResponseEnvelope,
 };
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::local_control::handlers::{
     app_state, close, metadata, metadata_config, settings_surfaces,
@@ -17,7 +17,7 @@ use crate::local_control::permissions::{
 };
 use crate::local_control::resolver::{validate_action_params, validate_action_target};
 
-/// DerpUI model that executes already-authenticated local-control actions.
+/// BorkUI model that executes already-authenticated local-control actions.
 pub struct LocalControlBridge {
     instance_id: Option<InstanceId>,
 }
@@ -105,8 +105,8 @@ impl LocalControlBridge {
             | ActionKind::SurfaceCommandSearchOpen
             | ActionKind::SurfaceThemePickerOpen
             | ActionKind::SurfaceKeybindingsOpen
-            | ActionKind::SurfaceDerpDriveOpen
-            | ActionKind::SurfaceDerpDriveToggle
+            | ActionKind::SurfaceBorkDriveOpen
+            | ActionKind::SurfaceBorkDriveToggle
             | ActionKind::SurfaceResourceCenterToggle
             | ActionKind::SurfaceAiAssistantToggle
             | ActionKind::SurfaceCodeReviewOpen

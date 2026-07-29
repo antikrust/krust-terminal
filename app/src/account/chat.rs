@@ -17,17 +17,17 @@ use std::time::Duration;
 use account_client::{AccountError, Message};
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill,
     Flex, FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     Radius, Shrinkable, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::r#async::Timer;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::r#async::Timer;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, ModelContext, SingletonEntity, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -163,7 +163,7 @@ impl SingletonEntity for ChatModel {}
 // ---------------------------------------------------------------------------
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
     app.register_fixed_bindings([
         FixedBinding::new(
             "escape",
@@ -290,7 +290,7 @@ impl View for ChatModalView {
         let close_button = ui_builder
             .close_button(24., self.close_mouse_state.clone())
             .build()
-            .on_click(|ctx: &mut derpui::EventContext, _, _| {
+            .on_click(|ctx: &mut borkui::EventContext, _, _| {
                 ctx.dispatch_typed_action(ChatModalAction::Cancel);
             })
             .finish();
@@ -420,7 +420,7 @@ impl View for ChatModalView {
 
         let mut stack = Stack::new();
         stack.add_child(
-            Container::new(derpui::elements::Empty::new().finish())
+            Container::new(borkui::elements::Empty::new().finish())
                 .with_background_color(ColorU::new(0, 0, 0, 179))
                 .finish(),
         );

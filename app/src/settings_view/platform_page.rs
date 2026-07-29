@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use derp_core::features::FeatureFlag;
-use derp_graphql::object_permissions::OwnerType;
-use derp_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_graphql::object_permissions::OwnerType;
+use bork_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
+use borkui::elements::{
     resizable_state_handle, Align, Border, ChildView, ConstrainedBox, Container,
     CrossAxisAlignment, DragBarSide, Element, Empty, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, Padding, ParentElement, Resizable,
     ResizableStateHandle, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::platform::{
     CreateApiKeyModal, CreateApiKeyModalEvent, CreateApiKeyModalViewState, ExpireApiKeyButton,
@@ -40,7 +40,7 @@ use crate::util::time_format::format_approx_duration_from_now_utc;
 
 const MODAL_WIDTH: f32 = 460.;
 const MODAL_HEIGHT: f32 = 320.;
-const API_KEY_DOCS_URL: &str = "https://therob.lol/derp-terminal/help/reference/cli/api-keys";
+const API_KEY_DOCS_URL: &str = "https://therob.lol/bork-terminal/help/reference/cli/api-keys";
 const API_KEY_NAME_COLUMN_DEFAULT_WIDTH: f32 = 220.;
 const API_KEY_NAME_COLUMN_MIN_WIDTH: f32 = 120.;
 const API_KEY_KEY_COLUMN_WIDTH: f32 = 120.;
@@ -200,7 +200,7 @@ impl PlatformPageView {
                         right: 24.,
                     }),
                     font_size: Some(16.),
-                    font_weight: Some(derpui::fonts::Weight::Bold),
+                    font_weight: Some(borkui::fonts::Weight::Bold),
                     ..Default::default()
                 })
                 .with_body_style(UiComponentStyles {
@@ -847,7 +847,7 @@ impl PlatformPageWidget {
                     .with_child(
                         ConstrainedBox::new(
                             Icon::Key
-                                .to_derpui_icon(appearance.theme().nonactive_ui_text_color())
+                                .to_borkui_icon(appearance.theme().nonactive_ui_text_color())
                                 .finish(),
                         )
                         .with_width(48.)

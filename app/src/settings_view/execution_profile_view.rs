@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use uuid::Uuid;
-use derp_core::features::FeatureFlag;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     ParentElement, Shrinkable, Text, Wrap,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -383,7 +383,7 @@ impl View for ExecutionProfileView {
                             render_bool_permission_line_with_icon(
                                 Icon::Compass,
                                 "Auto-save plans to the Library:",
-                                profile.autosync_plans_to_derp_drive,
+                                profile.autosync_plans_to_bork_drive,
                                 appearance,
                                 is_any_ai_enabled,
                             ),
@@ -399,10 +399,10 @@ impl View for ExecutionProfileView {
         )
         .with_background(appearance.theme().surface_2())
         .with_border(
-            derpui::elements::Border::new(1.).with_border_fill(appearance.theme().outline()),
+            borkui::elements::Border::new(1.).with_border_fill(appearance.theme().outline()),
         )
-        .with_corner_radius(derpui::elements::CornerRadius::with_all(
-            derpui::elements::Radius::Pixels(4.),
+        .with_corner_radius(borkui::elements::CornerRadius::with_all(
+            borkui::elements::Radius::Pixels(4.),
         ))
         .with_horizontal_padding(16.)
         .with_vertical_padding(12.)
@@ -458,11 +458,11 @@ where
                         )
                         .with_background(appearance.theme().surface_2())
                         .with_border(
-                            derpui::elements::Border::all(1.)
+                            borkui::elements::Border::all(1.)
                                 .with_border_fill(appearance.theme().outline()),
                         )
-                        .with_corner_radius(derpui::elements::CornerRadius::with_all(
-                            derpui::elements::Radius::Pixels(3.),
+                        .with_corner_radius(borkui::elements::CornerRadius::with_all(
+                            borkui::elements::Radius::Pixels(3.),
                         ))
                         .with_horizontal_padding(6.)
                         .with_vertical_padding(2.)
@@ -489,7 +489,7 @@ fn render_allowlist_denylist_row(
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        icon.to_derpui_icon(if is_ai_enabled {
+                        icon.to_borkui_icon(if is_ai_enabled {
                             appearance
                                 .theme()
                                 .sub_text_color(appearance.theme().surface_1())
@@ -527,7 +527,7 @@ fn render_allowlist_denylist_row(
             .finish(),
     )
     .with_margin_left(8.)
-    .with_border(derpui::elements::Border::left(1.).with_border_fill(appearance.theme().outline()))
+    .with_border(borkui::elements::Border::left(1.).with_border_fill(appearance.theme().outline()))
     .with_padding_left(8.)
     .finish()
 }
@@ -592,7 +592,7 @@ fn render_model_line_with_icon(
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        icon.to_derpui_icon(if is_ai_enabled {
+                        icon.to_borkui_icon(if is_ai_enabled {
                             appearance
                                 .theme()
                                 .sub_text_color(appearance.theme().surface_1())
@@ -653,7 +653,7 @@ fn render_permission_line_with_icon(
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    icon.to_derpui_icon(if is_ai_enabled {
+                    icon.to_borkui_icon(if is_ai_enabled {
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_1())

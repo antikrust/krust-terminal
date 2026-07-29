@@ -1,14 +1,14 @@
-use derpui::elements::{
+use borkui::elements::{
     Border, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
 };
-use derpui::keymap::macros::*;
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use derpui::ui_components::text::Span;
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::keymap::macros::*;
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use borkui::ui_components::text::Span;
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::blended_colors;
@@ -121,7 +121,7 @@ impl<T: 'static> View for ToggleableItemsView<T> {
         "ToggleableItemsView"
     }
 
-    fn keymap_context(&self, _app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, _app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if !self.items.is_empty() {
             context.set.insert(HAS_ITEMS);

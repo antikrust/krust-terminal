@@ -1,6 +1,6 @@
-use derp_completer::completer::SuggestionTypeName;
-use derpui::text_layout::TextStyle;
-use derpui::App;
+use bork_completer::completer::SuggestionTypeName;
+use borkui::text_layout::TextStyle;
+use borkui::App;
 
 use crate::appearance::Appearance;
 use crate::terminal::input::decorations::InputBackgroundJobOptions;
@@ -39,7 +39,7 @@ fn test_decorations_with_multibyte_chars() {
                 .update(ctx, |sessions, _ctx| {
                     // Wait until external commands have been loaded.
                     let session = sessions.get(session_id).expect("session should exist");
-                    derpui::r#async::block_on(session.load_external_commands());
+                    borkui::r#async::block_on(session.load_external_commands());
                 });
             session_id
         });

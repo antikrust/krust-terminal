@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use chrono::NaiveDateTime;
-use derpui::{AppContext, Entity, EntityId, WindowId};
+use borkui::{AppContext, Entity, EntityId, WindowId};
 
 use crate::context_chips::prompt_snapshot::PromptSnapshot;
 use crate::pane_group::{PaneGroup, PaneId};

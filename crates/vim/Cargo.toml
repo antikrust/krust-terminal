@@ -6,8 +6,8 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-derp_core.workspace = true
-derpui_core.workspace = true
+bork_core.workspace = true
+borkui_core.workspace = true
 log.workspace = true
 itertools.workspace = true
 string-offset.workspace = true

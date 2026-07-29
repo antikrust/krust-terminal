@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
 use regex::Regex;
-use derp_errors::report_error;
-use derp_graphql::billing::{
+use bork_errors::report_error;
+use bork_graphql::billing::{
     AiAutonomyPolicy as GqlAiAutonomyPolicy, AmbientAgentsPolicy as GqlAmbientAgentsPolicy,
     BillingCycleUsageHistory as GqlBillingCycleUsageHistory, BillingMetadata as GqlBillingMetadata,
     BonusGrant as GqlBonusGrant, ByoApiKeyPolicy as GqlByoApiKeyPolicy,
@@ -21,13 +21,13 @@ use derp_graphql::billing::{
     UgcDataCollectionPolicy as GqlUgcDataCollectionPolicy,
     UsageBasedPricingPolicy as GqlUsageBasedPricingPolicy,
     UsageVisibilityGranularity as GqlUsageVisibilityGranularity,
-    UsageVisibilityPolicy as GqlUsageVisibilityPolicy, DerpAiPolicy as GqlDerpAiPolicy,
+    UsageVisibilityPolicy as GqlUsageVisibilityPolicy, BorkAiPolicy as GqlBorkAiPolicy,
 };
-use derp_graphql::queries::get_conversation_usage as gql_usage;
-use derp_graphql::queries::get_workspaces_metadata_for_user::User as GqlUser;
-use derp_graphql::subscriptions::get_derp_drive_updates::DerpDriveUpdate;
-use derp_graphql::user::DiscoverableTeamData as GqlDiscoverableTeamData;
-use derp_graphql::workspace::{
+use bork_graphql::queries::get_conversation_usage as gql_usage;
+use bork_graphql::queries::get_workspaces_metadata_for_user::User as GqlUser;
+use bork_graphql::subscriptions::get_bork_drive_updates::BorkDriveUpdate;
+use bork_graphql::user::DiscoverableTeamData as GqlDiscoverableTeamData;
+use bork_graphql::workspace::{
     AddonCreditsSettings as GqlAddonCreditsSettings,
     AdminEnablementSetting as GqlAdminEnablementSetting, AiAutonomyValue as GqlAiAutonomyValue,
     AiPermissionsSettings as GqlAiPermissionsSettings,
@@ -57,7 +57,7 @@ use super::workspace::{
     SandboxedAgentSettings, SecretRedactionSettings, SessionSharingPolicy, SharedNotebooksPolicy,
     SharedWorkflowsPolicy, TeamByoSettings, TelemetryDataCollectionPolicy, TelemetrySettings, Tier,
     UgcCollectionEnablementSetting, UgcCollectionSettings, UgcDataCollectionPolicy,
-    UsageBasedPricingPolicy, UsageVisibilityGranularity, UsageVisibilityPolicy, DerpAiPolicy,
+    UsageBasedPricingPolicy, UsageVisibilityGranularity, UsageVisibilityPolicy, BorkAiPolicy,
     Workspace, WorkspaceInviteCode, WorkspaceMember, WorkspaceMemberUsageInfo, WorkspaceSettings,
     WorkspaceSizePolicy,
 };
@@ -220,15 +220,15 @@ impl From<GqlInviteLinkDomainRestriction> for InviteLinkDomainRestriction {
     }
 }
 
-impl From<GqlDerpAiPolicy> for DerpAiPolicy {
-    fn from(gql_derp_ai_policy: GqlDerpAiPolicy) -> DerpAiPolicy {
+impl From<GqlBorkAiPolicy> for BorkAiPolicy {
+    fn from(gql_bork_ai_policy: GqlBorkAiPolicy) -> BorkAiPolicy {
         Self {
-            limit: i64::from(gql_derp_ai_policy.limit),
-            is_code_suggestions_toggleable: gql_derp_ai_policy.is_code_suggestions_toggleable,
-            is_prompt_suggestions_toggleable: gql_derp_ai_policy.is_prompt_suggestions_toggleable,
-            is_next_command_enabled: gql_derp_ai_policy.is_next_command_enabled,
-            is_git_operations_ai_enabled: gql_derp_ai_policy.is_git_operations_ai_enabled,
-            is_voice_enabled: gql_derp_ai_policy.is_voice_enabled,
+            limit: i64::from(gql_bork_ai_policy.limit),
+            is_code_suggestions_toggleable: gql_bork_ai_policy.is_code_suggestions_toggleable,
+            is_prompt_suggestions_toggleable: gql_bork_ai_policy.is_prompt_suggestions_toggleable,
+            is_next_command_enabled: gql_bork_ai_policy.is_next_command_enabled,
+            is_git_operations_ai_enabled: gql_bork_ai_policy.is_git_operations_ai_enabled,
+            is_voice_enabled: gql_bork_ai_policy.is_voice_enabled,
         }
     }
 }
@@ -293,7 +293,7 @@ impl From<GqlUgcCollectionEnablementSetting> for UgcCollectionEnablementSetting 
                 report_error!(
                     "Invalid UgcCollectionEnablementSetting. Make sure to update client GraphQL types!",
                     extra: { "value" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 UgcCollectionEnablementSetting::RespectUserSetting
             }
@@ -340,7 +340,7 @@ impl From<GqlAdminEnablementSetting> for AdminEnablementSetting {
                 report_error!(
                     "Invalid AdminEnablementSetting. Make sure to update client GraphQL types!",
                     extra: { "value" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 AdminEnablementSetting::RespectUserSetting
             }
@@ -359,7 +359,7 @@ impl From<GqlHostEnablementSetting> for HostEnablementSetting {
                 report_error!(
                     "Invalid HostEnablementSetting. Make sure to update client GraphQL types!",
                     extra: { "value" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 HostEnablementSetting::RespectUserSetting
             }
@@ -531,7 +531,7 @@ impl From<GqlUsageVisibilityGranularity> for UsageVisibilityGranularity {
                 report_error!(
                     "Invalid UsageVisibilityGranularity. Make sure to update client GraphQL types!",
                     extra: { "value" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 // Fail closed to the most restrictive granularity.
                 UsageVisibilityGranularity::OwnOnly
@@ -598,7 +598,7 @@ impl From<GqlTier> for Tier {
         Self {
             name: gql_tier.name,
             description: gql_tier.description,
-            derp_ai_policy: gql_tier.derp_ai_policy.map(From::from),
+            bork_ai_policy: gql_tier.bork_ai_policy.map(From::from),
             workspace_size_policy: gql_tier.team_size_policy.map(From::from),
             shared_notebooks_policy: gql_tier.shared_notebooks_policy.map(From::from),
             shared_workflows_policy: gql_tier.shared_workflows_policy.map(From::from),
@@ -701,7 +701,7 @@ impl TryFrom<&BillingMetadata> for StripeSubscriptionPlan {
             CustomerType::Prosumer => Ok(StripeSubscriptionPlan::Pro),
             CustomerType::Business => {
                 // Check if this is a legacy Business Plan, or a new Build Business plan based on service agreement type
-                // See: https://github.com/derpdotdev/derp-server/pull/6828#discussion_r2496242091
+                // See: https://github.com/borkdotdev/bork-server/pull/6828#discussion_r2496242091
                 match billing_metadata
                     .service_agreements
                     .first()
@@ -737,7 +737,7 @@ fn convert_gql_ai_autonomy_value_to_action_permission(
             report_error!(
                 "Invalid AiAutonomyValue. Make sure to update client GraphQL types!",
                 extra: { "value" => %value },
-                derp_errors::ReportErrorLogMode::OncePerRun
+                bork_errors::ReportErrorLogMode::OncePerRun
             );
             None
         }
@@ -756,7 +756,7 @@ fn convert_gql_write_to_pty_autonomy_value_to_write_to_pty_permission(
             report_error!(
                 "Invalid WriteToPtyAutonomyValue. Make sure to update client GraphQL types!",
                 extra: { "value" => %value },
-                derp_errors::ReportErrorLogMode::OncePerRun
+                bork_errors::ReportErrorLogMode::OncePerRun
             );
             None
         }
@@ -775,7 +775,7 @@ fn convert_gql_computer_use_autonomy_value_to_computer_use_permission(
             report_error!(
                 "Invalid ComputerUseAutonomyValue. Make sure to update client GraphQL types!",
                 extra: { "value" => %value },
-                derp_errors::ReportErrorLogMode::OncePerRun
+                bork_errors::ReportErrorLogMode::OncePerRun
             );
             None
         }
@@ -813,9 +813,9 @@ impl ToPathBufs for Vec<String> {
         self.into_iter().map(PathBuf::from).collect()
     }
 }
-impl From<derp_graphql::workspace::LlmModelHost> for crate::ai::llms::LLMModelHost {
-    fn from(gql_host: derp_graphql::workspace::LlmModelHost) -> Self {
-        use derp_graphql::workspace::LlmModelHost as GqlLlmModelHost;
+impl From<bork_graphql::workspace::LlmModelHost> for crate::ai::llms::LLMModelHost {
+    fn from(gql_host: bork_graphql::workspace::LlmModelHost) -> Self {
+        use bork_graphql::workspace::LlmModelHost as GqlLlmModelHost;
         match gql_host {
             GqlLlmModelHost::DirectApi => Self::DirectApi,
             GqlLlmModelHost::AwsBedrock => Self::AwsBedrock,
@@ -831,8 +831,8 @@ impl From<derp_graphql::workspace::LlmModelHost> for crate::ai::llms::LLMModelHo
     }
 }
 
-impl From<derp_graphql::workspace::LlmHostSettings> for super::workspace::LlmHostSettings {
-    fn from(gql_settings: derp_graphql::workspace::LlmHostSettings) -> Self {
+impl From<bork_graphql::workspace::LlmHostSettings> for super::workspace::LlmHostSettings {
+    fn from(gql_settings: bork_graphql::workspace::LlmHostSettings) -> Self {
         Self {
             enabled: gql_settings.enabled,
             enablement_setting: gql_settings
@@ -845,8 +845,8 @@ impl From<derp_graphql::workspace::LlmHostSettings> for super::workspace::LlmHos
     }
 }
 
-impl From<derp_graphql::workspace::LlmSettings> for LlmSettings {
-    fn from(gql_settings: derp_graphql::workspace::LlmSettings) -> Self {
+impl From<bork_graphql::workspace::LlmSettings> for LlmSettings {
+    fn from(gql_settings: bork_graphql::workspace::LlmSettings) -> Self {
         let mut host_configs = std::collections::HashMap::new();
         for entry in gql_settings.host_configs {
             let host: crate::ai::llms::LLMModelHost = entry.host.into();
@@ -996,10 +996,10 @@ impl From<GqlWorkspaceSettings> for WorkspaceSettings {
                         .map(|denylist| denylist.to_predicates()),
                 }
             }),
-            enable_derp_attribution: gql_workspace_settings
+            enable_bork_attribution: gql_workspace_settings
                 .ambient_agent_settings
                 .as_ref()
-                .map(|s| s.enable_derp_attribution.clone().into())
+                .map(|s| s.enable_bork_attribution.clone().into())
                 .unwrap_or_default(),
             default_host_slug: gql_workspace_settings
                 .ambient_agent_settings
@@ -1154,14 +1154,14 @@ impl From<GqlUser> for WorkspacesMetadataResponse {
     }
 }
 
-pub fn object_update_message_from_gql(value: DerpDriveUpdate) -> Result<ObjectUpdateMessage> {
+pub fn object_update_message_from_gql(value: BorkDriveUpdate) -> Result<ObjectUpdateMessage> {
     match value {
-        DerpDriveUpdate::ObjectActionOccurred(message) => {
+        BorkDriveUpdate::ObjectActionOccurred(message) => {
             Ok(ObjectUpdateMessage::ObjectActionOccurred {
                 history: object_action_history_from_gql(message.history)?,
             })
         }
-        DerpDriveUpdate::ObjectContentUpdated(message) => {
+        BorkDriveUpdate::ObjectContentUpdated(message) => {
             let server_object = message.object.try_into()?;
             let last_editor = message.last_editor.map(|e| e.into());
             Ok(ObjectUpdateMessage::ObjectContentChanged {
@@ -1169,15 +1169,15 @@ pub fn object_update_message_from_gql(value: DerpDriveUpdate) -> Result<ObjectUp
                 last_editor,
             })
         }
-        DerpDriveUpdate::ObjectDeleted(message) => Ok(ObjectUpdateMessage::ObjectDeleted {
+        BorkDriveUpdate::ObjectDeleted(message) => Ok(ObjectUpdateMessage::ObjectDeleted {
             object_uid: ServerId::from_string_lossy(message.object_uid.inner()),
         }),
-        DerpDriveUpdate::ObjectMetadataUpdated(message) => {
+        BorkDriveUpdate::ObjectMetadataUpdated(message) => {
             Ok(ObjectUpdateMessage::ObjectMetadataChanged {
                 metadata: message.metadata.try_into()?,
             })
         }
-        DerpDriveUpdate::ObjectPermissionsUpdated(message) => {
+        BorkDriveUpdate::ObjectPermissionsUpdated(message) => {
             Ok(ObjectUpdateMessage::ObjectPermissionsChangedV2 {
                 object_uid: ServerId::from_string_lossy(message.object_uid.inner()),
                 user_profiles: message
@@ -1189,16 +1189,16 @@ pub fn object_update_message_from_gql(value: DerpDriveUpdate) -> Result<ObjectUp
                 permissions: message.permissions.try_into()?,
             })
         }
-        DerpDriveUpdate::TeamMembershipsChanged(_) => {
+        BorkDriveUpdate::TeamMembershipsChanged(_) => {
             Ok(ObjectUpdateMessage::TeamMembershipsChanged)
         }
-        DerpDriveUpdate::AmbientTaskUpdated(message) => {
+        BorkDriveUpdate::AmbientTaskUpdated(message) => {
             Ok(ObjectUpdateMessage::AmbientTaskUpdated {
                 task_id: message.task_id.inner().to_string(),
                 timestamp: message.task_updated_ts.utc(),
             })
         }
-        DerpDriveUpdate::Unknown => bail!("Unexpected DerpDriveUpdate variant"),
+        BorkDriveUpdate::Unknown => bail!("Unexpected BorkDriveUpdate variant"),
     }
 }
 

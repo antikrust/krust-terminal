@@ -25,12 +25,12 @@ use sum_tree::{self, Cursor, FilterCursor, SeekBias, SumTree};
 use time::{Global, Lamport};
 use undo::{LocalUndoStack, UndoHistory};
 use vec1::{vec1, Vec1};
-use derpui::color::ColorU;
-use derpui::text::point::Point;
-use derpui::text::words::is_default_word_boundary;
-use derpui::text::{BufferIndex, TextBuffer};
-use derpui::text_layout::TextStyle;
-use derpui::{Entity, ModelContext};
+use borkui::color::ColorU;
+use borkui::text::point::Point;
+use borkui::text::words::is_default_word_boundary;
+use borkui::text::{BufferIndex, TextBuffer};
+use borkui::text_layout::TextStyle;
+use borkui::{Entity, ModelContext};
 /// The public interfaces that we expose to the model.
 /// This should be a very limited set of APIs and should
 /// not expose the internal details of the buffer.
@@ -363,9 +363,9 @@ impl TextStyleOperation {
     ///
     /// # Example
     /// ```
-    /// use derpui::color::ColorU;
-    /// use derpui::text_layout::TextStyle;
-    /// use derp::editor::TextStyleOperation;
+    /// use borkui::color::ColorU;
+    /// use borkui::text_layout::TextStyle;
+    /// use bork::editor::TextStyleOperation;
     /// TextStyleOperation::apply_text_style_operation(
     ///     TextStyle::default(),
     ///     TextStyleOperation::default().set_error_underline_color(ColorU::black()),
@@ -1645,9 +1645,9 @@ impl Buffer {
     ///
     /// # Example
     /// ```ignore
-    /// use derpui::{color::ColorU, App, ModelHandle};
-    /// use derp::Assets;
-    /// use derp::editor::model::buffer::{Buffer, TextStyleOperation, EditOrigin};
+    /// use borkui::{color::ColorU, App, ModelHandle};
+    /// use bork::Assets;
+    /// use bork::editor::model::buffer::{Buffer, TextStyleOperation, EditOrigin};
     /// use string_offset::CharOffset;
     /// App::test((), |mut app| async move {
     ///     let buffer_model: &mut ModelHandle<Buffer> =

@@ -3,8 +3,8 @@ use instant::Duration;
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::{Role, Scrollback, ScrollbackBlock, SessionId};
 use session_sharing_protocol::sharer::SessionSourceType;
-use derpui::keymap::ContextPredicate;
-use derpui::{id, AppContext};
+use borkui::keymap::ContextPredicate;
+use borkui::{id, AppContext};
 
 use super::model::block::SerializedBlock;
 use super::model::terminal_model::BlockIndex;
@@ -284,7 +284,7 @@ impl SharedSessionScrollbackType {
 
 #[cfg(not(test))]
 pub fn max_session_size(ctx: &AppContext) -> Byte {
-    use derpui::SingletonEntity;
+    use borkui::SingletonEntity;
 
     use crate::workspaces::user_workspaces::UserWorkspaces;
 
@@ -327,7 +327,7 @@ pub enum SharedSessionActionSource {
 }
 
 /// Returns the native intent URL to join a shared session.
-/// This should be used when opening the session from within Derp.
+/// This should be used when opening the session from within Bork.
 pub fn join_native_intent(session_id: &SessionId) -> String {
     format!(
         "{}://shared_session/{}",

@@ -1,12 +1,12 @@
 use registry::register_uri_handler;
 #[cfg(feature = "release_bundle")]
-use derp_errors::report_error;
-use derpui::AppContext;
+use bork_errors::report_error;
+use borkui::AppContext;
 #[cfg(feature = "release_bundle")]
 use {
     service_impl::forward_uri_to_sole_running_instance,
     single_instance_manager::SingleInstanceManager, thiserror::Error, url::Url,
-    derp_core::channel::ChannelState,
+    bork_core::channel::ChannelState,
 };
 
 mod registry;
@@ -20,7 +20,7 @@ mod single_instance_manager;
 pub enum StartupArgsForwardingError {
     #[error("should not forward arguments after an auto-update")]
     IgnoredAfterAutoUpdate,
-    #[error("there is no other instance of Derp")]
+    #[error("there is no other instance of Bork")]
     NoExistingInstance,
     #[error("failed to construct url")]
     CouldNotCreateUrl(#[from] url::ParseError),
@@ -32,7 +32,7 @@ pub enum StartupArgsForwardingError {
 
 #[cfg(feature = "release_bundle")]
 pub fn pass_startup_args_to_existing_instance(
-    args: &derp_cli::AppArgs,
+    args: &bork_cli::AppArgs,
 ) -> Result<(), StartupArgsForwardingError> {
     if args.finish_update {
         return Err(StartupArgsForwardingError::IgnoredAfterAutoUpdate);
@@ -41,7 +41,7 @@ pub fn pass_startup_args_to_existing_instance(
         return Err(StartupArgsForwardingError::NoExistingInstance);
     }
 
-    derpui::r#async::block_on(async {
+    borkui::r#async::block_on(async {
         if args.urls.is_empty() {
             // If there are no URLs on the command line, send one to open a new
             // window using the same current working directory as this process.

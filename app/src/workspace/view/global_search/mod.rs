@@ -1,5 +1,5 @@
-use derp_ripgrep::search::Submatch;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
+use bork_ripgrep::search::Submatch;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
 
 pub struct SearchConfig {
     pub use_regex: bool,

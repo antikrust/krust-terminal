@@ -1,6 +1,6 @@
 use repo_metadata::DirectoryWatcher;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::{App, ModelHandle};
+use bork_util::standardized_path::StandardizedPath;
+use borkui::{App, ModelHandle};
 
 use super::*;
 use crate::code_review::git_repo_model::GitRepoStatusModel;
@@ -9,7 +9,7 @@ use crate::util::git::RepositoryInfo;
 fn pr(number: u64) -> PrInfo {
     PrInfo {
         number,
-        url: format!("https://github.com/derp/derp/pull/{number}"),
+        url: format!("https://github.com/bork/bork/pull/{number}"),
         state: "OPEN".to_string(),
         draft: false,
         base_branch: "main".to_string(),
@@ -18,8 +18,8 @@ fn pr(number: u64) -> PrInfo {
 
 fn repository_info() -> RepositoryInfo {
     RepositoryInfo {
-        name: "derp".to_string(),
-        owner: Some("derpdotdev".to_string()),
+        name: "bork".to_string(),
+        owner: Some("borkdotdev".to_string()),
     }
 }
 

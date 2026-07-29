@@ -1,16 +1,16 @@
 # Tech Spec: Oz Platform Plugin Installation for Third-Party Harnesses
 
-Linear: [REMOTE-1218](https://linear.app/derpdotdev/issue/REMOTE-1218)
+Linear: [REMOTE-1218](https://linear.app/borkdotdev/issue/REMOTE-1218)
 
 ## 1. Problem
 
-When a non-Oz harness (e.g. Claude Code) runs via the agent driver, `setup_harness` installs the **Derp notification plugin** (`derp@claude-code-derp` from `derpdotdev/claude-code-derp`). Harness runs also need a separate **Oz platform plugin** (`derp-cloud@claude-code-derp` from `derpdotdev/claude-code-derp-internal`) that connects the third-party CLI to the Oz platform — exposing tools, skills, and hooks (e.g. artifact reporting). This is distinct from the notification plugin: the platform plugin is about Oz integration, not just notifications.
+When a non-Oz harness (e.g. Claude Code) runs via the agent driver, `setup_harness` installs the **Bork notification plugin** (`bork@claude-code-bork` from `borkdotdev/claude-code-bork`). Harness runs also need a separate **Oz platform plugin** (`bork-cloud@claude-code-bork` from `borkdotdev/claude-code-bork-internal`) that connects the third-party CLI to the Oz platform — exposing tools, skills, and hooks (e.g. artifact reporting). This is distinct from the notification plugin: the platform plugin is about Oz integration, not just notifications.
 
 Today, only (a) is installed. We need to also install (b) for all harness runs driven by the agent driver, while keeping (b) out of normal local interactive agent sessions.
 
 ## 2. Relevant Code
 
-- `app/src/ai/agent_sdk/driver.rs:1242-1264` — `setup_harness`: subscribes to CLI session events, installs the derp plugin
+- `app/src/ai/agent_sdk/driver.rs:1242-1264` — `setup_harness`: subscribes to CLI session events, installs the bork plugin
 - `app/src/terminal/cli_agent_sessions/plugin_manager/mod.rs` — `CliAgentPluginManager` trait, `plugin_manager_for()` factory
 - `app/src/terminal/cli_agent_sessions/plugin_manager/claude.rs` — `ClaudeCodePluginManager`: install/update via `claude plugin marketplace add` + `claude plugin install`
 - `app/src/ai/agent_sdk/driver/harness/mod.rs:29` — `ThirdPartyHarness` trait
@@ -18,9 +18,9 @@ Today, only (a) is installed. We need to also install (b) for all harness runs d
 
 ### External
 
-- `derpdotdev/claude-code-derp-internal` — private repo containing both the existing `derp` plugin and the `derp-cloud` platform plugin
-- `.claude-plugin/marketplace.json` — declares `derp-cloud` as a marketplace entry: key `derp-cloud@claude-code-derp`, source `./plugins/derp-cloud`
-- `plugins/derp-cloud/skills/oz-report-artifact/` — platform-only skill for reporting PRs back to Oz
+- `borkdotdev/claude-code-bork-internal` — private repo containing both the existing `bork` plugin and the `bork-cloud` platform plugin
+- `.claude-plugin/marketplace.json` — declares `bork-cloud` as a marketplace entry: key `bork-cloud@claude-code-bork`, source `./plugins/bork-cloud`
+- `plugins/bork-cloud/skills/oz-report-artifact/` — platform-only skill for reporting PRs back to Oz
 
 ## 3. Current State
 
@@ -30,13 +30,13 @@ Today, only (a) is installed. We need to also install (b) for all harness runs d
 
 For Claude, `ClaudeCodePluginManager::install()` runs:
 ```
-claude plugin marketplace add derpdotdev/claude-code-derp
-claude plugin install derp@claude-code-derp
+claude plugin marketplace add borkdotdev/claude-code-bork
+claude plugin install bork@claude-code-bork
 ```
 
-This installs the **public** `derp` plugin (notifications). There is no concept of a second platform plugin. The `CliAgentPluginManager` trait models a single plugin per CLI agent.
+This installs the **public** `bork` plugin (notifications). There is no concept of a second platform plugin. The `CliAgentPluginManager` trait models a single plugin per CLI agent.
 
-The `claude-code-derp-internal` repo already defines the `derp-cloud` marketplace entry and contains the platform plugin, but nothing in derp-internal installs it.
+The `claude-code-bork-internal` repo already defines the `bork-cloud` marketplace entry and contains the platform plugin, but nothing in bork-internal installs it.
 
 ## 4. Proposed Changes
 
@@ -61,19 +61,19 @@ We call this `install_platform_plugin` (not `install_cloud_plugin`) because this
 New constants in `claude.rs`:
 
 ```rust
-const PLATFORM_PLUGIN_KEY: &str = "derp-cloud@claude-code-derp";
-const PLATFORM_MARKETPLACE_REPO: &str = "derpdotdev/claude-code-derp-internal";
-const PLATFORM_MARKETPLACE_NAME: &str = "claude-code-derp-internal";
+const PLATFORM_PLUGIN_KEY: &str = "bork-cloud@claude-code-bork";
+const PLATFORM_MARKETPLACE_REPO: &str = "borkdotdev/claude-code-bork-internal";
+const PLATFORM_MARKETPLACE_NAME: &str = "claude-code-bork-internal";
 ```
 
 Implementation: same pattern as `install()`, just targeting the internal repo/key:
 
 ```
-claude plugin marketplace add derpdotdev/claude-code-derp-internal
-claude plugin install derp-cloud@claude-code-derp
+claude plugin marketplace add borkdotdev/claude-code-bork-internal
+claude plugin install bork-cloud@claude-code-bork
 ```
 
-Note: this repo is **private**. The sandbox environment already has GitHub credentials configured (via `$GITHUB_ACCESS_TOKEN` in `entrypoint.sh`), and the `claude plugin marketplace add` command clones the repo via git, so it should work in cloud environments. For local `agent run --harness claude` runs, the user must have GitHub access to the `derpdotdev` org.
+Note: this repo is **private**. The sandbox environment already has GitHub credentials configured (via `$GITHUB_ACCESS_TOKEN` in `entrypoint.sh`), and the `claude plugin marketplace add` command clones the repo via git, so it should work in cloud environments. For local `agent run --harness claude` runs, the user must have GitHub access to the `borkdotdev` org.
 
 **No version tracking or manual instructions needed.** Unlike the notification plugin (which has `minimum_plugin_version`, `needs_update`, and install/update instruction modals for the footer UI), the platform plugin is only installed programmatically by the driver. There is no user-facing install chip or modal. In cloud environments, containers are ephemeral so every run gets a fresh install. If we later expose this to local users, we'd add version tracking and instructions at that point.
 
@@ -131,27 +131,27 @@ sequenceDiagram
     Setup->>PM: plugin_manager_for(Claude)
     PM-->>Setup: Some(ClaudeCodePluginManager)
 
-    Note over Setup: Install derp plugin (existing)
+    Note over Setup: Install bork plugin (existing)
     Setup->>PM: manager.install()
-    PM->>CLI: claude plugin marketplace add derpdotdev/claude-code-derp
-    PM->>CLI: claude plugin install derp@claude-code-derp
+    PM->>CLI: claude plugin marketplace add borkdotdev/claude-code-bork
+    PM->>CLI: claude plugin install bork@claude-code-bork
 
     Note over Setup: Install platform plugin (new)
     Setup->>PM: manager.install_platform_plugin()
-    PM->>CLI: claude plugin marketplace add derpdotdev/claude-code-derp-internal
-    PM->>CLI: claude plugin install derp-cloud@claude-code-derp
+    PM->>CLI: claude plugin marketplace add borkdotdev/claude-code-bork-internal
+    PM->>CLI: claude plugin install bork-cloud@claude-code-bork
 
     Setup-->>Driver: Ok(())
     Driver->>Driver: prepare_harness / run_harness
     Driver->>CC: claude --session-id ... < prompt
-    Note over CC: Both plugins active:<br/>derp (notifications) + derp-cloud (Oz platform)
+    Note over CC: Both plugins active:<br/>bork (notifications) + bork-cloud (Oz platform)
 ```
 
 ## 6. Risks and Mitigations
 
-**Private repo access.** `derpdotdev/claude-code-derp-internal` is private. Cloud environments have GitHub creds via `$GITHUB_ACCESS_TOKEN`. Local `agent run --harness claude` users need org access. **Mitigation:** `install_platform_plugin` is best-effort; failure is logged, not fatal.
+**Private repo access.** `borkdotdev/claude-code-bork-internal` is private. Cloud environments have GitHub creds via `$GITHUB_ACCESS_TOKEN`. Local `agent run --harness claude` users need org access. **Mitigation:** `install_platform_plugin` is best-effort; failure is logged, not fatal.
 
-**Plugin name collision.** The `derp` and `derp-cloud` plugins are in different marketplace repos. Claude Code's plugin system keys plugins by `<plugin_name>@<marketplace_name>`, so `derp@claude-code-derp` and `derp-cloud@claude-code-derp` are distinct. No collision risk.
+**Plugin name collision.** The `bork` and `bork-cloud` plugins are in different marketplace repos. Claude Code's plugin system keys plugins by `<plugin_name>@<marketplace_name>`, so `bork@claude-code-bork` and `bork-cloud@claude-code-bork` are distinct. No collision risk.
 
 **Install ordering.** We install the notification plugin first, then the platform plugin. If the platform install fails mid-way, the notification plugin is still active. This is the preferred degradation.
 

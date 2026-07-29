@@ -1,8 +1,8 @@
 //! Inline plan menu view for selecting among multiple AI document plans.
 
 use ai::document::AIDocumentId;
-use derpui::elements::ChildView;
-use derpui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use borkui::elements::ChildView;
+use borkui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::AgentViewController;
@@ -141,7 +141,7 @@ impl View for InlinePlanMenuView {
         "InlinePlanMenuView"
     }
 
-    fn render(&self, _app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

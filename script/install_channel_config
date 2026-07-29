@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs the derp_channel_config binary at a pinned revision.
+# Installs the bork_channel_config binary at a pinned revision.
 #
 # This script acts as a lockfile: the REVISION variable pins the exact version
 # of the config binary to the code that reads its output. Update REVISION when
@@ -10,9 +10,9 @@
 #   ./script/install_channel_config          # install if not already at pinned rev
 #   ./script/install_channel_config --force  # force reinstall
 
-REPO="ssh://git@github.com/derpdotdev/derp-channel-config.git"
+REPO="ssh://git@github.com/borkdotdev/bork-channel-config.git"
 REVISION="97a199b5bba11af9c7d3bd43dfb3669316d1f0f8"
-BIN_NAME="derp-channel-config"
+BIN_NAME="bork-channel-config"
 
 # Check for repo access before attempting to `cargo install` the binary.
 if ! git ls-remote --exit-code "${REPO}" HEAD >/dev/null 2>&1; then

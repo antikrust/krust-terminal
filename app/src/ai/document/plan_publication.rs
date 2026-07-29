@@ -1,13 +1,13 @@
-//! Publishing plan documents to Derp Drive ahead of child-agent launch.
+//! Publishing plan documents to Bork Drive ahead of child-agent launch.
 //!
 //! Callers first call [`prepare_plan_publications`] to kick off publication of
 //! a conversation's plans, then await [`wait_for_plan_publications`] before
 //! proceeding with work that requires the plans to be server-backed.
 use std::time::Duration;
 
-use derp_errors::report_error;
-use derpui::r#async::FutureExt as DerpFutureExt;
-use derpui::{Entity, ModelContext, SingletonEntity};
+use bork_errors::report_error;
+use borkui::r#async::FutureExt as BorkFutureExt;
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentModelEvent};

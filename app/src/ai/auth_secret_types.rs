@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
-use derp_cli::agent::Harness;
-use derp_graphql::managed_secrets::ManagedSecretType;
-use derp_managed_secrets::ManagedSecretValue;
+use bork_cli::agent::Harness;
+use bork_graphql::managed_secrets::ManagedSecretType;
+use bork_managed_secrets::ManagedSecretValue;
 
 pub struct AuthSecretTypeField {
     pub label: &'static str,
@@ -36,11 +36,11 @@ pub fn learn_more_url_for_harness(harness: Harness) -> &'static str {
 }
 
 const DEFAULT_LEARN_MORE_URL: &str =
-    "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/harnesses/authentication/";
+    "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/harnesses/authentication/";
 const CODEX_LEARN_MORE_URL: &str =
-    "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/harnesses/authentication/#connecting-codex-credentials";
+    "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/harnesses/authentication/#connecting-codex-credentials";
 const CLAUDE_LEARN_MORE_URL: &str =
-    "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/harnesses/authentication/#connecting-claude-code-credentials";
+    "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/harnesses/authentication/#connecting-claude-code-credentials";
 
 pub fn build_managed_secret_value(
     info: &AuthSecretTypeInfo,

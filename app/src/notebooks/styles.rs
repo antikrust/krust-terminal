@@ -1,13 +1,13 @@
 //! Shared styles for notebooks.
 
-use derpui::elements::{
+use borkui::elements::{
     Container, CrossAxisAlignment, Flex, Hoverable, MainAxisAlignment, MouseStateHandle,
     ParentElement,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::UiComponent as _;
-use derpui::units::{IntoPixels, Pixels};
-use derpui::{fonts, Element};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::UiComponent as _;
+use borkui::units::{IntoPixels, Pixels};
+use borkui::{fonts, Element};
 
 use crate::appearance::Appearance;
 use crate::settings::{derived_notebook_font_size, FontSettings};

@@ -17,9 +17,9 @@ on:
         description: Prompt to send to Docubot
         required: true
         default: "Analyze this PR for documentation needs"
-      derp_channel:
+      bork_channel:
         type: choice
-        description: Derp release channel
+        description: Bork release channel
         required: true
         default: dev
         options:
@@ -27,7 +27,7 @@ on:
           - preview
           - stable
       profile_id:
-        description: Derp profile ID
+        description: Bork profile ID
         required: false
 permissions:
   contents: write
@@ -63,7 +63,7 @@ jobs:
         uses: ./.github/actions/docubot
         with:
           prompt: ${{ github.event.comment.body || inputs.prompt}}
-          derp_api_key: ${{ secrets.DERP_DEV_API_KEY }}
-          derp_channel: ${{ inputs.derp_channel || 'dev' }}
-          profile_id: ${{ inputs.profile_id || vars.DERP_DEV_API_PROFILE_ID }}
+          bork_api_key: ${{ secrets.BORK_DEV_API_KEY }}
+          bork_channel: ${{ inputs.bork_channel || 'dev' }}
+          profile_id: ${{ inputs.profile_id || vars.BORK_DEV_API_PROFILE_ID }}
           github_token: ${{ secrets.PEI_GH_TOKEN_PLS_DEL }}

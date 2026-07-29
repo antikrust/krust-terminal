@@ -1,8 +1,8 @@
 use comfy_table::Cell;
 use serde::Serialize;
 use serde_json::json;
-use derp_cli::agent::OutputFormat;
-use derp_cli::json_filter::parse_jq_filter;
+use bork_cli::agent::OutputFormat;
+use bork_cli::json_filter::parse_jq_filter;
 
 use super::{
     run_jq_filter, write_filter_output, write_json, write_json_line, write_list, TableFormat,

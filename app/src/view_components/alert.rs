@@ -1,11 +1,11 @@
 use pathfinder_color::ColorU;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon, MainAxisSize,
     ParentElement, Radius, Shrinkable,
 };
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::Element;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::Element;
 
 use crate::appearance::Appearance;
 use crate::themes::theme::Fill;

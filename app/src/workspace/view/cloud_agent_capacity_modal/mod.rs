@@ -3,21 +3,21 @@ use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use thousands::Separable;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derp_graphql::billing::StripeSubscriptionPlan;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use bork_graphql::billing::StripeSubscriptionPlan;
+use borkui::elements::{
     Align, CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DropShadow, Expanded, Flex, FormattedTextElement, HighlightedHyperlink, Image,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::auth::AuthStateProvider;
 use crate::pricing::PricingInfoModel;
@@ -32,7 +32,7 @@ const MODAL_HEIGHT: f32 = 532.;
 const COMPACT_MODAL_HEIGHT: f32 = 360.;
 const HEADER_HEIGHT: f32 = 92.;
 const BUTTON_DIAMETER: f32 = 20.;
-const BILLING_AND_USAGE_URL: &str = "derp://settings/billing_and_usage";
+const BILLING_AND_USAGE_URL: &str = "bork://settings/billing_and_usage";
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum CloudAgentCapacityModalVariant {
@@ -42,7 +42,7 @@ pub enum CloudAgentCapacityModalVariant {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -242,7 +242,7 @@ impl CloudAgentCapacityModal {
                                 Container::new(
                                     ConstrainedBox::new(
                                         Icon::CheckCircleBroken
-                                            .to_derpui_icon(Fill::Solid(theme.ansi_fg_green()))
+                                            .to_borkui_icon(Fill::Solid(theme.ansi_fg_green()))
                                             .finish(),
                                     )
                                     .with_width(14.)

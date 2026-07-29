@@ -1,5 +1,5 @@
-use derpui::async_assert;
-use derpui::integration::AssertionCallback;
+use borkui::async_assert;
+use borkui::integration::AssertionCallback;
 
 use crate::context_chips::ContextChipKind;
 use crate::integration_testing::view_getters::single_terminal_view_for_tab;

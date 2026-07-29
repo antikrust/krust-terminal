@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use notify_debouncer_full::notify::{RecursiveMode, WatchFilter};
-use derpui_core::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use borkui_core::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{BulkFilesystemWatcher, BulkFilesystemWatcherEvent};
 

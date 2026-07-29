@@ -1,6 +1,6 @@
 # Product Spec: Double-click the hidden-section bar to fully expand
 
-**Issue:** [derpdotdev/derp#11622](https://github.com/derpdotdev/derp/issues/11622)
+**Issue:** [borkdotdev/bork#11622](https://github.com/borkdotdev/bork/issues/11622)
 **Figma:** none
 
 ## Summary

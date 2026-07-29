@@ -8,9 +8,9 @@ use futures::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWr
 use futures::lock::Mutex;
 use jsonrpc::Transport;
 use simple_logger::SimpleLogger;
-use derp_errors::report_error;
-use derpui_core::r#async::executor::{Background, BackgroundTask};
-use derpui_core::r#async::Timer;
+use bork_errors::report_error;
+use borkui_core::r#async::executor::{Background, BackgroundTask};
+use borkui_core::r#async::Timer;
 
 /// Transport implementation for LSP communication over process stdin/stdout.
 /// Also manages the LSP server process lifecycle with graceful shutdown capabilities.

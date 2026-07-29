@@ -1,5 +1,5 @@
-use derpui::elements::Element;
-use derpui::{AppContext, SingletonEntity};
+use borkui::elements::Element;
+use borkui::{AppContext, SingletonEntity};
 
 use crate::ai::blocklist::agent_view::orchestration_pill_bar::{
     render_agent_avatar_disc, render_orchestrator_avatar_disc,

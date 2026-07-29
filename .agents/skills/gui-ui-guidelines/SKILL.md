@@ -1,19 +1,19 @@
 ---
 name: gui-ui-guidelines
-description: GUI desktop app only. Catalog of guidelines for writing UI code in the Derp client. Read whenever doing any UI work in this repo, up front before writing the change, so the relevant guidelines shape the implementation.
+description: GUI desktop app only. Catalog of guidelines for writing UI code in the Bork client. Read whenever doing any UI work in this repo, up front before writing the change, so the relevant guidelines shape the implementation.
 ---
 
 # gui-ui-guidelines
 
-**Scope — GUI desktop app only.** This skill applies to Derp's **GUI** desktop front-end (the `app/` crate on the DerpUI pixel/GPU framework). It does **not** apply to the headless **TUI** front-end (`crates/derp_tui`; cell-grid `TuiElement` library under `crates/derpui_core/src/elements/tui`), which has its own components, tests, and change-verification workflow. For TUI work, see the `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills instead.
+**Scope — GUI desktop app only.** This skill applies to Bork's **GUI** desktop front-end (the `app/` crate on the BorkUI pixel/GPU framework). It does **not** apply to the headless **TUI** front-end (`crates/bork_tui`; cell-grid `TuiElement` library under `crates/borkui_core/src/elements/tui`), which has its own components, tests, and change-verification workflow. For TUI work, see the `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills instead.
 
-This skill is a growing catalog of guidelines for working on Derp's UI code. Each guideline captures a lesson that would otherwise be re-learned through review — typically because an agent or contributor reinvented a component, drifted from the design system, or bypassed a shared abstraction.
+This skill is a growing catalog of guidelines for working on Bork's UI code. Each guideline captures a lesson that would otherwise be re-learned through review — typically because an agent or contributor reinvented a component, drifted from the design system, or bypassed a shared abstraction.
 
 **How to use this skill:**
 
 - Read through the guidelines below once at the start of any UI task, then keep them in mind while implementing. The list is short enough to scan.
 - Each guideline is self-contained. Not every one will apply to every task — use judgment. But if a guideline *does* apply, follow it.
-- When in doubt, prefer reusing an existing abstraction over introducing a new one. The Derp UI has accumulated a well-factored set of shared components and themes; new one-offs almost always drift.
+- When in doubt, prefer reusing an existing abstraction over introducing a new one. The Bork UI has accumulated a well-factored set of shared components and themes; new one-offs almost always drift.
 
 New guidelines get added here over time. If you discover a recurring UI mistake that would have been caught by a written rule, add it.
 

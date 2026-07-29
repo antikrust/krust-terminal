@@ -6,8 +6,8 @@ pub mod switch;
 pub mod tooltip;
 
 pub use keyboard_shortcut::KeyboardShortcut;
-use derp_core::ui::appearance::Appearance;
-use derpui_core::Element;
+use bork_core::ui::appearance::Appearance;
+use borkui_core::Element;
 
 /// A reusable UI component that can be rendered with configurable parameters.
 ///
@@ -30,8 +30,8 @@ use derpui_core::Element;
 ///
 /// ```rust
 /// use ui_components::{Component, Options, button};
-/// use derp_core::ui::appearance::Appearance;
-/// use derpui_core::prelude::*;
+/// use bork_core::ui::appearance::Appearance;
+/// use borkui_core::prelude::*;
 ///
 /// // Store component as a field in your view.
 /// struct MyView {
@@ -39,7 +39,7 @@ use derpui_core::Element;
 /// }
 ///
 /// impl MyView {
-///     fn render_button(&self, appearance: &Appearance) -> Box<dyn derpui_core::Element> {
+///     fn render_button(&self, appearance: &Appearance) -> Box<dyn borkui_core::Element> {
 ///         self.my_button.render(
 ///             appearance,
 ///             button::Params {
@@ -61,8 +61,8 @@ use derpui_core::Element;
 ///
 /// ```rust
 /// use ui_components::Component;
-/// use derp_core::ui::appearance::Appearance;
-/// use derpui_core::prelude::*;
+/// use bork_core::ui::appearance::Appearance;
+/// use borkui_core::prelude::*;
 ///
 /// // 1. Define the component struct with any persistent state.
 /// #[derive(Default)]
@@ -135,7 +135,7 @@ pub trait Component: Default {
 ///
 /// ```rust
 /// use ui_components::{Params, Options};
-/// use derp_core::ui::appearance::Appearance;
+/// use bork_core::ui::appearance::Appearance;
 ///
 /// pub struct MyParams {
 ///     pub content: String,   // Required.
@@ -176,7 +176,7 @@ pub trait Params {
 ///
 /// ```rust
 /// use ui_components::{Options, MouseEventHandler};
-/// use derp_core::ui::appearance::Appearance;
+/// use bork_core::ui::appearance::Appearance;
 ///
 /// pub struct MyOptions {
 ///     pub disabled: bool,
@@ -231,8 +231,8 @@ pub trait Options {
 ///
 /// ```rust
 /// use ui_components::{Renderable, Options};
-/// use derp_core::ui::appearance::Appearance;
-/// use derpui_core::prelude::*;
+/// use bork_core::ui::appearance::Appearance;
+/// use borkui_core::prelude::*;
 ///
 /// pub struct SwitchOptions<'a> {
 ///     pub disabled: bool,
@@ -282,8 +282,8 @@ where
 /// A function that handles mouse events.
 pub type MouseEventHandler = Box<
     dyn FnMut(
-        &mut derpui_core::EventContext,
-        &derpui_core::AppContext,
+        &mut borkui_core::EventContext,
+        &borkui_core::AppContext,
         pathfinder_geometry::vector::Vector2F,
     ),
 >;

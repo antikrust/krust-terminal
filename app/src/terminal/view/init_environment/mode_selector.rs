@@ -1,17 +1,17 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss,
     DropShadow, Element, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -74,7 +74,7 @@ pub struct EnvironmentSetupModeSelector {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new(
@@ -228,7 +228,7 @@ impl EnvironmentSetupModeSelector {
                 (base_background, base_border)
             };
 
-            let avatar_icon = ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
+            let avatar_icon = ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
                 .with_width(AVATAR_ICON_SIZE)
                 .with_height(AVATAR_ICON_SIZE)
                 .finish();

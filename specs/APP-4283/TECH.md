@@ -95,10 +95,10 @@ stateDiagram-v2
 
 Manual E2E (verified):
 
-1. Build Derp from this branch (`cargo run`).
+1. Build Bork from this branch (`cargo run`).
 2. SSH into a remote host with the remote server feature flag enabled.
 3. Kill the `remote-server-proxy` on the remote side: `ssh <host> "pkill -f remote-server-proxy"`.
-4. Observe in `Derp.log`:
+4. Observe in `Bork.log`:
    - `"Remote server process exited for session …"` — exit status captured
    - `"Spontaneous disconnect for session …, will attempt reconnect"` — reconnect triggered
    - `"Attempting reconnect for session … (attempt 1/2)"` — delay + retry

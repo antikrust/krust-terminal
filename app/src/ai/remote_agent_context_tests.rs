@@ -1,11 +1,11 @@
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::{DirectoryWatcher, RepoMetadataModel};
-use derpui::App;
+use borkui::App;
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
 use crate::settings::AISettings;
-use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
+use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
 
 fn bundled_skill(
     id: &str,
@@ -79,7 +79,7 @@ fn setup_context_models(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
     app.add_singleton_model(|_| ProjectContextModel::default());
 }

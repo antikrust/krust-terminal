@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 
 use ai::skills::{provider_rank, ParsedSkill};
-use derp_cli::skill::SkillSpec;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
+use bork_cli::skill::SkillSpec;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
 
 use crate::ai::cloud_environments::GithubRepo;
 

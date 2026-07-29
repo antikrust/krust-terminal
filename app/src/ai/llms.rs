@@ -7,12 +7,12 @@ use anyhow::Context as _;
 use parking_lot::FairMutex;
 use serde::{de, Deserialize, Serialize};
 use settings::Setting as _;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::icons::Icon;
-use derp_core::user_preferences::GetUserPreferences;
-use derp_errors::report_error;
-use derp_multi_agent_api as api;
-use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_core::ui::icons::Icon;
+use bork_core::user_preferences::GetUserPreferences;
+use bork_errors::report_error;
+use bork_multi_agent_api as api;
+use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::custom_model_routers::{self, CustomModelRouter, ModelConfigError};
 use super::execution_profiles::profiles::AIExecutionProfilesModel;
@@ -21,7 +21,7 @@ use crate::auth::AuthStateProvider;
 use crate::network::{NetworkStatus, NetworkStatusEvent, NetworkStatusKind};
 use crate::server::server_api::ServerApiProvider;
 use crate::settings::AISettings;
-use crate::user_config::{DerpConfig, DerpConfigUpdateEvent};
+use crate::user_config::{BorkConfig, BorkConfigUpdateEvent};
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
 
 /// Checks if a user's' API key is being used for the given provider.
@@ -472,7 +472,7 @@ impl LLMInfo {
 /// The set of LLMs available for a feature.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AvailableLLMs {
-    /// The Derp "default" LLM.
+    /// The Bork "default" LLM.
     default_id: LLMId,
     choices: Vec<LLMInfo>,
 
@@ -784,8 +784,8 @@ impl LLMPreferences {
         // Rebuild custom model routers whenever the local `model_configs/` directory
         // changes, and reconcile any now-stale local selection.
         if FeatureFlag::CustomModelRouters.is_enabled() {
-            ctx.subscribe_to_model(&DerpConfig::handle(ctx), |me, _, event, ctx| {
-                if matches!(event, DerpConfigUpdateEvent::ModelConfigs) {
+            ctx.subscribe_to_model(&BorkConfig::handle(ctx), |me, _, event, ctx| {
+                if matches!(event, BorkConfigUpdateEvent::ModelConfigs) {
                     me.rebuild_custom_model_routers(ctx);
                     me.reconcile_stale_custom_router_selection(ctx);
                 }
@@ -913,7 +913,7 @@ impl LLMPreferences {
     /// `TuiAgentModel` setting) to an `LLMInfo`.
     ///
     /// `"auto"` — the default — resolves to the server-provided default model
-    /// (i.e. defers to Derp's automatic model selection). Unknown ids also
+    /// (i.e. defers to Bork's automatic model selection). Unknown ids also
     /// fall back to the default, so an invalid TOML value never sends an
     /// unresolvable model id to the server.
     ///
@@ -1121,7 +1121,7 @@ impl LLMPreferences {
         self.custom_llms.iter().find(|info| info.id == *id)
     }
 
-    /// Returns `true` when `id` identifies a model that can run in a Derp cloud
+    /// Returns `true` when `id` identifies a model that can run in a Bork cloud
     /// (Oz) agent, and is therefore safe to forward as a cloud
     /// `config.model_id`.
     ///
@@ -1141,7 +1141,7 @@ impl LLMPreferences {
             || custom_model_routers::is_local_custom_router_id(id.as_str()))
     }
 
-    /// True when the pane's active Agent Mode model can run in a Derp cloud
+    /// True when the pane's active Agent Mode model can run in a Bork cloud
     /// (Oz) agent (see [`Self::is_cloud_runnable_oz_model_id`]).
     pub(crate) fn is_active_base_model_cloud_runnable(
         &self,
@@ -1249,7 +1249,7 @@ impl LLMPreferences {
     /// (server-fetched + cached), so it is best-effort at startup before
     /// the server responds.
     fn rebuild_custom_model_routers(&mut self, ctx: &mut ModelContext<Self>) {
-        let local = DerpConfig::as_ref(ctx).custom_model_routers().clone();
+        let local = BorkConfig::as_ref(ctx).custom_model_routers().clone();
 
         let mut deduped = Vec::with_capacity(local.len());
         let mut seen = HashSet::new();
@@ -1288,8 +1288,8 @@ impl LLMPreferences {
             false
         });
         if !validation_errors.is_empty() {
-            DerpConfig::handle(ctx).update(ctx, |_, ctx| {
-                ctx.emit(DerpConfigUpdateEvent::ModelConfigErrors(validation_errors));
+            BorkConfig::handle(ctx).update(ctx, |_, ctx| {
+                ctx.emit(BorkConfigUpdateEvent::ModelConfigErrors(validation_errors));
             });
         }
 
@@ -1575,7 +1575,7 @@ impl LLMPreferences {
 
     pub fn new_choices_since_last_update(&self) -> Option<Vec<LLMInfo>> {
         self.last_update.as_ref().map(|update| {
-            // We don't want to display new choices if they are derp branded.
+            // We don't want to display new choices if they are bork branded.
             let filter_choices: Vec<LLMInfo> = update
                 .new_choices
                 .clone()
@@ -1879,7 +1879,7 @@ impl LLMPreferences {
     }
 }
 
-/// The TUI `agents.model` value that defers model choice to Derp's automatic
+/// The TUI `agents.model` value that defers model choice to Bork's automatic
 /// model selection (the server-provided default).
 const TUI_AUTO_MODEL_SETTING: &str = "auto";
 

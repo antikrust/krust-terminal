@@ -6,13 +6,13 @@
 //! Separated into its own module so the two codepaths are easy to distinguish.
 
 use pathfinder_geometry::vector::vec2f;
-use derp_core::features::FeatureFlag;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use borkui::elements::{
     ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Shrinkable, Stack,
 };
-use derpui::{Element, ViewHandle};
+use borkui::{Element, ViewHandle};
 
 use super::CodeReviewHeader;
 use crate::appearance::Appearance;
@@ -88,8 +88,8 @@ impl CodeReviewHeader {
 
     fn render_file_nav_button(button: &ViewHandle<ActionButton>) -> Box<dyn Element> {
         ConstrainedBox::new(ChildView::new(button).finish())
-            .with_height(derp_core::ui::icons::ICON_DIMENSIONS)
-            .with_width(derp_core::ui::icons::ICON_DIMENSIONS)
+            .with_height(bork_core::ui::icons::ICON_DIMENSIONS)
+            .with_width(bork_core::ui::icons::ICON_DIMENSIONS)
             .finish()
     }
 
@@ -143,8 +143,8 @@ impl CodeReviewHeader {
     ) -> Box<dyn Element> {
         let button_container = Container::new(
             ConstrainedBox::new(ChildView::new(header_dropdown_button).finish())
-                .with_height(derp_core::ui::icons::ICON_DIMENSIONS)
-                .with_width(derp_core::ui::icons::ICON_DIMENSIONS)
+                .with_height(bork_core::ui::icons::ICON_DIMENSIONS)
+                .with_width(bork_core::ui::icons::ICON_DIMENSIONS)
                 .finish(),
         )
         .finish();

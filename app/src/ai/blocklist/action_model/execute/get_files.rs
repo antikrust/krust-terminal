@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use futures::{future::BoxFuture, FutureExt};
 use itertools::Itertools;
-use derpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{
     ai::{

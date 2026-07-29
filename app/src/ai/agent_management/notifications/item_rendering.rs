@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use pathfinder_color::ColorU;
-use derp_core::ui::appearance::Appearance as CoreAppearance;
-use derp_core::ui::icons::Icon;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::{Fill, DerpTheme};
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance as CoreAppearance;
+use bork_core::ui::icons::Icon;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::{Fill, BorkTheme};
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::{
     ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     Element, EventHandler, Flex, MainAxisAlignment, MainAxisSize, ParentElement, Radius, Rect,
     Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{View, ViewContext, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{View, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::ConversationStatus;
 use crate::ai::agent_management::notifications::item::NotificationSourceAgent;
@@ -82,7 +82,7 @@ impl ActionButtonTheme for NotificationArtifactButtonTheme {
 }
 
 /// Callback invoked when the user clicks the expand/collapse affordance on a clamped message.
-pub(crate) type OnExpandClick = Box<dyn Fn(&mut derpui::EventContext)>;
+pub(crate) type OnExpandClick = Box<dyn Fn(&mut borkui::EventContext)>;
 
 /// Renders the inner content of a notification item.
 /// Dispatches to the rich layout (with branch row) or simple layout based on `item.branch`.
@@ -255,7 +255,7 @@ fn render_branch_label(branch: &str, appearance: &Appearance) -> Box<dyn Element
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_spacing(2.)
             .with_child(
-                ConstrainedBox::new(Icon::GitBranch.to_derpui_icon(color).finish())
+                ConstrainedBox::new(Icon::GitBranch.to_borkui_icon(color).finish())
                     .with_width(10.)
                     .with_height(10.)
                     .finish(),
@@ -328,7 +328,7 @@ fn render_timestamp_with_dot(item: &NotificationItem, appearance: &Appearance) -
 fn render_expand_chevron(
     expanded: bool,
     on_click: OnExpandClick,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
 ) -> Box<dyn Element> {
     let icon = if expanded {
         Icon::ChevronDown
@@ -336,7 +336,7 @@ fn render_expand_chevron(
         Icon::ChevronRight
     };
     let chevron = ConstrainedBox::new(
-        icon.to_derpui_icon(theme.disabled_text_color(theme.surface_1()))
+        icon.to_borkui_icon(theme.disabled_text_color(theme.surface_1()))
             .finish(),
     )
     .with_width(12.)
@@ -402,7 +402,7 @@ const NOTIFICATION_AVATAR_SIZE: f32 = 32.;
 fn render_agent_avatar(
     agent: NotificationSourceAgent,
     category: NotificationCategory,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
 ) -> Box<dyn Element> {
     let status = notification_category_to_conversation_status(category);
     let variant = match agent {

@@ -1,15 +1,15 @@
 ---
 name: gui-integration-test
-description: GUI desktop app only. Writes, runs, and debugs Derp integration tests using the custom Builder/TestStep framework in `crates/integration`. Use when adding a new integration test, fixing a failing integration test, wiring a test into the manual runner or nextest suite, or verifying end-to-end UI and terminal behavior in Derp.
+description: GUI desktop app only. Writes, runs, and debugs Bork integration tests using the custom Builder/TestStep framework in `crates/integration`. Use when adding a new integration test, fixing a failing integration test, wiring a test into the manual runner or nextest suite, or verifying end-to-end UI and terminal behavior in Bork.
 ---
 
-# Derp Integration Tests
+# Bork Integration Tests
 
-**Scope — GUI desktop app only.** This skill applies to Derp's **GUI** desktop front-end (the `app/` crate on the DerpUI pixel/GPU framework). It does **not** apply to the headless **TUI** front-end (`crates/derp_tui`; cell-grid `TuiElement` library under `crates/derpui_core/src/elements/tui`), which has its own components, tests, and change-verification workflow. For TUI work, see the `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills instead.
+**Scope — GUI desktop app only.** This skill applies to Bork's **GUI** desktop front-end (the `app/` crate on the BorkUI pixel/GPU framework). It does **not** apply to the headless **TUI** front-end (`crates/bork_tui`; cell-grid `TuiElement` library under `crates/borkui_core/src/elements/tui`), which has its own components, tests, and change-verification workflow. For TUI work, see the `tui-ui-guidelines`, `tui-testing`, and `tui-verify-change` skills instead.
 
-Use this skill for Rust integration tests in Derp's custom framework under `crates/integration/`.
+Use this skill for Rust integration tests in Bork's custom framework under `crates/integration/`.
 
-These are not ordinary unit tests. They boot a real Derp app instance, give it an isolated test home directory, drive it with synthetic UI and terminal events, and poll assertions until success or timeout.
+These are not ordinary unit tests. They boot a real Bork app instance, give it an isolated test home directory, drive it with synthetic UI and terminal events, and poll assertions until success or timeout.
 
 ## Framework map
 
@@ -22,7 +22,7 @@ The core pieces are:
 - `crates/integration/tests/common/mod.rs`
   - The outer Rust test harness used by `cargo test` and `cargo nextest`.
   - Shells out to the integration binary.
-  - Forwards a limited set of env vars (`PATH`, `RUST_*`, `DERP_*`, `DERPUI_*`, `WGPU_*`, display-related vars).
+  - Forwards a limited set of env vars (`PATH`, `RUST_*`, `BORK_*`, `BORKUI_*`, `WGPU_*`, display-related vars).
   - Re-runs tests up to 10 times when the integration binary exits with the special rerun code.
 - `crates/integration/src/test.rs`
   - Module hub for integration tests.
@@ -32,14 +32,14 @@ The core pieces are:
 - `crates/integration/tests/integration/shell_integration_tests.rs`
   - List of tests that must run against every shell or a specific shell matrix.
 - `crates/integration/src/builder.rs`
-  - Derp-specific wrapper around the lower-level DerpUI integration builder.
+  - Bork-specific wrapper around the lower-level BorkUI integration builder.
   - Sets default timeout, hermetic home directory, shell rc files, user prefs, and real-display mode when requested.
-- `crates/derpui_core/src/integration/driver.rs`
+- `crates/borkui_core/src/integration/driver.rs`
   - Executes steps, handles retries, precondition reruns, screenshots, video capture, artifact export, and `on_finish`.
-- `crates/derpui_core/src/integration/step.rs`
+- `crates/borkui_core/src/integration/step.rs`
   - Defines `TestStep`, input/event APIs, assertion polling, step-to-step data passing, and screenshot/recording hooks.
 - `app/src/integration_testing/`
-  - High-level helpers and assertions for common Derp behaviors.
+  - High-level helpers and assertions for common Bork behaviors.
   - Prefer these helpers over raw low-level event plumbing whenever they fit.
 
 ## How the framework actually runs a test
@@ -56,7 +56,7 @@ The core pieces are:
 6. If an assertion returns `PreconditionFailed`, the binary exits with the rerun code and the outer harness retries the whole test.
 7. On success, failure, or cancellation, the driver can run `on_finish` and export artifacts/runtime tags.
 
-This means integration tests should be written for a hermetic environment. Do not rely on the developer's real shell dotfiles, home directory contents, or persisted Derp settings.
+This means integration tests should be written for a hermetic environment. Do not rely on the developer's real shell dotfiles, home directory contents, or persisted Bork settings.
 
 ## Where to put a new test
 
@@ -91,8 +91,8 @@ The normal shape is:
 
 ```rust
 use crate::Builder;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::{
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::{
     clear_blocklist_to_remove_bootstrapped_blocks,
     execute_command_for_single_terminal_in_tab,
     wait_until_bootstrapped_single_pane_for_tab,
@@ -113,7 +113,7 @@ pub fn test_example() -> Builder {
             new_step_with_default_assertions("Assert some UI state")
                 .add_named_assertion("specific assertion name", |app, window_id| {
                     // inspect app state and return AssertionOutcome
-                    derpui::integration::AssertionOutcome::Success
+                    borkui::integration::AssertionOutcome::Success
                 }),
         )
 }
@@ -127,14 +127,14 @@ Prefer a small number of focused steps with descriptive names over a huge monoli
 
 Start here almost every time.
 
-Derp's wrapper automatically gives you:
+Bork's wrapper automatically gives you:
 
 - a per-test root directory
 - isolated `HOME`
 - generated rc files for Bash, Zsh, and Fish
 - file-backed user preferences
 - a default 2-minute hard timeout
-- real-display support if `DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS` is present
+- real-display support if `BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS` is present
 
 ### `with_setup(...)`
 
@@ -150,7 +150,7 @@ Prefer this over reaching into the real filesystem.
 
 ### `with_user_defaults(...)`
 
-Use this to set persisted Derp preferences before the test starts.
+Use this to set persisted Bork preferences before the test starts.
 
 This is the right tool for settings backed by user preferences rather than environment variables.
 
@@ -310,13 +310,13 @@ cargo nextest run --no-fail-fast --workspace test_name
 For screenshot/video or other real-display flows:
 
 ```bash
-DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS=1 cargo run -p integration --bin integration -- test_name
+BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS=1 cargo run -p integration --bin integration -- test_name
 ```
 
 Or with nextest:
 
 ```bash
-DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS=1 cargo nextest run --no-fail-fast --workspace test_name
+BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS=1 cargo nextest run --no-fail-fast --workspace test_name
 ```
 
 ## Debugging and investigation
@@ -332,7 +332,7 @@ RUST_BACKTRACE=1 cargo run -p integration --bin integration -- test_name
 This is useful when running locally and you want to inspect the failed UI state:
 
 ```bash
-DERPUI_PAUSE_INTEGRATION_TEST_ON_FAILURE=1 cargo run -p integration --bin integration -- test_name
+BORKUI_PAUSE_INTEGRATION_TEST_ON_FAILURE=1 cargo run -p integration --bin integration -- test_name
 ```
 
 ### Pause after every step
@@ -340,12 +340,12 @@ DERPUI_PAUSE_INTEGRATION_TEST_ON_FAILURE=1 cargo run -p integration --bin integr
 Useful for understanding exactly what the test is doing:
 
 ```bash
-DERPUI_PAUSE_INTEGRATION_TEST_AT_EVERY_STEP=1 cargo run -p integration --bin integration -- test_name
+BORKUI_PAUSE_INTEGRATION_TEST_AT_EVERY_STEP=1 cargo run -p integration --bin integration -- test_name
 ```
 
 ### Video and screenshots
 
-If the task is specifically about recording a test, collecting screenshots, or validating overlay/video artifacts, also use the `gui-integration-test-video` skill (located at `.derp/skills/gui-integration-test-video/SKILL.md`).
+If the task is specifically about recording a test, collecting screenshots, or validating overlay/video artifacts, also use the `gui-integration-test-video` skill (located at `.bork/skills/gui-integration-test-video/SKILL.md`).
 
 ### Environment variable gotcha
 

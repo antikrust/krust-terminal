@@ -7,7 +7,7 @@ pub enum ActivePrompt {
     #[default]
     PS1,
     /// JSON serialization of PromptSnapshot
-    DerpPrompt(String),
+    BorkPrompt(String),
 }
 
 /// Override the Debug impl to avoid accidentally leaking sensitive
@@ -16,7 +16,7 @@ impl std::fmt::Debug for ActivePrompt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PS1 { .. } => f.write_str("ActivePrompt::PS1"),
-            Self::DerpPrompt(..) => f.write_str("ActivePrompt::DerpPrompt"),
+            Self::BorkPrompt(..) => f.write_str("ActivePrompt::BorkPrompt"),
         }
     }
 }

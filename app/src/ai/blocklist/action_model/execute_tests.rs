@@ -39,7 +39,7 @@ mod binary_detection {
         let path = write_file(
             &dir,
             "bundle",
-            b"#!/usr/bin/env bash\n#\n# Builds a Derp binary and bundles it up for distribution.\n\nset -e\n",
+            b"#!/usr/bin/env bash\n#\n# Builds a Bork binary and bundles it up for distribution.\n\nset -e\n",
         );
         assert!(!block_on(should_read_as_binary(&path)));
     }
@@ -112,9 +112,9 @@ mod path_shell_quoting {
     #[test]
     fn is_file_path_neutralizes_posix_substitutions() {
         let command =
-            build_is_file_path_command("/tmp/x$(touch /tmp/derp-poc)`id`", ShellType::Bash);
+            build_is_file_path_command("/tmp/x$(touch /tmp/bork-poc)`id`", ShellType::Bash);
 
-        assert_eq!(command, "test -f '/tmp/x$(touch /tmp/derp-poc)`id`'");
+        assert_eq!(command, "test -f '/tmp/x$(touch /tmp/bork-poc)`id`'");
     }
 
     #[test]

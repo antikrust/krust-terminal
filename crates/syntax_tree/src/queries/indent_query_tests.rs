@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use arborium::tree_sitter::Tree;
 use languages::{language_by_filename, Language};
-use derp_editor::content::buffer::{Buffer, BufferSnapshot};
-use derp_editor::content::selection_model::BufferSelectionModel;
-use derp_editor::content::text::IndentBehavior;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::App;
+use bork_editor::content::buffer::{Buffer, BufferSnapshot};
+use bork_editor::content::selection_model::BufferSelectionModel;
+use bork_editor::content::text::IndentBehavior;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::App;
 
 use super::*;
 use crate::SyntaxTreeState;
@@ -15,7 +15,7 @@ use crate::SyntaxTreeState;
 fn mock_buffer_and_tree(text_content: &str, language: Arc<Language>) -> (Buffer, Tree) {
     // Create a tree by parsing the text
     let snapshot = BufferSnapshot::from_plain_text(text_content);
-    let tree = derpui_core::r#async::block_on(async {
+    let tree = borkui_core::r#async::block_on(async {
         SyntaxTreeState::parse_text(snapshot, None, &language).await
     })
     .expect("test buffer is small and should parse");
@@ -60,7 +60,7 @@ fn test_indent_query() {
         });
 
         let buffer_snapshot = buffer_handle.read(&app, |buffer, _| buffer.buffer_snapshot());
-        let tree = derpui_core::r#async::block_on(async {
+        let tree = borkui_core::r#async::block_on(async {
             SyntaxTreeState::parse_text(buffer_snapshot, None, &language).await
         })
         .expect("test buffer is small and should parse");
@@ -157,7 +157,7 @@ fn test_indent_query_on_go() {
         });
 
         let buffer_snapshot = buffer_handle.read(&app, |buffer, _| buffer.buffer_snapshot());
-        let tree = derpui_core::r#async::block_on(async {
+        let tree = borkui_core::r#async::block_on(async {
             SyntaxTreeState::parse_text(buffer_snapshot, None, &language).await
         })
         .expect("test buffer is small and should parse");

@@ -6,7 +6,7 @@ use super::*;
 fn ctx() -> MiseryContext {
     MiseryContext {
         command_name: "ls".to_owned(),
-        directory_name: Some("derp".to_owned()),
+        directory_name: Some("bork".to_owned()),
         nearby_files: vec![
             "Cargo.toml".to_owned(),
             "README.md".to_owned(),
@@ -34,7 +34,7 @@ fn expands_literal_text_unchanged() {
 #[test]
 fn fills_context_slots() {
     let out = expand("{CMD} in {DIR} took {DURATION}", &ctx(), &mut rng()).unwrap();
-    assert_eq!(out, "`ls` in `derp` took 1.5 seconds");
+    assert_eq!(out, "`ls` in `bork` took 1.5 seconds");
 }
 
 #[test]

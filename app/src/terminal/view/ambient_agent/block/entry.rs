@@ -1,16 +1,16 @@
 use settings::Setting;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon;
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable, MainAxisSize, MouseStateHandle,
     ParentElement, Shrinkable, Text,
 };
-use derpui::fonts::Properties;
-use derpui::platform::Cursor;
-use derpui::prelude::Empty;
-use derpui::text_layout::ClipConfig;
-use derpui::{
+use borkui::fonts::Properties;
+use borkui::platform::Cursor;
+use borkui::prelude::Empty;
+use borkui::text_layout::ClipConfig;
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakModelHandle,
 };
@@ -257,7 +257,7 @@ impl View for AmbientAgentEntryBlock {
                 )
                 .with_color(theme.main_text_color(theme.background()).into_solid())
                 .with_style(Properties {
-                    weight: derpui::fonts::Weight::Bold,
+                    weight: borkui::fonts::Weight::Bold,
                     ..Default::default()
                 })
                 .soft_wrap(false)
@@ -301,7 +301,7 @@ impl View for AmbientAgentEntryBlock {
             .with_child(
                 ConstrainedBox::new(
                     Icon::ChevronRight
-                        .to_derpui_icon(theme.sub_text_color(theme.background()))
+                        .to_borkui_icon(theme.sub_text_color(theme.background()))
                         .finish(),
                 )
                 .with_height(20.)

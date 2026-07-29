@@ -10,24 +10,24 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::color::internal_colors;
-use derp_errors::report_error;
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::color::internal_colors;
+use bork_errors::report_error;
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::{
     Align, Border, ChildAnchor, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable, Stack, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::platform::Cursor;
-use derpui::presenter::ChildView;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::ui_components::text_input::TextInput;
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::platform::Cursor;
+use borkui::presenter::ChildView;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::ui_components::text_input::TextInput;
+use borkui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -134,7 +134,7 @@ lazy_static! {
     static ref DELINQUENCY_BADGE_TEXT_COLOR: ColorU = ColorU::new(0, 0, 0, 190);
 }
 
-fn owner_state_chip_text_color(theme: &themes::theme::DerpTheme) -> ColorU {
+fn owner_state_chip_text_color(theme: &themes::theme::BorkTheme) -> ColorU {
     let chip_background = theme
         .background()
         .blend(&theme.accent().with_opacity(OWNER_STATE_CHIP_ACCENT_OPACITY));
@@ -174,7 +174,7 @@ pub enum TeamsPageAction {
     SendEmailInvites {
         team_uid: ServerId,
     },
-    OpenDerpDrive,
+    OpenBorkDrive,
     GenerateUpgradeLink {
         team_uid: ServerId,
     },
@@ -286,7 +286,7 @@ impl TryFrom<&TeamsPageAction> for TelemetryEvent {
 #[derive(Clone)]
 pub enum TeamsPageViewEvent {
     TeamsChanged,
-    OpenDerpDrive,
+    OpenBorkDrive,
     ShowToast {
         message: String,
         flavor: ToastFlavor,
@@ -532,7 +532,7 @@ impl TypedActionView for TeamsPageView {
                 self.send_email_invites(*team_uid, ctx);
                 ctx.notify();
             }
-            TeamsPageAction::OpenDerpDrive => ctx.emit(TeamsPageViewEvent::OpenDerpDrive),
+            TeamsPageAction::OpenBorkDrive => ctx.emit(TeamsPageViewEvent::OpenBorkDrive),
             TeamsPageAction::ShowLeaveTeamConfirmationDialog => {
                 let variant = if self.should_show_reload_credits_confirmation(ctx) {
                     CloudActionConfirmationDialogVariant::LeaveTeamReloadCredits
@@ -979,7 +979,7 @@ impl TeamsPageView {
                 ctx.open_url(upgrade_link);
             }
             UserWorkspacesEvent::GenerateUpgradeLinkRejected(err) => self.show_error(
-                "Failed to generate upgrade link. Please contact us at feedback@derp.baby",
+                "Failed to generate upgrade link. Please contact us at feedback@bork.baby",
                 Some(err),
                 ctx,
             ),
@@ -987,7 +987,7 @@ impl TeamsPageView {
                 ctx.open_url(billing_session_link);
             }
             UserWorkspacesEvent::GenerateStripeBillingPortalLinkRejected(err) => self.show_error(
-                "Failed to generate billing link. Please contact us at feedback@derp.baby",
+                "Failed to generate billing link. Please contact us at feedback@bork.baby",
                 Some(err),
                 ctx,
             ),
@@ -999,7 +999,7 @@ impl TeamsPageView {
                 self.show_error("Failed to toggle team discoverability", Some(err), ctx);
             }
             UserWorkspacesEvent::JoinTeamWithTeamDiscoverySuccess => {
-                // Force refresh of Derp Drive objects after joining a team
+                // Force refresh of Bork Drive objects after joining a team
                 UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
                     update_manager.refresh_updated_objects(ctx);
                 });
@@ -1491,7 +1491,7 @@ impl TeamsPageView {
                 ctx,
             );
         });
-        ctx.dispatch_typed_action(&WorkspaceAction::OpenDerpDrive);
+        ctx.dispatch_typed_action(&WorkspaceAction::OpenBorkDrive);
     }
 
     fn set_team_member_role(
@@ -1991,7 +1991,7 @@ impl TeamsWidget {
         let alert_icon = Container::new(
             ConstrainedBox::new(
                 Icon::AlertCircle
-                    .to_derpui_icon(active_text.with_opacity(90))
+                    .to_borkui_icon(active_text.with_opacity(90))
                     .finish(),
             )
             .with_max_height(20.)
@@ -2164,9 +2164,9 @@ impl TeamsWidget {
         has_admin_permissions: bool,
     ) -> Box<dyn Element> {
         let prorated_message = if has_admin_permissions {
-            "You'll be charged for a portion of the team member's usage of Derp."
+            "You'll be charged for a portion of the team member's usage of Bork."
         } else {
-            "Your admin will be charged for a portion of the team member's usage of Derp."
+            "Your admin will be charged for a portion of the team member's usage of Bork."
         };
 
         let additional_members_cost_money_msg = if let Some((monthly_cost, yearly_cost)) =
@@ -2184,7 +2184,7 @@ impl TeamsWidget {
         let horizontal_padding = 16.;
         let theme = appearance.theme();
         let currency_icon = Container::new(
-            ConstrainedBox::new(Icon::CoinsStacked.to_derpui_icon(theme.accent()).finish())
+            ConstrainedBox::new(Icon::CoinsStacked.to_borkui_icon(theme.accent()).finish())
                 .with_max_height(20.)
                 .with_max_width(20.)
                 .finish(),
@@ -2441,7 +2441,7 @@ impl TeamsWidget {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     "Contact support",
-                    Icon::Phone.to_derpui_icon(appearance.theme().accent()),
+                    Icon::Phone.to_borkui_icon(appearance.theme().accent()),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(14., 14.),
@@ -2470,7 +2470,7 @@ impl TeamsWidget {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     "Manage billing",
-                    Icon::CoinsStacked.to_derpui_icon(appearance.theme().accent()),
+                    Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(14., 14.),
@@ -2501,7 +2501,7 @@ impl TeamsWidget {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     "Open admin panel",
-                    Icon::Users.to_derpui_icon(appearance.theme().accent()),
+                    Icon::Users.to_borkui_icon(appearance.theme().accent()),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(14., 14.),
@@ -2995,7 +2995,7 @@ impl TeamsWidget {
             format!("Your plan ({plan_display}) has a maximum capacity of {cap} members.");
 
         let info_icon = Container::new(
-            ConstrainedBox::new(Icon::Info.to_derpui_icon(muted_color).finish())
+            ConstrainedBox::new(Icon::Info.to_borkui_icon(muted_color).finish())
                 .with_max_height(14.)
                 .with_max_width(14.)
                 .finish(),
@@ -3257,7 +3257,7 @@ impl TeamsWidget {
 
         let domain = current_user_email.split('@').nth(1).unwrap_or("");
         let team_discoverability_instructions =
-            format!("Allow Derp users with an @{domain} email to find and join the team.");
+            format!("Allow Bork users with an @{domain} email to find and join the team.");
         let subtext = self.render_sub_text(
             team_discoverability_instructions,
             appearance,
@@ -3569,7 +3569,7 @@ impl TeamsWidget {
                                 Hoverable::new(handle.clone(), move |_mouse_state| {
                                     Container::new(
                                         ConstrainedBox::new(
-                                            icon.to_derpui_icon(
+                                            icon.to_borkui_icon(
                                                 appearance
                                                     .theme()
                                                     .active_ui_text_color()
@@ -3602,7 +3602,7 @@ impl TeamsWidget {
                             Container::new(
                                 ConstrainedBox::new(
                                     Icon::DotsVertical
-                                        .to_derpui_icon(
+                                        .to_borkui_icon(
                                             appearance
                                                 .theme()
                                                 .active_ui_text_color()
@@ -4016,9 +4016,9 @@ impl TeamsWidget {
             .with_margin_left(-4.)
             .finish();
             let checkbox_row_text = if let Some(domain) = view.auth_state.user_email_domain() {
-                format!("Allow Derp users with an @{domain} email to find and join the team.")
+                format!("Allow Bork users with an @{domain} email to find and join the team.")
             } else {
-                "Allow Derp users with the same email domain as you to find and join the team."
+                "Allow Bork users with the same email domain as you to find and join the team."
                     .to_string()
             };
             let checkbox_row = Container::new(
@@ -4206,7 +4206,7 @@ impl TeamsWidget {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     text.to_string(),
-                    Icon::CoinsStacked.to_derpui_icon(icon_color),
+                    Icon::CoinsStacked.to_borkui_icon(icon_color),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(14., 14.),
@@ -4431,25 +4431,25 @@ impl SettingsWidget for TeamsWidget {
 #[cfg(test)]
 #[test]
 pub fn test_valid_domains() {
-    assert!(!TeamsPageView::is_valid_domain("@derp.baby"));
-    assert!(!TeamsPageView::is_valid_domain("derp,"));
-    assert!(!TeamsPageView::is_valid_domain("derpdev"));
+    assert!(!TeamsPageView::is_valid_domain("@bork.baby"));
+    assert!(!TeamsPageView::is_valid_domain("bork,"));
+    assert!(!TeamsPageView::is_valid_domain("borkdev"));
     assert!(!TeamsPageView::is_valid_domain(".dev"));
-    assert!(!TeamsPageView::is_valid_domain("derp..dev"));
+    assert!(!TeamsPageView::is_valid_domain("bork..dev"));
     assert!(!TeamsPageView::is_valid_domain(" "));
-    assert!(!TeamsPageView::is_valid_domain("derp!.dev"));
-    assert!(!TeamsPageView::is_valid_domain("derp.baby>"));
-    assert!(!TeamsPageView::is_valid_domain("derp.baby."));
-    assert!(TeamsPageView::is_valid_domain("app.derp.baby"));
-    assert!(TeamsPageView::is_valid_domain("derp0.dev0"));
-    assert!(TeamsPageView::is_valid_domain("derp.baby"));
+    assert!(!TeamsPageView::is_valid_domain("bork!.dev"));
+    assert!(!TeamsPageView::is_valid_domain("bork.baby>"));
+    assert!(!TeamsPageView::is_valid_domain("bork.baby."));
+    assert!(TeamsPageView::is_valid_domain("app.bork.baby"));
+    assert!(TeamsPageView::is_valid_domain("bork0.dev0"));
+    assert!(TeamsPageView::is_valid_domain("bork.baby"));
     assert!(TeamsPageView::is_valid_domain("miniclip.com"));
 }
 
 #[cfg(test)]
 #[test]
 pub fn test_owner_state_chip_text_contrasts_with_accent_overlay() {
-    let theme_config = themes::theme::DerpThemeConfig::new();
+    let theme_config = themes::theme::BorkThemeConfig::new();
 
     for theme_kind in [
         themes::theme::ThemeKind::CyberWave,

@@ -1,7 +1,7 @@
 use anyhow::Result;
 #[cfg(unix)]
-use derp_errors::report_error;
-use derpui::{AppContext, Entity, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{AppContext, Entity, SingletonEntity};
 #[cfg(unix)]
 use {
     crate::terminal::local_tty::server::TerminalServer, anyhow::bail, std::cmp::Reverse,

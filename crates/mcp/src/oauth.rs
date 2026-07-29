@@ -11,9 +11,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
-use derp_core::channel::ChannelState;
-use derp_errors::report_error;
-use derpui_extras::secure_storage::AppContextExt as _;
+use bork_core::channel::ChannelState;
+use bork_errors::report_error;
+use borkui_extras::secure_storage::AppContextExt as _;
 
 pub const TEMPLATABLE_MCP_CREDENTIALS_KEY: &str = "TemplatableMcpCredentials";
 pub const FILE_BASED_MCP_CREDENTIALS_KEY: &str = "FileBasedMcpCredentials";
@@ -56,7 +56,7 @@ pub type AuthenticatedCallback =
     Box<dyn Fn(String) -> BoxFuture<'static, anyhow::Result<()>> + Send>;
 
 /// A credential store that wraps [`InMemoryCredentialStore`] and persists token
-/// updates to Derp's secure storage via a channel.
+/// updates to Bork's secure storage via a channel.
 ///
 /// When rmcp auto-refreshes an expired access token at runtime, the rotated
 /// tokens are only saved to the in-memory store by default. This wrapper
@@ -132,7 +132,7 @@ impl CredentialStore for PersistingCredentialStore {
 }
 
 /// Installs a [`PersistingCredentialStore`] on the given auth manager so that
-/// runtime token auto-refreshes are written back to Derp's secure storage.
+/// runtime token auto-refreshes are written back to Bork's secure storage.
 ///
 /// A background tokio task is spawned to receive credential updates and persist
 /// them via the provided callback. The task terminates when the auth manager (and
@@ -263,12 +263,12 @@ pub async fn make_authenticated_client(
             log::warn!(
                 "File-based MCP server {uuid} requires OAuth authentication; \
                  skipping in headless mode. To use this server, authenticate it \
-                 in the Derp desktop app first."
+                 in the Bork desktop app first."
             );
         }
         return Err(AuthError::AuthorizationFailed(
             "MCP server requires OAuth authentication. Please authenticate this server in the \
-             Derp desktop app first, then try again."
+             Bork desktop app first, then try again."
                 .to_string(),
         ));
     }
@@ -311,7 +311,7 @@ pub async fn make_authenticated_client(
         // Try dynamic client registration.
         let mut oauth_state = OAuthState::Unauthorized(auth_manager);
         oauth_state
-            .start_authorization(&[], &redirect_uri, Some("Derp"))
+            .start_authorization(&[], &redirect_uri, Some("Bork"))
             .await?;
         oauth_state
     };
@@ -362,13 +362,13 @@ pub async fn make_authenticated_client(
 
 /// Loads credentials from secure storage at the provided key.
 pub fn load_credentials_from_secure_storage<T: DeserializeOwned + Default>(
-    app: &mut derpui::AppContext,
+    app: &mut borkui::AppContext,
     key: &str,
 ) -> T {
     app.secure_storage()
         .read_value(key)
         .inspect_err(|err| {
-            if !matches!(err, derpui_extras::secure_storage::Error::NotFound) {
+            if !matches!(err, borkui_extras::secure_storage::Error::NotFound) {
                 log::warn!("Failed to read MCP credentials from secure storage: {err:#}");
             }
         })
@@ -379,7 +379,7 @@ pub fn load_credentials_from_secure_storage<T: DeserializeOwned + Default>(
 
 /// Writes credentials to secure storage at the provided key.
 pub fn write_to_secure_storage<T: Serialize>(
-    app: &mut derpui::AppContext,
+    app: &mut borkui::AppContext,
     key: &str,
     credentials: &T,
 ) {

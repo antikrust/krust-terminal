@@ -1,12 +1,12 @@
-use derp_core::ui::appearance::Appearance;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, Flex, MouseStateHandle, ParentElement, Radius,
     Shrinkable,
 };
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -198,7 +198,7 @@ impl EnvVarCommandDialog {
             .with_centered_text_label(label_text.to_owned())
             .with_style(UiComponentStyles {
                 font_size: Some(BUTTON_FONT_SIZE),
-                font_weight: Some(derpui::fonts::Weight::Normal),
+                font_weight: Some(borkui::fonts::Weight::Normal),
                 ..Default::default()
             });
 
@@ -209,7 +209,7 @@ impl EnvVarCommandDialog {
         button
             .build()
             .on_click(move |ctx, _, _| ctx.dispatch_typed_action(action.clone()))
-            .with_cursor(derpui::platform::Cursor::PointingHand)
+            .with_cursor(borkui::platform::Cursor::PointingHand)
             .finish()
     }
 

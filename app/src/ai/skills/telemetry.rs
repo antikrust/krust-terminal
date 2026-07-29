@@ -2,7 +2,7 @@ use ai::skills::{SkillProvider, SkillReference, SkillScope};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::features::FeatureFlag;
 
@@ -31,7 +31,7 @@ pub enum SkillTelemetryEvent {
         name: Option<String>,
         /// Specifies the scope of the skill (home or project)
         scope: Option<SkillScope>,
-        /// Specifies the provider of the skill (Derp, Claude, Codex, etc.)
+        /// Specifies the provider of the skill (Bork, Claude, Codex, etc.)
         provider: Option<SkillProvider>,
         /// Whether the ReadSkill lookup failed (reference could not be resolved)
         error: bool,
@@ -94,7 +94,7 @@ impl TelemetryEvent for SkillTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -118,4 +118,4 @@ impl TelemetryEventDesc for SkillTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(SkillTelemetryEvent);
+bork_core::register_telemetry_event!(SkillTelemetryEvent);

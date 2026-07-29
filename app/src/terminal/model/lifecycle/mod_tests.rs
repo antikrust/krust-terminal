@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use instant::Instant;
-use derp_core::features::FeatureFlag;
-use derp_core::telemetry::TelemetryEvent;
+use bork_core::features::FeatureFlag;
+use bork_core::telemetry::TelemetryEvent;
 
 use super::telemetry::{
     LifecycleRecoveryRecord, LifecycleTelemetryEvent, LifecycleTelemetryLimiter,

@@ -12,7 +12,7 @@ pub struct UserID {
 
     /// The client's access token. This is either:
     /// * A short-lived firebase ID token (not refresh token).
-    /// * A Derp API key.
+    /// * A Bork API key.
     ///
     /// [`Some`] iff we know who the end-user is (i.e. they're logged in).
     #[serde(rename = "firebase_id_token")]

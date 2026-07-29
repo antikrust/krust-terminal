@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 pub use cloud_object_client::{
     ObjectAction, ObjectActionHistory, ObjectActionSubtype, ObjectActionType,
 };
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use crate::server::ids::{HashedSqliteId, ObjectUid};
 

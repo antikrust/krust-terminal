@@ -1,11 +1,11 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::external_product_icon::ExternalProductIcon;
-use derp_core::ui::icons::Icon;
-use derpui::elements::{
+use bork_core::ui::external_product_icon::ExternalProductIcon;
+use bork_core::ui::icons::Icon;
+use borkui::elements::{
     self, Align, Border, CacheOption, ChildAnchor, ConstrainedBox, Container, Element, Image,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack, Text,
 };
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
 
 use super::red_notification_dot::RedNotificationDot;
 
@@ -29,7 +29,7 @@ pub enum AvatarContent {
     /// generated DiceBear avatar or an uploaded local photo. The initial shows
     /// until it loads; no network is involved for generated/local sources.
     Source {
-        source: derpui::assets::asset_cache::AssetSource,
+        source: borkui::assets::asset_cache::AssetSource,
         display_name: String,
     },
 }

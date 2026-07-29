@@ -8,9 +8,9 @@
 #[cfg(feature = "local_fs")]
 use std::path::Path;
 
-use derp_core::HostId;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::{AppContext, ModelContext, ModelHandle, SingletonEntity};
+use bork_core::HostId;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::{AppContext, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::file_tree_store::FileTreeState;
 use crate::file_tree_update::{MetadataUpdateType, RepoMetadataUpdate};
@@ -467,7 +467,7 @@ impl RepoMetadataModel {
     }
 }
 
-impl derpui_core::Entity for RepoMetadataModel {
+impl borkui_core::Entity for RepoMetadataModel {
     type Event = RepoMetadataEvent;
 }
 

@@ -1,5 +1,5 @@
 use futures_util::future::{AbortHandle, Abortable, Aborted};
-use derpui::App;
+use borkui::App;
 
 use super::*;
 use crate::terminal::model::session::ExecuteCommandOptions;

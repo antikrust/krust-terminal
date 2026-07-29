@@ -6,7 +6,7 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-derp_errors.workspace = true
+bork_errors.workspace = true
 anyhow.workspace = true
 concat-idents.workspace = true
 inventory = "0.3"
@@ -15,14 +15,14 @@ schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 settings_value = { workspace = true, features = ["derive"] }
-derp_features.workspace = true
-derpui_core = { workspace = true, features = ["settings_value"] }
-derpui_extras = { workspace = true, features = ["default"] }
+bork_features.workspace = true
+borkui_core = { workspace = true, features = ["settings_value"] }
+borkui_extras = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 tempfile.workspace = true
-derp_features = { workspace = true, features = ["test-util"] }
-derpui_extras = { workspace = true, features = ["user_preferences-toml"] }
+bork_features = { workspace = true, features = ["test-util"] }
+borkui_extras = { workspace = true, features = ["user_preferences-toml"] }
 
 [features]
 integration_tests = []

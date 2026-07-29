@@ -1,12 +1,12 @@
 use pathfinder_geometry::vector::vec2f;
-use derpui::elements::{
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Highlight,
     ParentElement, Radius, Shrinkable, Wrap,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::units::IntoPixels;
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::units::IntoPixels;
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::context_chips::display_chip::{

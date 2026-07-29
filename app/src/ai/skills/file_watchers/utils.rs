@@ -7,12 +7,12 @@ use ai::skills::{
 use anyhow::Error;
 use repo_metadata::{RepoMetadataModel, RepositoryIdentifier};
 use walkdir::{DirEntry, WalkDir};
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::RemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui::AppContext;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::RemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui::AppContext;
 
-use crate::derp_managed_paths_watcher::derp_managed_skill_dirs;
+use crate::bork_managed_paths_watcher::bork_managed_skill_dirs;
 
 fn local_or_remote_path_for_repo_path(
     repo_id: &RepositoryIdentifier,
@@ -130,7 +130,7 @@ pub fn is_skill_file(path: &Path) -> bool {
 pub fn extract_skill_parent_directory(
     path: &LocalOrRemotePath,
 ) -> Result<LocalOrRemotePath, Error> {
-    let is_derp_home_skill = path
+    let is_bork_home_skill = path
         .to_local_path()
         .and_then(Path::file_name)
         .and_then(|name| name.to_str())
@@ -139,8 +139,8 @@ pub fn extract_skill_parent_directory(
             .to_local_path()
             .and_then(Path::parent)
             .and_then(Path::parent)
-            .is_some_and(|parent| derp_managed_skill_dirs().iter().any(|dir| parent == dir));
-    if is_derp_home_skill {
+            .is_some_and(|parent| bork_managed_skill_dirs().iter().any(|dir| parent == dir));
+    if is_bork_home_skill {
         return dirs::home_dir()
             .map(LocalOrRemotePath::Local)
             .ok_or_else(|| {
@@ -177,8 +177,8 @@ pub fn is_home_skill_directory(path: &Path) -> bool {
 /// E.g. ~/.agents/skills
 pub fn is_home_provider_path(path: &Path) -> bool {
     SKILL_PROVIDER_DEFINITIONS.iter().any(|provider| {
-        if provider.provider == SkillProvider::Derp {
-            return derp_managed_skill_dirs().iter().any(|dir| path == dir);
+        if provider.provider == SkillProvider::Bork {
+            return bork_managed_skill_dirs().iter().any(|dir| path == dir);
         }
         home_skills_path(provider.provider)
             .as_ref()

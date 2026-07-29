@@ -1,4 +1,4 @@
-use derp_terminal::model::grid::CellType;
+use bork_terminal::model::grid::CellType;
 
 use super::grid_handler::GridHandler;
 use super::{CursorDirection, CursorState, Dimensions as _};

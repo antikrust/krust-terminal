@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 pub use glibc::{GlibcVersion, RemoteLibc};
-use derp_core::channel::{Channel, ChannelState};
+use bork_core::channel::{Channel, ChannelState};
 pub const REMOTE_SERVER_ARTIFACT_VERSION_UNPINNED: &str = "unversioned";
 
 /// State machine for the remote server install → launch → initialize flow.
@@ -334,25 +334,25 @@ pub fn parse_uname_output(
 
 /// Returns the remote directory where the binary is installed, keyed by channel.
 ///
-/// - stable:      `~/.derp/remote-server`
-/// - preview:     `~/.derp-preview/remote-server`
-/// - dev:         `~/.derp-dev/remote-server`
-/// - local:       `~/.derp-local/remote-server`
-/// - integration: `~/.derp-dev/remote-server`
-/// - derp:    `~/.derp/remote-server`
+/// - stable:      `~/.bork/remote-server`
+/// - preview:     `~/.bork-preview/remote-server`
+/// - dev:         `~/.bork-dev/remote-server`
+/// - local:       `~/.bork-local/remote-server`
+/// - integration: `~/.bork-dev/remote-server`
+/// - bork:    `~/.bork/remote-server`
 pub fn remote_server_dir() -> String {
-    let derp_dir = match ChannelState::channel() {
-        Channel::Stable => ".derp",
-        Channel::Preview => ".derp-preview",
-        Channel::Dev | Channel::Integration => ".derp-dev",
-        Channel::Local => ".derp-local",
+    let bork_dir = match ChannelState::channel() {
+        Channel::Stable => ".bork",
+        Channel::Preview => ".bork-preview",
+        Channel::Dev | Channel::Integration => ".bork-dev",
+        Channel::Local => ".bork-local",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with derp
+            // TODO(alokedesai): need to figure out how remote server works with bork
             // For now, return what Dev returns.
-            ".derp-dev"
+            ".bork-dev"
         }
     };
-    format!("~/{derp_dir}/remote-server")
+    format!("~/{bork_dir}/remote-server")
 }
 
 /// Returns a short, deterministic directory name for a remote-server
@@ -600,8 +600,8 @@ pub fn install_script(staging_tarball_path: Option<&str>) -> String {
 
 /// Construct the download URL from the server root URL.
 ///
-/// For example, given `https://app.derp.baby`, returns
-/// `https://app.derp.baby/download/cli`.
+/// For example, given `https://app.bork.baby`, returns
+/// `https://app.bork.baby/download/cli`.
 fn download_url() -> String {
     let base = ChannelState::server_root_url();
     let base = base.trim_end_matches('/');
@@ -618,7 +618,7 @@ fn download_channel() -> &'static str {
         Channel::Preview => "preview",
         Channel::Dev | Channel::Local | Channel::Integration => "dev",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with derp
+            // TODO(alokedesai): need to figure out how remote server works with bork
             // For now, return what Dev returns.
             "dev"
         }

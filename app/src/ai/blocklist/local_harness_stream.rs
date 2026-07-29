@@ -1,6 +1,6 @@
 //! Injects a local CLI harness run (e.g. streaming Claude Code) into the agent
 //! conversation UI as a live, incrementally-updating exchange — the same
-//! rendering path Derp's own agent uses.
+//! rendering path Bork's own agent uses.
 //!
 //! Lives inside `blocklist` so it can reach
 //! [`BlocklistAIHistoryModel::update_conversation_for_new_request_input`]
@@ -16,8 +16,8 @@ use ai::agent::{TurnEvent, TurnUsage};
 use ai::skills::SkillPathOrigin;
 use chrono::Local;
 use prost_types::FieldMask;
-use derp_multi_agent_api as api;
-use derpui::{AppContext, EntityId, SingletonEntity as _};
+use bork_multi_agent_api as api;
+use borkui::{AppContext, EntityId, SingletonEntity as _};
 
 use super::controller::response_stream::ResponseStreamId;
 use super::controller::RequestInput;
@@ -343,7 +343,7 @@ impl LocalHarnessStream {
     }
 
     /// Appends an exact model delta to one live assistant message. The first
-    /// delta creates the message; later deltas use Derp's native protobuf
+    /// delta creates the message; later deltas use Bork's native protobuf
     /// append action and therefore preserve only newlines the model actually
     /// emitted.
     pub(crate) fn apply_text_delta(&mut self, text: &str, ctx: &mut AppContext) {
@@ -569,7 +569,7 @@ impl LocalHarnessStream {
                 token_usage: vec![],
                 tool_usage_metadata: None,
                 total_input_tokens: as_u32(context_tokens),
-                derp_token_usage: HashMap::new(),
+                bork_token_usage: HashMap::new(),
                 byok_token_usage,
                 context_window_segments: Vec::new(),
                 custom_endpoint_token_usage: HashMap::new(),

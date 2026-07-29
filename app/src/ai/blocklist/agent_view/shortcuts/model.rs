@@ -1,5 +1,5 @@
-use derp_core::send_telemetry_from_ctx;
-use derpui::{Entity, ModelContext, ModelHandle};
+use bork_core::send_telemetry_from_ctx;
+use borkui::{Entity, ModelContext, ModelHandle};
 
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::server::telemetry::TelemetryEvent;

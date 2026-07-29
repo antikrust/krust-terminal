@@ -32,7 +32,7 @@ fn make_test_store(
     (store, rx)
 }
 
-/// Backward compatibility: credentials persisted by older Derp versions do not
+/// Backward compatibility: credentials persisted by older Bork versions do not
 /// have the `token_received_at` field. Deserializing them must succeed and
 /// default to `None` so the next refresh can populate it. Failing this test
 /// would mean every existing user loses their MCP OAuth tokens on upgrade.

@@ -1,7 +1,7 @@
-use derpui::elements::{Align, MouseStateHandle, Shrinkable};
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::elements::{Align, MouseStateHandle, Shrinkable};
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::auth_manager::AuthManager;
 use crate::appearance::Appearance;
@@ -78,7 +78,7 @@ impl View for NeedsSsoLinkView {
 
         LoginErrorModal::new(app)
             .with_header("Your organization has enabled SSO for your account")
-            .with_detail("Click the button below to link your Derp account to your SSO provider.")
+            .with_detail("Click the button below to link your Bork account to your SSO provider.")
             .with_action(link_sso_button)
             .build()
             .finish()

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use super::notebook_pane::subscribe_to_link_model;
 use super::view::PaneView;

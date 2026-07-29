@@ -10,7 +10,7 @@ pub mod login_slide;
 pub mod needs_sso_link_view;
 pub mod paste_auth_token_modal;
 mod user_properties;
-pub use derp_server_auth::{auth_state, credentials, user, user_uid};
+pub use bork_server_auth::{auth_state, credentials, user, user_uid};
 #[cfg(target_family = "wasm")]
 pub mod web_handoff;
 
@@ -21,10 +21,10 @@ pub use auth_state::AuthStateProvider;
 use itertools::Itertools;
 pub use login_failure_notification::LoginFailureReason;
 pub use user_uid::UserUid;
-use derp_core::user_preferences::GetUserPreferences as _;
-use derp_errors::{report_error, report_if_error};
-use derpui::modals::{AlertDialogWithCallbacks, ModalButton};
-use derpui::{AppContext, SingletonEntity};
+use bork_core::user_preferences::GetUserPreferences as _;
+use bork_errors::{report_error, report_if_error};
+use borkui::modals::{AlertDialogWithCallbacks, ModalButton};
+use borkui::{AppContext, SingletonEntity};
 
 use crate::ai::agent_conversations_model::AgentConversationsModel;
 use crate::ai::blocklist::agent_view::orchestration_pill_bar_model::OrchestrationPillBarModel;
@@ -188,7 +188,7 @@ pub fn maybe_log_out(app: &mut AppContext) {
         );
 
         // On mac, we show the native platform modal. On platforms that don't support a native modal,
-        // we show the custom derp modal.
+        // we show the custom bork modal.
         if cfg!(all(not(target_family = "wasm"), target_os = "macos")) {
             app.show_native_platform_modal(alert_data);
         } else {
@@ -283,7 +283,7 @@ pub fn log_out(app: &mut AppContext) {
     }
 
     #[cfg(target_family = "wasm")]
-    crate::platform::wasm::emit_event(crate::platform::wasm::DerpEvent::LoggedOut);
+    crate::platform::wasm::emit_event(crate::platform::wasm::BorkEvent::LoggedOut);
 }
 
 // Remove the cloud persisted settings from user defaults.

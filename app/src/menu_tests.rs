@@ -1,6 +1,6 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::platform::WindowStyle;
-use derpui::{App, TypedActionView};
+use bork_core::ui::appearance::Appearance;
+use borkui::platform::WindowStyle;
+use borkui::{App, TypedActionView};
 
 use super::{Menu, MenuAction, MenuItem, MenuItemFields, SelectAction, SubMenu};
 

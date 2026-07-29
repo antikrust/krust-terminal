@@ -1,11 +1,11 @@
 use std::ops::Range;
 
-use derpui_core::elements::Point;
-use derpui_core::event::DispatchedEvent;
-use derpui_core::geometry::rect::RectF;
-use derpui_core::geometry::vector::Vector2F;
-use derpui_core::units::IntoPixels;
-use derpui_core::{
+use borkui_core::elements::Point;
+use borkui_core::event::DispatchedEvent;
+use borkui_core::geometry::rect::RectF;
+use borkui_core::geometry::vector::Vector2F;
+use borkui_core::units::IntoPixels;
+use borkui_core::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, ModelHandle,
     PaintContext, SizeConstraint, WeakViewHandle,
 };

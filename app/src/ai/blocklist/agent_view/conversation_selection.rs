@@ -1,5 +1,5 @@
-use derp_errors::report_error;
-use derpui::{AppContext, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{AppContext, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{
     AgentViewController, AgentViewControllerEvent, AgentViewEntryOrigin, EnterAgentViewError,
@@ -25,7 +25,7 @@ pub(crate) struct AgentViewConversationSelection {
 impl AgentViewConversationSelection {
     /// Creates GUI conversation selection for a terminal view.
     pub(crate) fn new(
-        terminal_surface_id: derpui::EntityId,
+        terminal_surface_id: borkui::EntityId,
         agent_view_controller: ModelHandle<AgentViewController>,
         ctx: &mut ModelContext<Box<dyn ConversationSelection>>,
     ) -> Self {

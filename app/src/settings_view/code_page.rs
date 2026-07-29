@@ -14,25 +14,25 @@ use lsp::{LspManagerModel, LspManagerModelEvent, LspServerModel, LspState};
 use pathfinder_color::ColorU;
 #[cfg(not(target_family = "wasm"))]
 use remote_server::codebase_index_proto::{RemoteCodebaseIndexState, RemoteCodebaseIndexStatus};
-use derp_core::features::FeatureFlag;
-use derp_core::settings::ToggleableSetting as _;
-use derp_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
-use derp_errors::report_if_error;
-use derp_util::path::user_friendly_path;
+use bork_core::features::FeatureFlag;
+use bork_core::settings::ToggleableSetting as _;
+use bork_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
+use bork_errors::report_if_error;
+use bork_util::path::user_friendly_path;
 #[cfg(not(target_family = "wasm"))]
-use derp_util::remote_path::RemotePath;
-use derpui::elements::{
+use bork_util::remote_path::RemotePath;
+use borkui::elements::{
     ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Empty,
     Expanded, Fill, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
     Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::ContextPredicate;
-use derpui::platform::{Cursor, FilePickerConfiguration};
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::switch::{SwitchStateHandle, TooltipConfig};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::ContextPredicate;
+use borkui::platform::{Cursor, FilePickerConfiguration};
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::switch::{SwitchStateHandle, TooltipConfig};
+use borkui::{
     id, Action, AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -80,10 +80,10 @@ const LSP_STATUS_INDICATOR_SIZE: f32 = 8.;
 const CODE_FEATURE_NAME: &str = "Code";
 const INITIALIZATION_SETTINGS_HEADER: &str = "Initialization Settings";
 const CODEBASE_INDEXING_LABEL: &str = "Codebase indexing";
-const CODEBASE_INDEX_DESCRIPTION: &str = "Derp can automatically index code repositories as you navigate them, helping agents quickly understand context and provide solutions. Code is never stored on the server. If a codebase is unable to be indexed, Derp can still navigate your codebase and gain insights via grep and find tool calling.";
-const DERP_INDEXING_IGNORE_DESCRIPTION: &str = "To exclude specific files or directories from indexing, add them to the .derpindexingignore file in your repository directory. These files will still be accessible to AI features, but they won't be included in codebase embeddings.";
+const CODEBASE_INDEX_DESCRIPTION: &str = "Bork can automatically index code repositories as you navigate them, helping agents quickly understand context and provide solutions. Code is never stored on the server. If a codebase is unable to be indexed, Bork can still navigate your codebase and gain insights via grep and find tool calling.";
+const BORK_INDEXING_IGNORE_DESCRIPTION: &str = "To exclude specific files or directories from indexing, add them to the .borkindexingignore file in your repository directory. These files will still be accessible to AI features, but they won't be included in codebase embeddings.";
 const AUTO_INDEX_FEATURE_NAME: &str = "Index new folders by default";
-const AUTO_INDEX_DESCRIPTION: &str = "When set to true, Derp will automatically index code repositories as you navigate them - helping agents quickly understand context and provide targeted solutions.";
+const AUTO_INDEX_DESCRIPTION: &str = "When set to true, Bork will automatically index code repositories as you navigate them - helping agents quickly understand context and provide targeted solutions.";
 const INDEXING_DISABLED_ADMIN_TEXT: &str = "Team admins have disabled codebase indexing.";
 const INDEXING_WORKSPACE_ENABLED_ADMIN_TEXT: &str = "Team admins have enabled codebase indexing.";
 const INDEXING_DISABLED_GLOBAL_AI_TEXT: &str =
@@ -346,7 +346,7 @@ impl CodeSettingsPageView {
 
         #[cfg(feature = "local_fs")]
         let external_editor_view;
-        let page = if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        let page = if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             #[cfg(feature = "local_fs")]
             {
                 external_editor_view = Some(ctx.add_typed_action_view(ExternalEditorView::new));
@@ -475,7 +475,7 @@ impl CodeSettingsPageView {
     /// Builds the full categorized page with all Code widgets.
     /// Used for the default/legacy view and when resetting to all-widgets mode for search.
     fn build_full_page(ctx: &mut ViewContext<Self>) -> PageType<Self> {
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             let manual_add_directory_button = ctx.add_typed_action_view(|_| {
                 ActionButton::new("Index new folder", SecondaryTheme)
                     .with_icon(Icon::FindAll)
@@ -953,7 +953,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         );
     }
 
-    if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+    if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
         ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
             vec![
                 ToggleSettingActionPair::new(
@@ -1051,7 +1051,7 @@ impl SettingsWidget for CodePageWidget {
         ));
         content.add_child(self.render_settings_subtext(
             global_ai_enabled,
-            DERP_INDEXING_IGNORE_DESCRIPTION,
+            BORK_INDEXING_IGNORE_DESCRIPTION,
             appearance,
         ));
 
@@ -1533,15 +1533,15 @@ impl CodePageWidget {
                     ..Default::default()
                 })
                 .with_text_and_icon_label(
-                    derpui::ui_components::button::TextAndIcon::new(
-                        derpui::ui_components::button::TextAndIconAlignment::IconFirst,
+                    borkui::ui_components::button::TextAndIcon::new(
+                        borkui::ui_components::button::TextAndIconAlignment::IconFirst,
                         "Open project rules",
-                        derpui::elements::Icon::new(
+                        borkui::elements::Icon::new(
                             "bundled/svg/file-code-02.svg",
                             theme.foreground(),
                         ),
-                        derpui::elements::MainAxisSize::Min,
-                        derpui::elements::MainAxisAlignment::Center,
+                        borkui::elements::MainAxisSize::Min,
+                        borkui::elements::MainAxisAlignment::Center,
                         pathfinder_geometry::vector::vec2f(14., 14.),
                     )
                     .with_inner_padding(4.),
@@ -1923,7 +1923,7 @@ impl CodePageWidget {
                 Container::new(
                     ConstrainedBox::new(
                         status_icon
-                            .to_derpui_icon(ThemeFill::Solid(presentation.color))
+                            .to_borkui_icon(ThemeFill::Solid(presentation.color))
                             .finish(),
                     )
                     .with_width(STATUS_ICON_SIZE)
@@ -2233,7 +2233,7 @@ impl CodePageWidget {
         &self,
         workspace_path: &Path,
         server_type: LSPServerType,
-        server_model: Option<&derpui::ModelHandle<LspServerModel>>,
+        server_model: Option<&borkui::ModelHandle<LspServerModel>>,
         is_enabled: bool,
         mouse_states: LspServerRowMouseStates,
         appearance: &Appearance,
@@ -2422,9 +2422,9 @@ impl CodePageWidget {
     /// Gets the status color and text for an LSP server.
     fn get_lsp_status_info(
         &self,
-        server_model: Option<&derpui::ModelHandle<LspServerModel>>,
+        server_model: Option<&borkui::ModelHandle<LspServerModel>>,
         app: &AppContext,
-        theme: &derp_core::ui::theme::DerpTheme,
+        theme: &bork_core::ui::theme::BorkTheme,
     ) -> (ColorU, &'static str) {
         match server_model {
             Some(model) => {
@@ -2681,7 +2681,7 @@ impl SettingsPageMeta for CodeSettingsPageView {
 
     fn should_render(&self, _ctx: &AppContext) -> bool {
         FeatureFlag::FullSourceCodeEmbedding.is_enabled()
-            || FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+            || FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
     }
 
     fn on_page_selected(&mut self, _: bool, ctx: &mut ViewContext<Self>) {

@@ -1,4 +1,4 @@
-use derpui::{Entity, ModelContext};
+use borkui::{Entity, ModelContext};
 
 use crate::editor::InteractionState;
 

@@ -1,19 +1,19 @@
 use asset_macro::bundled_or_fetched_asset;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::Fill;
+use borkui::elements::{
     Align, Border, CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Flex, FormattedTextElement, Image, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -49,7 +49,7 @@ const LEFT_PANEL_WIDTH: f32 = 330.;
 const RIGHT_PANEL_WIDTH: f32 = 325.;
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -110,7 +110,7 @@ impl CodexModal {
 
         // Title
         let title = FormattedTextElement::from_str(
-            "Use Codex models in Derp",
+            "Use Codex models in Bork",
             appearance.ui_font_family(),
             24.,
         )

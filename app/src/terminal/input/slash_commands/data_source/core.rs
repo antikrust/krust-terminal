@@ -6,13 +6,13 @@ use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 #[cfg(not(target_family = "wasm"))]
 use repo_metadata::repositories::DetectedRepositories;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon as DerpIcon;
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon as BorkIcon;
 #[cfg(not(target_family = "wasm"))]
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::fonts::FamilyId;
-use derpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::fonts::FamilyId;
+use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent_conversations_model::{AgentConversationsModel, AgentConversationsModelEvent};
 use crate::ai::blocklist::block::cli_controller::{CLISubagentController, CLISubagentEvent};
@@ -411,7 +411,7 @@ pub trait SlashCommandDataSource {
     fn common_command_gates(&self, ctx: &AppContext) -> CommonCommandGates {
         let ai_settings = AISettings::as_ref(ctx);
         // Hide /host when no default host is configured (env var or workspace setting).
-        let has_default_host = std::env::var("DERP_CLOUD_MODE_DEFAULT_HOST")
+        let has_default_host = std::env::var("BORK_CLOUD_MODE_DEFAULT_HOST")
             .ok()
             .filter(|s| !s.is_empty())
             .is_some()
@@ -674,13 +674,13 @@ impl InlineItem {
             override_icon
         } else {
             match skill.provider {
-                SkillProvider::Derp => DerpIcon::Derp,
-                SkillProvider::Claude => DerpIcon::ClaudeLogo,
-                SkillProvider::Codex => DerpIcon::OpenAILogo,
-                SkillProvider::Gemini => DerpIcon::GeminiLogo,
-                SkillProvider::Droid => DerpIcon::DroidLogo,
-                SkillProvider::OpenCode => DerpIcon::OpenCodeLogo,
-                _ => DerpIcon::Derp,
+                SkillProvider::Bork => BorkIcon::Bork,
+                SkillProvider::Claude => BorkIcon::ClaudeLogo,
+                SkillProvider::Codex => BorkIcon::OpenAILogo,
+                SkillProvider::Gemini => BorkIcon::GeminiLogo,
+                SkillProvider::Droid => BorkIcon::DroidLogo,
+                SkillProvider::OpenCode => BorkIcon::OpenCodeLogo,
+                _ => BorkIcon::Bork,
             }
         };
 

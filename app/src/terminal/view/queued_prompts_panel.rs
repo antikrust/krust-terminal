@@ -1,4 +1,4 @@
-//! Multi-prompt queue panel rendered between the derping indicator and the input editor in
+//! Multi-prompt queue panel rendered between the borking indicator and the input editor in
 //! [`TerminalView`].
 //!
 //! Reads from the `QueuedQueryModel` singleton (keyed by `AIConversationId`) for the queue of the
@@ -11,23 +11,23 @@ use std::collections::HashMap;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::vec2f;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
+use borkui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DragAxis, Draggable, DraggableState, Empty, Expanded, Fill,
     Flex, Hoverable, MinSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack, Text,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::fonts::{Properties, Style, Weight};
-use derpui::keymap::Keystroke;
-use derpui::platform::Cursor;
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::fonts::{Properties, Style, Weight};
+use borkui::keymap::Keystroke;
+use borkui::platform::Cursor;
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, BlurContext, Element, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, ViewHandle,
 };
@@ -1047,7 +1047,7 @@ fn render_header(
     let ui_font_size = appearance.ui_font_size();
     Hoverable::new(header_mouse_state.clone(), move |_state| {
         let chevron =
-            ConstrainedBox::new(chevron_icon.to_derpui_icon(sub_text_color.into()).finish())
+            ConstrainedBox::new(chevron_icon.to_borkui_icon(sub_text_color.into()).finish())
                 .with_height(16.)
                 .with_width(16.)
                 .finish();
@@ -1259,7 +1259,7 @@ fn render_row(props: RenderRowProps<'_>, app: &AppContext) -> Box<dyn Element> {
             Hoverable::new(drag_handle_tooltip_state.clone(), move |drag_state| {
                 let icon = ConstrainedBox::new(
                     TerminalIcon::DragIndicatorVertical
-                        .to_derpui_icon(disabled_color.into())
+                        .to_borkui_icon(disabled_color.into())
                         .finish(),
                 )
                 .with_height(20.)
@@ -1286,7 +1286,7 @@ fn render_row(props: RenderRowProps<'_>, app: &AppContext) -> Box<dyn Element> {
         } else {
             ConstrainedBox::new(
                 TerminalIcon::DragIndicatorVertical
-                    .to_derpui_icon(theme.sub_text_color(theme.surface_1()))
+                    .to_borkui_icon(theme.sub_text_color(theme.surface_1()))
                     .finish(),
             )
             .with_height(20.)

@@ -19,8 +19,8 @@ pub use native::McpIntegration;
 use parking_lot::Mutex;
 use uuid::Uuid;
 #[cfg(not(target_family = "wasm"))]
-use derpui::ModelSpawner;
-use derpui::{Entity, SingletonEntity};
+use borkui::ModelSpawner;
+use borkui::{Entity, SingletonEntity};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::mcp::templatable::CloudTemplatableMCPServer;
@@ -263,7 +263,7 @@ impl TemplatableMCPServerManager {
     pub fn get_active_file_based_servers(
         &self,
         cwd: &std::path::Path,
-        app: &derpui::AppContext,
+        app: &borkui::AppContext,
     ) -> HashMap<Uuid, &TemplatableMCPServerInfo> {
         FileBasedMCPManager::as_ref(app)
             .get_servers_for_working_directory(cwd, app)

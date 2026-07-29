@@ -4,15 +4,15 @@ use std::sync::Arc;
 
 use pathfinder_geometry::rect::RectF;
 use serde::{Deserialize, Serialize};
-use derpui::platform::FullscreenState;
-use derpui::{AppContext, SingletonEntity as _};
+use borkui::platform::FullscreenState;
+use borkui::{AppContext, SingletonEntity as _};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::AgentManagementFilters;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::blocklist::{InputConfig, SerializedBlockListItem};
 use crate::code::editor_management::CodeSource;
-use crate::drive::OpenDerpDriveObjectSettings;
+use crate::drive::OpenBorkDriveObjectSettings;
 use crate::root_view::quake_mode_window_id;
 use crate::server::ids::SyncId;
 use crate::settings_view::environments_page::EnvironmentsPage;
@@ -49,9 +49,9 @@ pub struct WindowSnapshot {
     pub fullscreen_state: FullscreenState,
     pub quake_mode: bool,
     pub universal_search_width: Option<f32>,
-    pub derp_ai_width: Option<f32>,
+    pub bork_ai_width: Option<f32>,
     pub voltron_width: Option<f32>,
-    pub derp_drive_index_width: Option<f32>,
+    pub bork_drive_index_width: Option<f32>,
     pub left_panel_open: bool,
     pub vertical_tabs_panel_open: bool,
     pub left_panel_width: Option<f32>,
@@ -239,7 +239,7 @@ pub enum NotebookPaneSnapshot {
         ///    server ID.
         notebook_id: Option<SyncId>,
         // Settings for the notebook pane when it's opened (such as a folder to focus upon opening)
-        settings: OpenDerpDriveObjectSettings,
+        settings: OpenBorkDriveObjectSettings,
     },
     LocalFileNotebook {
         /// The path to the local file that was open in this pane. This may be `None` if
@@ -278,7 +278,7 @@ pub enum WorkflowPaneSnapshot {
     CloudWorkflow {
         workflow_id: Option<SyncId>,
         // Settings for the workflow pane when it's opened (such as a folder to focus upon opening)
-        settings: OpenDerpDriveObjectSettings,
+        settings: OpenBorkDriveObjectSettings,
     },
 }
 
@@ -321,7 +321,7 @@ pub enum CodeReviewPaneSnapshot {
 pub enum LeftPanelDisplayedTab {
     FileTree,
     GlobalSearch,
-    DerpDrive,
+    BorkDrive,
     ConversationListView,
     Tabs,
     /// Fork: the embedded global chat room.
@@ -333,7 +333,7 @@ impl From<ToolPanelView> for LeftPanelDisplayedTab {
         match view {
             ToolPanelView::ProjectExplorer => LeftPanelDisplayedTab::FileTree,
             ToolPanelView::GlobalSearch { .. } => LeftPanelDisplayedTab::GlobalSearch,
-            ToolPanelView::DerpDrive => LeftPanelDisplayedTab::DerpDrive,
+            ToolPanelView::BorkDrive => LeftPanelDisplayedTab::BorkDrive,
             ToolPanelView::ConversationListView => LeftPanelDisplayedTab::ConversationListView,
             ToolPanelView::Tabs => LeftPanelDisplayedTab::Tabs,
             ToolPanelView::Chat => LeftPanelDisplayedTab::Chat,

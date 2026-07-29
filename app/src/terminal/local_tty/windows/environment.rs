@@ -3,8 +3,8 @@ use std::ffi::OsString;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use itertools::Itertools;
-use derp_core::channel::ChannelState;
-use derp_core::features::FeatureFlag;
+use bork_core::channel::ChannelState;
+use bork_core::features::FeatureFlag;
 use windows::core::{HSTRING, PCWSTR};
 use windows::Win32::System::Environment::ExpandEnvironmentStringsW;
 use winreg::enums::{RegType, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
@@ -17,18 +17,18 @@ use crate::terminal::focus_env::{FOCUS_URL_ENV, TERMINAL_SESSION_UUID_ENV};
 use crate::terminal::local_tty::shell::{extra_path_entries, ssh_socket_dir, ShellStarter};
 use crate::terminal::local_tty::PtyOptions;
 
-const HONOR_PS1_NAME: &str = "DERP_HONOR_PS1";
-const PROMPT_NODE_VERSION_ENABLED_NAME: &str = "DERP_PROMPT_NODE_VERSION_ENABLED";
-const INITIAL_WORKING_DIR_NAME: &str = "DERP_INITIAL_WORKING_DIR";
-const USE_SSH_WRAPPER_NAME: &str = "DERP_USE_SSH_WRAPPER";
-const SSH_REUSE_CONTROL_MASTER_NAME: &str = "DERP_SSH_REUSE_CONTROL_MASTER";
-const SHELL_DEBUG_MODE_NAME: &str = "DERP_SHELL_DEBUG_MODE";
+const HONOR_PS1_NAME: &str = "BORK_HONOR_PS1";
+const PROMPT_NODE_VERSION_ENABLED_NAME: &str = "BORK_PROMPT_NODE_VERSION_ENABLED";
+const INITIAL_WORKING_DIR_NAME: &str = "BORK_INITIAL_WORKING_DIR";
+const USE_SSH_WRAPPER_NAME: &str = "BORK_USE_SSH_WRAPPER";
+const SSH_REUSE_CONTROL_MASTER_NAME: &str = "BORK_SSH_REUSE_CONTROL_MASTER";
+const SHELL_DEBUG_MODE_NAME: &str = "BORK_SHELL_DEBUG_MODE";
 const TERM_PROGRAM_NAME: &str = "TERM_PROGRAM";
-const IS_LOCAL_SESSION_NAME: &str = "DERP_IS_LOCAL_SHELL_SESSION";
+const IS_LOCAL_SESSION_NAME: &str = "BORK_IS_LOCAL_SHELL_SESSION";
 const SSH_SOCKET_DIR: &str = "SSH_SOCKET_DIR";
-const PATH_APPEND_NAME: &str = "DERP_PATH_APPEND";
-const CLIENT_VERSION_NAME: &str = "DERP_CLIENT_VERSION";
-const CLI_AGENT_PROTOCOL_VERSION_NAME: &str = "DERP_CLI_AGENT_PROTOCOL_VERSION";
+const PATH_APPEND_NAME: &str = "BORK_PATH_APPEND";
+const CLIENT_VERSION_NAME: &str = "BORK_CLIENT_VERSION";
+const CLI_AGENT_PROTOCOL_VERSION_NAME: &str = "BORK_CLI_AGENT_PROTOCOL_VERSION";
 const WSLENV: &str = "WSLENV";
 const HISTIGNORE: &str = "HISTIGNORE";
 
@@ -114,7 +114,7 @@ pub(super) fn get_shell_environment_variables(options: &PtyOptions) -> Vec<u16> 
         map_key(TERM_PROGRAM_NAME.into()),
         EnvEntry {
             preferred_key: TERM_PROGRAM_NAME.into(),
-            value: "DerpTerminal".into(),
+            value: "BorkTerminal".into(),
         },
     );
 
@@ -154,7 +154,7 @@ pub(super) fn get_shell_environment_variables(options: &PtyOptions) -> Vec<u16> 
         },
     );
 
-    // Set DERP_PATH_APPEND with additional PATH entries to append
+    // Set BORK_PATH_APPEND with additional PATH entries to append
     let path_append = extra_path_entries()
         .map(|p| p.to_string_lossy().into_owned())
         .join(";");

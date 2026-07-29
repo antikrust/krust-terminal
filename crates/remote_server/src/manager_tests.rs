@@ -1,7 +1,7 @@
 use futures::channel::oneshot;
-use derp_core::SessionId;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::App;
+use bork_core::SessionId;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::App;
 
 use super::{
     HostRequestError, PendingHostRequest, RemoteServerManager, RemoteServerManagerEvent,

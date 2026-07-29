@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use session_sharing_protocol::common::SessionId;
 use update_queue::LocalTaskUpdateQueue;
-use derp_graphql::ai::{AgentTaskState, PlatformErrorCode};
-use derpui::{Entity, EntityId, ModelContext, SingletonEntity};
+use bork_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use borkui::{Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::history_model::{
     BlocklistAIHistoryEvent, BlocklistAIHistoryModel, ConversationStatusUpdate,
@@ -469,11 +469,11 @@ pub(crate) fn classify_renderable_error(
         RenderableAIError::ServerOverloaded => (
             AgentTaskState::Error,
             Some(TaskStatusUpdate::with_error_code(
-                "Derp is temporarily overloaded. Please try again shortly.",
+                "Bork is temporarily overloaded. Please try again shortly.",
                 PlatformErrorCode::ResourceUnavailable,
             )),
         ),
-        RenderableAIError::InternalDerpError => (
+        RenderableAIError::InternalBorkError => (
             AgentTaskState::Error,
             Some(TaskStatusUpdate::with_error_code(
                 "An internal error occurred during the conversation. Please try again.",

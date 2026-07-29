@@ -1,4 +1,4 @@
-use derpui::App;
+use borkui::App;
 
 use super::HandoffComposeState;
 use crate::ai::ambient_agents::telemetry::HandoffEntryPoint;

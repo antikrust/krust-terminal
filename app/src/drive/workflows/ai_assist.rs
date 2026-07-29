@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use derp_graphql::mutations::generate_metadata_for_command::{
+use bork_graphql::mutations::generate_metadata_for_command::{
     GenerateMetadataForCommandFailureType, GenerateMetadataForCommandSuccess,
 };
-use derpui::{SingletonEntity, ViewContext};
+use borkui::{SingletonEntity, ViewContext};
 
 use super::arguments::ArgumentsState;
 use super::modal::{AiAssistState, WorkflowModal, WorkflowModalEvent};

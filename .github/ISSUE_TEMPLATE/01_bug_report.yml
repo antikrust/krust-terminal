@@ -6,13 +6,13 @@ body:
     attributes:
       label: "Pre-submit Checks"
       options:
-        - label: "I have [searched Derp bugs](https://github.com/derpdotdev/derp/issues?q=is%3Aissue+label%3ABUG) and there are no duplicates"
+        - label: "I have [searched Bork bugs](https://github.com/borkdotdev/bork/issues?q=is%3Aissue+label%3ABUG) and there are no duplicates"
           required: true
-        - label: "I have [searched Derp known issues page](https://docs.derp.baby/help/known-issues) and my issue is not there"
+        - label: "I have [searched Bork known issues page](https://docs.bork.baby/help/known-issues) and my issue is not there"
           required: true
-        - label: "I have an issue with AI and have included the debugging ID (Optional, but helps expedite the AI quality fix). [Debugging ID instructions](https://docs.derp.baby/agent-platform/agent/ai-faqs#gathering-ai-debugging-id)"
+        - label: "I have an issue with AI and have included the debugging ID (Optional, but helps expedite the AI quality fix). [Debugging ID instructions](https://docs.bork.baby/agent-platform/agent/ai-faqs#gathering-ai-debugging-id)"
           required: false
-        - label: "I have technical issue and have included the logs (optional, but helps expedite the bug fix). [Log instructions](https://docs.derp.baby/support-and-community/troubleshooting-and-support/sending-us-feedback#gathering-derp-logs)"
+        - label: "I have technical issue and have included the logs (optional, but helps expedite the bug fix). [Log instructions](https://docs.bork.baby/support-and-community/troubleshooting-and-support/sending-us-feedback#gathering-bork-logs)"
           required: false
   - type: textarea
     id: "describe-the-bug"
@@ -72,9 +72,9 @@ body:
     validations:
       required: false
   - type: input
-    id: "derp-version"
+    id: "bork-version"
     attributes:
-      label: "Current Derp version"
+      label: "Current Bork version"
       description: "Open the Settings Dialog (CMD-,) using the Command Palette or by clicking the three dots > Settings > Account. Once you're on the Account page click the copy icon that's to the right of the version number. `v0.2047.04.07.47.47.stable_47`"
     validations:
       required: false
@@ -82,53 +82,53 @@ body:
     id: "regression"
     attributes:
       label: "Regression"
-      description: "Is this a regression (used to work in a previous Derp version)?"
+      description: "Is this a regression (used to work in a previous Bork version)?"
       multiple: false
       options:
-        - "No, this bug or issue has existed throughout my experience using Derp"
-        - "Yes, this bug started recently or with an X Derp version"
+        - "No, this bug or issue has existed throughout my experience using Bork"
+        - "Yes, this bug started recently or with an X Bork version"
     validations:
       required: true
   - type: input
-    id: "derp-version-regression-date"
+    id: "bork-version-regression-date"
     attributes:
-      label: "Recent working Derp date"
-      description: "Most recent date that Derp worked as expected"
+      label: "Recent working Bork date"
+      description: "Most recent date that Bork worked as expected"
     validations:
       required: false
   - type: textarea
     id: "additional-context"
     attributes:
       label: "Additional context"
-      description: "Add any other context about the problem here. If using Derp on Linux, tell us if you're using X11 or Wayland. If the issue is graphical, run Derp with the following command `RUST_LOG=wgpu_core=info,wgpu_hal=info MESA_DEBUG=1 EGL_LOG_LEVEL=debug derp-terminal` attach logs and tell us the result of `eglinfo`."
+      description: "Add any other context about the problem here. If using Bork on Linux, tell us if you're using X11 or Wayland. If the issue is graphical, run Bork with the following command `RUST_LOG=wgpu_core=info,wgpu_hal=info MESA_DEBUG=1 EGL_LOG_LEVEL=debug bork-terminal` attach logs and tell us the result of `eglinfo`."
     validations:
       required: false
   - type: dropdown
     id: "blocker"
     attributes:
-      label: "Does this block you from using Derp daily?"
+      label: "Does this block you from using Bork daily?"
       description: "All feedback will be reviewed, even if you select 'No'."
       multiple: false
       options:
         - "No"
-        - "Yes, this issue prevents me from using Derp daily."
+        - "Yes, this issue prevents me from using Bork daily."
     validations:
       required: true
   - type: dropdown
     id: "terminals"
     attributes:
-      label: "Is this an issue only in Derp?"
+      label: "Is this an issue only in Bork?"
       description: "Verifying this issue doesn't happen in other terminals helps us to prioritize the fix"
       multiple: false
       options:
-        - "Yes, I confirmed that this only happens in Derp, not other terminals."
-        - "No, this issue happens in Derp and other terminals."
+        - "Yes, I confirmed that this only happens in Bork, not other terminals."
+        - "No, this issue happens in Bork and other terminals."
     validations:
       required: true
   - type: dropdown
     id: "linear-label-bug"
     attributes:
-      label: "Derp Internal (ignore): linear-label:b9d78064-c89e-4973-b153-5178a31ee54e"
+      label: "Bork Internal (ignore): linear-label:b9d78064-c89e-4973-b153-5178a31ee54e"
       multiple: false
       options:
         - Ignore

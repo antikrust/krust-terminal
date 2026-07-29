@@ -1,6 +1,6 @@
-use derpui::elements::{CrossAxisAlignment, Flex, ParentElement};
-use derpui::prelude::ChildView;
-use derpui::{AppContext, Element};
+use borkui::elements::{CrossAxisAlignment, Flex, ParentElement};
+use borkui::prelude::ChildView;
+use borkui::{AppContext, Element};
 
 use crate::ai::blocklist::block::ImportedCommentGroup;
 

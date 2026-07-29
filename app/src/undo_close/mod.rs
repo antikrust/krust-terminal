@@ -1,8 +1,8 @@
 pub mod settings;
 mod stack;
 
-use derpui::keymap::EditableBinding;
-use derpui::AppContext;
+use borkui::keymap::EditableBinding;
+use borkui::AppContext;
 
 pub use self::settings::UndoCloseSettings;
 pub use self::stack::{UndoCloseStack, UndoCloseStackEvent};
@@ -11,7 +11,7 @@ use crate::workspace::WorkspaceAction;
 
 /// Register keybindings for undo close functionality.
 pub fn init(ctx: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     ctx.register_editable_bindings([EditableBinding::new(
         "app:reopen_closed_session",

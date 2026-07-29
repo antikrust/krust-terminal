@@ -1,8 +1,8 @@
-use derpui::AppContext;
+use borkui::AppContext;
 
 use super::{CloudObject, Space};
 use crate::drive::folders::CloudFolder;
-use crate::drive::items::DerpDriveItemId;
+use crate::drive::items::BorkDriveItemId;
 use crate::drive::CloudObjectTypeAndId;
 use crate::ui_components::breadcrumb::Breadcrumb;
 
@@ -49,10 +49,10 @@ pub enum ContainingObjectKind {
 }
 
 impl ContainingObjectKind {
-    pub fn into_item_id(self) -> DerpDriveItemId {
+    pub fn into_item_id(self) -> BorkDriveItemId {
         match self {
-            ContainingObjectKind::Space(space) => DerpDriveItemId::Space(space),
-            ContainingObjectKind::Object(object) => DerpDriveItemId::Object(object),
+            ContainingObjectKind::Space(space) => BorkDriveItemId::Space(space),
+            ContainingObjectKind::Object(object) => BorkDriveItemId::Object(object),
         }
     }
 }

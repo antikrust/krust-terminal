@@ -1,6 +1,6 @@
 use pathfinder_color::ColorU;
-use derpui_core::elements::Align;
-use derpui_core::Element;
+use borkui_core::elements::Align;
+use borkui_core::Element;
 
 use super::onboarding_visual::{OnboardingVisual, Pill, RectPct};
 use crate::visuals::onboarding_visual::Rect;

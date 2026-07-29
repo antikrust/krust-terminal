@@ -1,5 +1,5 @@
-use derpui::async_assert;
-use derpui::integration::AssertionCallback;
+use borkui::async_assert;
+use borkui::integration::AssertionCallback;
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{CloudModelType, GenericCloudObject, Revision};

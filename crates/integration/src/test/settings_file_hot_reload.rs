@@ -2,23 +2,23 @@
 //!
 //! Verifies that changes to `settings.toml` on disk are picked up by the
 //! filesystem watcher and pushed into the in-memory setting models, on every
-//! platform where Derp watches `config_local_dir()`.
+//! platform where Bork watches `config_local_dir()`.
 
 use std::time::Duration;
 
 use settings::Setting as _;
-use derp::features::FeatureFlag;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use derp::settings::FontSettings;
-use derpui_core::integration::TestStep;
-use derpui_core::{async_assert_eq, SingletonEntity};
+use bork::features::FeatureFlag;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use bork::settings::FontSettings;
+use borkui_core::integration::TestStep;
+use borkui_core::{async_assert_eq, SingletonEntity};
 
 use super::{new_builder, Builder};
 
 /// Helper: returns the path to the TOML settings file.
 fn toml_file_path() -> std::path::PathBuf {
-    derp::settings::user_preferences_toml_file_path()
+    bork::settings::user_preferences_toml_file_path()
 }
 
 /// Verifies the full settings hot-reload pipeline end-to-end: the filesystem
@@ -31,7 +31,7 @@ pub fn test_settings_file_hot_reload_applies_new_values() -> Builder {
     new_builder()
         .with_setup(move |utils| {
             // Use a short watcher delay so each reload fires quickly.
-            utils.set_env("DERP_CONFIG_WATCHER_DELAY_MS", Some("10".to_string()));
+            utils.set_env("BORK_CONFIG_WATCHER_DELAY_MS", Some("10".to_string()));
 
             // Write an initial valid settings file so the watcher is already
             // tracking it and the app reads a known value at startup.

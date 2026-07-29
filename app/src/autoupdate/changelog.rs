@@ -5,7 +5,7 @@ use anyhow::Result;
 use channel_versions::{Changelog, ChannelVersions};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 use super::channel_versions::fetch_channel_versions;
 use super::release_assets_directory_url;

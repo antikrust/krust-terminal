@@ -1,4 +1,4 @@
-use derp_core::features::FeatureFlag;
+use bork_core::features::FeatureFlag;
 
 use crate::terminal::event_listener::ChannelEventListener;
 use crate::terminal::model::ansi::{self, Handler};

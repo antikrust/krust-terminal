@@ -1,19 +1,19 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{Align, Container, CrossAxisAlignment, Dismiss, Flex, ParentElement, Stack};
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::platform::Cursor;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{BorderStyle, Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use bork_core::ui::theme::Fill;
+use borkui::elements::{Align, Container, CrossAxisAlignment, Dismiss, Flex, ParentElement, Stack};
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::platform::Cursor;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{BorderStyle, Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::buttons;
 use crate::ui_components::dialog::{dialog_styles, Dialog};
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -45,7 +45,7 @@ pub enum SummarizationCancelDialogAction {
     Continue,
 }
 
-use derpui::elements::MouseStateHandle;
+use borkui::elements::MouseStateHandle;
 
 #[derive(Default)]
 pub struct SummarizationCancelDialog {
@@ -63,7 +63,7 @@ impl View for SummarizationCancelDialog {
         "SummarizationCancelDialog"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &derpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
         // Ensure this dialog takes focus away from the terminal editor
         ctx.focus_self();
     }
@@ -118,7 +118,7 @@ impl View for SummarizationCancelDialog {
             .finish();
 
         // Close header with Icon::X and ESC pill
-        let esc_keystroke = derpui::keymap::Keystroke::parse("escape").expect("Valid keystroke");
+        let esc_keystroke = borkui::keymap::Keystroke::parse("escape").expect("Valid keystroke");
         let close_header = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_children([
@@ -190,11 +190,11 @@ impl View for SummarizationCancelDialog {
         let mut stack = Stack::new();
         stack.add_positioned_child(
             dialog_dismiss,
-            derpui::elements::OffsetPositioning::offset_from_parent(
+            borkui::elements::OffsetPositioning::offset_from_parent(
                 vec2f(0., 0.),
-                derpui::elements::ParentOffsetBounds::WindowByPosition,
-                derpui::elements::ParentAnchor::Center,
-                derpui::elements::ChildAnchor::Center,
+                borkui::elements::ParentOffsetBounds::WindowByPosition,
+                borkui::elements::ParentAnchor::Center,
+                borkui::elements::ChildAnchor::Center,
             ),
         );
 

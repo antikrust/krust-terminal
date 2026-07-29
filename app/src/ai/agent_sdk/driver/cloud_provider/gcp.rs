@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use derp_managed_secrets::{GcpCredentials, GcpFederationConfig};
+use bork_managed_secrets::{GcpCredentials, GcpFederationConfig};
 
 use super::{CloudProvider, CloudProviderSetupError, Result};
 use crate::ai::cloud_environments::GcpProviderConfig;

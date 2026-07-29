@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use ai::project_context::model::ProjectContextModel;
 use parking_lot::FairMutex;
-use derp_core::features::FeatureFlag;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::{
+use bork_core::features::FeatureFlag;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::{
     AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle,
 };
 

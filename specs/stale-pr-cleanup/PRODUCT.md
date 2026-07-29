@@ -1,5 +1,5 @@
 # Stale PR Follow-up for Requested-Changes Reviews — Product Spec
-Linear: none provided (originates from derpdotdev/oz-for-oss#457)
+Linear: none provided (originates from borkdotdev/oz-for-oss#457)
 Figma: none provided. GitHub automation with no UI beyond PR comments and the closed state.
 
 ## Summary

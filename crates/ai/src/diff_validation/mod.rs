@@ -313,7 +313,7 @@ fn append_unmatched_line_suffix(search: &str, file_line: &str, insertion: &mut S
 }
 /// We told the model not to include line numbers for the replacement content. However, it can
 /// still happen. Try to remove them here.
-/// https://github.com/derpdotdev/derp-server/blob/d9c1b6d1443290f2355979ae552d41af01a63bde/logic/ai/prompt/tools/suggest_diff.yaml#L34-L34
+/// https://github.com/borkdotdev/bork-server/blob/d9c1b6d1443290f2355979ae552d41af01a63bde/logic/ai/prompt/tools/suggest_diff.yaml#L34-L34
 fn remove_extra_line_num_prefix(replace: String) -> String {
     static LINE_NUMBER_PATTERN: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^\d+\|").expect("line number regex must compile"));
@@ -434,7 +434,7 @@ pub fn fuzzy_match_v4a_diffs(
     // multiple hunks targeting the same region (e.g. a large deletion whose
     // matched range subsumes a nearby single-line edit), the overlapping delta
     // must be dropped — applying both would produce an invalid edit range in
-    // the editor buffer (see DERP-CLIENT-DEV-NYY).
+    // the editor buffer (see BORK-CLIENT-DEV-NYY).
     deltas.sort_by_key(|d| d.replacement_line_range.start);
     deltas = deduplicate_overlapping_deltas(deltas);
 

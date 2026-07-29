@@ -1,10 +1,10 @@
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use derpui::elements::{
+use borkui::elements::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext, Point,
     SizeConstraint,
 };
-use derpui::event::DispatchedEvent;
-use derpui::geometry::rect::RectF;
+use borkui::event::DispatchedEvent;
+use borkui::geometry::rect::RectF;
 
 use super::blockgrid_renderer::GridRenderParams;
 use crate::appearance::Appearance;
@@ -44,7 +44,7 @@ impl BlockGridElement {
             block_grid: block_grid.clone(),
             block_grid_params: BlockGridParams {
                 grid_render_params: GridRenderParams {
-                    derp_theme: theme.clone(),
+                    bork_theme: theme.clone(),
                     font_family: appearance.monospace_font_family(),
                     font_size: appearance.monospace_font_size(),
                     font_weight: appearance.monospace_font_weight(),

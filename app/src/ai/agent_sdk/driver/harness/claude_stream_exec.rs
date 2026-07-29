@@ -7,7 +7,7 @@
 //! This is the counterpart to the interactive invocation in
 //! [`super::claude_code`]: instead of handing a shell string to the terminal
 //! and letting Claude Code draw its own full-screen UI, we capture structured
-//! output so Derp can render the conversation with its own components.
+//! output so Bork can render the conversation with its own components.
 
 use std::collections::HashMap;
 use std::process::{ExitStatus, Stdio};
@@ -16,11 +16,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use ai::agent::TurnEvent;
-use derpui::r#async::Timer;
+use borkui::r#async::Timer;
 use command::r#async::Command;
 use futures::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use uuid::Uuid;
-use derp_core::safe_warn;
+use bork_core::safe_warn;
 
 use super::claude_stream::parse_stream_json_line;
 

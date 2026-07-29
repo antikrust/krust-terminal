@@ -4,14 +4,14 @@ use std::borrow::Cow;
 
 pub use model::*;
 use pathfinder_color::ColorU;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     Border, Container, CrossAxisAlignment, Expanded, Flex, ParentElement, Text,
 };
-use derpui::keymap::Keystroke;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::keymap::Keystroke;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::blocklist::agent_view::{
     ENTER_AGENT_VIEW_NEW_CONVERSATION_KEYSTROKE, ENTER_CLOUD_AGENT_VIEW_NEW_CONVERSATION_KEYSTROKE,
@@ -266,7 +266,7 @@ pub fn render_agent_shortcuts_view(
 }
 
 pub mod styles {
-    use derp_core::ui::appearance::Appearance;
+    use bork_core::ui::appearance::Appearance;
 
     pub fn keystroke_size(appearance: &Appearance) -> f32 {
         font_size(appearance) + 2.

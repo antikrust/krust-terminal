@@ -3,16 +3,16 @@ use std::sync::Arc;
 pub use lightbox::LightboxImage;
 use pathfinder_geometry::vector::Vector2F;
 use ui_components::{lightbox, Component as _};
-use derpui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use derpui::image_cache::ImageType;
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::prelude::*;
-use derpui::{AppContext, BlurContext, Element, Entity, SingletonEntity, View, ViewContext};
+use borkui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use borkui::image_cache::ImageType;
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::prelude::*;
+use borkui::{AppContext, BlurContext, Element, Entity, SingletonEntity, View, ViewContext};
 
 use crate::appearance::Appearance;
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
     let view_id = id!(LightboxView::ui_name());
     app.register_fixed_bindings([
         FixedBinding::new("escape", LightboxViewAction::Dismiss, view_id.clone()),

@@ -7,9 +7,9 @@ use chrono::{DateTime, Local};
 use markdown_parser::FormattedTextFragment;
 use session_sharing_protocol::common::{ParticipantId, ParticipantList, Role, SessionId};
 use session_sharing_protocol::sharer::SessionSourceType;
-use derp_core::features::FeatureFlag;
-use derpui::elements::MouseStateHandle;
-use derpui::{AppContext, Element, ModelHandle, ViewContext, ViewHandle};
+use bork_core::features::FeatureFlag;
+use borkui::elements::MouseStateHandle;
+use borkui::{AppContext, Element, ModelHandle, ViewContext, ViewHandle};
 
 use super::sharer::Sharer;
 use super::viewer::Viewer;

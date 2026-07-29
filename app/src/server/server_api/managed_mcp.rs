@@ -7,7 +7,7 @@ use cynic::MutationBuilder;
 #[cfg(test)]
 use mockall::automock;
 use uuid::Uuid;
-use derp_graphql::mutations::create_managed_mcp_client_config::{
+use bork_graphql::mutations::create_managed_mcp_client_config::{
     CreateManagedMcpClientConfig, CreateManagedMcpClientConfigInput,
     CreateManagedMcpClientConfigOutput, CreateManagedMcpClientConfigResult,
     CreateManagedMcpClientConfigVariables,

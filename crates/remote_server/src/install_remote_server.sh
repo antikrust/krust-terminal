@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the Derp remote server binary on a remote host, plus the
+# Installs the Bork remote server binary on a remote host, plus the
 # artifact's `resources/` tree (bundled skills, settings schema) at a
 # global, version-independent location:
 #
@@ -12,9 +12,9 @@
 # startup, so a slightly newer resources tree underneath it is accepted.
 #
 # Placeholders (substituted at runtime by setup.rs):
-#   {download_base_url}         — e.g. https://app.derp.baby/download/cli
+#   {download_base_url}         — e.g. https://app.bork.baby/download/cli
 #   {channel}                   — stable | preview | dev
-#   {install_dir}               — e.g. ~/.derp/remote-server
+#   {install_dir}               — e.g. ~/.bork/remote-server
 #   {binary_name}               — e.g. oz | oz-dev | oz-preview
 #   {version_query}             — e.g. &version=v0.2026... (empty when no release tag)
 #   {version_suffix}            — e.g. -v0.2026...        (empty when no release tag)

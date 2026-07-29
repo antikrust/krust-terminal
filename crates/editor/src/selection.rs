@@ -3,10 +3,10 @@ use std::ops::Range;
 use num_traits::SaturatingSub;
 use string_offset::CharOffset;
 use vec1::Vec1;
-use derpui_core::text::TextBuffer;
-use derpui_core::text::point::Point;
-use derpui_core::text::word_boundaries::WordBoundariesPolicy;
-use derpui_core::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle};
+use borkui_core::text::TextBuffer;
+use borkui_core::text::point::Point;
+use borkui_core::text::word_boundaries::WordBoundariesPolicy;
+use borkui_core::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle};
 
 use crate::content::buffer::{
     AutoScrollBehavior, Buffer, BufferEvent, BufferSelectAction, SelectionOffsets,

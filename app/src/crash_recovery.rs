@@ -5,15 +5,15 @@ use ::settings::Setting as _;
 use cfg_if::cfg_if;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
-use derp_cli::RecoveryMechanism;
-use derp_core::channel::{Channel, ChannelState};
-use derp_errors::{report_error, report_if_error};
-use derpui::{Entity, ModelContext, SingletonEntity, WindowId};
-use derpui_extras::user_preferences::UserPreferences;
+use bork_cli::RecoveryMechanism;
+use bork_core::channel::{Channel, ChannelState};
+use bork_errors::{report_error, report_if_error};
+use borkui::{Entity, ModelContext, SingletonEntity, WindowId};
+use borkui_extras::user_preferences::UserPreferences;
 
 use crate::settings;
 
-/// Keep in sync with [`derp_cli::AppArgs`].
+/// Keep in sync with [`bork_cli::AppArgs`].
 pub const RECOVERY_MECHANISM_ARG: &str = "crash-recovery-mechanism";
 
 lazy_static! {
@@ -34,7 +34,7 @@ pub enum Event {
 }
 
 /// Returns true if this process is the crash recovery process.
-pub fn is_crash_recovery_process(args: &derp_cli::AppArgs) -> bool {
+pub fn is_crash_recovery_process(args: &bork_cli::AppArgs) -> bool {
     args.crash_recovery_mechanism.is_some()
 }
 
@@ -80,7 +80,7 @@ impl CrashRecoveryProcess {
 
         *IS_CRASH_RECOVERY_PROCESS_RUNNING.write() = false;
         self.is_alive = false;
-        derp_logging::on_crash_recovery_process_killed();
+        bork_logging::on_crash_recovery_process_killed();
     }
 
     fn handle_draw_frame_error(&mut self, window_id: WindowId) {
@@ -217,14 +217,14 @@ impl CrashRecovery {
     }
 
     #[cfg(test)]
-    pub fn register_for_test(app: &mut derpui::App) {
-        use derp_core::user_preferences::GetUserPreferences as _;
+    pub fn register_for_test(app: &mut borkui::App) {
+        use bork_core::user_preferences::GetUserPreferences as _;
 
         app.update(|ctx| {
             ctx.add_singleton_model(|ctx| {
                 let user_preferences = ctx.private_user_preferences();
                 let launch_mode = crate::LaunchMode::App {
-                    args: derp_cli::AppArgs::default(),
+                    args: bork_cli::AppArgs::default(),
                     api_key: None,
                 };
                 crate::crash_recovery::CrashRecovery::new(&launch_mode, user_preferences)
@@ -380,7 +380,7 @@ fn spawn_recovery_process(
 }
 
 #[cfg(windows)]
-fn wait_for_parent_crash(args: &derp_cli::AppArgs) {
+fn wait_for_parent_crash(args: &bork_cli::AppArgs) {
     use windows::Win32::Foundation::{GetLastError, WAIT_FAILED, WAIT_OBJECT_0};
     use windows::Win32::System::Threading::{GetProcessId, WaitForSingleObject, INFINITE};
 
@@ -410,7 +410,7 @@ fn wait_for_parent_crash(args: &derp_cli::AppArgs) {
 }
 
 #[cfg(unix)]
-fn wait_for_parent_crash(args: &derp_cli::AppArgs) {
+fn wait_for_parent_crash(args: &bork_cli::AppArgs) {
     use nix::unistd::Pid;
 
     let parent_pid = args
@@ -438,7 +438,7 @@ fn handle_parent_crash(
     recovery_mechanism: RecoveryMechanism,
     user_preferences: &dyn UserPreferences,
 ) -> bool {
-    derp_logging::on_parent_process_crash();
+    bork_logging::on_parent_process_crash();
 
     match recovery_mechanism {
         #[cfg(target_os = "linux")]

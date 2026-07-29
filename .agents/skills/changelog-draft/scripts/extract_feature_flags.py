@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Extract RELEASE_FLAGS, PREVIEW_FLAGS, and DOGFOOD_FLAGS from derp_features.
+"""Extract RELEASE_FLAGS, PREVIEW_FLAGS, and DOGFOOD_FLAGS from bork_features.
 
-Parses crates/derp_features/src/lib.rs to find the const arrays and extracts
+Parses crates/bork_features/src/lib.rs to find the const arrays and extracts
 the FeatureFlag variant names. Stdlib only, no pip deps.
 
 Usage:
-    python3 extract_feature_flags.py --file crates/derp_features/src/lib.rs
+    python3 extract_feature_flags.py --file crates/bork_features/src/lib.rs
 
 Outputs JSON to stdout.
 """
@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument(
         "--file",
         required=True,
-        help="Path to derp_features lib.rs",
+        help="Path to bork_features lib.rs",
     )
     args = parser.parse_args()
 

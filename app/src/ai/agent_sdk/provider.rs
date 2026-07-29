@@ -1,11 +1,11 @@
 //! Provider command for linking third-party services.
 use comfy_table::Cell;
 use serde::Serialize;
-use derp_cli::provider::{ProviderCommand, ProviderType};
-use derp_cli::GlobalOptions;
-use derp_core::channel::ChannelState;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::provider::{ProviderCommand, ProviderType};
+use bork_cli::GlobalOptions;
+use bork_core::channel::ChannelState;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -122,7 +122,7 @@ impl ProviderCommandRunner {
     }
 }
 
-impl derpui::Entity for ProviderCommandRunner {
+impl borkui::Entity for ProviderCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for ProviderCommandRunner {}

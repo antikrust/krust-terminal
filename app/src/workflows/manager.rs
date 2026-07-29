@@ -1,13 +1,13 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-use derpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::workflow::Workflow;
 use super::CloudWorkflowModel;
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{GenericCloudObject, Owner};
-use crate::drive::OpenDerpDriveObjectSettings;
+use crate::drive::OpenBorkDriveObjectSettings;
 use crate::pane_group::{PaneContent, WorkflowPane};
 use crate::server::cloud_objects::update_manager::{
     ObjectOperation, OperationSuccessType, UpdateManager, UpdateManagerEvent,
@@ -68,7 +68,7 @@ impl WorkflowManager {
     pub fn create_pane(
         &mut self,
         source: &WorkflowOpenSource,
-        settings: &OpenDerpDriveObjectSettings,
+        settings: &OpenBorkDriveObjectSettings,
         mode: WorkflowViewMode,
         window_id: WindowId,
         ctx: &mut ModelContext<Self>,
@@ -123,7 +123,7 @@ impl WorkflowManager {
                             *initial_folder_id,
                             ClientId::default(),
                         ),
-                        &OpenDerpDriveObjectSettings::default(),
+                        &OpenBorkDriveObjectSettings::default(),
                         mode,
                         ctx,
                     );

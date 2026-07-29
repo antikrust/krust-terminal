@@ -1,8 +1,8 @@
 use std::time::SystemTime;
 
 use chrono::{DateTime, Local};
-use derp_core::ui::Icon;
-use derp_multi_agent_api as api;
+use bork_core::ui::Icon;
+use bork_multi_agent_api as api;
 
 /// Temporary AWS credentials loaded from the AWS SDK.
 /// These are not persisted and are only used at runtime.
@@ -93,13 +93,13 @@ impl AwsCredentialsState {
             ),
             Self::Disabled => (
                 "AWS Bedrock Disabled".to_string(),
-                "Derp will not load your AWS CLI credentials until AWS Bedrock is enabled by you or your workspace admin"
+                "Bork will not load your AWS CLI credentials until AWS Bedrock is enabled by you or your workspace admin"
                     .to_string(),
                 Icon::Key,
             ),
             Self::Refreshing => (
                 "Refreshing credentials...".to_string(),
-                "Loading your AWS CLI credentials into Derp".to_string(),
+                "Loading your AWS CLI credentials into Bork".to_string(),
                 Icon::RefreshCw04,
             ),
             Self::Loaded {

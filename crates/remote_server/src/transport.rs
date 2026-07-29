@@ -17,7 +17,7 @@ use std::pin::Pin;
 
 use async_channel::Receiver;
 use serde::Serialize;
-use derpui_core::r#async::executor;
+use borkui_core::r#async::executor;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::client::RemoteServerLog;
@@ -141,17 +141,17 @@ impl Error {
 
 /// The SSH `ControlMaster` socket (if any) behind a connection, tagged
 /// with who owns the master process. Ownership decides teardown
-/// behavior: only `DerpManaged` masters are stopped with `ssh -O exit`
+/// behavior: only `BorkManaged` masters are stopped with `ssh -O exit`
 /// on explicit teardown (see [`crate::ssh::stop_control_master`]);
 /// `UserOwned` masters must be left running.
 #[cfg(not(target_family = "wasm"))]
 #[derive(Debug, Clone)]
 pub enum ControlPath {
-    /// Derp created the ControlMaster at this socket path and is
+    /// Bork created the ControlMaster at this socket path and is
     /// responsible for tearing it down on session exit.
-    DerpManaged(PathBuf),
+    BorkManaged(PathBuf),
     /// The SSH wrapper attached to a ControlMaster the user already had
-    /// running at this socket path. Derp must never tear it down.
+    /// running at this socket path. Bork must never tear it down.
     UserOwned(PathBuf),
     /// No ControlMaster socket (e.g. in-process test transports).
     None,

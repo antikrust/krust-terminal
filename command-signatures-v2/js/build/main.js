@@ -12,8 +12,8 @@ let generatedArgument = {
         }
     ],
 };
-export function activate(derp) {
-    derp.completions.registerCommandSignature({
+export function activate(bork) {
+    bork.completions.registerCommandSignature({
         command: {
             name: "jack",
             alias: "j",

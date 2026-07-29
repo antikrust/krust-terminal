@@ -1,17 +1,17 @@
 use ui_components::{button, Component as _, Options as _};
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui_core::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui_core::elements::{
     ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     MainAxisSize, MouseStateHandle, ParentElement,
 };
-use derpui_core::fonts::Weight;
-use derpui_core::keymap::Keystroke;
-use derpui_core::prelude::Align;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui_core::{
+use borkui_core::fonts::Weight;
+use borkui_core::keymap::Keystroke;
+use borkui_core::prelude::Align;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -37,7 +37,7 @@ pub enum ToolsPanelSubSetting {
     ConversationHistory,
     ProjectExplorer,
     GlobalSearch,
-    DerpDrive,
+    BorkDrive,
 }
 
 #[derive(Debug, Clone)]
@@ -73,7 +73,7 @@ pub struct CustomizeUISlide {
     chip_conversation_mouse: MouseStateHandle,
     chip_file_explorer_mouse: MouseStateHandle,
     chip_global_search_mouse: MouseStateHandle,
-    chip_derp_drive_mouse: MouseStateHandle,
+    chip_bork_drive_mouse: MouseStateHandle,
     // Buttons
     back_button: button::Button,
     next_button: button::Button,
@@ -109,7 +109,7 @@ impl CustomizeUISlide {
             chip_conversation_mouse: MouseStateHandle::default(),
             chip_file_explorer_mouse: MouseStateHandle::default(),
             chip_global_search_mouse: MouseStateHandle::default(),
-            chip_derp_drive_mouse: MouseStateHandle::default(),
+            chip_bork_drive_mouse: MouseStateHandle::default(),
             back_button: button::Button::default(),
             next_button: button::Button::default(),
             scroll_state: ClippedScrollStateHandle::new(),
@@ -147,7 +147,7 @@ impl CustomizeUISlide {
     fn render_header(&self, appearance: &Appearance) -> Box<dyn Element> {
         let title = appearance
             .ui_builder()
-            .paragraph("Customize your Derp")
+            .paragraph("Customize your Bork")
             .with_style(UiComponentStyles {
                 font_size: Some(36.),
                 font_weight: Some(Weight::Medium),
@@ -316,18 +316,18 @@ impl CustomizeUISlide {
             });
 
             chips.push(ChipSpec {
-                label: "Derp Drive",
-                is_enabled: ui.show_derp_drive,
-                mouse_state: self.chip_derp_drive_mouse.clone(),
+                label: "Bork Drive",
+                is_enabled: ui.show_bork_drive,
+                mouse_state: self.chip_bork_drive_mouse.clone(),
                 on_click: Box::new(|ctx, _, _| {
                     ctx.dispatch_typed_action(CustomizeSlideAction::ToggleToolsSubSetting {
-                        setting: ToolsPanelSubSetting::DerpDrive,
+                        setting: ToolsPanelSubSetting::BorkDrive,
                     });
                 }),
                 on_hover: Some(Box::new(|is_hovered, ctx, _, _| {
                     if is_hovered {
                         ctx.dispatch_typed_action(CustomizeSlideAction::HoverToolsChip {
-                            setting: ToolsPanelSubSetting::DerpDrive,
+                            setting: ToolsPanelSubSetting::BorkDrive,
                         });
                     }
                 })),
@@ -465,8 +465,8 @@ impl CustomizeUISlide {
         "async/png/onboarding/agent_intention/customize_fileexplorer_horizontal.png",
         "async/png/onboarding/agent_intention/customize_filesearch_vertical.png",
         "async/png/onboarding/agent_intention/customize_filesearch_horizontal.png",
-        "async/png/onboarding/agent_intention/customize_derpdrive_vertical.png",
-        "async/png/onboarding/agent_intention/customize_derpdrive_horizontal.png",
+        "async/png/onboarding/agent_intention/customize_borkdrive_vertical.png",
+        "async/png/onboarding/agent_intention/customize_borkdrive_horizontal.png",
         "async/png/onboarding/agent_intention/customize_codereview_enabled_vertical.png",
         "async/png/onboarding/agent_intention/customize_codereview_enabled_horizontal.png",
         "async/png/onboarding/agent_intention/customize_codereview_disabled_vertical.png",
@@ -478,14 +478,14 @@ impl CustomizeUISlide {
         "async/png/onboarding/terminal_intention/terminal_customize_fileexplorer_horizontal.png",
         "async/png/onboarding/terminal_intention/terminal_customize_filesearch_vertical.png",
         "async/png/onboarding/terminal_intention/terminal_customize_filesearch_horizontal.png",
-        "async/png/onboarding/terminal_intention/terminal_customize_derpdrive_vertical.png",
-        "async/png/onboarding/terminal_intention/terminal_customize_derpdrive_horizontal.png",
+        "async/png/onboarding/terminal_intention/terminal_customize_borkdrive_vertical.png",
+        "async/png/onboarding/terminal_intention/terminal_customize_borkdrive_horizontal.png",
         "async/png/onboarding/terminal_intention/terminal_codereview_enabled.png",
         "async/png/onboarding/terminal_intention/terminal_codereview_disabled.png",
     ];
 
     /// Returns the image path for the current visual state.
-    /// When `OpenDerpNewSettingsModes` is enabled, assets depend on the tab layout setting.
+    /// When `OpenBorkNewSettingsModes` is enabled, assets depend on the tab layout setting.
     fn visual_image_path(
         selected_setting: Option<SettingCard>,
         hovered_chip: Option<ToolsPanelSubSetting>,
@@ -546,8 +546,8 @@ impl CustomizeUISlide {
                             (ToolsPanelSubSetting::ProjectExplorer, false) => "async/png/onboarding/agent_intention/customize_fileexplorer_horizontal.png",
                             (ToolsPanelSubSetting::GlobalSearch, true) => "async/png/onboarding/agent_intention/customize_filesearch_vertical.png",
                             (ToolsPanelSubSetting::GlobalSearch, false) => "async/png/onboarding/agent_intention/customize_filesearch_horizontal.png",
-                            (ToolsPanelSubSetting::DerpDrive, true) => "async/png/onboarding/agent_intention/customize_derpdrive_vertical.png",
-                            (ToolsPanelSubSetting::DerpDrive, false) => "async/png/onboarding/agent_intention/customize_derpdrive_horizontal.png",
+                            (ToolsPanelSubSetting::BorkDrive, true) => "async/png/onboarding/agent_intention/customize_borkdrive_vertical.png",
+                            (ToolsPanelSubSetting::BorkDrive, false) => "async/png/onboarding/agent_intention/customize_borkdrive_horizontal.png",
                         }
                     } else {
                         // Terminal: no conversation chip; ConversationHistory falls through to file explorer.
@@ -556,8 +556,8 @@ impl CustomizeUISlide {
                             (ToolsPanelSubSetting::ConversationHistory | ToolsPanelSubSetting::ProjectExplorer, false) => "async/png/onboarding/terminal_intention/terminal_customize_fileexplorer_horizontal.png",
                             (ToolsPanelSubSetting::GlobalSearch, true) => "async/png/onboarding/terminal_intention/terminal_customize_filesearch_vertical.png",
                             (ToolsPanelSubSetting::GlobalSearch, false) => "async/png/onboarding/terminal_intention/terminal_customize_filesearch_horizontal.png",
-                            (ToolsPanelSubSetting::DerpDrive, true) => "async/png/onboarding/terminal_intention/terminal_customize_derpdrive_vertical.png",
-                            (ToolsPanelSubSetting::DerpDrive, false) => "async/png/onboarding/terminal_intention/terminal_customize_derpdrive_horizontal.png",
+                            (ToolsPanelSubSetting::BorkDrive, true) => "async/png/onboarding/terminal_intention/terminal_customize_borkdrive_vertical.png",
+                            (ToolsPanelSubSetting::BorkDrive, false) => "async/png/onboarding/terminal_intention/terminal_customize_borkdrive_horizontal.png",
                         }
                     }
                 }
@@ -587,7 +587,7 @@ impl CustomizeUISlide {
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
 
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             let path =
                 Self::visual_image_path(self.selected_setting, self.hovered_chip, intention, ui);
             let fg_layout = match self.selected_setting {
@@ -786,9 +786,9 @@ impl TypedActionView for CustomizeUISlide {
                             let current = model.ui_customization().show_global_search;
                             model.set_show_global_search(!current, ctx);
                         }
-                        ToolsPanelSubSetting::DerpDrive => {
-                            let current = model.ui_customization().show_derp_drive;
-                            model.set_show_derp_drive(!current, ctx);
+                        ToolsPanelSubSetting::BorkDrive => {
+                            let current = model.ui_customization().show_bork_drive;
+                            model.set_show_bork_drive(!current, ctx);
                         }
                     });
                 ctx.notify();

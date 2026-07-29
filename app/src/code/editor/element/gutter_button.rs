@@ -1,10 +1,10 @@
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::contrast::MinimumAllowedContrast;
-use derp_core::ui::color::ContrastingColor;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::Fill;
-use derp_core::ui::Icon;
-use derpui::elements::MouseState;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::contrast::MinimumAllowedContrast;
+use bork_core::ui::color::ContrastingColor;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::Fill;
+use bork_core::ui::Icon;
+use borkui::elements::MouseState;
 
 use crate::view_components::action_button::{
     ActionButtonTheme, DisabledSecondaryTheme, SecondaryTheme,

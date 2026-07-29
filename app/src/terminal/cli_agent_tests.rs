@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use chrono::Local;
 use smol_str::SmolStr;
-use derp_editor::render::model::LineCount;
-use derp_util::path::EscapeChar;
-use derpui::App;
+use bork_editor::render::model::LineCount;
+use bork_util::path::EscapeChar;
+use borkui::App;
 
 use super::{
     build_diff_hunk_prompt, build_review_prompt, build_selection_line_range_prompt,

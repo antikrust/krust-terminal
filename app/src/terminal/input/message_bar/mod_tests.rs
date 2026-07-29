@@ -1,6 +1,6 @@
-use derp_core::ui::Icon;
-use derpui::assets::asset_cache::AssetSource;
-use derpui::elements::MouseStateHandle;
+use bork_core::ui::Icon;
+use borkui::assets::asset_cache::AssetSource;
+use borkui::elements::MouseStateHandle;
 
 use super::{ChipHorizontalAlignment, MessageItem};
 

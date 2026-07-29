@@ -1,21 +1,21 @@
-use derp::cmd_or_ctrl_shift;
-use derp::features::FeatureFlag;
-use derp::integration_testing::command_palette::open_command_palette_and_run_action;
-use derp::integration_testing::notebook::{
+use bork::cmd_or_ctrl_shift;
+use bork::features::FeatureFlag;
+use bork::integration_testing::command_palette::open_command_palette_and_run_action;
+use bork::integration_testing::notebook::{
     assert_notebook_contents, assert_notebook_id, assert_notebook_not_open, assert_notebook_open,
-    assert_open_in_derp_banner_open, create_a_personal_notebook,
+    assert_open_in_bork_banner_open, create_a_personal_notebook,
     enter_notebook_edit_mode_and_set_markdown, move_notebook_cursor_to_offset, open_notebook,
 };
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::tab::{assert_pane_title, assert_tab_title};
-use derp::integration_testing::terminal::util::ExpectedExitStatus;
-use derp::integration_testing::terminal::{
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::tab::{assert_pane_title, assert_tab_title};
+use bork::integration_testing::terminal::util::ExpectedExitStatus;
+use bork::integration_testing::terminal::{
     assert_single_terminal_in_tab_bootstrapped, execute_command_for_single_terminal_in_tab,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::terminal_view;
-use derp::integration_testing::window::{add_and_save_window, close_window, save_active_window_id};
-use derpui_core::integration::TestStep;
+use bork::integration_testing::view_getters::terminal_view;
+use bork::integration_testing::window::{add_and_save_window, close_window, save_active_window_id};
+use borkui_core::integration::TestStep;
 
 use super::{new_builder, Builder};
 
@@ -143,7 +143,7 @@ pub fn test_close_notebook_window() -> Builder {
         )
 }
 
-pub fn test_open_in_derp_banner() -> Builder {
+pub fn test_open_in_bork_banner() -> Builder {
     new_builder()
         .with_setup(|utils| {
             std::fs::write(utils.test_dir().join("README.md"), "# Hello, world!")
@@ -157,13 +157,13 @@ pub fn test_open_in_derp_banner() -> Builder {
                 ExpectedExitStatus::Success,
                 (),
             )
-            .add_assertion(assert_open_in_derp_banner_open(0, 0)),
+            .add_assertion(assert_open_in_bork_banner_open(0, 0)),
         )
         .with_step(
-            new_step_with_default_assertions("Click Open in Derp banner")
+            new_step_with_default_assertions("Click Open in Bork banner")
                 .with_click_on_saved_position_fn(|app, window_id| {
                     let view = terminal_view(app, window_id, 0, 0);
-                    format!("open_in_derp_banner_button_{}", view.id())
+                    format!("open_in_bork_banner_button_{}", view.id())
                 }),
         )
         .with_step(

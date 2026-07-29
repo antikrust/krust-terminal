@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::Icon;
+use borkui::elements::{
     Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex,
     MainAxisAlignment, ParentElement as _, Radius, Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{BorderStyle, Coords, UiComponent as _, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{BorderStyle, Coords, UiComponent as _, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -158,7 +158,7 @@ impl View for GlowingEditor {
         let agent_icon = Container::new(
             ConstrainedBox::new(
                 Icon::AgentMode
-                    .to_derpui_icon(theme.sub_text_color(theme.background()))
+                    .to_borkui_icon(theme.sub_text_color(theme.background()))
                     .finish(),
             )
             .with_height(font_size)

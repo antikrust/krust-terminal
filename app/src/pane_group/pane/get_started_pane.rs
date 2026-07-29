@@ -1,4 +1,4 @@
-use derpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
+use borkui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use super::PaneId;
 use crate::app_state::LeafContents;

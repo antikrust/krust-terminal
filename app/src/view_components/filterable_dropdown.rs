@@ -1,17 +1,17 @@
 use std::marker::PhantomData;
 
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, DispatchEventResult, Element, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Shrinkable,
     Stack,
 };
-use derpui::geometry::vector::vec2f;
-use derpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::geometry::vector::vec2f;
+use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, BlurContext, Entity, FocusContext, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -496,7 +496,7 @@ where
                     TextAndIconAlignment::TextFirst,
                     selected_item_text,
                     icons::Icon::ChevronDown
-                        .to_derpui_icon(appearance.theme().active_ui_text_color()),
+                        .to_borkui_icon(appearance.theme().active_ui_text_color()),
                     self.main_axis_size,
                     MainAxisAlignment::SpaceBetween,
                     vec2f(15., 15.),
@@ -555,7 +555,7 @@ where
 
         let search_icon = ConstrainedBox::new(
             icons::Icon::SearchSmall
-                .to_derpui_icon(appearance.theme().active_ui_text_color())
+                .to_borkui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_width(12.)

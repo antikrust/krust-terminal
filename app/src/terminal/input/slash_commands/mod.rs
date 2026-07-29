@@ -13,16 +13,16 @@ pub use data_source::*;
 pub use mixer::{build_slash_command_mixer, slash_command_query, SlashCommandMixer};
 pub use view::{CloseReason, InlineSlashCommandView, SlashCommandsEvent};
 #[cfg(not(target_family = "wasm"))]
-use derp_cli::agent::Harness;
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::AnsiColorIdentifier;
-use derp_errors::report_error;
+use bork_cli::agent::Harness;
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::AnsiColorIdentifier;
+use bork_errors::report_error;
 #[cfg(feature = "local_fs")]
-use derp_util::path::{CleanPathResult, LineAndColumnArg};
-use derpui::clipboard::ClipboardContent;
-use derpui::{AppContext, SingletonEntity, ViewContext};
+use bork_util::path::{CleanPathResult, LineAndColumnArg};
+use borkui::clipboard::ClipboardContent;
+use borkui::{AppContext, SingletonEntity, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 #[cfg(not(target_family = "wasm"))]
@@ -441,7 +441,7 @@ impl Input {
 
                 self.show_workflows_info_box_on_workflow_selection(
                     WorkflowType::Cloud(Box::new(workflow)),
-                    WorkflowSource::DerpAI,
+                    WorkflowSource::BorkAI,
                     WorkflowSelectionSource::SlashMenu,
                     None,
                     ctx,
@@ -755,7 +755,7 @@ impl Input {
                             Ok(metadata) if metadata.is_file() => {
                                 use crate::util::file::external_editor;
 
-                                ctx.dispatch_typed_action(&TerminalAction::OpenCodeInDerp {
+                                ctx.dispatch_typed_action(&TerminalAction::OpenCodeInBork {
                                     path: file_path,
                                     layout: external_editor::settings::EditorLayout::SplitPane,
                                     line_col,

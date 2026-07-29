@@ -32,7 +32,7 @@ mutation CreateTeam($input: CreateTeamInput!, $request_context: RequestContext!)
           tier {
             name
             description
-            derpAiPolicy {
+            borkAiPolicy {
               limit
               isCodeSuggestionsToggleable
               isPromptSuggestionsToggleable

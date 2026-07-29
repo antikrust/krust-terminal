@@ -2,22 +2,22 @@ use std::borrow::Cow;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::blend::Blend as _;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::blend::Blend as _;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::Icon;
+use borkui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Expanded,
     Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Radius, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::EditableBinding;
-use derpui::platform::file_picker::FilePickerError;
-use derpui::platform::{Cursor, FilePickerConfiguration};
-use derpui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::EditableBinding;
+use borkui::platform::file_picker::FilePickerError;
+use borkui::platform::{Cursor, FilePickerConfiguration};
+use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
 };
 
@@ -26,7 +26,7 @@ use crate::util::bindings::{keybinding_name_to_display_string, BindingGroup, Cus
 const BUTTON_MIN_WIDTH: f32 = 149.;
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -108,7 +108,7 @@ impl ProjectButtons {
 
         Hoverable::new(mouse_state, move |state| {
             let icon_el = Container::new(
-                ConstrainedBox::new(icon.to_derpui_icon(icon_color).finish())
+                ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
                     .with_height(20.)
                     .with_width(20.)
                     .finish(),

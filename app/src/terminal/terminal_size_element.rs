@@ -1,11 +1,11 @@
 use std::any::Any;
 
 use async_channel::Sender;
-use derpui::elements::Point;
-use derpui::event::DispatchedEvent;
-use derpui::geometry::rect::RectF;
-use derpui::geometry::vector::Vector2F;
-use derpui::{
+use borkui::elements::Point;
+use borkui::event::DispatchedEvent;
+use borkui::geometry::rect::RectF;
+use borkui::geometry::vector::Vector2F;
+use borkui::{
     AfterLayoutContext, AppContext, Element, Event, EventContext, LayoutContext, PaintContext,
     SizeConstraint,
 };

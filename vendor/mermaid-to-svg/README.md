@@ -129,4 +129,4 @@ MIT — see [LICENSE](LICENSE).
 This project includes code derived from mermaid.js, dagre.js, and dagre_rust.
 See [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) for details.
 
-Derp requires contributors to sign a contributor license agreement (CLA) before their contributions can be merged. You can read and sign our CLA at https://cla.derp.baby.
+Bork requires contributors to sign a contributor license agreement (CLA) before their contributions can be merged. You can read and sign our CLA at https://cla.bork.baby.

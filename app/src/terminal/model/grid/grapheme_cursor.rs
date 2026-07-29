@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
-use derp_terminal::model::grid::cell::{self, Cell};
-use derp_terminal::model::grid::row::Row;
-use derp_terminal::model::grid::CellType;
+use bork_terminal::model::grid::cell::{self, Cell};
+use bork_terminal::model::grid::row::Row;
+use bork_terminal::model::grid::CellType;
 
 use super::grid_handler::GridHandler;
 use super::{CursorDirection, CursorState, Dimensions as _};

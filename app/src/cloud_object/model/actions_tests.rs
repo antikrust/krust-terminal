@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use derpui::App;
+use borkui::App;
 
 use super::{ObjectAction, ObjectActionSubtype, ObjectActionType, ObjectActions};
 

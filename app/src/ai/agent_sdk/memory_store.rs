@@ -1,14 +1,14 @@
 use anyhow::Result;
 use comfy_table::Cell;
 use serde::Serialize;
-use derp_cli::agent::OutputFormat;
-use derp_cli::memory_store::{
+use bork_cli::agent::OutputFormat;
+use bork_cli::memory_store::{
     CreateMemoryArgs, DeleteMemoryArgs, GetStoreArgs, ListMemoriesArgs, ListStoreAgentsArgs,
     ListVersionsArgs, MemoryCommand, MemoryStoreCommand, UpdateMemoryArgs, UpdateStoreArgs,
 };
-use derp_cli::GlobalOptions;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::GlobalOptions;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::server::server_api::ai::{
@@ -313,7 +313,7 @@ impl MemoryStoreCommandRunner {
     }
 }
 
-impl derpui::Entity for MemoryStoreCommandRunner {
+impl borkui::Entity for MemoryStoreCommandRunner {
     type Event = ();
 }
 

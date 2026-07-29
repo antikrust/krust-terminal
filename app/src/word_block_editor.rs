@@ -1,12 +1,12 @@
 use pathfinder_color::ColorU;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Wrap, WrapFill,
 };
-use derpui::fonts::FamilyId;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::FamilyId;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

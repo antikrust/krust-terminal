@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use string_offset::CharOffset;
-use derpui_core::text::TuiGridPoint;
+use borkui_core::text::TuiGridPoint;
 
 use super::super::{CharCellState, CharCellTemporaryBlock, LineCount};
 use super::{DisplayRow, DisplayRowKind};

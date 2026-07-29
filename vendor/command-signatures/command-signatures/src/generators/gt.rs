@@ -1,4 +1,4 @@
-use derp_completion_metadata::CommandSignatureGenerators;
+use bork_completion_metadata::CommandSignatureGenerators;
 
 use super::git::{commits_generator, local_branches_generator};
 

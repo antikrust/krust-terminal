@@ -1,4 +1,4 @@
-use derp_completion_metadata::CommandSignatureGenerators;
+use bork_completion_metadata::CommandSignatureGenerators;
 
 use crate::generators::common::{dependencies_generator, get_scripts_generator};
 

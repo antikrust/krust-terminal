@@ -1,6 +1,6 @@
-use derpui_core::elements::{CornerRadius, Radius};
-use derpui_core::geometry::rect::RectF;
-use derpui_core::geometry::vector::{Vector2F, vec2f};
+use borkui_core::elements::{CornerRadius, Radius};
+use borkui_core::geometry::rect::RectF;
+use borkui_core::geometry::vector::{Vector2F, vec2f};
 
 use super::{RenderContext, RenderableBlock};
 use crate::extract_block;
@@ -69,8 +69,8 @@ impl RenderableBlock for HorizontalRule {
     fn layout(
         &mut self,
         _model: &RenderState,
-        _ctx: &mut derpui_core::LayoutContext,
-        _app: &derpui_core::AppContext,
+        _ctx: &mut borkui_core::LayoutContext,
+        _app: &borkui_core::AppContext,
     ) {
     }
 
@@ -78,7 +78,7 @@ impl RenderableBlock for HorizontalRule {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        _app: &derpui_core::AppContext,
+        _app: &borkui_core::AppContext,
     ) {
         let content = model.content();
         let horizontal_rule = extract_block!(self.viewport_item, content, (block, BlockItem::HorizontalRule(rule)) => block.horizontal_rule(rule));

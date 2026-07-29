@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use chrono::TimeZone;
-use derpui::{AppContext, EntityId, SingletonEntity, WindowId};
+use borkui::{AppContext, EntityId, SingletonEntity, WindowId};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};

@@ -1,1 +1,1 @@
-pub use derp_core::interval_timer::IntervalTimer;
+pub use bork_core::interval_timer::IntervalTimer;

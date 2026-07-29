@@ -1,7 +1,7 @@
 # Product Spec: Filtering and JSON output for `oz run list` and `oz run get`
 
-Linear: [REMOTE-1374](https://linear.app/derpdotdev/issue/REMOTE-1374)
-Related customer report: [CSAT-8397](https://linear.app/derpdotdev/issue/CSAT-8397)
+Linear: [REMOTE-1374](https://linear.app/borkdotdev/issue/REMOTE-1374)
+Related customer report: [CSAT-8397](https://linear.app/borkdotdev/issue/CSAT-8397)
 Figma: none (CLI-only change)
 
 ## Summary

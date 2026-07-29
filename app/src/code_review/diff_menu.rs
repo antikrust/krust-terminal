@@ -3,19 +3,19 @@
 use std::cmp;
 
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
-use derp_core::ui::theme::Fill;
-use derp_editor::editor::NavigationKey;
-use derpui::color::ColorU;
-use derpui::elements::{
+use bork_core::ui::theme::Fill;
+use bork_editor::editor::NavigationKey;
+use borkui::color::ColorU;
+use borkui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss,
     DispatchEventResult, DropShadow, Element, Empty, EventHandler, Flex, Highlight, MainAxisSize,
     MouseInBehavior, ParentElement, Radius, ScrollStateHandle, Scrollable, ScrollableElement,
     ScrollbarWidth, Text, UniformList, UniformListState,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::FixedBinding;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::FixedBinding;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     id, AppContext, Entity, FocusContext, SingletonEntity as _, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -331,7 +331,7 @@ impl CodeReviewDiffMenu {
 
                         let check_slot: Box<dyn Element> = if target.is_selected {
                             ConstrainedBox::new(
-                                Icon::Check.to_derpui_icon(Fill::Solid(text_color)).finish(),
+                                Icon::Check.to_borkui_icon(Fill::Solid(text_color)).finish(),
                             )
                             .with_width(CHECK_SLOT_SIZE)
                             .with_height(CHECK_SLOT_SIZE)
@@ -412,7 +412,7 @@ impl CodeReviewDiffMenu {
             ScrollbarWidth::None,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .with_padding_end(0.)
         .with_padding_start(0.);

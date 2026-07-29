@@ -2,13 +2,13 @@ use std::time::Duration;
 
 use instant::Instant;
 use session_sharing_protocol::common::SessionId;
-use derp_cli::agent::Harness;
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_errors::report_error;
-use derp_terminal::model::BlockId;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use bork_cli::agent::Harness;
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_errors::report_error;
+use bork_terminal::model::BlockId;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::AmbientAgentProgressUIState;
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -67,7 +67,7 @@ const HANDOFF_APPLY_SNAPSHOT_PROMPT: &str = "Apply the workspace changes from my
 
 /// Cloud `config.model_id` fallback slug used when the pane's active Oz model
 /// is not cloud-runnable (e.g. a custom-endpoint/BYOK model or local custom
-/// router). `auto` defers to Derp's automatic server-side model selection.
+/// router). `auto` defers to Bork's automatic server-side model selection.
 const CLOUD_FALLBACK_OZ_MODEL_ID: &str = "auto";
 
 /// Tracks progress timestamps for each step during ambient agent spawning.
@@ -307,7 +307,7 @@ impl AmbientAgentViewModel {
             }
         });
 
-        // Validate the default environment once Derp Drive sync completes.
+        // Validate the default environment once Bork Drive sync completes.
         // The environment ID may be restored from settings before environments are synced,
         // so we need to validate it once the initial load is complete.
         let initial_load_complete = UpdateManager::as_ref(ctx).initial_load_complete();
@@ -318,7 +318,7 @@ impl AmbientAgentViewModel {
         let ui_state = AmbientAgentProgressUIState::new(ctx);
 
         // This fork defaults the terminal agent to the local Claude Code harness
-        // (Oz, the upstream default, requires a Derp account and 401s here).
+        // (Oz, the upstream default, requires a Bork account and 401s here).
         let harness = Harness::Claude;
         let availability = HarnessAvailabilityModel::as_ref(ctx);
         // If the default harness is not available, find the first available one.
@@ -462,7 +462,7 @@ impl AmbientAgentViewModel {
         }
     }
 
-    /// Validates the environment ID after Derp Drive initial load completes.
+    /// Validates the environment ID after Bork Drive initial load completes.
     /// If the environment no longer exists, clears the selection.
     fn validate_environment_after_initial_load(&mut self, ctx: &mut ModelContext<Self>) {
         if let Some(id) = &self.environment_id {
@@ -1023,7 +1023,7 @@ impl AmbientAgentViewModel {
 
     /// Applies the run configuration for an existing shared ambient session.
     ///
-    /// Viewed sessions can join before Derp Drive has loaded the referenced environment object,
+    /// Viewed sessions can join before Bork Drive has loaded the referenced environment object,
     /// especially on web. Preserve the server-provided environment ID anyway so the selector does
     /// not fall back to an unrelated default while waiting for the environment object to arrive.
     fn apply_viewed_task_config_snapshot(
@@ -1185,7 +1185,7 @@ impl AmbientAgentViewModel {
     /// Builds the default `AgentConfigSnapshot` for spawning a cloud agent from this pane.
     ///
     /// Reads the user's preferred model, computer-use autonomy, optional self-hosted
-    /// host (`DERP_CLOUD_MODE_DEFAULT_HOST`), and the pane's currently-selected env
+    /// host (`BORK_CLOUD_MODE_DEFAULT_HOST`), and the pane's currently-selected env
     /// and harness. Shared by `spawn_agent` and the local-to-cloud handoff path so
     /// both flows route to the same worker host and inherit the same defaults.
     pub(crate) fn build_default_spawn_config(&self, ctx: &AppContext) -> AgentConfigSnapshot {

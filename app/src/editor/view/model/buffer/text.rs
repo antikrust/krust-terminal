@@ -7,8 +7,8 @@ use arrayvec::ArrayVec;
 use num_traits::SaturatingSub;
 use string_offset::{ByteOffset, CharOffset};
 use sum_tree::{self, SeekBias, SumTree};
-use derpui::text::point::Point;
-use derpui::text_layout::TextStyle;
+use borkui::text::point::Point;
+use borkui::text_layout::TextStyle;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Run {

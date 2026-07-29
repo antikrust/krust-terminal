@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use derpui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use borkui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use crate::ai::facts::AIFactView;
 use crate::pane_group::{AIFactPane, PaneContent};

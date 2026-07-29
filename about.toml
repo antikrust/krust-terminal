@@ -33,7 +33,7 @@ workarounds = [
     "rustls",
 ]
 
-# These are Derp's own private crates, sourced via git from the derpdotdev
+# These are Bork's own private crates, sourced via git from the borkdotdev
 # organization. They are not part of this workspace and do not have explicit
 # licenses yet (they will be open-sourced soon). cargo-about will skip them
 # during generation. Once they are open-sourced and have license fields, they
@@ -43,7 +43,7 @@ workarounds = [
 # Excluded crates (same as deny.toml exceptions):
 #   - command-corrections
 #   - session-sharing-protocol
-#   - derp-command-signatures
-#   - derp-completion-metadata
-#   - derp-workflows
-#   - derp-workflows-types
+#   - bork-command-signatures
+#   - bork-completion-metadata
+#   - bork-workflows
+#   - bork-workflows-types

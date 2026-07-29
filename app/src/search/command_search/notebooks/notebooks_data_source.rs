@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use futures_lite::future::yield_now;
-use derpui::{AppContext, SingletonEntity};
+use borkui::{AppContext, SingletonEntity};
 
 use super::NotebookSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;

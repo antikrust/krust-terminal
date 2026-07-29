@@ -14,7 +14,7 @@ fn observes_synthetic_recording_exit() {
 #[test]
 fn removes_unclaimed_output_when_handle_is_dropped() {
     let path =
-        std::env::temp_dir().join(format!("derp-recording-drop-test-{}", std::process::id()));
+        std::env::temp_dir().join(format!("bork-recording-drop-test-{}", std::process::id()));
     std::fs::write(&path, b"video").unwrap();
     let handle = RecordingHandle {
         width: 1,

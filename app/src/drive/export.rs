@@ -10,11 +10,11 @@ use aho_corasick::{AhoCorasick, MatchKind};
 use anyhow::{anyhow, Context};
 #[cfg(feature = "local_fs")]
 use futures::AsyncWriteExt;
-use derp_util::path::ShellFamily;
-use derpui::platform::file_picker::FilePickerError;
-use derpui::platform::{FilePickerConfiguration, OperatingSystem};
-use derpui::r#async::SpawnedFutureHandle;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use bork_util::path::ShellFamily;
+use borkui::platform::file_picker::FilePickerError;
+use borkui::platform::{FilePickerConfiguration, OperatingSystem};
+use borkui::r#async::SpawnedFutureHandle;
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 use super::CloudObjectTypeAndId;
 #[cfg(feature = "local_fs")]
@@ -35,7 +35,7 @@ use crate::{
     workspace::WorkspaceAction,
 };
 
-/// Singleton model for exporting from Derp Drive.
+/// Singleton model for exporting from Bork Drive.
 pub struct ExportManager {
     exports: HashMap<ExportId, Export>,
 }
@@ -58,7 +58,7 @@ pub enum ExportEvent {
     Completed { id: ExportId, path: PathBuf },
 }
 
-/// A single Derp Drive export.
+/// A single Bork Drive export.
 struct Export {
     /// The ID of the window that started this export, for showing toasts.
     window_id: WindowId,
@@ -480,7 +480,7 @@ impl ExportManager {
         ctx: &mut ModelContext<Self>,
     ) {
         let id = *export.key();
-        // Don't send the error to Sentry, since it likely includes a user file path and their Derp
+        // Don't send the error to Sentry, since it likely includes a user file path and their Bork
         // Drive object name. Also don't report this as an error, since the most likely failure
         // reason is an I/O issue on the user's machine (like being out of disk space, or exporting
         // to a directory they can't write to).

@@ -1,9 +1,9 @@
-pkgname=derp-terminal@@CHANNEL_SUFFIX@@
+pkgname=bork-terminal@@CHANNEL_SUFFIX@@
 pkgver=@@VERSION@@
 pkgrel=@@RELEASE@@
-pkgdesc="Derp, the Rust-based terminal for developers and teams"
+pkgdesc="Bork, the Rust-based terminal for developers and teams"
 arch=('@@ARCH@@')
-url="https://derp.baby"
+url="https://bork.baby"
 license=('custom')
 depends=(
 	'curl'

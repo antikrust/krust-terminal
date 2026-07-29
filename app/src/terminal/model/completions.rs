@@ -1,4 +1,4 @@
-use derp_completer::completer::{Match, MatchedSuggestion, Suggestion, SuggestionType};
+use bork_completer::completer::{Match, MatchedSuggestion, Suggestion, SuggestionType};
 
 /// The completions data coming from the shell.
 ///

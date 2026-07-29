@@ -6,9 +6,9 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use pathfinder_color::ColorU;
 use serde::Deserialize;
-use derp_core::ui::color::hex_color::coloru_from_hex_string;
-use derp_core::ui::theme::{AnsiColor, AnsiColors, TerminalColors, DerpTheme};
-use derpui::fonts::FontInfo;
+use bork_core::ui::color::hex_color::coloru_from_hex_string;
+use bork_core::ui::theme::{AnsiColor, AnsiColors, TerminalColors, BorkTheme};
+use borkui::fonts::FontInfo;
 
 use super::config::{
     calculate_accent_color, Config, ConfigError, ImportableSetting, ParseableConfig, SettingType,
@@ -290,7 +290,7 @@ impl AlacrittyTheme {
         } else {
             let bright = terminal_colors.bright;
             let accent = calculate_accent_color(background, foreground, cursor_color, bright);
-            Ok(ThemeType::Single(DerpTheme::new(
+            Ok(ThemeType::Single(BorkTheme::new(
                 background.into(),
                 foreground.into(),
                 accent.into(),
@@ -305,7 +305,7 @@ impl AlacrittyTheme {
 }
 
 impl AlacrittyColors {
-    /// Returns terminal colors with Derp's default colors substituted in for any
+    /// Returns terminal colors with Bork's default colors substituted in for any
     /// missing terminal colors.
     fn into_ansi_with_default(self, default: AnsiColors) -> Result<AnsiColors, ThemeError> {
         Ok(AnsiColors {

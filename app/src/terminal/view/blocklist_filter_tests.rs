@@ -1,4 +1,4 @@
-use derp_multi_agent_api as api;
+use bork_multi_agent_api as api;
 
 use super::{exchanges_for_blocklist, should_show_task_in_blocklist};
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
@@ -34,15 +34,15 @@ fn create_restored_conversation(
 }
 
 #[test]
-fn test_should_show_task_in_blocklist_hides_derp_docs_subagent_task() {
+fn test_should_show_task_in_blocklist_hides_bork_docs_subagent_task() {
     let conversation = create_restored_conversation(
-        api::message::tool_call::subagent::Metadata::DerpDocumentationSearch(()),
+        api::message::tool_call::subagent::Metadata::BorkDocumentationSearch(()),
     );
 
     let subtask = conversation
         .all_tasks()
-        .find(|task| task.is_derp_documentation_search_subagent())
-        .expect("derp docs subagent task should exist");
+        .find(|task| task.is_bork_documentation_search_subagent())
+        .expect("bork docs subagent task should exist");
 
     assert!(!should_show_task_in_blocklist(subtask));
 }
@@ -62,9 +62,9 @@ fn test_should_show_task_in_blocklist_hides_conversation_search_subagent_task() 
 }
 
 #[test]
-fn test_exchanges_for_blocklist_excludes_derp_docs_subagent_exchanges() {
+fn test_exchanges_for_blocklist_excludes_bork_docs_subagent_exchanges() {
     let conversation = create_restored_conversation(
-        api::message::tool_call::subagent::Metadata::DerpDocumentationSearch(()),
+        api::message::tool_call::subagent::Metadata::BorkDocumentationSearch(()),
     );
 
     let exchanges = exchanges_for_blocklist(&conversation);

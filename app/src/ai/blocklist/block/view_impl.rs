@@ -35,24 +35,24 @@ use common::get_highlight_ranges_for_find_matches;
 use itertools::Itertools;
 use pathfinder_color::ColorU;
 use settings::Setting as _;
-use derp_core::features::FeatureFlag;
-use derp_core::semantic_selection::SemanticSelection;
-use derp_core::ui::color::contrast::{
+use bork_core::features::FeatureFlag;
+use bork_core::semantic_selection::SemanticSelection;
+use bork_core::ui::color::contrast::{
     foreground_color_with_minimum_contrast, MinimumAllowedContrast,
 };
-use derp_core::ui::color::Rgb;
-use derp_core::ui::theme::{Fill, DerpTheme};
-use derpui::elements::{
+use bork_core::ui::color::Rgb;
+use bork_core::ui::theme::{Fill, BorkTheme};
+use borkui::elements::{
     Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, FormattedTextElement, Highlight, HighlightedRange, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, SavePosition,
     SelectableArea, Text,
 };
-use derpui::fonts::Properties;
-use derpui::platform::Cursor;
-use derpui::text_layout::TextStyle;
-use derpui::ui_components::components::UiComponent;
-use derpui::{AppContext, Element, SingletonEntity, View, ViewContext};
+use borkui::fonts::Properties;
+use borkui::platform::Cursor;
+use borkui::text_layout::TextStyle;
+use borkui::ui_components::components::UiComponent;
+use borkui::{AppContext, Element, SingletonEntity, View, ViewContext};
 
 use super::secret_redaction::SecretRedactionState;
 use super::{
@@ -93,7 +93,7 @@ use crate::workspace::WorkspaceAction;
 fn create_secret_gray_highlight() -> Highlight {
     Highlight::new().with_text_style(
         TextStyle::new()
-            .with_foreground_color(derpui::color::ColorU::new(128, 128, 128, 255))
+            .with_foreground_color(borkui::color::ColorU::new(128, 128, 128, 255))
             .with_show_strikethrough(true),
     )
 }
@@ -132,7 +132,7 @@ fn add_slash_command_highlight(
 
         let current_properties = existing.properties();
         let mut bold_properties = current_properties;
-        bold_properties.weight = derpui::fonts::Weight::Bold;
+        bold_properties.weight = borkui::fonts::Weight::Bold;
 
         Highlight::new()
             .with_text_style(updated_style)
@@ -140,7 +140,7 @@ fn add_slash_command_highlight(
     } else {
         // Create new highlight with default properties and bold weight
         let default_properties = Properties {
-            weight: derpui::fonts::Weight::Bold,
+            weight: borkui::fonts::Weight::Bold,
             ..Default::default()
         };
         Highlight::new()
@@ -407,7 +407,7 @@ pub(crate) fn add_highlights_to_rich_text(
     find_context: Option<FindContext<'_>>,
     location_index: usize,
     line_count: usize,
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     is_selecting: bool,
     is_action: bool,
     app: &AppContext,
@@ -452,7 +452,7 @@ pub(crate) fn add_highlights_to_rich_text(
                     .detected_links
                     .iter()
                     .filter_map(|(range, link)| {
-                        // Stylings like [](https://example.com) would cause derp to panic. We need to filter that out.
+                        // Stylings like [](https://example.com) would cause bork to panic. We need to filter that out.
                         if range.is_empty() {
                             return None;
                         }
@@ -657,29 +657,29 @@ pub fn render_citation(
     let theme = appearance.theme();
 
     let (icon, name) = match citation {
-        AIAgentCitation::DerpDriveObject { uid } => {
+        AIAgentCitation::BorkDriveObject { uid } => {
             let item = CloudModel::as_ref(app)
                 .get_by_uid(uid)?
-                .to_derp_drive_item(appearance)?;
+                .to_bork_drive_item(appearance)?;
             (
                 item.icon(appearance, Some(theme.active_ui_text_color())),
                 item.display_name().unwrap_or(String::from("Untitled")),
             )
         }
-        AIAgentCitation::DerpDocumentation { .. } => {
-            let icon = Icon::Derp.to_derpui_icon(theme.foreground()).finish();
-            let name = String::from("Derp Docs");
+        AIAgentCitation::BorkDocumentation { .. } => {
+            let icon = Icon::Bork.to_borkui_icon(theme.foreground()).finish();
+            let name = String::from("Bork Docs");
             (Some(icon), name)
         }
         AIAgentCitation::WebPage { url } => {
             let icon = Icon::LinkExternal
-                .to_derpui_icon(theme.foreground())
+                .to_borkui_icon(theme.foreground())
                 .finish();
             let name = url.clone();
             (Some(icon), name)
         }
         AIAgentCitation::AgentMemory { content, .. } => {
-            let icon = Icon::Cognition.to_derpui_icon(theme.foreground()).finish();
+            let icon = Icon::Cognition.to_borkui_icon(theme.foreground()).finish();
             let name = if content.is_empty() {
                 String::from("Memory")
             } else {
@@ -736,7 +736,7 @@ pub fn render_citation(
 /// [`render_autonomy_checkbox_setting_speedbump_footer`].
 pub fn render_autonomy_dropdown_setting_speedbump_footer<A>(
     description: &'static str,
-    dropdown: &derpui::ViewHandle<crate::view_components::dropdown::Dropdown<A>>,
+    dropdown: &borkui::ViewHandle<crate::view_components::dropdown::Dropdown<A>>,
     settings_link_handle: MouseStateHandle,
     app: &AppContext,
 ) -> Box<dyn Element>
@@ -764,7 +764,7 @@ where
                 .finish(),
             )
             .with_child(
-                Container::new(derpui::elements::ChildView::new(dropdown).finish())
+                Container::new(borkui::elements::ChildView::new(dropdown).finish())
                     .with_margin_right(8.)
                     .finish(),
             )
@@ -856,7 +856,7 @@ pub fn render_autonomy_checkbox_setting_speedbump_footer(
                                 ctx.dispatch_typed_action(
                                     WorkspaceAction::ShowSettingsPageWithSearch {
                                         search_query: "Autonomy".to_string(),
-                                        section: Some(SettingsSection::DerpAgent),
+                                        section: Some(SettingsSection::BorkAgent),
                                     },
                                 );
                             })),
@@ -1260,13 +1260,13 @@ impl View for AIBlock {
         selectable.finish()
     }
 
-    fn on_focus(&mut self, focus_ctx: &derpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
         if focus_ctx.is_self_focused() {
             self.focus_subview_if_necessary(ctx);
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self

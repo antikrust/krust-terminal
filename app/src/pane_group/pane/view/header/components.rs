@@ -1,13 +1,13 @@
-use derp_core::ui::icons::ICON_DIMENSIONS;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{
+use bork_core::ui::icons::ICON_DIMENSIONS;
+use bork_core::ui::theme::Fill;
+use borkui::elements::{
     Align, Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
     Text,
 };
-use derpui::text_layout::ClipConfig;
-use derpui::ui_components::components::UiComponent;
-use derpui::Element;
+use borkui::text_layout::ClipConfig;
+use borkui::ui_components::components::UiComponent;
+use borkui::Element;
 
 use super::super::header_content::HeaderRenderContext;
 use super::{ActionPayload, PaneHeaderAction};

@@ -10,22 +10,22 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill, DerpTheme};
-use derp_core::ui::Icon;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill, BorkTheme};
+use bork_core::ui::Icon;
 #[cfg(feature = "local_fs")]
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derpui::elements::{
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use borkui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Dismiss, Empty, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, Padding, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect,
     Shrinkable, Stack,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakModelHandle,
 };
@@ -165,7 +165,7 @@ enum LSPServerRenderStatus {
 }
 
 impl LSPServerRenderStatus {
-    fn to_icon_color(&self, theme: &DerpTheme) -> ColorU {
+    fn to_icon_color(&self, theme: &BorkTheme) -> ColorU {
         match self {
             LSPServerRenderStatus::Available => AnsiColorIdentifier::Green
                 .to_ansi_color(&theme.terminal_colors().normal)
@@ -283,11 +283,11 @@ impl CodeFooterView {
         })
     }
 
-    fn render_tab_config_info_icon(theme: &DerpTheme) -> Box<dyn Element> {
+    fn render_tab_config_info_icon(theme: &BorkTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 Icon::Info
-                    .to_derpui_icon(theme.active_ui_text_color())
+                    .to_borkui_icon(theme.active_ui_text_color())
                     .finish(),
             )
             .with_width(12.)
@@ -1169,7 +1169,7 @@ impl CodeFooterView {
             mouse_states.open_logs.clone(),
             move || {
                 Icon::Code1
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Open logs",
@@ -1191,7 +1191,7 @@ impl CodeFooterView {
             mouse_states.restart_server.clone(),
             move || {
                 Icon::RefreshCcw
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Restart server",
@@ -1236,7 +1236,7 @@ impl CodeFooterView {
             mouse_states.start_server.clone(),
             move || {
                 Icon::Play
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Start server",
@@ -1258,7 +1258,7 @@ impl CodeFooterView {
             mouse_states.remove_server.clone(),
             move || {
                 Icon::Trash
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Remove server",
@@ -1281,7 +1281,7 @@ impl CodeFooterView {
             mouse_states.restart_all.clone(),
             move || {
                 Icon::RefreshCcw
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             if is_plural {
@@ -1337,7 +1337,7 @@ impl CodeFooterView {
             mouse_states.start_all.clone(),
             move || {
                 Icon::Play
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             if !is_plural {
@@ -1365,7 +1365,7 @@ impl CodeFooterView {
             mouse_states.manage_servers.clone(),
             move || {
                 Icon::Gear
-                    .to_derpui_icon(ThemeFill::Solid(text_color))
+                    .to_borkui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Manage servers",
@@ -1375,7 +1375,7 @@ impl CodeFooterView {
 
     /// Computes the aggregate indicator color across all tracked servers.
     /// Priority: Failed > Busy > Stopped > Available.
-    fn aggregate_indicator_color(&self, theme: &DerpTheme, app: &AppContext) -> ColorU {
+    fn aggregate_indicator_color(&self, theme: &BorkTheme, app: &AppContext) -> ColorU {
         if self.lsp_servers.is_empty() {
             return LSPServerRenderStatus::Stopped.to_icon_color(theme);
         }
@@ -1448,7 +1448,7 @@ impl CodeFooterView {
     }
 
     fn render_status_text(
-        theme: &DerpTheme,
+        theme: &BorkTheme,
         appearance: &Appearance,
         message: String,
     ) -> Box<dyn Element> {

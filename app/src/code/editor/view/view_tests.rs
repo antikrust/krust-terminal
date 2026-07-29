@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use derp_core::ui::appearance::Appearance;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_util::user_input::UserInput;
-use derpui::elements::new_scrollable::ScrollableAppearance;
-use derpui::elements::ScrollbarWidth;
-use derpui::platform::WindowStyle;
-use derpui::{App, TypedActionView, ViewHandle, WindowId};
+use bork_core::ui::appearance::Appearance;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_util::user_input::UserInput;
+use borkui::elements::new_scrollable::ScrollableAppearance;
+use borkui::elements::ScrollbarWidth;
+use borkui::platform::WindowStyle;
+use borkui::{App, TypedActionView, ViewHandle, WindowId};
 
 use super::{CodeEditorRenderOptions, CodeEditorView, CodeEditorViewAction};
 use crate::cloud_object::model::persistence::CloudModel;

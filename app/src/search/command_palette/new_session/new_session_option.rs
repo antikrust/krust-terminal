@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use derpui::Action;
+use borkui::Action;
 
 use crate::server::telemetry::AddTabWithShellSource;
 use crate::terminal::available_shells::AvailableShell;

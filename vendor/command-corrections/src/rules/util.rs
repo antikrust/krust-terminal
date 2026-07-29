@@ -291,24 +291,24 @@ mod test {
         let mut metadata = SessionMetadata::new();
 
         assert_eq!(
-            open_in_default_application(&metadata, "https://derp.baby"),
+            open_in_default_application(&metadata, "https://bork.baby"),
             None
         );
 
         metadata.set_executables(["open"]);
         assert_eq!(
-            open_in_default_application(&metadata, "https://derp.baby")
+            open_in_default_application(&metadata, "https://bork.baby")
                 .unwrap()
                 .to_command_string(&metadata.shell),
-            "open https://derp.baby"
+            "open https://bork.baby"
         );
 
         metadata.set_executables(["xdg-open"]);
         assert_eq!(
-            open_in_default_application(&metadata, "https://derp.baby")
+            open_in_default_application(&metadata, "https://bork.baby")
                 .unwrap()
                 .to_command_string(&metadata.shell),
-            "xdg-open https://derp.baby"
+            "xdg-open https://bork.baby"
         );
     }
 }

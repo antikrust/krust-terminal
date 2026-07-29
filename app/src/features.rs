@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use derp_core::channel::ChannelState;
-pub use derp_core::features::*;
+use bork_core::channel::ChannelState;
+pub use bork_core::features::*;
 
 /// Mark all features which should be enabled on the current channel as enabled.
 /// This sets global feature flag state and should never be called in a unit test.
@@ -122,8 +122,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::AutoupdateUIRevamp,
         #[cfg(all(not(windows), feature = "kitty_images"))]
         FeatureFlag::KittyImages,
-        #[cfg(feature = "derp_packs")]
-        FeatureFlag::DerpPacks,
+        #[cfg(feature = "bork_packs")]
+        FeatureFlag::BorkPacks,
         #[cfg(feature = "global_ai_analytics_banner")]
         FeatureFlag::GlobalAIAnalyticsBanner,
         #[cfg(feature = "global_ai_analytics_collection")]
@@ -332,8 +332,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::AgentView,
         #[cfg(feature = "agent_view_block_context")]
         FeatureFlag::AgentViewBlockContext,
-        #[cfg(feature = "derp_managed_secrets")]
-        FeatureFlag::DerpManagedSecrets,
+        #[cfg(feature = "bork_managed_secrets")]
+        FeatureFlag::BorkManagedSecrets,
         #[cfg(feature = "v4a_file_diffs")]
         FeatureFlag::V4AFileDiffs,
         #[cfg(feature = "interactive_conversation_management_view")]
@@ -402,8 +402,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::BundledSkills,
         #[cfg(feature = "oz_launch_modal")]
         FeatureFlag::OzLaunchModal,
-        #[cfg(feature = "open_derp_launch_modal")]
-        FeatureFlag::OpenDerpLaunchModal,
+        #[cfg(feature = "open_bork_launch_modal")]
+        FeatureFlag::OpenBorkLaunchModal,
         #[cfg(feature = "orchestration_launch_modal")]
         FeatureFlag::OrchestrationLaunchModal,
         #[cfg(feature = "new_tab_styling")]
@@ -434,8 +434,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::RestorePromptOnInlineModelSelectorSearch,
         #[cfg(feature = "directory_tab_colors")]
         FeatureFlag::DirectoryTabColors,
-        #[cfg(feature = "open_derp_new_settings_modes")]
-        FeatureFlag::OpenDerpNewSettingsModes,
+        #[cfg(feature = "open_bork_new_settings_modes")]
+        FeatureFlag::OpenBorkNewSettingsModes,
         #[cfg(feature = "hoa_code_review")]
         FeatureFlag::HoaCodeReview,
         #[cfg(feature = "vertical_tabs")]
@@ -448,8 +448,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::GroupedTabs,
         #[cfg(feature = "pinned_tabs")]
         FeatureFlag::PinnedTabs,
-        #[cfg(feature = "derp_control_cli")]
-        FeatureFlag::DerpControlCli,
+        #[cfg(feature = "bork_control_cli")]
+        FeatureFlag::BorkControlCli,
         #[cfg(feature = "agent_harness")]
         FeatureFlag::AgentHarness,
         #[cfg(feature = "oz_handoff")]
@@ -464,8 +464,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::CLIAgentRichInput,
         #[cfg(feature = "transfer_control_tool")]
         FeatureFlag::TransferControlTool,
-        #[cfg(feature = "derpify_footer")]
-        FeatureFlag::DerpifyFooter,
+        #[cfg(feature = "borkify_footer")]
+        FeatureFlag::BorkifyFooter,
         #[cfg(feature = "solo_user_byok")]
         FeatureFlag::SoloUserByok,
         #[cfg(feature = "billing_and_usage_page_v2")]

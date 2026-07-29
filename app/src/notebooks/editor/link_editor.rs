@@ -1,14 +1,14 @@
-use derp_editor::editor::NavigationKey;
-use derp_editor::model::RichTextEditorModel;
-use derp_editor::render::model::RenderState;
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use bork_editor::model::RichTextEditorModel;
+use bork_editor::render::model::RenderState;
+use borkui::elements::{
     AnchorPair, Container, Flex, MouseStateHandle, OffsetPositioning, OffsetType, ParentElement,
     PositionedElementOffsetBounds, PositioningAxis, XAxisAnchor, YAxisAnchor,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, BlurContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -198,7 +198,7 @@ impl View for LinkEditor {
         }
     }
 
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let mut editors = Flex::column();
 

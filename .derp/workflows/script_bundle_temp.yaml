@@ -1,9 +1,0 @@
----
-name: "Bundle derp"
-command: "./script/bundle -c {{channel}}"
-description: ~
-arguments:
-  - name: channel
-    description: "The channel that should be bundled. One of \"stable\", \"preview\", or \"dev\"."
-author: Derp Team
-shells: []

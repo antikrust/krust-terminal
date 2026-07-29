@@ -17,16 +17,16 @@ use instant::Instant;
 use itertools::Itertools;
 pub use query::query_conversation_entries;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use derp_cli::agent::Harness;
-use derp_core::execution_mode::AppExecutionMode;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::DerpTheme;
-use derp_errors::report_error;
-use derpui::color::ColorU;
-use derpui::r#async::Timer;
-use derpui::windowing::{StateEvent, WindowManager};
-use derpui::{
+use bork_cli::agent::Harness;
+use bork_core::execution_mode::AppExecutionMode;
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::BorkTheme;
+use bork_errors::report_error;
+use borkui::color::ColorU;
+use borkui::r#async::Timer;
+use borkui::windowing::{StateEvent, WindowManager};
+use borkui::{
     duration_with_jitter, AppContext, Entity, EntityId, ModelContext, ModelHandle, RequestState,
     SingletonEntity, WindowId,
 };
@@ -494,7 +494,7 @@ impl AgentRunDisplayStatus {
         )
     }
 
-    pub fn status_icon_and_color(&self, theme: &DerpTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU) {
         match self {
             AgentRunDisplayStatus::TaskQueued
             | AgentRunDisplayStatus::TaskPending

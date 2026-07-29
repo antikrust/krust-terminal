@@ -1,4 +1,4 @@
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use super::CloudEnvVarCollectionModel;
 use crate::cloud_object::breadcrumbs::ContainingObject;

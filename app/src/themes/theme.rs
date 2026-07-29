@@ -4,16 +4,16 @@ use std::path::{Component, Path, PathBuf};
 
 use anyhow::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-pub use derp_core::ui::color::blend::Blend;
-use derp_core::ui::color::pick_foreground_color;
-pub use derp_core::ui::theme::*;
-use derpui::assets::asset_cache::AssetSource;
-use derpui::color::ColorU;
-use derpui::elements::{
+pub use bork_core::ui::color::blend::Blend;
+use bork_core::ui::color::pick_foreground_color;
+pub use bork_core::ui::theme::*;
+use borkui::assets::asset_cache::AssetSource;
+use borkui::color::ColorU;
+use borkui::elements::{
     Align, Border, ConstrainedBox, Container, Element, Empty, Flex, ParentElement, Rect,
     Shrinkable, Stack, Text,
 };
-use derpui::fonts::FamilyId;
+use borkui::fonts::FamilyId;
 
 use super::default_themes::*;
 use super::theme_creator::{pick_accent_color_from_options, top_colors_for_image};
@@ -409,7 +409,7 @@ impl InMemoryThemeOptions {
         self.path = path;
     }
 
-    pub fn theme(&self) -> DerpTheme {
+    pub fn theme(&self) -> BorkTheme {
         let bg_color = self.chosen_bg_color();
         let fg_color = pick_foreground_color(bg_color);
         let possible_accent_colors: Vec<ColorU> = self
@@ -428,7 +428,7 @@ impl InMemoryThemeOptions {
             (Details::Lighter, light_mode_colors())
         };
 
-        DerpTheme::new(
+        BorkTheme::new(
             bg_color.into(),
             fg_color,
             accent_color.into(),
@@ -449,14 +449,14 @@ impl InMemoryThemeOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct DerpThemeConfig {
-    theme_map: HashMap<ThemeKind, DerpTheme>,
+pub struct BorkThemeConfig {
+    theme_map: HashMap<ThemeKind, BorkTheme>,
 }
 
-impl DerpThemeConfig {
+impl BorkThemeConfig {
     pub fn new() -> Self {
         // preload with built-in themes
-        let theme_map: HashMap<ThemeKind, DerpTheme> = HashMap::from_iter([
+        let theme_map: HashMap<ThemeKind, BorkTheme> = HashMap::from_iter([
             (ThemeKind::Dark, dark_theme()),
             (ThemeKind::Light, light_theme()),
             (ThemeKind::SolarizedDark, solarized_dark()),
@@ -479,10 +479,10 @@ impl DerpThemeConfig {
             (ThemeKind::SolarFlare, solar_flare()),
             (ThemeKind::Adeberry, adeberry()),
         ]);
-        DerpThemeConfig { theme_map }
+        BorkThemeConfig { theme_map }
     }
 
-    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: DerpTheme) {
+    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: BorkTheme) {
         self.theme_map.insert(theme_name, theme);
     }
 
@@ -490,16 +490,16 @@ impl DerpThemeConfig {
         CustomTheme::new(name, path).into()
     }
 
-    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &DerpTheme)> {
+    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &BorkTheme)> {
         self.theme_map.iter()
     }
 
-    pub fn theme(&self, name: &ThemeKind) -> DerpTheme {
+    pub fn theme(&self, name: &ThemeKind) -> BorkTheme {
         self.theme_map.get(name).cloned().unwrap_or_else(dark_theme)
     }
 }
 
-impl Default for DerpThemeConfig {
+impl Default for BorkThemeConfig {
     fn default() -> Self {
         Self::new()
     }
@@ -568,8 +568,8 @@ pub struct PromptColors {
     pub input_prompt_ssh: ColorU,
 }
 
-impl From<DerpTheme> for PromptColors {
-    fn from(theme: DerpTheme) -> Self {
+impl From<BorkTheme> for PromptColors {
+    fn from(theme: BorkTheme) -> Self {
         PromptColors {
             input_prompt_conversation_management: theme.terminal_colors().normal.white.into(),
             input_prompt_pwd: theme.terminal_colors().normal.magenta.into(),
@@ -592,7 +592,7 @@ impl From<DerpTheme> for PromptColors {
 }
 
 pub fn render_preview(
-    theme: &DerpTheme,
+    theme: &BorkTheme,
     font_family: FamilyId,
     form_factor: Option<f32>,
 ) -> Box<dyn Element> {
@@ -674,9 +674,9 @@ pub fn render_preview(
         thumbnail.add_child(
             Shrinkable::new(
                 1.,
-                derpui::elements::Image::new(
+                borkui::elements::Image::new(
                     background_image.source(),
-                    derpui::elements::CacheOption::BySize,
+                    borkui::elements::CacheOption::BySize,
                 )
                 .cover()
                 .finish(),

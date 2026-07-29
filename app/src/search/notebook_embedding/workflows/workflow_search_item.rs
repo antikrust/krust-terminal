@@ -1,15 +1,15 @@
 use ordered_float::OrderedFloat;
-use derpui::elements::{
+use borkui::elements::{
     Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObject;
-use crate::drive::cloud_object_styling::derp_drive_icon_color;
+use crate::drive::cloud_object_styling::bork_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::search::item::{IconLocation, SearchItem};
 use crate::search::notebook_embedding::embedded_fuzzy_match::FuzzyMatchEmbeddedObjectResult;
@@ -46,17 +46,17 @@ impl SearchItem for WorkflowSearchItem {
         let (icon, icon_color) = if self.cloud_workflow.model().data.is_agent_mode_workflow() {
             (
                 Icon::Prompt,
-                derp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
+                bork_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
             )
         } else {
             (
                 Icon::Workflow,
-                derp_drive_icon_color(appearance, DriveObjectType::Workflow),
+                bork_drive_icon_color(appearance, DriveObjectType::Workflow),
             )
         };
 
         Container::new(
-            ConstrainedBox::new(icon.to_derpui_icon(icon_color.into()).finish())
+            ConstrainedBox::new(icon.to_borkui_icon(icon_color.into()).finish())
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish(),
@@ -112,7 +112,7 @@ impl SearchItem for WorkflowSearchItem {
                 .finish();
             let warning_icon = ConstrainedBox::new(
                 Icon::Warning
-                    .to_derpui_icon(appearance.theme().ui_warning_color().into())
+                    .to_borkui_icon(appearance.theme().ui_warning_color().into())
                     .finish(),
             )
             .with_width(warning_font_size)

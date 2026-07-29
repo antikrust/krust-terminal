@@ -3,9 +3,9 @@ use std::time::{Duration, SystemTime};
 
 use ai::api_keys::ApiKeyManager;
 use settings::{PrivatePreferences, PublicPreferences};
-use derp_managed_secrets::ManagedSecretManager;
-use derpui::{AddSingletonModel, App};
-use derpui_extras::user_preferences;
+use bork_managed_secrets::ManagedSecretManager;
+use borkui::{AddSingletonModel, App};
+use borkui_extras::user_preferences;
 
 use super::*;
 use crate::server::server_api::team::MockTeamClient;
@@ -17,8 +17,8 @@ use crate::workspaces::workspace::{HostEnablementSetting, LlmHostSettings, Works
 // ── pure helpers ────────────────────────────────────────────────
 
 const TEST_AUDIENCE: &str =
-    "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/derp-pool/providers/derp-provider";
-const TEST_SA_EMAIL: &str = "derp-geap@test-project.iam.gserviceaccount.com";
+    "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/bork-pool/providers/bork-provider";
+const TEST_SA_EMAIL: &str = "bork-geap@test-project.iam.gserviceaccount.com";
 
 #[test]
 fn mint_binding_from_parts_trims_and_normalizes() {
@@ -220,7 +220,7 @@ fn initialize_app(app: &mut App, workspaces: Vec<Workspace>) {
         )
     });
     app.update(|ctx| {
-        derpui_extras::secure_storage::register_noop("test", ctx);
+        borkui_extras::secure_storage::register_noop("test", ctx);
         ctx.add_singleton_model(ApiKeyManager::new);
     });
 }

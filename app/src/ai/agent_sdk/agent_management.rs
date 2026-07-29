@@ -6,14 +6,14 @@ use std::io::Write as _;
 use anyhow::anyhow;
 use comfy_table::Cell;
 use serde::Serialize;
-use derp_cli::agent::{
+use bork_cli::agent::{
     AgentCreateArgs, AgentDeleteArgs, AgentGetArgs, AgentListArgs, AgentSortByArg, AgentUpdateArgs,
     OutputFormat,
 };
-use derp_cli::json_filter::JsonOutput;
-use derp_cli::SortOrderArg;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::json_filter::JsonOutput;
+use bork_cli::SortOrderArg;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use super::output::TableFormat;
 use crate::server::server_api::ai::{
@@ -71,7 +71,7 @@ pub fn delete_agent(
 impl AgentManagementRunner {
     fn spawn_command(
         &self,
-        future: impl derpui::r#async::Spawnable<Output = anyhow::Result<()>>,
+        future: impl borkui::r#async::Spawnable<Output = anyhow::Result<()>>,
         ctx: &mut ModelContext<Self>,
     ) {
         ctx.spawn(future, |_, result, ctx| match result {
@@ -450,7 +450,7 @@ fn print_single_agent(agent: &AgentResponse, output_format: OutputFormat) -> any
 }
 
 fn print_skills_hint() {
-    let binary_name = derp_cli::binary_name().unwrap_or_else(|| "derp".to_string());
+    let binary_name = bork_cli::binary_name().unwrap_or_else(|| "bork".to_string());
     println!("\n\nLooking for your agent skills? Use `{binary_name} agent skills` instead.");
 }
 
@@ -504,7 +504,7 @@ fn display_list<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
     }
 }
 
-impl derpui::Entity for AgentManagementRunner {
+impl borkui::Entity for AgentManagementRunner {
     type Event = ();
 }
 

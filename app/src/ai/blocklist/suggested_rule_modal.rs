@@ -1,15 +1,15 @@
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, Flex, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, ScrollbarWidth,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -40,7 +40,7 @@ const HEADER_TEXT: &str = "Suggested rule";
 const MAX_EDITOR_HEIGHT: f32 = 240.;
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -583,7 +583,7 @@ impl SuggestedRuleView {
                             ScrollbarWidth::Auto,
                             appearance.theme().nonactive_ui_detail().into(),
                             appearance.theme().active_ui_detail().into(),
-                            derpui::elements::Fill::None,
+                            borkui::elements::Fill::None,
                         )
                         .finish(),
                     )

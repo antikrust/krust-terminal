@@ -1,7 +1,7 @@
-use derpui::elements::{Container, Flex, ParentElement};
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::ui_components::text::WrappableText;
-use derpui::{AppContext, Element, Entity, ModelContext, SingletonEntity};
+use borkui::elements::{Container, Flex, ParentElement};
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::ui_components::text::WrappableText;
+use borkui::{AppContext, Element, Entity, ModelContext, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;

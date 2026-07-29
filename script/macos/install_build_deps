@@ -1,5 +1,5 @@
 #!/bin/sh
 #
-# Installs macOS-specific build dependencies required to build Derp.
+# Installs macOS-specific build dependencies required to build Bork.
 
 xcodebuild -downloadComponent MetalToolchain

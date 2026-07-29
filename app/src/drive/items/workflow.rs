@@ -1,10 +1,10 @@
-use derp_core::context_flag::ContextFlag;
-use derpui::elements::{Container, Flex, MouseStateHandle, ParentElement};
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use bork_core::context_flag::ContextFlag;
+use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::model::actions::{ObjectActionType, ObjectActions};
 use crate::cloud_object::CloudObjectMetadata;
@@ -14,18 +14,18 @@ use crate::themes::theme::Fill;
 use crate::workflows::{CloudWorkflow, WorkflowViewMode};
 
 #[derive(Clone)]
-pub struct DerpDriveWorkflow {
+pub struct BorkDriveWorkflow {
     id: CloudObjectTypeAndId,
     workflow: CloudWorkflow,
 }
 
-impl DerpDriveWorkflow {
+impl BorkDriveWorkflow {
     pub fn new(id: CloudObjectTypeAndId, workflow: CloudWorkflow) -> Self {
         Self { id, workflow }
     }
 }
 
-impl DerpDriveItem for DerpDriveWorkflow {
+impl BorkDriveItem for BorkDriveWorkflow {
     fn display_name(&self) -> Option<String> {
         if self.workflow.model().data.name().is_empty() {
             None
@@ -65,7 +65,7 @@ impl DerpDriveItem for DerpDriveWorkflow {
 
     fn preview(&self, appearance: &Appearance) -> Option<Box<dyn Element>> {
         let mut modal =
-            Flex::column().with_cross_axis_alignment(derpui::elements::CrossAxisAlignment::Stretch);
+            Flex::column().with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Stretch);
 
         let mut text = Flex::column()
             .with_child(Container::new(self.render_workflow_name(appearance)).finish());
@@ -105,8 +105,8 @@ impl DerpDriveItem for DerpDriveWorkflow {
         Some(modal.finish())
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -127,12 +127,12 @@ impl DerpDriveItem for DerpDriveWorkflow {
             .get_action_history_summary_for_action_type(&self.id.uid(), ObjectActionType::Execute)
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }
 
-impl DerpDriveWorkflow {
+impl BorkDriveWorkflow {
     fn render_workflow_name(&self, appearance: &Appearance) -> Box<dyn Element> {
         appearance
             .ui_builder()

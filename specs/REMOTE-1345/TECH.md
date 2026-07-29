@@ -73,7 +73,7 @@ Codex config is global (`~/.codex/config.toml`), not cwd-relative, so no path is
 
 ### 5. Transport mapping
 
-Derp's `JSONTransportType` maps to each harness as follows:
+Bork's `JSONTransportType` maps to each harness as follows:
 
 **`CLIServer { command, args, env, working_directory }`:**
 - Claude Code: `{ "type": "stdio", "command": "...", "args": [...], "env": {...} }`

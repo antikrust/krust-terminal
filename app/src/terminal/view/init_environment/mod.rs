@@ -1,10 +1,10 @@
 pub mod mode_selector;
 
-use derpui::elements::{
+use borkui::elements::{
     ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement,
     Radius, Text,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

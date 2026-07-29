@@ -1,6 +1,6 @@
 # Ask-User-Question Autonomy Speedbump — Technical Notes
 
-Linear: [QUALITY-512](https://linear.app/derpdotdev/issue/QUALITY-512/add-ask-user-question-permission-speedbump)
+Linear: [QUALITY-512](https://linear.app/borkdotdev/issue/QUALITY-512/add-ask-user-question-permission-speedbump)
 Product spec: `specs/QUALITY-512-ask-user-question-speedbump/PRODUCT.md`
 
 ## 1. Overview
@@ -12,8 +12,8 @@ This change adds a one-shot Ask-User-Question autonomy speedbump to the existing
 - `app/src/ai/blocklist/inline_action/ask_user_question_view.rs` — owns the Ask-User-Question card chrome and renders the attached footer in completed/collapsed states.
 - `app/src/server/telemetry/events.rs` — adds `ChangedAgentModeAskUserQuestionPermission`.
 - `app/src/terminal/block_list_element.rs` — forwards covered mouse events to visible rich-content overlays so dropdown menus remain interactive.
-- `crates/derpui_core/src/elements/dismiss.rs` — consumes underlay clicks for dismissable overlays that prevent interaction with other elements.
-- `crates/derpui_core/src/elements/selectable_area.rs` — avoids starting terminal selection for mouse down events covered by higher-z-index overlays.
+- `crates/borkui_core/src/elements/dismiss.rs` — consumes underlay clicks for dismissable overlays that prevent interaction with other elements.
+- `crates/borkui_core/src/elements/selectable_area.rs` — avoids starting terminal selection for mouse down events covered by higher-z-index overlays.
 - `app/src/ai/blocklist/block_tests.rs` — covers permission index mapping, first Ask-User-Question action detection, and setting defaults/round-trip.
 ## 3. Setting
 The new setting is intentionally local-only:
@@ -58,7 +58,7 @@ The footer is threaded into `AskUserQuestionView` rather than wrapping the child
 
 This avoids a double-rounded seam between the card body and the speedbump footer.
 ## 8. Overlay event routing
-The dropdown menu is rendered through DerpUI overlay infrastructure. A covered mouse event previously could be rejected by `BlockListElement` before the rich-content overlay received it, allowing terminal selection or surrounding content to intercept dropdown clicks.
+The dropdown menu is rendered through BorkUI overlay infrastructure. A covered mouse event previously could be rejected by `BlockListElement` before the rich-content overlay received it, allowing terminal selection or surrounding content to intercept dropdown clicks.
 
 The fix has three parts:
 - `BlockListElement` forwards covered mouse events to visible rich-content views before returning.
@@ -74,9 +74,9 @@ The new telemetry event is `ChangedAgentModeAskUserQuestionPermission` with fiel
 The speedbump path emits the event with `src = Speedbump` whenever the user selects a dropdown option.
 ## 10. Validation
 Local validation:
-- `cargo check -p derp`
-- `cargo check --all-targets -p derp`
-- `cargo nextest run --no-fail-fast -p derp ask_user_question`
+- `cargo check -p bork`
+- `cargo check --all-targets -p bork`
+- `cargo nextest run --no-fail-fast -p bork ask_user_question`
 - `cargo fmt --all`
 - `cargo clippy --workspace --all-targets --all-features --tests -- -D warnings`
 - `git --no-pager diff --check`

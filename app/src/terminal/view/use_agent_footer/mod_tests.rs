@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use derp_core::settings::Setting as _;
-use derpui::{App, AppContext, SingletonEntity, ViewContext};
+use bork_core::settings::Setting as _;
+use borkui::{App, AppContext, SingletonEntity, ViewContext};
 
 use super::super::{AIBlockMetadata, RichContentMetadata, RichContentType};
 use super::*;

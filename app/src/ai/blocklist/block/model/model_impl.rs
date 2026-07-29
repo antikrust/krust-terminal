@@ -4,8 +4,8 @@ use anyhow::{anyhow, Result};
 use chrono::{Local, TimeDelta};
 use history_model::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};
 use session_sharing_protocol::common::ParticipantId;
-use derp_errors::report_error;
-use derpui::{AppContext, Entity, SingletonEntity, ViewContext};
+use bork_errors::report_error;
+use borkui::{AppContext, Entity, SingletonEntity, ViewContext};
 
 use super::{AIBlockModel, AIBlockOutputStatus, OutputStatusUpdateCallback};
 use crate::ai::agent::conversation::AIConversationId;

@@ -1,5 +1,5 @@
-use derp_editor::content::version::BufferVersion;
-use derp_util::path::LineAndColumnArg;
+use bork_editor::content::version::BufferVersion;
+use bork_util::path::LineAndColumnArg;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScrollWheelBehavior {

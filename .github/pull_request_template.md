@@ -23,7 +23,7 @@ You can run the app locally using `./script/run` - see AGENTS.md for more detail
 <!-- Attach screenshots or a short video demonstrating the change, where appropriate. Remove this section if it is not relevant to your PR. -->
 
 ## Agent Mode
-- [ ] Derp Agent Mode - This PR was created via Derp's AI Agent Mode
+- [ ] Bork Agent Mode - This PR was created via Bork's AI Agent Mode
 
 <!--
 ## Changelog Entries for Stable

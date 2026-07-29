@@ -6,28 +6,28 @@ use std::rc::Rc;
 
 use ::settings::{Setting, SettingSection, ToggleableSetting};
 use enum_iterator::all;
-use derp_core::ui::theme::color::internal_colors;
-use derp_errors::{report_error, report_if_error};
-use derp_util::path::user_friendly_path;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use bork_errors::{report_error, report_if_error};
+use bork_util::path::user_friendly_path;
+use borkui::elements::{
     Align, Border, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Dismiss, Element, Empty, Fill, Flex, FormattedTextElement, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text, Wrap,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use derpui::fonts::{FamilyId, FontInfo, Weight};
-use derpui::keymap::{ContextPredicate, FixedBinding};
-use derpui::platform::{Cursor, FilePickerConfiguration, GraphicsBackend, SystemTheme};
-use derpui::rendering::ThinStrokes;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::radio_buttons::{
+use borkui::fonts::{FamilyId, FontInfo, Weight};
+use borkui::keymap::{ContextPredicate, FixedBinding};
+use borkui::platform::{Cursor, FilePickerConfiguration, GraphicsBackend, SystemTheme};
+use borkui::rendering::ThinStrokes;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::radio_buttons::{
     RadioButtonItem, RadioButtonLayout, RadioButtonStateHandle,
 };
-use derpui::ui_components::slider::SliderStateHandle;
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::units::IntoPixels;
-use derpui::{
+use borkui::ui_components::slider::SliderStateHandle;
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::units::IntoPixels;
+use borkui::{
     id, Action, AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, UpdateModel,
     View, ViewContext, ViewHandle, WindowId,
 };
@@ -87,11 +87,11 @@ use crate::terminal::text_effects::{
 use crate::terminal::{
     BlockListSettings, ShowBlockDividers, ShowJumpToBottomOfBlockButton, SizeInfo,
 };
-use crate::themes::theme::{self, RespectSystemTheme, SelectedSystemThemes, ThemeKind, DerpTheme};
+use crate::themes::theme::{self, RespectSystemTheme, SelectedSystemThemes, ThemeKind, BorkTheme};
 use crate::themes::theme_chooser::ThemeChooserMode;
 use crate::ui_components::color_dot::{render_color_dot, TAB_COLOR_OPTIONS};
 use crate::ui_components::icons::Icon;
-use crate::user_config::DerpConfig;
+use crate::user_config::BorkConfig;
 use crate::util::bindings;
 use crate::view_components::action_button::{ActionButton, ButtonSize, NakedTheme};
 use crate::view_components::{Dropdown, DropdownItem, FilterableDropdown};
@@ -250,9 +250,9 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         context.to_owned(),
     )]);
 
-    // Add command palette entry for toggling between Derp and Classic input modes
+    // Add command palette entry for toggling between Bork and Classic input modes
     app.register_fixed_bindings(vec![FixedBinding::empty(
-        "Toggle Input Mode (Derp/Classic)".to_string(),
+        "Toggle Input Mode (Bork/Classic)".to_string(),
         builder(SettingsAction::AppearancePageToggle(
             AppearancePageAction::ToggleInputMode,
         )),
@@ -320,7 +320,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         ),
     );
 
-    if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+    if !FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
         toggle_binding_pairs.push(
             ToggleSettingActionPair::custom(
                 SettingActionPairDescriptions::new(
@@ -642,7 +642,7 @@ pub struct AppearanceSettingsPageView {
     header_toolbar_inline_editor: ViewHandle<HeaderToolbarInlineEditor>,
 
     /// The context chip renderers based on the most recently
-    /// selected Derp prompt configuration.
+    /// selected Bork prompt configuration.
     context_chips: Vec<ContextChipRenderer>,
 
     /// The information we need to render the PS1 as a grid when we're
@@ -1259,7 +1259,7 @@ impl AppearanceSettingsPageView {
             // `all_system_fonts` API doesn't exist.
             #[cfg(not(target_family = "wasm"))]
             {
-                let all_system_fonts = derpui::fonts::Cache::handle(ctx)
+                let all_system_fonts = borkui::fonts::Cache::handle(ctx)
                     .update(ctx, |font_cache, ctx| font_cache.all_system_fonts(ctx));
                 ctx.spawn(all_system_fonts, Self::set_system_fonts);
             }
@@ -1721,7 +1721,7 @@ impl AppearanceSettingsPageView {
         let tab_settings = TabSettings::as_ref(ctx);
         let mut tab_settings_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> =
             vec![Box::new(TabIndicatorWidget::default())];
-        if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if !FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             tab_settings_widgets.push(Box::new(CodeReviewButtonWidget::default()));
         }
         if FeatureFlag::FullScreenZenMode.is_enabled()
@@ -1896,7 +1896,7 @@ impl AppearanceSettingsPageView {
 
     fn input_mode_dropdown_item_label(val: InputMode) -> &'static str {
         match val {
-            InputMode::PinnedToBottom => "Pin to the bottom (Derp mode)",
+            InputMode::PinnedToBottom => "Pin to the bottom (Bork mode)",
             InputMode::PinnedToTop => "Pin to the top (Reverse mode)",
             InputMode::Waterfall => "Start at the top (Classic mode)",
         }
@@ -1920,7 +1920,7 @@ impl AppearanceSettingsPageView {
             AppIcon::Original => "Original",
             AppIcon::Starburst => "Starburst",
             AppIcon::Sticker => "Sticker",
-            AppIcon::DerpOne => "Derp 1",
+            AppIcon::BorkOne => "Bork 1",
         }
     }
 
@@ -3248,7 +3248,7 @@ impl SettingsWidget for CreateCustomThemeWidget {
                 .link(
                     "Create your own custom theme".to_string(),
                     Some(
-                        "https://therob.lol/derp-terminal/help/terminal/appearance/custom-themes"
+                        "https://therob.lol/bork-terminal/help/terminal/appearance/custom-themes"
                             .to_string(),
                     ),
                     None,
@@ -3282,7 +3282,7 @@ impl ThemeSelectWidget {
         is_selected: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        let theme: DerpTheme = DerpConfig::as_ref(app).theme_config().theme(&theme_kind);
+        let theme: BorkTheme = BorkConfig::as_ref(app).theme_config().theme(&theme_kind);
         let mode_ui_label = match theme_chooser_mode {
             ThemeChooserMode::SystemLight => "Light",
             ThemeChooserMode::SystemDark => "Dark",
@@ -3495,7 +3495,7 @@ impl SettingsWidget for CustomAppIconWidget {
         );
 
         let show_dock_icon_toggle = render_body_item::<AppearancePageAction>(
-            "Show Derp in Dock".into(),
+            "Show Bork in Dock".into(),
             None,
             LocalOnlyIconState::for_setting(
                 ShowDockIconState::storage_key(),
@@ -3535,7 +3535,7 @@ impl SettingsWidget for CustomAppIconWidget {
                     appearance
                         .ui_builder()
                         .wrappable_text(
-                            "You may need to restart Derp for MacOS to apply the preferred icon style.",
+                            "You may need to restart Bork for MacOS to apply the preferred icon style.",
                             true,
                         )
                         .with_style(UiComponentStyles {
@@ -3840,7 +3840,7 @@ impl SettingsWidget for WindowBlurWidget {
         let label_info = AdditionalInfo {
             mouse_state: self.info_button.clone(),
             on_click_action: Some(AppearancePageAction::OpenUrl(
-                "https://therob.lol/derp-terminal/help/terminal/appearance/size-opacity-blurring"
+                "https://therob.lol/bork-terminal/help/terminal/appearance/size-opacity-blurring"
                     .into(),
             )),
             secondary_text: None,
@@ -3957,7 +3957,7 @@ impl SettingsWidget for ToolsPanelStateScopeWidget {
     type View = AppearanceSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "left tools panel open closed across tabs file tree project explorer global search derp drive conversation list"
+        "left tools panel open closed across tabs file tree project explorer global search bork drive conversation list"
     }
 
     fn render(
@@ -4133,7 +4133,7 @@ impl SettingsWidget for InputTypeWidget {
     type View = AppearanceSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "input type derp universal classic style prompt terminal ai developer mode interface shell chips ps1"
+        "input type bork universal classic style prompt terminal ai developer mode interface shell chips ps1"
     }
 
     fn render(
@@ -4148,7 +4148,7 @@ impl SettingsWidget for InputTypeWidget {
             .radio_buttons(
                 self.radio_buttons_states.clone(),
                 vec![
-                    RadioButtonItem::text("Derp"),
+                    RadioButtonItem::text("Bork"),
                     RadioButtonItem::text("Shell (PS1)"),
                 ],
                 view.input_type_radio_state.clone(),
@@ -4222,7 +4222,7 @@ impl SettingsWidget for PromptWidget {
     type View = AppearanceSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "prompt ps1 terminal derp shell custom"
+        "prompt ps1 terminal bork shell custom"
     }
 
     fn render(
@@ -6287,7 +6287,7 @@ impl SettingsWidget for AltScreenPaddingWidget {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_mouse_state.clone(),
                 on_click_action: Some(AppearancePageAction::OpenUrl(
-                    "https://therob.lol/derp-terminal/help/terminal/more-features/full-screen-apps#padding".into(),
+                    "https://therob.lol/bork-terminal/help/terminal/more-features/full-screen-apps#padding".into(),
                 )),
                 secondary_text: None,
                 tooltip_override_text: None,

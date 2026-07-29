@@ -1,4 +1,4 @@
-use derpui::{EntityId, WindowId};
+use borkui::{EntityId, WindowId};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::conversation_navigation::ConversationNavigationData;

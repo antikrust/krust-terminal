@@ -1,6 +1,6 @@
 [package]
 name = "fuzzy_match"
-authors = ["Derp Team <dev@derp.baby>"]
+authors = ["Bork Team <dev@bork.baby>"]
 version = "0.1.0"
 edition = "2021"
 description = "Performs fuzzy match with text against query"

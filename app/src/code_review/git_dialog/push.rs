@@ -8,16 +8,16 @@
 
 use std::collections::HashMap;
 
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_errors::report_error;
-use derpui::elements::{
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_errors::report_error;
+use borkui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, ScrollbarWidth, Text,
 };
-use derpui::platform::Cursor;
-use derpui::ViewContext;
+use borkui::platform::Cursor;
+use borkui::ViewContext;
 
 use crate::code::editor::{add_color, remove_color};
 use crate::code_review::git_dialog::{
@@ -326,7 +326,7 @@ fn render_commits_section(state: &PushState, appearance: &Appearance) -> Box<dyn
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish(),
     )

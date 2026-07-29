@@ -4,17 +4,17 @@ use ai::api_keys::{ApiKeyManager, ApiKeyManagerEvent};
 use itertools::Itertools;
 use regex::Regex;
 use thousands::Separable;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Align, Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CrossAxisAlignment, Expanded, Flex, Highlight, MouseStateHandle, ParentElement,
     PartialClickableElement, ScrollbarWidth, Text,
 };
-use derpui::fonts::Properties;
-use derpui::platform::Cursor;
-use derpui::ui_components::slider::SliderStateHandle;
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::{
+use borkui::fonts::Properties;
+use borkui::platform::Cursor;
+use borkui::ui_components::slider::SliderStateHandle;
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -63,8 +63,8 @@ fn render_upgrade_footer(
     let text_color = theme.main_text_color(surface);
 
     let info_icon = ConstrainedBox::new(
-        derp_core::ui::Icon::Info
-            .to_derpui_icon(text_color)
+        bork_core::ui::Icon::Info
+            .to_borkui_icon(text_color)
             .finish(),
     )
     .with_width(16.)
@@ -1539,7 +1539,7 @@ impl View for ExecutionProfileEditorView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish()
     }
@@ -1740,7 +1740,7 @@ impl TypedActionView for ExecutionProfileEditorView {
             }
             ExecutionProfileEditorViewAction::SetPlanAutoSync { enabled } => {
                 AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles_model, ctx| {
-                    profiles_model.set_autosync_plans_to_derp_drive(self.profile_id, *enabled, ctx);
+                    profiles_model.set_autosync_plans_to_bork_drive(self.profile_id, *enabled, ctx);
                 });
                 ctx.notify();
             }
@@ -1762,17 +1762,17 @@ impl BackingView for ExecutionProfileEditorView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         _action: &Self::PaneHeaderOverflowMenuAction,
-        _ctx: &mut derpui::ViewContext<Self>,
+        _ctx: &mut borkui::ViewContext<Self>,
     ) {
         self.handle_action(_action, _ctx)
     }
 
-    fn close(&mut self, ctx: &mut derpui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut borkui::ViewContext<Self>) {
         self.save_profile_name_if_valid(ctx);
         ctx.emit(ExecutionProfileEditorViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut derpui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut borkui::ViewContext<Self>) {
         self.focus(ctx);
     }
 
@@ -1785,7 +1785,7 @@ impl BackingView for ExecutionProfileEditorView {
             title: HEADER_TEXT.into(),
             title_secondary: None,
             title_style: None,
-            title_clip_config: derpui::text_layout::ClipConfig::start(),
+            title_clip_config: borkui::text_layout::ClipConfig::start(),
             title_max_width: None,
             left_of_title: None,
             right_of_title: None,

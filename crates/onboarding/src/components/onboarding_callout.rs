@@ -4,20 +4,20 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::button::Button as ButtonComponent;
 use ui_components::{button, Component, MouseEventHandler, Options as _};
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::color::coloru_with_opacity;
-use derp_core::ui::color::contrast::relative_luminance;
-use derp_core::ui::theme::phenomenon::PhenomenonStyle;
-use derp_core::ui::theme::Fill;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::color::coloru_with_opacity;
+use bork_core::ui::color::contrast::relative_luminance;
+use bork_core::ui::theme::phenomenon::PhenomenonStyle;
+use bork_core::ui::theme::Fill;
+use borkui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect,
 };
-use derpui_core::fonts::Weight;
-use derpui_core::keymap::Keystroke;
-use derpui_core::prelude::*;
-use derpui_core::ui_components::checkbox::Checkbox as DerpCheckbox;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::fonts::Weight;
+use borkui_core::keymap::Keystroke;
+use borkui_core::prelude::*;
+use borkui_core::ui_components::checkbox::Checkbox as BorkCheckbox;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
 
 const CALLOUT_WIDTH: f32 = 480.;
 const CALLOUT_BORDER_WIDTH: f32 = 1.;
@@ -248,7 +248,7 @@ impl OnboardingCallout {
         let foreground_color = PhenomenonStyle::foreground();
         let subtle_border = Fill::Solid(PhenomenonStyle::subtle_border());
 
-        let checkbox_element = DerpCheckbox::new(
+        let checkbox_element = BorkCheckbox::new(
             self.checkbox_mouse_state.clone(),
             UiComponentStyles {
                 font_size: checkbox_size,

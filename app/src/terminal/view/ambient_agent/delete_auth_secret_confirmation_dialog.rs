@@ -1,10 +1,10 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derp_cli::agent::Harness;
-use derp_managed_secrets::client::SecretOwner;
-use derpui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use bork_cli::agent::Harness;
+use bork_managed_secrets::client::SecretOwner;
+use borkui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

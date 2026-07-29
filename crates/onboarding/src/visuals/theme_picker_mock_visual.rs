@@ -1,7 +1,7 @@
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui_core::elements::Align;
-use derpui_core::Element;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui_core::elements::Align;
+use borkui_core::Element;
 
 use super::onboarding_visual::{OnboardingVisual, Pill, RectPct};
 

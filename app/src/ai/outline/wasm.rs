@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use derpui::{Entity, ModelContext, SingletonEntity};
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use super::OutlineStatus;
 

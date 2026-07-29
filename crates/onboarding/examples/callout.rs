@@ -7,13 +7,13 @@ use onboarding::components::onboarding_callout::{
 };
 use rust_embed::RustEmbed;
 use ui_components::Component as _;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, DerpTheme};
-use derpui_core::color::ColorU;
-use derpui_core::elements::{Rect, Stack};
-use derpui_core::fonts::{Cache, FamilyId, Weight};
-use derpui_core::prelude::*;
-use derpui_core::{platform, AddWindowOptions, AssetProvider, ModelContext};
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, BorkTheme};
+use borkui_core::color::ColorU;
+use borkui_core::elements::{Rect, Stack};
+use borkui_core::fonts::{Cache, FamilyId, Weight};
+use borkui_core::prelude::*;
+use borkui_core::{platform, AddWindowOptions, AssetProvider, ModelContext};
 
 #[derive(Clone, Copy, RustEmbed)]
 #[folder = "../../app/assets"]
@@ -30,7 +30,7 @@ impl AssetProvider for Assets {
 }
 
 fn main() -> platform::app::TerminationResult {
-    let app_builder = derpui::platform::AppBuilder::new(
+    let app_builder = borkui::platform::AppBuilder::new(
         platform::AppCallbacks::default(),
         Box::new(ASSETS),
         None,
@@ -85,7 +85,7 @@ impl View for RootView {
         let callout = self.callout.render(
             appearance,
             CalloutParams {
-                title: "Meet your Derp input".into(),
+                title: "Meet your Bork input".into(),
                 text: "Your terminal input can detect natural language as well as commands.".into(),
                 step: StepStatus::new(1, 2),
                 right_button: CalloutButton {
@@ -119,7 +119,7 @@ impl TypedActionView for RootView {
     fn handle_action(&mut self, _action: &Self::Action, _ctx: &mut ViewContext<Self>) {}
 }
 
-fn mock_theme() -> DerpTheme {
+fn mock_theme() -> BorkTheme {
     let normal = AnsiColors::new(
         AnsiColor::from_u32(0x121212FF),
         AnsiColor::from_u32(0xC76156FF),
@@ -142,7 +142,7 @@ fn mock_theme() -> DerpTheme {
         AnsiColor::from_u32(0xFFFFFFFF),
     );
 
-    DerpTheme::new(
+    BorkTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -155,7 +155,7 @@ fn mock_theme() -> DerpTheme {
 }
 
 fn build_appearance(
-    theme: DerpTheme,
+    theme: BorkTheme,
     ui_font_family: FamilyId,
     ctx: &mut ModelContext<Appearance>,
 ) -> Appearance {

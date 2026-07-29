@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use futures::future::{ready, Either};
 #[cfg(test)]
 use virtual_fs::{Stub, VirtualFS};
-use derp_util::host_id::HostId;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::remote_path::{RemoteNavigationResult, RemotePath};
-use derp_util::standardized_path::StandardizedPath;
+use bork_util::host_id::HostId;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::remote_path::{RemoteNavigationResult, RemotePath};
+use bork_util::standardized_path::StandardizedPath;
 #[cfg(test)]
-use derpui_core::r#async::FutureId;
-use derpui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use borkui_core::r#async::FutureId;
+use borkui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{DirectoryWatcher, Repository};
 

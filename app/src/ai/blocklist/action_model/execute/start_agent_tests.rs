@@ -1,6 +1,6 @@
 use ai::agent::action_result::StartAgentVersion;
-use derp_core::features::FeatureFlag;
-use derpui::{App, Entity, EntityId, ModelHandle};
+use bork_core::features::FeatureFlag;
+use borkui::{App, Entity, EntityId, ModelHandle};
 
 use super::*;
 use crate::ai::agent::conversation::ConversationStatus;

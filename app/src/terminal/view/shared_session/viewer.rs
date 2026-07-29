@@ -1,6 +1,6 @@
 use session_sharing_protocol::common::{Role, WindowSize};
-use derpui::elements::MouseStateHandle;
-use derpui::{ViewContext, ViewHandle};
+use borkui::elements::MouseStateHandle;
+use borkui::{ViewContext, ViewHandle};
 
 use super::adapter::Participant;
 use crate::menu::{Menu, MenuItem, MenuItemFields};

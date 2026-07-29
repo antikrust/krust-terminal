@@ -50,7 +50,7 @@ pub enum AgentAttachment {
     PlainText { content: String },
 
     /// A reference to a file that has been uploaded to GCS.
-    /// The host fetches download URLs directly from derp-server using the attachment ID.
+    /// The host fetches download URLs directly from bork-server using the attachment ID.
     FileReference {
         attachment_id: String,
         file_name: String,

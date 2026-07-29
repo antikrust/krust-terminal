@@ -1,13 +1,13 @@
 use pathfinder_color::ColorU;
-use derpui::elements::{
+use borkui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, Icon,
     MouseStateHandle, ParentElement, Radius, Text,
 };
-use derpui::platform::Cursor;
-use derpui::{Element, EventContext};
+use borkui::platform::Cursor;
+use borkui::{Element, EventContext};
 
 use crate::appearance::Appearance;
-use crate::drive::cloud_object_styling::derp_drive_icon_color;
+use crate::drive::cloud_object_styling::bork_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::search::{FilterChipRenderer as CommonFilterChipRenderer, QueryFilter};
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
@@ -123,33 +123,33 @@ impl FilterChipRenderer for QueryFilter {
                 .theme()
                 .main_text_color(appearance.theme().surface_2())
                 .into_solid(),
-            QueryFilter::Workflows => derp_drive_icon_color(appearance, DriveObjectType::Workflow),
-            QueryFilter::Notebooks => derp_drive_icon_color(
+            QueryFilter::Workflows => bork_drive_icon_color(appearance, DriveObjectType::Workflow),
+            QueryFilter::Notebooks => bork_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: false,
                 },
             ),
-            QueryFilter::Plans => derp_drive_icon_color(
+            QueryFilter::Plans => bork_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: true,
                 },
             ),
             QueryFilter::EnvironmentVariables => {
-                derp_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
+                bork_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
             }
             QueryFilter::AgentModeWorkflows => {
-                derp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow)
+                bork_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow)
             }
         }
     }
 }
 
 mod styles {
-    use derpui::elements::{Border, MouseState};
+    use borkui::elements::{Border, MouseState};
 
-    use crate::themes::theme::{Blend, Fill, DerpTheme};
+    use crate::themes::theme::{Blend, Fill, BorkTheme};
 
     /// Size of the border when the query filter is hovered.
     const HOVERED_BORDER_SIZE: f32 = 2.;
@@ -183,7 +183,7 @@ mod styles {
     }
 
     /// Returns the border that should be applied to the query filter.
-    pub fn border(mouse_state: &MouseState, theme: &DerpTheme) -> Border {
+    pub fn border(mouse_state: &MouseState, theme: &BorkTheme) -> Border {
         if mouse_state.is_hovered() {
             Border::all(HOVERED_BORDER_SIZE).with_border_fill(theme.accent())
         } else {
@@ -192,7 +192,7 @@ mod styles {
     }
 
     /// Returns the background [`Fill`] that should be applied to the query filter.
-    pub fn background_fill(mouse_state: &MouseState, theme: &DerpTheme) -> Fill {
+    pub fn background_fill(mouse_state: &MouseState, theme: &BorkTheme) -> Fill {
         if mouse_state.is_hovered() {
             theme
                 .surface_2()

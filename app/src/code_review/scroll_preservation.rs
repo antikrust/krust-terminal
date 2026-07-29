@@ -1,9 +1,9 @@
-use derp_core::features::FeatureFlag;
-use derpui::elements::ScrollOffset;
-use derpui::units::Pixels;
+use bork_core::features::FeatureFlag;
+use borkui::elements::ScrollOffset;
+use borkui::units::Pixels;
 #[cfg(not(target_family = "wasm"))]
-use derpui::{AppContext, WeakViewHandle};
-use derpui::{ViewContext, ViewHandle};
+use borkui::{AppContext, WeakViewHandle};
+use borkui::{ViewContext, ViewHandle};
 
 #[cfg(not(target_family = "wasm"))]
 use super::FILE_HEADER_HEIGHT;

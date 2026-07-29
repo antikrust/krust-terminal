@@ -10,10 +10,10 @@ use derivative::Derivative;
 use http::StatusCode;
 use lazy_static::lazy_static;
 use uuid::Uuid;
-use derp_errors::report_error;
-use derp_graphql::scalars::time::ServerTimestamp;
-use derpui::r#async::FutureId;
-use derpui::{Entity, ModelContext, RequestState, RetryOption, SingletonEntity};
+use bork_errors::report_error;
+use bork_graphql::scalars::time::ServerTimestamp;
+use borkui::r#async::FutureId;
+use borkui::{Entity, ModelContext, RequestState, RetryOption, SingletonEntity};
 
 use super::graphql::GraphQLError;
 use super::ids::{ClientId, HashableId, ObjectUid, ServerId, SyncId, ToServerId};
@@ -1728,7 +1728,7 @@ impl SyncQueue {
 
             if let Some(err) = cause.downcast_ref::<GraphQLError>() {
                 match err {
-                    // This only applies to DerpDev, but if someone's IP address is blocked, there's no
+                    // This only applies to BorkDev, but if someone's IP address is blocked, there's no
                     // point in continuing to dequeue.
                     GraphQLError::StagingAccessBlocked => return true,
                     // If the user isn't authorized, stop dequeuing. In general, this should

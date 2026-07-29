@@ -30,8 +30,8 @@ We need a 4-step guided onboarding flow for existing users that introduces HOA f
 - `app/src/workspace/view.rs:515` — `TAB_BAR_POSITION_ID`: the tab bar already has a `SavePosition`.
 
 ### Feature flags
-- `crates/derp_features/src/lib.rs:9` — `FeatureFlag` enum.
-- `crates/derp_features/src/lib.rs:797` — `DOGFOOD_FLAGS` array.
+- `crates/bork_features/src/lib.rs:9` — `FeatureFlag` enum.
+- `crates/bork_features/src/lib.rs:797` — `DOGFOOD_FLAGS` array.
 
 ### Workspace integration
 - `app/src/workspace/view.rs:779-901` — `Workspace` struct: holds all modal view handles, panel state.
@@ -52,7 +52,7 @@ We need a 4-step guided onboarding flow for existing users that introduces HOA f
 
 Add `HOAOnboardingFlow` to the `FeatureFlag` enum and `DOGFOOD_FLAGS`. Read the create feature flag skill for information on how to do this in a complete way.
 
-File: `crates/derp_features/src/lib.rs`
+File: `crates/bork_features/src/lib.rs`
 
 ### 2. Shared callout bubble component
 
@@ -204,7 +204,7 @@ Handle `HoaOnboardingFlowEvent`:
 
 ## End-to-End Flow
 
-1. Existing user launches Derp with `HOAOnboardingFlow` enabled.
+1. Existing user launches Bork with `HOAOnboardingFlow` enabled.
 2. `OneTimeModalModel` receives auth + cloud sync completion → calls `check_and_trigger_hoa_onboarding`.
 3. Checks pass (flag enabled, not completed, is existing user) → emits `OneTimeModalEvent`.
 4. `Workspace` receives event → enables vertical tabs setting → opens vertical tabs panel → creates `HoaOnboardingFlow` in `WelcomeBanner` step → renders scrim + banner.

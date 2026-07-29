@@ -1,28 +1,28 @@
 //! One-time inline banner shown to users who had previously opted into the now-deprecated
-//! tmux-based SSH derpification flow. It explains that tmux SSH derpification has been turned
-//! off in favor of Derp's SSH extension (remote server) and links to the docs.
+//! tmux-based SSH borkification flow. It explains that tmux SSH borkification has been turned
+//! off in favor of Bork's SSH extension (remote server) and links to the docs.
 //!
 //! The banner is shown at most once per affected user: it is gated on the
 //! `ssh_tmux_deprecation_notice_pending` setting, which is set by a one-time migration and
 //! cleared by the parent [`crate::terminal::TerminalView`] once the banner is shown.
 
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::terminal::model::session::SessionId;
-use crate::terminal::derpify::render::SSH_DOCS_URL;
+use crate::terminal::borkify::render::SSH_DOCS_URL;
 use crate::ui_components::icons::Icon;
 use crate::Appearance;
 
-const BANNER_TITLE: &str = "Tmux SSH derpification has been deprecated";
+const BANNER_TITLE: &str = "Tmux SSH borkification has been deprecated";
 
-const BANNER_BODY: &str = "Derp now connects to remote sessions using the SSH extension, which is \
+const BANNER_BODY: &str = "Bork now connects to remote sessions using the SSH extension, which is \
     more robust than the tmux-based flow. The tmux option has been removed.";
 
 const LEARN_MORE_LABEL: &str = "Learn more";
@@ -76,9 +76,9 @@ impl View for SshTmuxDeprecationBanner {
         let font_size = appearance.monospace_font_size();
         let small_font_size = font_size - 2.;
 
-        // Derp icon to match the other derpification blocks.
+        // Bork icon to match the other borkification blocks.
         let icon = Container::new(
-            ConstrainedBox::new(Icon::Derp.to_derpui_icon(fg_color.into()).finish())
+            ConstrainedBox::new(Icon::Bork.to_borkui_icon(fg_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish(),
@@ -126,7 +126,7 @@ impl View for SshTmuxDeprecationBanner {
         // Close (X) button
         let close_icon_color = muted_color;
         let close = Hoverable::new(self.close_mouse_state.clone(), move |_| {
-            ConstrainedBox::new(Icon::X.to_derpui_icon(close_icon_color.into()).finish())
+            ConstrainedBox::new(Icon::X.to_borkui_icon(close_icon_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish()

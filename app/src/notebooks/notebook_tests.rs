@@ -3,13 +3,13 @@ use std::sync::Arc;
 use chrono::{Duration, Utc};
 use futures_util::future::BoxFuture;
 use itertools::Itertools;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::editor::EditorView;
-use derpui::platform::WindowStyle;
-use derpui::presenter::ChildView;
-use derpui::r#async::Timer;
-use derpui::telemetry::EventPayload;
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use bork_editor::editor::EditorView;
+use borkui::platform::WindowStyle;
+use borkui::presenter::ChildView;
+use borkui::r#async::Timer;
+use borkui::telemetry::EventPayload;
+use borkui::{
     AddSingletonModel, App, AppContext, Element, Entity, SingletonEntity, TypedActionView, View,
     ViewHandle, WindowId,
 };
@@ -24,7 +24,7 @@ use crate::cloud_object::model::view::{CloudViewModel, Editor, EditorState};
 use crate::cloud_object::{
     Owner, Revision, ServerCloudObject, ServerMetadata, ServerNotebook, ServerPermissions,
 };
-use crate::drive::OpenDerpDriveObjectSettings;
+use crate::drive::OpenBorkDriveObjectSettings;
 use crate::editor::{DisplayPoint, EditorAction, InteractionState, SelectAction};
 use crate::network::NetworkStatus;
 use crate::notebooks::active_notebook_data::Mode;
@@ -132,7 +132,7 @@ fn open_notebook(
     notebook: CloudNotebook,
 ) -> BoxFuture<'static, ()> {
     let load_future = handle.update(app, |view, ctx| {
-        view.load(notebook, &OpenDerpDriveObjectSettings::default(), ctx)
+        view.load(notebook, &OpenBorkDriveObjectSettings::default(), ctx)
     });
     app.update(|ctx| ctx.await_spawned_future(load_future.future_id()))
 }
@@ -383,7 +383,7 @@ fn test_focus_tracking() {
 #[ignore]
 fn test_edit_telemetry() {
     fn edit_events() -> Vec<serde_json::Value> {
-        derpui::telemetry::flush_events()
+        borkui::telemetry::flush_events()
             .into_iter()
             .filter_map(|event| match event.payload {
                 EventPayload::NamedEvent { name, value, .. } if name == "Notebook Edited" => value,
@@ -521,8 +521,8 @@ fn test_not_eager_baton_grab_different_editor() {
         // Complete the initial load so that grab-the-baton behavior applies.
         initial_load(&mut app, vec![]).await;
 
-        let uid = "ian@derp.baby".to_string();
-        let email = "ian@derp.baby".to_string();
+        let uid = "ian@bork.baby".to_string();
+        let email = "ian@bork.baby".to_string();
 
         let (_, notebook_view, _) = create_notebook(&mut app);
         let mut cloud_notebook = cloud_notebook("Test Notebook", r#"A notebook"#);
@@ -568,14 +568,14 @@ fn test_not_eager_baton_grab_different_editor() {
 }
 
 /// Test to make sure we do not eagerly enter edit mode when another editor took the baton
-/// while Derp was closed.
+/// while Bork was closed.
 #[test]
 fn test_baton_grab_editor_changed_offline() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
 
-        let other_uid = "ben@derp.baby";
-        let other_email = "ben@derp.baby";
+        let other_uid = "ben@bork.baby";
+        let other_email = "ben@bork.baby";
 
         let (_, notebook_view, _) = create_notebook(&mut app);
 
@@ -630,7 +630,7 @@ fn test_baton_grab_editor_left_offline() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
 
-        let other_uid = "ben@derp.baby";
+        let other_uid = "ben@bork.baby";
 
         let (_, notebook_view, _) = create_notebook(&mut app);
 

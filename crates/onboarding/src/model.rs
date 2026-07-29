@@ -1,6 +1,6 @@
 use ai::LLMId;
-use derp_core::send_telemetry_from_ctx;
-use derpui_core::{Entity, ModelContext};
+use bork_core::send_telemetry_from_ctx;
+use borkui_core::{Entity, ModelContext};
 
 use crate::slides::{
     AgentAutonomy, AgentDevelopmentSettings, OnboardingModelInfo, ProjectOnboardingSettings,
@@ -15,7 +15,7 @@ pub struct UICustomizationSettings {
     pub show_conversation_history: bool,
     pub show_project_explorer: bool,
     pub show_global_search: bool,
-    pub show_derp_drive: bool,
+    pub show_bork_drive: bool,
     pub show_code_review_button: bool,
 }
 
@@ -27,7 +27,7 @@ impl UICustomizationSettings {
             show_conversation_history: true,
             show_project_explorer: true,
             show_global_search: true,
-            show_derp_drive: true,
+            show_bork_drive: true,
             show_code_review_button: true,
         }
     }
@@ -39,7 +39,7 @@ impl UICustomizationSettings {
             show_conversation_history: false,
             show_project_explorer: false,
             show_global_search: false,
-            show_derp_drive: false,
+            show_bork_drive: false,
             show_code_review_button: false,
         }
     }
@@ -52,7 +52,7 @@ impl UICustomizationSettings {
         (conversation_visible && self.show_conversation_history)
             || self.show_project_explorer
             || self.show_global_search
-            || self.show_derp_drive
+            || self.show_bork_drive
     }
 }
 
@@ -79,7 +79,7 @@ pub enum SelectedSettings {
 
 impl SelectedSettings {
     pub fn is_ai_enabled(&self) -> bool {
-        use derp_core::features::FeatureFlag;
+        use bork_core::features::FeatureFlag;
         match self {
             // Agent-driven development always means "I want AI" (including the
             // bring-your-own-agents `disable_oz` path). This reflects intent and
@@ -88,27 +88,27 @@ impl SelectedSettings {
             // account (see `apply_onboarding_settings`).
             SelectedSettings::AgentDrivenDevelopment { .. } => true,
             SelectedSettings::Terminal { .. } => {
-                // With old onboarding (no OpenDerpNewSettingsModes), Terminal
+                // With old onboarding (no OpenBorkNewSettingsModes), Terminal
                 // intent still leaves AI enabled; with new onboarding,
                 // Terminal intent explicitly disables AI.
-                !FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+                !FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
             }
         }
     }
 
-    pub fn is_derp_drive_enabled(&self) -> bool {
+    pub fn is_bork_drive_enabled(&self) -> bool {
         match self {
             SelectedSettings::AgentDrivenDevelopment {
                 ui_customization, ..
             } => ui_customization
                 .as_ref()
-                .map(|ui| ui.show_derp_drive)
+                .map(|ui| ui.show_bork_drive)
                 .unwrap_or(true),
             SelectedSettings::Terminal {
                 ui_customization, ..
             } => ui_customization
                 .as_ref()
-                .map(|ui| ui.show_derp_drive)
+                .map(|ui| ui.show_bork_drive)
                 .unwrap_or(false),
         }
     }
@@ -131,20 +131,20 @@ pub(crate) enum OnboardingStep {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AiSetupChoice {
     #[default]
-    DerpAgent,
+    BorkAgent,
     ThirdParty,
 }
 
 impl std::fmt::Display for AiSetupChoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AiSetupChoice::DerpAgent => write!(f, "derp_agent"),
+            AiSetupChoice::BorkAgent => write!(f, "bork_agent"),
             AiSetupChoice::ThirdParty => write!(f, "third_party"),
         }
     }
 }
 
-/// The access method selected on the "Choose how to access AI" slide (Derp Agent path).
+/// The access method selected on the "Choose how to access AI" slide (Bork Agent path).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AiAccessChoice {
     #[default]
@@ -245,8 +245,8 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn settings(&self) -> SelectedSettings {
-        use derp_core::features::FeatureFlag;
-        let ui_customization = if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        use bork_core::features::FeatureFlag;
+        let ui_customization = if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             Some(self.ui_customization.clone())
         } else {
             None
@@ -306,10 +306,10 @@ impl OnboardingStateModel {
 
     /// Whether the DES-816 V3 onboarding flow (the "Choose your AI setup" fork on the
     /// AI-first path) is active. True for all users when the new settings-modes flow
-    /// is enabled, since new users always enter a world where Derp-provided AI is not free.
+    /// is enabled, since new users always enter a world where Bork-provided AI is not free.
     pub(crate) fn ai_setup_flow_active(&self) -> bool {
-        use derp_core::features::FeatureFlag;
-        FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+        use bork_core::features::FeatureFlag;
+        FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
     }
 
     pub(crate) fn ai_setup_choice(&self) -> AiSetupChoice {
@@ -440,7 +440,7 @@ impl OnboardingStateModel {
         self.ui_customization.show_conversation_history = enabled;
         self.ui_customization.show_project_explorer = enabled;
         self.ui_customization.show_global_search = enabled;
-        self.ui_customization.show_derp_drive = enabled;
+        self.ui_customization.show_bork_drive = enabled;
         ctx.notify();
     }
 
@@ -493,18 +493,18 @@ impl OnboardingStateModel {
         ctx.notify();
     }
 
-    pub(crate) fn set_show_derp_drive(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
-        if self.ui_customization.show_derp_drive == value {
+    pub(crate) fn set_show_bork_drive(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
+        if self.ui_customization.show_bork_drive == value {
             return;
         }
         send_telemetry_from_ctx!(
             OnboardingEvent::SettingChanged {
-                setting: "derp_drive".to_string(),
+                setting: "bork_drive".to_string(),
                 value: value.to_string(),
             },
             ctx
         );
-        self.ui_customization.show_derp_drive = value;
+        self.ui_customization.show_bork_drive = value;
         ctx.notify();
     }
 
@@ -660,12 +660,12 @@ impl OnboardingStateModel {
         default_model_id: LLMId,
         ctx: &mut ModelContext<Self>,
     ) {
-        use derp_core::features::FeatureFlag;
+        use bork_core::features::FeatureFlag;
 
         // If the user is past the agent slide, don't change the agent model from underneath them.
         // When the new settings modes flag is on, ThemePicker comes after the agent slides
         // so it must also be guarded.
-        let is_past_agent_slide = if FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        let is_past_agent_slide = if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             matches!(
                 self.step,
                 OnboardingStep::ThirdParty | OnboardingStep::ThemePicker
@@ -774,8 +774,8 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn back(&mut self, ctx: &mut ModelContext<Self>) {
-        use derp_core::features::FeatureFlag;
-        let theme_picker_last = FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
+        use bork_core::features::FeatureFlag;
+        let theme_picker_last = FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
         let ai_setup_flow = self.ai_setup_flow_active();
         let agent_intention = matches!(self.intention, OnboardingIntention::AgentDrivenDevelopment);
 
@@ -787,7 +787,7 @@ impl OnboardingStateModel {
                 OnboardingStep::Customize => {
                     if ai_setup_flow && agent_intention {
                         match self.ai_setup_choice {
-                            AiSetupChoice::DerpAgent => Some(OnboardingStep::AiAccess),
+                            AiSetupChoice::BorkAgent => Some(OnboardingStep::AiAccess),
                             AiSetupChoice::ThirdParty => Some(OnboardingStep::ThirdParty),
                         }
                     } else {
@@ -828,8 +828,8 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn next(&mut self, ctx: &mut ModelContext<Self>) {
-        use derp_core::features::FeatureFlag;
-        let theme_picker_last = FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
+        use bork_core::features::FeatureFlag;
+        let theme_picker_last = FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
 
         let is_last_step = if theme_picker_last {
             matches!(self.step, OnboardingStep::ThemePicker)
@@ -855,7 +855,7 @@ impl OnboardingStateModel {
                     }
                 },
                 OnboardingStep::AiSetup => match self.ai_setup_choice {
-                    AiSetupChoice::DerpAgent => self.set_step(OnboardingStep::Agent, ctx),
+                    AiSetupChoice::BorkAgent => self.set_step(OnboardingStep::Agent, ctx),
                     AiSetupChoice::ThirdParty => self.set_step(OnboardingStep::ThirdParty, ctx),
                 },
                 OnboardingStep::Customize => match self.intention {
@@ -995,10 +995,10 @@ impl OnboardingStateModel {
     /// The `(step_index, step_count)` shown by the bottom-nav progress dots for the
     /// current step, intention, and flow variant.
     pub(crate) fn progress(&self) -> (usize, usize) {
-        use derp_core::features::FeatureFlag;
+        use bork_core::features::FeatureFlag;
 
         let is_terminal = matches!(self.intention, OnboardingIntention::Terminal);
-        if !FeatureFlag::OpenDerpNewSettingsModes.is_enabled() {
+        if !FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
             // Legacy flow: ThemePicker → Intention → Agent → Project.
             return match self.step {
                 OnboardingStep::Intro | OnboardingStep::ThemePicker => (0, 4),
@@ -1012,13 +1012,13 @@ impl OnboardingStateModel {
             };
         }
 
-        // The Derp Agent path has the extra "Choose how to access AI" step, so it
+        // The Bork Agent path has the extra "Choose how to access AI" step, so it
         // is one longer than the third-party-agent path.
-        let is_derp_agent_path =
-            !is_terminal && matches!(self.ai_setup_choice, AiSetupChoice::DerpAgent);
+        let is_bork_agent_path =
+            !is_terminal && matches!(self.ai_setup_choice, AiSetupChoice::BorkAgent);
         let step_count = if is_terminal {
             3
-        } else if is_derp_agent_path {
+        } else if is_bork_agent_path {
             6
         } else {
             5
@@ -1031,7 +1031,7 @@ impl OnboardingStateModel {
             OnboardingStep::Customize => {
                 if is_terminal {
                     1
-                } else if is_derp_agent_path {
+                } else if is_bork_agent_path {
                     4
                 } else {
                     3

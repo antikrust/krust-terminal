@@ -1,14 +1,14 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use derp_core::ui::icons::Icon;
-use derpui::elements::{ConstrainedBox, Container, Highlight, Text};
-use derpui::fonts::{Properties, Weight};
-use derpui::text_layout::ClipConfig;
-use derpui::{AppContext, Element, Entity, ModelContext, ModelHandle, SingletonEntity as _};
+use bork_core::ui::icons::Icon;
+use borkui::elements::{ConstrainedBox, Container, Highlight, Text};
+use borkui::fonts::{Properties, Weight};
+use borkui::text_layout::ClipConfig;
+use borkui::{AppContext, Element, Entity, ModelContext, ModelHandle, SingletonEntity as _};
 
 use crate::appearance::Appearance;
 use crate::cloud_object::model::persistence::CloudModel;
-use crate::search::command_palette::derp_drive;
+use crate::search::command_palette::bork_drive;
 use crate::search::data_source::{DataSourceSearchError, Query, QueryResult};
 use crate::search::mixer::DataSourceRunErrorWrapper;
 use crate::search::result_renderer::ItemHighlightState;
@@ -35,7 +35,7 @@ impl InlineMenuAction for AcceptPrompt {
 }
 
 pub struct PromptsMenuDataSource {
-    derp_drive_data_source: ModelHandle<derp_drive::DataSource>,
+    bork_drive_data_source: ModelHandle<bork_drive::DataSource>,
 }
 
 impl PromptsMenuDataSource {
@@ -44,9 +44,9 @@ impl PromptsMenuDataSource {
         // currently its implementation is not well-setup for async use.
         //
         // TODO(zachbai): Revert to full-text search and make this an `AsyncDataSource`.
-        let derp_drive_data_source = ctx.add_model(derp_drive::DataSource::new_fuzzy);
+        let bork_drive_data_source = ctx.add_model(bork_drive::DataSource::new_fuzzy);
         Self {
-            derp_drive_data_source,
+            bork_drive_data_source,
         }
     }
 }
@@ -88,7 +88,7 @@ impl SyncDataSource for PromptsMenuDataSource {
                 .collect());
         }
 
-        self.derp_drive_data_source
+        self.bork_drive_data_source
             .as_ref(app)
             .search_workflows(query, true, false, app)
             .map(|results| {
@@ -162,7 +162,7 @@ impl SearchItem for PromptSearchItem {
         let icon_color = inline_styles::icon_color(appearance);
         let icon_size = inline_styles::font_size(appearance);
 
-        let icon = Icon::Prompt.to_derpui_icon(icon_color).finish();
+        let icon = Icon::Prompt.to_borkui_icon(icon_color).finish();
 
         Container::new(
             ConstrainedBox::new(icon)
@@ -207,7 +207,7 @@ impl SearchItem for PromptSearchItem {
         &self,
         highlight_state: ItemHighlightState,
         appearance: &Appearance,
-    ) -> Option<derp_core::ui::theme::Fill> {
+    ) -> Option<bork_core::ui::theme::Fill> {
         inline_styles::item_background(highlight_state, appearance)
     }
 

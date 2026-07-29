@@ -1,11 +1,11 @@
-//! Logic relating to a secondary process which Derp uses to spawn new shell
+//! Logic relating to a secondary process which Bork uses to spawn new shell
 //! sessions.
 //!
 //! The purpose of this "server" process is to ensure that shell processes are
 //! created in as clean of a state as possible.  In general, the act of creating
 //! a new process in Unix "leaks" some state from the parent into the child
 //! (e.g.: open file descriptors).  By spawning this secondary process very
-//! early during Derp's initialization, we can be more confident that there are
+//! early during Bork's initialization, we can be more confident that there are
 //! no resources that will leak into shell processes (and, subsequently, into
 //! the programs the user runs within the shell).
 //!
@@ -33,7 +33,7 @@ use command::blocking::Command;
 use cvt::cvt;
 use nix::sys::socket;
 use parking_lot::Mutex;
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 pub use self::client::TerminalServerClient;
 use super::spawner::PtyHandle;
@@ -57,7 +57,7 @@ const SEND_SOCKET_FILENO: RawFd = RECV_SOCKET_FILENO + 1;
 /// This should be executed very shortly after process start; it is important
 /// to minimize the number of resources acquired that could be leaked to a child
 /// process through a fork/exec pair.
-pub fn run_terminal_server(args: &derp_cli::TerminalServerArgs) {
+pub fn run_terminal_server(args: &bork_cli::TerminalServerArgs) {
     // We initialize context-independent feature flags early, as the terminal
     // server process may need to reference them. User-controlled flags are overridden
     // soon after.
@@ -112,7 +112,7 @@ fn spawn_message_receiver_thread(socket_fd: RawFd, terminated_children: Arc<Mute
 /// sockets.
 ///
 /// Unlike a standard pipe, Unix domain sockets support sending file descriptors
-/// between processes, enabling the Derp application process to communicate
+/// between processes, enabling the Bork application process to communicate
 /// directly with the pty (grandchild) process - this is much more performant
 /// than communicating with the grandchild via the terminal server as an
 /// intermediary.
@@ -181,11 +181,11 @@ impl TerminalServer {
                     }
                     Ok(())
                 })
-                .arg(derp_cli::terminal_server_subcommand())
+                .arg(bork_cli::terminal_server_subcommand())
                 // Tell the terminal server process what process ID it should
                 // expect its parent to have.  This allows it to terminate
                 // itself when it detects its parent process to have changed.
-                .arg(derp_cli::parent_flag())
+                .arg(bork_cli::parent_flag())
                 .spawn()
                 .context("Failed to spawn terminal server process")?;
 

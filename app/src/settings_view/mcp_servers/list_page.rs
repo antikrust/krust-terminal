@@ -7,19 +7,19 @@ use settings::Setting as _;
 use settings::ToggleableSetting as _;
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use derp_core::features::FeatureFlag;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::Icon;
-use derp_errors::report_error;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::Icon;
+use bork_errors::report_error;
+use borkui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Expanded, Fill, Flex,
     FormattedTextElement, HighlightedHyperlink, MainAxisAlignment, MainAxisSize, ParentElement,
     Text,
 };
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::switch::SwitchStateHandle;
-use derpui::{
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::switch::SwitchStateHandle;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -70,7 +70,7 @@ use crate::workspace::Workspace;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::ToastStack;
 
-const DESCRIPTION_TEXT: &str = "Add MCP servers to extend the Derp Agent's capabilities. MCP servers expose data sources or tools to agents through a standardized interface, essentially acting like plugins. Add a custom server, or use the presets to get started with popular servers. You can also find team servers that have been shared with you here. ";
+const DESCRIPTION_TEXT: &str = "Add MCP servers to extend the Bork Agent's capabilities. MCP servers expose data sources or tools to agents through a standardized interface, essentially acting like plugins. Add a custom server, or use the presets to get started with popular servers. You can also find team servers that have been shared with you here. ";
 
 #[derive(Debug, Clone)]
 pub enum MCPServersListPageViewEvent {
@@ -121,7 +121,7 @@ impl MCPServersListPageView {
             me.handle_templatable_mcp_manager_event(event, ctx);
         });
 
-        // Installs Derp's built-in web search server the first time this
+        // Installs Bork's built-in web search server the first time this
         // page is opened, so it shows up without the user pasting any JSON.
         // A no-op after the first call.
         templatable_manager.update(ctx, |manager, ctx| {
@@ -1177,7 +1177,7 @@ impl MCPServersListPageView {
                 ),
                 FormattedTextFragment::hyperlink(
                     "See supported providers.",
-                    "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
+                    "https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
                 ),
             ]
         });
@@ -1215,7 +1215,7 @@ impl MCPServersListPageView {
             FormattedTextFragment::plain_text(DESCRIPTION_TEXT),
             FormattedTextFragment::hyperlink(
                 "Learn more.",
-                "https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp",
+                "https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp",
             ),
         ];
 
@@ -1310,8 +1310,8 @@ impl MCPServersListPageView {
                         .current_team()
                         .map(|team| team.name.clone());
                     let shared_by_text = match team_name {
-                        Some(name) => format!("Shared by Derp and {name}"),
-                        None => "Shared by Derp and from other devices".to_string(),
+                        Some(name) => format!("Shared by Bork and {name}"),
+                        None => "Shared by Bork and from other devices".to_string(),
                     };
 
                     page.add_child(self.render_server_cards_section(
@@ -1322,7 +1322,7 @@ impl MCPServersListPageView {
                     ));
                 } else if !filtered_gallery_cards.is_empty() {
                     page.add_child(self.render_server_cards_section(
-                        "Shared from Derp",
+                        "Shared from Bork",
                         &filtered_gallery_cards,
                         appearance,
                         app,
@@ -1582,10 +1582,10 @@ impl MCPServersListPageView {
             }
         }
 
-        // If the path is the Derp data directory (e.g. ~/.derp or ~/.derp_dev), set the text to
-        // "global". The Derp provider stores its data directory as the root path rather than the
+        // If the path is the Bork data directory (e.g. ~/.bork or ~/.bork_dev), set the text to
+        // "global". The Bork provider stores its data directory as the root path rather than the
         // home directory, unlike other providers that store the home directory directly.
-        if root_path == &crate::derp_managed_paths_watcher::derp_data_dir() {
+        if root_path == &crate::bork_managed_paths_watcher::bork_data_dir() {
             return Some("global".to_string());
         }
 

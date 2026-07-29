@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use derp_util::standardized_path::StandardizedPath;
+use bork_util::standardized_path::StandardizedPath;
 
 use crate::entry::{DirectoryEntry, Entry, FileId, FileMetadata};
 use crate::file_tree_store::{FileTreeEntry, FileTreeEntryState};

@@ -1,16 +1,16 @@
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::util::current_shell_starter_and_version;
-use derp::integration_testing::terminal::{
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::util::current_shell_starter_and_version;
+use bork::integration_testing::terminal::{
     assert_active_block_output_for_single_terminal_in_tab, assert_input_editor_contents,
     assert_long_running_block_executing_for_single_terminal_in_tab,
     assert_no_visible_background_blocks, wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::single_terminal_view_for_tab;
-use derp::terminal::model::block::TranscriptScope;
-use derp::terminal::model::terminal_model::BlockIndex;
-use derp::terminal::shell::{Shell, ShellType};
-use derpui_core::integration::{AssertionCallback, AssertionOutcome, TestStep};
-use derpui_core::{async_assert, async_assert_eq};
+use bork::integration_testing::view_getters::single_terminal_view_for_tab;
+use bork::terminal::model::block::TranscriptScope;
+use bork::terminal::model::terminal_model::BlockIndex;
+use bork::terminal::shell::{Shell, ShellType};
+use borkui_core::integration::{AssertionCallback, AssertionOutcome, TestStep};
+use borkui_core::{async_assert, async_assert_eq};
 
 use super::{new_builder, Builder};
 use crate::util::skip_if_powershell_core_2303;
@@ -65,7 +65,7 @@ macro_rules! check_command {
     };
 }
 
-/// Tests that the shell reports its input buffer to the Derp typeahead model after
+/// Tests that the shell reports its input buffer to the Bork typeahead model after
 /// a long-running command completes.
 pub fn test_input_reporting_posix_shells() -> Builder {
     // When the shell can report its input buffer, we can handle typeahead with
@@ -206,9 +206,9 @@ pub fn test_background_output() -> Builder {
     use std::os::unix::prelude::OpenOptionsExt;
 
     use regex::Regex;
-    use derp::integration_testing::block::assert_background_output;
-    use derp::integration_testing::terminal::execute_command_for_single_terminal_in_tab;
-    use derp::integration_testing::terminal::util::ExpectedExitStatus;
+    use bork::integration_testing::block::assert_background_output;
+    use bork::integration_testing::terminal::execute_command_for_single_terminal_in_tab;
+    use bork::integration_testing::terminal::util::ExpectedExitStatus;
 
     let (starter, _) = current_shell_starter_and_version();
     let (spawn_command, kill_command) = match starter.shell_type() {

@@ -2,7 +2,7 @@
 use crate::discovery::{InstanceId, InstanceRecord};
 use crate::protocol::{ControlError, ErrorCode};
 
-/// CLI-level selector for choosing one discovered Derp instance.
+/// CLI-level selector for choosing one discovered Bork instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstanceSelector {
     Active,
@@ -23,7 +23,7 @@ pub fn select_instance(
             .ok_or_else(|| {
                 ControlError::new(
                     ErrorCode::NoInstance,
-                    format!("no Derp instance with id {}", instance_id.0),
+                    format!("no Bork instance with id {}", instance_id.0),
                 )
             }),
         InstanceSelector::Pid(pid) => records
@@ -33,7 +33,7 @@ pub fn select_instance(
             .ok_or_else(|| {
                 ControlError::new(
                     ErrorCode::NoInstance,
-                    format!("no Derp instance with pid {pid}"),
+                    format!("no Bork instance with pid {pid}"),
                 )
             }),
     }
@@ -43,12 +43,12 @@ fn select_active(records: &[InstanceRecord]) -> Result<InstanceRecord, ControlEr
     match records {
         [] => Err(ControlError::new(
             ErrorCode::NoInstance,
-            "no local Derp control instances were discovered",
+            "no local Bork control instances were discovered",
         )),
         [record] => Ok(record.clone()),
         _ => Err(ControlError::new(
             ErrorCode::AmbiguousInstance,
-            "multiple local Derp control instances were discovered; pass --instance",
+            "multiple local Bork control instances were discovered; pass --instance",
         )),
     }
 }

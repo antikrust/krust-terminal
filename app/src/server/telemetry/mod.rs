@@ -22,9 +22,9 @@ use rudder_message::{
     Batch as RudderBatch, BatchMessage as RudderBatchMessageWithMetadata,
     BatchMessageItem as RudderBatchMessage, Message as RudderMessage,
 };
-use derp_core::channel::RudderStackDestination;
-use derp_errors::report_error;
-use derpui::telemetry::Event;
+use bork_core::channel::RudderStackDestination;
+use bork_errors::report_error;
+use borkui::telemetry::Event;
 
 use crate::auth::UserUid;
 use crate::features::FeatureFlag;
@@ -38,14 +38,14 @@ const RUDDER_TELEMETRY_EVENTS_FILE_NAME: &str = "rudder_telemetry_events.json";
 
 /// Filepath where the Rudder events should be written on app quit.
 fn rudder_event_file_path() -> PathBuf {
-    derp_core::paths::secure_state_dir()
-        .unwrap_or_else(derp_core::paths::state_dir)
+    bork_core::paths::secure_state_dir()
+        .unwrap_or_else(bork_core::paths::state_dir)
         .join(RUDDER_TELEMETRY_EVENTS_FILE_NAME)
 }
 
 /// Removes all telemetry events from the app telemetry event queue.
 pub fn clear_event_queue() {
-    let _ = derpui::telemetry::flush_events();
+    let _ = borkui::telemetry::flush_events();
 }
 
 pub struct TelemetryApi {
@@ -93,7 +93,7 @@ impl TelemetryApi {
     // Batches up telemetry events from the global queue and sends a Message to the Rudderstack API.
     // Returns the number of events that were flushed.
     pub async fn flush_events(&self, settings_snapshot: PrivacySettingsSnapshot) -> Result<usize> {
-        let events = derpui::telemetry::flush_events();
+        let events = borkui::telemetry::flush_events();
         let event_count = events.len();
 
         #[cfg(not(target_family = "wasm"))]
@@ -171,7 +171,7 @@ impl TelemetryApi {
 
         let file = File::create(path)?;
 
-        let events = derpui::telemetry::flush_events();
+        let events = borkui::telemetry::flush_events();
         if events.len() > max_event_count {
             report_error!("More telemetry events in queue than the limit to persist")
         }
@@ -200,7 +200,7 @@ impl TelemetryApi {
 
     #[cfg(not(target_family = "wasm"))]
     fn persist_events_to_telemetry_log_file(&self, events: Vec<Event>) -> Result<()> {
-        let log_directory = derp_logging::log_directory()?;
+        let log_directory = bork_logging::log_directory()?;
         let telemetry_file_path = log_directory.join(&*ChannelState::telemetry_file_name());
 
         let file = OpenOptions::new()
@@ -216,16 +216,16 @@ impl TelemetryApi {
         &self,
         user_id: Option<UserUid>,
         anonymous_id: String,
-        event: impl derp_core::telemetry::TelemetryEvent,
+        event: impl bork_core::telemetry::TelemetryEvent,
         settings_snapshot: PrivacySettingsSnapshot,
     ) -> Result<()> {
-        let event = derpui::telemetry::create_event(
+        let event = borkui::telemetry::create_event(
             user_id.map(|uid| uid.as_string()),
             anonymous_id,
             event.name().into(),
             event.payload(),
             event.contains_ugc(),
-            derpui::time::get_current_time(),
+            borkui::time::get_current_time(),
         );
 
         self.send_telemetry_event_internal(event, settings_snapshot)

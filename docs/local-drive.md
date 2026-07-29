@@ -1,14 +1,14 @@
-# Local Derp Drive ("Library"): notes, workflows, and notebooks without a server
+# Local Bork Drive ("Library"): notes, workflows, and notebooks without a server
 
 > **Naming**: the user-facing name of this feature is **Library** (renamed
 > 2026-07-19; the panel, menus, keybindings, and tips all say Library).
 > Code identifiers, settings TOML paths, and this doc's internal
-> vocabulary keep the historical `derp_drive` naming — see
-> DERPDRIVE-DESIGN.md §7 for why identifiers were not churned.
+> vocabulary keep the historical `bork_drive` naming — see
+> BORKDRIVE-DESIGN.md §7 for why identifiers were not churned.
 
-This fork makes **Derp Drive fully local**. Notebooks, workflows, env var
+This fork makes **Bork Drive fully local**. Notebooks, workflows, env var
 collections, MCP server configs, AI facts, and folders live in the app's
-SQLite database and never touch Derp's servers. Sharing is file-based:
+SQLite database and never touch Bork's servers. Sharing is file-based:
 export an item (`.md` for notebooks, `.yaml` for workflows), send the file,
 the recipient imports it. This document maps how that works and where the
 seams are. **Read the traps before changing anything.**
@@ -17,7 +17,7 @@ seams are. **Read the traps before changing anything.**
 
 ## Architecture overview
 
-Upstream Derp Drive was already offline-first in shape:
+Upstream Bork Drive was already offline-first in shape:
 
 ```
 UI (drive/panel, drive/index, items)
@@ -53,9 +53,9 @@ that seam:
 * Sharing/guests/link/transfer methods return `Err` — their UI entry points
   are removed in this fork.
 * `fetch_changed_objects` returns an empty `InitialLoadResponse`;
-  `get_derp_drive_updates` signals ready then pends forever.
+  `get_bork_drive_updates` signals ready then pends forever.
 
-Objects created back when the install talked to derp.baby keep their real
+Objects created back when the install talked to bork.baby keep their real
 server IDs and work unchanged — the local client acknowledges operations on
 any ID.
 
@@ -80,10 +80,10 @@ Network transitions no longer stop polling or dequeueing
 ## What was removed from the UI
 
 * **Anonymous object limits + "Sign up for free" banner**: neutered at the
-  single choke point `AuthState::personal_object_limits()` (derp_server_auth
+  single choke point `AuthState::personal_object_limits()` (bork_server_auth
   crate) which now returns `None`. All limit gates AND the banner render
   path check it.
-* **Drive availability**: `DerpDriveSettings::is_derp_drive_enabled` is now
+* **Drive availability**: `BorkDriveSettings::is_bork_drive_enabled` is now
   purely the user setting; upstream also required a logged-in user.
 * **"Copy link" / "Share" / "Open on Desktop"** in Drive context menus
   (folder + item menus in drive/index.rs). "Export" remains and is the
@@ -132,7 +132,7 @@ open, mirroring Rules.
 * The **MCP gallery** rides the same client (`InitialLoadResponse.mcp_gallery`)
   and is now always empty. The **cloud-preferences syncer** also uses this
   client; "syncing" settings succeeds as a no-op against the local store.
-* `fetch_single_cloud_object` errors, so opening a `derp.baby` shared-object
+* `fetch_single_cloud_object` errors, so opening a `bork.baby` shared-object
   link shows a failure toast. The web-intent plumbing still exists.
 
 ## Follow-ups considered but not done

@@ -1,14 +1,14 @@
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
 };
-use derpui::platform::Cursor;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -312,7 +312,7 @@ impl RuleEditorView {
                     ScrollbarWidth::Auto,
                     appearance.theme().nonactive_ui_detail().into(),
                     appearance.theme().active_ui_detail().into(),
-                    derpui::elements::Fill::None,
+                    borkui::elements::Fill::None,
                 )
                 .finish(),
             )

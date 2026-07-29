@@ -1,6 +1,6 @@
 use chrono::{Local, TimeZone};
-use derp_core::execution_mode::{AppExecutionMode, ExecutionMode};
-use derpui::{App, ModelHandle, ReadModel, UpdateModel};
+use bork_core::execution_mode::{AppExecutionMode, ExecutionMode};
+use borkui::{App, ModelHandle, ReadModel, UpdateModel};
 
 use super::*;
 use crate::auth::{AuthManager, AuthStateProvider};

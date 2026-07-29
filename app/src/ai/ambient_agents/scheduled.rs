@@ -7,8 +7,8 @@ pub use cloud_object_models::{
 use futures::channel::oneshot;
 use futures::FutureExt;
 use serde_json::{Map, Value};
-use derp_graphql::queries::get_scheduled_agent_history::ScheduledAgentHistory;
-use derpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use bork_graphql::queries::get_scheduled_agent_history::ScheduledAgentHistory;
+use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::cloud_object::model::json_model::JsonModel;
@@ -108,7 +108,7 @@ pub struct UpdateScheduleParams {
     pub skill_spec: Option<Option<String>>,
     /// The new worker host for the scheduled agent.
     /// If not provided, the worker host will not be updated.
-    /// Setting to "derp" or empty string reverts to Derp-hosted.
+    /// Setting to "bork" or empty string reverts to Bork-hosted.
     pub worker_host: Option<String>,
 }
 
@@ -141,7 +141,7 @@ impl ScheduledAgentManager {
         &self,
         schedule_id: SyncId,
         app: &AppContext,
-    ) -> impl derpui::r#async::Spawnable<Output = anyhow::Result<Option<ScheduledAgentHistory>>>
+    ) -> impl borkui::r#async::Spawnable<Output = anyhow::Result<Option<ScheduledAgentHistory>>>
     {
         let ai_client = ServerApiProvider::as_ref(app).get_ai_client();
 

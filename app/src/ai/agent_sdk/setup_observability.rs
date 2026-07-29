@@ -4,7 +4,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use futures::FutureExt as _;
 use tracing::Instrument as _;
-use derpui::r#async::executor::Background;
+use borkui::r#async::executor::Background;
 
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::server::server_api::ai::{AIClient, AgentRunClientEventRequest};
@@ -180,7 +180,7 @@ impl OzRunTimelineEvent {
 #[derive(Clone, Copy)]
 pub(crate) enum SetupStep {
     TeamMetadataRefresh,
-    DerpDriveSync,
+    BorkDriveSync,
     TaskDataFetch,
     EnvironmentResolution,
     SkillRepoClone,
@@ -222,8 +222,8 @@ impl SetupStep {
             Self::TeamMetadataRefresh => {
                 span_and_name!("setup_team_metadata_refresh")
             }
-            Self::DerpDriveSync => {
-                span_and_name!("setup_derp_drive_sync")
+            Self::BorkDriveSync => {
+                span_and_name!("setup_bork_drive_sync")
             }
             Self::TaskDataFetch => {
                 span_and_name!("setup_task_metadata_secrets_attachments_git_credentials_fetch")

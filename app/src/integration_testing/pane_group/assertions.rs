@@ -1,5 +1,5 @@
-use derpui::async_assert_eq;
-use derpui::integration::{AssertionCallback, AssertionOutcome};
+use borkui::async_assert_eq;
+use borkui::integration::{AssertionCallback, AssertionOutcome};
 
 use crate::integration_testing::view_getters::pane_group_view;
 

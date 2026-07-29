@@ -6,7 +6,7 @@ use ai::diff_validation::DiffMatchFailures;
 use serde::Serialize;
 use serde_json::json;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use derp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::ai::agent::AIIdentifiers;
 use crate::ai::blocklist::RequestedEditResolution;
@@ -196,7 +196,7 @@ impl TelemetryEvent for RequestFileEditsTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        derp_core::telemetry::enum_events::<Self>()
+        bork_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -246,4 +246,4 @@ impl TelemetryEventDesc for RequestFileEditsTelemetryEventDiscriminants {
     }
 }
 
-derp_core::register_telemetry_event!(RequestFileEditsTelemetryEvent);
+bork_core::register_telemetry_event!(RequestFileEditsTelemetryEvent);

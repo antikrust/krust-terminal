@@ -1,8 +1,8 @@
 use comfy_table::Cell;
 use serde::Serialize;
-use derp_cli::mcp::MCPCommand;
-use derp_cli::GlobalOptions;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::mcp::MCPCommand;
+use bork_cli::GlobalOptions;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::ai::mcp::TemplatableMCPServerManager;
@@ -41,12 +41,12 @@ impl MCPCommandRunner {
                 global_options.output_format,
             );
 
-            ctx.terminate_app(derpui::platform::TerminationMode::ForceTerminate, None);
+            ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
         });
     }
 }
 
-impl derpui::Entity for MCPCommandRunner {
+impl borkui::Entity for MCPCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for MCPCommandRunner {}

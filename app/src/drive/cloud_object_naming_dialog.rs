@@ -1,13 +1,13 @@
-use derpui::elements::{
+use borkui::elements::{
     Border, Clipped, Container, CornerRadius, Dismiss, Empty, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::Weight;
-use derpui::platform::Cursor;
-use derpui::presenter::ChildView;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, ViewHandle};
+use borkui::fonts::Weight;
+use borkui::platform::Cursor;
+use borkui::presenter::ChildView;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, ViewHandle};
 
 use super::index::DriveIndexAction;
 use super::DriveObjectType;

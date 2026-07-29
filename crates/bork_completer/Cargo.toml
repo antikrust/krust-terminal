@@ -1,0 +1,62 @@
+[package]
+name = "bork_completer"
+authors = ["Bork Team <dev@bork.baby>"]
+version = "0.1.0"
+edition = "2021"
+description = "Bork completions engine"
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+async-recursion.workspace = true
+async-trait.workspace = true
+anyhow.workspace = true
+bincode.workspace = true
+cfg-if.workspace = true
+clap.workspace = true
+derive-new = "0.5.8"
+dirs.workspace = true
+futures.workspace = true
+fuzzy_match.workspace = true
+getset.workspace = true
+instant.workspace = true
+itertools.workspace = true
+lazy_static.workspace = true
+log.workspace = true
+memo-map.workspace = true
+regex.workspace = true
+serde.workspace = true
+shellexpand.workspace = true
+smol_str.workspace = true
+string-offset.workspace = true
+thiserror.workspace = true
+bork_cli.workspace = true
+bork_core.workspace = true
+bork_js = { workspace = true, optional = true }
+borkui_core.workspace = true
+bork_util.workspace = true
+typed-path.workspace = true
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+# For wasm, we don't use the feature "embed-signatures".
+bork-command-signatures = {workspace = true}
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+command = { path = "../command" }
+rquickjs = { workspace = true, optional = true }
+bork-command-signatures = {workspace = true, features = ["embed-signatures"]}
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+command = { path = "../command", features = ["test-util"] }
+
+[dev-dependencies]
+anyhow.workspace = true
+# Enable the `test-util` feature for our own package when running tests.
+bork_completer = { path = ".", features = ["test-util"] }
+
+[features]
+# Enables the completions-on-js implementation of the completion engine.
+# Note that this feature is only compatible with non-wasm targets.
+v2 = ["dep:bork_js", "dep:rquickjs"]
+# Enables utilities for testing.
+test-util = ["bork_js?/test-util"]

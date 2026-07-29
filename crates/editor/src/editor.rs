@@ -9,9 +9,9 @@ use num_traits::SaturatingSub;
 use pathfinder_color::ColorU;
 use rangemap::{RangeMap, RangeSet};
 use string_offset::CharOffset;
-use derpui_core::elements::Border;
-use derpui_core::text_layout::PaintStyleOverride;
-use derpui_core::{Action, AppContext, Element, TypedActionView, View};
+use borkui_core::elements::Border;
+use borkui_core::text_layout::PaintStyleOverride;
+use borkui_core::{Action, AppContext, Element, TypedActionView, View};
 
 use crate::content::version::BufferVersion;
 use crate::render::element::RichTextAction;

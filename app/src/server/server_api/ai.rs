@@ -16,100 +16,100 @@ use itertools::Itertools;
 #[cfg(test)]
 use mockall::automock;
 use prost::Message;
-use derp_core::channel::ChannelState;
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derp_graphql::ai::{AgentTaskState, PlatformErrorCode};
-use derp_graphql::client::Operation;
-use derp_graphql::mutations::confirm_file_artifact_upload::{
+use bork_core::channel::ChannelState;
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use bork_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use bork_graphql::client::Operation;
+use bork_graphql::mutations::confirm_file_artifact_upload::{
     ConfirmFileArtifactUpload, ConfirmFileArtifactUploadInput, ConfirmFileArtifactUploadResult,
     ConfirmFileArtifactUploadVariables,
 };
-use derp_graphql::mutations::create_agent_task::{
+use bork_graphql::mutations::create_agent_task::{
     CreateAgentTask, CreateAgentTaskInput, CreateAgentTaskResult, CreateAgentTaskVariables,
 };
-use derp_graphql::mutations::create_file_artifact_upload_target::{
+use bork_graphql::mutations::create_file_artifact_upload_target::{
     CreateFileArtifactUploadTarget, CreateFileArtifactUploadTargetInput,
     CreateFileArtifactUploadTargetResult, CreateFileArtifactUploadTargetVariables,
 };
-use derp_graphql::mutations::delete_ai_conversation::{
+use bork_graphql::mutations::delete_ai_conversation::{
     DeleteAIConversation, DeleteAIConversationVariables, DeleteConversationInput,
     DeleteConversationResult,
 };
-use derp_graphql::mutations::generate_code_embeddings::{
+use bork_graphql::mutations::generate_code_embeddings::{
     GenerateCodeEmbeddings, GenerateCodeEmbeddingsInput, GenerateCodeEmbeddingsResult,
     GenerateCodeEmbeddingsVariables,
 };
-use derp_graphql::mutations::generate_commands::{
+use bork_graphql::mutations::generate_commands::{
     GenerateCommands, GenerateCommandsInput, GenerateCommandsResult, GenerateCommandsStatus,
     GenerateCommandsVariables,
 };
-use derp_graphql::mutations::generate_dialogue::{
+use bork_graphql::mutations::generate_dialogue::{
     GenerateDialogue, GenerateDialogueInput,
     GenerateDialogueResult as GenerateDialogueResultGraphql, GenerateDialogueStatus,
     GenerateDialogueVariables, TranscriptPart as TranscriptPartGraphql,
 };
-use derp_graphql::mutations::generate_metadata_for_command::{
+use bork_graphql::mutations::generate_metadata_for_command::{
     GenerateMetadataForCommand, GenerateMetadataForCommandInput, GenerateMetadataForCommandResult,
     GenerateMetadataForCommandStatus, GenerateMetadataForCommandVariables,
 };
-use derp_graphql::mutations::populate_merkle_tree_cache::{
+use bork_graphql::mutations::populate_merkle_tree_cache::{
     PopulateMerkleTreeCache, PopulateMerkleTreeCacheResult, PopulateMerkleTreeCacheVariables,
 };
-use derp_graphql::mutations::request_bonus::{
+use bork_graphql::mutations::request_bonus::{
     ProvideNegativeFeedbackResponseForAiConversation,
     ProvideNegativeFeedbackResponseForAiConversationInput,
     ProvideNegativeFeedbackResponseForAiConversationVariables, RequestsRefundedResult,
 };
-use derp_graphql::mutations::update_agent_task::{
+use bork_graphql::mutations::update_agent_task::{
     AgentTaskStatusMessageInput, UpdateAgentTask, UpdateAgentTaskInput, UpdateAgentTaskResult,
     UpdateAgentTaskVariables,
 };
-use derp_graphql::mutations::update_merkle_tree::{
+use bork_graphql::mutations::update_merkle_tree::{
     MerkleTreeNode, UpdateMerkleTree, UpdateMerkleTreeInput, UpdateMerkleTreeResult,
     UpdateMerkleTreeVariables,
 };
-use derp_graphql::queries::codebase_context_config::{
+use bork_graphql::queries::codebase_context_config::{
     CodebaseContextConfigQuery, CodebaseContextConfigResult, CodebaseContextConfigVariables,
 };
-use derp_graphql::queries::free_available_models::{
+use bork_graphql::queries::free_available_models::{
     FreeAvailableModels, FreeAvailableModelsInput, FreeAvailableModelsResult,
     FreeAvailableModelsVariables,
 };
-use derp_graphql::queries::get_available_harnesses::{
+use bork_graphql::queries::get_available_harnesses::{
     GetAvailableHarnesses, GetAvailableHarnessesVariables,
 };
-use derp_graphql::queries::get_conversation_usage::{
+use bork_graphql::queries::get_conversation_usage::{
     ConversationUsage, GetConversationUsage, GetConversationUsageVariables, UserResult,
 };
-use derp_graphql::queries::get_feature_model_choices::{
+use bork_graphql::queries::get_feature_model_choices::{
     GetFeatureModelChoices, GetFeatureModelChoicesVariables,
 };
-use derp_graphql::queries::get_relevant_fragments::{
+use bork_graphql::queries::get_relevant_fragments::{
     GetRelevantFragmentsQuery, GetRelevantFragmentsResult, GetRelevantFragmentsVariables,
 };
 #[cfg(not(feature = "agent_mode_evals"))]
-use derp_graphql::queries::get_request_limit_info::{
+use bork_graphql::queries::get_request_limit_info::{
     GetRequestLimitInfo, GetRequestLimitInfoVariables,
 };
-use derp_graphql::queries::get_scheduled_agent_history::{
+use bork_graphql::queries::get_scheduled_agent_history::{
     GetScheduledAgentHistory, GetScheduledAgentHistoryVariables, ScheduledAgentHistory,
     ScheduledAgentHistoryInput, ScheduledAgentHistoryResult,
 };
-use derp_graphql::queries::rerank_fragments::{
+use bork_graphql::queries::rerank_fragments::{
     RerankFragments, RerankFragmentsResult, RerankFragmentsVariables,
 };
-use derp_graphql::queries::sync_merkle_tree::{
+use bork_graphql::queries::sync_merkle_tree::{
     SyncMerkleTree, SyncMerkleTreeInput, SyncMerkleTreeResult, SyncMerkleTreeVariables,
 };
-use derp_graphql::queries::task_attachments::{
+use bork_graphql::queries::task_attachments::{
     Task as TaskAttachmentsQuery, TaskInput, TaskResult, TaskVariables,
 };
-use derp_graphql::queries::task_git_credentials::{
+use bork_graphql::queries::task_git_credentials::{
     TaskGitCredentials, TaskGitCredentialsInput, TaskGitCredentialsResult,
     TaskGitCredentialsVariables,
 };
-use derp_multi_agent_api::ConversationData;
+use bork_multi_agent_api::ConversationData;
 
 #[cfg(not(target_family = "wasm"))]
 use super::download::write_response_body_to_path;
@@ -141,7 +141,7 @@ use crate::ai::request_usage_model::RequestLimitInfo;
 #[cfg(not(feature = "agent_mode_evals"))]
 use crate::ai::BonusGrant;
 use crate::ai::RequestUsageInfo;
-use crate::ai_assistant::execution_context::DerpAiExecutionContext;
+use crate::ai_assistant::execution_context::BorkAiExecutionContext;
 use crate::ai_assistant::requests::GenerateDialogueResult;
 use crate::ai_assistant::utils::TranscriptPart;
 use crate::ai_assistant::{AIGeneratedCommand, GenerateCommandsFromNaturalLanguageError};
@@ -230,10 +230,10 @@ pub struct SpawnAgentRequest {
     /// Not yet wired through the local start_agent flow.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_run_id: Option<String>,
-    /// Base64-encoded `derp.multi_agent.v1.Skill` payloads to restore as runtime skills.
+    /// Base64-encoded `bork.multi_agent.v1.Skill` payloads to restore as runtime skills.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub runtime_skills: Vec<String>,
-    /// Base64-encoded `derp.multi_agent.v1.Attachment` payloads to restore as referenced attachments.
+    /// Base64-encoded `bork.multi_agent.v1.Attachment` payloads to restore as referenced attachments.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub referenced_attachments: Vec<String>,
     /// Server-side conversation id to resume against (sets `task.AgentConversationID`).
@@ -1123,14 +1123,14 @@ pub trait AIClient: 'static + Send + Sync {
     async fn generate_commands_from_natural_language(
         &self,
         prompt: String,
-        ai_execution_context: Option<DerpAiExecutionContext>,
+        ai_execution_context: Option<BorkAiExecutionContext>,
     ) -> Result<Vec<AIGeneratedCommand>, GenerateCommandsFromNaturalLanguageError>;
 
     async fn generate_dialogue_answer(
         &self,
         transcript: Vec<TranscriptPart>,
         prompt: String,
-        ai_execution_context: Option<DerpAiExecutionContext>,
+        ai_execution_context: Option<BorkAiExecutionContext>,
     ) -> anyhow::Result<GenerateDialogueResult>;
 
     async fn generate_metadata_for_command(
@@ -1147,7 +1147,7 @@ pub trait AIClient: 'static + Send + Sync {
         &self,
         days: Option<i32>,
         limit: Option<i32>,
-        last_updated_end_timestamp: Option<derp_graphql::scalars::Time>,
+        last_updated_end_timestamp: Option<bork_graphql::scalars::Time>,
     ) -> Result<Vec<ConversationUsage>, anyhow::Error>;
 
     async fn get_feature_model_choices(&self) -> Result<ModelsByFeature, anyhow::Error>;
@@ -1492,7 +1492,7 @@ pub trait AIClient: 'static + Send + Sync {
 }
 
 fn into_file_artifact_record(
-    artifact: derp_graphql::mutations::create_file_artifact_upload_target::FileArtifact,
+    artifact: bork_graphql::mutations::create_file_artifact_upload_target::FileArtifact,
 ) -> FileArtifactRecord {
     FileArtifactRecord {
         artifact_uid: artifact.artifact_uid.into_inner(),
@@ -1575,9 +1575,9 @@ impl ServerApi {
 /// dropped, because a server-provided field we can't represent will almost certainly
 /// cause the upload to fail.
 fn convert_upload_field(
-    field: derp_graphql::mutations::create_file_artifact_upload_target::FileArtifactUploadField,
+    field: bork_graphql::mutations::create_file_artifact_upload_target::FileArtifactUploadField,
 ) -> anyhow::Result<UploadField> {
-    use derp_graphql::mutations::create_file_artifact_upload_target::FileArtifactUploadFieldValue;
+    use bork_graphql::mutations::create_file_artifact_upload_target::FileArtifactUploadFieldValue;
 
     let value = match field.value {
         FileArtifactUploadFieldValue::StaticUploadFieldValue(v) => {
@@ -1605,7 +1605,7 @@ impl AIClient for ServerApi {
         &self,
         prompt: String,
         // TODO: use relevant context from RequestContext and deprecate usage of ai_execution_context
-        _ai_execution_context: Option<DerpAiExecutionContext>,
+        _ai_execution_context: Option<BorkAiExecutionContext>,
     ) -> Result<Vec<AIGeneratedCommand>, GenerateCommandsFromNaturalLanguageError> {
         let default_err = GenerateCommandsFromNaturalLanguageError::Other;
 
@@ -1644,7 +1644,7 @@ impl AIClient for ServerApi {
         transcript: Vec<TranscriptPart>,
         prompt: String,
         // TODO: use relevant context from RequestContext and deprecate usage of ai_execution_context
-        _ai_execution_context: Option<DerpAiExecutionContext>,
+        _ai_execution_context: Option<BorkAiExecutionContext>,
     ) -> anyhow::Result<GenerateDialogueResult> {
         let graphql_transcript: Vec<TranscriptPartGraphql> = transcript
             .into_iter()
@@ -1748,7 +1748,7 @@ impl AIClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         match response.user {
-            derp_graphql::queries::get_request_limit_info::UserResult::UserOutput(user_output) => {
+            bork_graphql::queries::get_request_limit_info::UserResult::UserOutput(user_output) => {
                 let request_limit_info = user_output.user.request_limit_info.into();
 
                 let workspace_bonus_grants = user_output
@@ -1784,10 +1784,10 @@ impl AIClient for ServerApi {
                     bonus_grants,
                 })
             }
-            derp_graphql::queries::get_request_limit_info::UserResult::UserFacingError(e) => {
+            bork_graphql::queries::get_request_limit_info::UserResult::UserFacingError(e) => {
                 Err(anyhow!(get_user_facing_error_message(e)))
             }
-            derp_graphql::queries::get_request_limit_info::UserResult::Unknown => {
+            bork_graphql::queries::get_request_limit_info::UserResult::Unknown => {
                 Err(anyhow!("failed to get request limit info"))
             }
         }
@@ -1797,7 +1797,7 @@ impl AIClient for ServerApi {
         &self,
         days: Option<i32>,
         limit: Option<i32>,
-        last_updated_end_timestamp: Option<derp_graphql::scalars::Time>,
+        last_updated_end_timestamp: Option<bork_graphql::scalars::Time>,
     ) -> Result<Vec<ConversationUsage>, anyhow::Error> {
         let operation = GetConversationUsage::build(GetConversationUsageVariables {
             request_context: get_request_context(),
@@ -1820,9 +1820,9 @@ impl AIClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         match response.user {
-            derp_graphql::queries::get_feature_model_choices::UserResult::UserOutput(
-                derp_graphql::queries::get_feature_model_choices::UserOutput {
-                    user: derp_graphql::queries::get_feature_model_choices::User { mut workspaces },
+            bork_graphql::queries::get_feature_model_choices::UserResult::UserOutput(
+                bork_graphql::queries::get_feature_model_choices::UserOutput {
+                    user: bork_graphql::queries::get_feature_model_choices::User { mut workspaces },
                 },
             ) if !workspaces.is_empty() => {
                 // This is safe (`remove()` can panic) because we ensure workspaces is non-empty
@@ -1841,7 +1841,7 @@ impl AIClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         match response.user {
-            derp_graphql::queries::get_available_harnesses::UserResult::UserOutput(output) => {
+            bork_graphql::queries::get_available_harnesses::UserResult::UserOutput(output) => {
                 Ok(output
                     .user
                     .available_harnesses
@@ -1863,7 +1863,7 @@ impl AIClient for ServerApi {
                     })
                     .collect())
             }
-            derp_graphql::queries::get_available_harnesses::UserResult::Unknown => {
+            bork_graphql::queries::get_available_harnesses::UserResult::Unknown => {
                 Err(anyhow!("Failed to get available harnesses"))
             }
         }
@@ -2239,7 +2239,7 @@ impl AIClient for ServerApi {
         &self,
         server_conversation_token: ServerConversationToken,
     ) -> anyhow::Result<(ConversationData, ServerAIConversationMetadata), anyhow::Error> {
-        use derp_graphql::queries::list_ai_conversations::{
+        use bork_graphql::queries::list_ai_conversations::{
             ListAIConversations, ListAIConversationsInput, ListAIConversationsResult,
             ListAIConversationsVariables,
         };
@@ -2287,7 +2287,7 @@ impl AIClient for ServerApi {
         if !FeatureFlag::CloudConversations.is_enabled() {
             return Ok(vec![]);
         }
-        use derp_graphql::queries::list_ai_conversations::{
+        use bork_graphql::queries::list_ai_conversations::{
             ListAIConversationMetadata, ListAIConversationMetadataResult,
             ListAIConversationMetadataVariables, ListAIConversationsInput,
         };
@@ -2327,11 +2327,11 @@ impl AIClient for ServerApi {
         &self,
         server_conversation_token: ServerConversationToken,
     ) -> anyhow::Result<AIAgentConversationFormat, anyhow::Error> {
-        use derp_graphql::queries::get_ai_conversation_format::{
+        use bork_graphql::queries::get_ai_conversation_format::{
             GetAIConversationFormat, GetAIConversationFormatResult,
             GetAIConversationFormatVariables,
         };
-        use derp_graphql::queries::list_ai_conversations::ListAIConversationsInput;
+        use bork_graphql::queries::list_ai_conversations::ListAIConversationsInput;
 
         let conversation_id = server_conversation_token.as_str().to_string();
         let operation = GetAIConversationFormat::build(GetAIConversationFormatVariables {
@@ -2940,13 +2940,13 @@ impl AIClient for ServerApi {
     }
 }
 
-impl TryFrom<derp_graphql::queries::get_feature_model_choices::FeatureModelChoice>
+impl TryFrom<bork_graphql::queries::get_feature_model_choices::FeatureModelChoice>
     for ModelsByFeature
 {
     type Error = anyhow::Error;
 
     fn try_from(
-        value: derp_graphql::queries::get_feature_model_choices::FeatureModelChoice,
+        value: bork_graphql::queries::get_feature_model_choices::FeatureModelChoice,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             agent_mode: value.agent_mode.try_into()?,
@@ -2957,10 +2957,10 @@ impl TryFrom<derp_graphql::queries::get_feature_model_choices::FeatureModelChoic
     }
 }
 
-impl TryFrom<derp_graphql::workspace::FeatureModelChoice> for ModelsByFeature {
+impl TryFrom<bork_graphql::workspace::FeatureModelChoice> for ModelsByFeature {
     type Error = anyhow::Error;
 
-    fn try_from(value: derp_graphql::workspace::FeatureModelChoice) -> Result<Self, Self::Error> {
+    fn try_from(value: bork_graphql::workspace::FeatureModelChoice) -> Result<Self, Self::Error> {
         Ok(Self {
             agent_mode: value.agent_mode.try_into()?,
             coding: value.coding.try_into()?,
@@ -2970,11 +2970,11 @@ impl TryFrom<derp_graphql::workspace::FeatureModelChoice> for ModelsByFeature {
     }
 }
 
-impl TryFrom<derp_graphql::queries::get_feature_model_choices::AvailableLlms> for AvailableLLMs {
+impl TryFrom<bork_graphql::queries::get_feature_model_choices::AvailableLlms> for AvailableLLMs {
     type Error = anyhow::Error;
 
     fn try_from(
-        value: derp_graphql::queries::get_feature_model_choices::AvailableLlms,
+        value: bork_graphql::queries::get_feature_model_choices::AvailableLlms,
     ) -> Result<Self, Self::Error> {
         Self::new(
             value.default_id.into(),
@@ -2984,10 +2984,10 @@ impl TryFrom<derp_graphql::queries::get_feature_model_choices::AvailableLlms> fo
     }
 }
 
-impl TryFrom<derp_graphql::workspace::AvailableLlms> for AvailableLLMs {
+impl TryFrom<bork_graphql::workspace::AvailableLlms> for AvailableLLMs {
     type Error = anyhow::Error;
 
-    fn try_from(value: derp_graphql::workspace::AvailableLlms) -> Result<Self, Self::Error> {
+    fn try_from(value: bork_graphql::workspace::AvailableLlms) -> Result<Self, Self::Error> {
         Self::new(
             value.default_id.into(),
             value.choices.into_iter().map(LLMInfo::from),
@@ -2996,8 +2996,8 @@ impl TryFrom<derp_graphql::workspace::AvailableLlms> for AvailableLLMs {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::LlmInfo> for LLMInfo {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::LlmInfo) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::LlmInfo> for LLMInfo {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::LlmInfo) -> Self {
         let host_configs = {
             let mut map = std::collections::HashMap::new();
             for config in value.host_configs {
@@ -3035,8 +3035,8 @@ impl From<derp_graphql::queries::get_feature_model_choices::LlmInfo> for LLMInfo
     }
 }
 
-impl From<derp_graphql::workspace::LlmInfo> for LLMInfo {
-    fn from(value: derp_graphql::workspace::LlmInfo) -> Self {
+impl From<bork_graphql::workspace::LlmInfo> for LLMInfo {
+    fn from(value: bork_graphql::workspace::LlmInfo) -> Self {
         let host_configs = {
             let mut map = std::collections::HashMap::new();
             for config in value.host_configs {
@@ -3074,10 +3074,10 @@ impl From<derp_graphql::workspace::LlmInfo> for LLMInfo {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::RoutingHostConfig>
+impl From<bork_graphql::queries::get_feature_model_choices::RoutingHostConfig>
     for RoutingHostConfig
 {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::RoutingHostConfig) -> Self {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::RoutingHostConfig) -> Self {
         Self {
             enabled: value.enabled,
             model_routing_host: value.model_routing_host.into(),
@@ -3085,8 +3085,8 @@ impl From<derp_graphql::queries::get_feature_model_choices::RoutingHostConfig>
     }
 }
 
-impl From<derp_graphql::workspace::RoutingHostConfig> for RoutingHostConfig {
-    fn from(value: derp_graphql::workspace::RoutingHostConfig) -> Self {
+impl From<bork_graphql::workspace::RoutingHostConfig> for RoutingHostConfig {
+    fn from(value: bork_graphql::workspace::RoutingHostConfig) -> Self {
         Self {
             enabled: value.enabled,
             model_routing_host: value.model_routing_host.into(),
@@ -3094,22 +3094,22 @@ impl From<derp_graphql::workspace::RoutingHostConfig> for RoutingHostConfig {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::LlmModelHost> for LLMModelHost {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::LlmModelHost) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::LlmModelHost> for LLMModelHost {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::LlmModelHost) -> Self {
         match value {
-            derp_graphql::queries::get_feature_model_choices::LlmModelHost::DirectApi => {
+            bork_graphql::queries::get_feature_model_choices::LlmModelHost::DirectApi => {
                 LLMModelHost::DirectApi
             }
-            derp_graphql::queries::get_feature_model_choices::LlmModelHost::AwsBedrock => {
+            bork_graphql::queries::get_feature_model_choices::LlmModelHost::AwsBedrock => {
                 LLMModelHost::AwsBedrock
             }
-            derp_graphql::queries::get_feature_model_choices::LlmModelHost::CustomEndpoint => {
+            bork_graphql::queries::get_feature_model_choices::LlmModelHost::CustomEndpoint => {
                 LLMModelHost::CustomEndpoint
             }
-            derp_graphql::queries::get_feature_model_choices::LlmModelHost::GeminiEnterprise => {
+            bork_graphql::queries::get_feature_model_choices::LlmModelHost::GeminiEnterprise => {
                 LLMModelHost::GeminiEnterprise
             }
-            derp_graphql::queries::get_feature_model_choices::LlmModelHost::Other(value) => {
+            bork_graphql::queries::get_feature_model_choices::LlmModelHost::Other(value) => {
                 log::warn!(
                     "Unknown LlmModelHost '{value}'. Make sure to update client GraphQL types!"
                 );
@@ -3119,27 +3119,27 @@ impl From<derp_graphql::queries::get_feature_model_choices::LlmModelHost> for LL
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::LlmProvider> for LLMProvider {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::LlmProvider) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::LlmProvider> for LLMProvider {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::LlmProvider) -> Self {
         match value {
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Openai => {
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Openai => {
                 LLMProvider::OpenAI
             }
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Anthropic => {
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Anthropic => {
                 LLMProvider::Anthropic
             }
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Google => {
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Google => {
                 LLMProvider::Google
             }
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Xai => LLMProvider::Xai,
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Unknown => {
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Xai => LLMProvider::Xai,
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Unknown => {
                 LLMProvider::Unknown
             }
-            derp_graphql::queries::get_feature_model_choices::LlmProvider::Other(value) => {
+            bork_graphql::queries::get_feature_model_choices::LlmProvider::Other(value) => {
                 report_error!(
                     "Invalid LlmProvider; update client GraphQL types",
                     extra: { "provider" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 LLMProvider::Unknown
             }
@@ -3147,19 +3147,19 @@ impl From<derp_graphql::queries::get_feature_model_choices::LlmProvider> for LLM
     }
 }
 
-impl From<derp_graphql::workspace::LlmProvider> for LLMProvider {
-    fn from(value: derp_graphql::workspace::LlmProvider) -> Self {
+impl From<bork_graphql::workspace::LlmProvider> for LLMProvider {
+    fn from(value: bork_graphql::workspace::LlmProvider) -> Self {
         match value {
-            derp_graphql::workspace::LlmProvider::Openai => LLMProvider::OpenAI,
-            derp_graphql::workspace::LlmProvider::Anthropic => LLMProvider::Anthropic,
-            derp_graphql::workspace::LlmProvider::Google => LLMProvider::Google,
-            derp_graphql::workspace::LlmProvider::Xai => LLMProvider::Xai,
-            derp_graphql::workspace::LlmProvider::Unknown => LLMProvider::Unknown,
-            derp_graphql::workspace::LlmProvider::Other(value) => {
+            bork_graphql::workspace::LlmProvider::Openai => LLMProvider::OpenAI,
+            bork_graphql::workspace::LlmProvider::Anthropic => LLMProvider::Anthropic,
+            bork_graphql::workspace::LlmProvider::Google => LLMProvider::Google,
+            bork_graphql::workspace::LlmProvider::Xai => LLMProvider::Xai,
+            bork_graphql::workspace::LlmProvider::Unknown => LLMProvider::Unknown,
+            bork_graphql::workspace::LlmProvider::Other(value) => {
                 report_error!(
                     "Invalid LlmProvider; update client GraphQL types",
                     extra: { "provider" => %value },
-                    derp_errors::ReportErrorLogMode::OncePerRun
+                    bork_errors::ReportErrorLogMode::OncePerRun
                 );
                 LLMProvider::Unknown
             }
@@ -3167,8 +3167,8 @@ impl From<derp_graphql::workspace::LlmProvider> for LLMProvider {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::LlmSpec> for LLMSpec {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::LlmSpec) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::LlmSpec> for LLMSpec {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::LlmSpec) -> Self {
         Self {
             cost: value.cost as f32,
             quality: value.quality as f32,
@@ -3177,8 +3177,8 @@ impl From<derp_graphql::queries::get_feature_model_choices::LlmSpec> for LLMSpec
     }
 }
 
-impl From<derp_graphql::workspace::LlmSpec> for LLMSpec {
-    fn from(value: derp_graphql::workspace::LlmSpec) -> Self {
+impl From<bork_graphql::workspace::LlmSpec> for LLMSpec {
+    fn from(value: bork_graphql::workspace::LlmSpec) -> Self {
         Self {
             cost: value.cost as f32,
             quality: value.quality as f32,
@@ -3187,8 +3187,8 @@ impl From<derp_graphql::workspace::LlmSpec> for LLMSpec {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::LlmUsageMetadata> for LLMUsageMetadata {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::LlmUsageMetadata) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::LlmUsageMetadata> for LLMUsageMetadata {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::LlmUsageMetadata) -> Self {
         Self {
             request_multiplier: value.request_multiplier.max(1) as usize,
             credit_multiplier: value.credit_multiplier.map(|v| v as f32),
@@ -3196,8 +3196,8 @@ impl From<derp_graphql::queries::get_feature_model_choices::LlmUsageMetadata> fo
     }
 }
 
-impl From<derp_graphql::workspace::LlmUsageMetadata> for LLMUsageMetadata {
-    fn from(value: derp_graphql::workspace::LlmUsageMetadata) -> Self {
+impl From<bork_graphql::workspace::LlmUsageMetadata> for LLMUsageMetadata {
+    fn from(value: bork_graphql::workspace::LlmUsageMetadata) -> Self {
         Self {
             request_multiplier: value.request_multiplier.max(1) as usize,
             credit_multiplier: value.credit_multiplier.map(|v| v as f32),
@@ -3205,55 +3205,55 @@ impl From<derp_graphql::workspace::LlmUsageMetadata> for LLMUsageMetadata {
     }
 }
 
-impl From<derp_graphql::queries::get_feature_model_choices::DisableReason> for DisableReason {
-    fn from(value: derp_graphql::queries::get_feature_model_choices::DisableReason) -> Self {
+impl From<bork_graphql::queries::get_feature_model_choices::DisableReason> for DisableReason {
+    fn from(value: bork_graphql::queries::get_feature_model_choices::DisableReason) -> Self {
         match value {
-            derp_graphql::queries::get_feature_model_choices::DisableReason::AdminDisabled => {
+            bork_graphql::queries::get_feature_model_choices::DisableReason::AdminDisabled => {
                 DisableReason::AdminDisabled
             }
-            derp_graphql::queries::get_feature_model_choices::DisableReason::OutOfRequests => {
+            bork_graphql::queries::get_feature_model_choices::DisableReason::OutOfRequests => {
                 DisableReason::OutOfRequests
             }
-            derp_graphql::queries::get_feature_model_choices::DisableReason::ProviderOutage => {
+            bork_graphql::queries::get_feature_model_choices::DisableReason::ProviderOutage => {
                 DisableReason::ProviderOutage
             }
-            derp_graphql::queries::get_feature_model_choices::DisableReason::RequiresUpgrade => {
+            bork_graphql::queries::get_feature_model_choices::DisableReason::RequiresUpgrade => {
                 DisableReason::RequiresUpgrade
             }
-            derp_graphql::queries::get_feature_model_choices::DisableReason::Other(_) => {
+            bork_graphql::queries::get_feature_model_choices::DisableReason::Other(_) => {
                 DisableReason::Unavailable
             }
         }
     }
 }
 
-impl From<derp_graphql::workspace::DisableReason> for DisableReason {
-    fn from(value: derp_graphql::workspace::DisableReason) -> Self {
+impl From<bork_graphql::workspace::DisableReason> for DisableReason {
+    fn from(value: bork_graphql::workspace::DisableReason) -> Self {
         match value {
-            derp_graphql::workspace::DisableReason::AdminDisabled => DisableReason::AdminDisabled,
-            derp_graphql::workspace::DisableReason::OutOfRequests => DisableReason::OutOfRequests,
-            derp_graphql::workspace::DisableReason::ProviderOutage => DisableReason::ProviderOutage,
-            derp_graphql::workspace::DisableReason::RequiresUpgrade => {
+            bork_graphql::workspace::DisableReason::AdminDisabled => DisableReason::AdminDisabled,
+            bork_graphql::workspace::DisableReason::OutOfRequests => DisableReason::OutOfRequests,
+            bork_graphql::workspace::DisableReason::ProviderOutage => DisableReason::ProviderOutage,
+            bork_graphql::workspace::DisableReason::RequiresUpgrade => {
                 DisableReason::RequiresUpgrade
             }
-            derp_graphql::workspace::DisableReason::Other(_) => DisableReason::Unavailable,
+            bork_graphql::workspace::DisableReason::Other(_) => DisableReason::Unavailable,
         }
     }
 }
 
 // Conversions for AIConversationMetadata from GraphQL types
 
-fn convert_harness(harness: derp_graphql::ai::AgentHarness) -> AIAgentHarness {
+fn convert_harness(harness: bork_graphql::ai::AgentHarness) -> AIAgentHarness {
     match harness {
-        derp_graphql::ai::AgentHarness::Oz => AIAgentHarness::Oz,
-        derp_graphql::ai::AgentHarness::ClaudeCode => AIAgentHarness::ClaudeCode,
-        derp_graphql::ai::AgentHarness::Gemini => AIAgentHarness::Gemini,
-        derp_graphql::ai::AgentHarness::Codex => AIAgentHarness::Codex,
-        derp_graphql::ai::AgentHarness::Other(value) => {
+        bork_graphql::ai::AgentHarness::Oz => AIAgentHarness::Oz,
+        bork_graphql::ai::AgentHarness::ClaudeCode => AIAgentHarness::ClaudeCode,
+        bork_graphql::ai::AgentHarness::Gemini => AIAgentHarness::Gemini,
+        bork_graphql::ai::AgentHarness::Codex => AIAgentHarness::Codex,
+        bork_graphql::ai::AgentHarness::Other(value) => {
             report_error!(
                 "Invalid AgentHarness; update client GraphQL types",
                 extra: { "harness" => %value },
-                derp_errors::ReportErrorLogMode::OncePerRun
+                bork_errors::ReportErrorLogMode::OncePerRun
             );
             AIAgentHarness::Unknown
         }
@@ -3261,15 +3261,15 @@ fn convert_harness(harness: derp_graphql::ai::AgentHarness) -> AIAgentHarness {
 }
 
 fn convert_block_snapshot_format(
-    format: derp_graphql::ai::SerializedBlockFormat,
+    format: bork_graphql::ai::SerializedBlockFormat,
 ) -> AIAgentSerializedBlockFormat {
     match format {
-        derp_graphql::ai::SerializedBlockFormat::JsonV1 => AIAgentSerializedBlockFormat::JsonV1,
+        bork_graphql::ai::SerializedBlockFormat::JsonV1 => AIAgentSerializedBlockFormat::JsonV1,
     }
 }
 
 fn convert_conversation_format(
-    format: derp_graphql::ai::AIConversationFormat,
+    format: bork_graphql::ai::AIConversationFormat,
 ) -> AIAgentConversationFormat {
     AIAgentConversationFormat {
         has_task_list: format.has_task_list,
@@ -3277,10 +3277,10 @@ fn convert_conversation_format(
     }
 }
 
-impl TryFrom<derp_graphql::ai::AIConversation> for ServerAIConversationMetadata {
+impl TryFrom<bork_graphql::ai::AIConversation> for ServerAIConversationMetadata {
     type Error = anyhow::Error;
 
-    fn try_from(value: derp_graphql::ai::AIConversation) -> Result<Self, Self::Error> {
+    fn try_from(value: bork_graphql::ai::AIConversation) -> Result<Self, Self::Error> {
         // Full conversion including per-model token usage and tool usage
         // stats, so restored conversations render the same usage details
         // (e.g. the credits-expansion "Models" rows) as live ones.
@@ -3317,13 +3317,13 @@ impl TryFrom<derp_graphql::ai::AIConversation> for ServerAIConversationMetadata 
     }
 }
 
-impl TryFrom<derp_graphql::queries::list_ai_conversations::AIConversationMetadata>
+impl TryFrom<bork_graphql::queries::list_ai_conversations::AIConversationMetadata>
     for ServerAIConversationMetadata
 {
     type Error = anyhow::Error;
 
     fn try_from(
-        value: derp_graphql::queries::list_ai_conversations::AIConversationMetadata,
+        value: bork_graphql::queries::list_ai_conversations::AIConversationMetadata,
     ) -> Result<Self, Self::Error> {
         let usage: ConversationUsageMetadata = (&value.usage.usage_metadata).into();
         let metadata = value.metadata.try_into()?;

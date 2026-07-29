@@ -1,11 +1,11 @@
-use derp_completer::ParsedTokensSnapshot;
-use derp_completer::util::parse_current_commands_and_tokens;
+use bork_completer::ParsedTokensSnapshot;
+use bork_completer::util::parse_current_commands_and_tokens;
 
 use super::*;
 use crate::test_utils::CompletionContext;
 
 async fn mock_parsed_input_token(buffer_text: String) -> ParsedTokensSnapshot {
-    derp_features::mark_initialized();
+    bork_features::mark_initialized();
     let completion_context = CompletionContext::new();
     parse_current_commands_and_tokens(buffer_text, &completion_context).await
 }

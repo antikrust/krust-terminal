@@ -10,11 +10,11 @@ use derivative::Derivative;
 use lazy_static::lazy_static;
 use regex::Regex;
 use url::Url;
-use derp_core::channel::Channel;
-use derp_core::features::FeatureFlag;
-use derp_graphql::queries::get_updated_cloud_objects::UpdatedObjectInput;
-use derp_graphql::scalars::time::ServerTimestamp;
-use derpui::{AppContext, SingletonEntity};
+use bork_core::channel::Channel;
+use bork_core::features::FeatureFlag;
+use bork_graphql::queries::get_updated_cloud_objects::UpdatedObjectInput;
+use bork_graphql::scalars::time::ServerTimestamp;
+use borkui::{AppContext, SingletonEntity};
 
 use self::breadcrumbs::ContainingObject;
 use self::model::actions::ObjectActions;
@@ -25,8 +25,8 @@ use self::model::persistence::CloudModel;
 use crate::appearance::Appearance;
 use crate::auth::UserUid;
 use crate::channel::ChannelState;
-use crate::drive::items::DerpDriveItem;
-use crate::drive::{CloudObjectTypeAndId, OpenDerpDriveObjectArgs, OpenDerpDriveObjectSettings};
+use crate::drive::items::BorkDriveItem;
+use crate::drive::{CloudObjectTypeAndId, OpenBorkDriveObjectArgs, OpenBorkDriveObjectSettings};
 use crate::persistence::ModelEvent;
 use crate::server::cloud_objects::update_manager::InitiatedBy;
 use crate::server::ids::{HashableId, HashedSqliteId, ObjectUid, ServerId, SyncId, ToServerId};
@@ -151,17 +151,17 @@ pub trait CloudObject: Debug {
     /// in the sync queue item.
     fn update_object_queue_item(&self, revision_ts: Option<Revision>) -> QueueItem;
 
-    /// Returns whether this model type should render as a derp drive item.
-    fn renders_in_derp_drive(&self) -> bool;
+    /// Returns whether this model type should render as a bork drive item.
+    fn renders_in_bork_drive(&self) -> bool;
 
     /// Returns whether this model type should show update toasts in the UI.
     fn should_show_activity_toasts(&self) -> bool {
         true
     }
 
-    /// Creates a new Derp Drive item for this object.  Returns None if this
-    /// object is not rendered in Derp Drive.
-    fn to_derp_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn DerpDriveItem>>;
+    /// Creates a new Bork Drive item for this object.  Returns None if this
+    /// object is not rendered in Bork Drive.
+    fn to_bork_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn BorkDriveItem>>;
 
     /// Returns the web link of this object. Will return none if we do not support web links
     /// for this particular object (i.e. if it's not yet sync'd to the server, or if we don't
@@ -432,8 +432,8 @@ pub trait CloudModelType: Debug + Clone + Send + Sync {
     /// Returns the ObjectType for this model.
     fn object_type(&self) -> ObjectType;
 
-    /// Returns whether this model type should render as a derp drive item.
-    fn renders_in_derp_drive(&self) -> bool;
+    /// Returns whether this model type should render as a bork drive item.
+    fn renders_in_bork_drive(&self) -> bool;
 
     /// Returns whether this model type should show update toasts in the UI.
     fn should_show_activity_toasts(&self) -> bool {
@@ -446,19 +446,19 @@ pub trait CloudModelType: Debug + Clone + Send + Sync {
         true
     }
 
-    /// Creates a new derp drive item for this model type. Returns None
-    /// if this object does not render in Derp Drive.
-    fn to_derp_drive_item(
+    /// Creates a new bork drive item for this model type. Returns None
+    /// if this object does not render in Bork Drive.
+    fn to_bork_drive_item(
         &self,
         id: SyncId,
         appearance: &Appearance,
         object: &Self::CloudObjectType,
-    ) -> Option<Box<dyn DerpDriveItem>>;
+    ) -> Option<Box<dyn BorkDriveItem>>;
 
-    /// Returns the display name for this model (e.g. to show in the Derp Drive index)
+    /// Returns the display name for this model (e.g. to show in the Bork Drive index)
     fn display_name(&self) -> String;
 
-    /// Sets the display name to show in the Derp Drive Index.  Setting the name
+    /// Sets the display name to show in the Bork Drive Index.  Setting the name
     /// is not currently supported by all object types, hence the default empty
     /// implementation.
     fn set_display_name(&mut self, _name: &str) {}
@@ -770,12 +770,12 @@ where
         self.model().update_object_queue_item(revision_ts, self)
     }
 
-    fn renders_in_derp_drive(&self) -> bool {
-        self.model().renders_in_derp_drive()
+    fn renders_in_bork_drive(&self) -> bool {
+        self.model().renders_in_bork_drive()
     }
 
-    fn to_derp_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn DerpDriveItem>> {
-        self.model().to_derp_drive_item(self.id, appearance, self)
+    fn to_bork_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn BorkDriveItem>> {
+        self.model().to_bork_drive_item(self.id, appearance, self)
     }
 
     fn can_export(&self) -> bool {
@@ -796,11 +796,11 @@ where
 }
 
 /// Extracts the server id and object type from a (caller validated) Drive link.
-/// Intended use is deriving metadata from links such that Derp objects
-/// can be opened natively in Derp with no web interaction.
-pub fn extract_server_id_and_object_type_from_derp_drive_link(
+/// Intended use is deriving metadata from links such that Bork objects
+/// can be opened natively in Bork with no web interaction.
+pub fn extract_server_id_and_object_type_from_bork_drive_link(
     url: &Url,
-) -> Option<OpenDerpDriveObjectArgs> {
+) -> Option<OpenBorkDriveObjectArgs> {
     let server_id = url
         .path_segments()
         .and_then(|mut segments| segments.next_back())
@@ -809,7 +809,7 @@ pub fn extract_server_id_and_object_type_from_derp_drive_link(
 
     let object_type = url.path_segments().and_then(|mut segments| segments.nth(1));
 
-    // Parse the object portion of the path segment (derp.baby/drive/{object})
+    // Parse the object portion of the path segment (bork.baby/drive/{object})
     // into an object type
     let object_type = match object_type {
         Some("notebook") => ObjectType::Notebook,
@@ -823,13 +823,13 @@ pub fn extract_server_id_and_object_type_from_derp_drive_link(
 
     let invitee_email: Option<String> = query_string.get("invitee_email").map(|s| s.to_string());
 
-    Some(OpenDerpDriveObjectArgs {
+    Some(OpenBorkDriveObjectArgs {
         object_type,
         server_id: match server_id {
             Some(server_id) => server_id.try_into().ok()?,
             _ => return None,
         },
-        settings: OpenDerpDriveObjectSettings {
+        settings: OpenBorkDriveObjectSettings {
             focused_folder_id,
             invitee_email,
         },
@@ -890,7 +890,7 @@ pub trait CloudObjectMetadataExt {
     /// Returns None if the revision and last_editor are None.
     fn semantic_editing_history(&self, app: &AppContext) -> Option<String>;
 
-    /// Returns a semantic summary of the object's creator. For example, "Alice" or "joan@derp.baby".
+    /// Returns a semantic summary of the object's creator. For example, "Alice" or "joan@bork.baby".
     #[cfg_attr(target_family = "wasm", expect(dead_code))]
     fn semantic_creator(&self, app: &AppContext) -> Option<String>;
 
@@ -903,7 +903,7 @@ impl CloudObjectMetadataExt for CloudObjectMetadata {
     fn semantic_editing_history(&self, app: &AppContext) -> Option<String> {
         let user_profiles = UserProfiles::as_ref(app);
 
-        // First, the editor. For example, "Joan Didion" or "joan@derp.baby".
+        // First, the editor. For example, "Joan Didion" or "joan@bork.baby".
         let editor_string = self
             .last_editor_uid
             .as_ref()
@@ -986,7 +986,7 @@ pub use cloud_object_models::{
     ServerPreference, ServerScheduledAmbientAgent, ServerTemplatableMCPServer, ServerWorkflow,
     ServerWorkflowEnum, TryFromGql,
 };
-use derp_errors::report_error;
+use bork_errors::report_error;
 
 #[derive(Default, Clone, Copy, Debug, Eq, Derivative)]
 #[derivative(PartialEq, Hash)]
@@ -1017,7 +1017,7 @@ impl Space {
     }
 }
 
-/// Enum for specifying the location of a derp drive object.
+/// Enum for specifying the location of a bork drive object.
 /// Objects can live in top level spaces, or a specific folder.
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum CloudObjectLocation {

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement,
 };
-use derpui::{Action, AppContext, Element, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::{Action, AppContext, Element, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::blocklist::inline_action::inline_action_icons::icon_size;
 use crate::ui_components::icons::Icon;
@@ -230,7 +230,7 @@ pub fn render_expansion_icon(
     app: &AppContext,
 ) -> Box<dyn Element> {
     ConstrainedBox::new(
-        derpui::elements::Icon::new(
+        borkui::elements::Icon::new(
             if expanded {
                 if expands_upwards {
                     Icon::ChevronUp.into()

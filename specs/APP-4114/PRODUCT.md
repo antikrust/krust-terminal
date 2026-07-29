@@ -8,7 +8,7 @@ The feature is scoped to pane items in the Vertical Tabs panel. Custom pane name
 
 ## Problem
 
-Derp already supports renaming tabs, but vertical tabs expose pane-level items. When a tab has multiple panes, the existing tab rename feature is too coarse: it names the whole tab rather than the individual split panes inside it.
+Bork already supports renaming tabs, but vertical tabs expose pane-level items. When a tab has multiple panes, the existing tab rename feature is too coarse: it names the whole tab rather than the individual split panes inside it.
 
 Users need a pane-level naming affordance so they can distinguish related panes at a glance while keeping the tab title and pane header behavior unchanged.
 
@@ -92,7 +92,7 @@ Behavior rules:
 
 ### Inline editor behavior
 
-The pane rename editor should behave consistently with existing inline rename interactions in Derp.
+The pane rename editor should behave consistently with existing inline rename interactions in Bork.
 
 Expected behavior:
 
@@ -191,7 +191,7 @@ Expected behavior:
 - Splitting a pane creates a new pane without automatically copying the source pane's custom name unless existing split behavior already clones all pane metadata.
 - Closing a pane removes its custom name with the pane.
 - Closing a tab removes custom names for panes in that tab.
-- Reopening Derp should preserve custom pane names for restored panes if those panes are part of persisted workspace state.
+- Reopening Bork should preserve custom pane names for restored panes if those panes are part of persisted workspace state.
 
 ### Search behavior
 
@@ -252,7 +252,7 @@ Expected behavior:
 - **Focused-session mode**: Switch to `View as = Tabs` and `Tab item = Focused session`. Focus panes with and without custom names and verify the representative row updates correctly.
 - **Summary mode**: Switch to `View as = Tabs` and `Tab item = Summary`. Verify the summary primary line is not replaced by a custom pane name.
 - **Search**: Search for the custom pane name in Panes mode and focused-session Tabs mode and verify the expected row is matched.
-- **Lifecycle**: Move a named pane to another tab, close named panes, and relaunch Derp with restored workspace state. Verify names stay attached to the intended panes and disappear when panes are gone.
+- **Lifecycle**: Move a named pane to another tab, close named panes, and relaunch Bork with restored workspace state. Verify names stay attached to the intended panes and disappear when panes are gone.
 
 ## Open questions
 

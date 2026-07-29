@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use chrono::{Local, TimeZone};
-use derp_multi_agent_api as api;
-use derp_terminal::model::BlockIndex;
+use bork_multi_agent_api as api;
+use bork_terminal::model::BlockIndex;
 
 use super::find_block_indices_for_exchange_timestamps;
 use crate::ai::agent::conversation::AIConversation;
@@ -298,21 +298,21 @@ fn conversation_with_dirs(initial: &str, latest: &str) -> AIConversation {
 
 #[test]
 fn conversation_tracks_initial_and_latest_working_directory() {
-    let conversation = conversation_with_dirs("/home/user/code/derp", "/home/user/code/derp/wt");
+    let conversation = conversation_with_dirs("/home/user/code/bork", "/home/user/code/bork/wt");
 
     assert_eq!(
         conversation.initial_working_directory().as_deref(),
-        Some("/home/user/code/derp"),
+        Some("/home/user/code/bork"),
     );
     assert_eq!(
         conversation.current_working_directory().as_deref(),
-        Some("/home/user/code/derp/wt"),
+        Some("/home/user/code/bork/wt"),
     );
 }
 
 #[test]
 fn forked_startup_working_directory_uses_latest_directory() {
-    let conversation = conversation_with_dirs("/home/user/code/derp", "/home/user/code/derp/wt");
+    let conversation = conversation_with_dirs("/home/user/code/bork", "/home/user/code/bork/wt");
 
     let restoration = ConversationRestorationInNewPaneType::Forked {
         conversation,
@@ -323,11 +323,11 @@ fn forked_startup_working_directory_uses_latest_directory() {
     // working directory, not the directory it was originally started in.
     assert_eq!(
         restoration.startup_working_directory().as_deref(),
-        Some("/home/user/code/derp/wt"),
+        Some("/home/user/code/bork/wt"),
     );
     // The initial working directory getter still returns the original directory.
     assert_eq!(
         restoration.initial_working_directory().as_deref(),
-        Some("/home/user/code/derp"),
+        Some("/home/user/code/bork"),
     );
 }

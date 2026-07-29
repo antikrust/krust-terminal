@@ -1,12 +1,12 @@
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use derpui_core::assets::asset_cache::AssetSource;
-use derpui_core::elements::{
+use borkui_core::assets::asset_cache::AssetSource;
+use borkui_core::elements::{
     Align, CacheOption, Clipped, ConstrainedBox, Container, CrossAxisAlignment, Empty, Expanded,
     Flex, Image, MainAxisSize, ParentElement, Point, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch, Stack,
 };
-use derpui_core::event::DispatchedEvent;
-use derpui_core::{
+use borkui_core::event::DispatchedEvent;
+use borkui_core::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,
     SizeConstraint,
 };

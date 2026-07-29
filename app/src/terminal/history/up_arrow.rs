@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use derp_core::features::FeatureFlag;
-use derpui::{AppContext, EntityId, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use borkui::{AppContext, EntityId, SingletonEntity};
 
 use super::History;
 use crate::ai::blocklist::{BlocklistAIHistoryModel, InputConfig};

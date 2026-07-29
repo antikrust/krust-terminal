@@ -10,7 +10,7 @@
 //!
 //! ## Relationship to the (still-present) fake auth
 //!
-//! Upstream Derp's `AuthState`/`Credentials` machinery is still in the tree and
+//! Upstream Bork's `AuthState`/`Credentials` machinery is still in the tree and
 //! still boots a fake local "test user" (see ACCOUNTS.md). This module is
 //! deliberately kept *separate* from it for now: signing in here does not touch
 //! `AuthState`, so it cannot destabilize the ~140 files that read it, and the
@@ -37,8 +37,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use account_client::{Account, AccountClient, AccountError, ServerConfig};
-use derp_core::user_preferences::GetUserPreferences;
-use derpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use bork_core::user_preferences::GetUserPreferences;
+use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 pub mod chat;
 pub mod settings_sync;

@@ -4,11 +4,11 @@ use parking_lot::FairMutex;
 use session_sharing_protocol::common::{
     OrderedTerminalEvent, OrderedTerminalEventType, Scrollback, ScrollbackBlock, WindowSize,
 };
-use derp_core::command::ExitCode;
-use derp_core::features::FeatureFlag;
-use derpui::platform::WindowStyle;
-use derpui::units::Lines;
-use derpui::{App, SingletonEntity, ViewHandle};
+use bork_core::command::ExitCode;
+use bork_core::features::FeatureFlag;
+use borkui::platform::WindowStyle;
+use borkui::units::Lines;
+use borkui::{App, SingletonEntity, ViewHandle};
 
 use crate::ai::blocklist::{BlocklistAIHistoryModel, QueuedQueryModel};
 use crate::terminal::event_listener::ChannelEventListener;

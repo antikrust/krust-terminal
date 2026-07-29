@@ -18,7 +18,7 @@ on:
           - github_hosted
   workflow_call:
 
-name: Derp CI
+name: Bork CI
 
 env:
   CARGO_TERM_COLOR: always
@@ -31,7 +31,7 @@ env:
   RUSTFLAGS: -C debuginfo=line-tables-only --cfg=web_sys_unstable_apis
   # Ensure we open up real windows that render their contents via the GPU,
   # so that we can exercise the actual rendering logic.
-  DERPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS: 1
+  BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS: 1
 
 concurrency:
   # Cancel any outstanding CI workflow runs against the same PR.
@@ -50,7 +50,7 @@ jobs:
     if: >-
       github.event.pull_request.draft == false &&
       (!startsWith(github.event.pull_request.head.ref, 'repo-sync/') || contains(github.event.pull_request.labels.*.name, 'repo-sync:conflict')) &&
-      github.repository_owner == 'derpdotdev'
+      github.repository_owner == 'borkdotdev'
     outputs:
       affects-database-schema: ${{ github.ref == 'master' || steps.filter.outputs.affects-database-schema }}
       affects-rust-sources: ${{ github.ref == 'master' || steps.filter.outputs.affects-rust-sources }}
@@ -81,7 +81,7 @@ jobs:
         id: wasm_runner_type
         run: |
           # Use a larger (16 core, 64GB ram) runner on Linux to speed up execution time.
-          # https://github.com/derpdotdev/derp-internal/settings/actions/runners
+          # https://github.com/borkdotdev/bork-internal/settings/actions/runners
           RUNNER_TYPE='["ubuntu-latest-large"]'
           echo "value=$RUNNER_TYPE" >> $GITHUB_OUTPUT
 
@@ -114,7 +114,7 @@ jobs:
           - os: "linux"
             name: "Linux"
             # Use a larger (16 core, 64GB ram) runner on Linux to speed up execution time.
-            # https://github.com/derpdotdev/derp-internal/settings/actions/runners
+            # https://github.com/borkdotdev/bork-internal/settings/actions/runners
             runner: ubuntu-latest-large
             # We don't (yet) have any self-hosted Linux runners.
             is_self_hosted: false
@@ -125,7 +125,7 @@ jobs:
             runner: windows-latest-large
             # We don't (yet) have any self-hosted Windows runners.
             is_self_hosted: false
-            extra_test_args: "--exclude command-signatures-v2 --exclude derp_js"
+            extra_test_args: "--exclude command-signatures-v2 --exclude bork_js"
     runs-on: ${{ matrix.runner }}
     needs: params
     # Make sure an ID token is created with the necessary permissions to use
@@ -230,7 +230,7 @@ jobs:
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: projects/63595664881/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          service_account: github-ci-workflow@derp-ssh-integration-testing.iam.gserviceaccount.com
+          service_account: github-ci-workflow@bork-ssh-integration-testing.iam.gserviceaccount.com
 
       - name: Install gcloud CLI tool
         # Skipped for fork PRs - see HAS_GCP_AUTH definition above.
@@ -264,7 +264,7 @@ jobs:
           # Unit tests may end up spawning a shell, but shouldn't care which
           # shell it is.  We'll use zsh, as it has the shortest bootstrap times
           # and tends to be the most reliable.
-          DERP_SHELL_PATH: ${{ steps.echo_default_shell.outputs.default_shell_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_default_shell.outputs.default_shell_path }}
 
       - name: Upload results of unit tests to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -274,7 +274,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=unit
           variant: ${{ matrix.os }}
@@ -289,7 +289,7 @@ jobs:
         env:
           # We run shell-agnostic tests against zsh, as it has the shortest
           # bootstrap times and tends to be the most reliable.
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.zsh_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.zsh_path }}
 
       - name: Upload results of shell-agnostic integration tests to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -299,7 +299,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=shell-agnostic
           variant: ${{ matrix.os }}
@@ -312,7 +312,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} -E "package(integration) and test(shell_integration_tests)${{ env.EXCLUDE_SSH_TESTS_FILTER }}${{ env.EXCLUDE_REMOTE_SERVER_TESTS_FILTER }}"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.default_bash_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.default_bash_path }}
 
       - name: Upload results of shell integration tests against default version of bash to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -322,7 +322,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=bash-default
           variant: ${{ matrix.os }}
@@ -338,7 +338,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} -E "package(integration) and test(shell_integration_tests)${{ env.EXCLUDE_SSH_TESTS_FILTER }}${{ env.EXCLUDE_REMOTE_SERVER_TESTS_FILTER }}"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.latest_bash_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.latest_bash_path }}
 
       - name: Upload results of shell integration tests against latest version of bash to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -348,7 +348,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=bash-latest
           variant: ${{ matrix.os }}
@@ -361,7 +361,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} -E "package(integration) and test(shell_integration_tests)${{ env.EXCLUDE_SSH_TESTS_FILTER }}${{ env.EXCLUDE_REMOTE_SERVER_TESTS_FILTER }}"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.fish_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.fish_path }}
 
       - name: Upload results of shell integration tests against fish to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -371,7 +371,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=fish
           variant: ${{ matrix.os }}
@@ -384,7 +384,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} -E "package(integration) and test(shell_integration_tests)${{ env.EXCLUDE_SSH_TESTS_FILTER }}${{ env.EXCLUDE_REMOTE_SERVER_TESTS_FILTER }}"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.zsh_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.zsh_path }}
 
       - name: Upload results of shell integration tests against zsh to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -394,7 +394,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=zsh
           variant: ${{ matrix.os }}
@@ -407,7 +407,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} -E "package(integration) and test(shell_integration_tests)${{ env.EXCLUDE_SSH_TESTS_FILTER }}${{ env.EXCLUDE_REMOTE_SERVER_TESTS_FILTER }}"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.powershell_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_shells_unix.outputs.powershell_path }}
 
       - name: Upload results of shell integration tests against powershell to trunk.io
         # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -417,7 +417,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=powershell
           variant: ${{ matrix.os }}
@@ -430,7 +430,7 @@ jobs:
         if: success() || failure()
         run: cargo test ${{ env.WORKSPACE_TEST_ARGS }} ${{ matrix.extra_test_args }} --doc
 
-        # Run derp_completer tests with the "v2" (completions-on-js) flag enabled. We do this to
+        # Run bork_completer tests with the "v2" (completions-on-js) flag enabled. We do this to
         # ensure that the v2 completions implementation doesn't regress/rot while it's development
         # is paused.
       - name: Run completions-on-js tests
@@ -438,7 +438,7 @@ jobs:
         if: matrix.os != 'windows' && (success() || failure())
         uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3 # v1
         with:
-          run: cargo nextest run --locked -p derp_completer --features v2
+          run: cargo nextest run --locked -p bork_completer --features v2
 
     # This is longer than we like and temporary until we speed up integration tests
     # The maximum timeout for the entire job is 6 hours:
@@ -491,7 +491,7 @@ jobs:
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: projects/63595664881/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          service_account: github-ci-workflow@derp-ssh-integration-testing.iam.gserviceaccount.com
+          service_account: github-ci-workflow@bork-ssh-integration-testing.iam.gserviceaccount.com
 
       - name: Install gcloud CLI tool
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -504,7 +504,7 @@ jobs:
           sudo apt-get install -y curl sshpass xz-utils
           MUSL_CROSS_TARGET="x86_64-unknown-linux-musl"
           source script/linux/configure_musl_toolchain "$MUSL_CROSS_TARGET"
-          MUSL_CROSS_BIN="$(dirname "$DERP_MUSL_CC")"
+          MUSL_CROSS_BIN="$(dirname "$BORK_MUSL_CC")"
           echo "$MUSL_CROSS_BIN" >> "$GITHUB_PATH"
           rustup target add x86_64-unknown-linux-musl
 
@@ -516,7 +516,7 @@ jobs:
         with:
           run: cargo nextest run ${{ env.WORKSPACE_TEST_ARGS }} -E "package(integration) and test(/remote_server/)"
         env:
-          DERP_SHELL_PATH: ${{ steps.echo_bash.outputs.default_bash_path }}
+          BORK_SHELL_PATH: ${{ steps.echo_bash.outputs.default_bash_path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload results of remote-server integration tests to trunk.io
@@ -526,7 +526,7 @@ jobs:
         with:
           junit-paths: target/nextest/ci/junit.xml
           cli-version: 0.12.5
-          org-slug: derp
+          org-slug: bork
           token: ${{ secrets.TRUNK_API_TOKEN }}
           tags: type=integration,category=remote-server
           variant: linux
@@ -571,17 +571,17 @@ jobs:
             runner: ${{ fromJSON(needs.params.outputs.macos-runner) }}
             is_self_hosted: ${{ contains(fromJSON(needs.params.outputs.macos-runner), 'self-hosted') }}
             null_device: "/dev/null"
-            clippy_excludes: "--exclude derp_completer"
+            clippy_excludes: "--exclude bork_completer"
 
           - os: "linux"
             name: "Linux"
             # Use a larger (16 core, 64GB ram) runner on Linux to speed up execution time.
-            # https://github.com/derpdotdev/derp-internal/settings/actions/runners
+            # https://github.com/borkdotdev/bork-internal/settings/actions/runners
             runner: ubuntu-latest-large
             # We don't (yet) have any self-hosted Linux runners.
             is_self_hosted: false
             null_device: "/dev/null"
-            clippy_excludes: "--exclude derp_completer"
+            clippy_excludes: "--exclude bork_completer"
 
           - os: "windows"
             name: "Windows"
@@ -589,7 +589,7 @@ jobs:
             # We don't (yet) have any self-hosted Windows runners.
             is_self_hosted: false
             null_device: "NUL"
-            clippy_excludes: "--exclude derp_js --exclude command-signatures-v2"
+            clippy_excludes: "--exclude bork_js --exclude command-signatures-v2"
     runs-on: ${{ matrix.runner }}
     needs: params
     #    if: ${{ needs.params.outputs.affects-rust-sources == 'true' }}
@@ -619,9 +619,9 @@ jobs:
           else
             # TODO(vorporeal): Re-enable the `all-features` flag once we've fixed things.
             cargo clippy --locked --workspace ${{ matrix.clippy_excludes }} --all-targets --tests -- -D warnings
-            # Run clippy on derp_completer with default, rather than all features enabled, because there is
+            # Run clippy on bork_completer with default, rather than all features enabled, because there is
             # feature-gated logic for the WIP completions-on-js implementation.
-            cargo clippy --locked -p derp_completer --all-targets --tests -- -D warnings
+            cargo clippy --locked -p bork_completer --all-targets --tests -- -D warnings
           fi
         env:
           # Attach the GitHub auth token so that requests to the GitHub API
@@ -635,7 +635,7 @@ jobs:
           if [[ ! -d $(brew --prefix clang-format) ]]; then
             brew install clang-format
           fi
-          ./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/derpui/src/ ./app/src/
+          ./script/run-clang-format.py -r --extensions 'c,h,cpp,m' ./crates/borkui/src/ ./app/src/
 
   general-lint:
     name: Miscellaneous checks
@@ -679,7 +679,7 @@ jobs:
         shell: pwsh
 
       - name: Validate repo-sync markers
-        uses: derpdotdev/repo-sync/actions/validate-markers@main
+        uses: borkdotdev/repo-sync/actions/validate-markers@main
 
       - name: Check for incorrectly named test files
         run: |
@@ -750,7 +750,7 @@ jobs:
           - os: "linux"
             name: "Linux"
             # Use a larger (16 core, 64GB ram) runner on Linux to speed up execution time.
-            # https://github.com/derpdotdev/derp-internal/settings/actions/runners
+            # https://github.com/borkdotdev/bork-internal/settings/actions/runners
             runner: ubuntu-latest-large
             # We don't (yet) have any self-hosted Linux runners.
             is_self_hosted: false

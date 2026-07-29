@@ -6,20 +6,20 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use inquire::{Confirm, InquireError, Password};
 use serde::Serialize;
-use derp_cli::agent::OutputFormat;
-use derp_cli::scope::ObjectScope;
-use derp_cli::secret::{
+use bork_cli::agent::OutputFormat;
+use bork_cli::scope::ObjectScope;
+use bork_cli::secret::{
     AnthropicMethod, CodexMethod, CreateProvider, CreateSecretArgs, DeleteSecretArgs,
     ListSecretsArgs, SecretCommand, SecretType, UpdateSecretArgs, ValueArgs,
 };
-use derp_cli::GlobalOptions;
-use derp_core::features::FeatureFlag;
-use derp_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
-use derp_graphql::object::SpaceType;
-use derp_managed_secrets::client::SecretOwner;
-use derp_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, SingletonEntity as _};
+use bork_cli::GlobalOptions;
+use bork_core::features::FeatureFlag;
+use bork_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
+use bork_graphql::object::SpaceType;
+use bork_managed_secrets::client::SecretOwner;
+use bork_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, SingletonEntity as _};
 
 use super::output::{self, TableFormat};
 use crate::auth::UserUid;
@@ -67,7 +67,7 @@ pub fn run(
     global_options: GlobalOptions,
     command: SecretCommand,
 ) -> Result<()> {
-    if !FeatureFlag::DerpManagedSecrets.is_enabled() {
+    if !FeatureFlag::BorkManagedSecrets.is_enabled() {
         return Err(anyhow::anyhow!("This feature is not enabled"));
     }
 

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use derp_core::features::FeatureFlag;
-use derp_errors::report_error;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_core::features::FeatureFlag;
+use bork_errors::report_error;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use super::{
     add_pending_file_attachments, input_context_for_request, parse_context_attachments,

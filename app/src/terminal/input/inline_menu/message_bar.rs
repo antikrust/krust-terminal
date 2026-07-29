@@ -1,8 +1,8 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::Element;
-use derpui::prelude::Container;
-use derpui::scene::Border;
-use derpui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::Element;
+use borkui::prelude::Container;
+use borkui::scene::Border;
+use borkui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::terminal::input::inline_menu::model::InlineMenuModel;

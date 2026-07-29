@@ -6,43 +6,43 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use markdown_parser::{parse_html, parse_markdown, FormattedText};
 use pathfinder_geometry::vector::vec2f;
 use string_offset::CharOffset;
-use derp_editor::content::anchor::Anchor;
-use derp_editor::content::text::{BufferTextStyle, CodeBlockType, TextStyles};
-use derp_editor::content::version::BufferVersion;
-use derp_editor::editor::{EmbeddedItemModel, NavigationKey, RunnableCommandModel, TextDecoration};
-use derp_editor::model::{CoreEditorModel, RichTextEditorModel};
-use derp_editor::render::element::{
+use bork_editor::content::anchor::Anchor;
+use bork_editor::content::text::{BufferTextStyle, CodeBlockType, TextStyles};
+use bork_editor::content::version::BufferVersion;
+use bork_editor::editor::{EmbeddedItemModel, NavigationKey, RunnableCommandModel, TextDecoration};
+use bork_editor::model::{CoreEditorModel, RichTextEditorModel};
+use bork_editor::render::element::{
     DisplayOptions, DisplayStateHandle, RichTextAction, RichTextElement, VerticalExpansionBehavior,
 };
-use derp_editor::render::model::{BlockItem, HitTestBlockType, Location, RenderState};
-use derp_editor::selection::{TextDirection, TextUnit};
-use derp_util::path::LineAndColumnArg;
-use derp_util::user_input::UserInput;
-use derpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, DerpA11yRole};
-use derpui::actions::StandardAction;
-use derpui::assets::asset_cache::{AssetCache, AssetHandle, AssetState};
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::{
+use bork_editor::render::model::{BlockItem, HitTestBlockType, Location, RenderState};
+use bork_editor::selection::{TextDirection, TextUnit};
+use bork_util::path::LineAndColumnArg;
+use bork_util::user_input::UserInput;
+use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
+use borkui::actions::StandardAction;
+use borkui::assets::asset_cache::{AssetCache, AssetHandle, AssetState};
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::{
     AnchorPair, Axis, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     Dismiss, Fill, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning, OffsetType,
     ParentAnchor, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius,
     ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Stack, XAxisAnchor,
     YAxisAnchor,
 };
-use derpui::event::ModifiersState;
-use derpui::fonts::{FallbackFontEvent, FallbackFontModel};
-use derpui::image_cache::ImageType;
-use derpui::keymap::{EditableBinding, FixedBinding, PerPlatformKeystroke};
-use derpui::platform::{Cursor, OperatingSystem};
-use derpui::presenter::ChildView;
-use derpui::r#async::SpawnedFutureHandle;
+use borkui::event::ModifiersState;
+use borkui::fonts::{FallbackFontEvent, FallbackFontModel};
+use borkui::image_cache::ImageType;
+use borkui::keymap::{EditableBinding, FixedBinding, PerPlatformKeystroke};
+use borkui::platform::{Cursor, OperatingSystem};
+use borkui::presenter::ChildView;
+use borkui::r#async::SpawnedFutureHandle;
 #[cfg(feature = "local_fs")]
-use derpui::text::word_boundaries::WordBoundariesPolicy;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::units::Pixels;
-use derpui::windowing::WindowManager;
-use derpui::{
+use borkui::text::word_boundaries::WordBoundariesPolicy;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::units::Pixels;
+use borkui::windowing::WindowManager;
+use borkui::{
     windowing, AppContext, BlurContext, CursorInfo, Element, Entity, FocusContext, ModelHandle,
     SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -72,7 +72,7 @@ use crate::util::bindings::CustomAction;
 #[cfg(feature = "local_fs")]
 use crate::util::link_detection::{detect_file_paths, get_word_range_at_offset, DetectedLinkType};
 use crate::util::tooltips::{
-    render_tooltip, should_show_open_in_derp_link, TooltipLink, TooltipRedaction,
+    render_tooltip, should_show_open_in_bork_link, TooltipLink, TooltipRedaction,
 };
 use crate::view_components::DismissibleToast;
 use crate::workspace::WorkspaceAction;
@@ -88,7 +88,7 @@ const MAX_EDITOR_TIP_WIDTH: f32 = 300.;
 const GUTTER_WIDTH: f32 = ICON_DIMENSIONS + 4.;
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     // Context for text entry/navigation/selection:
     // - The editor is focused
@@ -832,7 +832,7 @@ pub enum EditorViewAction {
     Redo,
     OpenBlockInsertionMenu,
     /// Insert a block of the given type after the hovered location.
-    InsertBlock(derp_editor::content::text::BlockType),
+    InsertBlock(bork_editor::content::text::BlockType),
     Indent,
     Unindent,
     Tab,
@@ -863,11 +863,11 @@ pub enum EditorViewAction {
     OpenEmbeddedObjectSearch,
     RemoveEmbeddingAt(CharOffset),
     MiddleClickPaste,
-    /// Open a file. If open_in_derp is true, open in Derp's code editor; otherwise use external editor.
+    /// Open a file. If open_in_bork is true, open in Bork's code editor; otherwise use external editor.
     OpenFile {
         path: PathBuf,
         line_and_column_num: Option<LineAndColumnArg>,
-        force_open_in_derp: bool,
+        force_open_in_bork: bool,
     },
     /// Signal from a Mermaid toggle view that the user changed the display mode for a block.
     MermaidDisplayModeSelected {
@@ -916,7 +916,7 @@ enum LayoutAffectingAssetLoad {
 }
 
 fn mermaid_diagram_needs_loaded_layout(
-    config: &derp_editor::render::model::ImageBlockConfig,
+    config: &bork_editor::render::model::ImageBlockConfig,
     image: &ImageType,
 ) -> bool {
     let ImageType::Svg { svg } = image else {
@@ -942,7 +942,7 @@ pub enum EditorViewEvent {
     OpenFile {
         path: PathBuf,
         line_and_column_num: Option<LineAndColumnArg>,
-        force_open_in_derp: bool,
+        force_open_in_bork: bool,
     },
     /// Emitted when the user runs a notebook workflow. The parent `NotebookView` is responsible
     /// for sending it to the active terminal.
@@ -1023,7 +1023,7 @@ struct SelectedFilePath {
 #[derive(Default)]
 struct FilePathMouseStateHandles {
     open_file_handle: MouseStateHandle,
-    open_in_derp_handle: MouseStateHandle,
+    open_in_bork_handle: MouseStateHandle,
 }
 
 pub struct RichTextEditorView {
@@ -1939,7 +1939,7 @@ impl RichTextEditorView {
                     ctx.emit(EditorViewEvent::OpenFile {
                         path: hovered_file_path.path.clone(),
                         line_and_column_num: hovered_file_path.line_and_column_num,
-                        force_open_in_derp: false,
+                        force_open_in_bork: false,
                     });
                 } else {
                     self.open_file_path = Some(hovered_file_path.clone());
@@ -2078,7 +2078,7 @@ impl RichTextEditorView {
     /// Inserts a new `block_type` block after the hovered block.
     pub(super) fn insert_block(
         &mut self,
-        block_type: derp_editor::content::text::BlockType,
+        block_type: bork_editor::content::text::BlockType,
         ctx: &mut ViewContext<Self>,
     ) {
         enum InsertionMode {
@@ -2131,7 +2131,7 @@ impl RichTextEditorView {
                         model.insert_block_after(insertion_offset + 1, block_type, ctx);
                     }
                     InsertionMode::DeleteSlashAndRestyleLine(cursor_position) => match block_type {
-                        derp_editor::content::text::BlockType::Item(item) => {
+                        bork_editor::content::text::BlockType::Item(item) => {
                             // Set one more offset position to the left to avoid additional linebreaks.
                             // Note: We can use `set_last_selection_head` because the menu cannot
                             // be opened when there are multiple selections.
@@ -2139,7 +2139,7 @@ impl RichTextEditorView {
                             model.insert_block_item(item, ctx);
                             model.cursor_at(cursor_position + 1, ctx);
                         }
-                        derp_editor::content::text::BlockType::Text(style) => {
+                        bork_editor::content::text::BlockType::Text(style) => {
                             // Note: We can use `set_last_selection_head` because the menu cannot
                             // be opened when there are multiple selections.
                             model.set_last_selection_head(cursor_position, ctx);
@@ -2510,7 +2510,7 @@ impl RichTextEditorView {
         appearance: &Appearance,
         ctx: &AppContext,
     ) -> Box<dyn Element> {
-        use derpui::EventContext;
+        use borkui::EventContext;
         type FilePathTooltipLinks = Vec<TooltipLink<Box<dyn Fn(&mut EventContext)>>>;
 
         let path = selected_file_path.path.clone();
@@ -2521,7 +2521,7 @@ impl RichTextEditorView {
             "Open file"
         }
         .to_string();
-        let show_open_in_derp = should_show_open_in_derp_link(&path, ctx);
+        let show_open_in_bork = should_show_open_in_bork_link(&path, ctx);
         let path_for_primary = path.clone();
         let modifier = directly_open_link_keybinding_string();
 
@@ -2531,26 +2531,26 @@ impl RichTextEditorView {
                 ctx.dispatch_typed_action(EditorViewAction::OpenFile {
                     path: path_for_primary.clone(),
                     line_and_column_num,
-                    force_open_in_derp: false,
+                    force_open_in_bork: false,
                 });
             }),
             detail: Some(format!("[{modifier} Click]")),
             mouse_state: self.file_path_mouse_states.open_file_handle.clone(),
         }];
 
-        if show_open_in_derp {
-            let path_for_derp = path.clone();
+        if show_open_in_bork {
+            let path_for_bork = path.clone();
             links.push(TooltipLink {
-                text: "Open in Derp".to_string(),
+                text: "Open in Bork".to_string(),
                 on_click: Box::new(move |ctx: &mut EventContext| {
                     ctx.dispatch_typed_action(EditorViewAction::OpenFile {
-                        path: path_for_derp.clone(),
+                        path: path_for_bork.clone(),
                         line_and_column_num,
-                        force_open_in_derp: true,
+                        force_open_in_bork: true,
                     });
                 }),
                 detail: None,
-                mouse_state: self.file_path_mouse_states.open_in_derp_handle.clone(),
+                mouse_state: self.file_path_mouse_states.open_in_bork_handle.clone(),
             });
         }
 
@@ -2748,7 +2748,7 @@ impl View for RichTextEditorView {
         stack.finish()
     }
 
-    fn active_cursor_position(&self, ctx: &ViewContext<Self>) -> Option<derpui::CursorInfo> {
+    fn active_cursor_position(&self, ctx: &ViewContext<Self>) -> Option<borkui::CursorInfo> {
         let model = self.model.as_ref(ctx);
         let render_state = model.render_state().as_ref(ctx);
         let font_size = model.cursor_font_size(ctx);
@@ -2759,7 +2759,7 @@ impl View for RichTextEditorView {
             })
     }
 
-    fn keymap_context(&self, ctx: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, ctx: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self.is_editable(ctx) {
@@ -3101,12 +3101,12 @@ impl TypedActionView for RichTextEditorView {
             OpenFile {
                 path,
                 line_and_column_num,
-                force_open_in_derp,
+                force_open_in_bork,
             } => {
                 ctx.emit(EditorViewEvent::OpenFile {
                     path: path.clone(),
                     line_and_column_num: *line_and_column_num,
-                    force_open_in_derp: *force_open_in_derp,
+                    force_open_in_bork: *force_open_in_bork,
                 });
             }
         }
@@ -3133,13 +3133,13 @@ impl TypedActionView for RichTextEditorView {
             EditorViewAction::UserTyped(text) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     text.clone().into_inner(),
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::Paste | EditorViewAction::MiddleClickPaste => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Pasting: {}", ctx.clipboard().read().plain_text),
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::Enter
@@ -3152,21 +3152,21 @@ impl TypedActionView for RichTextEditorView {
             | EditorViewAction::Unindent
             | EditorViewAction::Tab => ActionAccessibilityContent::from_debug(),
             EditorViewAction::ShiftTab => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Shift-tab", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Shift-tab", BorkA11yRole::UserAction),
             ),
             EditorViewAction::EditLink | EditorViewAction::CreateOrEditLink => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Edit Link",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::CopyLink => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Copy Link", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Copy Link", BorkA11yRole::UserAction),
             ),
             EditorViewAction::OpenTooltipLink(link) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Open link: {}", **link),
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::SecondaryLinkAction(link) => {
@@ -3176,72 +3176,72 @@ impl TypedActionView for RichTextEditorView {
                 );
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     content,
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::DeleteLineLeft => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Delete line left",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::DeleteLineRight => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Delete line right",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::DeleteWordLeft => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Delete word left",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::DeleteWordRight => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Delete word right",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
 
             EditorViewAction::CutLineLeft => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Cut line left", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Cut line left", BorkA11yRole::UserAction),
             ),
             EditorViewAction::CutLineRight => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Cut line right", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Cut line right", BorkA11yRole::UserAction),
             ),
             EditorViewAction::CutWordLeft => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Cut word left", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Cut word left", BorkA11yRole::UserAction),
             ),
             EditorViewAction::CutWordRight => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Cut word right", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Cut word right", BorkA11yRole::UserAction),
             ),
 
             EditorViewAction::ShowCharacterPalette => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Show character palette",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::ShowFindBar => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Show find bar", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Show find bar", BorkA11yRole::UserAction),
             ),
             EditorViewAction::OpenBlockInsertionMenu => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Open block-insertion menu",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::OpenEmbeddedObjectSearch => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Open embedded object search menu",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::InsertBlock(block_type) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Insert {} block", BlockType::from(block_type).label()),
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::Bold => self
@@ -3268,23 +3268,23 @@ impl TypedActionView for RichTextEditorView {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new(
                     "De-select command",
                     "Switch from selecting commands to selecting text",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::CodeBlockTypeSelectedAtOffset {
                 code_block_type, ..
             } => ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                 format!("Change code block language to {code_block_type}"),
-                DerpA11yRole::UserAction,
+                BorkA11yRole::UserAction,
             )),
             EditorViewAction::CopyTextToClipboard { .. } => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Copy code block", DerpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Copy code block", BorkA11yRole::UserAction),
             ),
             EditorViewAction::ToggleTaskList(_) => {
                 // TODO(ben): Is it useful to include the text and/or on/off state here?
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Toggle task list",
-                    DerpA11yRole::UserAction,
+                    BorkA11yRole::UserAction,
                 ))
             }
             EditorViewAction::Delete
@@ -3342,7 +3342,7 @@ impl TypedActionView for RichTextEditorView {
     }
 }
 
-impl derp_editor::editor::EditorView for RichTextEditorView {
+impl bork_editor::editor::EditorView for RichTextEditorView {
     type RichTextAction = EditorViewAction;
 
     fn runnable_command_at<'a>(
@@ -3446,7 +3446,7 @@ impl RichTextAction<RichTextEditorView> for EditorViewAction {
         );
         let multiselect = modifiers.alt && FeatureFlag::RichTextMultiselect.is_enabled();
 
-        // The first mouse down to bring focus to a Derp window will not have a corresponding mouse up.
+        // The first mouse down to bring focus to a Bork window will not have a corresponding mouse up.
         // We ignore it, and they can click again.
         if is_first_mouse {
             return None;

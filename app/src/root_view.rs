@@ -17,20 +17,20 @@ use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::SessionId;
 use settings::Setting as _;
 use url::Url;
-use derp_core::context_flag::ContextFlag;
-use derp_core::safe_error;
-use derp_core::user_preferences::GetUserPreferences as _;
-use derp_errors::{report_error, report_if_error};
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::{
+use bork_core::context_flag::ContextFlag;
+use bork_core::safe_error;
+use bork_core::user_preferences::GetUserPreferences as _;
+use bork_errors::{report_error, report_if_error};
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::{
     Border, ChildAnchor, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
-use derpui::keymap::{EditableBinding, FixedBinding};
-use derpui::platform::{WindowBounds, WindowStyle};
-use derpui::presenter::ChildView;
-use derpui::rendering::OnGPUDeviceSelected;
-use derpui::windowing::WindowManager;
-use derpui::{
+use borkui::keymap::{EditableBinding, FixedBinding};
+use borkui::platform::{WindowBounds, WindowStyle};
+use borkui::presenter::ChildView;
+use borkui::rendering::OnGPUDeviceSelected;
+use borkui::windowing::WindowManager;
+use borkui::{
     id, AddWindowOptions, AppContext, DisplayId, Element, Entity, EntityId, FocusContext,
     NextNewWindowsHasThisWindowsBoundsUponClose, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
@@ -61,8 +61,8 @@ use crate::changelog_model::ChangelogRequestType;
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{GenericStringObjectFormat, JsonObjectType, ObjectType};
 use crate::drive::export::ExportManager;
-use crate::drive::items::DerpDriveItemId;
-use crate::drive::{CloudObjectTypeAndId, OpenDerpDriveObjectArgs, OpenDerpDriveObjectSettings};
+use crate::drive::items::BorkDriveItemId;
+use crate::drive::{CloudObjectTypeAndId, OpenBorkDriveObjectArgs, OpenBorkDriveObjectSettings};
 use crate::experiments::{BlockOnboarding, Experiment};
 use crate::features::FeatureFlag;
 use crate::interval_timer::IntervalTimer;
@@ -88,7 +88,7 @@ use crate::terminal::keys_settings::KeysSettings;
 use crate::terminal::shell::ShellType;
 use crate::terminal::view::{cell_size_and_padding, TerminalAction};
 use crate::themes::onboarding_theme_picker_themes;
-use crate::themes::theme::{AnsiColorIdentifier, Blend, Fill, ThemeKind, DerpThemeConfig};
+use crate::themes::theme::{AnsiColorIdentifier, Blend, Fill, ThemeKind, BorkThemeConfig};
 use crate::uri::{OpenMCPSettingsArgs, OpenSettingsArgs};
 use crate::util::bindings::{self, is_binding_pty_compliant};
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightData, TrafficLightMouseStates};
@@ -106,7 +106,7 @@ use crate::{
     GlobalResourceHandlesProvider, UpdateQuakeModeEventArg,
 };
 
-const WINDOW_TITLE: &str = "Derp";
+const WINDOW_TITLE: &str = "Bork";
 
 lazy_static! {
     static ref FALLBACK_WINDOW_SIZE: Vector2F = vec2f(800.0, 600.0);
@@ -241,11 +241,11 @@ impl CreateEnvironmentArg {
                 // Accept valid URLs (e.g., https://github.com/user/repo)
                 Url::parse(repo).is_ok()
                     // Or valid POSIX portable pathnames (e.g., user/repo)
-                    || derp_util::path::is_posix_portable_pathname(repo)
+                    || bork_util::path::is_posix_portable_pathname(repo)
                     // Or absolute POSIX paths with portable components (e.g., /Users/me/repo)
                     || repo
                         .strip_prefix('/')
-                        .is_some_and(derp_util::path::is_posix_portable_pathname)
+                        .is_some_and(bork_util::path::is_posix_portable_pathname)
             })
             .join(" ");
 
@@ -364,11 +364,11 @@ pub fn init(app: &mut AppContext) {
     );
     app.add_global_action(
         "root_view:open_drive_object_new_window",
-        open_derp_drive_object,
+        open_bork_drive_object,
     );
     app.add_action(
         "root_view:open_drive_object_existing_window",
-        RootView::open_derp_drive_object_in_existing_window,
+        RootView::open_bork_drive_object_in_existing_window,
     );
 
     app.add_global_action(
@@ -717,7 +717,7 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                         AddWindowOptions {
                             window_style: WindowStyle::Pin,
                             window_bounds: WindowBounds::ExactPosition(frame_args.window_bounds),
-                            title: Some("Derp".to_owned()),
+                            title: Some("Bork".to_owned()),
                             fullscreen_state: window.fullscreen_state,
                             background_blur_radius_pixels,
                             background_blur_texture,
@@ -760,7 +760,7 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                         ctx.add_window(
                             AddWindowOptions {
                                 window_bounds: WindowBounds::new(window.bounds),
-                                title: Some("Derp".to_owned()),
+                                title: Some("Bork".to_owned()),
                                 fullscreen_state: window.fullscreen_state,
                                 background_blur_radius_pixels,
                                 background_blur_texture,
@@ -812,7 +812,7 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                 ctx.add_window(
                     AddWindowOptions {
                         window_bounds: WindowBounds::new(window.bounds),
-                        title: Some("Derp".to_owned()),
+                        title: Some("Bork".to_owned()),
                         fullscreen_state: window.fullscreen_state,
                         background_blur_radius_pixels,
                         background_blur_texture,
@@ -844,7 +844,7 @@ fn path_if_directory(path: &Path) -> Option<&Path> {
 /// Opens a new window with the workspace configured according to `source`. Returns the
 /// newly-opened window ID and a handle to the root view in that window.
 ///
-/// This is the canonical way to open a new Derp window - all other entrypoints should delegate to
+/// This is the canonical way to open a new Bork window - all other entrypoints should delegate to
 /// it if possible.
 pub(crate) fn open_new_with_workspace_source(
     source: NewWorkspaceSource,
@@ -999,7 +999,7 @@ fn open_settings_page_in_new_window(section: &SettingsSection, ctx: &mut AppCont
     });
 }
 
-/// Maps a `derp://settings` deeplink to the workspace action that opens it.
+/// Maps a `bork://settings` deeplink to the workspace action that opens it.
 fn workspace_action_for_open_settings(args: &OpenSettingsArgs) -> WorkspaceAction {
     match args {
         OpenSettingsArgs::Default => WorkspaceAction::ShowSettings,
@@ -1082,7 +1082,7 @@ fn open_linear_issue_work_in_new_window(args: &LinearIssueWork, ctx: &mut AppCon
     });
 }
 
-fn open_derp_drive_object(arg: &OpenDerpDriveObjectArgs, ctx: &mut AppContext) {
+fn open_bork_drive_object(arg: &OpenBorkDriveObjectArgs, ctx: &mut AppContext) {
     match arg.object_type {
         ObjectType::Notebook => open_new_workspace_with_notebook_open(
             SyncId::ServerId(arg.server_id),
@@ -1107,7 +1107,7 @@ fn display_object_missing_error_in_window(window_id: WindowId, ctx: &mut AppCont
 
 fn open_new_workspace_with_notebook_open(
     notebook_id: SyncId,
-    settings: OpenDerpDriveObjectSettings,
+    settings: OpenBorkDriveObjectSettings,
     ctx: &mut AppContext,
 ) {
     open_new_with_workspace_source(
@@ -1121,7 +1121,7 @@ fn open_new_workspace_with_notebook_open(
 
 fn open_new_workspace_with_workflow_open(
     workflow_id: SyncId,
-    settings: OpenDerpDriveObjectSettings,
+    settings: OpenBorkDriveObjectSettings,
     ctx: &mut AppContext,
 ) {
     open_new_with_workspace_source(
@@ -1212,7 +1212,7 @@ fn default_window_options(window_settings: &WindowSettings, ctx: &AppContext) ->
     AddWindowOptions {
         window_style,
         window_bounds: next_bounds,
-        title: Some("Derp".to_owned()),
+        title: Some("Bork".to_owned()),
         background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
         background_blur_texture: *window_settings.background_blur_texture,
         on_gpu_driver_selected: on_gpu_driver_selected_callback(),
@@ -1397,12 +1397,12 @@ fn toggle_quake_mode_window(global_resource_handles: &GlobalResourceHandles, ctx
                 AddWindowOptions {
                     window_style: WindowStyle::Pin,
                     window_bounds: WindowBounds::ExactPosition(config.window_bounds),
-                    title: Some("Derp".to_owned()),
+                    title: Some("Bork".to_owned()),
                     background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
                     background_blur_texture: *window_settings.background_blur_texture,
                     // Ignore the quake window for positioning the next window
                     anchor_new_windows_from_closed_position:
-                        derpui::NextNewWindowsHasThisWindowsBoundsUponClose::No,
+                        borkui::NextNewWindowsHasThisWindowsBoundsUponClose::No,
                     on_gpu_driver_selected: on_gpu_driver_selected_callback(),
                     window_instance: Some(ChannelState::app_id().to_string() + "-hotkey"),
                     ..Default::default()
@@ -1469,11 +1469,11 @@ fn toggle_quake_mode_window(global_resource_handles: &GlobalResourceHandles, ctx
     };
 }
 
-/// This action will show or hide all of Derp's windows except the quake window
+/// This action will show or hide all of Bork's windows except the quake window
 ///
-/// - If Derp is active and has any windows, hide those windows.
-/// - If Derp is hidden, show all windows.
-/// - If Derp is active but has 0 normal windows, create a new window with a new session.
+/// - If Bork is active and has any windows, hide those windows.
+/// - If Bork is hidden, show all windows.
+/// - If Bork is active but has 0 normal windows, create a new window with a new session.
 fn show_or_hide_non_quake_mode_windows(_: &(), ctx: &mut AppContext) {
     let quake_window_id = get_quake_mode_state(ctx).map(|state| state.window_id);
     let non_quake_mode_window_ids = ctx
@@ -1484,7 +1484,7 @@ fn show_or_hide_non_quake_mode_windows(_: &(), ctx: &mut AppContext) {
         open_new(&(), ctx);
     }
     let windowing_model = ctx.windows();
-    // Now there is at least one window. If a Derp window is active, hide the app.
+    // Now there is at least one window. If a Bork window is active, hide the app.
     // Otherwise, show activate the app to show it in front.
     let active_window_id = windowing_model.active_window();
     match active_window_id {
@@ -1532,11 +1532,11 @@ pub enum NewWorkspaceSource {
     },
     NotebookById {
         id: SyncId,
-        settings: OpenDerpDriveObjectSettings,
+        settings: OpenBorkDriveObjectSettings,
     },
     WorkflowById {
         id: SyncId,
-        settings: OpenDerpDriveObjectSettings,
+        settings: OpenBorkDriveObjectSettings,
     },
     AgentSession {
         options: Box<NewTerminalOptions>,
@@ -1717,11 +1717,11 @@ impl RootView {
                 if #[cfg(target_family = "wasm")] {
                     AuthOnboardingState::WebImport(AuthOnboardingTarget::Workspace(workspace_args.into()))
                 } else {
-                    // When OpenDerpNewSettingsModes is enabled, show onboarding before login for
+                    // When OpenBorkNewSettingsModes is enabled, show onboarding before login for
                     // users who haven't completed it yet (tracked via a local UserPreferences key).
-                    let has_completed_local_onboarding = FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+                    let has_completed_local_onboarding = FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
                         && has_completed_local_onboarding(ctx);
-                    let should_show_pre_login_onboarding = FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+                    let should_show_pre_login_onboarding = FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
                         && FeatureFlag::AgentOnboarding.is_enabled()
                         && !has_completed_local_onboarding;
                     if FeatureFlag::ForceLogin.is_enabled() {
@@ -1790,7 +1790,7 @@ impl RootView {
                 // the default if it's not already set and the user is logging in.
                 #[cfg(target_os = "macos")]
                 {
-                    use derpui_extras::user_preferences::UserPreferences;
+                    use borkui_extras::user_preferences::UserPreferences;
 
                     // Make sure we're interacting with user defaults instead
                     // of some other preferences store.  Apple implements some
@@ -1798,7 +1798,7 @@ impl RootView {
                     // defaults (like press-and-hold being either accented
                     // characters or key repeat), so we need to make sure we're
                     // interacting with the user defaults system.
-                    let user_defaults = derpui_extras::user_preferences::user_defaults::UserDefaultsPreferencesStorage::new(None);
+                    let user_defaults = borkui_extras::user_preferences::user_defaults::UserDefaultsPreferencesStorage::new(None);
                     if user_defaults
                         .read_value("ApplePressAndHoldEnabled")
                         .unwrap_or_default()
@@ -2078,7 +2078,7 @@ impl RootView {
     }
 
     fn onboarding_theme_kind(theme_name: &str) -> Option<ThemeKind> {
-        DerpThemeConfig::new()
+        BorkThemeConfig::new()
             .theme_items()
             .find_map(|(kind, theme)| {
                 (theme.name().as_deref() == Some(theme_name)).then(|| kind.clone())
@@ -2170,13 +2170,13 @@ impl RootView {
 
                 let is_logged_in = AuthStateProvider::as_ref(ctx).get().is_logged_in();
                 // If the user isn't logged in, only require login if the applied
-                // settings need an account (AI enabled). Fork: Derp Drive is
+                // settings need an account (AI enabled). Fork: Bork Drive is
                 // local-only and never requires an account.
                 let ai_enabled = selected_settings.is_ai_enabled();
                 // With old onboarding, we ask user to log in before onboarding, so don't do it after onboarding completes.
                 let requires_login = !is_logged_in
                     && ai_enabled
-                    && FeatureFlag::OpenDerpNewSettingsModes.is_enabled();
+                    && FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
 
                 if requires_login {
                     let tutorial = OnboardingTutorial::from(selected_settings.clone());
@@ -2390,7 +2390,7 @@ impl RootView {
                     LoginSlideView::new(
                         ai_enabled,
                         // No agent setup choice has been made yet; default to the
-                        // Derp Agent login screen rather than the third-party copy.
+                        // Bork Agent login screen rather than the third-party copy.
                         false,
                         &theme_name,
                         use_vertical_tabs,
@@ -2546,9 +2546,9 @@ impl RootView {
         false
     }
 
-    pub fn open_derp_drive_object_in_existing_window(
+    pub fn open_bork_drive_object_in_existing_window(
         &mut self,
-        arg: &OpenDerpDriveObjectArgs,
+        arg: &OpenBorkDriveObjectArgs,
         ctx: &mut ViewContext<Self>,
     ) -> bool {
         if let AuthOnboardingState::Terminal(handle) = &self.auth_onboarding_state {
@@ -2558,7 +2558,7 @@ impl RootView {
                 ObjectType::Notebook => {
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_derp_drive_initialized_sections(ctx);
+                            workspace.has_bork_drive_initialized_sections(ctx);
                         let notebook_id = SyncId::ServerId(arg.server_id);
                         let settings = arg.settings.clone();
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
@@ -2574,7 +2574,7 @@ impl RootView {
                 ObjectType::Workflow => {
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_derp_drive_initialized_sections(ctx);
+                            workspace.has_bork_drive_initialized_sections(ctx);
                         let workflow_id = SyncId::ServerId(arg.server_id);
                         let settings = arg.settings.clone();
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
@@ -2591,16 +2591,16 @@ impl RootView {
                     }
 
                     let item_id =
-                        DerpDriveItemId::Object(CloudObjectTypeAndId::from_generic_string_object(
+                        BorkDriveItemId::Object(CloudObjectTypeAndId::from_generic_string_object(
                             GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                             SyncId::ServerId(arg.server_id),
                         ));
 
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_derp_drive_initialized_sections(ctx);
+                            workspace.has_bork_drive_initialized_sections(ctx);
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
-                            workspace.view_in_and_focus_derp_drive(item_id, ctx);
+                            workspace.view_in_and_focus_bork_drive(item_id, ctx);
                         });
                     });
                 }
@@ -2610,14 +2610,14 @@ impl RootView {
                         return false;
                     }
 
-                    let item_id = DerpDriveItemId::Object(CloudObjectTypeAndId::Folder(
+                    let item_id = BorkDriveItemId::Object(CloudObjectTypeAndId::Folder(
                         SyncId::ServerId(arg.server_id),
                     ));
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_derp_drive_initialized_sections(ctx);
+                            workspace.has_bork_drive_initialized_sections(ctx);
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
-                            workspace.view_in_and_focus_derp_drive(item_id, ctx);
+                            workspace.view_in_and_focus_bork_drive(item_id, ctx);
                         });
                     });
                 }
@@ -2633,7 +2633,7 @@ impl RootView {
             ctx.windows().show_window_and_focus_app(window_id);
             ctx.notify();
         } else {
-            log::warn!("Auth not complete before trying to open derp drive object");
+            log::warn!("Auth not complete before trying to open bork drive object");
         }
         true
     }
@@ -2780,7 +2780,7 @@ impl RootView {
     }
 
     /// Insert a command that should create a subshell. If we support bootstrapping AKA
-    /// "derpifying" its [`ShellType`], set a flag to automatically bootstrap it when the command's
+    /// "borkifying" its [`ShellType`], set a flag to automatically bootstrap it when the command's
     /// block receives the [`AfterBlockStarted`] event.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -2806,17 +2806,17 @@ impl RootView {
     /// Shows the user the settings view of their newly joined team
     /// within the app.
     pub fn handle_team_intent_link_action(&mut self, _: &(), ctx: &mut ViewContext<Self>) -> bool {
-        // Force-open derp drive.
+        // Force-open bork drive.
         let window_id = ctx.window_id();
         if let AuthOnboardingState::Terminal(handle) = &self.auth_onboarding_state {
             ctx.dispatch_typed_action_for_view(
                 window_id,
                 handle.id(),
-                &WorkspaceAction::OpenDerpDrive,
+                &WorkspaceAction::OpenBorkDrive,
             );
             ctx.windows().show_window_and_focus_app(window_id);
         } else {
-            report_error!("Auth not complete before trying to open derp drive");
+            report_error!("Auth not complete before trying to open bork drive");
         }
 
         // Use the team tester model to notify relevant subscribers to refresh their data.
@@ -2992,7 +2992,7 @@ impl RootView {
                 } else if let AuthOnboardingState::NeedsSsoLink { .. } = &self.auth_onboarding_state
                 {
                     // We should be able to access their SSO state; if not, default to true,
-                    // since we should err on the side of them _not_ being able to use Derp.
+                    // since we should err on the side of them _not_ being able to use Bork.
                     if auth_state.needs_sso_link() == Some(false) {
                         self.auth_onboarding_state.complete_sso_link(ctx);
                     }
@@ -3030,7 +3030,7 @@ impl RootView {
                             self.web_handoff(ctx);
                         } else {
                             // On native, force sign them out, as they should not be able to continue
-                            // to use Derp. Instead, they can sign in or up with a valid account.
+                            // to use Bork. Instead, they can sign in or up with a valid account.
                             crate::auth::log_out(ctx);
                         }
                     }
@@ -3097,7 +3097,7 @@ impl RootView {
                 }
             }
             AuthOverrideWarningModalEvent::BulkExport => {
-                self.export_all_derp_drive_objects(ctx);
+                self.export_all_bork_drive_objects(ctx);
             }
         }
     }
@@ -3117,7 +3117,7 @@ impl RootView {
         ctx.notify();
     }
 
-    fn export_all_derp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
+    fn export_all_bork_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let cloud_model = CloudModel::as_ref(ctx);
         let exportable_objects = cloud_model.get_all_exportable_object_ids();
@@ -3241,11 +3241,11 @@ impl RootView {
     #[cfg(feature = "voice_input")]
     fn maybe_stop_active_voice_input(
         &mut self,
-        key_code: &derpui::platform::keyboard::KeyCode,
+        key_code: &borkui::platform::keyboard::KeyCode,
         ctx: &mut ViewContext<Self>,
     ) -> bool {
         use voice_input::{VoiceInput, VoiceInputState, VoiceInputToggledFrom};
-        use derpui::event::KeyState;
+        use borkui::event::KeyState;
 
         use crate::settings::AISettings;
 
@@ -3316,7 +3316,7 @@ impl RootView {
             return;
         };
 
-        if FeatureFlag::OpenDerpNewSettingsModes.is_enabled()
+        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
             && FeatureFlag::TabConfigs.is_enabled()
         {
             let intention = tutorial.intention();
@@ -3453,10 +3453,10 @@ impl View for RootView {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "voice_input")] {
-                use derpui::elements::{EventHandler, DispatchEventResult};
+                use borkui::elements::{EventHandler, DispatchEventResult};
                 EventHandler::new(stack.finish())
                     .on_modifier_state_changed(|ctx, _app, key_code, key_state| {
-                        if matches!(key_state, derpui::event::KeyState::Released) {
+                        if matches!(key_state, borkui::event::KeyState::Released) {
                             ctx.dispatch_action("root_view:maybe_stop_active_voice_input", *key_code);
                         }
                         DispatchEventResult::PropagateToParent
@@ -3468,7 +3468,7 @@ impl View for RootView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> derpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if quake_mode_window_is_open() {
             context.set.insert(flags::QUAKE_WINDOW_OPEN_FLAG);
@@ -3687,7 +3687,7 @@ impl AuthOnboardingState {
             AuthOnboardingState::Terminal(workspace) => {
                 // Fork: the app is fully usable signed out, so logging out
                 // clears identity and cloud state but keeps the workspace —
-                // it does NOT tear the terminal down and return to the Derp
+                // it does NOT tear the terminal down and return to the Bork
                 // auth/onboarding screens.
                 workspace.update(ctx, |workspace, ctx| {
                     workspace.on_log_out(ctx);

@@ -1,8 +1,8 @@
-use derp_errors::report_if_error;
-use derpui::elements::{CrossAxisAlignment, Fill, Flex, ParentElement, Shrinkable};
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use bork_errors::report_if_error;
+use borkui::elements::{CrossAxisAlignment, Fill, Flex, ParentElement, Shrinkable};
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, Event, SingleLineEditorOptions, TextOptions};
@@ -203,7 +203,7 @@ impl View for StartupShellView {
     }
 
     /// Renders controls to change the default shell for new sessions.
-    fn render(&self, app: &derpui::AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
         let appearance = Appearance::as_ref(app);
         let ui_builder = appearance.ui_builder();
         let theme = appearance.theme();

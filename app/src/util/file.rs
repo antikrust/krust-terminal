@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 #[cfg(windows)]
-use derp_util::path::is_network_resource;
-use derp_util::path::{CleanPathResult, LineAndColumnArg};
+use bork_util::path::is_network_resource;
+use bork_util::path::{CleanPathResult, LineAndColumnArg};
 
 pub use self::external_editor::{open_file_path_in_external_editor, open_file_path_with_editor};
 use crate::terminal::model::grid::grid_handler::{ContainsPoint, Link};

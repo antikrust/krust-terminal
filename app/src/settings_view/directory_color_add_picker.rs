@@ -5,13 +5,13 @@ use ai::index::full_source_code_embedding::manager::{
     CodebaseIndexManager, CodebaseIndexManagerEvent,
 };
 use settings::Setting;
-use derp_util::path::user_friendly_path;
-use derpui::elements::{
+use bork_util::path::user_friendly_path;
+use borkui::elements::{
     Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use derpui::platform::Cursor;
-use derpui::{
+use borkui::platform::Cursor;
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

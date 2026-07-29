@@ -2,8 +2,8 @@ use std::future::Future;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
-use derpui::r#async::Timer;
-use derpui::{duration_with_jitter, RetryOption};
+use borkui::r#async::Timer;
+use borkui::{duration_with_jitter, RetryOption};
 
 use crate::server::graphql::GraphQLError;
 use crate::server::server_api::presigned_upload::HttpStatusError;

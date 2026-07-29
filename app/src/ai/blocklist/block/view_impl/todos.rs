@@ -1,12 +1,12 @@
 //! Rendering logic for todo list components in AI blocks.
 
-use derpui::elements::{
+use borkui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, Highlight,
     ParentElement, Radius, Shrinkable, Text,
 };
-use derpui::fonts::Properties;
-use derpui::text_layout::TextStyle;
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::Properties;
+use borkui::text_layout::TextStyle;
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::WithContentItemSpacing;
 use crate::ai::agent::conversation::{AIConversation, TodoStatus};
@@ -159,9 +159,9 @@ pub(super) fn render_completed_todo_items(
     // Create a check mark icon
     let check_icon = Container::new(
         ConstrainedBox::new(
-            derpui::elements::Icon::new(
+            borkui::elements::Icon::new(
                 Icon::Check.into(),
-                derp_core::ui::theme::Fill::Solid(sub_text_color),
+                bork_core::ui::theme::Fill::Solid(sub_text_color),
             )
             .finish(),
         )

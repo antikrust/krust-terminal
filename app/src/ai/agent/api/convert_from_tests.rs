@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use ai::agent::action::AskUserQuestionType;
 use ai::skills::{SkillPathOrigin, SkillReference};
-use derp_multi_agent_api as api;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
+use bork_multi_agent_api as api;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::{
     convert_api_question, ConversionParams, ConvertAPIMessageToClientOutputMessage,

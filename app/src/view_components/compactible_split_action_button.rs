@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use derpui::elements::{ChildView, Flex, ParentElement, SavePosition};
-use derpui::{Action, Element, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::elements::{ChildView, Flex, ParentElement, SavePosition};
+use borkui::{Action, Element, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{

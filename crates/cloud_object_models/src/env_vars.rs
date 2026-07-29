@@ -3,7 +3,7 @@ use cloud_objects::cloud_object::{
 };
 use cloud_objects::ids::GenericStringObjectId;
 use serde::{Deserialize, Serialize};
-use derp_util::path::ShellFamily;
+use bork_util::path::ShellFamily;
 
 use crate::{JsonModel, JsonSerializer};
 

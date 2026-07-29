@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use derp_cli::agent::OutputFormat;
-use derp_cli::artifact::{
+use bork_cli::agent::OutputFormat;
+use bork_cli::artifact::{
     ArtifactCommand, DownloadArtifactArgs, GetArtifactArgs, UploadArtifactArgs,
 };
-use derp_cli::GlobalOptions;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, ModelContext, SingletonEntity};
+use bork_cli::GlobalOptions;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, ModelContext, SingletonEntity};
 
 use super::artifact_upload::{
     CompletedFileArtifactUpload, FileArtifactUploadRequest, FileArtifactUploader,
@@ -130,7 +130,7 @@ impl ArtifactCommandRunner {
     }
 }
 
-impl derpui::Entity for ArtifactCommandRunner {
+impl borkui::Entity for ArtifactCommandRunner {
     type Event = ();
 }
 

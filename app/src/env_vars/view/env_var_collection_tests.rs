@@ -1,6 +1,6 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::platform::WindowStyle;
-use derpui::{App, ViewHandle};
+use bork_core::ui::appearance::Appearance;
+use borkui::platform::WindowStyle;
+use borkui::{App, ViewHandle};
 
 use crate::auth::AuthStateProvider;
 use crate::cloud_object::model::actions::ObjectActions;

@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
-use derpui::elements::MouseStateHandle;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::Element;
+use borkui::elements::MouseStateHandle;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::Element;
 
 use super::teams_page::TeamsPageAction;
 use crate::cloud_object::model::persistence::CloudModel;

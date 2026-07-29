@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use uuid::Uuid;
-use derp_core::execution_mode::ExecutionMode;
-use derp_util::path::EscapeChar;
-use derpui::{App, EntityId, ModelHandle};
+use bork_core::execution_mode::ExecutionMode;
+use bork_util::path::EscapeChar;
+use borkui::{App, EntityId, ModelHandle};
 
 use super::{BlocklistAIHistoryModel, BlocklistAIPermissions};
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -473,7 +473,7 @@ fn test_can_write_files_mcp_config_always_denied() {
 
         let mcp_config_paths = vec![
             PathBuf::from("/project/.mcp.json"),
-            PathBuf::from("/project/.derp/.mcp.json"),
+            PathBuf::from("/project/.bork/.mcp.json"),
             PathBuf::from("/project/.codex/config.toml"),
         ];
 

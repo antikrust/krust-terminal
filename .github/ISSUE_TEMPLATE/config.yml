@@ -1,26 +1,26 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Derp GitHub Search
-    url: https://github.com/derpdotdev/derp/issues?q=is%3Aissue+is%3Aopen+a+sort%3Areactions-%2B1-desc
-    about: Search Derp's open bugs and enhancements.
-  - name: Derp Documentation
-    url: https://docs.derp.baby/support-and-billing/known-issues?q=
+  - name: Bork GitHub Search
+    url: https://github.com/borkdotdev/bork/issues?q=is%3Aissue+is%3Aopen+a+sort%3Areactions-%2B1-desc
+    about: Search Bork's open bugs and enhancements.
+  - name: Bork Documentation
+    url: https://docs.bork.baby/support-and-billing/known-issues?q=
     about: Documentation for features, known issues, troubleshooting, keyboard shortcuts, telemetry table, and more!
-  - name: Derp Changelog
-    url: https://docs.derp.baby/changelog
+  - name: Bork Changelog
+    url: https://docs.bork.baby/changelog
     about: See our changelog to learn about new features, improvements, bug fixes, and Oz updates.
   - name: Contact Us
-    url: https://docs.derp.baby/support-and-community/troubleshooting-and-support/sending-us-feedback
-    about: Submit feedback and contact the Derp support team for things like Billing, Enterprise, and other issues.
-  - name: Derp Preview Slack Community
-    url: https://go.derp.baby/join-preview
-    about: Discuss give feedback on the new features with other Derp Preview users.
-  - name: Derp Discord Community
-    url: https://discord.com/invite/derpdotdev
-    about: Discuss what you want to see in a Modern ADE with a community of other Derp users.
-  - name: Derp Homepage
-    url: https://www.derp.baby/
-    about: Homepage for all things Derp.
-  - name: Derp Licenses
-    url: https://docs.derp.baby/support-and-community/privacy-security-and-licensing/open-source-licenses
-    about: See the open source projects Derp depends on and their licenses.
+    url: https://docs.bork.baby/support-and-community/troubleshooting-and-support/sending-us-feedback
+    about: Submit feedback and contact the Bork support team for things like Billing, Enterprise, and other issues.
+  - name: Bork Preview Slack Community
+    url: https://go.bork.baby/join-preview
+    about: Discuss give feedback on the new features with other Bork Preview users.
+  - name: Bork Discord Community
+    url: https://discord.com/invite/borkdotdev
+    about: Discuss what you want to see in a Modern ADE with a community of other Bork users.
+  - name: Bork Homepage
+    url: https://www.bork.baby/
+    about: Homepage for all things Bork.
+  - name: Bork Licenses
+    url: https://docs.bork.baby/support-and-community/privacy-security-and-licensing/open-source-licenses
+    about: See the open source projects Bork depends on and their licenses.

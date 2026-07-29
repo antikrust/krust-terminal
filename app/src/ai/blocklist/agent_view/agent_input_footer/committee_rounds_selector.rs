@@ -14,13 +14,13 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use derp_core::ui::theme::Fill;
-use derp_errors::report_if_error;
-use derpui::elements::{
+use bork_core::ui::theme::Fill;
+use bork_errors::report_if_error;
+use borkui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use derpui::{
+use borkui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -140,7 +140,7 @@ impl GenericMenuItem for RoundPlanMenuItem {
         let theme = Appearance::as_ref(app).theme();
         let color = theme.main_text_color(theme.surface_2()).into_solid();
         Some(
-            ConstrainedBox::new(Icon::Check.to_derpui_icon(Fill::Solid(color)).finish())
+            ConstrainedBox::new(Icon::Check.to_borkui_icon(Fill::Solid(color)).finish())
                 .with_width(CHECK_ICON_SIZE)
                 .with_height(CHECK_ICON_SIZE)
                 .finish(),

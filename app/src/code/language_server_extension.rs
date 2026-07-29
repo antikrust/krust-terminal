@@ -2,19 +2,19 @@ use lsp::{HoverContents, LspServerLogLevel, MarkupKind};
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use num_traits::SaturatingSub;
 use string_offset::CharOffset;
-use derp_core::send_telemetry_from_ctx;
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::theme::DerpTheme;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_editor::render::model::Decoration;
-use derpui::elements::{
+use bork_core::send_telemetry_from_ctx;
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::theme::BorkTheme;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_editor::render::model::Decoration;
+use borkui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable,
     MouseStateHandle, ParentElement, Radius, Rect, ScrollbarWidth,
 };
-use derpui::{AppContext, Element, SingletonEntity, ViewContext};
+use borkui::{AppContext, Element, SingletonEntity, ViewContext};
 
 use super::editor::view::{CodeEditorRenderOptions, CodeEditorView};
 use super::lsp_telemetry::LspTelemetryEvent;
@@ -544,7 +544,7 @@ impl LocalCodeEditorView {
             ScrollbarWidth::Auto,
             theme.disabled_ui_text_color().into(),
             theme.active_ui_text_color().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish();
 
@@ -570,7 +570,7 @@ impl LocalCodeEditorView {
     }
 
     /// Render a separator line between hover card sections.
-    fn render_separator(theme: &DerpTheme) -> Box<dyn Element> {
+    fn render_separator(theme: &BorkTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 Rect::new()

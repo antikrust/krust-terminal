@@ -4,16 +4,16 @@
 //! and need to create an environment.
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use derp_core::ui::theme::{AnsiColorIdentifier, Fill};
-use derp_errors::report_error;
-use derpui::elements::new_scrollable::SingleAxisConfig;
-use derpui::elements::{
+use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
+use bork_errors::report_error;
+use borkui::elements::new_scrollable::SingleAxisConfig;
+use borkui::elements::{
     Align, Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Expanded, Flex, FormattedTextElement, HighlightedHyperlink,
     NewScrollable, ParentElement, Radius, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::ambient_agents::github_auth_url::{AuthSource, GithubAuthRedirectTarget};
 use crate::ai::request_usage_model::AMBIENT_AGENT_TRIAL_CREDIT_THRESHOLD;
@@ -162,7 +162,7 @@ impl FirstTimeCloudAgentSetupView {
             ),
             FormattedTextFragment::hyperlink(
                 "Visit docs",
-                "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/overview",
+                "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/overview",
             ),
         ];
         column.add_child(
@@ -353,7 +353,7 @@ impl View for FirstTimeCloudAgentSetupView {
             },
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish();
 

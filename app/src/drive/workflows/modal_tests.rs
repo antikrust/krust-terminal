@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use derp_core::ui::appearance::Appearance;
-use derpui::platform::WindowStyle;
-use derpui::{App, SingletonEntity, ViewHandle};
+use bork_core::ui::appearance::Appearance;
+use borkui::platform::WindowStyle;
+use borkui::{App, SingletonEntity, ViewHandle};
 
 use super::WorkflowModal;
 use crate::auth::AuthStateProvider;

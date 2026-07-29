@@ -1,12 +1,12 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use derpui::elements::{
+use borkui::elements::{
     ChildAnchor, CornerRadius, Fill, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use derpui::fonts::Weight;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::Weight;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use super::presence_manager::{Participant, MUTED_AVATAR_BORDER_COLOR, MUTED_PARTICIPANT_COLOR};
 use crate::appearance::Appearance;

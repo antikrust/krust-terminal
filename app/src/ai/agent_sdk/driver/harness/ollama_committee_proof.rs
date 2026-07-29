@@ -241,8 +241,8 @@ pub(crate) async fn run_proof_script(
 ) -> ShellExecution {
     let stage_dir = std::env::temp_dir();
     let id = Uuid::new_v4();
-    let proof = stage_dir.join(format!("derp-committee-proof-{id}.py"));
-    let wrapper = stage_dir.join(format!("derp-committee-wrap-{id}.py"));
+    let proof = stage_dir.join(format!("bork-committee-proof-{id}.py"));
+    let wrapper = stage_dir.join(format!("bork-committee-wrap-{id}.py"));
     // The shim runs the proof with the repository first on `sys.path` — the
     // script is staged in the temp dir, so without this a perfectly sensible
     // `import payday` looks for the module next to the temp file and dies —
@@ -331,8 +331,8 @@ pub(crate) async fn run_python_tests(
 ) -> TestRun {
     let stage_dir = std::env::temp_dir();
     let id = Uuid::new_v4();
-    let tests = stage_dir.join(format!("derp-committee-tests-{id}.py"));
-    let runner = stage_dir.join(format!("derp-committee-runner-{id}.py"));
+    let tests = stage_dir.join(format!("bork-committee-tests-{id}.py"));
+    let runner = stage_dir.join(format!("bork-committee-runner-{id}.py"));
     // Each result is one machine-readable line, so the Rust side never has
     // to parse a traceback to know what happened.
     let runner_source = format!(
@@ -437,7 +437,7 @@ pub(crate) async fn score_against_suite(
     timeout_secs: u64,
     path: &str,
 ) -> Option<usize> {
-    let dir = std::env::temp_dir().join(format!("derp-score-{}", Uuid::new_v4()));
+    let dir = std::env::temp_dir().join(format!("bork-score-{}", Uuid::new_v4()));
     std::fs::create_dir_all(&dir).ok()?;
     let run = match std::fs::write(dir.join(format!("{module}.py")), draft) {
         Ok(()) => run_python_tests(suite, timeout_secs, &dir, path).await,
@@ -580,7 +580,7 @@ impl SuiteOutcome {
 /// A suite that can't run (no toolchain, a timeout) is `Unavailable`, never
 /// `Failed` — a missing `cargo` is not evidence about the user's code.
 pub(crate) async fn run_suite(suite: ProjectSuite, working_dir: &Path, path: &str) -> SuiteOutcome {
-    let wrapper = std::env::temp_dir().join(format!("derp-committee-suite-{}.py", Uuid::new_v4()));
+    let wrapper = std::env::temp_dir().join(format!("bork-committee-suite-{}.py", Uuid::new_v4()));
     let wrapper_source = format!(
         "import subprocess, sys\n\
          try:\n\

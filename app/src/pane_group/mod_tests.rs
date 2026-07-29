@@ -14,12 +14,12 @@ use repo_metadata::RepoMetadataModel;
 use session_sharing_protocol::common::SessionId;
 use shared_session::permissions_manager::SessionPermissionsManager;
 use uuid::Uuid;
-use derp_core::features::FeatureFlag;
-use derp_server_client::iap::IapManager;
-use derpui::platform::{WindowBounds, WindowStyle};
-use derpui::windowing::state::ApplicationStage;
-use derpui::windowing::WindowManager;
-use derpui::{App, ModelHandle};
+use bork_core::features::FeatureFlag;
+use bork_server_client::iap::IapManager;
+use borkui::platform::{WindowBounds, WindowStyle};
+use borkui::windowing::state::ApplicationStage;
+use borkui::windowing::WindowManager;
+use borkui::{App, ModelHandle};
 use watcher::HomeDirectoryWatcher;
 
 use super::child_agent::hydration::{
@@ -97,7 +97,7 @@ use crate::terminal::shared_session::{
 };
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::undo_close::UndoCloseStack;
-use crate::derp_managed_paths_watcher::DerpManagedPathsWatcher;
+use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{ActiveSession, OneTimeModalModel, WorkspaceRegistry};
@@ -141,7 +141,7 @@ fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
     app.add_singleton_model(DirectoryWatcher::new);
-    app.add_singleton_model(DerpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(FileMCPWatcher::new);
     app.add_singleton_model(|_| FileBasedMCPManager::default());
 
@@ -401,7 +401,7 @@ fn persisted_remote_child_conversation(
             last_modified_at: Utc::now().naive_utc(),
             summary: None,
         },
-        tasks: vec![derp_multi_agent_api::Task {
+        tasks: vec![bork_multi_agent_api::Task {
             id: Uuid::new_v4().to_string(),
             messages: vec![],
             dependencies: None,
@@ -2919,7 +2919,7 @@ fn test_terminal_pane_headers() {
 
 /// Tests that focusing two different panes in quick succession does not cause
 /// an infinite loop of focus changes, as outlined in this PR's description:
-/// https://github.com/derpdotdev/derp-internal/pull/8990
+/// https://github.com/borkdotdev/bork-internal/pull/8990
 #[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_pane_focus_does_not_have_an_infinite_event_loop() {

@@ -2,10 +2,10 @@ use std::path::Path;
 
 use futures::channel::oneshot;
 use vec1::vec1;
-use derp_editor::content::buffer::{InitialBufferState, SelectionOffsets};
-use derp_editor::multiline::MultilineString;
-use derp_util::content_version::ContentVersion;
-use derpui::App;
+use bork_editor::content::buffer::{InitialBufferState, SelectionOffsets};
+use bork_editor::multiline::MultilineString;
+use bork_util::content_version::ContentVersion;
+use borkui::App;
 
 use super::*;
 use crate::code::editor::line::EditorLineLocation;

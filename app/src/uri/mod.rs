@@ -14,18 +14,18 @@ use itertools::Itertools;
 use session_sharing_protocol::common::SessionId;
 use url::Url;
 #[cfg(not(target_family = "wasm"))]
-use derp_errors::report_error;
-use derp_util::path::LineAndColumnArg;
-use derpui::notification::UserNotification;
-use derpui::platform::TerminationMode;
-use derpui::{AppContext, EntityId, SingletonEntity as _, TypedActionView, ViewHandle, WindowId};
+use bork_errors::report_error;
+use bork_util::path::LineAndColumnArg;
+use borkui::notification::UserNotification;
+use borkui::platform::TerminationMode;
+use borkui::{AppContext, EntityId, SingletonEntity as _, TypedActionView, ViewHandle, WindowId};
 
 use self::docker::open_docker_container;
 use crate::ai::active_agent_views_model::{ActiveAgentViewsModel, ConversationOrTaskId};
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
 use crate::cloud_object::ObjectType;
-use crate::drive::{OpenDerpDriveObjectArgs, OpenDerpDriveObjectSettings};
+use crate::drive::{OpenBorkDriveObjectArgs, OpenBorkDriveObjectSettings};
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::linear::{LinearAction, LinearIssueWork};
@@ -41,8 +41,8 @@ use crate::settings_view::{
 use crate::tab_configs::TabConfig;
 use crate::user_config::{load_launch_configs, load_tab_configs, tab_configs_dir};
 use crate::util::openable_file_type::{
-    is_file_openable_in_derp, is_markdown_file, is_runnable_shell_script,
-    renders_in_derp_notebook_viewer, starts_with_shebang,
+    is_file_openable_in_bork, is_markdown_file, is_runnable_shell_script,
+    renders_in_bork_notebook_viewer, starts_with_shebang,
 };
 use crate::view_components::DismissibleToast;
 use crate::workspace::auto_handoff::trigger_auto_handoff_to_cloud;
@@ -65,14 +65,14 @@ pub struct OpenMCPSettingsArgs {
     pub autoinstall: Option<String>,
 }
 
-/// Args for the `derp://settings` deeplink family, dispatched to the
+/// Args for the `bork://settings` deeplink family, dispatched to the
 /// `root_view:open_settings_in_{existing,new}_window` actions.
 pub enum OpenSettingsArgs {
-    /// `derp://settings` — open a settings tab on the default page.
+    /// `bork://settings` — open a settings tab on the default page.
     Default,
-    /// `derp://settings?q=<query>` — open settings with the search bar pre-filled.
+    /// `bork://settings?q=<query>` — open settings with the search bar pre-filled.
     Search { query: String },
-    /// `derp://settings?widget=<widget_id>` — open settings scrolled to a widget.
+    /// `bork://settings?widget=<widget_id>` — open settings scrolled to a widget.
     Widget {
         page: SettingsSection,
         widget_id: &'static str,
@@ -91,13 +91,13 @@ pub enum UriHost {
     Action,
     /// A host prefix for all actions that involve launch configurations
     Launch,
-    /// Supports joining shared sessions via a derp:// URI.
+    /// Supports joining shared sessions via a bork:// URI.
     SharedSession,
-    /// Supports viewing AI conversations via a derp:// URI.
+    /// Supports viewing AI conversations via a bork:// URI.
     Conversation,
     /// Supports WD object actions
     Drive,
-    /// Supports opening derp's settings panel via URI
+    /// Supports opening bork's settings panel via URI
     Settings,
     /// A host prefix for a general-purpose home/landing page. Unlike other intent URIs, the home
     /// page behavior may change over time and vary from platform to platform.
@@ -225,7 +225,7 @@ impl UriHost {
             }
             UriHost::SharedSession => {
                 // We expect the uri to have the ID of the session to join as the last segment.
-                // e.g. derp://shared_session/{id}
+                // e.g. bork://shared_session/{id}
                 let session_id = url
                     .path_segments()
                     .into_iter()
@@ -257,7 +257,7 @@ impl UriHost {
             }
             UriHost::Conversation => {
                 // We expect the uri to have the conversation ID as the last segment.
-                // e.g. derp://conversation/{conversation_id}
+                // e.g. bork://conversation/{conversation_id}
                 let conversation_id: Option<ServerConversationToken> = url
                     .path_segments()
                     .into_iter()
@@ -291,7 +291,7 @@ impl UriHost {
             }
             UriHost::Drive => {
                 // We expect the uri to have the ID of the object we are trying to open and the object_type.
-                // e.g. derp://drive/{object_type}?id={UID}
+                // e.g. bork://drive/{object_type}?id={UID}
                 // For folder links, we expect an additional query parameter primary_object_id which refers to the id object
                 // that should be opened
                 // When the user is directed here via the request access flow, we expect an additional query parameter invitee_email
@@ -319,10 +319,10 @@ impl UriHost {
                         ctx.root_view_id(window_id)
                             .map(|view_id| (window_id, view_id))
                     });
-                    let args = OpenDerpDriveObjectArgs {
+                    let args = OpenBorkDriveObjectArgs {
                         object_type,
                         server_id,
-                        settings: OpenDerpDriveObjectSettings {
+                        settings: OpenBorkDriveObjectSettings {
                             focused_folder_id,
                             invitee_email,
                         },
@@ -331,7 +331,7 @@ impl UriHost {
                     if let Some((primary_window_id, root_view_id)) = primary_window_and_view {
                         // `args` may contain user-identifiable fields
                         // (e.g. `invitee_email`), so avoid writing the full
-                        // debug representation to `derp.log` on non-dogfood
+                        // debug representation to `bork.log` on non-dogfood
                         // release channels.
                         safe_info!(
                             safe: (
@@ -356,18 +356,18 @@ impl UriHost {
             }
             UriHost::Settings => {
                 // We support opening different settings pages through URI:
-                // - derp://settings - opens a settings tab on the default page
-                // - derp://settings?q={query} - opens settings with the search bar pre-filled
-                // - derp://settings?widget={widget_id} - opens settings scrolled to a widget
-                // - derp://settings/teams?invite={email} - opens team settings with invite modal
-                // - derp://settings/billing_and_usage - opens billing and usage settings page
-                // - derp://settings/environments - opens environments settings page
-                // - derp://settings/mcp - opens MCP servers settings page
-                // - derp://settings/platform - opens platform settings page
-                // - derp://settings/appearance - opens appearance settings page (themes, fonts, etc.)
-                // - derp://settings/derp_agent - opens the Derp Agent settings page (inference / API keys)
+                // - bork://settings - opens a settings tab on the default page
+                // - bork://settings?q={query} - opens settings with the search bar pre-filled
+                // - bork://settings?widget={widget_id} - opens settings scrolled to a widget
+                // - bork://settings/teams?invite={email} - opens team settings with invite modal
+                // - bork://settings/billing_and_usage - opens billing and usage settings page
+                // - bork://settings/environments - opens environments settings page
+                // - bork://settings/mcp - opens MCP servers settings page
+                // - bork://settings/platform - opens platform settings page
+                // - bork://settings/appearance - opens appearance settings page (themes, fonts, etc.)
+                // - bork://settings/bork_agent - opens the Bork Agent settings page (inference / API keys)
                 let query_string: HashMap<_, _> = url.query_pairs().collect();
-                // A bare `derp://settings` (or a trailing slash) yields an empty path
+                // A bare `bork://settings` (or a trailing slash) yields an empty path
                 // segment; treat that as "no sub-page" so the query-param routing below
                 // handles it.
                 let settings_sub_page: Option<String> = url
@@ -411,7 +411,7 @@ impl UriHost {
                         }
                     }
                     Some("mcp") => {
-                        // derp://settings/mcp?autoinstall=<name> auto-installs a gallery MCP server.
+                        // bork://settings/mcp?autoinstall=<name> auto-installs a gallery MCP server.
                         // The value is matched case-insensitively against gallery titles.
                         let autoinstall = query_string.get("autoinstall").map(|v| v.to_string());
                         let args = OpenMCPSettingsArgs { autoinstall };
@@ -426,7 +426,7 @@ impl UriHost {
                     // No special sub-page: route the bare host, the `q` (search) and
                     // `widget` (scroll-to) query params, and the simple section
                     // sub-pages (e.g. billing_and_usage, platform, appearance,
-                    // derp_agent) resolved via `settings_section_for_simple_subpage`.
+                    // bork_agent) resolved via `settings_section_for_simple_subpage`.
                     maybe_simple_subpage => {
                         let simple_section =
                             maybe_simple_subpage.and_then(settings_section_for_simple_subpage);
@@ -470,7 +470,7 @@ impl UriHost {
                                 ctx,
                             );
                         } else if maybe_simple_subpage.is_none() {
-                            // Bare `derp://settings` opens the default settings page.
+                            // Bare `bork://settings` opens the default settings page.
                             let args = OpenSettingsArgs::Default;
                             dispatch_action_in_new_or_existing_window(
                                 primary_window_id,
@@ -780,13 +780,13 @@ fn find_matching_config_name<'a>(
         .find(|&config| config.name.to_lowercase() == target_name_lower)
 }
 
-/// Handles `derp://tab_config/<name>` deeplinks.
+/// Handles `bork://tab_config/<name>` deeplinks.
 ///
 /// Resolution rules:
 /// - `<name>` is matched case-insensitively against each tab config's file
-///   stem, so both `derp://tab_config/my_tab` and
-///   `derp://tab_config/my_tab.toml` work.
-/// - When `?new_window=true` (or no Derp window is open) the tab config opens
+///   stem, so both `bork://tab_config/my_tab` and
+///   `bork://tab_config/my_tab.toml` work.
+/// - When `?new_window=true` (or no Bork window is open) the tab config opens
 ///   in a brand-new window. Otherwise it opens as a new tab in the active
 ///   window.
 fn handle_tab_config_uri(primary_window_id: Option<WindowId>, url: &Url, ctx: &mut AppContext) {
@@ -1198,7 +1198,7 @@ impl Action {
             | Self::AutoHandoffToCloud { .. } => W::default(),
             Self::NewTab => W::ShowPrimaryWindow(WindowActivationFallbackBehavior::Notify {
                 title: "New tab created".to_owned(),
-                description: "Go to Derp to see your new tab.".to_owned(),
+                description: "Go to Bork to see your new tab.".to_owned(),
             }),
             Self::NewWindow => W::Nothing,
         }
@@ -1279,7 +1279,7 @@ fn get_primary_window(
 enum OpenFileAction {
     /// Open in the notebook viewer pane (Markdown, or Jupyter when enabled).
     Notebook,
-    /// Open in Derp's code/text editor pane.
+    /// Open in Bork's code/text editor pane.
     Editor,
     /// Open a session at the parent directory and queue the file as the pending command,
     /// or just open a session at the directory path if `path` is a directory.
@@ -1290,19 +1290,19 @@ enum OpenFileAction {
 /// standing up a full `AppContext`.
 ///
 /// The Markdown Viewer preference is passed in because macOS can hand Markdown
-/// file URLs to Derp via the file type registration in `Info.plist`. Since Derp
+/// file URLs to Bork via the file type registration in `Info.plist`. Since Bork
 /// cannot easily update that registration when the user toggles the viewer
 /// preference, the URI handler must check the preference before routing a
-/// Markdown file to the in-Derp notebook viewer. Other notebook viewer formats,
+/// Markdown file to the in-Bork notebook viewer. Other notebook viewer formats,
 /// such as Jupyter notebooks, are controlled by their own routing checks.
 fn classify_open_file_action(path: &Path, prefer_markdown_viewer: bool) -> OpenFileAction {
-    if renders_in_derp_notebook_viewer(path) && (!is_markdown_file(path) || prefer_markdown_viewer)
+    if renders_in_bork_notebook_viewer(path) && (!is_markdown_file(path) || prefer_markdown_viewer)
     {
         OpenFileAction::Notebook
     } else if is_runnable_shell_script(path) {
         OpenFileAction::ExecuteInSession
     } else if path.is_file()
-        && (is_file_openable_in_derp(path).is_some() || starts_with_shebang(path))
+        && (is_file_openable_in_bork(path).is_some() || starts_with_shebang(path))
     {
         OpenFileAction::Editor
     } else {
@@ -1312,7 +1312,7 @@ fn classify_open_file_action(path: &Path, prefer_markdown_viewer: bool) -> OpenF
 
 #[cfg(feature = "local_fs")]
 fn can_open_file_editor_path(path: &Path) -> bool {
-    path.is_file() && is_file_openable_in_derp(path).is_some()
+    path.is_file() && is_file_openable_in_bork(path).is_some()
 }
 
 /// Handle an incoming `file://` URL.
@@ -1355,11 +1355,11 @@ fn open_file(window_id: Option<WindowId>, path: PathBuf, ctx: &mut AppContext) {
             use crate::code::editor_management::CodeSource;
             use crate::root_view::{open_new_with_workspace_source, NewWorkspaceSource};
             use crate::util::file::external_editor::EditorSettings;
-            use crate::util::openable_file_type::resolve_file_target_to_open_in_derp;
+            use crate::util::openable_file_type::resolve_file_target_to_open_in_bork;
 
-            // Open text/code files in Derp's code editor, respecting the user's layout preference.
+            // Open text/code files in Bork's code editor, respecting the user's layout preference.
             let editor_settings = EditorSettings::as_ref(ctx);
-            let target = resolve_file_target_to_open_in_derp(&path, editor_settings, None);
+            let target = resolve_file_target_to_open_in_bork(&path, editor_settings, None);
 
             let window_id = if let Some((wid, _)) = primary_window_and_view {
                 wid
@@ -1442,7 +1442,7 @@ fn open_file_editor(
         use crate::code::editor_management::CodeSource;
         use crate::root_view::{open_new_with_workspace_source, NewWorkspaceSource};
         use crate::util::file::external_editor::EditorSettings;
-        use crate::util::openable_file_type::resolve_file_target_to_open_in_derp;
+        use crate::util::openable_file_type::resolve_file_target_to_open_in_bork;
 
         if !can_open_file_editor_path(&path) {
             log::warn!("open_file_editor action rejected non-openable path: {path:?}");
@@ -1450,7 +1450,7 @@ fn open_file_editor(
         }
 
         let editor_settings = EditorSettings::as_ref(ctx);
-        let target = resolve_file_target_to_open_in_derp(&path, editor_settings, None);
+        let target = resolve_file_target_to_open_in_bork(&path, editor_settings, None);
 
         let window_id = if let Some((wid, _)) = primary_window_id.and_then(|window_id| {
             ctx.root_view_id(window_id)
@@ -1656,7 +1656,7 @@ fn settings_section_for_simple_subpage(subpage: &str) -> Option<SettingsSection>
         "billing_and_usage" => Some(SettingsSection::BillingAndUsage),
         "platform" => Some(SettingsSection::OzCloudAPIKeys),
         "appearance" => Some(SettingsSection::Appearance),
-        "derp_agent" => Some(SettingsSection::DerpAgent),
+        "bork_agent" => Some(SettingsSection::BorkAgent),
         _ => None,
     }
 }

@@ -13,8 +13,8 @@ let generatedArgument: Argument = {
     ],
 };
 
-export function activate(derp: Derp) {
-  derp.completions.registerCommandSignature({
+export function activate(bork: Bork) {
+  bork.completions.registerCommandSignature({
     command: {
       name: "jack",
       alias: "j",

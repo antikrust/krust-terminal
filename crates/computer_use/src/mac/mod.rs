@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use pathfinder_geometry::vector::Vector2I;
 use post::PostTarget;
 use util::{display_scale_factor_for_window, main_display_scale_factor};
-use derpui_core::r#async::Timer;
+use borkui_core::r#async::Timer;
 
 // Video recording is not yet implemented on macOS; reuse the no-op recorder.
 pub use crate::noop::Recorder;

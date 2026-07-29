@@ -6,35 +6,35 @@ use std::time::Duration;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use settings::Setting as _;
-use derp::cmd_or_ctrl_shift;
-use derp::features::FeatureFlag;
-use derp::integration_testing::clipboard::assert_clipboard_contains_string;
-use derp::integration_testing::pane_group::assert_focused_pane_index;
-use derp::integration_testing::step::new_step_with_default_assertions;
-use derp::integration_testing::terminal::util::{
+use bork::cmd_or_ctrl_shift;
+use bork::features::FeatureFlag;
+use bork::integration_testing::clipboard::assert_clipboard_contains_string;
+use bork::integration_testing::pane_group::assert_focused_pane_index;
+use bork::integration_testing::step::new_step_with_default_assertions;
+use bork::integration_testing::terminal::util::{
     current_shell_starter_and_version, ExpectedExitStatus,
 };
-use derp::integration_testing::terminal::{
+use bork::integration_testing::terminal::{
     assert_active_session_local_path, assert_command_executed_for_single_terminal_in_tab,
     assert_focused_editor_in_tab, assert_long_running_block_executing_for_single_terminal_in_tab,
     execute_command, execute_command_for_single_terminal_in_tab, wait_until_bootstrapped_pane,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use derp::integration_testing::view_getters::{terminal_view, workspace_view};
-use derp::integration_testing::window::{
+use bork::integration_testing::view_getters::{terminal_view, workspace_view};
+use bork::integration_testing::window::{
     add_and_save_window, assert_num_windows_open, save_active_window_id,
 };
-use derp::integration_testing::workspace::{
+use bork::integration_testing::workspace::{
     assert_focused_tab_index, assert_tab_count, press_native_modal_button,
 };
-use derp::settings::PaneSettings;
-use derp::terminal::shell::ShellType;
-use derp::workspace::tab_settings::{TabSettings, VerticalTabsDisplayGranularity};
-use derp::workspace::{WorkspaceAction, NEW_TAB_BUTTON_POSITION_ID};
-use derpui_core::event::{Event, ModifiersState};
-use derpui_core::integration::{AssertionCallback, AssertionOutcome, StepDataMap, TestStep};
-use derpui_core::windowing::WindowManager;
-use derpui_core::{async_assert, async_assert_eq, SingletonEntity, TypedActionView, WindowId};
+use bork::settings::PaneSettings;
+use bork::terminal::shell::ShellType;
+use bork::workspace::tab_settings::{TabSettings, VerticalTabsDisplayGranularity};
+use bork::workspace::{WorkspaceAction, NEW_TAB_BUTTON_POSITION_ID};
+use borkui_core::event::{Event, ModifiersState};
+use borkui_core::integration::{AssertionCallback, AssertionOutcome, StepDataMap, TestStep};
+use borkui_core::windowing::WindowManager;
+use borkui_core::{async_assert, async_assert_eq, SingletonEntity, TypedActionView, WindowId};
 
 use super::new_builder;
 use crate::util::skip_if_powershell_core_2303;
@@ -54,7 +54,7 @@ fn tab_position_id(tab_index: usize) -> String {
     format!("tab_position_{tab_index}")
 }
 
-fn vertical_tab_pane_row_position_id(app: &mut derpui_core::App, window_id: WindowId) -> String {
+fn vertical_tab_pane_row_position_id(app: &mut borkui_core::App, window_id: WindowId) -> String {
     let workspace = workspace_view(app, window_id);
     let pane_group = workspace.read(app, |workspace, _ctx| {
         workspace
@@ -70,7 +70,7 @@ fn vertical_tab_pane_row_position_id(app: &mut derpui_core::App, window_id: Wind
 }
 
 fn vertical_tab_pane_row_position_id_for_pane_index(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     window_id: WindowId,
     pane_index: usize,
 ) -> String {
@@ -91,7 +91,7 @@ fn vertical_tab_pane_row_position_id_for_pane_index(
 }
 
 fn first_vertical_tab_pane_row_position_id(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     window_id: WindowId,
 ) -> String {
     vertical_tab_pane_row_position_id_for_pane_index(app, window_id, 0)
@@ -371,7 +371,7 @@ fn focus_other_window(other_window_key: &'static str, known_window_key: &'static
     })
 }
 
-fn dispatch_mouse_event(app: &mut derpui_core::App, window_id: WindowId, event: Event) {
+fn dispatch_mouse_event(app: &mut borkui_core::App, window_id: WindowId, event: Event) {
     let window = app.read(|ctx| {
         ctx.windows()
             .platform_window(window_id)
@@ -382,7 +382,7 @@ fn dispatch_mouse_event(app: &mut derpui_core::App, window_id: WindowId, event: 
     });
 }
 
-fn tab_bounds(app: &mut derpui_core::App, window_id: WindowId, tab_index: usize) -> RectF {
+fn tab_bounds(app: &mut borkui_core::App, window_id: WindowId, tab_index: usize) -> RectF {
     let presenter = app.presenter(window_id).expect("presenter should exist");
     let bounds = presenter
         .borrow()
@@ -392,12 +392,12 @@ fn tab_bounds(app: &mut derpui_core::App, window_id: WindowId, tab_index: usize)
     bounds
 }
 
-fn tab_center(app: &mut derpui_core::App, window_id: WindowId, tab_index: usize) -> Vector2F {
+fn tab_center(app: &mut borkui_core::App, window_id: WindowId, tab_index: usize) -> Vector2F {
     tab_bounds(app, window_id, tab_index).center()
 }
 
 fn source_local_point_for_screen_point(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     source_window_id: WindowId,
     screen_point: Vector2F,
 ) -> Vector2F {
@@ -408,7 +408,7 @@ fn source_local_point_for_screen_point(
 }
 
 fn tab_screen_point(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     window_id: WindowId,
     tab_index: usize,
     x_offset: f32,
@@ -449,7 +449,7 @@ fn set_saved_window_origin(window_key: &'static str, origin: Vector2F) -> TestSt
 
 fn assert_total_tab_count(
     expected_total_tab_count: usize,
-) -> impl FnMut(&mut derpui_core::App, WindowId) -> AssertionOutcome {
+) -> impl FnMut(&mut borkui_core::App, WindowId) -> AssertionOutcome {
     move |app, _| {
         let total_tab_count = app
             .window_ids()
@@ -1157,7 +1157,7 @@ pub fn test_multi_tab_drag_back_to_source_and_out_again() -> Builder {
 /// Dispatches a drag event whose cursor lands on the target window's tab bar,
 /// addressed to the source window (which owns the active drag gesture).
 fn drag_over_target_tab_bar(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     _window_id: WindowId,
     data: &mut StepDataMap,
 ) {
@@ -1190,7 +1190,7 @@ fn drag_over_target_tab_bar(
 /// Dispatches a drag event whose cursor lands back on the source window's own
 /// tab bar (the put-back case), addressed to the source window.
 fn drag_over_source_tab_bar(
-    app: &mut derpui_core::App,
+    app: &mut borkui_core::App,
     _window_id: WindowId,
     data: &mut StepDataMap,
 ) {

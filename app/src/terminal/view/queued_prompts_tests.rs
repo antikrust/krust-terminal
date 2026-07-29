@@ -8,9 +8,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use derp_cli::agent::Harness;
-use derpui::platform::WindowStyle;
-use derpui::{App, SingletonEntity, TypedActionView, ViewContext, ViewHandle};
+use bork_cli::agent::Harness;
+use borkui::platform::WindowStyle;
+use borkui::{App, SingletonEntity, TypedActionView, ViewContext, ViewHandle};
 
 use super::queued_prompts_panel::{
     QueuedPromptsPanelAction, QueuedPromptsPanelEvent, QueuedPromptsPanelView,
@@ -63,7 +63,7 @@ fn query_with_attachments(text: &str, attachments: Vec<PendingAttachment>) -> Qu
 /// Mirrors `TerminalView::drain_queued_prompts`' Complete path at the model level: peek the head
 /// row's action, then remove the fired row (both `AutofireAction` variants carry the row id).
 fn drain_one(
-    model: &derpui::ModelHandle<QueuedQueryModel>,
+    model: &borkui::ModelHandle<QueuedQueryModel>,
     app: &mut App,
     conv: AIConversationId,
 ) -> Option<AutofireAction> {
@@ -171,7 +171,7 @@ fn queue_texts(
 
 fn with_singleton<F>(test: F)
 where
-    F: FnOnce(App, derpui::ModelHandle<QueuedQueryModel>, AIConversationId) + 'static,
+    F: FnOnce(App, borkui::ModelHandle<QueuedQueryModel>, AIConversationId) + 'static,
 {
     App::test((), |mut app| async move {
         // `QueuedQueryModel::new` reads and subscribes to `AISettings`, so settings

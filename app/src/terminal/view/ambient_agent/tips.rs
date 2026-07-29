@@ -1,7 +1,7 @@
 //! Tips for cloud mode loading screen.
 
-use derpui::keymap::Keystroke;
-use derpui::AppContext;
+use borkui::keymap::Keystroke;
+use borkui::AppContext;
 
 use crate::ai::agent_tips::AITip;
 
@@ -42,163 +42,163 @@ pub fn get_cloud_mode_tips() -> Vec<CloudModeTip> {
     vec![
         CloudModeTip::new(
             "Install the Oz Slack integration to trigger agents from any channel or DM.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/slack"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/slack"),
         ),
         CloudModeTip::new(
             "Build programmatic agents using Oz's TypeScript and Python SDKs.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Set team or personal secrets for agents using the `oz secret` command.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/secrets"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/secrets"),
         ),
         CloudModeTip::new(
             "View all your agent runs and their status in the Oz web app.",
-            Some("https://oz.derp.baby"),
+            Some("https://oz.bork.baby"),
         ),
         CloudModeTip::new(
             "Join any Oz cloud agent run in real-time using Agent Session Sharing.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
         ),
         CloudModeTip::new(
             "Set up recurring agents that run on cron schedules for automated maintenance.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Create agents that automatically fix bugs when issues are filed in Linear.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/linear"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/linear"),
         ),
         CloudModeTip::new(
             "Build agents that respond to CI failures and attempt automatic fixes.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
         ),
         CloudModeTip::new(
             "Run agents from GitHub Actions using the `oz-agent-action`.",
-            Some("https://github.com/derpdotdev/oz-agent-action"),
+            Some("https://github.com/borkdotdev/oz-agent-action"),
         ),
         CloudModeTip::new(
             "Call the Oz REST API to trigger agents from any backend service or internal tool.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Create reusable environments with Docker images for consistent agent execution.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/environments"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/environments"),
         ),
         CloudModeTip::new(
             "Share agent session links with your team for collaborative debugging.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
         ),
         CloudModeTip::new(
             "Use the `--share` flag with the Oz CLI to enable session sharing from anywhere.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/platform"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/platform"),
         ),
         CloudModeTip::new(
-            "Fork a completed Oz cloud agent session into Derp to continue the work locally.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
+            "Fork a completed Oz cloud agent session into Bork to continue the work locally.",
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/viewing-cloud-agent-runs"),
         ),
         CloudModeTip::new(
             "Build internal tools that use agents to answer questions from your databases.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations"),
         ),
         CloudModeTip::new(
             "Create a scheduled agent to clean up stale feature flags every week.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Tag @Oz in Linear issues to automatically investigate and propose fixes.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/linear"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/linear"),
         ),
         CloudModeTip::new(
             "Run agents on remote dev boxes or CI runners using the Oz CLI.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/platform"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/platform"),
         ),
         CloudModeTip::new(
             "Configure MCP servers to give Oz cloud agents access to GitHub, Linear, and Sentry.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp"),
         ),
         CloudModeTip::new(
-            "Use `oz agent run` to kick off tasks without opening the Derp terminal.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/platform"),
+            "Use `oz agent run` to kick off tasks without opening the Bork terminal.",
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/platform"),
         ),
         CloudModeTip::new(
             "View your teammates' agent runs in the Oz web app for shared visibility.",
-            Some("https://oz.derp.baby"),
+            Some("https://oz.bork.baby"),
         ),
         CloudModeTip::new(
             "Build agents that automatically triage and label incoming GitHub issues.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
         ),
         CloudModeTip::new(
             "Set up an agent to generate daily summaries of newly opened issues.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
         ),
         CloudModeTip::new(
             "Create an agent that automatically reviews PRs and suggests improvements.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/github-actions"),
         ),
         CloudModeTip::new(
             "Use `oz environment create` to define reproducible execution contexts.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/environments"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/environments"),
         ),
         CloudModeTip::new(
             "Trigger agents from webhooks to respond to production incidents.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Build an agent that restarts services or scales deployments when alerts fire.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers"),
         ),
         CloudModeTip::new(
             "Use personal secrets for credentials that should only be used by your agents.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/secrets"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/secrets"),
         ),
         CloudModeTip::new(
             "Use team secrets for shared infrastructure credentials across all agents.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/secrets"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/secrets"),
         ),
         CloudModeTip::new(
             "Create an agent that runs nightly to check for dependency updates.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Build an agent that automatically formats and lints code on a schedule.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Use `oz schedule create` to set up cron-triggered agents.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Pause and resume scheduled agents without deleting them using `oz schedule pause`.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/triggers/scheduled-agents"),
         ),
         CloudModeTip::new(
             "Use `oz mcp list` to see which MCP servers are available to your agents.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/capabilities/mcp"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp"),
         ),
         CloudModeTip::new(
             "Build an internal Slack bot that delegates coding tasks to Oz agents.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/slack"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/slack"),
         ),
         CloudModeTip::new(
             "Create an agent that responds to @mentions in Slack threads with full context.",
-            Some("https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/integrations/slack"),
+            Some("https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/integrations/slack"),
         ),
         CloudModeTip::new(
             "Use the Oz TypeScript SDK to build custom automation pipelines.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Use the Oz Python SDK to integrate agents into your data pipelines.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Monitor agent success rates and runtimes using the Oz API.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
         CloudModeTip::new(
             "Build a dashboard that tracks all agent activity across your team.",
-            Some("https://therob.lol/derp-terminal/help/reference/api-and-sdk"),
+            Some("https://therob.lol/bork-terminal/help/reference/api-and-sdk"),
         ),
     ]
 }

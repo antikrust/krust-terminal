@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use derp_core::ui::theme::color::internal_colors;
-use derp_core::ui::Icon;
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_core::ui::theme::color::internal_colors;
+use bork_core::ui::Icon;
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, Padding, ParentElement, Radius, SavePosition, ScrollTarget,
     ScrollToPositionMode, ScrollbarWidth, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::keymap::macros::*;
-use derpui::keymap::{FixedBinding, Keystroke};
-use derpui::platform::Cursor;
-use derpui::ui_components::components::UiComponent;
-use derpui::{
+use borkui::fonts::{Properties, Weight};
+use borkui::keymap::macros::*;
+use borkui::keymap::{FixedBinding, Keystroke};
+use borkui::platform::Cursor;
+use borkui::ui_components::components::UiComponent;
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -508,7 +508,7 @@ impl View for TabConfigParamsModal {
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(3.)))
             .finish();
 
-            let close_icon = ConstrainedBox::new(Icon::X.to_derpui_icon(sub_text).finish())
+            let close_icon = ConstrainedBox::new(Icon::X.to_borkui_icon(sub_text).finish())
                 .with_width(14.)
                 .with_height(14.)
                 .finish();

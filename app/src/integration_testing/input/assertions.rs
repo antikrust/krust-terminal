@@ -1,5 +1,5 @@
-use derpui::integration::AssertionCallback;
-use derpui::{async_assert, async_assert_eq};
+use borkui::integration::AssertionCallback;
+use borkui::{async_assert, async_assert_eq};
 
 use crate::integration_testing::view_getters::{input_view, single_input_view_for_tab};
 use crate::terminal::input::InputSuggestionsMode;

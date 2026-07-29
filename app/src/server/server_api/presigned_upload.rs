@@ -7,7 +7,7 @@ use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 #[cfg(not(target_family = "wasm"))]
 use crc::{Crc, CRC_32_ISCSI};
-pub use derp_server_client::HttpStatusError;
+pub use bork_server_client::HttpStatusError;
 
 #[cfg(feature = "local_fs")]
 use super::ai::FileArtifactUploadTargetInfo;

@@ -2,18 +2,18 @@
 
 ## Problem
 
-When the Derp notification plugin can't be auto-installed (SSH session, or a previous install attempt failed), the user currently has no way to learn how to install it manually. We need a modal that shows step-by-step manual installation instructions.
+When the Bork notification plugin can't be auto-installed (SSH session, or a previous install attempt failed), the user currently has no way to learn how to install it manually. We need a modal that shows step-by-step manual installation instructions.
 
 ## Current Behavior
 
-- A green "Install Derp plugin" chip appears in the CLI agent footer when the plugin isn't installed (`agent_input_footer/mod.rs:611-633`)
+- A green "Install Bork plugin" chip appears in the CLI agent footer when the plugin isn't installed (`agent_input_footer/mod.rs:611-633`)
 - Clicking it runs auto-install via `claude plugin` CLI commands (`plugin_manager/claude.rs:29-37`)
 - On failure: an error toast appears with a link to logs
 - On SSH: the chip visibility has a bug (see below)
 
 ## Chip Visibility Fix (Remote Sessions)
 
-`should_show_install_plugin_button` hides the chip when `manager.is_installed()` returns true. But `is_installed()` reads the **local** filesystem (`~/.claude/plugins/installed_plugins.json`), not the remote machine's. In any remote session (derpified SSH, legacy SSH, Docker via SSH) where Claude Code runs on the remote, this check is wrong:
+`should_show_install_plugin_button` hides the chip when `manager.is_installed()` returns true. But `is_installed()` reads the **local** filesystem (`~/.claude/plugins/installed_plugins.json`), not the remote machine's. In any remote session (borkified SSH, legacy SSH, Docker via SSH) where Claude Code runs on the remote, this check is wrong:
 
 - Plugin installed locally but not on remote → chip hidden, user stuck with no instructions
 
@@ -27,8 +27,8 @@ The chip has two modes depending on context:
 
 **When:** local session, no prior install failure for this session.
 
-- Chip label: "Install Derp plugin"
-- Chip tooltip: "Install the Derp plugin to enable rich agent notifications within Derp"
+- Chip label: "Install Bork plugin"
+- Chip tooltip: "Install the Bork plugin to enable rich agent notifications within Bork"
 - On click: runs auto-install (existing `handle_install_plugin` flow)
 - On success: chip disappears (listener registers)
 - On failure: transitions to Mode 2 for the rest of the session
@@ -38,7 +38,7 @@ The chip has two modes depending on context:
 **When:** SSH session, OR auto-install previously failed in this session.
 
 - Chip label: "Plugin install instructions"
-- Chip tooltip: "View instructions to install the Derp plugin"
+- Chip tooltip: "View instructions to install the Bork plugin"
 - Chip icon: `Icon::Info` (instead of `Icon::Download`)
 - On click: opens a modal with manual installation steps
 
@@ -48,7 +48,7 @@ The chip has two modes depending on context:
 
 Custom modal view following the `CodexModal` pattern (centered overlay, semi-transparent backdrop, Escape to close, click-outside to dismiss via `Dismiss` element).
 
-- Title from `PluginInstallInstructions.title` (e.g. "Install Derp Plugin for Claude Code")
+- Title from `PluginInstallInstructions.title` (e.g. "Install Bork Plugin for Claude Code")
 - Subtitle from `PluginInstallInstructions.subtitle`
 - Numbered steps, each with:
   - A short description of what the step does
@@ -60,14 +60,14 @@ Custom modal view following the `CodexModal` pattern (centered overlay, semi-tra
 
 These are in-session slash commands (the user is already running Claude Code).
 
-Step 1: "Add the Derp plugin marketplace repository"
+Step 1: "Add the Bork plugin marketplace repository"
 ```
-/plugins marketplace add derpdotdev/claude-code-derp
+/plugins marketplace add borkdotdev/claude-code-bork
 ```
 
-Step 2: "Install the Derp plugin"
+Step 2: "Install the Bork plugin"
 ```
-/plugins install derp@claude-code-derp
+/plugins install bork@claude-code-bork
 ```
 
 Step 3: "Reload plugins to activate"
@@ -77,7 +77,7 @@ Step 3: "Reload plugins to activate"
 
 Subtitle: "Ensure that jq is installed on your machine. Then, run these commands inside your Claude Code session."
 
-Auto-install success toast: "Derp plugin installed. Please run /reload-plugins to activate."
+Auto-install success toast: "Bork plugin installed. Please run /reload-plugins to activate."
 
 ### Extensibility
 
@@ -114,4 +114,4 @@ Failure state is not persisted. A new terminal session starts fresh in Mode 1 (a
 - **User installs plugin manually mid-session (without using the chip):** The listener will connect on next `SessionStart` event, chip disappears automatically.
 - **User clicks chip in Mode 2 then installs manually:** Modal stays open until dismissed. Chip disappears on next render once listener is present.
 - **Multiple terminal tabs with same agent:** Each tab has its own `AgentInputFooter` with independent failure tracking. This is correct — one tab's failure shouldn't affect another.
-- **Derpified SSH (tmux wrapper):** Even though the local filesystem is accessible via tmux, the agent runs on the remote machine. The `is_remote` flag is set for all SSH sessions (derpified or legacy), so Mode 2 applies to all remote sessions.
+- **Borkified SSH (tmux wrapper):** Even though the local filesystem is accessible via tmux, the agent runs on the remote machine. The `is_remote` flag is set for all SSH sessions (borkified or legacy), so Mode 2 applies to all remote sessions.

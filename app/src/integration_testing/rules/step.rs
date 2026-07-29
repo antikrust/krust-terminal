@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use derpui::integration::TestStep;
-use derpui::windowing::WindowManager;
-use derpui::{async_assert, SingletonEntity, WindowId};
+use borkui::integration::TestStep;
+use borkui::windowing::WindowManager;
+use borkui::{async_assert, SingletonEntity, WindowId};
 
 use crate::ai::facts::view::AIFactPage;
 use crate::ai::facts::AIMemory;

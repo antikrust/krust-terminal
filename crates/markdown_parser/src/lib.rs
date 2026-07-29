@@ -18,11 +18,11 @@ use serde_yaml::Mapping;
 use weight::CustomWeight;
 
 /// Trait for an "action" that can be dispatched via a hyperlink click handler.
-/// This purposefully shadows the `Action` trait from `derpui`.
+/// This purposefully shadows the `Action` trait from `borkui`.
 ///
-/// Since `derpui` depends on this crate, we can't depend on the `derpui_core::Action` trait directly.
+/// Since `borkui` depends on this crate, we can't depend on the `borkui_core::Action` trait directly.
 /// Instead, we create a new trait with a blanket implementation that implicitly results
-/// in any `derpui_core::Action` implementing this `Action`.
+/// in any `borkui_core::Action` implementing this `Action`.
 pub trait Action: Any + Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }
@@ -359,7 +359,7 @@ pub struct FormattedTable {
 }
 
 impl FormattedTable {
-    /// Parse from the internal tab-separated format used in `derp-markdown-table` code blocks.
+    /// Parse from the internal tab-separated format used in `bork-markdown-table` code blocks.
     pub fn from_internal_format(content: &str) -> Self {
         let parse_line = |line: &str| -> Vec<FormattedTextInline> {
             line.split('\t')
@@ -391,7 +391,7 @@ impl FormattedTable {
         table
     }
 
-    /// Serialize to the internal tab-separated format used in `derp-markdown-table` code blocks.
+    /// Serialize to the internal tab-separated format used in `bork-markdown-table` code blocks.
     /// Inline formatting is preserved as markdown syntax so it survives the buffer round-trip.
     pub fn to_internal_format(&self) -> String {
         if self.headers.is_empty() && self.rows.is_empty() {

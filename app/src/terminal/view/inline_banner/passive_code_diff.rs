@@ -1,5 +1,5 @@
-use derpui::elements::{Border, ChildView, Container};
-use derpui::{AppContext, Element, Entity, SingletonEntity, View, ViewHandle};
+use borkui::elements::{Border, ChildView, Container};
+use borkui::{AppContext, Element, Entity, SingletonEntity, View, ViewHandle};
 
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
 use crate::ai::blocklist::inline_action::inline_action_header::INLINE_ACTION_HORIZONTAL_PADDING;

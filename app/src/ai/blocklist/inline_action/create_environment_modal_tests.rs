@@ -1,7 +1,7 @@
-use derp_core::ui::appearance::Appearance;
-use derpui::elements::Empty;
-use derpui::platform::WindowStyle;
-use derpui::{
+use bork_core::ui::appearance::Appearance;
+use borkui::elements::Empty;
+use borkui::platform::WindowStyle;
+use borkui::{
     AddSingletonModel, App, AppContext, Element, Entity, TypedActionView, View, WindowId,
 };
 

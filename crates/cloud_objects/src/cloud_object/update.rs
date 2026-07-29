@@ -1,4 +1,4 @@
-use derp_graphql::queries::get_updated_cloud_objects::UpdatedObjectInput;
+use bork_graphql::queries::get_updated_cloud_objects::UpdatedObjectInput;
 
 use super::RevisionAndLastEditor;
 

@@ -7,8 +7,8 @@ use itertools::Itertools;
 use mio::Interest;
 use parking_lot::Mutex;
 use signal_hook_mio::v1_0::Signals;
-use derp_cli::TerminalServerArgs;
-use derp_errors::report_error;
+use bork_cli::TerminalServerArgs;
+use bork_errors::report_error;
 
 use super::{api, logging, protocol, RECV_SOCKET_FILENO, SEND_SOCKET_FILENO};
 use crate::terminal::local_tty::server::protocol::NonblockingSocketFd;
@@ -216,7 +216,7 @@ impl EventLoop {
             }
 
             // If we've been reparented to a different process, stop running -
-            // the original host Derp process died and we're now an orphan.
+            // the original host Bork process died and we're now an orphan.
             if nix::unistd::Pid::parent() != self.original_parent_pid {
                 log::info!("Detected a change in parent process; shutting down terminal server.");
                 break 'event_loop;

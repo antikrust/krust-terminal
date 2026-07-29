@@ -6,10 +6,10 @@ use repo_metadata::repository::{RepositorySubscriber, SubscriberId};
 use repo_metadata::{DirectoryWatcher, Repository, RepositoryUpdate};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use derp_core::safe_warn;
-use derp_util::local_or_remote_path::LocalOrRemotePath;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::{ModelContext, ModelHandle, SingletonEntity};
+use bork_core::safe_warn;
+use bork_util::local_or_remote_path::LocalOrRemotePath;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::{ModelContext, ModelHandle, SingletonEntity};
 use watcher::{HomeDirectoryWatcher, HomeDirectoryWatcherEvent};
 
 use super::model::{GlobalRulesDelta, ProjectContextModel, ProjectContextModelEvent, ProjectRule};

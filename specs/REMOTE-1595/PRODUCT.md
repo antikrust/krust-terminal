@@ -1,5 +1,5 @@
 # Handoff-Compose Footer Chip Filtering — Product Spec
-Linear: [REMOTE-1595](https://linear.app/derpdotdev/issue/REMOTE-1595)
+Linear: [REMOTE-1595](https://linear.app/borkdotdev/issue/REMOTE-1595)
 ## Summary
 When `&` handoff-compose mode is active, the agent view footer should show only the chips relevant to composing a cloud run — hiding local-context and local-agent-only items that do not apply.
 ## Problem

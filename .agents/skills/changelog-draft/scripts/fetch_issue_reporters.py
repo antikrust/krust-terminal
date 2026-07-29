@@ -4,7 +4,7 @@
 Uses `gh` CLI (must be authenticated) — stdlib only, no pip deps.
 
 Usage:
-    python3 fetch_issue_reporters.py --repo derpdotdev/derp --issues 1234,5678,9012
+    python3 fetch_issue_reporters.py --repo borkdotdev/bork --issues 1234,5678,9012
 
 Outputs JSON to stdout mapping issue numbers to reporter info.
 """
@@ -90,7 +90,7 @@ def main() -> None:
         "--org",
         required=False,
         default="",
-        help="GitHub org to filter out internal reporters (e.g. derpdotdev)",
+        help="GitHub org to filter out internal reporters (e.g. borkdotdev)",
     )
     parser.add_argument(
         "--issues",

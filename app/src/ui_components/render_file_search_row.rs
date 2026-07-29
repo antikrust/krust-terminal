@@ -15,13 +15,13 @@
 use std::path::Path;
 
 use fuzzy_match::FuzzyMatchResult;
-use derp_core::ui::theme::Fill;
-use derpui::elements::{
+use bork_core::ui::theme::Fill;
+use borkui::elements::{
     Container, CrossAxisAlignment, Flex, Highlight, MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::text_layout::{ClipConfig, ClipDirection, ClipStyle};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::fonts::{Properties, Weight};
+use borkui::text_layout::{ClipConfig, ClipDirection, ClipStyle};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::safe_truncate;

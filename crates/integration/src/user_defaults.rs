@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use derp::settings::INPUT_MODE;
-use derp::terminal::block_list_viewport::InputMode;
+use bork::settings::INPUT_MODE;
+use bork::terminal::block_list_viewport::InputMode;
 
 /// Returns a user defaults map with the `InputMode` set to `input_mode`.
 #[allow(dead_code)]

@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use ai::skills::SkillReference;
 use serde::{Deserialize, Serialize};
-use derp_util::path::LineAndColumnArg;
-use derpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use bork_util::path::LineAndColumnArg;
+use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use super::buffer_location::LocalOrRemotePath;
 use super::view::CodeView;
@@ -113,7 +113,7 @@ pub enum CodeSource {
     },
     /// Opened from an active AI agent conversation.
     AIAction { id: AIAgentActionId },
-    /// Opened from project rules (DERP.md) file.
+    /// Opened from project rules (BORK.md) file.
     ProjectRules { location: LocalOrRemotePath },
     /// Opened from file tree (local or remote).
     FileTree { location: LocalOrRemotePath },

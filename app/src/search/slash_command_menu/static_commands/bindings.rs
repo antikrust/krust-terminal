@@ -1,4 +1,4 @@
-use derpui::keymap::{BindingDescription, PerPlatformKeystroke};
+use borkui::keymap::{BindingDescription, PerPlatformKeystroke};
 
 use super::StaticCommand;
 

@@ -4,11 +4,11 @@
 use std::collections::HashMap;
 
 use settings::Setting as _;
-use derp::features::FeatureFlag;
-use derp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use derp::settings::{BlockVisibilitySettings, ScrollSettings};
-use derpui_core::integration::AssertionOutcome;
-use derpui_core::{async_assert, async_assert_eq, SingletonEntity};
+use bork::features::FeatureFlag;
+use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use bork::settings::{BlockVisibilitySettings, ScrollSettings};
+use borkui_core::integration::AssertionOutcome;
+use borkui_core::{async_assert, async_assert_eq, SingletonEntity};
 
 use super::{new_builder, Builder};
 
@@ -65,7 +65,7 @@ pub fn test_settings_file_migration_from_native_store() -> Builder {
                 .add_named_assertion(
                     "TOML settings file should contain the migrated settings",
                     move |_app, _window_id| {
-                        let toml_path = derp::settings::user_preferences_toml_file_path();
+                        let toml_path = bork::settings::user_preferences_toml_file_path();
                         let contents = match std::fs::read_to_string(&toml_path) {
                             Ok(c) => c,
                             Err(err) => {

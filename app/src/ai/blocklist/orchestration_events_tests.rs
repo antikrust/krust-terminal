@@ -1,7 +1,7 @@
 #![allow(deprecated)]
 use std::collections::HashSet;
 
-use derp_multi_agent_api as api;
+use bork_multi_agent_api as api;
 
 use super::*;
 // Helper for constructing lifecycle pending events with minimal boilerplate.

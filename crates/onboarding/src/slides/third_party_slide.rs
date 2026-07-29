@@ -1,16 +1,16 @@
 use ui_components::{button, Component as _, Options as _};
-use derp_core::ui::appearance::Appearance;
-use derp_core::ui::theme::color::internal_colors;
-use derpui_core::elements::{
+use bork_core::ui::appearance::Appearance;
+use bork_core::ui::theme::color::internal_colors;
+use borkui_core::elements::{
     ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     MainAxisSize, MouseStateHandle, ParentElement,
 };
-use derpui_core::fonts::Weight;
-use derpui_core::keymap::Keystroke;
-use derpui_core::prelude::Align;
-use derpui_core::text_layout::TextAlignment;
-use derpui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use derpui_core::{
+use borkui_core::fonts::Weight;
+use borkui_core::keymap::Keystroke;
+use borkui_core::prelude::Align;
+use borkui_core::text_layout::TextAlignment;
+use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use borkui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };

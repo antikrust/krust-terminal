@@ -1,7 +1,7 @@
 use ordered_float::OrderedFloat;
-use derpui::elements::{ConstrainedBox, Container, Flex, ParentElement, Text};
-use derpui::fonts::{Properties, Weight};
-use derpui::{AppContext, Element, SingletonEntity};
+use borkui::elements::{ConstrainedBox, Container, Flex, ParentElement, Text};
+use borkui::fonts::{Properties, Weight};
+use borkui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;

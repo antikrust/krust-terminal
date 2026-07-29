@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use derp_editor::render::model::LineCount;
-use derpui::{Entity, ModelContext};
+use bork_editor::render::model::LineCount;
+use borkui::{Entity, ModelContext};
 
 use super::{
     AttachedReviewComment, AttachedReviewCommentTarget, CommentId, PendingImportedReviewComment,

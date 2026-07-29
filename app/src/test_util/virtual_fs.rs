@@ -2,18 +2,18 @@ use std::path::PathBuf;
 
 pub use virtual_fs::{Dirs, Stub, VirtualFS};
 
-pub trait DerpDirs {
+pub trait BorkDirs {
     #[allow(dead_code)]
     fn git_repository_fixture(&self) -> PathBuf {
-        Derp::fixtures().join("git_repository")
+        Bork::fixtures().join("git_repository")
     }
 }
 
-impl DerpDirs for Dirs {}
+impl BorkDirs for Dirs {}
 
-pub struct Derp;
+pub struct Bork;
 
-impl Derp {
+impl Bork {
     #[allow(dead_code)]
     pub fn executable() -> PathBuf {
         let mut path = {
@@ -29,7 +29,7 @@ impl Derp {
                 .unwrap_or_else(|| Self::root().join(format!("target/{}", &build)))
         };
 
-        path.push("derp");
+        path.push("bork");
         path
     }
 

@@ -6,11 +6,11 @@ use std::sync::Arc;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::RepoMetadataModel;
 use tempfile::tempdir;
-use derpui::elements::Empty;
-use derpui::platform::WindowStyle;
-use derpui::r#async::block_on;
-use derpui::windowing::WindowManager;
-use derpui::{App, AppContext, Element, Entity, SingletonEntity, TypedActionView, View};
+use borkui::elements::Empty;
+use borkui::platform::WindowStyle;
+use borkui::r#async::block_on;
+use borkui::windowing::WindowManager;
+use borkui::{App, AppContext, Element, Entity, SingletonEntity, TypedActionView, View};
 
 use crate::search::ai_context_menu::files::data_source::{
     file_data_source_for_pwd, fuzzy_match_files, FileSnapshot,

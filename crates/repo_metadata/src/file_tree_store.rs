@@ -3,8 +3,8 @@ mod file_tree_state;
 use std::sync::Arc;
 
 use ignore::gitignore::Gitignore;
-use derp_util::standardized_path::StandardizedPath;
-use derpui_core::ModelHandle;
+use bork_util::standardized_path::StandardizedPath;
+use borkui_core::ModelHandle;
 
 use crate::file_tree_store::file_tree_state::FileTreeMapStore;
 use crate::{BuildTreeError, Entry, FileId, FileMetadata, Repository};

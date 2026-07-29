@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use derp_core::ui::Icon;
-use derpui::elements::{
+use bork_core::ui::Icon;
+use borkui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, ParentElement, SavePosition, Shrinkable,
     Text,
 };
-use derpui::fonts::{Properties, Style};
-use derpui::{Action, AppContext, Element};
+use borkui::fonts::{Properties, Style};
+use borkui::{Action, AppContext, Element};
 
 use crate::ai::custom_model_routers::is_custom_router_id;
 use crate::ai::llms::{
@@ -109,7 +109,7 @@ fn make_item_fields<A: Action + Clone>(
                 let icon_container = Container::new(
                     ConstrainedBox::new(
                         leading_icon
-                            .to_derpui_icon(appearance.theme().foreground())
+                            .to_borkui_icon(appearance.theme().foreground())
                             .finish(),
                     )
                     .with_height(appearance.ui_font_size())
@@ -136,7 +136,7 @@ fn make_item_fields<A: Action + Clone>(
                 if let Some(icon) = trailing_credential_icon {
                     let credential_icon = Container::new(
                         ConstrainedBox::new(
-                            icon.to_derpui_icon(appearance.theme().disabled_ui_text_color())
+                            icon.to_borkui_icon(appearance.theme().disabled_ui_text_color())
                                 .finish(),
                         )
                         .with_height(appearance.ui_font_size())

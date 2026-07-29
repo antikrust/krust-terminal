@@ -1,20 +1,20 @@
 use std::time::Duration;
 
 use pathfinder_geometry::vector::vec2f;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, EventHandler, Flex, Hoverable, MouseStateHandle,
     OffsetPositioning, Padding, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, SavePosition, Shrinkable, Stack,
 };
-use derpui::keymap::Keystroke;
-use derpui::platform::Cursor;
-use derpui::r#async::{SpawnedFutureHandle, Timer};
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::keymap::Keystroke;
+use borkui::platform::Cursor;
+use borkui::r#async::{SpawnedFutureHandle, Timer};
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::agent_management::notifications::item_rendering::{
     create_notification_artifact_buttons_view, handle_notification_artifact_buttons_event,
@@ -367,7 +367,7 @@ fn render_toast(
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let theme = appearance.theme();
-    let on_expand: OnExpandClick = Box::new(move |ctx: &mut derpui::EventContext| {
+    let on_expand: OnExpandClick = Box::new(move |ctx: &mut borkui::EventContext| {
         ctx.dispatch_typed_action(AgentNotificationToastAction::ToggleMessageExpanded(id));
     });
     let keybinding_hint = keystroke.map(|ks| render_keybinding_hint(ks, appearance));

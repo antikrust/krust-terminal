@@ -1,10 +1,10 @@
-use derp_editor::editor::NavigationKey;
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use borkui::elements::{
     Align, ConstrainedBox, Container, Flex, ParentElement, SavePosition, Shrinkable, Stack,
 };
-use derpui::fonts::FamilyId;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{AppContext, Element, ViewContext, ViewHandle};
+use borkui::fonts::FamilyId;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{AppContext, Element, ViewContext, ViewHandle};
 
 use crate::editor::{
     EditOrigin, EditorOptions, EditorView, Event as EditorEvent, InteractionState,

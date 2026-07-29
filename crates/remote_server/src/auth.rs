@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use derpui_core::r#async::BoxFuture;
+use borkui_core::r#async::BoxFuture;
 type GetAuthTokenFn = dyn Fn() -> BoxFuture<'static, Option<String>> + Send + Sync;
 type RemoteServerIdentityKeyFn = dyn Fn() -> String + Send + Sync;
 /// App-supplied authentication and preference context for transport-agnostic

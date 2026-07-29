@@ -1,11 +1,11 @@
-use derp_core::features::FeatureFlag;
-use derpui::elements::MouseStateHandle;
-use derpui::{AppContext, Element};
+use bork_core::features::FeatureFlag;
+use borkui::elements::MouseStateHandle;
+use borkui::{AppContext, Element};
 
-use super::{DerpDriveItem, DerpDriveItemId};
+use super::{BorkDriveItem, BorkDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
-use crate::drive::cloud_object_styling::derp_drive_icon_color;
+use crate::drive::cloud_object_styling::bork_drive_icon_color;
 use crate::drive::folders::CloudFolder;
 use crate::drive::index::DriveIndexAction;
 use crate::drive::{CloudObjectTypeAndId, DriveObjectType};
@@ -13,18 +13,18 @@ use crate::themes::theme::Fill;
 use crate::ui_components::icons::Icon;
 
 #[derive(Clone)]
-pub struct DerpDriveFolder {
+pub struct BorkDriveFolder {
     id: CloudObjectTypeAndId,
     folder: CloudFolder,
 }
 
-impl DerpDriveFolder {
+impl BorkDriveFolder {
     pub fn new(id: CloudObjectTypeAndId, folder: CloudFolder) -> Self {
         Self { id, folder }
     }
 }
 
-impl DerpDriveItem for DerpDriveFolder {
+impl BorkDriveItem for BorkDriveFolder {
     fn display_name(&self) -> Option<String> {
         if self.folder.model().name.is_empty() {
             None
@@ -43,14 +43,14 @@ impl DerpDriveItem for DerpDriveFolder {
 
     fn icon(&self, appearance: &Appearance, color: Option<Fill>) -> Option<Box<dyn Element>> {
         let icon_fill =
-            color.unwrap_or(derp_drive_icon_color(appearance, DriveObjectType::Folder).into());
-        let icon = if FeatureFlag::DerpPacks.is_enabled() && self.folder.model().is_derp_pack {
+            color.unwrap_or(bork_drive_icon_color(appearance, DriveObjectType::Folder).into());
+        let icon = if FeatureFlag::BorkPacks.is_enabled() && self.folder.model().is_bork_pack {
             Icon::PackageCheck
         } else {
             Icon::from(DriveObjectType::Folder)
         };
 
-        Some(icon.to_derpui_icon(icon_fill).finish())
+        Some(icon.to_borkui_icon(icon_fill).finish())
     }
 
     fn secondary_icon(&self, _color: Option<Fill>) -> Option<Box<dyn Element>> {
@@ -69,8 +69,8 @@ impl DerpDriveItem for DerpDriveFolder {
         None
     }
 
-    fn derp_drive_id(&self) -> DerpDriveItemId {
-        DerpDriveItemId::Object(self.id)
+    fn bork_drive_id(&self) -> BorkDriveItemId {
+        BorkDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -90,7 +90,7 @@ impl DerpDriveItem for DerpDriveFolder {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn DerpDriveItem> {
+    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
         Box::new(self.clone())
     }
 }

@@ -2,22 +2,22 @@
 // Adding this file level gate as some of the code around editability is not used in WASM yet.
 
 use pathfinder_color::ColorU;
-use derp_editor::editor::NavigationKey;
-use derp_editor::search::{SearchEvent, Searcher};
-pub use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
-use derpui::elements::{
+use bork_editor::editor::NavigationKey;
+use bork_editor::search::{SearchEvent, Searcher};
+pub use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
+use borkui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Element, Flex, Hoverable, MainAxisAlignment, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentOffsetBounds, Radius, Rect, SavePosition, Shrinkable,
     Text,
 };
-pub use derpui::elements::{ParentElement as _, Stack};
-pub use derpui::geometry::vector::vec2f;
-use derpui::keymap::EditableBinding;
-use derpui::presenter::ChildView;
-use derpui::ui_components::components::UiComponent;
-pub use derpui::AppContext;
-use derpui::{
+pub use borkui::elements::{ParentElement as _, Stack};
+pub use borkui::geometry::vector::vec2f;
+use borkui::keymap::EditableBinding;
+use borkui::presenter::ChildView;
+use borkui::ui_components::components::UiComponent;
+pub use borkui::AppContext;
+use borkui::{
     Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -104,7 +104,7 @@ pub enum FindAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
     app.register_editable_bindings([
         EditableBinding::new(
             "find:find_next_occurrence",
@@ -378,10 +378,10 @@ impl CodeEditorFind {
                     self.searcher.as_ref(ctx).match_count()
                 ),
                 "Use enter and shift-enter to navigate between matches. Escape to quit.",
-                DerpA11yRole::UserAction,
+                BorkA11yRole::UserAction,
             )
         } else {
-            AccessibilityContent::new_without_help("No results.", DerpA11yRole::UserAction)
+            AccessibilityContent::new_without_help("No results.", BorkA11yRole::UserAction)
         };
         ctx.emit_a11y_content(content);
     }
@@ -396,12 +396,12 @@ impl CodeEditorFind {
                     "Successfully replaced match. Selected match is {match_index} of {remaining_matches}"
                 ),
                 "Continue pressing Enter to replace more matches, or use up/down arrows to navigate.",
-                DerpA11yRole::UserAction,
+                BorkA11yRole::UserAction,
             )
         } else {
             AccessibilityContent::new_without_help(
                 "Successfully replaced the last match.",
-                DerpA11yRole::UserAction,
+                BorkA11yRole::UserAction,
             )
         };
         ctx.emit_a11y_content(content);
@@ -490,7 +490,7 @@ impl CodeEditorFind {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_derpui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_borkui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -554,7 +554,7 @@ impl CodeEditorFind {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(match_icon.to_derpui_icon(icon_color).finish())
+            ConstrainedBox::new(match_icon.to_borkui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -581,7 +581,7 @@ impl CodeEditorFind {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(Icon::Search.to_derpui_icon(icon_color).finish())
+            ConstrainedBox::new(Icon::Search.to_borkui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -608,7 +608,7 @@ impl CodeEditorFind {
         };
         Container::new(
             ConstrainedBox::new(
-                icon.to_derpui_icon(appearance.theme().active_ui_text_color())
+                icon.to_borkui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_height(height)
@@ -946,7 +946,7 @@ impl View for CodeEditorFind {
         Some(AccessibilityContent::new(
             description,
             help_text,
-            DerpA11yRole::TextareaRole,
+            BorkA11yRole::TextareaRole,
         ))
     }
 
@@ -964,7 +964,7 @@ impl View for CodeEditorFind {
         }
     }
 
-    fn on_blur(&mut self, _blur_ctx: &derpui::BlurContext, ctx: &mut ViewContext<Self>) {
+    fn on_blur(&mut self, _blur_ctx: &borkui::BlurContext, ctx: &mut ViewContext<Self>) {
         // Check if the currently focused view is one of our child components
         let focused_view_id = ctx.focused_view_id(ctx.window_id());
         let is_focus_within_find_bar = [

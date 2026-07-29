@@ -5,8 +5,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use command::blocking::Command;
 use service_impl::{LogServiceImpl, PluginHostBootstrapServiceImpl};
-use derp_errors::report_error;
-use derpui::{Entity, ModelContext, SingletonEntity};
+use bork_errors::report_error;
+use borkui::{Entity, ModelContext, SingletonEntity};
 
 use super::{PLUGIN_HOST_ADDRESS_ENV_VAR, PLUGIN_HOST_FLAG};
 
@@ -73,7 +73,7 @@ impl PluginHost {
         #[cfg(feature = "completions_v2")]
         let server_builder =
             server_builder.with_service(service_impl::RegisterCommandSignatureServiceImpl::new(
-                derp_completer::signatures::CommandRegistry::global_instance(),
+                bork_completer::signatures::CommandRegistry::global_instance(),
             ));
 
         let (server, plugin_host_process) =

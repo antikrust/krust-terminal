@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
 use blocking::unblock;
-use derp_cli::artifact::UploadArtifactArgs;
+use bork_cli::artifact::UploadArtifactArgs;
 
 use super::common::parse_ambient_task_id;
 use crate::ai::agent::api::ServerConversationToken;

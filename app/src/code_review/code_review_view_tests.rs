@@ -5,13 +5,13 @@ use ai::agent::action::InsertReviewComment;
 use chrono::Local;
 use lsp::LspManagerModel;
 use repo_metadata::repositories::DetectedRepositories;
-use derp_core::ui::appearance::Appearance;
-use derp_editor::content::buffer::InitialBufferState;
-use derp_editor::render::element::VerticalExpansionBehavior;
-use derp_editor::render::model::LineCount;
-use derpui::elements::{Empty, MouseStateHandle};
-use derpui::platform::WindowStyle;
-use derpui::{App, ViewHandle};
+use bork_core::ui::appearance::Appearance;
+use bork_editor::content::buffer::InitialBufferState;
+use bork_editor::render::element::VerticalExpansionBehavior;
+use bork_editor::render::model::LineCount;
+use borkui::elements::{Empty, MouseStateHandle};
+use borkui::platform::WindowStyle;
+use borkui::{App, ViewHandle};
 
 use super::*;
 use crate::ai::persisted_workspace::PersistedWorkspace;
@@ -48,12 +48,12 @@ use crate::NotebookKeybindings;
 #[derive(Default)]
 struct TestView;
 
-impl derpui::Entity for TestView {
+impl borkui::Entity for TestView {
     type Event = ();
 }
 
-impl derpui::View for TestView {
-    fn render(&self, _: &derpui::AppContext) -> Box<dyn derpui::Element> {
+impl borkui::View for TestView {
+    fn render(&self, _: &borkui::AppContext) -> Box<dyn borkui::Element> {
         Empty::new().finish()
     }
 
@@ -62,7 +62,7 @@ impl derpui::View for TestView {
     }
 }
 
-impl derpui::TypedActionView for TestView {
+impl borkui::TypedActionView for TestView {
     type Action = ();
 }
 
@@ -288,7 +288,7 @@ struct TestContext {
     repo_path: PathBuf,
     repo_location: LocalOrRemotePath,
     #[allow(dead_code)]
-    window_id: derpui::WindowId,
+    window_id: borkui::WindowId,
     state: LoadedState,
     code_review_view: ViewHandle<CodeReviewView>,
 }
@@ -338,7 +338,7 @@ impl TestContext {
 /// Must be called within an App context.
 fn create_loaded_state_with_editors(
     app: &mut App,
-    window_id: derpui::WindowId,
+    window_id: borkui::WindowId,
     file_editors: Vec<(String, ViewHandle<LocalCodeEditorView>)>,
 ) -> LoadedState {
     let file_states = file_editors

@@ -2,23 +2,23 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 use string_offset::CharCounter;
-use derp_completer::signatures::CommandRegistry;
-use derp_completer::util::parse_current_commands_and_tokens;
-use derp_completer::ParsedTokensSnapshot;
-use derp_core::ui::theme::{AnsiColorIdentifier, AnsiColors};
-use derp_errors::report_error;
-use derpui::clipboard::ClipboardContent;
-use derpui::elements::new_scrollable::{ClippedAxisConfiguration, DualAxisConfig, NewScrollable};
-use derpui::elements::{
+use bork_completer::signatures::CommandRegistry;
+use bork_completer::util::parse_current_commands_and_tokens;
+use bork_completer::ParsedTokensSnapshot;
+use bork_core::ui::theme::{AnsiColorIdentifier, AnsiColors};
+use bork_errors::report_error;
+use borkui::clipboard::ClipboardContent;
+use borkui::elements::new_scrollable::{ClippedAxisConfiguration, DualAxisConfig, NewScrollable};
+use borkui::elements::{
     Align, Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Highlight, HighlightedRange,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use derpui::fonts::{Properties, Weight};
-use derpui::prelude::ChildView;
-use derpui::text_layout::TextStyle;
-use derpui::ui_components::components::{UiComponent, UiComponentStyles};
-use derpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::fonts::{Properties, Weight};
+use borkui::prelude::ChildView;
+use borkui::text_layout::TextStyle;
+use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::agent_management::telemetry::{AgentManagementTelemetryEvent, SetupGuideStep};
 use crate::ai::blocklist::code_block::{
@@ -31,10 +31,10 @@ use crate::view_components::action_button::{ActionButton, SecondaryTheme};
 use crate::workflows::workflow::{Argument, ArgumentType, Workflow};
 use crate::workflows::WorkflowType;
 
-const DOCS_URL: &str = "https://therob.lol/derp-terminal/help/agent-platform/cloud-agents/overview";
+const DOCS_URL: &str = "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/overview";
 const ENV_DOCS_URL: &str =
-    "https://therob.lol/derp-terminal/help/reference/cli/integration-setup#creating-an-environment";
-const OZ_URL: &str = "https://oz.derp.baby";
+    "https://therob.lol/bork-terminal/help/reference/cli/integration-setup#creating-an-environment";
+const OZ_URL: &str = "https://oz.bork.baby";
 
 const CONTENT_MAX_WIDTH: f32 = 720.;
 
@@ -156,7 +156,7 @@ impl CloudSetupGuideView {
         header_container.add_child(title);
 
         let subtitle = Text::new(
-            "Start Oz cloud agents directly in Derp from an integration (Linear, Slack), with an event (GitHub, built-in schedule), or programmatically with the Oz SDK or CLI.",
+            "Start Oz cloud agents directly in Bork from an integration (Linear, Slack), with an event (GitHub, built-in schedule), or programmatically with the Oz SDK or CLI.",
             appearance.ui_font_family(),
             subtitle_font_size,
         )
@@ -209,13 +209,13 @@ impl CloudSetupGuideView {
         header_container.finish()
     }
 
-    /// Render the quick start banner with link to oz.derp.baby.
+    /// Render the quick start banner with link to oz.bork.baby.
     fn render_quick_start_banner(&self, appearance: &Appearance) -> Box<dyn Element> {
         let theme = appearance.theme();
         let font_size = 16.;
 
         let text = Text::new_inline(
-            "Quick start: Visit oz.derp.baby for a UI-based setup experience.",
+            "Quick start: Visit oz.bork.baby for a UI-based setup experience.",
             appearance.ui_font_family(),
             font_size,
         )
@@ -291,7 +291,7 @@ impl CloudSetupGuideView {
     }
 
     /// Render a description that includes a link at the end
-    /// (e.g. "Use derp's environment setup command to have an agent help you through it. LINK[Visit docs]")
+    /// (e.g. "Use bork's environment setup command to have an agent help you through it. LINK[Visit docs]")
     fn render_description_with_link(
         prefix: &'static str,
         link_text: &'static str,
@@ -455,7 +455,7 @@ impl CloudSetupGuideView {
         .finish();
 
         let sub_description = Container::new(Self::render_description_with_link(
-            "Use Derp's environment setup command to have an agent help you through it. ",
+            "Use Bork's environment setup command to have an agent help you through it. ",
             "Visit docs",
             self.env_docs_link_mouse_state.clone(),
             SetupGuideDocs::Environment,
@@ -528,7 +528,7 @@ impl CloudSetupGuideView {
             .finish();
 
         let sub_description = Container::new(Self::render_description_with_link(
-            "Integrate Slack or Linear to assign Derp's Agent tasks with @Derp. ",
+            "Integrate Slack or Linear to assign Bork's Agent tasks with @Bork. ",
             "Visit docs",
             self.integration_docs_link_mouse_state.clone(),
             SetupGuideDocs::Integration,
@@ -620,7 +620,7 @@ impl View for CloudSetupGuideView {
             },
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            derpui::elements::Fill::None,
+            borkui::elements::Fill::None,
         )
         .finish();
 

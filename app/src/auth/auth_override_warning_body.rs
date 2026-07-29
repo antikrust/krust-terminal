@@ -1,17 +1,17 @@
-use derp_core::ui::builder::UiBuilder;
-use derp_core::ui::color::blend::Blend;
-use derp_core::ui::color::darken;
-use derpui::accessibility::{AccessibilityContent, DerpA11yRole};
-use derpui::color::ColorU;
-use derpui::elements::{
+use bork_core::ui::builder::UiBuilder;
+use bork_core::ui::color::blend::Blend;
+use bork_core::ui::color::darken;
+use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
+use borkui::color::ColorU;
+use borkui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Fill, Flex, Icon,
     MouseStateHandle, ParentElement, Radius, Shrinkable,
 };
-use derpui::fonts::Weight;
-use derpui::keymap::FixedBinding;
-use derpui::ui_components::button::ButtonVariant;
-use derpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use derpui::{
+use borkui::fonts::Weight;
+use borkui::keymap::FixedBinding;
+use borkui::ui_components::button::ButtonVariant;
+use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -28,7 +28,7 @@ const ACTION_BUTTON_BORDER_WIDTH: f32 = 2.;
 const ACTION_BUTTON_HORIZONTAL_PADDING: f32 = 8.;
 const ACTION_BUTTON_FONT_SIZE: f32 = 14.;
 
-const AUTH_OVERRIDE_DESCRIPTION: &str = "It looks like you logged into a Derp account through a web browser. If you continue, any personal Derp drive objects and preferences from this anonymous session with be permanently deleted.";
+const AUTH_OVERRIDE_DESCRIPTION: &str = "It looks like you logged into a Bork account through a web browser. If you continue, any personal Bork drive objects and preferences from this anonymous session with be permanently deleted.";
 const AUTH_OVERRIDE_CONFIRMATION_WARNING: &str = "This cannot be undone.";
 const AUTH_OVERRIDE_INITIAL_STEP_HEADER: &str = "New login detected";
 const AUTH_OVERRIDE_CONFIRM_CONFIRMATION_STEP_HEADER: &str =
@@ -64,7 +64,7 @@ pub struct AuthOverrideWarningBody {
 }
 
 pub fn init(app: &mut AppContext) {
-    use derpui::keymap::macros::*;
+    use borkui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
@@ -377,8 +377,8 @@ impl View for AuthOverrideWarningBody {
     fn accessibility_contents(&self, _: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new(
             "New login detected",
-            "Derp has detected a new login from a web browser. Press escape to cancel and continue using Derp without login.",
-            DerpA11yRole::HelpRole,
+            "Bork has detected a new login from a web browser. Press escape to cancel and continue using Bork without login.",
+            BorkA11yRole::HelpRole,
         ))
     }
 

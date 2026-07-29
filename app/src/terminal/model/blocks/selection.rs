@@ -5,11 +5,11 @@ use std::ops::RangeInclusive;
 
 use sum_tree::SeekBias;
 use vec1::{vec1, Vec1};
-use derp_core::semantic_selection::SemanticSelection;
-use derp_terminal::model::grid::CellType;
-use derpui::text::{IsRect, SelectionType};
-use derpui::units::{IntoLines as _, Lines};
-use derpui::{AppContext, EntityId, ViewAsRef as _};
+use bork_core::semantic_selection::SemanticSelection;
+use bork_terminal::model::grid::CellType;
+use borkui::text::{IsRect, SelectionType};
+use borkui::units::{IntoLines as _, Lines};
+use borkui::{AppContext, EntityId, ViewAsRef as _};
 
 use super::{
     BlockHeight, BlockHeightItem, BlockHeightSummary, BlockList, BlockListPoint, RichContentItem,
@@ -22,7 +22,7 @@ use crate::terminal::model::block::BlockSection;
 use crate::terminal::model::index::{Direction, Point, Side};
 use crate::terminal::model::selection::{ExpandedSelectionRange, Selection, SelectionDirection};
 use crate::terminal::model::terminal_model::{BlockIndex, WithinBlock};
-use crate::terminal::derpify::success_block::DerpifySuccessBlock;
+use crate::terminal::borkify::success_block::BorkifySuccessBlock;
 use crate::terminal::GridType;
 
 /// A selection that can span multiple blocks (and thus grids). Here row is the number of lines from
@@ -999,11 +999,11 @@ impl BlockList {
 
                             if let Some(active_window_id) = app.windows().active_window() {
                                 if let Some(ssh_block) = app
-                                    .view_with_id::<DerpifySuccessBlock>(active_window_id, *view_id)
+                                    .view_with_id::<BorkifySuccessBlock>(active_window_id, *view_id)
                                 {
-                                    let derpify_success_block = app.view(&ssh_block);
+                                    let borkify_success_block = app.view(&ssh_block);
                                     if let Some(selected_text) =
-                                        derpify_success_block.selected_text()
+                                        borkify_success_block.selected_text()
                                     {
                                         selected_texts.push(selected_text);
                                     }
@@ -1123,10 +1123,10 @@ impl BlockList {
                         }
 
                         if let Some(ssh_block) =
-                            app.view_with_id::<DerpifySuccessBlock>(active_window_id, view_id)
+                            app.view_with_id::<BorkifySuccessBlock>(active_window_id, view_id)
                         {
-                            let derpify_success_block = app.view(&ssh_block);
-                            if let Some(selected_text) = derpify_success_block.selected_text() {
+                            let borkify_success_block = app.view(&ssh_block);
+                            if let Some(selected_text) = borkify_success_block.selected_text() {
                                 selected_texts.push(selected_text);
                             }
                         }

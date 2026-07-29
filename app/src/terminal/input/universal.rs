@@ -1,9 +1,9 @@
 use settings::Setting;
-use derpui::elements::{
+use borkui::elements::{
     Border, ChildView, Container, CornerRadius, DropTarget, Element, Flex, Hoverable,
     ParentElement, Radius, SavePosition, Stack,
 };
-use derpui::{AppContext, SingletonEntity};
+use borkui::{AppContext, SingletonEntity};
 
 use super::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack,

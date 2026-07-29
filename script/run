@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Cross-platform entrypoint for running a local Derp build.
+# Cross-platform entrypoint for running a local Bork build.
 #
-# On macOS this delegates to `./script/macos/run`, which builds and runs Derp
+# On macOS this delegates to `./script/macos/run`, which builds and runs Bork
 # as a real `.app` bundle (with code signing, plist updates, etc.). On Linux
 # and Windows it invokes `cargo run` directly for the appropriate binary.
 #
@@ -21,27 +21,27 @@ OS_TYPE="$(uname -s)"
 FEATURES="gui"
 INSTALL_COMMON_SKILLS=1
 FORCE_COMMON_SKILLS=0
-COMMON_SKILLS_TARGET="${DERP_COMMON_SKILLS_INSTALL_TARGET:-}"
+COMMON_SKILLS_TARGET="${BORK_COMMON_SKILLS_INSTALL_TARGET:-}"
 
 ./script/install_channel_config || echo "Skipping internal channel config installation (no repo access)."
 
 
-# The `derp` binary is the sole app build (OSS channel).
-DERP_BIN_NAME="derp"
-DERP_CHANNEL="oss"
+# The `bork` binary is the sole app build (OSS channel).
+BORK_BIN_NAME="bork"
+BORK_CHANNEL="oss"
 
 # Shared argument parsing. macOS-specific flags (--dont-open,
 # --open_with_launchd, --generate-schema) are forwarded through MAC_ARGS and
 # silently ignored on other platforms.
 MAC_ARGS=()
 CARGO_PARAMS=()
-DERP_ARGS=()
+BORK_ARGS=()
 
 while (( "$#" )); do
   case "$1" in
     --)
       shift
-      DERP_ARGS=("$@")
+      BORK_ARGS=("$@")
       break
       ;;
     --features)
@@ -55,7 +55,7 @@ while (( "$#" )); do
       ;;
     --host-id)
       if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
-        export DERP_CLOUD_MODE_DEFAULT_HOST="$2"
+        export BORK_CLOUD_MODE_DEFAULT_HOST="$2"
         shift 2
       else
         echo "Error: Argument for $1 is missing" >&2
@@ -100,7 +100,7 @@ if [[ "$INSTALL_COMMON_SKILLS" -eq 1 ]]; then
   if [[ "${COMMON_SKILLS_TARGET}" = "project" || "${COMMON_SKILLS_TARGET}" = "global" ]]; then
     COMMON_SKILLS_ARGS=("--${COMMON_SKILLS_TARGET}")
   fi
-  if [[ "${DERP_SKIP_COMMON_SKILLS_INSTALL:-}" = "1" ]]; then
+  if [[ "${BORK_SKIP_COMMON_SKILLS_INSTALL:-}" = "1" ]]; then
     :
   elif [[ "$FORCE_COMMON_SKILLS" -eq 1 ]]; then
     if [[ "${#COMMON_SKILLS_ARGS[@]}" -gt 0 ]]; then
@@ -118,7 +118,7 @@ if [[ "$INSTALL_COMMON_SKILLS" -eq 1 ]]; then
 fi
 
 # These cargo features were removed and replaced by environment variables read
-# by derp-channel-config. Intercept them here so that existing --features
+# by bork-channel-config. Intercept them here so that existing --features
 # invocations keep working.
 for mapping in \
     "with_local_server:WITH_LOCAL_SERVER" \
@@ -135,21 +135,21 @@ for mapping in \
 done
 
 export FEATURES
-export DERP_BIN_NAME
-export DERP_CHANNEL
+export BORK_BIN_NAME
+export BORK_CHANNEL
 
 if [[ "$OS_TYPE" = "Darwin" ]]; then
-  if [[ ${#DERP_ARGS[@]} -gt 0 ]]; then
-    exec ./script/macos/run "${MAC_ARGS[@]}" -- "${DERP_ARGS[@]}"
+  if [[ ${#BORK_ARGS[@]} -gt 0 ]]; then
+    exec ./script/macos/run "${MAC_ARGS[@]}" -- "${BORK_ARGS[@]}"
   else
     exec ./script/macos/run "${MAC_ARGS[@]}"
   fi
 elif [[ "$OS_TYPE" = "Linux" ]] || [[ "$OS_TYPE" =~ ^(MINGW64_NT|MSYS_NT) ]]; then
-  echo "Running cargo run --bin $DERP_BIN_NAME --features \"$FEATURES\" ${CARGO_PARAMS[*]}"
-  if [[ ${#DERP_ARGS[@]} -gt 0 ]]; then
-    cargo run --bin "$DERP_BIN_NAME" --features "$FEATURES" "${CARGO_PARAMS[@]}" -- "${DERP_ARGS[@]}"
+  echo "Running cargo run --bin $BORK_BIN_NAME --features \"$FEATURES\" ${CARGO_PARAMS[*]}"
+  if [[ ${#BORK_ARGS[@]} -gt 0 ]]; then
+    cargo run --bin "$BORK_BIN_NAME" --features "$FEATURES" "${CARGO_PARAMS[@]}" -- "${BORK_ARGS[@]}"
   else
-    cargo run --bin "$DERP_BIN_NAME" --features "$FEATURES" "${CARGO_PARAMS[@]}"
+    cargo run --bin "$BORK_BIN_NAME" --features "$FEATURES" "${CARGO_PARAMS[@]}"
   fi
 else
   echo "No run script defined for the current platform ($OS_TYPE)!" >&2

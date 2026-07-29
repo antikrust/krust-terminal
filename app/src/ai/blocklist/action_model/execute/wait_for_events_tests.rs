@@ -4,8 +4,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use derp_core::features::FeatureFlag;
-use derpui::{App, EntityId};
+use bork_core::features::FeatureFlag;
+use borkui::{App, EntityId};
 
 use super::{
     watchdog_timeout_for_stamped_seconds, AnyActionExecution, ExecuteActionInput,

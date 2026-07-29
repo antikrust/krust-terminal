@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures::executor::block_on;
-use derp_completer::meta::SpannedItem;
-use derp_completer::{ParsedTokenData, ParsedTokensSnapshot};
+use bork_completer::meta::SpannedItem;
+use bork_completer::{ParsedTokenData, ParsedTokensSnapshot};
 
 use super::*;
 

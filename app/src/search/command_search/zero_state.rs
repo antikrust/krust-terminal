@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use derp_core::features::FeatureFlag;
-use derp_core::ui::theme::color::internal_colors;
-use derpui::elements::{
+use bork_core::features::FeatureFlag;
+use bork_core::ui::theme::color::internal_colors;
+use borkui::elements::{
     Container, CornerRadius, Flex, Hoverable, MouseStateHandle, ParentElement, Radius, Text, Wrap,
 };
-use derpui::platform::Cursor;
-use derpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use borkui::platform::Cursor;
+use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::search::{FilterChipRenderer, QueryFilter};
@@ -180,7 +180,7 @@ impl View for CommandSearchZeroStateView {
         "CommandSearchZeroStateView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn derpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
         let appearance = Appearance::as_ref(app);
 
         let command_search_text = Container::new(

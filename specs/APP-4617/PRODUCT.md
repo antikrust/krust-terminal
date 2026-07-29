@@ -1,6 +1,6 @@
 # Product Spec: Attachments on Queued Prompts
 
-Linear: [APP-4617](https://linear.app/derpdotdev/issue/APP-4617)
+Linear: [APP-4617](https://linear.app/borkdotdev/issue/APP-4617)
 Figma: none provided
 
 ## Summary

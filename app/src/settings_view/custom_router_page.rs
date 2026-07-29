@@ -3,7 +3,7 @@
 //! A custom router is a user-defined "auto" model: it inspects each task and
 //! forwards it to a concrete model — by how hard the task looks (complexity),
 //! or by matching the prompt against rules you write. The routers themselves
-//! are YAML files under `~/.derp/custom_model_routers/`; this page lists them,
+//! are YAML files under `~/.bork/custom_model_routers/`; this page lists them,
 //! opens the editor to add or change one, and surfaces any that failed to parse.
 //!
 //! This was a section at the bottom of the AI Manager page. On its own page it
@@ -11,12 +11,12 @@
 //! used — the events below just forward to `SettingsView`, which already knew
 //! how to open it.
 
-use derpui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Text};
-use derpui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use borkui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Text};
+use borkui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 // `SingletonEntity` provides `.as_ref` for the config/settings singletons the
 // local_fs body reads; it is unused when that body is compiled out.
 #[cfg(feature = "local_fs")]
-use derpui::SingletonEntity;
+use borkui::SingletonEntity;
 
 #[cfg(feature = "local_fs")]
 use std::path::PathBuf;
@@ -63,7 +63,7 @@ impl CustomRouterPageView {
         #[cfg(feature = "local_fs")]
         let add_router_button = {
             use crate::view_components::action_button::{ActionButton, ButtonSize, SecondaryTheme};
-            let is_enabled = derp_core::features::FeatureFlag::CustomModelRouters.is_enabled()
+            let is_enabled = bork_core::features::FeatureFlag::CustomModelRouters.is_enabled()
                 && crate::settings::AISettings::as_ref(ctx).is_any_ai_enabled(ctx);
             let button = ctx.add_typed_action_view(|_| {
                 ActionButton::new("+ Add router", SecondaryTheme)
@@ -100,11 +100,11 @@ impl CustomRouterPageView {
         ctx: &mut ViewContext<Self>,
     ) -> Vec<ViewHandle<super::custom_router_view::CustomRouterView>> {
         use super::custom_router_view::{CustomRouterView, CustomRouterViewEvent};
-        use crate::user_config::DerpConfig;
-        if !derp_core::features::FeatureFlag::CustomModelRouters.is_enabled() {
+        use crate::user_config::BorkConfig;
+        if !bork_core::features::FeatureFlag::CustomModelRouters.is_enabled() {
             return Vec::new();
         }
-        let routers: Vec<CustomModelRouter> = DerpConfig::as_ref(ctx).custom_model_routers().clone();
+        let routers: Vec<CustomModelRouter> = BorkConfig::as_ref(ctx).custom_model_routers().clone();
         routers
             .into_iter()
             .map(|router| {
@@ -119,7 +119,7 @@ impl CustomRouterPageView {
                     }
                     CustomRouterViewEvent::Delete => {
                         if let Some(path) = &router_clone.source_path {
-                            if let Err(e) = DerpConfig::delete_custom_model_router(path) {
+                            if let Err(e) = BorkConfig::delete_custom_model_router(path) {
                                 log::warn!("Failed to delete custom router: {e:?}");
                             }
                             me.router_views = Self::create_router_views(ctx);
@@ -165,7 +165,7 @@ impl SettingsPageMeta for CustomRouterPageView {
     }
 
     fn should_render(&self, _ctx: &AppContext) -> bool {
-        derp_core::features::FeatureFlag::CustomModelRouters.is_enabled()
+        bork_core::features::FeatureFlag::CustomModelRouters.is_enabled()
     }
 
     fn update_filter(&mut self, query: &str, ctx: &mut ViewContext<Self>) -> MatchData {
@@ -202,7 +202,7 @@ impl SettingsWidget for RoutersWidget {
     }
 
     fn should_render(&self, _app: &AppContext) -> bool {
-        derp_core::features::FeatureFlag::CustomModelRouters.is_enabled()
+        bork_core::features::FeatureFlag::CustomModelRouters.is_enabled()
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
@@ -218,7 +218,7 @@ impl SettingsWidget for RoutersWidget {
             Container::new(description_text(
                 "Route each task to a concrete model — by how hard the task looks, or by \
                  matching the prompt against rules you write. Routers show up in your model \
-                 selector menu. Each one is a YAML file under ~/.derp/custom_model_routers/.",
+                 selector menu. Each one is a YAML file under ~/.bork/custom_model_routers/.",
                 appearance,
             ))
             .with_margin_bottom(VERTICAL_MARGIN)
@@ -228,7 +228,7 @@ impl SettingsWidget for RoutersWidget {
         #[cfg(feature = "local_fs")]
         {
             use super::custom_router_view::render_router_error_card;
-            use crate::user_config::DerpConfig;
+            use crate::user_config::BorkConfig;
 
             column.add_child(
                 Container::new(view.add_router_button.as_ref(app).render(app))
@@ -238,7 +238,7 @@ impl SettingsWidget for RoutersWidget {
 
             // Files that failed to parse come first, so a broken router is
             // obvious rather than silently missing from the list below.
-            for error in DerpConfig::as_ref(app).custom_model_router_errors().iter() {
+            for error in BorkConfig::as_ref(app).custom_model_router_errors().iter() {
                 column.add_child(
                     Container::new(render_router_error_card(
                         &error.file_name,
@@ -259,7 +259,7 @@ impl SettingsWidget for RoutersWidget {
             }
             for view_handle in &view.router_views {
                 column.add_child(
-                    Container::new(derpui::elements::ChildView::new(view_handle).finish())
+                    Container::new(borkui::elements::ChildView::new(view_handle).finish())
                         .with_margin_top(8.)
                         .finish(),
                 );

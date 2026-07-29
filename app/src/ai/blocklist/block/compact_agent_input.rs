@@ -1,6 +1,6 @@
 //! Compact free-form text input used by inline AI block actions.
-use derpui::presenter::ChildView;
-use derpui::{
+use borkui::presenter::ChildView;
+use borkui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, View, ViewContext, ViewHandle,
 };
 

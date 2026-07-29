@@ -6,9 +6,9 @@ mod view;
 
 use pathfinder_color::ColorU;
 pub use view::{InlineConversationMenuEvent, InlineConversationMenuView};
-use derp_core::ui::appearance::Appearance;
-use derpui::keymap::Keystroke;
-use derpui::SingletonEntity;
+use bork_core::ui::appearance::Appearance;
+use borkui::keymap::Keystroke;
+use borkui::SingletonEntity;
 
 use crate::ai::agent_conversations_model::AgentConversationEntryId;
 use crate::terminal::input::inline_menu::{

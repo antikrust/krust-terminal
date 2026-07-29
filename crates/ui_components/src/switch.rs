@@ -1,9 +1,9 @@
 use std::sync::LazyLock;
 
-use derp_core::ui::appearance::Appearance;
-use derpui_core::elements::{MouseStateHandle, Rect};
-use derpui_core::prelude::stack::*;
-use derpui_core::prelude::*;
+use bork_core::ui::appearance::Appearance;
+use borkui_core::elements::{MouseStateHandle, Rect};
+use borkui_core::prelude::stack::*;
+use borkui_core::prelude::*;
 
 use crate::{Component, MouseEventHandler, Renderable};
 

@@ -5,13 +5,13 @@ use anyhow::Context;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use vec1::{vec1, Vec1};
-use derpui::keymap::Keystroke;
+use borkui::keymap::Keystroke;
 #[cfg(not(test))]
-use derpui::keymap::Trigger;
-use derpui::AppContext;
+use borkui::keymap::Trigger;
+use borkui::AppContext;
 
 /// Environment variable to disable saving keybindings to file (used in integration tests)
-pub const DISABLE_SAVE_ENV_VAR: &str = "DERP_TEST_DISABLE_KEYBINDING_SAVE";
+pub const DISABLE_SAVE_ENV_VAR: &str = "BORK_TEST_DISABLE_KEYBINDING_SAVE";
 const REMOVED_KEYBINDING_SERIALIZATION: &str = "none";
 
 #[derive(PartialEq, Debug)]
@@ -93,7 +93,7 @@ where
 }
 
 pub fn keybinding_file_path() -> std::path::PathBuf {
-    derp_core::paths::config_local_dir().join(KEYBINDINGS_FILE_NAME)
+    bork_core::paths::config_local_dir().join(KEYBINDINGS_FILE_NAME)
 }
 
 /// Save the custom keybindings map to disk.

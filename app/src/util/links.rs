@@ -1,4 +1,4 @@
-pub const USER_DOCS_URL: &str = "https://therob.lol/derp-terminal/help/";
+pub const USER_DOCS_URL: &str = "https://therob.lol/bork-terminal/help/";
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-pub const GITHUB_ISSUES_URL: &str = "https://github.com/derpdotdev/Derp/issues";
-pub const PRIVACY_POLICY_URL: &str = "https://www.derp.baby/privacy";
+pub const GITHUB_ISSUES_URL: &str = "https://github.com/borkdotdev/Bork/issues";
+pub const PRIVACY_POLICY_URL: &str = "https://www.bork.baby/privacy";
