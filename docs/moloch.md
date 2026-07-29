@@ -5,9 +5,9 @@
 > elsewhere. This service is exactly that: it answers the app as though it
 > were the AI, and contains none. It replaces Bork's cloud agent (Oz).
 
-> **The server now lives in its own private repo: `/Volumes/Instruments/moloch`**
-> (proprietary; it also holds **acolyte**, the conduit that runs beside the
-> models on the AI machine). It was moved out of this workspace because this
+> **The server lives in its own repo: `https://shithub.space/n01/moloch`**
+> (proprietary licence; it also holds **acolyte**, the conduit that runs beside
+> the models on the AI machine). It was moved out of this workspace because this
 > fork is AGPL-3.0-only and a crate here would inherit AGPL. Nothing was lost
 > in the move — Moloch never depended on the app.
 >
