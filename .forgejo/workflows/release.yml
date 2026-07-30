@@ -75,6 +75,12 @@ jobs:
         run: |
           set -o pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
+          # The default target dir (under the act workdir, on the root disk)
+          # has almost no headroom on this runner -- point cargo at the big
+          # data disk instead. This was the real, persistent cause of the
+          # repeated "No space left on device" failures, not /mnt/terra
+          # (which only mattered for tmp files and the swapfile).
+          export CARGO_TARGET_DIR=/mnt/terra/forgejo-ci/cargo-target
           # Just .deb for now: the runner's disk/RAM are tight and building all
           # three formats (deb+rpm+AppImage) in one job exhausted both. Add
           # rpm,appimage back once there's more headroom on the runner.
