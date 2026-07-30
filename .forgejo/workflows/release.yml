@@ -73,8 +73,16 @@ jobs:
           }
       - name: bundle
         run: |
+          set -o pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
-          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage
+          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/bork-release.log
+      - name: report failure as an issue
+        if: failure()
+        run: |
+          body=$(tail -c 60000 /tmp/bork-release.log | jq -Rs .)
+          curl -sf -X POST -H "Authorization: token ${{ github.token }}" -H "Content-Type: application/json" \
+            -d "{\"title\": \"CI failure: linux release bundle @ ${{ github.sha }}\", \"body\": $body}" \
+            "https://shithub.space/api/v1/repos/${{ github.repository }}/issues" || true
       - name: attach linux artifacts to release
         run: |
           T="${{ github.token }}"

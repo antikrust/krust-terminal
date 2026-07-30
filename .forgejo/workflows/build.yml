@@ -29,6 +29,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH" || true
       - name: check
         run: |
+          set -o pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
           cargo check --bin bork --locked 2>&1 | tee /tmp/bork-check.log
       - name: report failure as an issue
@@ -61,6 +62,7 @@ jobs:
         run: |
           $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
           cargo check --bin bork --locked 2>&1 | Tee-Object -FilePath check.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: report failure as an issue
         if: failure()
         run: |
