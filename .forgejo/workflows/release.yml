@@ -81,6 +81,10 @@ jobs:
           # repeated "No space left on device" failures, not /mnt/terra
           # (which only mattered for tmp files and the swapfile).
           export CARGO_TARGET_DIR=/mnt/terra/forgejo-ci/cargo-target
+          # Full parallelism exhausts this runner's 31G RAM + swap during
+          # release+LTO codegen/linking (repeatedly OOM-killed rustc even with
+          # 16G extra swap added). Trade build time for actually completing.
+          export CARGO_BUILD_JOBS=2
           # Just .deb for now: the runner's disk/RAM are tight and building all
           # three formats (deb+rpm+AppImage) in one job exhausted both. Add
           # rpm,appimage back once there's more headroom on the runner.
