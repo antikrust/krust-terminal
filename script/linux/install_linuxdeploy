@@ -15,30 +15,33 @@ appimage_commit() {
 # it in ~/.local/bin.
 #
 # Usage:
-#   download_appimage $BINARY_NAME $VERSION $COMMIT $REPO_URL
+#   download_appimage $BINARY_NAME $VERSION $COMMIT $MIRROR_URL
 #
 # Args:
 #   BINARY_NAME: The name of the AppImage-bundled binary we want to download,
 #                e.g.: "linuxdeploy".
-#   VERSION:     The upstream release tag.
+#   VERSION:     The upstream release tag (kept for the cache-hit message only).
 #   COMMIT:      The (short) commit SHA the release tag points at; used to
 #                verify the cached binary matches the pinned version.
-#   REPO_URL:    The URL of the GitHub repository hosting the release.
+#   MIRROR_URL:  Direct URL to the AppImage file. Mirrored under our own
+#                infra (not github.com/releases) so this doesn't depend on
+#                GitHub's availability from the build runner -- a stalled
+#                unbounded fetch here previously hung a CI release for 30+
+#                minutes with no timeout and no error.
 download_appimage() {
   BINARY_NAME="$1"
   VERSION="$2"
   COMMIT="$3"
-  REPO_URL="$4"
+  MIRROR_URL="$4"
 
   APPIMAGE_NAME="$BINARY_NAME-$(uname -m).AppImage"
   APPIMAGE_PATH="$LOCAL_BIN/$APPIMAGE_NAME"
 
   if [ -x "$APPIMAGE_PATH" ] && [ "$(appimage_commit "$APPIMAGE_PATH")" = "$COMMIT" ]; then
-    echo "✅ Found $APPIMAGE_NAME in $LOCAL_BIN."
+    echo "✅ Found $APPIMAGE_NAME in $LOCAL_BIN (pinned $VERSION)."
   else
-    APPIMAGE_RELEASE_URL="$REPO_URL/releases/download/$VERSION/$APPIMAGE_NAME"
-    echo "⬇️ Downloading $APPIMAGE_RELEASE_URL..."
-    curl -fL "$APPIMAGE_RELEASE_URL" --output "$APPIMAGE_PATH"
+    echo "⬇️ Downloading $MIRROR_URL..."
+    curl -fL --connect-timeout 15 --max-time 180 "$MIRROR_URL" --output "$APPIMAGE_PATH"
     chmod +x "$APPIMAGE_PATH"
   fi
 
@@ -47,9 +50,10 @@ download_appimage() {
 }
 
 # Install linuxdeploy, a helper for constructing an AppDir (and then invoking
-# appimagetool).
+# appimagetool). Mirrored to derp.baby (see comment above) -- originally
+# https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
 download_appimage "linuxdeploy" "1-alpha-20251107-1" "cc7b864" \
-  "https://github.com/linuxdeploy/linuxdeploy"
+  "https://derp.baby/vendor/linuxdeploy-x86_64.AppImage"
 
 if [ ! -x "$(which linuxdeploy)" ]; then
   echo -e "⚠️  ${red}Please make sure that \"$LOCAL_BIN\" is on your PATH, otherwise some scripts may not work.${reset}"
