@@ -56,7 +56,10 @@ jobs:
 
   linux:
     runs-on: linux
-    needs: windows
+    # No `needs: windows` -- the windows runner (bob-winbuild) is occasionally
+    # offline, and linux/mac artifacts should still ship without waiting on it.
+    # Windows assets get picked up whenever that lane next completes (the
+    # "gather" step below just finds zero if none exist yet).
     steps:
       - name: checkout
         run: |
