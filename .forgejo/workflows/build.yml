@@ -22,12 +22,11 @@ jobs:
           git init -q .
           git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
           git checkout -q --force FETCH_HEAD
-      - name: ensure rust
+      - name: install build deps
         run: |
-          command -v cargo >/dev/null || {
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          }
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH" || export PATH="$HOME/.cargo/bin:$PATH"
+          export BORK_SKIP_SUDO_PROMPT=1
+          ./script/linux/install_build_deps
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH" || true
       - name: check
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
@@ -44,7 +43,7 @@ jobs:
           git init -q .
           git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
           git checkout -q --force FETCH_HEAD
-      - name: ensure rust
+      - name: install build deps
         run: |
           if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
             Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
