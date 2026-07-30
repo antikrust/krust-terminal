@@ -30,7 +30,14 @@ jobs:
       - name: check
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          cargo check --bin bork --locked
+          cargo check --bin bork --locked 2>&1 | tee /tmp/bork-check.log
+      - name: report failure as an issue
+        if: failure()
+        run: |
+          body=$(tail -c 60000 /tmp/bork-check.log | jq -Rs .)
+          curl -sf -X POST -H "Authorization: token ${{ github.token }}" -H "Content-Type: application/json" \
+            -d "{\"title\": \"CI failure: linux check @ ${{ github.sha }}\", \"body\": $body}" \
+            "https://shithub.space/api/v1/repos/${{ github.repository }}/issues" || true
 
   windows:
     runs-on: windows
@@ -53,4 +60,13 @@ jobs:
       - name: check
         run: |
           $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
-          cargo check --bin bork --locked
+          cargo check --bin bork --locked 2>&1 | Tee-Object -FilePath check.log
+      - name: report failure as an issue
+        if: failure()
+        run: |
+          $tail = (Get-Content check.log -Tail 2000 -ErrorAction SilentlyContinue) -join "`n"
+          $body = @{ title = "CI failure: windows check @ ${{ github.sha }}"; body = $tail } | ConvertTo-Json
+          $headers = @{ Authorization = "token ${{ github.token }}"; "Content-Type" = "application/json" }
+          try {
+            Invoke-RestMethod -Method Post -Uri "https://shithub.space/api/v1/repos/${{ github.repository }}/issues" -Headers $headers -Body $body
+          } catch {}
