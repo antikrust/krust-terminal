@@ -75,7 +75,10 @@ jobs:
         run: |
           set -o pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
-          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/bork-release.log
+          # Just .deb for now: the runner's disk/RAM are tight and building all
+          # three formats (deb+rpm+AppImage) in one job exhausted both. Add
+          # rpm,appimage back once there's more headroom on the runner.
+          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb 2>&1 | tee /tmp/bork-release.log
       - name: report failure as an issue
         if: failure()
         run: |
