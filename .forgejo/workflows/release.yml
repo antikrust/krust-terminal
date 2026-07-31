@@ -74,16 +74,19 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           # Needed for the bundle's third-party-license generation step.
           command -v cargo-about >/dev/null || cargo install cargo-about --features cli
-      - name: bundle
-        run: |
-          set -o pipefail
-          export PATH="$HOME/.cargo/bin:$PATH"
           # The default target dir (under the act workdir, on the root disk)
           # has almost no headroom on this runner -- point cargo at the big
           # data disk instead. This was the real, persistent cause of the
           # repeated "No space left on device" failures, not /mnt/terra
-          # (which only mattered for tmp files and the swapfile).
-          export CARGO_TARGET_DIR=/mnt/terra/forgejo-ci/cargo-target
+          # (which only mattered for tmp files and the swapfile). Written to
+          # GITHUB_ENV (not just exported here) so later steps -- notably the
+          # artifact-finding `find` below -- see it too; a plain `export`
+          # inside one step's `run:` does not carry over to the next step.
+          echo "CARGO_TARGET_DIR=/mnt/terra/forgejo-ci/cargo-target" >> "$GITHUB_ENV"
+      - name: bundle
+        run: |
+          set -o pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
           # Full parallelism exhausts this runner's 31G RAM + swap during
           # release+LTO codegen/linking (repeatedly OOM-killed rustc even with
           # 16G extra swap added). Trade build time for actually completing.
@@ -109,8 +112,10 @@ jobs:
               -d "{\"tag_name\":\"$GITHUB_REF_NAME\",\"name\":\"$GITHUB_REF_NAME\"}" "$api/releases" >/dev/null
           rid=$(curl -sf -H "Authorization: token $T" "$api/releases/tags/$GITHUB_REF_NAME" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
           mkdir -p dist/linux
-          # Collect whatever the bundler produced, wherever it landed.
-          find . -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.pkg.tar.zst' \) \
+          # Collect whatever the bundler produced, wherever it landed --
+          # CARGO_TARGET_DIR points outside the checkout (see "ensure rust"),
+          # so search both roots explicitly rather than just `.`.
+          find . "${CARGO_TARGET_DIR:-/nonexistent}" -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.pkg.tar.zst' \) \
             -not -path '*/vendor/*' -exec cp -n {} dist/linux/ \; 2>/dev/null || true
           for f in dist/linux/*; do
             [ -f "$f" ] || continue
