@@ -92,8 +92,10 @@ cp "$RPMBUILD_DIR/RPMS/$ARCH/$RPM_NAME" "$OUT_DIR"
 # should have already been added to the gpg-agent with a preset passphrase.
 if [ "${GITHUB_ACTIONS}" == "true" ]; then
   # Import our signing key's public key into rpm so the signature can be
-  # verified.
-  sudo rpm --import https://releases.bork.baby/linux/keys/bork.asc
+  # verified. There's no real signing infra set up for Bork yet (no key
+  # published at releases.bork.baby), so this is expected to fail for now --
+  # same tolerance as the rpmsign call below, which already no-ops without it.
+  sudo rpm --import https://releases.bork.baby/linux/keys/bork.asc || true
 
   # We use batch mode with tty-based pin entry to ensure that the build doesn't
   # hang waiting on user input if, for some reason, we failed to preset the
