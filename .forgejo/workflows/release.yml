@@ -81,6 +81,10 @@ jobs:
           # separate manual setup step, so CI has to invoke it explicitly.
           ./script/linux/install_linuxdeploy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # Needed for the .rpm package -- install_build_deps only pulls in
+          # apt/cargo deps needed to *compile*, not rpmbuild (only relevant
+          # for packaging on this Debian-based runner).
+          command -v rpmbuild >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq rpm; }
           # The default target dir (under the act workdir, on the root disk)
           # has almost no headroom on this runner -- point cargo at the big
           # data disk instead. This was the real, persistent cause of the
