@@ -91,10 +91,7 @@ jobs:
           # release+LTO codegen/linking (repeatedly OOM-killed rustc even with
           # 16G extra swap added). Trade build time for actually completing.
           export CARGO_BUILD_JOBS=2
-          # Just .deb for now: the runner's disk/RAM are tight and building all
-          # three formats (deb+rpm+AppImage) in one job exhausted both. Add
-          # rpm,appimage back once there's more headroom on the runner.
-          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb 2>&1 | tee /tmp/bork-release.log
+          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/bork-release.log
       - name: report failure as an issue
         if: failure()
         run: |
