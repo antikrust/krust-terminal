@@ -74,6 +74,13 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           # Needed for the bundle's third-party-license generation step.
           command -v cargo-about >/dev/null || cargo install cargo-about --features cli
+          # Needed for the AppImage package -- script/linux/bundle tries
+          # appimage first (before deb/rpm) and the script has `set -e`, so
+          # without this the whole bundle aborts before deb/rpm ever build.
+          # install_build_deps doesn't call this itself; it's normally a
+          # separate manual setup step, so CI has to invoke it explicitly.
+          ./script/linux/install_linuxdeploy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           # The default target dir (under the act workdir, on the root disk)
           # has almost no headroom on this runner -- point cargo at the big
           # data disk instead. This was the real, persistent cause of the
