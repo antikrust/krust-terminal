@@ -7,7 +7,7 @@ Type=Application
 Name=Bork
 GenericName=TerminalEmulator
 
-Exec=bork-terminal-oss %U
+Exec=bork-terminal %U
 StartupWMClass=bork.baby.Bork
 
 Keywords=shell;prompt;command;commandline;cmd;
