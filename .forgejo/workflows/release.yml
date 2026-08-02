@@ -23,6 +23,24 @@ jobs:
       run:
         shell: powershell
     steps:
+      - name: free disk space
+        run: |
+          # Only one drive on this runner (C:, ~64G total) with no data disk
+          # to redirect CARGO_TARGET_DIR to (unlike the linux runner's
+          # /mnt/terra). Every past run's target dir sits under its own
+          # hash-named act workdir and is never cleaned up, so stale ones
+          # from earlier CI runs just accumulate. Reclaim that before it
+          # starves the current run of space during LTO codegen (the actual
+          # cause of the "not enough space on the disk" failure here).
+          $ErrorActionPreference = 'Continue'
+          Get-ChildItem -Path "C:\w\.cache\act" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $t = Join-Path $_.FullName "hostexecutor\target"
+            if (Test-Path $t) {
+              Write-Output "Removing stale target dir: $t"
+              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+            }
+          }
+          Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize | Out-String -Width 200
       - name: checkout
         run: |
           git init -q .
