@@ -3026,10 +3026,19 @@ fn committee_usage() -> TurnUsage {
 }
 
 /// An all-success exit status for paths that finish without spawning curl
-/// (clean tree, no models). The whole Ollama harness is unix-only already
-/// (`/usr/bin/curl`, `/bin/zsh`).
+/// (clean tree, no models). The rest of the Ollama harness is unix-only
+/// (`/usr/bin/curl`, `/bin/zsh`), but this constructor itself is trivially
+/// cross-platform (ExitStatusExt::from_raw exists on both, just via
+/// different traits/raw-code types), so it's kept compiling on Windows too.
+#[cfg(unix)]
 fn success_status() -> ExitStatus {
     use std::os::unix::process::ExitStatusExt;
+    ExitStatus::from_raw(0)
+}
+
+#[cfg(windows)]
+fn success_status() -> ExitStatus {
+    use std::os::windows::process::ExitStatusExt;
     ExitStatus::from_raw(0)
 }
 
