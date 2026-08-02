@@ -68,6 +68,14 @@ jobs:
             .\rustup-init.exe -y --default-toolchain stable
           }
           echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Needed for proto codegen in build.rs (prost-build). Mirrored under
+          # our own infra rather than fetched from github.com/releases, same
+          # reasoning as script/linux/install_build_deps.
+          if (-not (Get-Command protoc -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest -Uri "https://derp.baby/vendor/protoc-25.1-win64.zip" -OutFile protoc.zip -TimeoutSec 60
+            Expand-Archive -Path protoc.zip -DestinationPath "$env:USERPROFILE\protoc" -Force
+          }
+          echo "$env:USERPROFILE\protoc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: check
         run: |
           $ErrorActionPreference = 'Continue'

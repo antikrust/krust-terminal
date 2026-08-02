@@ -39,10 +39,17 @@ jobs:
             Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
             .\rustup-init.exe -y --default-toolchain stable
           }
+          # Needed for proto codegen in build.rs (prost-build). Mirrored under
+          # our own infra rather than fetched from github.com/releases, same
+          # reasoning as script/linux/install_build_deps.
+          if (-not (Get-Command protoc -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest -Uri "https://derp.baby/vendor/protoc-25.1-win64.zip" -OutFile protoc.zip -TimeoutSec 60
+            Expand-Archive -Path protoc.zip -DestinationPath "$env:USERPROFILE\protoc" -Force
+          }
       - name: bundle
         run: |
           $ErrorActionPreference = 'Continue'
-          $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+          $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:USERPROFILE\protoc\bin;$env:PATH"
           .\script\windows\bundle.ps1 -CHANNEL oss -RELEASE_TAG "$env:GITHUB_REF_NAME"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: attach to release
