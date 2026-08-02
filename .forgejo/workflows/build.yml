@@ -55,6 +55,10 @@ jobs:
           git init -q .
           git fetch -q https://x-access-token:${{ github.token }}@shithub.space/${{ github.repository }}.git ${{ github.sha }}
           git checkout -q --force FETCH_HEAD
+      - name: disk info
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize | Out-String -Width 200
       - name: install build deps
         run: |
           # cargo/rustup write routine progress to stderr; under this runner's
