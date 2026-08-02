@@ -59,13 +59,17 @@ jobs:
           # from earlier CI runs just accumulate. Reclaim that before it
           # starves the current run of space during LTO codegen.
           $ErrorActionPreference = 'Continue'
-          Get-ChildItem -Path "C:\w\.cache\act" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            $t = Join-Path $_.FullName "hostexecutor\target"
-            if (Test-Path $t) {
-              Write-Output "Removing stale target dir: $t"
-              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
-            }
-          }
+          Write-Output "--- C:\w ---"
+          Get-ChildItem -Path "C:\w" -ErrorAction SilentlyContinue | Select-Object Name,LastWriteTime | Format-Table -AutoSize | Out-String -Width 200
+          Write-Output "--- C:\w\.cache ---"
+          Get-ChildItem -Path "C:\w\.cache" -ErrorAction SilentlyContinue | Select-Object Name,LastWriteTime | Format-Table -AutoSize | Out-String -Width 200
+          Write-Output "--- C:\w\.cache\act ---"
+          Get-ChildItem -Path "C:\w\.cache\act" -ErrorAction SilentlyContinue | Select-Object Name,LastWriteTime | Format-Table -AutoSize | Out-String -Width 200
+          Write-Output "--- top-level dir sizes under C:\w (this can take a minute) ---"
+          Get-ChildItem -Path "C:\w" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $size = (Get-ChildItem -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            [PSCustomObject]@{ Name = $_.FullName; SizeGB = [math]::Round($size / 1GB, 2) }
+          } | Sort-Object SizeGB -Descending | Format-Table -AutoSize | Out-String -Width 200
           Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize | Out-String -Width 200
       - name: checkout
         run: |
