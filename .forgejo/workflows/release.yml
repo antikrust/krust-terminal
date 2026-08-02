@@ -30,14 +30,21 @@ jobs:
           git checkout -q --force FETCH_HEAD
       - name: ensure rust
         run: |
+          # cargo/rustup write routine progress to stderr; under this runner's
+          # remoting model that gets wrapped as a terminating error (category
+          # RemoteException) whenever $ErrorActionPreference is 'Stop' (which
+          # the runner sets by default for every step). Same fix as build.yml.
+          $ErrorActionPreference = 'Continue'
           if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
             Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
             .\rustup-init.exe -y --default-toolchain stable
           }
       - name: bundle
         run: |
+          $ErrorActionPreference = 'Continue'
           $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
           .\script\windows\bundle.ps1 -CHANNEL oss -RELEASE_TAG "$env:GITHUB_REF_NAME"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: attach to release
         run: |
           $T = "${{ github.token }}"

@@ -57,7 +57,12 @@ if ($ARCH -eq 'arm64') {
     $PLATFORM_TARGET = 'x86_64-pc-windows-msvc'
 }
 
-$ErrorActionPreference = 'Stop'
+# Not 'Stop': cargo/ISCC write routine progress to stderr, which some runners
+# (e.g. Forgejo's self-hosted Windows runner) wrap as a terminating
+# RemoteException under 'Stop', aborting mid-build on the first progress
+# line. Every native invocation below already checks $? / exits explicitly,
+# so 'Stop' was never needed for error detection here.
+$ErrorActionPreference = 'Continue'
 
 $WORKSPACE_ROOT_DIR = $(Get-Location).Path
 $CARGO_TARGET_DIR = $WORKSPACE_ROOT_DIR + '\target'

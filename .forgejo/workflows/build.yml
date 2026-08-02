@@ -57,6 +57,12 @@ jobs:
           git checkout -q --force FETCH_HEAD
       - name: install build deps
         run: |
+          # cargo/rustup write routine progress to stderr; under this runner's
+          # remoting model that gets wrapped as a terminating error (category
+          # RemoteException) whenever $ErrorActionPreference is 'Stop' (which
+          # the runner sets by default for every step). Rely on $LASTEXITCODE
+          # instead, like the check step already does.
+          $ErrorActionPreference = 'Continue'
           if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
             Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
             .\rustup-init.exe -y --default-toolchain stable
@@ -64,6 +70,7 @@ jobs:
           echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: check
         run: |
+          $ErrorActionPreference = 'Continue'
           $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
           cargo check --bin bork --locked 2>&1 | Tee-Object -FilePath check.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

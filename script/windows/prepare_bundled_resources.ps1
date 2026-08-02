@@ -23,7 +23,8 @@ Param(
     [String]$CargoProfile = ''
 )
 
-$ErrorActionPreference = 'Stop'
+# See bundle.ps1 for why this is 'Continue' and not 'Stop'.
+$ErrorActionPreference = 'Continue'
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Get-Item "$ScriptDir\..\.." | Select-Object -ExpandProperty FullName)
