@@ -11,7 +11,7 @@ fn persisted_conversation(conversation_id: AIConversationId) -> AgentConversatio
             last_modified_at: chrono::NaiveDateTime::default(),
             summary: None,
         },
-        tasks: vec![bork_multi_agent_api::Task {
+        tasks: vec![krust_multi_agent_api::Task {
             id: task_id,
             messages: vec![],
             dependencies: None,

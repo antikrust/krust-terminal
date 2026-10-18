@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krustui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     FormattedTextElement, MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::text_layout::TextAlignment;
-use borkui_core::Element;
+use krustui_core::fonts::Weight;
+use krustui_core::text_layout::TextAlignment;
+use krustui_core::Element;
 
 /// Content for a "you'll lose these features" opt-out confirmation dialog.
 pub struct FeatureOptOutDialog {
@@ -62,7 +62,7 @@ pub fn render_feature_optout_dialog(
         let mut feature_list =
             Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
         for &item in dialog.features {
-            let icon_el = ConstrainedBox::new(Icon::X.to_borkui_icon(feature_x_fill).finish())
+            let icon_el = ConstrainedBox::new(Icon::X.to_krustui_icon(feature_x_fill).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish();

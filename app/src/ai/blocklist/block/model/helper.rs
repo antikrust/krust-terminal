@@ -1,4 +1,4 @@
-use borkui::{AppContext, EntityId, ModelHandle, SingletonEntity};
+use krustui::{AppContext, EntityId, ModelHandle, SingletonEntity};
 
 use super::AIBlockModel;
 use crate::ai::agent::conversation::AIConversation;

@@ -7,15 +7,15 @@ use ::local_control::{ControlError, ErrorCode};
 use serde::Serialize;
 use serde_json::{json, Value};
 use settings::Setting as _;
-use borkui::keymap::DescriptionContext;
-use borkui::{ModelContext, SingletonEntity};
+use krustui::keymap::DescriptionContext;
+use krustui::{ModelContext, SingletonEntity};
 
 use crate::local_control::LocalControlBridge;
 use crate::settings::{
     derived_theme_kind, AccessibilitySettings, FontSettings, InputSettings, ThemeSettings,
 };
 use crate::themes::theme::ThemeKind;
-use crate::user_config::BorkConfig;
+use crate::user_config::KrustConfig;
 use crate::util::bindings::trigger_to_keystroke;
 use crate::WindowSettings;
 
@@ -95,7 +95,7 @@ fn theme_list_result(
     ctx: &mut ModelContext<LocalControlBridge>,
 ) -> Result<ThemeListResult, ControlError> {
     let current_theme = active_theme_kind(ThemeSettings::as_ref(ctx), ctx);
-    let mut themes = BorkConfig::as_ref(ctx)
+    let mut themes = KrustConfig::as_ref(ctx)
         .theme_config()
         .theme_items()
         .map(|(kind, _)| ThemeSummary {

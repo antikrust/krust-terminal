@@ -367,14 +367,14 @@ dependencies = [
  "base16ct",
  "base64 0.22.1",
  "bincode",
- "bork_core",
- "bork_errors",
- "bork_graphql",
- "bork_multi_agent_api",
- "bork_terminal",
- "bork_util",
- "borkui_core",
- "borkui_extras",
+ "krust_core",
+ "krust_errors",
+ "krust_graphql",
+ "krust_multi_agent_api",
+ "krust_terminal",
+ "krust_util",
+ "krustui_core",
+ "krustui_extras",
  "bytes",
  "cfg-if",
  "chrono",
@@ -1259,8 +1259,8 @@ dependencies = [
  "async-compat",
  "async-fs",
  "base64 0.22.1",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "bytes",
  "cfg-if",
  "futures",
@@ -1273,7 +1273,7 @@ dependencies = [
 name = "asset_macro"
 version = "0.1.0"
 dependencies = [
- "bork_util",
+ "krust_util",
  "proc-macro2",
  "quote",
  "sha2 0.10.9",
@@ -2426,7 +2426,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork"
+name = "krust"
 version = "0.1.0"
 dependencies = [
  "account_client",
@@ -2462,33 +2462,33 @@ dependencies = [
  "bitflags-serde-legacy",
  "block",
  "blocking",
- "bork-command-signatures",
- "bork-workflows",
- "bork_assets",
- "bork_channel_config",
- "bork_cli",
- "bork_completer",
- "bork_core",
- "bork_editor",
- "bork_errors",
- "bork_files",
- "bork_graphql",
- "bork_isolation_platform",
- "bork_js",
- "bork_logging",
- "bork_managed_secrets",
- "bork_multi_agent_api",
- "bork_multi_agent_client",
- "bork_ripgrep",
- "bork_search_core",
- "bork_server_auth",
- "bork_server_client",
- "bork_terminal",
- "bork_util",
- "bork_web_event_bus",
- "borkui",
- "borkui_core",
- "borkui_extras",
+ "krust-command-signatures",
+ "krust-workflows",
+ "krust_assets",
+ "krust_channel_config",
+ "krust_cli",
+ "krust_completer",
+ "krust_core",
+ "krust_editor",
+ "krust_errors",
+ "krust_files",
+ "krust_graphql",
+ "krust_isolation_platform",
+ "krust_js",
+ "krust_logging",
+ "krust_managed_secrets",
+ "krust_multi_agent_api",
+ "krust_multi_agent_client",
+ "krust_ripgrep",
+ "krust_search_core",
+ "krust_server_auth",
+ "krust_server_client",
+ "krust_terminal",
+ "krust_util",
+ "krust_web_event_bus",
+ "krustui",
+ "krustui_core",
+ "krustui_extras",
  "bounded-vec-deque",
  "byte-unit",
  "bytecount",
@@ -2726,10 +2726,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork-command-signatures"
+name = "krust-command-signatures"
 version = "0.0.0"
 dependencies = [
- "bork-completion-metadata",
+ "krust-completion-metadata",
  "cfg-if",
  "itertools 0.10.5",
  "lazy_static",
@@ -2743,7 +2743,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork-completion-metadata"
+name = "krust-completion-metadata"
 version = "0.0.0"
 dependencies = [
  "html-escape",
@@ -2755,11 +2755,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork-workflows"
+name = "krust-workflows"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bork-workflows-types",
+ "krust-workflows-types",
  "convert_case 0.4.0",
  "memmap",
  "serde_yaml 0.8.26",
@@ -2768,37 +2768,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork-workflows-types"
+name = "krust-workflows-types"
 version = "0.1.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
-name = "bork_assets"
+name = "krust_assets"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "borkui_core",
+ "krustui_core",
  "rust-embed 8.7.2",
 ]
 
 [[package]]
-name = "bork_channel_config"
+name = "krust_channel_config"
 version = "0.0.0"
 dependencies = [
- "bork_core",
+ "krust_core",
  "command",
  "serde_json",
 ]
 
 [[package]]
-name = "bork_cli"
+name = "krust_cli"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "bork_core",
- "bork_util",
+ "krust_core",
+ "krust_util",
  "cfg-if",
  "cfg_aliases 0.2.1",
  "chrono",
@@ -2817,20 +2817,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_completer"
+name = "krust_completer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
  "async-trait",
  "bincode",
- "bork-command-signatures",
- "bork_cli",
- "bork_completer",
- "bork_core",
- "bork_js",
- "bork_util",
- "borkui_core",
+ "krust-command-signatures",
+ "krust_cli",
+ "krust_completer",
+ "krust_core",
+ "krust_js",
+ "krust_util",
+ "krustui_core",
  "cfg-if",
  "clap",
  "command",
@@ -2855,16 +2855,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_core"
+name = "krust_core"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "async-broadcast",
- "bork_errors",
- "bork_features",
- "bork_util",
- "borkui_core",
- "borkui_extras",
+ "krust_errors",
+ "krust_features",
+ "krust_util",
+ "krustui_core",
+ "krustui_extras",
  "cfg-if",
  "chrono",
  "command-corrections",
@@ -2911,18 +2911,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_editor"
+name = "krust_editor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "arrayvec",
  "asset_cache",
  "async-channel",
- "bork_core",
- "bork_errors",
- "bork_util",
- "borkui",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_util",
+ "krustui",
+ "krustui_core",
  "bytes",
  "criterion",
  "enclose",
@@ -2966,7 +2966,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_errors"
+name = "krust_errors"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -2980,22 +2980,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_features"
+name = "krust_features"
 version = "0.0.0"
 dependencies = [
  "enum-iterator",
 ]
 
 [[package]]
-name = "bork_files"
+name = "krust_files"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
  "async-fs",
- "bork_core",
- "bork_util",
- "borkui_core",
+ "krust_core",
+ "krust_util",
+ "krustui_core",
  "futures",
  "log",
  "notify-debouncer-full",
@@ -3007,13 +3007,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_graphql"
+name = "krust_graphql"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bork_core",
- "bork_graphql_schema",
+ "krust_core",
+ "krust_graphql_schema",
  "chrono",
  "cynic",
  "cynic-codegen",
@@ -3033,7 +3033,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_graphql_schema"
+name = "krust_graphql_schema"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -3042,12 +3042,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_isolation_platform"
+name = "krust_isolation_platform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
- "bork_core",
+ "krust_core",
  "chrono",
  "command",
  "log",
@@ -3057,7 +3057,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_js"
+name = "krust_js"
 version = "0.1.0"
 dependencies = [
  "bincode",
@@ -3069,13 +3069,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_logging"
+name = "krust_logging"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "bork_core",
- "bork_errors",
- "bork_web_event_bus",
+ "krust_core",
+ "krust_errors",
+ "krust_web_event_bus",
  "cfg-if",
  "chrono",
  "console_error_panic_hook",
@@ -3093,16 +3093,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_managed_secrets"
+name = "krust_managed_secrets"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "bork_core",
- "bork_graphql",
- "bork_isolation_platform",
- "borkui_core",
+ "krust_core",
+ "krust_graphql",
+ "krust_isolation_platform",
+ "krustui_core",
  "chrono",
  "getrandom 0.3.4",
  "hpke",
@@ -3121,7 +3121,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_multi_agent_api"
+name = "krust_multi_agent_api"
 version = "0.0.0"
 dependencies = [
  "prost",
@@ -3132,15 +3132,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_multi_agent_client"
+name = "krust_multi_agent_client"
 version = "0.1.0"
 dependencies = [
  "aha-reqwest-eventsource",
  "anyhow",
  "base64 0.22.1",
- "bork_core",
- "bork_multi_agent_api",
- "bork_server_client",
+ "krust_core",
+ "krust_multi_agent_api",
+ "krust_server_client",
  "cfg-if",
  "futures",
  "prost",
@@ -3150,12 +3150,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_ripgrep"
+name = "krust_ripgrep"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-process",
- "bork_cli",
+ "krust_cli",
  "command",
  "futures",
  "getrandom 0.2.16",
@@ -3170,15 +3170,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_search_core"
+name = "krust_search_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "bork_core",
- "bork_errors",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krustui_core",
  "enum-iterator",
  "futures",
  "futures-util",
@@ -3200,16 +3200,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_server_auth"
+name = "krust_server_auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bork_core",
- "bork_errors",
- "bork_graphql",
- "bork_managed_secrets",
- "borkui_core",
- "borkui_extras",
+ "krust_core",
+ "krust_errors",
+ "krust_graphql",
+ "krust_managed_secrets",
+ "krustui_core",
+ "krustui_extras",
  "chrono",
  "cynic",
  "lasso",
@@ -3222,7 +3222,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_server_client"
+name = "krust_server_client"
 version = "0.1.0"
 dependencies = [
  "aha-reqwest-eventsource",
@@ -3232,12 +3232,12 @@ dependencies = [
  "base64 0.22.1",
  "bincode",
  "blocking",
- "bork_core",
- "bork_errors",
- "bork_graphql",
- "bork_isolation_platform",
- "bork_server_auth",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_graphql",
+ "krust_isolation_platform",
+ "krust_server_auth",
+ "krustui_core",
  "bounded-vec-deque",
  "cfg-if",
  "chrono",
@@ -3275,17 +3275,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_terminal"
+name = "krust_terminal"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "bitflags 2.13.0",
  "bitflags-serde-legacy",
- "bork_completer",
- "bork_core",
- "bork_errors",
- "bork_util",
- "borkui_core",
+ "krust_completer",
+ "krust_core",
+ "krust_errors",
+ "krust_util",
+ "krustui_core",
  "cfg-if",
  "channel_versions",
  "command-corrections",
@@ -3311,7 +3311,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_tui"
+name = "krust_tui"
 version = "0.0.0"
 dependencies = [
  "ai",
@@ -3319,17 +3319,17 @@ dependencies = [
  "async-channel",
  "async-fs",
  "base64 0.22.1",
- "bork",
- "bork_channel_config",
- "bork_core",
- "bork_editor",
- "bork_errors",
- "bork_files",
- "bork_search_core",
- "bork_terminal",
- "bork_util",
- "borkui",
- "borkui_core",
+ "krust",
+ "krust_channel_config",
+ "krust_core",
+ "krust_editor",
+ "krust_errors",
+ "krust_files",
+ "krust_search_core",
+ "krust_terminal",
+ "krust_util",
+ "krustui",
+ "krustui_core",
  "channel_versions",
  "clap",
  "command",
@@ -3357,12 +3357,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_util"
+name = "krust_util"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "command",
  "content_inspector",
  "dirs 6.0.0",
@@ -3387,7 +3387,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bork_web_event_bus"
+name = "krust_web_event_bus"
 version = "0.0.0"
 dependencies = [
  "js-sys",
@@ -3398,7 +3398,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "borkui"
+name = "krustui"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -3410,9 +3410,9 @@ dependencies = [
  "bindgen 0.70.1",
  "block",
  "blocking",
- "bork_errors",
- "borkui",
- "borkui_core",
+ "krust_errors",
+ "krustui",
+ "krustui_core",
  "bytemuck",
  "cc",
  "cfg-if",
@@ -3498,7 +3498,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "borkui_core"
+name = "krustui_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3509,9 +3509,9 @@ dependencies = [
  "async-fs",
  "async-io",
  "async-task",
- "bork_errors",
- "bork_util",
- "borkui_core",
+ "krust_errors",
+ "krust_util",
+ "krustui_core",
  "bounded-vec-deque",
  "bytes",
  "cfg-if",
@@ -3580,14 +3580,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "borkui_extras"
+name = "krustui_extras"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bork_errors",
- "borkui_core",
- "borkui_extras",
+ "krust_errors",
+ "krustui_core",
+ "krustui_extras",
  "gloo-storage",
  "log",
  "objc2 0.6.3",
@@ -4154,8 +4154,8 @@ dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "bork_core",
- "bork_graphql",
+ "krust_core",
+ "krust_graphql",
  "chrono",
  "cloud_object_models",
  "cloud_objects",
@@ -4171,12 +4171,12 @@ version = "0.1.0"
 dependencies = [
  "ai",
  "anyhow",
- "bork-workflows",
- "bork_cli",
- "bork_core",
- "bork_errors",
- "bork_graphql",
- "bork_util",
+ "krust-workflows",
+ "krust_cli",
+ "krust_core",
+ "krust_errors",
+ "krust_graphql",
+ "krust_util",
  "cfg-if",
  "chrono",
  "cloud_object_persistence",
@@ -4203,8 +4203,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
- "bork_core",
- "bork_graphql",
+ "krust_core",
+ "krust_graphql",
  "chrono",
  "cloud_objects",
  "diesel",
@@ -4220,10 +4220,10 @@ name = "cloud_objects"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bork_core",
- "bork_graphql",
- "bork_server_auth",
- "borkui_core",
+ "krust_core",
+ "krust_graphql",
+ "krust_server_auth",
+ "krustui_core",
  "chrono",
  "cynic",
  "derivative",
@@ -4413,7 +4413,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-process",
- "bork_errors",
+ "krust_errors",
  "futures-lite 1.13.0",
  "lazy_static",
  "libc",
@@ -4467,8 +4467,8 @@ dependencies = [
  "anyhow",
  "ashpd",
  "async-trait",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "cfg-if",
  "cfg_aliases 0.2.1",
  "clap",
@@ -7673,8 +7673,8 @@ dependencies = [
  "anyhow",
  "async-compat",
  "async-stream",
- "bork_core",
- "bork_errors",
+ "krust_core",
+ "krust_errors",
  "bytes",
  "cfg-if",
  "futures",
@@ -7696,9 +7696,9 @@ name = "http_server"
 version = "0.0.0"
 dependencies = [
  "axum",
- "bork_core",
- "bork_errors",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krustui_core",
  "log",
  "tokio",
  "tower",
@@ -8139,9 +8139,9 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "bork_completer",
- "bork_errors",
- "bork_features",
+ "krust_completer",
+ "krust_errors",
+ "krust_features",
  "candle-core",
  "candle-nn",
  "candle-onnx",
@@ -8210,15 +8210,15 @@ dependencies = [
  "anyhow",
  "app-installation-detection",
  "backtrace",
- "bork",
- "bork-command-signatures",
- "bork-workflows",
- "bork_cli",
- "bork_core",
- "bork_multi_agent_api",
- "borkui",
- "borkui_core",
- "borkui_extras",
+ "krust",
+ "krust-command-signatures",
+ "krust-workflows",
+ "krust_cli",
+ "krust_core",
+ "krust_multi_agent_api",
+ "krustui",
+ "krustui_core",
+ "krustui_extras",
  "cfg-if",
  "chrono",
  "clap",
@@ -8310,7 +8310,7 @@ dependencies = [
  "async-compat",
  "async-trait",
  "bincode",
- "borkui_core",
+ "krustui_core",
  "futures",
  "interprocess",
  "itertools 0.14.0",
@@ -8638,8 +8638,8 @@ dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "futures",
  "log",
  "serde",
@@ -8780,8 +8780,8 @@ name = "languages"
 version = "0.0.0"
 dependencies = [
  "arborium",
- "bork_editor",
- "bork_util",
+ "krust_editor",
+ "krust_util",
  "lazy_static",
  "rust-embed 8.7.2",
  "serde",
@@ -9128,10 +9128,10 @@ dependencies = [
  "async-fs",
  "async-process",
  "async-trait",
- "bork_core",
- "bork_errors",
- "bork_util",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_util",
+ "krustui_core",
  "cfg-if",
  "chrono",
  "command",
@@ -9281,7 +9281,7 @@ dependencies = [
 name = "managed_secrets_wasm"
 version = "0.1.0"
 dependencies = [
- "bork_managed_secrets",
+ "krust_managed_secrets",
  "serde",
  "serde_json",
  "wasm-bindgen",
@@ -9391,10 +9391,10 @@ dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "bork_core",
- "bork_errors",
- "borkui",
- "borkui_extras",
+ "krust_core",
+ "krust_errors",
+ "krustui",
+ "krustui_extras",
  "cfg-if",
  "cloud_object_models",
  "futures",
@@ -9953,7 +9953,7 @@ dependencies = [
  "anyhow",
  "async-fs",
  "async-trait",
- "bork_core",
+ "krust_core",
  "cfg-if",
  "command",
  "flate2",
@@ -10637,11 +10637,11 @@ version = "0.1.0"
 dependencies = [
  "ai",
  "anyhow",
- "bork_core",
- "bork_errors",
- "bork_logging",
- "borkui",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_logging",
+ "krustui",
+ "krustui_core",
  "cfg-if",
  "instant",
  "log",
@@ -11205,7 +11205,7 @@ dependencies = [
 name = "persistence"
 version = "0.0.0"
 dependencies = [
- "bork_multi_agent_api",
+ "krust_multi_agent_api",
  "chrono",
  "diesel",
  "diesel_migrations",
@@ -12599,10 +12599,10 @@ dependencies = [
  "async-channel",
  "async-io",
  "async-process",
- "bork_core",
- "bork_errors",
- "bork_util",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_util",
+ "krustui_core",
  "bounded-vec-deque",
  "command",
  "dashmap",
@@ -12641,11 +12641,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-fs",
- "bork_core",
- "bork_errors",
- "bork_util",
- "borkui",
- "borkui_core",
+ "krust_core",
+ "krust_errors",
+ "krust_util",
+ "krustui",
+ "krustui_core",
  "cfg-if",
  "dirs 6.0.0",
  "dunce",
@@ -13814,10 +13814,10 @@ name = "settings"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "bork_errors",
- "bork_features",
- "borkui_core",
- "borkui_extras",
+ "krust_errors",
+ "krust_features",
+ "krustui_core",
+ "krustui_extras",
  "concat-idents",
  "inventory",
  "log",
@@ -14008,8 +14008,8 @@ version = "0.1.0"
 dependencies = [
  "async-channel",
  "async-fs",
- "bork_core",
- "borkui_core",
+ "krust_core",
+ "krustui_core",
  "chrono",
  "futures",
  "instant",
@@ -14382,7 +14382,7 @@ name = "sum_tree"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
- "bork_errors",
+ "krust_errors",
  "log",
  "rand 0.8.6",
  "sum_tree",
@@ -14491,10 +14491,10 @@ name = "syntax_tree"
 version = "0.1.0"
 dependencies = [
  "arborium",
- "bork_editor",
- "bork_util",
- "borkui",
- "borkui_core",
+ "krust_editor",
+ "krust_util",
+ "krustui",
+ "krustui_core",
  "futures",
  "futures-lite 1.13.0",
  "languages",
@@ -15779,9 +15779,9 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "asset_cache",
- "bork_core",
- "borkui",
- "borkui_core",
+ "krust_core",
+ "krustui",
+ "krustui_core",
  "pathfinder_color",
  "pathfinder_geometry",
  "rust-embed 8.7.2",
@@ -16184,8 +16184,8 @@ name = "vim"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bork_core",
- "borkui_core",
+ "krust_core",
+ "krustui_core",
  "itertools 0.14.0",
  "log",
  "string-offset",
@@ -16209,8 +16209,8 @@ dependencies = [
  "anyhow",
  "async-channel",
  "base64 0.22.1",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "cpal",
  "futures",
  "hound",
@@ -16435,8 +16435,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bork_errors",
- "borkui_core",
+ "krust_errors",
+ "krustui_core",
  "futures",
  "log",
  "notify-debouncer-full",

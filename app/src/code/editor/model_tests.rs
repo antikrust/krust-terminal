@@ -2,10 +2,10 @@ use std::path::Path;
 
 use futures::channel::oneshot;
 use vec1::vec1;
-use bork_editor::content::buffer::{InitialBufferState, SelectionOffsets};
-use bork_editor::multiline::MultilineString;
-use bork_util::content_version::ContentVersion;
-use borkui::App;
+use krust_editor::content::buffer::{InitialBufferState, SelectionOffsets};
+use krust_editor::multiline::MultilineString;
+use krust_util::content_version::ContentVersion;
+use krustui::App;
 
 use super::*;
 use crate::code::editor::line::EditorLineLocation;

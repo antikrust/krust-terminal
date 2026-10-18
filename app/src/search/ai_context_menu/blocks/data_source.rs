@@ -1,6 +1,6 @@
 use fuzzy_match::FuzzyMatchResult;
 use itertools::Itertools;
-use borkui::{AppContext, Entity, SingletonEntity};
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::BlockSearchItem;
 use crate::search::ai_context_menu::mixer::AIContextMenuSearchableAction;

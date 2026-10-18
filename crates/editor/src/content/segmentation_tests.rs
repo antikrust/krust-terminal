@@ -1,11 +1,11 @@
 use itertools::Itertools;
 use markdown_parser::parse_markdown;
 use string_offset::CharOffset;
-use bork_core::features::FeatureFlag;
-use borkui_core::App;
-use borkui_core::text::TextBuffer;
-use borkui_core::text::point::Point;
-use borkui_core::text::word_boundaries::WordBoundariesPolicy;
+use krust_core::features::FeatureFlag;
+use krustui_core::App;
+use krustui_core::text::TextBuffer;
+use krustui_core::text::point::Point;
+use krustui_core::text::word_boundaries::WordBoundariesPolicy;
 
 use crate::content::buffer::{Buffer, EditOrigin};
 use crate::content::selection_model::BufferSelectionModel;

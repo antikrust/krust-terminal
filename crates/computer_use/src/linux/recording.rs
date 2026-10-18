@@ -52,7 +52,7 @@ impl crate::Recorder for Recorder {
         }
 
         let path =
-            std::env::temp_dir().join(format!("bork-recording-{}.mp4", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("krust-recording-{}.mp4", uuid::Uuid::new_v4()));
         // ffmpeg's progress log goes to a file so its stderr pipe can never fill
         // and stall capture over a long recording.
         let log_path = path.with_extension("log");

@@ -15,13 +15,13 @@ use lsp_types::{
 #[cfg(not(target_arch = "wasm32"))]
 use simple_logger::manager::LogManager;
 #[cfg(not(target_arch = "wasm32"))]
-use bork_core::features::FeatureFlag;
+use krust_core::features::FeatureFlag;
 #[cfg(not(target_arch = "wasm32"))]
-use bork_errors::report_error;
-use borkui_core::r#async::executor::Background;
+use krust_errors::report_error;
+use krustui_core::r#async::executor::Background;
 #[cfg(not(target_arch = "wasm32"))]
-use borkui_core::SingletonEntity;
-use borkui_core::{Entity, ModelContext};
+use krustui_core::SingletonEntity;
+use krustui_core::{Entity, ModelContext};
 
 use crate::config::{lsp_uri_to_path, LanguageId};
 use crate::server_repo_watcher::LspRepoWatcher;

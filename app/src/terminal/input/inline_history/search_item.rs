@@ -1,15 +1,15 @@
 use chrono::{DateTime, Local};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use borkui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
-use borkui::scene::{CornerRadius, Radius};
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krustui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
+use krustui::scene::{CornerRadius, Radius};
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::conversation_status_ui::{render_status_element, STATUS_ELEMENT_PADDING};
@@ -124,7 +124,7 @@ impl SearchItem for InlineHistoryItem {
             HistoryItemType::Command { .. } => {
                 let icon_color = inline_styles::icon_color(appearance);
                 Container::new(
-                    ConstrainedBox::new(Icon::Terminal.to_borkui_icon(icon_color).finish())
+                    ConstrainedBox::new(Icon::Terminal.to_krustui_icon(icon_color).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),
@@ -139,7 +139,7 @@ impl SearchItem for InlineHistoryItem {
             HistoryItemType::AIPrompt { .. } => {
                 let icon_color = inline_styles::icon_color(appearance);
                 Container::new(
-                    ConstrainedBox::new(Icon::Prompt.to_borkui_icon(icon_color).finish())
+                    ConstrainedBox::new(Icon::Prompt.to_krustui_icon(icon_color).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),

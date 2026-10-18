@@ -8,12 +8,12 @@
 //! Then, you can use the global [`ServerExperiments`] model
 //! to update and query the latest experiment state.
 //!
-//! See [here](https://www.notion.so/borkdev/Server-side-experiments-dynamic-feature-enablement-c0fb9aed695d4178a19b8830e3269094)
+//! See [here](https://www.notion.so/krustdev/Server-side-experiments-dynamic-feature-enablement-c0fb9aed695d4178a19b8830e3269094)
 //! for a full guide on the server-side experiment framework.
 
-use borkui::AppContext;
+use krustui::AppContext;
 #[cfg(test)]
-use borkui::SingletonEntity;
+use krustui::SingletonEntity;
 
 use crate::features::FeatureFlag;
 

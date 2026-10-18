@@ -3,16 +3,16 @@ use std::sync::Arc;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 use pathfinder_color::ColorU;
-use borkui::elements::{
+use krustui::elements::{
     Align, ConstrainedBox, Container, Flex, Highlight, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::{DescriptionContext, Keystroke};
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::{DescriptionContext, Keystroke};
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
-use crate::drive::cloud_object_styling::bork_drive_icon_color;
+use crate::drive::cloud_object_styling::krust_drive_icon_color;
 use crate::drive::DriveObjectType;
 use crate::features::FeatureFlag;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
@@ -182,7 +182,7 @@ impl SearchItemIcon for BindingGroup {
     fn icon(&self) -> Icon {
         match self {
             Self::Settings => Icon::Gear,
-            Self::BorkAi => {
+            Self::KrustAi => {
                 if !FeatureFlag::AgentMode.is_enabled() {
                     Icon::AiAssistant
                 } else {
@@ -212,19 +212,19 @@ impl SearchItemIcon for BindingGroup {
             | Self::Folders
             | Self::Terminal
             | Self::Notifications => appearance.theme().foreground().into_solid(),
-            Self::BorkAi if !FeatureFlag::AgentMode.is_enabled() => {
-                ColorU::from_u32(colors::BORK_AI)
+            Self::KrustAi if !FeatureFlag::AgentMode.is_enabled() => {
+                ColorU::from_u32(colors::KRUST_AI)
             }
-            Self::BorkAi => appearance.theme().foreground().into_solid(),
-            Self::Workflow => bork_drive_icon_color(appearance, DriveObjectType::Workflow),
-            Self::Notebooks => bork_drive_icon_color(
+            Self::KrustAi => appearance.theme().foreground().into_solid(),
+            Self::Workflow => krust_drive_icon_color(appearance, DriveObjectType::Workflow),
+            Self::Notebooks => krust_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: false,
                 },
             ),
             Self::EnvVarCollection => {
-                bork_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
+                krust_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
             }
         }
     }

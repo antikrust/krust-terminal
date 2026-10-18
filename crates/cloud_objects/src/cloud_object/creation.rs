@@ -1,4 +1,4 @@
-use bork_graphql::scalars::time::ServerTimestamp;
+use krust_graphql::scalars::time::ServerTimestamp;
 
 use super::{
     CloudObjectEventEntrypoint, GenericStringObjectFormat, GenericStringObjectUniqueKey, Owner,

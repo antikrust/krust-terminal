@@ -3,8 +3,8 @@ use std::fs;
 use std::sync::Arc;
 
 use tempfile::TempDir;
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
 
 use super::{
     build_local_claude_child_command, build_local_codex_child_command,

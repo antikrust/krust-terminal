@@ -1,18 +1,18 @@
 use chrono::{Local, TimeZone};
 use uuid::Uuid;
-use bork_core::ui::external_product_icon::ExternalProductIcon;
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::external_product_icon::ExternalProductIcon;
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Flex, Hoverable, MainAxisAlignment, MouseStateHandle, Padding, ParentElement, Radius,
     Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -169,7 +169,7 @@ impl UpdateModalBody {
                     let mut icon = Container::new(
                         ConstrainedBox::new(
                             Icon::X
-                                .to_borkui_icon(theme.active_ui_text_color())
+                                .to_krustui_icon(theme.active_ui_text_color())
                                 .finish(),
                         )
                         .with_width(16.)

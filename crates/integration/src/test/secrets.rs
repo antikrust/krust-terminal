@@ -1,21 +1,21 @@
-use bork::integration_testing::clipboard::assert_clipboard_contains_string;
-use bork::integration_testing::secret_redaction::{
+use krust::integration_testing::clipboard::assert_clipboard_contains_string;
+use krust::integration_testing::secret_redaction::{
     assert_secret_tooltip_open, assert_secrets_redacted_for_ai,
 };
-use bork::integration_testing::settings::toggle_setting;
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::terminal::util::ExpectedExitStatus;
-use bork::integration_testing::terminal::{
+use krust::integration_testing::settings::toggle_setting;
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::terminal::util::ExpectedExitStatus;
+use krust::integration_testing::terminal::{
     assert_selected_block_index_is_last_renderable, execute_command_for_single_terminal_in_tab,
     initialize_secret_regexes, open_context_menu_for_selected_block, run_alt_grid_program,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::view_getters::single_terminal_view;
-use bork::settings_view::{PrivacyPageAction, SettingsAction};
-use bork::terminal::model::index::Point;
-use bork::terminal::model::terminal_model::WithinModel;
-use borkui_core::async_assert;
-use borkui_core::integration::TestStep;
+use krust::integration_testing::view_getters::single_terminal_view;
+use krust::settings_view::{PrivacyPageAction, SettingsAction};
+use krust::terminal::model::index::Point;
+use krust::terminal::model::terminal_model::WithinModel;
+use krustui_core::async_assert;
+use krustui_core::integration::TestStep;
 
 use super::{new_builder, Builder};
 use crate::util::skip_if_powershell_core_2303;

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use borkui::elements::ChildView;
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::elements::ChildView;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::tab_configs::PickerStyle;
 use crate::util::git::{

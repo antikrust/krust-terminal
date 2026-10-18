@@ -3,7 +3,7 @@
 > *"Moloch whose mind is pure machinery!"* — the hollow idol that appears
 > all-powerful and has nothing inside, fed by offerings carried from
 > elsewhere. This service is exactly that: it answers the app as though it
-> were the AI, and contains none. It replaces Bork's cloud agent (Oz).
+> were the AI, and contains none. It replaces Krust's cloud agent (Oz).
 
 > **The server lives in its own repo: `https://shithub.space/n01/moloch`**
 > (proprietary licence; it also holds **acolyte**, the conduit that runs beside
@@ -17,7 +17,7 @@
 > and slots refer to code in that other repo.
 
 Moloch is the fork's replacement for the cloud backend the app already talks
-to for AI. The app is built to send AI work to a server ("the cloud"); Bork's
+to for AI. The app is built to send AI work to a server ("the cloud"); Krust's
 servers are gone in this fork. Moloch stands in for them — **but it owns no
 AI**. It is a *broker*:
 
@@ -50,9 +50,9 @@ rest), pinned self-signed TLS, config in env / `.env`.
 
 ## Where the API came from
 
-The endpoint surface is the **Bork/Oz Agent API** as published at
-`https://therob.lol/bork-terminal/help/api/` (the rebranded bork.baby docs —
-see [[bork-terminal-website]]). Base URL `https://app.bork.baby/api/v1`, bearer
+The endpoint surface is the **Krust/Oz Agent API** as published at
+`https://therob.lol/krust-terminal/help/api/` (the rebranded krust.baby docs —
+see [[krust-terminal-website]]). Base URL `https://app.krust.baby/api/v1`, bearer
 auth. The machine-readable `openapi.json` is the ground truth; the endpoint
 list below mirrors it. This replaced my first draft, which reverse-engineered
 the shapes from the client's `ServerApi` Rust code — the docs are
@@ -151,8 +151,8 @@ built** (a tick that reads due, non-paused schedules and calls the spawn path).
 ### harness-support (worker → server, wire parity with Oz)
 
 The full `HarnessSupportClient` surface so an external worker phones home
-exactly as the app's `bork agent run` binary would to the cloud. Run
-identified by the `X-Bork-Cloud-Agent-ID` header. Slots:
+exactly as the app's `krust agent run` binary would to the cloud. Run
+identified by the `X-Krust-Cloud-Agent-ID` header. Slots:
 `external-conversation`, `resolve-prompt`, `transcript` (POST target / GET
 download), `block-snapshot`, `upload-snapshot`, `report-artifact`,
 `notify-user`, `finish-task`, `report-shutdown`; plus
@@ -238,7 +238,7 @@ app against a live Moloch:
    the LLM choice lists are deliberately empty because this fork's model
    picker is served locally by `default_harnesses()`.
 2. **An API key now beats the synthetic test user** in
-   `AuthState::initialize` (`crates/bork_server_auth`). The fork pins
+   `AuthState::initialize` (`crates/krust_server_auth`). The fork pins
    `should_use_test_user()` to `true` so the app works with no account, but
    those credentials are `SessionCookie` → `AuthToken::NoAuth` → **no
    `Authorization` header at all**, so a configured token could never reach
@@ -252,21 +252,21 @@ Two further wiring details worth knowing:
 - The override is applied in `run()` **before** upstream's
   `--server-root-url` handling, so an explicit CLI flag still wins for a
   one-off, and it is **not** gated on `allows_server_url_overrides()` (that
-  gate exists to stop shipped Bork builds being redirected off Bork's
+  gate exists to stop shipped Krust builds being redirected off Krust's
   servers — in this fork that redirect is the point).
 - The app's API-key path prefixes tokens with `wk-`
-  (`bork_server_auth::API_KEY_PREFIX`), so Moloch accepts the token **with or
+  (`krust_server_auth::API_KEY_PREFIX`), so Moloch accepts the token **with or
   without** that prefix. The plain token from `api-token` works from the app,
   curl, and worker scripts alike.
 
 ### Verified end to end
 
-With `MOLOCH_URL`/`MOLOCH_TOKEN` set and a live server, the real `bork`
+With `MOLOCH_URL`/`MOLOCH_TOKEN` set and a live server, the real `krust`
 binary:
 
 - logs `server_root_url: "http://127.0.0.1:18104"` — pointed at Moloch;
 - completes its auth handshake against Moloch's GraphQL bootstrap;
-- runs `bork agent skills` and `agent list` successfully against
+- runs `krust agent skills` and `agent list` successfully against
   `/api/v1/agent` and `/api/v1/agent/identities`;
 - reads back a run that an external worker claimed, streamed a transcript
   for, and completed (`state: SUCCEEDED, executed_by: worker`).

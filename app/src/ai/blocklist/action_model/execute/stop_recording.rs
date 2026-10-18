@@ -3,8 +3,8 @@ use ai::agent::action_result::StopRecordingResult;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
-use borkui::{Entity, ModelContext};
+use krustui::SingletonEntity;
+use krustui::{Entity, ModelContext};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::AIAgentActionType;
@@ -35,7 +35,7 @@ impl StopRecordingExecutor {
     ) -> bool {
         let ExecuteActionInput { action, .. } = input;
         matches!(action.action, AIAgentActionType::StopRecording { .. })
-            && bork_core::features::FeatureFlag::VideoRecording.is_enabled()
+            && krust_core::features::FeatureFlag::VideoRecording.is_enabled()
     }
 
     #[cfg_attr(target_family = "wasm", allow(unused_variables))]

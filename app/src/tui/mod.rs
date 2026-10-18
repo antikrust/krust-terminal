@@ -1,18 +1,18 @@
-//! The headless `bork-tui` front-end's app-side entry point.
+//! The headless `krust-tui` front-end's app-side entry point.
 //!
-//! `bork_tui` boots the real headless Bork app via [`crate::run_tui`]. Once
+//! `krust_tui` boots the real headless Krust app via [`crate::run_tui`]. Once
 //! shared initialization is done, [`init`] registers the [`TuiLoginModel`] that
 //! the TUI observes, mounts the TUI immediately (so it renders right away), and
 //! — when the user isn't logged in yet — drives the device-authorization login
 //! flow, flipping the model to [`TuiLoginPhase::LoggedIn`] when it completes.
 
-use borkui::{AppContext, Entity, SingletonEntity};
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
 use crate::auth::AuthStateProvider;
 use crate::TuiMountFn;
 
-/// Login state of the headless TUI, observed by the `bork_tui` root view to
+/// Login state of the headless TUI, observed by the `krust_tui` root view to
 /// decide whether to show the login placeholder or the input UI.
 pub enum TuiLoginPhase {
     /// Waiting for the user to finish the device-authorization login. The
@@ -29,7 +29,7 @@ pub enum TuiLoginPhase {
 }
 
 /// Singleton holding the TUI's [`TuiLoginPhase`]. Updated by [`init`]'s auth
-/// flow and read by the `bork_tui` root view.
+/// flow and read by the `krust_tui` root view.
 pub struct TuiLoginModel {
     phase: TuiLoginPhase,
 }

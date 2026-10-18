@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use borkui::{App, EntityId};
+use krustui::{App, EntityId};
 
 use super::{
     is_query_refinement, AbsoluteMatch, AsyncFindConfig, AsyncFindController, AsyncFindStatus,
@@ -107,7 +107,7 @@ fn test_async_find_produces_same_results_as_sync_find() {
                 break;
             }
             // Small delay to let background task and stream delivery run.
-            borkui::r#async::Timer::after(std::time::Duration::from_millis(10)).await;
+            krustui::r#async::Timer::after(std::time::Duration::from_millis(10)).await;
         }
 
         let (status, async_count) = test_model.update(&mut app, |model, _ctx| {
@@ -729,7 +729,7 @@ fn assert_async_focused_order_matches_sync(block_sort_direction: BlockSortDirect
             if is_complete {
                 break;
             }
-            borkui::r#async::Timer::after(std::time::Duration::from_millis(10)).await;
+            krustui::r#async::Timer::after(std::time::Duration::from_millis(10)).await;
         }
 
         let (status, async_match_count) = test_model.update(&mut app, |model, _ctx| {

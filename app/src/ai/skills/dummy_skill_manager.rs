@@ -1,6 +1,6 @@
 use ai::skills::{ParsedSkill, SkillPathOrigin, SkillProvider, SkillReference};
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::skills::{
     ActiveSkillLookupError, SkillDescriptor, SkillManagerEvent, SkillPathQuery,

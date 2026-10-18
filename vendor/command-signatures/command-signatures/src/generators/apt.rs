@@ -1,5 +1,5 @@
 /// Used for debian-based package managers like apt-get, aptitude, etc.
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Priority, Suggestion,
 };

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::io;
 
-use bork_terminal::model::ansi::control_sequence_parameters::*;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use borkui::color::ColorU;
+use krust_terminal::model::ansi::control_sequence_parameters::*;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krustui::color::ColorU;
 
 use super::dcs_hooks::*;
 use super::ProcessorInput;
@@ -250,16 +250,16 @@ pub trait Handler {
         true
     }
 
-    /// Callback for the Bork CommandFinished hook.
+    /// Callback for the Krust CommandFinished hook.
     fn command_finished(&mut self, _data: CommandFinishedValue) {}
 
     /// Process a prompt marker control sequence.
     fn prompt_marker(&mut self, _marker: PromptMarker) {}
 
-    /// Callback for a Bork precmd hook with completion metadata.
+    /// Callback for a Krust precmd hook with completion metadata.
     fn precmd_with_completion_metadata(&mut self, _data: PrecmdValue) {}
 
-    /// Callback for a prompt-only Bork precmd hook.
+    /// Callback for a prompt-only Krust precmd hook.
     fn prompt_only_precmd(&mut self, _data: PromptMetadata) {}
 
     /// Update the active block's current working directory, independent of the
@@ -268,19 +268,19 @@ pub trait Handler {
     /// waiting for the shell to redraw its prompt.
     fn set_current_working_directory(&mut self, _path: String) {}
 
-    /// Callback for the Bork preexec hook.
+    /// Callback for the Krust preexec hook.
     fn preexec(&mut self, _data: PreexecValue) {}
 
-    /// Callback for the Bork bootstrapped hook - called once when the shell is
+    /// Callback for the Krust bootstrapped hook - called once when the shell is
     /// bootstrapped
     fn bootstrapped(&mut self, _data: BootstrappedValue) {}
 
-    /// Callback for the Bork pre-interactive SSH session hook - called once
+    /// Callback for the Krust pre-interactive SSH session hook - called once
     /// before initiating an interactive SSH session (either with or without the
     /// SSH wrapper).
     fn pre_interactive_ssh_session(&mut self, _data: PreInteractiveSSHSessionValue) {}
 
-    /// Callback for the Bork ssh hook - called once after successfully connecting to
+    /// Callback for the Krust ssh hook - called once after successfully connecting to
     /// an SSH server
     fn ssh(&mut self, _data: SSHValue) {}
 
@@ -288,8 +288,8 @@ pub trait Handler {
     /// logic into the PTY
     fn init_shell(&mut self, _data: InitShellValue) {}
 
-    /// Callback for the Bork exit-shell hook — emitted by the remote shell right
-    /// before it exits. Gives the Bork client a chance to drop per-session
+    /// Callback for the Krust exit-shell hook — emitted by the remote shell right
+    /// before it exits. Gives the Krust client a chance to drop per-session
     /// resources (e.g. the `ssh … remote-server-proxy` child) before the outer
     /// ssh tunnel starts tearing down, so its ControlMaster can exit cleanly
     /// rather than hanging on orphaned multiplexed channels.
@@ -299,7 +299,7 @@ pub trait Handler {
     fn clear(&mut self, _data: ClearValue) {}
 
     /// Callback for the terminal when the shell reports the current line editor
-    /// input buffer (the reporting is itself triggered by Bork).
+    /// input buffer (the reporting is itself triggered by Krust).
     fn input_buffer(&mut self, _data: InputBufferValue) {}
 
     /// Callback emitted during the initialization process for subshells with where the shell type
@@ -307,9 +307,9 @@ pub trait Handler {
     fn init_subshell(&mut self, _data: InitSubshellValue) {}
 
     /// Callback emitted when executing the user's RC file, which signals a new session is being
-    /// created. If the session is for a subshell, this should triggers Bork's bootstrap process.
+    /// created. If the session is for a subshell, this should triggers Krust's bootstrap process.
     /// Otherwise, it's ignored.
-    fn sourced_rc_file(&mut self, _data: SourcedRcFileForBorkValue) {}
+    fn sourced_rc_file(&mut self, _data: SourcedRcFileForKrustValue) {}
 
     /// Callback emitted to notify the app that we're ready to complete an
     /// assisted auto-update.
@@ -406,7 +406,7 @@ pub trait Handler {
     }
 
     /// Callback for pluggable notifications triggered via OSC 9 or OSC 777 escape sequences.
-    /// These allow external programs to trigger notifications in Bork.
+    /// These allow external programs to trigger notifications in Krust.
     /// - OSC 9: Simple notification with just a body (iTerm2/Windows Terminal style)
     /// - OSC 777: Notification with title and body (urxvt style)
     fn pluggable_notification(&mut self, _title: Option<String>, _body: String) {}

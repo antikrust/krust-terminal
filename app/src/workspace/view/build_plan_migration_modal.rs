@@ -5,20 +5,20 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
 use thousands::Separable;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use bork_graphql::billing::{AddonCreditsOption, StripeSubscriptionPlan};
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krust_graphql::billing::{AddonCreditsOption, StripeSubscriptionPlan};
+use krustui::elements::{
     Align, Border, CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Flex, FormattedTextElement, HighlightedHyperlink, Image,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
 };
-use borkui::fonts::{FamilyId, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{FamilyId, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -283,7 +283,7 @@ impl BuildPlanMigrationModal {
             ChildView::new(&self.reload_denominations_dropdown).finish()
         } else {
             // Match dropdown height to prevent layout shift (dropdown is typically ~28-32px)
-            ConstrainedBox::new(borkui::elements::Empty::new().finish())
+            ConstrainedBox::new(krustui::elements::Empty::new().finish())
                 .with_width(DROPDOWN_WIDTH)
                 .with_height(28.)
                 .finish()
@@ -516,7 +516,7 @@ impl BuildPlanMigrationModal {
         let title_text = if is_business {
             "Welcome to the New Business Plan"
         } else {
-            "Welcome to Bork Build"
+            "Welcome to Krust Build"
         };
 
         let title = Self::create_text(
@@ -528,9 +528,9 @@ impl BuildPlanMigrationModal {
         );
 
         let intro_text = if is_business {
-            "Your workspace has been updated to the new Bork Business Plan as the legacy Business plan is sunset."
+            "Your workspace has been updated to the new Krust Business Plan as the legacy Business plan is sunset."
         } else {
-            "Your workspace has been updated to the Bork Build Plan as the legacy Pro, Turbo, and Lightspeed plans are sunset."
+            "Your workspace has been updated to the Krust Build Plan as the legacy Pro, Turbo, and Lightspeed plans are sunset."
         };
 
         let intro = Self::create_text(intro_text.to_string(), font_family, 14., text_color, None);
@@ -539,7 +539,7 @@ impl BuildPlanMigrationModal {
             if is_business {
                 "The new Business plan is a primarily usage-based plan, starting at:"
             } else {
-                "Bork Build is a primarily usage-based plan, starting at:"
+                "Krust Build is a primarily usage-based plan, starting at:"
             }
             .to_string(),
             font_family,
@@ -632,7 +632,7 @@ impl BuildPlanMigrationModal {
 
         let learn_more_fragments = vec![
             FormattedTextFragment::plain_text("Learn more on our "),
-            FormattedTextFragment::hyperlink("pricing page", "https://www.bork.baby/pricing"),
+            FormattedTextFragment::hyperlink("pricing page", "https://www.krust.baby/pricing"),
             FormattedTextFragment::plain_text("."),
         ];
         let learn_more = Container::new(
@@ -647,7 +647,7 @@ impl BuildPlanMigrationModal {
             .with_hyperlink_font_color(appearance.theme().accent().into_solid())
             .register_default_click_handlers(|_url, ctx, _| {
                 ctx.dispatch_typed_action(BuildPlanMigrationModalViewAction::OpenUrl(
-                    "https://www.bork.baby/pricing",
+                    "https://www.krust.baby/pricing",
                 ));
             })
             .finish(),

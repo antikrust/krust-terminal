@@ -23,14 +23,14 @@ use repo_metadata::repositories::{DetectedRepositories, DetectedRepositoriesEven
 use repo_metadata::RepoMetadataModel;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "local_fs")]
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_if_error;
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_if_error;
 #[cfg(feature = "local_fs")]
-use bork_util::{local_or_remote_path::LocalOrRemotePath, standardized_path::StandardizedPath};
+use krust_util::{local_or_remote_path::LocalOrRemotePath, standardized_path::StandardizedPath};
 #[cfg(feature = "local_fs")]
-use borkui::windowing::WindowManager;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::windowing::WindowManager;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::blocklist::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};
 #[cfg(feature = "local_fs")]
@@ -825,7 +825,7 @@ impl PersistedWorkspace {
     /// This ensures that the codebase index is up-to-date before the conversation begins.
     fn trigger_incremental_sync_for_conversation(
         &mut self,
-        terminal_view_id: borkui::EntityId,
+        terminal_view_id: krustui::EntityId,
         ctx: &mut ModelContext<Self>,
     ) {
         if !UserWorkspaces::as_ref(ctx).is_codebase_context_enabled(ctx) {

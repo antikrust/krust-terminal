@@ -1,17 +1,17 @@
 use std::time::Duration;
 
-use bork::features::FeatureFlag;
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::terminal::{
+use krust::features::FeatureFlag;
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::terminal::{
     assert_long_running_block_executing_for_single_terminal_in_tab,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::view_getters::single_terminal_view_for_tab;
-use borkui_core::event::{KeyEventDetails, KeyState};
-use borkui_core::integration::TestStep;
-use borkui_core::keymap::Keystroke;
-use borkui_core::platform::keyboard::KeyCode;
-use borkui_core::{async_assert, Event};
+use krust::integration_testing::view_getters::single_terminal_view_for_tab;
+use krustui_core::event::{KeyEventDetails, KeyState};
+use krustui_core::integration::TestStep;
+use krustui_core::keymap::Keystroke;
+use krustui_core::platform::keyboard::KeyCode;
+use krustui_core::{async_assert, Event};
 
 use super::new_builder;
 use crate::Builder;
@@ -48,7 +48,7 @@ fn wait_for_protocol_enabled() -> TestStep {
 fn assert_output_contains(
     expected: &'static str,
     description: &'static str,
-) -> impl FnMut(&mut borkui_core::App, borkui_core::WindowId) -> borkui_core::integration::AssertionOutcome
+) -> impl FnMut(&mut krustui_core::App, krustui_core::WindowId) -> krustui_core::integration::AssertionOutcome
 {
     move |app, window_id| {
         let terminal_view = single_terminal_view_for_tab(app, window_id, 0);

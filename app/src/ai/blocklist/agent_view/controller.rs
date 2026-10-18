@@ -3,10 +3,10 @@ use std::time::Duration;
 
 use instant::Instant;
 use parking_lot::FairMutex;
-use bork_core::ui::appearance::Appearance;
-use borkui::keymap::Keystroke;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krustui::keymap::Keystroke;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{DismissalStrategy, EphemeralMessage, EphemeralMessageModel};
 use crate::ai::agent::conversation::AIConversationId;
@@ -134,7 +134,7 @@ pub enum AgentViewEntryOrigin {
     /// Entered agent view by opening an existing non-Oz cloud agent run (live shared-session
     /// viewer or transcript viewer).
     ThirdPartyCloudAgent,
-    /// Entered agent view via the CLI (e.g. `bork agent run`).
+    /// Entered agent view via the CLI (e.g. `krust agent run`).
     Cli,
     /// Entered agent view via the headless TUI frontend.
     Tui,
@@ -514,7 +514,7 @@ impl AgentViewController {
         self.pending_confirmation = Some(pending_confirmation);
 
         let abort_handle = ctx.spawn_abortable(
-            async move { borkui::r#async::Timer::after(ENTER_OR_EXIT_CONFIRMATION_WINDOW).await },
+            async move { krustui::r#async::Timer::after(ENTER_OR_EXIT_CONFIRMATION_WINDOW).await },
             move |me, _, _ctx| {
                 me.pending_confirmation = None;
                 me.pending_confirmation_abort_handle = None;
@@ -1025,7 +1025,7 @@ fn exit_confirmation_message(
     should_stop_and_exit: bool,
     app: &AppContext,
 ) -> Message {
-    use borkui::SingletonEntity;
+    use krustui::SingletonEntity;
 
     use crate::terminal::input::message_bar::{Message, MessageItem};
 

@@ -1,12 +1,12 @@
-use borkui::elements::{
+use krustui::elements::{
     ClippedScrollStateHandle, Container, CrossAxisAlignment, DispatchEventResult, EventHandler,
     Flex, Hoverable, MouseInBehavior, MouseStateHandle, ParentElement, SavePosition, ScrollTarget,
     ScrollToPositionMode,
 };
-use borkui::keymap::FixedBinding;
-use borkui::ui_components::button::Button;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::keymap::FixedBinding;
+use krustui::ui_components::button::Button;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
 
@@ -20,7 +20,7 @@ const KEYBOARD_NAVIGATION_ENABLED: &str = "KeyboardNavigationEnabled";
 const ENTER_ACTIVATION_ENABLED: &str = "EnterActivationEnabled";
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     for i in 1..=9u8 {
         app.register_fixed_bindings([FixedBinding::new(
@@ -77,7 +77,7 @@ pub enum NumberShortcutButtonsAction {
 
 pub enum NumberShortcutButtonsEvent {}
 
-pub type ButtonBuilder = Box<dyn Fn(bool, &borkui::AppContext) -> Button>;
+pub type ButtonBuilder = Box<dyn Fn(bool, &krustui::AppContext) -> Button>;
 pub type OnButtonClickFn = Box<dyn Fn(&mut ViewContext<NumberShortcutButtons>)>;
 
 #[derive(Clone, Default)]
@@ -123,7 +123,7 @@ pub struct NumberShortcutButtonBuilder {
 
 impl NumberShortcutButtonBuilder {
     pub fn new(
-        button_builder: impl Fn(bool, &borkui::AppContext) -> Button + 'static,
+        button_builder: impl Fn(bool, &krustui::AppContext) -> Button + 'static,
         on_click: impl Fn(&mut ViewContext<NumberShortcutButtons>) + 'static,
     ) -> Self {
         Self {
@@ -142,7 +142,7 @@ impl NumberShortcutButtonBuilder {
     }
 }
 
-pub fn numbered_shortcut_button<A: borkui::Action + Clone + 'static>(
+pub fn numbered_shortcut_button<A: krustui::Action + Clone + 'static>(
     number: usize,
     text_label: String,
     is_checked: bool,
@@ -317,7 +317,7 @@ impl View for NumberShortcutButtons {
         "NumberShortcutButtons"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         Hoverable::new(self.mouse_state.clone(), |_| {
             let mut content = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
             for (index, button_builder) in self.button_builders.iter().enumerate() {
@@ -367,7 +367,7 @@ impl View for NumberShortcutButtons {
         .finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if !self.button_builders.is_empty() && self.keyboard_shortcuts_enabled(app) {
             context.set.insert(NUMBER_SELECT_ENABLED);

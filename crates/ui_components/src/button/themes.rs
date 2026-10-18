@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::theme::color::internal_colors;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::theme::color::internal_colors;
 
 /// Theming delegate for a button.
 pub trait Theme {

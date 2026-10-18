@@ -9,8 +9,8 @@ use futures_lite::FutureExt;
 use fuzzy_match::FuzzyMatchResult;
 use instant::Instant;
 use itertools::Itertools;
-use bork_util::path::CleanPathResult;
-use borkui::{AppContext, Entity, SingletonEntity};
+use krust_util::path::CleanPathResult;
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::{CreateFileSearchItem, FileSearchItem};
 use crate::code::opened_files::{OpenedFilesInRepo, OpenedFilesModel};
@@ -26,7 +26,7 @@ const MAX_RESULTS: usize = 100;
 enum FileRanking {
     None,
     ChangedInGit,
-    OpenedInBork { timestamp: Instant },
+    OpenedInKrust { timestamp: Instant },
 }
 
 pub struct FileDataSource {
@@ -155,7 +155,7 @@ impl FileDataSource {
                         .as_ref()
                         .and_then(|of: &OpenedFilesInRepo| of.get(&item.path))
                     {
-                        file_ranking = FileRanking::OpenedInBork {
+                        file_ranking = FileRanking::OpenedInKrust {
                             timestamp: *last_opened_timestamp,
                         };
                     }

@@ -38,9 +38,9 @@ impl fmt::Display for CodeForge {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GithubRepo {
-    /// Repository owner (e.g. "borkdotdev")
+    /// Repository owner (e.g. "krustdotdev")
     pub owner: String,
-    /// Repository name (e.g. "bork-internal")
+    /// Repository name (e.g. "krust-internal")
     pub repo: String,
 }
 
@@ -158,7 +158,7 @@ pub struct EnvironmentSecretRef {
     pub name: String,
 }
 
-/// An AmbientAgentEnvironment represents an environment that we would run a Bork agent in.
+/// An AmbientAgentEnvironment represents an environment that we would run a Krust agent in.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AmbientAgentEnvironment {
     /// Environment name

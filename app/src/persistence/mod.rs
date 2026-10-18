@@ -37,11 +37,11 @@ pub use sqlite::database_file_path_for_scope;
 #[cfg(any(feature = "local_fs", feature = "integration_tests"))]
 pub use sqlite::establish_ro_connection;
 use uuid::Uuid;
-use bork_core::command::ExitCode;
-use bork_errors::report_error;
-use bork_graphql::scalars::time::ServerTimestamp;
-use bork_multi_agent_api as api;
-use borkui::{AppContext, Entity, SingletonEntity};
+use krust_core::command::ExitCode;
+use krust_errors::report_error;
+use krust_graphql::scalars::time::ServerTimestamp;
+use krust_multi_agent_api as api;
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use self::model::{AgentConversation, AgentConversationData, Project};
 use crate::ai::blocklist::PersistedAIInput;
@@ -70,7 +70,7 @@ use crate::workspaces::workspace::{Workspace as WorkspaceMetadata, WorkspaceUid}
 pub enum PersistenceScope {
     /// The GUI app (and other launch modes that share its database).
     App,
-    /// The `bork-tui` front-end, which keeps its own database so GUI/TUI
+    /// The `krust-tui` front-end, which keeps its own database so GUI/TUI
     /// version skew can never migrate a shared database out from under the
     /// older binary. Cloud sync is the cross-front-end sharing mechanism.
     Tui,
@@ -108,7 +108,7 @@ pub enum PersistedDataScope {
     /// The GUI app: everything, including window/tab/block session
     /// restoration and command history.
     Full,
-    /// The `bork-tui` front-end: cloud objects and agent/conversation state,
+    /// The `krust-tui` front-end: cloud objects and agent/conversation state,
     /// but no GUI session restoration, command history, user profiles, or
     /// pending object actions.
     TuiFrontend,

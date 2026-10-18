@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, DropShadow, Radius,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, View, ViewContext,
     ViewHandle,
 };

@@ -1,27 +1,27 @@
 //! Serializable selectors for targeting windows, tabs, and panes.
 use serde::{Deserialize, Serialize};
 
-/// Opaque window identifier supplied by Bork metadata.
+/// Opaque window identifier supplied by Krust metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct WindowSelector(pub String);
 
-/// Opaque tab identifier supplied by Bork metadata.
+/// Opaque tab identifier supplied by Krust metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TabSelector(pub String);
 
-/// Opaque pane identifier supplied by Bork metadata.
+/// Opaque pane identifier supplied by Krust metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PaneSelector(pub String);
 
-/// Opaque session identifier supplied by Bork metadata.
+/// Opaque session identifier supplied by Krust metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct SessionSelector(pub String);
 
-/// Hierarchical target for actions that operate on a specific Bork surface.
+/// Hierarchical target for actions that operate on a specific Krust surface.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct TargetSelector {

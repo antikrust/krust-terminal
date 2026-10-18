@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 
 use async_trait::async_trait;
 pub use recording::Recorder;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use crate::{ActionResult, Options, TargetedAction};
 

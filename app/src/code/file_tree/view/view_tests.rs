@@ -8,9 +8,9 @@ use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
 use settings::Setting;
 use virtual_fs::{Stub, VirtualFS};
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::{App, ModelHandle, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::{App, ModelHandle, SingletonEntity};
 
 use super::FileTreeView;
 use crate::auth::AuthStateProvider;
@@ -24,8 +24,8 @@ use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::ToastStack;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
-fn std_path(path: &std::path::Path) -> bork_util::standardized_path::StandardizedPath {
-    bork_util::standardized_path::StandardizedPath::try_from_local(path).unwrap()
+fn std_path(path: &std::path::Path) -> krust_util::standardized_path::StandardizedPath {
+    krust_util::standardized_path::StandardizedPath::try_from_local(path).unwrap()
 }
 
 fn initialize_app(
@@ -61,7 +61,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         false,
     ));
     let src_dir = Entry::Directory(DirectoryEntry {
-        path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        path: krust_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages/app/src"),
         )
         .unwrap(),
@@ -70,7 +70,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         loaded: true,
     });
     let app_dir = Entry::Directory(DirectoryEntry {
-        path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        path: krust_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages/app"),
         )
         .unwrap(),
@@ -79,7 +79,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         loaded: true,
     });
     let packages_dir = Entry::Directory(DirectoryEntry {
-        path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        path: krust_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages"),
         )
         .unwrap(),
@@ -98,7 +98,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
 
 fn build_repo_state_with_unloaded_directory(repo_root: &std::path::Path) -> FileTreeState {
     let unloaded_src_dir = Entry::Directory(DirectoryEntry {
-        path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        path: krust_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("src"),
         )
         .unwrap(),
@@ -118,7 +118,7 @@ fn build_repo_state_with_unloaded_directory(repo_root: &std::path::Path) -> File
 fn flattened_paths(
     view: &FileTreeView,
     root: &std::path::Path,
-) -> Vec<bork_util::standardized_path::StandardizedPath> {
+) -> Vec<krust_util::standardized_path::StandardizedPath> {
     view.root_directories
         .get(&std_path(root))
         .expect("root directory is tracked")
@@ -270,7 +270,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
         let repo_root = dirs.tests().join("repo");
         let displayed_root = repo_root.join("packages/app");
         let canonical_repo_root =
-            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -289,13 +289,13 @@ fn repo_transition_unregisters_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(view.registered_lazy_loaded_paths.contains(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap()
                 ));
                 let displayed_std =
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
                         .unwrap();
                 assert_eq!(
                     view.root_directories
@@ -306,7 +306,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -324,10 +324,10 @@ fn repo_transition_unregisters_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 let displayed_std =
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
                         .unwrap();
                 let repo_std =
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap();
                 assert!(!view.registered_lazy_loaded_paths.contains(&displayed_std));
                 assert_eq!(view.root_for_path(&displayed_std), Some(repo_std.clone()));
@@ -340,7 +340,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -375,7 +375,7 @@ fn repo_backed_unloaded_directory_loads_through_model() {
         let nested_dir = repo_root.join("src/nested");
         let source_file = repo_root.join("src/nested/main.rs");
         let canonical_repo_root =
-            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -403,11 +403,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(!view
                     .root_directories
                     .get(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file
                         )
                         .unwrap()
@@ -416,9 +416,9 @@ fn repo_backed_unloaded_directory_loads_through_model() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.ensure_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&src_dir)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&src_dir)
                         .unwrap(),
                     ctx,
                 );
@@ -428,11 +428,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(view
                     .root_directories
                     .get(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(
                             &nested_dir
                         )
                         .unwrap()
@@ -441,9 +441,9 @@ fn repo_backed_unloaded_directory_loads_through_model() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.ensure_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&nested_dir)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&nested_dir)
                         .unwrap(),
                     ctx,
                 );
@@ -453,11 +453,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(view
                     .root_directories
                     .get(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file
                         )
                         .unwrap()
@@ -465,17 +465,17 @@ fn repo_backed_unloaded_directory_loads_through_model() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                     ctx
                 ));
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(model.get_repository(&id, ctx).is_some_and(|state| {
                     state.entry.contains(
-                        &bork_util::standardized_path::StandardizedPath::try_from_local(
+                        &krust_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file,
                         )
                         .unwrap(),
@@ -496,7 +496,7 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
 
         let repo_root = dirs.tests().join("repo");
         let canonical_repo_root =
-            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -518,7 +518,7 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(matches!(
@@ -534,18 +534,18 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(!view.registered_lazy_loaded_paths.contains(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap()
                 ));
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                     ctx
                 ));
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    bork_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    krust_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(matches!(
@@ -574,7 +574,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(!view.registered_lazy_loaded_paths.contains(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap()
@@ -582,7 +582,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -607,7 +607,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(model.is_lazy_loaded_path(
-                    &bork_util::standardized_path::StandardizedPath::try_from_local(
+                    &krust_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -753,26 +753,26 @@ fn click_on_file_under_absorbed_descendant_keeps_file_selected() {
     VirtualFS::test(
         "file_tree_click_file_preserves_selection",
         |dirs, mut vfs| {
-            vfs.mkdir("code/bork-server")
+            vfs.mkdir("code/krust-server")
                 .with_files(vec![Stub::FileWithContent(
-                    "code/bork-server/main.rs",
+                    "code/krust-server/main.rs",
                     "fn main() {}\n",
                 )]);
             let code = dirs.tests().join("code");
-            let bork_server = code.join("bork-server");
-            let main_rs = bork_server.join("main.rs");
+            let krust_server = code.join("krust-server");
+            let main_rs = krust_server.join("main.rs");
 
             App::test((), |mut app| async move {
                 let _ = initialize_app(&mut app);
                 let (_, file_tree_view) =
                     app.add_window(WindowStyle::NotStealFocus, FileTreeView::new);
 
-                // Seed with `code` as the only root and expand bork-server so
+                // Seed with `code` as the only root and expand krust-server so
                 // main.rs is materialized in the flattened items.
                 file_tree_view.update(&mut app, |view, ctx| {
                     view.set_is_active(true, ctx);
                     view.set_root_directories(vec![code.clone()], ctx);
-                    view.toggle_folder_expansion(&std_path(&code), &std_path(&bork_server), ctx);
+                    view.toggle_folder_expansion(&std_path(&code), &std_path(&krust_server), ctx);
                 });
 
                 // Simulate a click on main.rs (select_id is what the click
@@ -794,13 +794,13 @@ fn click_on_file_under_absorbed_descendant_keeps_file_selected() {
 
                 // Now `DirectoriesChanged` fires as a side effect of the file
                 // opening in a code view — the working-directories-model adds
-                // the file's repo/parent (bork-server) to the active set.
+                // the file's repo/parent (krust-server) to the active set.
                 file_tree_view.update(&mut app, |view, ctx| {
-                    view.set_root_directories(vec![bork_server.clone(), code.clone()], ctx);
+                    view.set_root_directories(vec![krust_server.clone(), code.clone()], ctx);
                 });
 
                 file_tree_view.read(&app, |view, _ctx| {
-                    // Selection is still on main.rs, not on bork-server.
+                    // Selection is still on main.rs, not on krust-server.
                     let selected = view.selected_item.clone().expect("selection");
                     let root_dir = view.root_directories.get(&std_path(&code)).unwrap();
                     let path = root_dir.items.get(selected.index).unwrap().path();
@@ -820,13 +820,13 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
     // rebuilds (e.g. from repo-metadata updates) must keep the
     // selection but NOT re-scroll, so user scrolling is respected.
     VirtualFS::test("file_tree_pending_respects_user_scroll", |dirs, mut vfs| {
-        vfs.mkdir("tree/bork-server")
+        vfs.mkdir("tree/krust-server")
             .with_files(vec![Stub::FileWithContent(
-                "tree/bork-server/main.rs",
+                "tree/krust-server/main.rs",
                 "fn main() {}\n",
             )]);
         let tree = dirs.tests().join("tree");
-        let bork_server = tree.join("bork-server");
+        let krust_server = tree.join("krust-server");
 
         App::test((), |mut app| async move {
             let _ = initialize_app(&mut app);
@@ -834,7 +834,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.set_is_active(true, ctx);
-                view.set_root_directories(vec![bork_server.clone(), tree.clone()], ctx);
+                view.set_root_directories(vec![krust_server.clone(), tree.clone()], ctx);
             });
 
             // Initial apply should have scrolled once.
@@ -844,7 +844,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
             });
 
             // Simulate a later rebuild (e.g. metadata update). Selection
-            // should still land on bork-server, but `scrolled` must stay
+            // should still land on krust-server, but `scrolled` must stay
             // true (no re-scroll).
             file_tree_view.update(&mut app, |view, _ctx| {
                 view.rebuild_flattened_items();
@@ -855,7 +855,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
                 let selected = view.selected_item.clone().expect("selection");
                 let root_dir = view.root_directories.get(&std_path(&tree)).unwrap();
                 let path = root_dir.items.get(selected.index).unwrap().path();
-                assert_eq!(path, &std_path(&bork_server));
+                assert_eq!(path, &std_path(&krust_server));
                 let pending = view.pending_focus_target.as_ref().expect("pending");
                 assert!(pending.scrolled, "scrolled flag stays set after re-apply");
             });
@@ -866,30 +866,30 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
 #[test]
 fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
     VirtualFS::test("file_tree_focus_follow_deferred", |dirs, mut vfs| {
-        vfs.mkdir("tree/bork-server")
+        vfs.mkdir("tree/krust-server")
             .with_files(vec![Stub::FileWithContent(
-                "tree/bork-server/main.rs",
+                "tree/krust-server/main.rs",
                 "fn main() {}\n",
             )]);
         let tree = dirs.tests().join("tree");
-        let bork_server = tree.join("bork-server");
+        let krust_server = tree.join("krust-server");
 
         App::test((), |mut app| async move {
             let _ = initialize_app(&mut app);
             let (_, file_tree_view) = app.add_window(WindowStyle::NotStealFocus, FileTreeView::new);
 
-            // User cd's into bork-server with ~/tree as the ancestor root.
-            // The bork-server entry should be materialized by indexing and
+            // User cd's into krust-server with ~/tree as the ancestor root.
+            // The krust-server entry should be materialized by indexing and
             // selected as the focus-follow target.
             file_tree_view.update(&mut app, |view, ctx| {
                 view.set_is_active(true, ctx);
-                view.set_root_directories(vec![bork_server.clone(), tree.clone()], ctx);
+                view.set_root_directories(vec![krust_server.clone(), tree.clone()], ctx);
             });
 
             file_tree_view.read(&app, |view, _ctx| {
                 // Single displayed root, descendant absorbed.
                 assert_eq!(view.displayed_directories, vec![std_path(&tree)]);
-                // Selection landed on bork-server's directory header.
+                // Selection landed on krust-server's directory header.
                 let selected = view.selected_item.clone().expect("selection set");
                 assert_eq!(selected.root, std_path(&tree));
                 let root_dir = view.root_directories.get(&std_path(&tree)).unwrap();
@@ -897,7 +897,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                     .items
                     .get(selected.index)
                     .expect("selected index in range");
-                assert_eq!(selected_item.path(), &std_path(&bork_server));
+                assert_eq!(selected_item.path(), &std_path(&krust_server));
                 // Pending target is preserved across rebuilds so later
                 // repo-metadata updates don't override the cwd-follow
                 // selection. It clears when the user interacts explicitly
@@ -907,7 +907,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                     .as_ref()
                     .expect("pending target preserved");
                 assert_eq!(pending.root, std_path(&tree));
-                assert_eq!(pending.path, std_path(&bork_server));
+                assert_eq!(pending.path, std_path(&krust_server));
                 // The initial apply scrolled; later applies must not
                 // re-scroll so user scrolling is respected.
                 assert!(pending.scrolled, "initial apply scrolls the tree");
@@ -921,10 +921,10 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                     root: std_path(&tree),
                     index: 0,
                 };
-                // Sanity: the first item is the root header, not bork-server.
+                // Sanity: the first item is the root header, not krust-server.
                 assert_ne!(
                     root_dir.items.first().unwrap().path(),
-                    &std_path(&bork_server)
+                    &std_path(&krust_server)
                 );
                 view.select_id(&id, ctx);
             });

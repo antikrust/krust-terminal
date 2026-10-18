@@ -2,8 +2,8 @@ use std::borrow::Cow;
 
 use async_channel::Sender;
 #[cfg(unix)]
-use borkui::AppContext;
-use borkui::{Entity, ViewContext};
+use krustui::AppContext;
+use krustui::{Entity, ViewContext};
 
 use crate::ai::agent::AIAgentPtyWriteMode;
 #[cfg(unix)]
@@ -48,7 +48,7 @@ pub trait PtyIntentEvent {
 /// A terminal frontend surface driven by `TerminalManager`.
 ///
 /// Each surface defines how its own event type collapses into a PTY/session intent.
-/// This is bounded by [`Entity`] instead of [`View`](borkui::View) so the same
+/// This is bounded by [`Entity`] instead of [`View`](krustui::View) so the same
 /// manager can drive both GUI views and TUI views.
 pub trait TerminalSurface: Entity + 'static
 where

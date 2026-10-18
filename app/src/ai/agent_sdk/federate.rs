@@ -2,14 +2,14 @@ use std::process;
 
 use anyhow::{anyhow, Result};
 use serde_json::json;
-use bork_cli::agent::OutputFormat;
-use bork_cli::federate::{FederateCommand, IssueGcpTokenArgs, IssueTokenArgs};
-use bork_cli::GlobalOptions;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_managed_secrets::ManagedSecretManager;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, SingletonEntity as _};
+use krust_cli::agent::OutputFormat;
+use krust_cli::federate::{FederateCommand, IssueGcpTokenArgs, IssueTokenArgs};
+use krust_cli::GlobalOptions;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_managed_secrets::ManagedSecretManager;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, SingletonEntity as _};
 
 use super::common::set_ambient_task_context_from_run_id;
 
@@ -46,7 +46,7 @@ fn issue_token(
 
     ManagedSecretManager::handle(ctx).update(ctx, move |manager, ctx| {
         let future =
-            manager.issue_task_identity_token(bork_managed_secrets::client::IdentityTokenOptions {
+            manager.issue_task_identity_token(krust_managed_secrets::client::IdentityTokenOptions {
                 audience,
                 requested_duration: duration,
                 subject_template,

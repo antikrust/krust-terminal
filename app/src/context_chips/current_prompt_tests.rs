@@ -8,10 +8,10 @@ use parking_lot::Mutex;
 #[cfg(feature = "local_fs")]
 use repo_metadata::DirectoryWatcher;
 use settings::Setting as _;
-use bork_completer::completer::{CommandExitStatus, CommandOutput};
-use bork_core::command::ExitCode;
-use borkui::{App, SingletonEntity};
-use borkui_extras::user_preferences;
+use krust_completer::completer::{CommandExitStatus, CommandOutput};
+use krust_core::command::ExitCode;
+use krustui::{App, SingletonEntity};
+use krustui_extras::user_preferences;
 
 use super::{ChipUpdateStatus, CurrentPrompt, PromptContext};
 use crate::auth::auth_manager::AuthManager;
@@ -31,7 +31,7 @@ use crate::features::FeatureFlag;
 use crate::menu::MenuItem;
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
-use crate::settings::BorkPromptSeparator;
+use crate::settings::KrustPromptSeparator;
 #[cfg(windows)]
 use crate::system::SystemInfo;
 use crate::terminal::model::block::BlockMetadata;
@@ -65,7 +65,7 @@ fn test_context_menu_items() {
                     ContextChipKind::VirtualEnvironment,
                 ],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -123,7 +123,7 @@ fn test_prompt_to_string() {
                     ContextChipKind::ShellGitBranch,
                 ],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -179,7 +179,7 @@ fn test_fingerprint_skips_contextual_chip_recompute_when_context_is_unchanged() 
             Prompt::mock_with(
                 [ContextChipKind::WorkingDirectory],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -239,7 +239,7 @@ fn test_shell_chip_is_disabled_when_required_executable_is_missing() {
             Prompt::mock_with(
                 [ContextChipKind::ShellGitBranch],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -343,7 +343,7 @@ fn test_invalidating_command_count_unaffected_for_chips_without_invalidate_on_co
             Prompt::mock_with(
                 [ContextChipKind::WorkingDirectory],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -389,7 +389,7 @@ fn test_disabling_chips() {
             Prompt::mock_with(
                 [ContextChipKind::ShellGitBranch],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -505,7 +505,7 @@ fn test_externally_driven_chip_skips_periodic_timer() {
             Prompt::mock_with(
                 [ContextChipKind::ShellGitBranch],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -525,7 +525,7 @@ fn test_externally_driven_chip_skips_periodic_timer() {
         let repo_handle = watcher_handle.update(&mut app, |watcher, ctx| {
             watcher
                 .add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(
                         temp_dir.path(),
                     )
                     .unwrap(),
@@ -566,7 +566,7 @@ fn test_git_status_change_updates_chip_value() {
             Prompt::mock_with(
                 [ContextChipKind::ShellGitBranch],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -586,7 +586,7 @@ fn test_git_status_change_updates_chip_value() {
         let repo_handle = watcher_handle.update(&mut app, |watcher, ctx| {
             watcher
                 .add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(
                         temp_dir.path(),
                     )
                     .unwrap(),
@@ -637,7 +637,7 @@ fn test_git_status_change_updates_branch_status_chip_value() {
             Prompt::mock_with(
                 [ContextChipKind::GitBranchStatus],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -657,7 +657,7 @@ fn test_git_status_change_updates_branch_status_chip_value() {
         let repo_handle = watcher_handle.update(&mut app, |watcher, ctx| {
             watcher
                 .add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(
                         temp_dir.path(),
                     )
                     .unwrap(),
@@ -718,7 +718,7 @@ fn test_git_status_pr_info_updates_github_pr_chip_value() {
             Prompt::mock_with(
                 [ContextChipKind::GithubPullRequest],
                 false,
-                BorkPromptSeparator::None,
+                KrustPromptSeparator::None,
             )
         });
         app.add_singleton_model(SessionSettings::new_with_defaults);
@@ -738,7 +738,7 @@ fn test_git_status_pr_info_updates_github_pr_chip_value() {
         let repo_handle = watcher_handle.update(&mut app, |watcher, ctx| {
             watcher
                 .add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(
                         temp_dir.path(),
                     )
                     .unwrap(),
@@ -772,7 +772,7 @@ fn test_git_status_pr_info_updates_github_pr_chip_value() {
             model.set_pr_info_for_test(
                 Some(PrInfo {
                     number: 123,
-                    url: "https://github.com/bork/bork/pull/123".to_string(),
+                    url: "https://github.com/krust/krust/pull/123".to_string(),
                     state: "OPEN".to_string(),
                     draft: true,
                     base_branch: "main".to_string(),
@@ -788,7 +788,7 @@ fn test_git_status_pr_info_updates_github_pr_chip_value() {
             assert_eq!(
                 value,
                 Some(&crate::context_chips::ChipValue::Text(
-                    "https://github.com/bork/bork/pull/123".to_string(),
+                    "https://github.com/krust/krust/pull/123".to_string(),
                 )),
             );
         });
@@ -812,7 +812,7 @@ fn test_git_status_pr_info_updates_github_pr_chip_value() {
             model.set_pr_info_for_test(
                 Some(PrInfo {
                     number: 456,
-                    url: "https://github.com/bork/bork/pull/456".to_string(),
+                    url: "https://github.com/krust/krust/pull/456".to_string(),
                     state: "OPEN".to_string(),
                     draft: false,
                     base_branch: "main".to_string(),

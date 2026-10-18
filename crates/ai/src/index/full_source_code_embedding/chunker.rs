@@ -2,7 +2,7 @@ use std::path::Path;
 
 use string_offset::ByteOffset;
 #[cfg(not(target_family = "wasm"))]
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::standardized_path::StandardizedPath;
 
 mod naive;
 #[cfg(not(target_family = "wasm"))]

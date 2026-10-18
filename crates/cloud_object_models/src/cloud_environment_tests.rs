@@ -7,7 +7,7 @@ use super::{
 fn deserialize_legacy_environment_without_providers() {
     let json = serde_json::json!({
         "name": "my-env",
-        "github_repos": [{"owner": "borkdotdev", "repo": "bork"}],
+        "github_repos": [{"owner": "krustdotdev", "repo": "krust"}],
         "docker_image": "ubuntu:latest",
         "setup_commands": ["echo hello"]
     });
@@ -22,8 +22,8 @@ fn deserialize_legacy_environment_without_providers() {
         env.effective_repos(),
         vec![SourceRepo::new(
             CodeForge::GitHub,
-            "borkdotdev".into(),
-            "bork".into()
+            "krustdotdev".into(),
+            "krust".into()
         )]
     );
     assert_eq!(
@@ -39,7 +39,7 @@ fn deserialize_environment_without_docker_image() {
     // server may omit the docker image entirely.
     let json = serde_json::json!({
         "name": "no-image-env",
-        "github_repos": [{"owner": "borkdotdev", "repo": "bork"}],
+        "github_repos": [{"owner": "krustdotdev", "repo": "krust"}],
         "setup_commands": ["echo hello"]
     });
 
@@ -138,7 +138,7 @@ fn legacy_environment_serialization_omits_provider_neutral_fields() {
     let env = AmbientAgentEnvironment::new(
         "legacy-env".into(),
         None,
-        vec![GithubRepo::new("borkdotdev".into(), "bork".into())],
+        vec![GithubRepo::new("krustdotdev".into(), "krust".into())],
         "ubuntu:latest".into(),
         vec![],
     );

@@ -1,7 +1,7 @@
-//! Client configuration for **MOLOCH** — this fork's replacement for Bork's
+//! Client configuration for **MOLOCH** — this fork's replacement for Krust's
 //! cloud agent backend (Oz).
 //!
-//! Upstream, the app's AI work goes to `https://app.bork.baby`. Those servers
+//! Upstream, the app's AI work goes to `https://app.krust.baby`. Those servers
 //! are not ours, so this fork points the same call sites at a Moloch instance
 //! we run (`crates/moloch`, docs/moloch.md). Moloch itself owns no AI: it
 //! brokers the work out to a machine that does (a local harness, the Linux
@@ -35,7 +35,7 @@ const TOKEN_KEY: &str = "MOLOCH_TOKEN";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MolochConfig {
     /// Base URL, trailing slash trimmed (e.g. `https://192.168.1.50:10102`).
-    /// The app appends `/api/v1/...` to this exactly as it did for Bork's
+    /// The app appends `/api/v1/...` to this exactly as it did for Krust's
     /// cloud.
     pub url: String,
     /// Bearer token. Moloch accepts it with or without the app's `wk-`
@@ -45,7 +45,7 @@ pub struct MolochConfig {
 }
 
 fn config_path() -> PathBuf {
-    bork_core::paths::state_dir().join(CONFIG_FILE)
+    krust_core::paths::state_dir().join(CONFIG_FILE)
 }
 
 /// Parses `KEY=VALUE` lines, skipping blanks, `#` comments, and an optional
@@ -107,11 +107,11 @@ pub fn config() -> Option<&'static MolochConfig> {
 /// any client is built.
 ///
 /// Unlike upstream's `--server-root-url` (dev-channel only, so shipped builds
-/// can't be redirected off Bork's servers), this override is always honored:
+/// can't be redirected off Krust's servers), this override is always honored:
 /// in this fork redirecting off those servers is the entire point.
 pub fn apply_server_url_override() {
     let Some(config) = config() else { return };
-    match bork_core::channel::ChannelState::override_server_root_url(config.url.clone()) {
+    match krust_core::channel::ChannelState::override_server_root_url(config.url.clone()) {
         Ok(()) => log::info!("MOLOCH: server root pointed at {}", config.url),
         Err(e) => eprintln!(
             "Error: invalid {URL_KEY} ({}): {e:#} — falling back to the built-in server URL",

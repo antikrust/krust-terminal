@@ -2,17 +2,17 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use pathfinder_color::ColorU;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Fill, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable,
 };
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity as _, ViewContext, ViewHandle};
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity as _, ViewContext, ViewHandle};
 
 use super::alias_argument_selector::{AliasArgumentSelector, AliasArgumentSelectorEvent};
 use super::{

@@ -1,8 +1,8 @@
 //! Generic model for tracking the selected item in an inline menu.
 use std::collections::HashSet;
 
-use borkui::elements::MouseStateHandle;
-use borkui::{Entity, ModelContext};
+use krustui::elements::MouseStateHandle;
+use krustui::{Entity, ModelContext};
 
 use crate::search::data_source::QueryFilter;
 use crate::terminal::input::inline_menu::view::InlineMenuAction;

@@ -6,20 +6,20 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use inquire::{Confirm, InquireError, Password};
 use serde::Serialize;
-use bork_cli::agent::OutputFormat;
-use bork_cli::scope::ObjectScope;
-use bork_cli::secret::{
+use krust_cli::agent::OutputFormat;
+use krust_cli::scope::ObjectScope;
+use krust_cli::secret::{
     AnthropicMethod, CodexMethod, CreateProvider, CreateSecretArgs, DeleteSecretArgs,
     ListSecretsArgs, SecretCommand, SecretType, UpdateSecretArgs, ValueArgs,
 };
-use bork_cli::GlobalOptions;
-use bork_core::features::FeatureFlag;
-use bork_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
-use bork_graphql::object::SpaceType;
-use bork_managed_secrets::client::SecretOwner;
-use bork_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, SingletonEntity as _};
+use krust_cli::GlobalOptions;
+use krust_core::features::FeatureFlag;
+use krust_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
+use krust_graphql::object::SpaceType;
+use krust_managed_secrets::client::SecretOwner;
+use krust_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, SingletonEntity as _};
 
 use super::output::{self, TableFormat};
 use crate::auth::UserUid;
@@ -67,7 +67,7 @@ pub fn run(
     global_options: GlobalOptions,
     command: SecretCommand,
 ) -> Result<()> {
-    if !FeatureFlag::BorkManagedSecrets.is_enabled() {
+    if !FeatureFlag::KrustManagedSecrets.is_enabled() {
         return Err(anyhow::anyhow!("This feature is not enabled"));
     }
 

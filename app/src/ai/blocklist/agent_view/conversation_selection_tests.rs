@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use borkui::r#async::executor::Background;
-use borkui::{App, EntityId};
+use krustui::r#async::executor::Background;
+use krustui::{App, EntityId};
 
 use super::{classify_gui_list_entry, AgentViewConversationSelection};
 use crate::ai::agent::conversation::AIConversationId;

@@ -6,10 +6,10 @@ use instant::Instant;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2_app_kit::NSWorkspace;
 use objc2_foundation::{NSBundle, NSString, NSURL};
-use bork_core::channel::ChannelState;
-use bork_core::AppId;
-use bork_errors::report_error;
-use borkui::ApplicationBundleInfo;
+use krust_core::channel::ChannelState;
+use krust_core::AppId;
+use krust_errors::report_error;
+use krustui::ApplicationBundleInfo;
 
 use super::*;
 
@@ -346,14 +346,14 @@ pub fn open_file_path_with_line_and_col(
         }
 
         // NSWorkspace's default-app routing can hand files to a sibling
-        // Bork channel (e.g. Stable handling files while Preview is running).
-        // When the resolved default is a different Bork, open with the
+        // Krust channel (e.g. Stable handling files while Preview is running).
+        // When the resolved default is a different Krust, open with the
         // running channel's bundle directly.
         let bundle_id = default_app_to_open_path(full_path);
         if let Some(bundle_id) = bundle_id.as_deref() {
             let current = ChannelState::app_id().to_string();
             if bundle_id != current
-                && is_bork_bundle(bundle_id)
+                && is_krust_bundle(bundle_id)
                 && open_with_bundle(&current, full_path)
             {
                 return;
@@ -363,9 +363,9 @@ pub fn open_file_path_with_line_and_col(
     ctx.open_file_path(full_path);
 }
 
-fn is_bork_bundle(bundle_id: &str) -> bool {
+fn is_krust_bundle(bundle_id: &str) -> bool {
     AppId::parse(bundle_id)
-        .map(|id| id.qualifier() == "dev" && id.organization() == "bork")
+        .map(|id| id.qualifier() == "dev" && id.organization() == "krust")
         .unwrap_or(false)
 }
 

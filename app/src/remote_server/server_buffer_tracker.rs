@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use bork_editor::content::buffer::Buffer;
-use bork_util::file::FileId;
-use borkui::{ModelContext, ModelHandle, SingletonEntity};
+use krust_editor::content::buffer::Buffer;
+use krust_util::file::FileId;
+use krustui::{ModelContext, ModelHandle, SingletonEntity};
 
 use super::server_model::{ConnectionId, ServerModel};
 use crate::code::global_buffer_model::GlobalBufferModel;

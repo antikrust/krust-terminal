@@ -2,12 +2,12 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use borkui_core::assets::asset_cache::{
+use krustui_core::assets::asset_cache::{
     AssetCache, AssetSource, AssetState, AsyncAssetId, AsyncAssetType,
 };
-use borkui_core::image_cache::ImageType;
-use borkui_core::units::{IntoPixels, Pixels};
-use borkui_core::{AppContext, SingletonEntity};
+use krustui_core::image_cache::ImageType;
+use krustui_core::units::{IntoPixels, Pixels};
+use krustui_core::{AppContext, SingletonEntity};
 
 use crate::render::layout::TextLayout;
 use crate::render::model::{BlockSpacing, ImageBlockConfig};

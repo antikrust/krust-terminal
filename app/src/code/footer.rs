@@ -10,22 +10,22 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill, BorkTheme};
-use bork_core::ui::Icon;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill, KrustTheme};
+use krust_core::ui::Icon;
 #[cfg(feature = "local_fs")]
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::elements::{
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Dismiss, Empty, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, Padding, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect,
     Shrinkable, Stack,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakModelHandle,
 };
@@ -165,7 +165,7 @@ enum LSPServerRenderStatus {
 }
 
 impl LSPServerRenderStatus {
-    fn to_icon_color(&self, theme: &BorkTheme) -> ColorU {
+    fn to_icon_color(&self, theme: &KrustTheme) -> ColorU {
         match self {
             LSPServerRenderStatus::Available => AnsiColorIdentifier::Green
                 .to_ansi_color(&theme.terminal_colors().normal)
@@ -283,11 +283,11 @@ impl CodeFooterView {
         })
     }
 
-    fn render_tab_config_info_icon(theme: &BorkTheme) -> Box<dyn Element> {
+    fn render_tab_config_info_icon(theme: &KrustTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 Icon::Info
-                    .to_borkui_icon(theme.active_ui_text_color())
+                    .to_krustui_icon(theme.active_ui_text_color())
                     .finish(),
             )
             .with_width(12.)
@@ -1169,7 +1169,7 @@ impl CodeFooterView {
             mouse_states.open_logs.clone(),
             move || {
                 Icon::Code1
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Open logs",
@@ -1191,7 +1191,7 @@ impl CodeFooterView {
             mouse_states.restart_server.clone(),
             move || {
                 Icon::RefreshCcw
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Restart server",
@@ -1236,7 +1236,7 @@ impl CodeFooterView {
             mouse_states.start_server.clone(),
             move || {
                 Icon::Play
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Start server",
@@ -1258,7 +1258,7 @@ impl CodeFooterView {
             mouse_states.remove_server.clone(),
             move || {
                 Icon::Trash
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Remove server",
@@ -1281,7 +1281,7 @@ impl CodeFooterView {
             mouse_states.restart_all.clone(),
             move || {
                 Icon::RefreshCcw
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             if is_plural {
@@ -1337,7 +1337,7 @@ impl CodeFooterView {
             mouse_states.start_all.clone(),
             move || {
                 Icon::Play
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             if !is_plural {
@@ -1365,7 +1365,7 @@ impl CodeFooterView {
             mouse_states.manage_servers.clone(),
             move || {
                 Icon::Gear
-                    .to_borkui_icon(ThemeFill::Solid(text_color))
+                    .to_krustui_icon(ThemeFill::Solid(text_color))
                     .finish()
             },
             "Manage servers",
@@ -1375,7 +1375,7 @@ impl CodeFooterView {
 
     /// Computes the aggregate indicator color across all tracked servers.
     /// Priority: Failed > Busy > Stopped > Available.
-    fn aggregate_indicator_color(&self, theme: &BorkTheme, app: &AppContext) -> ColorU {
+    fn aggregate_indicator_color(&self, theme: &KrustTheme, app: &AppContext) -> ColorU {
         if self.lsp_servers.is_empty() {
             return LSPServerRenderStatus::Stopped.to_icon_color(theme);
         }
@@ -1448,7 +1448,7 @@ impl CodeFooterView {
     }
 
     fn render_status_text(
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         appearance: &Appearance,
         message: String,
     ) -> Box<dyn Element> {

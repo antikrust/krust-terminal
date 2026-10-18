@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, DropShadow, Empty, Expanded, Flex, MainAxisSize, ParentElement,
     Radius, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable, Text,
 };
-use borkui::fonts::{FamilyId, Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::{
+use krustui::fonts::{FamilyId, Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -47,7 +47,7 @@ struct Styles {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -124,9 +124,9 @@ impl AgentTodosPopupView {
 
     fn render_header(
         &self,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
         todo_list: &AIAgentTodoList,
-    ) -> Box<dyn borkui::Element> {
+    ) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let styles = self.styles(appearance);
         let theme = appearance.theme();
@@ -159,7 +159,7 @@ impl View for AgentTodosPopupView {
         "AgentTodosPopup"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let Some(todo_list) = self
             .ai_context_model
             .as_ref(app)
@@ -271,7 +271,7 @@ impl View for AgentTodosPopupView {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();

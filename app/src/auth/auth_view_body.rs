@@ -1,20 +1,20 @@
 use anyhow::anyhow;
 use lazy_static::lazy_static;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::DEFAULT_COMMAND_PALETTE_FONT_SIZE;
-use bork_core::ui::builder::UiBuilder;
-use bork_errors::report_error;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::clipboard::ClipboardContent;
-use borkui::color::ColorU;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::DEFAULT_COMMAND_PALETTE_FONT_SIZE;
+use krust_core::ui::builder::UiBuilder;
+use krust_errors::report_error;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::clipboard::ClipboardContent;
+use krustui::color::ColorU;
+use krustui::elements::{
     Align, Border, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::FixedBinding;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::FixedBinding;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, UpdateModel, View,
     ViewContext, ViewHandle,
 };
@@ -41,7 +41,7 @@ use crate::themes::theme::Fill as ThemeFill;
 use crate::util::color::{darken, lighten};
 use crate::{send_telemetry_from_ctx, send_telemetry_sync_from_ctx};
 
-const TOS_URL: &str = "https://www.bork.baby/terms-of-service";
+const TOS_URL: &str = "https://www.krust.baby/terms-of-service";
 
 const COMMON_BODY_UI_FONT_SIZE: f32 = 12.;
 const AUTH_MODAL_GAP: f32 = 16.;
@@ -62,7 +62,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
@@ -329,7 +329,7 @@ impl AuthViewBody {
             Flex::row()
                 .with_child(
                     ui_builder
-                        .span("By continuing, you agree to Bork's ")
+                        .span("By continuing, you agree to Krust's ")
                         .with_style(disclaimer_styles)
                         .build()
                         .finish(),
@@ -605,7 +605,7 @@ impl AuthViewBody {
 
         let text = match self.variant {
             AuthViewVariant::RequireLoginCloseable  => {
-                "In order to use Bork’s AI features or collaborate with others, please create an account."
+                "In order to use Krust’s AI features or collaborate with others, please create an account."
             }
             AuthViewVariant::HitDriveObjectLimitCloseable => {
                 "In order to create more objects in the Library, please create an account."
@@ -646,12 +646,12 @@ impl AuthViewBody {
                 if AISettings::as_ref(app).is_swear_mode_enabled() {
                     "well fucking hell. look at this"
                 } else {
-                    "Welcome to Bork!"
+                    "Welcome to Krust!"
                 }
             }
             AuthViewVariant::RequireLoginCloseable
             | AuthViewVariant::HitDriveObjectLimitCloseable
-            | AuthViewVariant::ShareRequirementCloseable => "Sign up for Bork",
+            | AuthViewVariant::ShareRequirementCloseable => "Sign up for Krust",
         };
 
         ui_builder
@@ -1009,10 +1009,10 @@ impl View for AuthViewBody {
             if AISettings::as_ref(app).is_swear_mode_enabled() {
                 "well fucking hell. look at this"
             } else {
-                "Welcome to Bork!"
+                "Welcome to Krust!"
             },
             "Press enter to open your browser to Sign Up or Sign In.",
-            BorkA11yRole::HelpRole,
+            KrustA11yRole::HelpRole,
         ))
     }
 

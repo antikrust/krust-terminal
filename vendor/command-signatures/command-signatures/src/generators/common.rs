@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::collections::HashMap;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, Generator, GeneratorResults, GeneratorResultsCollector, Suggestion,
 };
 

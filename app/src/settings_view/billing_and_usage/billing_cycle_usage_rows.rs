@@ -3,17 +3,17 @@ use std::collections::HashMap;
 use itertools::Itertools as _;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::channel::ChannelState;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::channel::ChannelState;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow,
     Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, EventContext, SingletonEntity};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, EventContext, SingletonEntity};
 
 use crate::ai::AIRequestUsageModel;
 use crate::auth::AuthStateProvider;
@@ -515,7 +515,7 @@ fn render_row_card(
             let info_color = appearance
                 .theme()
                 .sub_text_color(appearance.theme().background());
-            let icon = ConstrainedBox::new(Icon::Info.to_borkui_icon(info_color).finish())
+            let icon = ConstrainedBox::new(Icon::Info.to_krustui_icon(info_color).finish())
                 .with_width(ROW_ICON_SIZE)
                 .with_height(ROW_ICON_SIZE)
                 .finish();
@@ -553,11 +553,11 @@ fn render_row_card(
     .with_color(main)
     .finish();
     let icon_color = theme.sub_text_color(theme.background());
-    let coin_icon = ConstrainedBox::new(Icon::Credits.to_borkui_icon(icon_color).finish())
+    let coin_icon = ConstrainedBox::new(Icon::Credits.to_krustui_icon(icon_color).finish())
         .with_width(ROW_ICON_SIZE)
         .with_height(ROW_ICON_SIZE)
         .finish();
-    let card_icon = ConstrainedBox::new(Icon::CreditCard.to_borkui_icon(icon_color).finish())
+    let card_icon = ConstrainedBox::new(Icon::CreditCard.to_krustui_icon(icon_color).finish())
         .with_width(ROW_ICON_SIZE)
         .with_height(ROW_ICON_SIZE)
         .finish();

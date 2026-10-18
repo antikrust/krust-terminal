@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
 
 /// Identifies a repository across local and remote environments.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

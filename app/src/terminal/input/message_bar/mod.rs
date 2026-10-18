@@ -6,11 +6,11 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use pathfinder_color::ColorU;
-use bork_core::ui::Icon;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::MouseStateHandle;
-use borkui::keymap::Keystroke;
-use borkui::EventContext;
+use krust_core::ui::Icon;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::MouseStateHandle;
+use krustui::keymap::Keystroke;
+use krustui::EventContext;
 /// A trait for types that can produce a message based on some contextual arguments.
 ///
 /// The generic `Args` parameter allows each call site to define its own

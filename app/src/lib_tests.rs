@@ -8,8 +8,8 @@ fn tui_uses_distinct_secure_storage_service_name() {
     };
 
     assert_eq!(
-        launch_mode.secure_storage_service_name("bork.baby.Bork-Dev"),
-        "bork.baby.Bork-Dev.tui"
+        launch_mode.secure_storage_service_name("krust.baby.Krust-Dev"),
+        "krust.baby.Krust-Dev.tui"
     );
 }
 
@@ -21,7 +21,7 @@ fn app_keeps_default_secure_storage_service_name() {
     };
 
     assert_eq!(
-        launch_mode.secure_storage_service_name("bork.baby.Bork-Dev"),
-        "bork.baby.Bork-Dev"
+        launch_mode.secure_storage_service_name("krust.baby.Krust-Dev"),
+        "krust.baby.Krust-Dev"
     );
 }

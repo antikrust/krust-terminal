@@ -1,7 +1,7 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{Align, ConstrainedBox, Container, Empty};
-use borkui::Element;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{Align, ConstrainedBox, Container, Empty};
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::search::result_renderer::ItemHighlightState;
@@ -26,7 +26,7 @@ pub fn render_search_item_icon(
         background_color.into_solid(),
         MinimumAllowedContrast::NonText,
     );
-    let icon_element = icon.to_borkui_icon(Fill::Solid(icon_color)).finish();
+    let icon_element = icon.to_krustui_icon(Fill::Solid(icon_color)).finish();
     render_search_item_icon_inner(appearance, icon_element)
 }
 
@@ -50,5 +50,5 @@ fn render_search_item_icon_inner(
 }
 
 pub mod colors {
-    pub const BORK_AI: u32 = 0xF3B911FF;
+    pub const KRUST_AI: u32 = 0xF3B911FF;
 }

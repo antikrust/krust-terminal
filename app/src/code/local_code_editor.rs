@@ -29,32 +29,32 @@ use repo_metadata::repositories::DetectedRepositories;
 use string_offset::CharOffset;
 use vec1::Vec1;
 use vim::vim::{MotionType, VimMode};
-use bork_core::features::FeatureFlag;
-use bork_core::r#async::debounce;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::icons::Icon;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::content::text::IndentUnit;
-use bork_editor::render::model::{Decoration, LineCount};
-use bork_util::content_version::ContentVersion;
-use bork_util::file::{FileId, FileLoadError, FileSaveError};
+use krust_core::features::FeatureFlag;
+use krust_core::r#async::debounce;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::icons::Icon;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::content::text::IndentUnit;
+use krust_editor::render::model::{Decoration, LineCount};
+use krust_util::content_version::ContentVersion;
+use krust_util::file::{FileId, FileLoadError, FileSaveError};
 #[cfg(feature = "local_fs")]
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::path::to_relative_path;
-use bork_util::sync::Condition;
-use borkui::elements::{
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::path::to_relative_path;
+use krust_util::sync::Condition;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Rect, Shrinkable, Stack, Text,
 };
-use borkui::keymap::macros::*;
-use borkui::keymap::FixedBinding;
-use borkui::platform::SaveFilePickerConfiguration;
-use borkui::text::point::Point;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::macros::*;
+use krustui::keymap::FixedBinding;
+use krustui::platform::SaveFilePickerConfiguration;
+use krustui::text::point::Point;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WindowId,
 };
@@ -81,7 +81,7 @@ const DROP_SHADOW_COLOR: ColorU = ColorU {
 
 const HOVER_DEBOUNCE_PERIOD: Duration = Duration::from_millis(500);
 
-use bork_core::send_telemetry_from_ctx;
+use krust_core::send_telemetry_from_ctx;
 
 use super::diff_viewer::DiffViewer;
 use super::editor::scroll::{ScrollPosition, ScrollTrigger};
@@ -168,7 +168,7 @@ struct LoadedFileMetadata {
     location: BufferFileLocation,
 }
 
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 pub use super::diff_viewer::DisplayMode;
 
@@ -652,7 +652,7 @@ impl LocalCodeEditorView {
                 let window_id = ctx.window_id();
 
                 // Create the on-click action based on whether we have a definition
-                let on_click: Box<dyn Fn(&mut borkui::AppContext)> = if has_different_definition {
+                let on_click: Box<dyn Fn(&mut krustui::AppContext)> = if has_different_definition {
                     let target_location = definition_locations.first().unwrap().target.clone();
                     Box::new(move |app| {
                         app.dispatch_typed_action_for_view(
@@ -2139,13 +2139,13 @@ impl View for LocalCodeEditorView {
         "LocalCodeEditorView"
     }
 
-    fn on_focus(&mut self, focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, focus_ctx: &krustui::FocusContext, ctx: &mut ViewContext<Self>) {
         if focus_ctx.is_self_focused() {
             self.editor.update(ctx, |editor, ctx| editor.focus(ctx));
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         // Rendering the remote disconnection banner or version conflict banner.
         // Only show the disconnection banner if the file was successfully loaded;
         // if it never loaded, the error/loading state handles that.
@@ -2368,7 +2368,7 @@ pub fn render_unsaved_changes_banner(
             Container::new(
                 ConstrainedBox::new(
                     Icon::Warning
-                        .to_borkui_icon(appearance.theme().active_ui_text_color())
+                        .to_krustui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(16.)
@@ -2465,7 +2465,7 @@ pub fn render_remote_disconnected_banner(appearance: &Appearance) -> Box<dyn Ele
             Container::new(
                 ConstrainedBox::new(
                     Icon::Warning
-                        .to_borkui_icon(appearance.theme().active_ui_text_color())
+                        .to_krustui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(16.)

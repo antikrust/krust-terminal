@@ -1,10 +1,10 @@
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ChildView, Clipped, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex,
     MouseStateHandle, Padding, ParentElement, Radius, Text,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -195,7 +195,7 @@ impl View for SpendingLimitModal {
         let theme = appearance.theme();
 
         let description_text = Text::new(
-            "Bork will prevent use of premium models when this dollar limit is reached. Resets on a monthly basis.",
+            "Krust will prevent use of premium models when this dollar limit is reached. Resets on a monthly basis.",
             appearance.ui_font_family(),
             14.,
         )

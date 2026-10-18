@@ -1,4 +1,4 @@
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 use super::action::RunAgentsRequest;
 

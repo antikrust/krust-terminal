@@ -1,5 +1,5 @@
 use serde::Serialize;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::conversation::AIConversationId;
 use super::{
@@ -21,16 +21,16 @@ impl ForTelemetry for AIAgentCitation {
 
     fn for_telemetry(&self, ctx: &AppContext) -> Option<Self::Output> {
         match self {
-            Self::BorkDriveObject { uid } => {
+            Self::KrustDriveObject { uid } => {
                 CloudModel::as_ref(ctx).get_by_uid(uid).map(|object| {
-                    CitationForTelemetry::BorkDriveObject {
+                    CitationForTelemetry::KrustDriveObject {
                         object_type: object.object_type(),
                         uid: object.uid(),
                     }
                 })
             }
-            Self::BorkDocumentation { path } => {
-                Some(CitationForTelemetry::BorkDocs { page: path.clone() })
+            Self::KrustDocumentation { path } => {
+                Some(CitationForTelemetry::KrustDocs { page: path.clone() })
             }
             Self::WebPage { url } => Some(CitationForTelemetry::WebPage { url: url.clone() }),
             Self::AgentMemory {

@@ -1,5 +1,5 @@
 [package]
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 name = "sum_tree"
 version = "0.1.0"
 edition = "2021"
@@ -7,7 +7,7 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-bork_errors.workspace = true
+krust_errors.workspace = true
 arrayvec.workspace = true
 log.workspace = true
 

@@ -13,17 +13,17 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use string_offset::{ByteOffset, CharOffset};
 use urlocator::{UrlLocation, UrlLocator};
 use vec1::Vec1;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_errors::report_error;
-use borkui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use borkui_core::fonts::Weight;
-use borkui_core::image_cache::ImageType;
-use borkui_core::text::char_slice;
-use borkui_core::text::point::Point;
-use borkui_core::text_layout::{StyleAndFont, TextAlignment};
-use borkui_core::units::{IntoPixels, Pixels};
-use borkui_core::{AppContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_errors::report_error;
+use krustui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use krustui_core::fonts::Weight;
+use krustui_core::image_cache::ImageType;
+use krustui_core::text::char_slice;
+use krustui_core::text::point::Point;
+use krustui_core::text_layout::{StyleAndFont, TextAlignment};
+use krustui_core::units::{IntoPixels, Pixels};
+use krustui_core::{AppContext, SingletonEntity};
 
 use super::buffer::{StyledBufferBlock, StyledBufferRun, StyledTextBlock};
 use super::mermaid_diagram::{mermaid_asset_source, mermaid_diagram_layout};

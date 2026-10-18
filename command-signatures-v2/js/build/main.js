@@ -12,8 +12,8 @@ let generatedArgument = {
         }
     ],
 };
-export function activate(bork) {
-    bork.completions.registerCommandSignature({
+export function activate(krust) {
+    krust.completions.registerCommandSignature({
         command: {
             name: "jack",
             alias: "j",

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bork_util::path::LineAndColumnArg;
+use krust_util::path::LineAndColumnArg;
 
 use super::{tokenize_exec, DesktopExecError, EditorMetadata};
 
@@ -228,7 +228,7 @@ fn test_field_code_substitutions() {
     Version=1.0
     Type=Application
     Exec=/usr/bin/app %c %i %k %%
-    Name=Bork Test Application
+    Name=Krust Test Application
     Icon=/foo/bar/icon.png
     "#;
     with_files("test_field_code_substitutions", data, |desktop, content| {
@@ -244,7 +244,7 @@ fn test_field_code_substitutions() {
         assert_eq!(
             cmd.get_args().collect::<Vec<_>>(),
             [
-                "Bork Test Application",
+                "Krust Test Application",
                 "--icon",
                 "/foo/bar/icon.png",
                 desktop_file_path.as_str(),

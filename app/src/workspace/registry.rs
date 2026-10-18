@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use borkui::{AppContext, Entity, SingletonEntity, WeakViewHandle, WindowId};
+use krustui::{AppContext, Entity, SingletonEntity, WeakViewHandle, WindowId};
 
 use super::Workspace;
 
@@ -40,7 +40,7 @@ impl WorkspaceRegistry {
         &self,
         window_id: WindowId,
         app: &AppContext,
-    ) -> Option<borkui::ViewHandle<Workspace>> {
+    ) -> Option<krustui::ViewHandle<Workspace>> {
         self.workspaces.get(&window_id)?.upgrade(app)
     }
 
@@ -49,7 +49,7 @@ impl WorkspaceRegistry {
     pub fn all_workspaces(
         &self,
         app: &AppContext,
-    ) -> Vec<(WindowId, borkui::ViewHandle<Workspace>)> {
+    ) -> Vec<(WindowId, krustui::ViewHandle<Workspace>)> {
         self.workspaces
             .iter()
             .filter_map(|(window_id, weak_handle)| {

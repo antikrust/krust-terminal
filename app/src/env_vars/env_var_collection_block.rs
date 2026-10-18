@@ -5,16 +5,16 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_core::ui::Icon;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_core::ui::Icon;
+use krustui::elements::{
     get_rich_content_position_id, Border, Clipped, Container, CornerRadius, CrossAxisAlignment,
     Flex, FormattedTextElement, MouseStateHandle, ParentElement, Radius, SavePosition,
     SelectableArea, SelectionHandle,
 };
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::{
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::{
     AppContext, Element, Entity, EntityId, FocusContext, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -118,7 +118,7 @@ pub struct EnvVarCollectionBlock {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(

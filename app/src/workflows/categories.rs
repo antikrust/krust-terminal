@@ -6,23 +6,23 @@ use std::sync::Arc;
 
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use itertools::Itertools;
-use bork_core::ui::builder::UiBuilder;
-use bork_core::ui::theme::color::internal_colors;
-use bork_editor::editor::NavigationKey;
-use bork_workflows::workflows as global_workflows;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::color::ColorU;
-use borkui::elements::{
+use krust_core::ui::builder::UiBuilder;
+use krust_core::ui::theme::color::internal_colors;
+use krust_editor::editor::NavigationKey;
+use krust_workflows::workflows as global_workflows;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::color::ColorU;
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, DispatchEventResult, Element,
     EventHandler, Fill, Flex, Highlight, Hoverable, MainAxisSize, MouseStateHandle, ParentElement,
     ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Text,
     UniformList, UniformListState, LEFT_PADDING as SCROLLABLE_LEFT_PADDING,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WeakViewHandle,
 };
 
@@ -33,8 +33,8 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::editor::Event as EditorEvent;
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
-use crate::themes::theme::{self, Blend, BorkTheme};
-use crate::user_config::{BorkConfig, BorkConfigUpdateEvent};
+use crate::themes::theme::{self, Blend, KrustTheme};
+use crate::user_config::{KrustConfig, KrustConfigUpdateEvent};
 use crate::util::bindings::CustomAction;
 use crate::voltron::{VoltronFeatureViewMeta, VoltronMetadata};
 use crate::workflows::WorkflowType;
@@ -51,7 +51,7 @@ const WORKFLOW_LIST_PADDING_MIDDLE: f32 = 5.;
 pub const WORKFLOW_SUBTEXT_FONT_SIZE: f32 = 14.0;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", WorkflowsViewAction::Up, id!("WorkflowsView")),
@@ -171,7 +171,7 @@ impl WorkflowViewType {
             WorkflowViewType::Team => "Showing team workflows".into(),
         };
 
-        AccessibilityContent::new_without_help(a11y_content, BorkA11yRole::UserAction)
+        AccessibilityContent::new_without_help(a11y_content, KrustA11yRole::UserAction)
     }
 }
 
@@ -336,7 +336,7 @@ impl SelectionState {
         }
     }
 
-    fn background_color(&self, theme: &BorkTheme) -> theme::Fill {
+    fn background_color(&self, theme: &KrustTheme) -> theme::Fill {
         match self {
             SelectionState::Unselected => theme.surface_2(),
             SelectionState::Selected => theme.surface_2().blend(&theme.accent_overlay()),
@@ -372,7 +372,7 @@ impl CategoriesView {
             Self::categorize_workflows(
                 global_workflows()
                     .into_iter()
-                    .map(Workflow::from) // convert from the public-facing Workflow type to the bork-internal Workflow type
+                    .map(Workflow::from) // convert from the public-facing Workflow type to the krust-internal Workflow type
                     .map(WorkflowType::Local)
                     .map(Arc::new),
             ),
@@ -403,8 +403,8 @@ impl CategoriesView {
             ctx.notify();
         });
 
-        ctx.subscribe_to_model(&BorkConfig::handle(ctx), |me, _, event, ctx| {
-            if let BorkConfigUpdateEvent::LocalUserWorkflows = event {
+        ctx.subscribe_to_model(&KrustConfig::handle(ctx), |me, _, event, ctx| {
+            if let KrustConfigUpdateEvent::LocalUserWorkflows = event {
                 me.update_workflows(ctx);
             }
         });
@@ -719,7 +719,7 @@ impl CategoriesView {
             );
             ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                 a11y_content_text,
-                BorkA11yRole::MenuItemRole,
+                KrustA11yRole::MenuItemRole,
             ));
         }
     }
@@ -763,7 +763,7 @@ impl CategoriesView {
                 .link(
                     "creating your own workflow".into(),
                     Some(
-                        "https://therob.lol/bork-terminal/help/knowledge-and-collaboration/bork-drive/workflows"
+                        "https://therob.lol/krust-terminal/help/knowledge-and-collaboration/krust-drive/workflows"
                             .into(),
                     ),
                     None,
@@ -1153,7 +1153,7 @@ impl CategoriesView {
     }
 
     fn update_workflows(&mut self, ctx: &mut ViewContext<Self>) {
-        let workflows = BorkConfig::as_ref(ctx)
+        let workflows = KrustConfig::as_ref(ctx)
             .local_user_workflows()
             .iter()
             .map(Clone::clone)
@@ -1209,7 +1209,7 @@ impl View for CategoriesView {
         Some(AccessibilityContent::new(
             "Workflows",
             "Search or use arrow up and arrow down keys to navigate and find a workflow. Use enter to confirm the workflow and esc to quit.",
-            BorkA11yRole::MenuRole,
+            KrustA11yRole::MenuRole,
         ))
     }
 

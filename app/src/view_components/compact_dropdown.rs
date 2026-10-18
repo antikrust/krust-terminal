@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, CornerRadius, CrossAxisAlignment, Flex,
-    Icon as BorkUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
+    Icon as KrustUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, BlurContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -125,7 +125,7 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
     }
 
     /// Render an icon at the configured icon size.
-    fn render_sized_icon(&self, appearance: &Appearance, icon: BorkUiIcon) -> Box<dyn Element> {
+    fn render_sized_icon(&self, appearance: &Appearance, icon: KrustUiIcon) -> Box<dyn Element> {
         let icon_size = self.icon_size.unwrap_or(appearance.ui_font_size());
         ConstrainedBox::new(icon.finish())
             .with_width(icon_size)
@@ -144,7 +144,7 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
         if let Some(icon) = self.trigger_icon {
             button_label.add_child(self.render_sized_icon(
                 appearance,
-                icon.to_borkui_icon(appearance.theme().active_ui_text_color()),
+                icon.to_krustui_icon(appearance.theme().active_ui_text_color()),
             ));
         } else if let Some(MenuItem::Item(fields)) = self.dropdown.as_ref(app).selected_item() {
             if let Some(icon) = fields.icon() {
@@ -152,14 +152,14 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
                     .override_icon_color()
                     .unwrap_or_else(|| appearance.theme().active_ui_text_color());
                 button_label
-                    .add_child(self.render_sized_icon(appearance, icon.to_borkui_icon(icon_color)));
+                    .add_child(self.render_sized_icon(appearance, icon.to_krustui_icon(icon_color)));
             }
         }
 
         if self.show_trigger_chevron {
             button_label.add_child(self.render_sized_icon(
                 appearance,
-                BorkUiIcon::new(
+                KrustUiIcon::new(
                     "bundled/svg/chevron-down.svg",
                     appearance.theme().active_ui_text_color(),
                 ),

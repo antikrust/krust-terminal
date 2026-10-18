@@ -4,14 +4,14 @@
 use std::time::Duration;
 
 use instant::Instant;
-use borkui::color::ColorU;
-use borkui::elements::{
+use krustui::color::ColorU;
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Element, Expanded, Flex, MouseStateHandle,
     ParentElement, Shrinkable, Text,
 };
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, SingletonEntity};
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -146,7 +146,7 @@ pub fn render_copyable_text_field<F>(
     app: &AppContext,
 ) -> Box<dyn Element>
 where
-    F: FnMut(&mut borkui::EventContext) + 'static,
+    F: FnMut(&mut krustui::EventContext) + 'static,
 {
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
@@ -170,7 +170,7 @@ where
 
     let copy_button: Box<dyn Element> = if show_checkmark {
         // Show green checkmark
-        let check_icon = borkui::elements::Icon::new(Icon::Check.into(), theme.ansi_fg_green());
+        let check_icon = krustui::elements::Icon::new(Icon::Check.into(), theme.ansi_fg_green());
         ConstrainedBox::new(check_icon.finish())
             .with_width(config.icon_size)
             .with_height(config.icon_size)

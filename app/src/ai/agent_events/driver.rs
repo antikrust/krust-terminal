@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use futures::future::Either;
 use futures::StreamExt;
 use instant::Instant;
-use bork_errors::{report_error, AnyhowErrorExt as _};
-use borkui::r#async::Timer;
+use krust_errors::{report_error, AnyhowErrorExt as _};
+use krustui::r#async::Timer;
 
 use crate::server::retry_strategies::is_transient_http_error;
 use crate::server::server_api::ai::AgentRunEvent;

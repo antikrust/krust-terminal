@@ -2,17 +2,17 @@
 //! shown inline in the input.
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Element, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::EditorElement;
 use crate::appearance::Appearance;
@@ -303,7 +303,7 @@ impl View for AcceptAutosuggestionKeybinding {
             let chevron_down = Container::new(
                 ConstrainedBox::new(
                     Icon::ArrowDropDown
-                        .to_borkui_icon(Fill::Solid(font_color))
+                        .to_krustui_icon(Fill::Solid(font_color))
                         .finish(),
                 )
                 .with_height(height_without_border)

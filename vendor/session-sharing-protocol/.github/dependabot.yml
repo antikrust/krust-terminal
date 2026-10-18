@@ -8,7 +8,7 @@ updates:
     schedule:
       interval: "daily"
     reviewers:
-      - "borkdotdev/tech-leads"
+      - "krustdotdev/tech-leads"
     # Only send security updates, not general version updates.
     open-pull-requests-limit: 0
   - package-ecosystem: "github-actions"
@@ -16,7 +16,7 @@ updates:
     schedule:
       interval: "daily"
     reviewers:
-      - "borkdotdev/tech-leads"
+      - "krustdotdev/tech-leads"
     cooldown:
       # Don't update to any action release that is less than two weeks old.
       default-days: 14

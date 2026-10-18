@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use bork_core::settings::macros::define_settings_group;
-use bork_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
+use krust_core::settings::macros::define_settings_group;
+use krust_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
 
 use crate::banner::BannerState;
 use crate::resource_center::Tip;
@@ -15,7 +15,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.show_warning_before_quitting",
-        description: "Whether to show a warning dialog before quitting Bork.",
+        description: "Whether to show a warning dialog before quitting Krust.",
     },
     quit_on_last_window_closed: QuitOnLastWindowClosed {
         type: bool,
@@ -25,7 +25,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.quit_on_last_window_closed",
-        description: "Whether to quit Bork when the last window is closed.",
+        description: "Whether to quit Krust when the last window is closed.",
     },
     restore_session: RestoreSession {
         type: bool,
@@ -35,7 +35,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.restore_session",
-        description: "Whether to restore the previous session when Bork starts up.",
+        description: "Whether to restore the previous session when Krust starts up.",
     },
     add_app_as_login_item: LoginItem {
         type: bool,
@@ -48,13 +48,13 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "general.login_item",
-        description: "Whether to launch Bork automatically when you log in.",
+        description: "Whether to launch Krust automatically when you log in.",
     },
     // Records whether the app has been added as a login item.
     // If it has, we don't try to add it again unless the user explicitly
     // retoggles the setting. This is to allow a user to remove the login item
     // directly from their OS's startup UI and not have it re-added when they
-    // next start Bork.
+    // next start Krust.
     app_added_as_login_item: AppAddedAsLoginItem {
         type: bool,
         default: false,
@@ -116,7 +116,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    open_in_bork_banner_dismissed_for_markdown: OpenInBorkBannerDismissedMarkdown {
+    open_in_krust_banner_dismissed_for_markdown: OpenInKrustBannerDismissedMarkdown {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
@@ -124,7 +124,7 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    open_in_bork_banner_dismissed_for_code_and_text: OpenInBorkBannerDismissedCode {
+    open_in_krust_banner_dismissed_for_code_and_text: OpenInKrustBannerDismissedCode {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
@@ -148,10 +148,10 @@ define_settings_group!(GeneralSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: true,
     },
-    // One-time flag tracking whether the OpenBork launch modal has already been
+    // One-time flag tracking whether the OpenKrust launch modal has already been
     // shown to the user. Not user-visible; modeled as a setting so it's only
     // shown once per user regardless of the number of devices they use.
-    did_check_to_trigger_openbork_launch_modal: DidShowOpenBorkLaunchModal {
+    did_check_to_trigger_openkrust_launch_modal: DidShowOpenKrustLaunchModal {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,

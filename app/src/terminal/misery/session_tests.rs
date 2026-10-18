@@ -4,12 +4,12 @@ use super::*;
 #[test]
 fn directory_name_takes_the_basename() {
     assert_eq!(
-        directory_name(Some("/Volumes/Instruments/bork")),
-        Some("bork".to_owned())
+        directory_name(Some("/Volumes/Instruments/krust")),
+        Some("krust".to_owned())
     );
     assert_eq!(
-        directory_name(Some("/Volumes/Instruments/bork/")),
-        Some("bork".to_owned()),
+        directory_name(Some("/Volumes/Instruments/krust/")),
+        Some("krust".to_owned()),
         "a trailing slash should not swallow the name"
     );
     assert_eq!(directory_name(None), None);

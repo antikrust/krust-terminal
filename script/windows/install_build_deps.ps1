@@ -1,6 +1,6 @@
 #!/usr/bin/env powershell
 #
-# Install all dependencies required to build Bork on Windows.
+# Install all dependencies required to build Krust on Windows.
 
 # Install Rust + cargo.
 bash (((Get-Location).path) + '\script\install_rust')

@@ -1,8 +1,8 @@
 use vim::vim::VimMode;
-use bork_core::features::FeatureFlag;
-use borkui::keymap::Keystroke;
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krust_core::features::FeatureFlag;
+use krustui::keymap::Keystroke;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::initialize_app;
 use crate::editor::{DisplayPoint, EditorOptions, EditorView};

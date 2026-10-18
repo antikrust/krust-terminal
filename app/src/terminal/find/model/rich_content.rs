@@ -1,7 +1,7 @@
 //! Traits and abstractions supporting the find operation across rich content blocks.
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use borkui::{AppContext, View, ViewContext, ViewHandle};
+use krustui::{AppContext, View, ViewContext, ViewHandle};
 
 use super::FindOptions;
 

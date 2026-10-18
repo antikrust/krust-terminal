@@ -1,10 +1,10 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, Container, CrossAxisAlignment, Element, Empty, Fill, Flex, MouseStateHandle,
     ParentElement,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 use crate::ui_components::blended_colors;
 
@@ -32,7 +32,7 @@ pub fn render_tab_selector<F>(
 where
     // The on select function will take in the click event context and the selected label,
     // and will then presumably change the passed in selected label.
-    F: Fn(&str, &mut borkui::EventContext) + 'static + Clone,
+    F: Fn(&str, &mut krustui::EventContext) + 'static + Clone,
 {
     let mut tabs_row = Flex::row()
         .with_spacing(12.)

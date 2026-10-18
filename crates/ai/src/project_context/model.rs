@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use futures::future::BoxFuture;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui_core::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui_core::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::GlobalRules;
 
@@ -14,8 +14,8 @@ cfg_if::cfg_if! {
         use repo_metadata::{
             RepoMetadataEvent, RepoMetadataModel, RepositoryIdentifier, StandingQueryContent,
         };
-        use bork_util::remote_path::RemotePath;
-        use bork_util::standardized_path::StandardizedPath;
+        use krust_util::remote_path::RemotePath;
+        use krust_util::standardized_path::StandardizedPath;
     }
 }
 
@@ -56,13 +56,13 @@ pub struct ProjectRule {
 #[derive(Debug, Clone)]
 struct RuleAtPath {
     parent_path: LocalOrRemotePath,
-    bork_md: Option<ProjectRule>,
+    krust_md: Option<ProjectRule>,
     agents_md: Option<ProjectRule>,
 }
 
 impl RuleAtPath {
     fn respected_rule(&self) -> Option<&ProjectRule> {
-        self.bork_md.as_ref().or(self.agents_md.as_ref())
+        self.krust_md.as_ref().or(self.agents_md.as_ref())
     }
 }
 
@@ -96,7 +96,7 @@ impl ProjectRules {
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     fn rule_paths(&self) -> impl Iterator<Item = &LocalOrRemotePath> {
         self.rules.iter().flat_map(|rule| {
-            rule.bork_md
+            rule.krust_md
                 .iter()
                 .chain(rule.agents_md.iter())
                 .map(|rule| &rule.path)
@@ -111,11 +111,11 @@ impl ProjectRules {
     fn retain_rule_paths(&mut self, retained_paths: &HashSet<LocalOrRemotePath>) {
         self.rules.retain_mut(|rule| {
             if rule
-                .bork_md
+                .krust_md
                 .as_ref()
                 .is_some_and(|rule| !retained_paths.contains(&rule.path))
             {
-                rule.bork_md = None;
+                rule.krust_md = None;
             }
             if rule
                 .agents_md
@@ -124,7 +124,7 @@ impl ProjectRules {
             {
                 rule.agents_md = None;
             }
-            rule.bork_md.is_some() || rule.agents_md.is_some()
+            rule.krust_md.is_some() || rule.agents_md.is_some()
         });
     }
     /// Finds the set of rules that are active in the given path and the set that are available to be applied.
@@ -173,8 +173,8 @@ impl ProjectRules {
 
         match existing_rule {
             Some(rule) => {
-                if file_name.to_lowercase() == "bork.md" {
-                    rule.bork_md = rule_file;
+                if file_name.to_lowercase() == "krust.md" {
+                    rule.krust_md = rule_file;
                 } else if file_name.to_lowercase() == "agents.md" {
                     rule.agents_md = rule_file;
                 }
@@ -182,11 +182,11 @@ impl ProjectRules {
             None => {
                 let mut rule = RuleAtPath {
                     parent_path: parent,
-                    bork_md: None,
+                    krust_md: None,
                     agents_md: None,
                 };
-                if file_name.to_lowercase() == "bork.md" {
-                    rule.bork_md = rule_file;
+                if file_name.to_lowercase() == "krust.md" {
+                    rule.krust_md = rule_file;
                 } else if file_name.to_lowercase() == "agents.md" {
                     rule.agents_md = rule_file;
                 }
@@ -197,7 +197,7 @@ impl ProjectRules {
 }
 
 /// Singleton model that keeps track of mapping between paths and rule files
-/// Currently supports BORK.md files, but designed to be extensible
+/// Currently supports KRUST.md files, but designed to be extensible
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
 #[derive(Default)]
 pub struct ProjectContextModel {
@@ -530,9 +530,9 @@ impl ProjectContextModel {
     /// Returns the rules applicable to `path`, layering global rules on top of
     /// any project rules discovered up the directory tree.
     ///
-    /// Precedence is `global > project BORK.md > project AGENTS.md`. Globals
+    /// Precedence is `global > project KRUST.md > project AGENTS.md`. Globals
     /// are always included (when present) regardless of project state; the
-    /// existing in-directory `BORK.md > AGENTS.md` shadow inside
+    /// existing in-directory `KRUST.md > AGENTS.md` shadow inside
     /// [`RuleAtPath::respected_rule`] still applies to project rules.
     ///
     /// This is the entry point used by `BlocklistAIContextModel` when packing

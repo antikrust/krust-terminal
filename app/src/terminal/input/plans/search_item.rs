@@ -3,13 +3,13 @@
 use ai::document::AIDocumentId;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use borkui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krustui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::document::ai_document_model::{AIDocument, AIDocumentVersion};
 use crate::appearance::Appearance;
@@ -68,7 +68,7 @@ impl SearchItem for PlanSearchItem {
             .sub_text_color(appearance.theme().background());
 
         let icon = Container::new(
-            ConstrainedBox::new(Icon::Compass.to_borkui_icon(icon_color).finish())
+            ConstrainedBox::new(Icon::Compass.to_krustui_icon(icon_color).finish())
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish(),

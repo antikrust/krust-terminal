@@ -18,7 +18,7 @@ use remote_server::setup::{
 };
 use remote_server::ssh::ssh_args;
 use remote_server::transport::{Connection, ControlPath, Error, InstallOutcome, RemoteTransport};
-use borkui::r#async::executor;
+use krustui::r#async::executor;
 
 #[path = "ssh_transport/installation.rs"]
 pub(crate) mod installation;
@@ -33,18 +33,18 @@ pub(crate) mod installation;
 pub struct SshTransport {
     socket_path: PathBuf,
     auth_context: Arc<RemoteServerAuthContext>,
-    /// Whether Bork owns the ControlMaster behind `socket_path`. `false`
+    /// Whether Krust owns the ControlMaster behind `socket_path`. `false`
     /// when the SSH wrapper attached to a master the user already had
-    /// running, in which case Bork must not run `ssh -O exit` against it
+    /// running, in which case Krust must not run `ssh -O exit` against it
     /// on teardown.
-    bork_owns_control_master: bool,
+    krust_owns_control_master: bool,
 }
 
 impl fmt::Debug for SshTransport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SshTransport")
             .field("socket_path", &self.socket_path)
-            .field("bork_owns_control_master", &self.bork_owns_control_master)
+            .field("krust_owns_control_master", &self.krust_owns_control_master)
             .finish_non_exhaustive()
     }
 }
@@ -53,12 +53,12 @@ impl SshTransport {
     pub fn new(
         socket_path: PathBuf,
         auth_context: Arc<RemoteServerAuthContext>,
-        bork_owns_control_master: bool,
+        krust_owns_control_master: bool,
     ) -> Self {
         Self {
             socket_path,
             auth_context,
-            bork_owns_control_master,
+            krust_owns_control_master,
         }
     }
 
@@ -66,8 +66,8 @@ impl SshTransport {
         &self.socket_path
     }
 
-    pub fn bork_owns_control_master(&self) -> bool {
-        self.bork_owns_control_master
+    pub fn krust_owns_control_master(&self) -> bool {
+        self.krust_owns_control_master
     }
 
     pub fn remote_daemon_socket_path(&self) -> String {
@@ -188,7 +188,7 @@ impl RemoteTransport for SshTransport {
         let socket_path = self.socket_path.clone();
         Box::pin(async move {
             // Treat the existence of the remote-server install directory
-            // itself as evidence of a prior install. If `~/.bork-XX/remote-server`
+            // itself as evidence of a prior install. If `~/.krust-XX/remote-server`
             // exists, something was installed there before, so any mismatch
             // with the client's expected binary path should be auto-updated
             // rather than surfaced as a first-time install prompt.
@@ -227,7 +227,7 @@ impl RemoteTransport for SshTransport {
         executor: Arc<executor::Background>,
     ) -> Pin<Box<dyn Future<Output = Result<Connection>> + Send>> {
         let socket_path = self.socket_path.clone();
-        let bork_owns_control_master = self.bork_owns_control_master;
+        let krust_owns_control_master = self.krust_owns_control_master;
         let remote_proxy_command = self.remote_proxy_command();
         Box::pin(async move {
             let mut args = ssh_args(&socket_path);
@@ -268,11 +268,11 @@ impl RemoteTransport for SshTransport {
                 host_response_rx,
                 child,
                 // Tag the socket with master ownership. Teardown only runs
-                // `ssh -O exit` against Bork-managed masters; a user-owned
-                // (external) master must be left running when the Bork
+                // `ssh -O exit` against Krust-managed masters; a user-owned
+                // (external) master must be left running when the Krust
                 // session exits.
-                control_path: if bork_owns_control_master {
-                    ControlPath::BorkManaged(socket_path)
+                control_path: if krust_owns_control_master {
+                    ControlPath::KrustManaged(socket_path)
                 } else {
                     ControlPath::UserOwned(socket_path)
                 },

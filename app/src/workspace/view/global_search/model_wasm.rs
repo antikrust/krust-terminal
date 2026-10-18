@@ -1,5 +1,5 @@
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{Entity, ModelContext};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{Entity, ModelContext};
 
 use crate::workspace::view::global_search::view::GlobalSearchEvent;
 use crate::workspace::view::global_search::SearchConfig;

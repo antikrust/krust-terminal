@@ -8,10 +8,10 @@ pub use picker::{TextEffectPicker, TextEffectPickerEvent};
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{Setting as _, SupportedPlatforms, SyncToCloud};
-use bork_terminal::model::ansi::{Color, NamedColor};
-use bork_terminal::model::char_or_str::CharOrStr;
-use borkui::color::ColorU;
-use borkui::{AppContext, SingletonEntity};
+use krust_terminal::model::ansi::{Color, NamedColor};
+use krust_terminal::model::char_or_str::CharOrStr;
+use krustui::color::ColorU;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::features::FeatureFlag;
 use crate::terminal::model::grid::grid_handler::AbsolutePoint;

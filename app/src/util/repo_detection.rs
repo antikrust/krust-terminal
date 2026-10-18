@@ -13,11 +13,11 @@ use futures::future::Either;
 #[cfg(not(target_family = "wasm"))]
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::repositories::RepoDetectionSource;
-use bork_core::SessionId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::AppContext;
+use krust_core::SessionId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::AppContext;
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
+use krustui::SingletonEntity;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::remote_server::manager::RemoteServerManager;

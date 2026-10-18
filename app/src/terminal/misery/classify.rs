@@ -4,7 +4,7 @@
 //! should land on `ls`, not on a 40-minute build. Everything here works off the
 //! command string alone so the engine stays testable without a live shell; the
 //! caller can pass a name already extracted by the real parser
-//! (`bork_completer::parsers::hir::Command::command_name_span`) when it has
+//! (`krust_completer::parsers::hir::Command::command_name_span`) when it has
 //! one, which is more accurate for pipelines and assignments.
 
 /// What kind of thing the user just asked for. Drives both template selection

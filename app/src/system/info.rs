@@ -8,8 +8,8 @@ use num_traits::Zero;
 use ordered_float::OrderedFloat;
 use serde::Serialize;
 use sysinfo::ProcessesToUpdate;
-use bork_core::channel::ChannelState;
-use borkui::{App, AppContext, Entity, ModelContext, SingletonEntity};
+use krust_core::channel::ChannelState;
+use krustui::{App, AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::server::telemetry;
 use crate::system::memory_footprint;
@@ -128,7 +128,7 @@ impl SystemInfo {
     fn schedule_refresh(ctx: &mut ModelContext<Self>) {
         ctx.spawn(
             async {
-                borkui::r#async::Timer::after(REFRESH_INTERVAL).await;
+                krustui::r#async::Timer::after(REFRESH_INTERVAL).await;
             },
             |me, _, ctx| {
                 me.refresh(ctx);

@@ -1,6 +1,6 @@
-use bork_util::content_version::ContentVersion;
-// Re-export from bork_util so existing app-level imports continue to work.
-pub use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::content_version::ContentVersion;
+// Re-export from krust_util so existing app-level imports continue to work.
+pub use krust_util::local_or_remote_path::LocalOrRemotePath;
 
 /// Tracks sync state between client and server for a single remote buffer.
 ///

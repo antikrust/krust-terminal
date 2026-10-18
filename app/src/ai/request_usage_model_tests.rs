@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use ai::api_keys::{ApiKeyManager, GrokTokens};
 use chrono::Duration;
-use bork_core::features::FeatureFlag;
-use bork_graphql::billing::{AddonCreditsOption, OveragesPricing, PricingInfo};
-use borkui::{App, ModelHandle};
+use krust_core::features::FeatureFlag;
+use krust_graphql::billing::{AddonCreditsOption, OveragesPricing, PricingInfo};
+use krustui::{App, ModelHandle};
 
 use super::*;
 use crate::auth::AuthStateProvider;
@@ -58,7 +58,7 @@ fn add_request_usage_model_without_auth(app: &mut App) -> ModelHandle<AIRequestU
     app.add_singleton_model(|_| ServerApiProvider::new_for_test());
     register_user_preferences_for_tests(app);
     app.update(|ctx| {
-        borkui_extras::secure_storage::register_noop("test", ctx);
+        krustui_extras::secure_storage::register_noop("test", ctx);
         ctx.add_singleton_model(ApiKeyManager::new);
     });
     app.add_singleton_model(|_| PricingInfoModel::new());

@@ -1,14 +1,14 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::phenomenon::PhenomenonStyle;
-use bork_core::ui::theme::Fill;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krust_core::ui::theme::phenomenon::PhenomenonStyle;
+use krust_core::ui::theme::Fill;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, Image, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::{Element, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::{Element, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -43,7 +43,7 @@ const FEATURE_ITEMS: &[FeatureItem] = &[
     FeatureItem {
         icon: Icon::MessageCheckSquare,
         title: "Native code review",
-        description: "Send inline comments from Bork's code review directly to Claude Code, Codex, or OpenCode",
+        description: "Send inline comments from Krust's code review directly to Claude Code, Codex, or OpenCode",
     },
 ];
 
@@ -105,7 +105,7 @@ pub fn render_welcome_banner(
 
     // Title
     let title = Text::new(
-        "Introducing universal agent support: level up any coding agent with Bork",
+        "Introducing universal agent support: level up any coding agent with Krust",
         appearance.ui_font_family(),
         20.,
     )
@@ -121,7 +121,7 @@ pub fn render_welcome_banner(
     for item in FEATURE_ITEMS {
         let icon_el = ConstrainedBox::new(
             item.icon
-                .to_borkui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
+                .to_krustui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
                 .finish(),
         )
         .with_width(16.)

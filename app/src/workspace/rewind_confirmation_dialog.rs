@@ -1,18 +1,18 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::Fill;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::Fill;
+use krust_errors::report_error;
+use krustui::elements::{
     Align, ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
     Text,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -23,7 +23,7 @@ use crate::ui_components::dialog::{dialog_styles, Dialog};
 use crate::ui_components::icons::Icon;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -85,7 +85,7 @@ impl View for RewindConfirmationDialog {
         "RewindConfirmationDialog"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &krustui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 
@@ -177,7 +177,7 @@ impl View for RewindConfirmationDialog {
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(
                 Container::new(
-                    ConstrainedBox::new(Icon::Info.to_borkui_icon(info_color).finish())
+                    ConstrainedBox::new(Icon::Info.to_krustui_icon(info_color).finish())
                         .with_height(14.)
                         .with_width(14.)
                         .finish(),

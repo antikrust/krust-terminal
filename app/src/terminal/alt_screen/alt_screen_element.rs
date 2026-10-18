@@ -5,18 +5,18 @@ use num_traits::Float as _;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::vec2f;
 use vec1::Vec1;
-use bork_core::features::FeatureFlag;
-use bork_util::user_input::UserInput;
-use borkui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use borkui::elements::{Axis, Point as UiPoint, ScrollData, ScrollableElement};
-use borkui::event::{DispatchedEvent, InBoundsExt, KeyState, ModifiersState};
-use borkui::fonts::Properties;
-use borkui::geometry::rect::RectF;
-use borkui::geometry::vector::Vector2F;
-use borkui::platform::keyboard::KeyCode;
-use borkui::text::SelectionType;
-use borkui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use borkui::{
+use krust_core::features::FeatureFlag;
+use krust_util::user_input::UserInput;
+use krustui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use krustui::elements::{Axis, Point as UiPoint, ScrollData, ScrollableElement};
+use krustui::event::{DispatchedEvent, InBoundsExt, KeyState, ModifiersState};
+use krustui::fonts::Properties;
+use krustui::geometry::rect::RectF;
+use krustui::geometry::vector::Vector2F;
+use krustui::platform::keyboard::KeyCode;
+use krustui::text::SelectionType;
+use krustui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use krustui::{
     end_trace, record_trace_event, start_trace, AfterLayoutContext, AppContext, ClipBounds,
     Element, EntityId, Event, EventContext, LayoutContext, ModelHandle, PaintContext,
     SizeConstraint,
@@ -130,7 +130,7 @@ impl AltScreenElement {
             pane_state: terminal_view_render_context.pane_state,
             active_session_state: terminal_view_render_context.active_session_state,
             grid_render_params: GridRenderParams {
-                bork_theme: appearance.theme().clone(),
+                krust_theme: appearance.theme().clone(),
                 font_family: appearance.monospace_font_family(),
                 font_size: appearance.monospace_font_size(),
                 font_weight: appearance.monospace_font_weight(),
@@ -259,7 +259,7 @@ impl AltScreenElement {
         ctx.dispatch_typed_action(TerminalAction::Focus);
 
         // On mobile, request soft keyboard so users can input.
-        if borkui::platform::is_mobile_device() {
+        if krustui::platform::is_mobile_device() {
             ctx.request_soft_keyboard();
         }
 
@@ -355,7 +355,7 @@ impl AltScreenElement {
             // Note: it is counter-intuitive to use "pressed" as a state here for mouse hover motions, however,
             // we're largely just following standards from Alacritty/other terminals and the original terminal specs.
             // We intend to combine the mouse button and mouse action enums to avoid "weird" or "impossible" combinations,
-            // see Linear issue at https://linear.app/borkdotdev/issue/CORE-1039/combine-the-mousebutton-and-mouseaction-enums-to-avoid-impossible.
+            // see Linear issue at https://linear.app/krustdotdev/issue/CORE-1039/combine-the-mousebutton-and-mouseaction-enums-to-avoid-impossible.
             let mouse_state =
                 MouseState::new(MouseButton::Move, MouseAction::Pressed, Default::default());
             ctx.dispatch_typed_action(TerminalAction::AltMouseAction(mouse_state.set_point(point)));
@@ -519,7 +519,7 @@ impl AltScreenElement {
     fn render_selections(&self, size_info: &SizeInfo, origin: Vector2F, ctx: &mut PaintContext) {
         let text_selection_color = self
             .grid_render_params
-            .bork_theme
+            .krust_theme
             .text_selection_color()
             .into_solid();
 
@@ -740,7 +740,7 @@ impl Element for AltScreenElement {
             end_row.ceil() as usize,
             &model.colors(),
             &override_colors,
-            &self.grid_render_params.bork_theme,
+            &self.grid_render_params.krust_theme,
             properties,
             self.grid_render_params.font_family,
             self.grid_render_params.font_size,
@@ -779,7 +779,7 @@ impl Element for AltScreenElement {
                 model.alt_screen().cursor_style(),
                 padding_x,
                 adjusted_grid_origin,
-                self.grid_render_params.bork_theme.cursor().into(),
+                self.grid_render_params.krust_theme.cursor().into(),
                 ctx,
                 self.terminal_view_id,
                 self.cursor_hint_text.as_mut(),

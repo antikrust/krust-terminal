@@ -5,11 +5,11 @@ use std::sync::Arc;
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
 use itertools::Itertools;
 use ui_components::lightbox::{LightboxImage, LightboxImageSource};
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{Empty, MouseStateHandle};
-use borkui::{App, Element};
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{Empty, MouseStateHandle};
+use krustui::{App, Element};
 
 #[cfg(feature = "local_fs")]
 use super::{blocklist_image_asset_source, ResolvedBlocklistImageSources};
@@ -17,7 +17,7 @@ use super::{
     collect_visual_markdown_lightbox_collection, compute_visual_section_width,
     image_tooltip_handles_for_group, inline_image_source_label,
     is_supported_blocklist_image_source, lightbox_trigger_for_section, query_prefix_highlight_len,
-    render_scrollable_collapsible_content, text_sections_with_indices, borking_footer_height,
+    render_scrollable_collapsible_content, text_sections_with_indices, krusting_footer_height,
     CollapsibleElementState, CollapsibleExpansionState, VisualMarkdownLightboxCollection,
 };
 use crate::ai::agent::{
@@ -162,15 +162,15 @@ fn render_scrollable_collapsible_content_returns_none_when_collapsed() {
 }
 
 #[test]
-fn borking_footer_height_reserves_a_line_for_the_secondary_element() {
-    // Regression: the borking indicator's footer is a fixed-height, clipped
+fn krusting_footer_height_reserves_a_line_for_the_secondary_element() {
+    // Regression: the krusting indicator's footer is a fixed-height, clipped
     // container. When an agent tip (or fallback-model explanation) is present it
     // renders on a second line, so the footer must be taller than the
     // single-line case — otherwise the clip (added to keep action chips from
     // overflowing narrow panes) hides the tip entirely.
     let font_size = 13.;
-    let without_tip = borking_footer_height(font_size, false);
-    let with_tip = borking_footer_height(font_size, true);
+    let without_tip = krusting_footer_height(font_size, false);
+    let with_tip = krusting_footer_height(font_size, true);
 
     assert!(
         with_tip > without_tip,
@@ -328,7 +328,7 @@ fn blocklist_image_asset_source_uses_cached_resolution_when_available() {
 }
 
 /// `is_supported_blocklist_image_source` should accept the same image extensions
-/// that `bork_util::file_type::is_binary_file` recognises (plus `svg`, which is
+/// that `krust_util::file_type::is_binary_file` recognises (plus `svg`, which is
 /// text/XML and not in `is_binary_file`). Until #9395 / this fix landed the
 /// blocklist list was only `jpg | jpeg | png | gif | webp | svg`, so inline
 /// references to local `.bmp` / `.tiff` / `.tif` / `.ico` images failed the

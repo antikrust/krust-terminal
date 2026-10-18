@@ -2,16 +2,16 @@ pub mod feature_section;
 pub use feature_section::FeatureSectionView;
 pub mod content_section;
 pub use content_section::ContentSectionView;
-use bork_core::features::FeatureFlag;
+use krust_core::features::FeatureFlag;
 pub mod changelog_section;
 pub use changelog_section::ChangelogSectionView;
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
     MouseStateHandle, ParentElement, ScrollbarWidth, Shrinkable,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, ViewContext, ViewHandle};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::resource_center::section_views::feature_section::FeatureSection;

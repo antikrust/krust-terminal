@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use itertools::{Either, Itertools};
-use bork_core::features::FeatureFlag;
-use borkui::{EntityId, UpdateView, ViewContext};
+use krust_core::features::FeatureFlag;
+use krustui::{EntityId, UpdateView, ViewContext};
 
 use super::{group_member_indices, Workspace};
 use crate::menu::{MenuItem, MenuItemFields};

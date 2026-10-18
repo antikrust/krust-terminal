@@ -1,8 +1,8 @@
 use ai::agent::action_result::FetchConversationResult;
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::api::ServerConversationToken;
@@ -77,7 +77,7 @@ fn materialize_conversation(
         ));
     };
 
-    let tasks: Vec<bork_multi_agent_api::Task> = conversation
+    let tasks: Vec<krust_multi_agent_api::Task> = conversation
         .all_tasks()
         .filter_map(|task| task.source().cloned())
         .collect();

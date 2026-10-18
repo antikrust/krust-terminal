@@ -1,8 +1,8 @@
 use pathfinder_geometry::rect::RectF;
-use borkui::integration::TestStep;
-use borkui::platform::TerminationMode;
-use borkui::windowing::WindowManager;
-use borkui::{async_assert_eq, SingletonEntity};
+use krustui::integration::TestStep;
+use krustui::platform::TerminationMode;
+use krustui::windowing::WindowManager;
+use krustui::{async_assert_eq, SingletonEntity};
 
 use crate::integration_testing::step::new_step_with_default_assertions;
 

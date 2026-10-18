@@ -4,10 +4,10 @@ use std::time::{Duration, SystemTime};
 use futures::channel::oneshot;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use bork_errors::report_error;
-use bork_multi_agent_api as api;
-use borkui_core::{Entity, ModelContext, SingletonEntity};
-use borkui_extras::secure_storage::{self, AppContextExt};
+use krust_errors::report_error;
+use krust_multi_agent_api as api;
+use krustui_core::{Entity, ModelContext, SingletonEntity};
+use krustui_extras::secure_storage::{self, AppContextExt};
 
 pub use crate::aws_credentials::{AwsCredentials, AwsCredentialsState};
 pub use crate::geap_credentials::{
@@ -31,7 +31,7 @@ pub enum ApiKeyManagerEvent {
 /// User-provided API keys for AI providers.
 ///
 /// These are used for "Bring Your Own API Key" functionality, allowing
-/// users to use their own API keys instead of Bork's.
+/// users to use their own API keys instead of Krust's.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ApiKeys {
@@ -547,7 +547,7 @@ impl ApiKeyManager {
                 google,
                 open_router,
                 grok_oauth_access_token,
-                allow_use_of_bork_credits: false,
+                allow_use_of_krust_credits: false,
                 aws_credentials,
                 google_cloud_credentials,
             })

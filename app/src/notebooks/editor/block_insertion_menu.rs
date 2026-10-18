@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use bork_editor::content::text::BufferBlockItem;
-use borkui::elements::{
+use krust_editor::content::text::BufferBlockItem;
+use krustui::elements::{
     AnchorPair, Border, Container, CornerRadius, MouseStateHandle, OffsetPositioning, OffsetType,
     PositionedElementOffsetBounds, PositioningAxis, Radius, SavePosition, Stack, XAxisAnchor,
     YAxisAnchor,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::ButtonTooltipPosition;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::ButtonTooltipPosition;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
 
 use super::embedded_item::EmbeddedWorkflow;
 use super::view::{EditorViewAction, EditorViewEvent, RichTextEditorView};
@@ -89,7 +89,7 @@ impl BlockInsertionMenuState {
                 MenuItemFields::new(block_type.label())
                     .with_icon(block_type.icon())
                     .with_on_select_action(EditorViewAction::InsertBlock(
-                        bork_editor::content::text::BlockType::Text(block_type.into()),
+                        krust_editor::content::text::BlockType::Text(block_type.into()),
                     ))
                     .into_item(),
             );
@@ -108,7 +108,7 @@ impl BlockInsertionMenuState {
             let mut item_fields = MenuItemFields::new(block_type.label())
                 .with_icon(block_type.icon())
                 .with_on_select_action(EditorViewAction::InsertBlock(
-                    bork_editor::content::text::BlockType::Text(block_type.into()),
+                    krust_editor::content::text::BlockType::Text(block_type.into()),
                 ));
             if let Some(icon_fill) = block_type.icon_color(appearance) {
                 item_fields = item_fields.with_override_icon_color(icon_fill);
@@ -120,7 +120,7 @@ impl BlockInsertionMenuState {
             MenuItemFields::new("Divider")
                 .with_icon(Icon::HorizontalRuleBlock)
                 .with_on_select_action(EditorViewAction::InsertBlock(
-                    bork_editor::content::text::BlockType::Item(BufferBlockItem::HorizontalRule),
+                    krust_editor::content::text::BlockType::Item(BufferBlockItem::HorizontalRule),
                 ))
                 .with_override_icon_color(Fill::Solid(appearance.theme().ui_warning_color()))
                 .into_item(),
@@ -213,7 +213,7 @@ impl RichTextEditorView {
     /// Insert an embedded workflow block at the current insertion menu source.
     fn insert_embedded_workflow(&mut self, id: &SyncId, ctx: &mut ViewContext<Self>) {
         self.insert_block(
-            bork_editor::content::text::BlockType::Item(BufferBlockItem::Embedded {
+            krust_editor::content::text::BlockType::Item(BufferBlockItem::Embedded {
                 item: Arc::new(EmbeddedWorkflow::new(
                     id.sqlite_uid_hash(ObjectIdType::Workflow),
                 )),

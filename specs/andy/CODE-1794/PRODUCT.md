@@ -1,14 +1,14 @@
 # PRODUCT — Distinguish left vs right Alt on Windows and Linux
 
-Linear: [CODE-1794](https://linear.app/borkdotdev/issue/CODE-1794/windowslinux-right-alt-isnt-recognized-breaking-right-alt-as-meta)
+Linear: [CODE-1794](https://linear.app/krustdotdev/issue/CODE-1794/windowslinux-right-alt-isnt-recognized-breaking-right-alt-as-meta)
 
 ## Summary
 
-On Windows and Linux, the "Right Alt as meta" and "Left Alt as meta" settings under Keys in Bork should each independently control only their own physical Alt key. Today, right Alt is never recognized as right Alt, so enabling "Right Alt as meta" is a no-op and enabling "Left Alt as meta" incorrectly treats both Alt keys as meta.
+On Windows and Linux, the "Right Alt as meta" and "Left Alt as meta" settings under Keys in Krust should each independently control only their own physical Alt key. Today, right Alt is never recognized as right Alt, so enabling "Right Alt as meta" is a no-op and enabling "Left Alt as meta" incorrectly treats both Alt keys as meta.
 
 ## Problem
 
-Bork users on Windows and Linux who rely on the extra-meta-keys settings to make a single Alt key behave as meta (for example, shell users who want right Alt to emit ESC-prefixed keys while left Alt still works as a regular modifier for keybindings like Ctrl+Alt+R "Resume conversation") cannot do so today. The setting either has no effect (right-alt-as-meta) or applies to both keys at once (left-alt-as-meta), breaking keybindings that need a plain Alt modifier.
+Krust users on Windows and Linux who rely on the extra-meta-keys settings to make a single Alt key behave as meta (for example, shell users who want right Alt to emit ESC-prefixed keys while left Alt still works as a regular modifier for keybindings like Ctrl+Alt+R "Resume conversation") cannot do so today. The setting either has no effect (right-alt-as-meta) or applies to both keys at once (left-alt-as-meta), breaking keybindings that need a plain Alt modifier.
 
 ## Behavior
 
@@ -30,11 +30,11 @@ Bork users on Windows and Linux who rely on the extra-meta-keys settings to make
 
 7. On macOS, the existing Option-as-meta behavior, which already distinguishes left and right Option via the platform-native path, is unchanged.
 
-8. Settings changes take effect on the next keystroke. The user does not have to relaunch Bork.
+8. Settings changes take effect on the next keystroke. The user does not have to relaunch Krust.
 
 9. Alt state does not get "stuck":
-   - If the user holds Alt, switches windows via Alt+Tab, releases Alt while Bork is not focused, and then refocuses Bork, Bork must not continue to believe that Alt is held. The next character key pressed in Bork reports `alt: false`.
-   - If either Alt key release is lost for any other reason (dropped event, OS-level remap), Bork recovers whenever the OS next reports that no Alt is held.
+   - If the user holds Alt, switches windows via Alt+Tab, releases Alt while Krust is not focused, and then refocuses Krust, Krust must not continue to believe that Alt is held. The next character key pressed in Krust reports `alt: false`.
+   - If either Alt key release is lost for any other reason (dropped event, OS-level remap), Krust recovers whenever the OS next reports that no Alt is held.
 
 10. The per-side distinction applies only to Alt for this feature. Other modifiers (Shift, Ctrl, Cmd/Super) continue to behave as before.
 

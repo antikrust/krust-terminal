@@ -5,7 +5,7 @@ use ai::diff_validation::{DiffDelta, ParsedDiff, V4AHunk};
 use async_io::block_on;
 use tempfile::NamedTempFile;
 use vec1::vec1;
-use borkui::App;
+use krustui::App;
 
 use super::*;
 use crate::ai::agent::{AIIdentifiers, FileEdit};

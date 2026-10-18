@@ -1,6 +1,6 @@
 use fuzzy_match::FuzzyMatchResult;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, Entity, SingletonEntity};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use super::search_item::SkillSearchItem;
 use crate::ai::skills::SkillManager;

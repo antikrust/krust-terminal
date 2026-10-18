@@ -26,7 +26,7 @@
 use ::settings::SettingsManager;
 use account_client::{AccountClient, ScopeDocument, SettingsWrite};
 use serde_json::{Map, Value};
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::AccountSession;
 

@@ -11,11 +11,11 @@ use repo_metadata::{
     StandingQueryContent, StandingQueryResults, StandingQueryResultsDelta, TargetFile,
 };
 use tempfile::TempDir;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::App;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::App;
 
 use super::super::subscribers::SkillRepositoryMessage;
 use super::{parse_project_skill_contents, SkillWatcher};

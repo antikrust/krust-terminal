@@ -1,13 +1,13 @@
-use borkui::elements::{
+use krustui::elements::{
     Border, Clipped, Container, CornerRadius, Dismiss, Empty, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, ViewHandle};
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, ViewHandle};
 
 use super::index::DriveIndexAction;
 use super::DriveObjectType;

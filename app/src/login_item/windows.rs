@@ -9,9 +9,9 @@
 use std::path::{Path, PathBuf};
 
 use ::settings::Setting;
-use bork_core::channel::ChannelState;
-use bork_errors::report_if_error;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::channel::ChannelState;
+use krust_errors::report_if_error;
+use krustui::{AppContext, SingletonEntity};
 use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
 use winreg::RegKey;
 
@@ -48,7 +48,7 @@ pub(super) fn maybe_register_app_as_login_item(ctx: &mut AppContext) {
                     match register(&value_name, &exe) {
                         Ok(()) => true,
                         Err(err) => {
-                            log::warn!("Failed to register Bork as a login item: {err}");
+                            log::warn!("Failed to register Krust as a login item: {err}");
                             false
                         }
                     }
@@ -58,7 +58,7 @@ pub(super) fn maybe_register_app_as_login_item(ctx: &mut AppContext) {
                         Err(err) => {
                             // Don't flip app_added_as_login_item on failure — let a
                             // later retoggle try again.
-                            log::warn!("Failed to unregister Bork as a login item: {err}");
+                            log::warn!("Failed to unregister Krust as a login item: {err}");
                         }
                     }
                     false
@@ -82,7 +82,7 @@ fn current_exe_path() -> Option<PathBuf> {
 /// Returns the per-channel registry value name used under the `Run` subkey.
 ///
 /// Using the channel's application name keeps Dogfood / Preview / Stable installs
-/// isolated (`Bork`, `BorkPreview`, `BorkDev`, etc.) so installing multiple
+/// isolated (`Krust`, `KrustPreview`, `KrustDev`, etc.) so installing multiple
 /// channels doesn't cause one to overwrite another's startup entry.
 fn login_item_value_name() -> String {
     ChannelState::app_id().application_name().to_owned()
@@ -91,7 +91,7 @@ fn login_item_value_name() -> String {
 /// Writes the startup registry value pointing at `exe` under `value_name`.
 ///
 /// The path is wrapped in quotes so paths containing spaces (e.g.
-/// `C:\Program Files\Bork\bork.exe`) are parsed as a single executable path.
+/// `C:\Program Files\Krust\krust.exe`) are parsed as a single executable path.
 fn register(value_name: &str, exe: &Path) -> std::io::Result<()> {
     register_in(HKEY_CURRENT_USER, RUN_SUBKEY, value_name, exe)
 }

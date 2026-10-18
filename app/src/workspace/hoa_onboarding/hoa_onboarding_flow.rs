@@ -4,18 +4,18 @@ use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextLine, FormattedTextStyles, Hyperlink,
 };
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::phenomenon::PhenomenonStyle;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::phenomenon::PhenomenonStyle;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex,
     FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
     Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::geometry::vector::Vector2F;
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::platform::file_picker::{FilePickerConfiguration, FilePickerError};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::geometry::vector::Vector2F;
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::platform::file_picker::{FilePickerConfiguration, FilePickerError};
+use krustui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -113,8 +113,8 @@ impl HoaOnboardingStep {
     }
 }
 
-pub fn init(app: &mut borkui::AppContext) {
-    use borkui::keymap::macros::*;
+pub fn init(app: &mut krustui::AppContext) {
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
@@ -433,7 +433,7 @@ impl HoaOnboardingFlow {
             styles: FormattedTextStyles {
                 underline: true,
                 hyperlink: Some(Hyperlink::Url(
-                    "https://therob.lol/bork-terminal/help/agent-platform/bork-agents/agent-notifications".into(),
+                    "https://therob.lol/krust-terminal/help/agent-platform/krust-agents/agent-notifications".into(),
                 )),
                 ..Default::default()
             },
@@ -441,7 +441,7 @@ impl HoaOnboardingFlow {
 
         let formatted = FormattedText::new([FormattedTextLine::Line(vec![
             FormattedTextFragment::plain_text(
-                "Bork pipes through notifications from any CLI coding agent into a unified notification center that works across all coding agents and harnesses. ",
+                "Krust pipes through notifications from any CLI coding agent into a unified notification center that works across all coding agents and harnesses. ",
             ),
             learn_more_fragment,
         ])]);
@@ -531,7 +531,7 @@ impl View for HoaOnboardingFlow {
         "HoaOnboardingFlow"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &krustui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

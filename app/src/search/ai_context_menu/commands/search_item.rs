@@ -1,7 +1,7 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use borkui::elements::{ConstrainedBox, Container, Icon, Text};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::elements::{ConstrainedBox, Container, Icon, Text};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::mixer::AIContextMenuSearchableAction;
@@ -52,9 +52,9 @@ impl SearchItem for CommandSearchItem {
         )
         .with_color(highlight_state.main_text_fill(appearance).into_solid())
         .with_single_highlight(
-            borkui::elements::Highlight::new()
+            krustui::elements::Highlight::new()
                 .with_properties(
-                    borkui::fonts::Properties::default().weight(borkui::fonts::Weight::Bold),
+                    krustui::fonts::Properties::default().weight(krustui::fonts::Weight::Bold),
                 )
                 .with_foreground_color(highlight_state.main_text_fill(appearance).into_solid()),
             self.match_result.matched_indices.clone(),

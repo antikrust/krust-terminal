@@ -3,8 +3,8 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, Table};
 use serde::Serialize;
 use serde_json::{Map, Value};
-use bork_cli::agent::OutputFormat;
-use bork_graphql::queries::get_simple_integrations::{
+use krust_cli::agent::OutputFormat;
+use krust_graphql::queries::get_simple_integrations::{
     ListedSimpleIntegrationConfig, SimpleIntegration, SimpleIntegrationConnectionStatus,
     SimpleIntegrationsOutput,
 };
@@ -112,13 +112,13 @@ fn format_mcp_server_display(name: &str, config: &Value) -> String {
         return format!("{name}: {command} {}", args.join(" "));
     }
 
-    if let Some(bork_id) = obj
-        .get("bork_id")
+    if let Some(krust_id) = obj
+        .get("krust_id")
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|s| !s.is_empty())
     {
-        return format!("{name}: bork_id={bork_id}");
+        return format!("{name}: krust_id={krust_id}");
     }
 
     name.to_string()

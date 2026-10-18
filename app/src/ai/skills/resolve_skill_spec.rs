@@ -1,6 +1,6 @@
 //! Skill resolution for agent runs.
 //!
-//! This module exists primarily for `bork agent run --skill ...` (and related flows) where we need to
+//! This module exists primarily for `krust agent run --skill ...` (and related flows) where we need to
 //! resolve a CLI-provided `--skill` specifier (`SkillSpec`) into a concrete `SKILL.md` file and its
 //! parsed instruction body.
 //!
@@ -18,12 +18,12 @@ use ai::skills::{
 };
 use command::blocking::Command;
 use command::r#async::Command as AsyncCommand;
-use bork_cli::skill::SkillSpec;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, SingletonEntity as _};
+use krust_cli::skill::SkillSpec;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, SingletonEntity as _};
 
 use super::SkillManager;
-use crate::bork_managed_paths_watcher::bork_managed_skill_dirs;
+use crate::krust_managed_paths_watcher::krust_managed_skill_dirs;
 
 const SKILL_FILE_NAME: &str = "SKILL.md";
 
@@ -63,8 +63,8 @@ fn resolve_from_skill_dirs_by_directory_scan(
 fn home_skill_dirs_for_resolution() -> Vec<PathBuf> {
     let mut skill_dirs = Vec::new();
     for provider in SKILL_PROVIDER_DEFINITIONS.iter() {
-        if provider.provider == SkillProvider::Bork {
-            for dir in bork_managed_skill_dirs() {
+        if provider.provider == SkillProvider::Krust {
+            for dir in krust_managed_skill_dirs() {
                 push_unique_path(&mut skill_dirs, dir);
             }
         } else if let Some(dir) = home_skills_path(provider.provider) {

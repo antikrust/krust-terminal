@@ -1,5 +1,5 @@
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::App;
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::App;
 
 use super::*;
 use crate::StandingQueryContent;
@@ -15,7 +15,7 @@ fn snapshot_and_incremental_update_maintain_remote_standing_results() {
         let host = HostId::new("remote-host".to_string());
         let repo_path = path("/repo");
         let skill = StandingQueryContent::file(path("/repo/.agents/skills/review/SKILL.md"));
-        let rule = StandingQueryContent::file(path("/repo/BORK.md"));
+        let rule = StandingQueryContent::file(path("/repo/KRUST.md"));
         let id = RemoteRepositoryIdentifier::new(host.clone(), repo_path.clone());
         let snapshot = RepoMetadataUpdate {
             repo_path: repo_path.clone(),

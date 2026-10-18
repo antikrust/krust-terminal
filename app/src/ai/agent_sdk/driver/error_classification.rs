@@ -1,4 +1,4 @@
-use bork_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use krust_graphql::ai::{AgentTaskState, PlatformErrorCode};
 
 use super::terminal::ShareSessionError;
 use super::AgentDriverError;
@@ -9,7 +9,7 @@ use crate::server::server_api::ai::TaskStatusUpdate;
 /// suitable for reporting via `update_agent_task`.
 pub fn classify_driver_error(error: &AgentDriverError) -> (AgentTaskState, TaskStatusUpdate) {
     match error {
-        // --- Bork-side errors (task → ERROR) ---
+        // --- Krust-side errors (task → ERROR) ---
         AgentDriverError::TerminalUnavailable | AgentDriverError::InvalidRuntimeState => (
             AgentTaskState::Error,
             TaskStatusUpdate::with_error_code(
@@ -63,7 +63,7 @@ pub fn classify_driver_error(error: &AgentDriverError) -> (AgentTaskState, TaskS
                 ),
             )
         }
-        AgentDriverError::BorkDriveSyncFailed => (
+        AgentDriverError::KrustDriveSyncFailed => (
             AgentTaskState::Error,
             TaskStatusUpdate::with_error_code(
                 "Library failed to sync. Please check your network connection and try again.",
@@ -71,12 +71,12 @@ pub fn classify_driver_error(error: &AgentDriverError) -> (AgentTaskState, TaskS
             ),
         ),
         AgentDriverError::NotLoggedIn => {
-            let bin = bork_cli::binary_name().unwrap_or_else(|| "bork".to_string());
+            let bin = krust_cli::binary_name().unwrap_or_else(|| "krust".to_string());
             (
                 AgentTaskState::Error,
                 TaskStatusUpdate::with_error_code(
                     format!(
-                        "Authentication required. Log in via '{bin} login', provide an API key via '--api-key', or set the BORK_API_KEY environment variable."
+                        "Authentication required. Log in via '{bin} login', provide an API key via '--api-key', or set the KRUST_API_KEY environment variable."
                     ),
                     PlatformErrorCode::AuthenticationRequired,
                 ),

@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use sum_tree::SumTree;
-use borkui_core::SizeConstraint;
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::units::{IntoPixels, Pixels};
+use krustui_core::SizeConstraint;
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::units::{IntoPixels, Pixels};
 
 use super::ViewportState;
 use crate::render::model::RenderState;

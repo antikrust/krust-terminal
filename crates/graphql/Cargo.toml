@@ -1,7 +1,7 @@
 [package]
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 edition = "2021"
-name = "bork_graphql"
+name = "krust_graphql"
 version = "0.1.0"
 publish.workspace = true
 license.workspace = true
@@ -21,8 +21,8 @@ persistence.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-bork_core.workspace = true
-bork_graphql_schema.workspace = true
+krust_core.workspace = true
+krust_graphql_schema.workspace = true
 websocket = {path = "../websocket"}
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]

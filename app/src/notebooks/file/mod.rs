@@ -5,29 +5,29 @@ use std::sync::Arc;
 use pathfinder_geometry::vector::vec2f;
 #[cfg(not(target_family = "wasm"))]
 use remote_server::manager::RemoteServerManager;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::icons::ICON_DIMENSIONS;
-use bork_editor::model::CoreEditorModel;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::icons::ICON_DIMENSIONS;
+use krust_editor::model::CoreEditorModel;
 #[cfg(feature = "local_fs")]
-use bork_files::{FileModel, FileModelEvent};
+use krust_files::{FileModel, FileModelEvent};
 #[cfg(feature = "local_fs")]
-use bork_util::file::FileId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::path::user_friendly_path;
-use bork_util::remote_path::RemotePath;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
+use krust_util::file::FileId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::path::user_friendly_path;
+use krust_util::remote_path::RemotePath;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
 #[cfg(feature = "local_fs")]
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     Align, Container, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
     Stack, Text,
 };
-use borkui::keymap::EditableBinding;
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::EditableBinding;
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -55,12 +55,12 @@ use crate::server::telemetry::{NotebookActionEvent, NotebookTelemetryMetadata, T
 use crate::settings::FontSettings;
 use crate::terminal::model::session::Session;
 use crate::ui_components::icons::Icon;
-// `renders_in_bork_notebook_viewer` is only consumed by non-wasm views
+// `renders_in_krust_notebook_viewer` is only consumed by non-wasm views
 // (`code::view` resolves to `view.rs` off-wasm and to `wasm.rs` on-wasm, and the
 // tooltips helper is `local_fs`-gated). Gate the re-export to match, otherwise it
 // is flagged as an unused import on the wasm build where those consumers are absent.
 #[cfg(not(target_family = "wasm"))]
-pub use crate::util::openable_file_type::renders_in_bork_notebook_viewer;
+pub use crate::util::openable_file_type::renders_in_krust_notebook_viewer;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
 pub use crate::util::openable_file_type::{is_jupyter_notebook_file, is_markdown_file};
@@ -76,7 +76,7 @@ pub enum MarkdownDisplayMode {
     Raw,
 }
 
-/// View for a read-only notebook backed by a file, rather than Bork Drive.
+/// View for a read-only notebook backed by a file, rather than Krust Drive.
 pub struct FileNotebookView {
     /// The location of the open file. This is cached for displaying the title and breadcrumbs.
     location: Option<FileLocation>,
@@ -118,7 +118,7 @@ pub enum FileNotebookEvent {
     OpenFileWithTarget {
         path: PathBuf,
         target: FileTarget,
-        line_col: Option<bork_util::path::LineAndColumnArg>,
+        line_col: Option<krust_util::path::LineAndColumnArg>,
     },
 }
 
@@ -221,7 +221,7 @@ impl FileState {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -899,7 +899,7 @@ impl FileNotebookView {
                             TextAndIcon::new(
                                 TextAndIconAlignment::TextFirst,
                                 "Try again".to_string(),
-                                Icon::Refresh.to_borkui_icon(error_text_color),
+                                Icon::Refresh.to_krustui_icon(error_text_color),
                                 MainAxisSize::Min,
                                 MainAxisAlignment::Center,
                                 vec2f(16., 16.),
@@ -991,7 +991,7 @@ impl View for FileNotebookView {
     fn accessibility_contents(&self, _ctx: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new_without_help(
             format!("{} notebook", self.title()),
-            BorkA11yRole::TextRole,
+            KrustA11yRole::TextRole,
         ))
     }
 
@@ -1227,14 +1227,14 @@ impl BackingView for FileNotebookView {
             let title_text = render_pane_header_title_text(
                 title,
                 appearance,
-                borkui::text_layout::ClipConfig::start(),
+                krustui::text_layout::ClipConfig::start(),
             );
 
             // Wrap the title in a hoverable tooltip showing the full file path.
             let title_element: Box<dyn Element> =
                 if let Some(display_path) = self.file_state.path().map(|p| p.display_path()) {
                     use pathfinder_geometry::vector::vec2f;
-                    use borkui::elements::{
+                    use krustui::elements::{
                         ChildAnchor, Hoverable, OffsetPositioning, ParentAnchor,
                         ParentOffsetBounds, Stack,
                     };
@@ -1284,7 +1284,7 @@ impl BackingView for FileNotebookView {
                 title,
                 title_secondary: None,
                 title_style: None,
-                title_clip_config: borkui::text_layout::ClipConfig::start(),
+                title_clip_config: krustui::text_layout::ClipConfig::start(),
                 title_max_width: None,
                 left_of_title: None,
                 right_of_title: None,

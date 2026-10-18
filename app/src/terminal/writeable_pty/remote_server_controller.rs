@@ -8,8 +8,8 @@ use remote_server::setup::{
 };
 use remote_server::transport::Error;
 use settings::Setting;
-use bork_core::SessionId;
-use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
+use krust_core::SessionId;
+use krustui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
 use super::pty_controller::{EventLoopSender, PtyController};
 use crate::auth::auth_state::AuthStateProvider;
@@ -20,7 +20,7 @@ use crate::server::server_api::ServerApiProvider;
 use crate::settings::PrivacySettings;
 use crate::terminal::model::session::{IsSSHWrapperSession, SessionInfo};
 use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
-use crate::terminal::borkify::settings::{SshExtensionInstallMode, BorkifySettings};
+use crate::terminal::krustify::settings::{SshExtensionInstallMode, KrustifySettings};
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
 /// Per-SSH-init state machine. Encoding the state as an enum makes invalid
@@ -198,7 +198,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
         };
         let session_id = info.session_id;
         let socket_path = socket_path.clone();
-        let bork_owns_control_master = !external_control_master;
+        let krust_owns_control_master = !external_control_master;
         debug_assert!(matches!(self.state, SshInitState::Idle));
         match std::mem::replace(&mut self.state, SshInitState::Idle) {
             SshInitState::Idle => {}
@@ -224,7 +224,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
         let transport = SshTransport::new(
             socket_path,
             self.build_auth_context(ctx),
-            bork_owns_control_master,
+            krust_owns_control_master,
         );
         self.did_install = false;
         self.remote_platform = None;
@@ -279,7 +279,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
         match result {
             Ok(true) => {
                 let socket_path = transport.socket_path().clone();
-                let bork_owns_control_master = transport.bork_owns_control_master();
+                let krust_owns_control_master = transport.krust_owns_control_master();
                 let connection_label = connection_label_for_session_info(&session_info);
                 self.state = SshInitState::AwaitingConnect {
                     session_id,
@@ -289,7 +289,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
                 self.connect_session_for_current_identity(
                     session_id,
                     socket_path,
-                    bork_owns_control_master,
+                    krust_owns_control_master,
                     connection_label,
                     ctx,
                 );
@@ -310,7 +310,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
                 });
             }
             Ok(false) => {
-                let install_mode = *BorkifySettings::as_ref(ctx)
+                let install_mode = *KrustifySettings::as_ref(ctx)
                     .ssh_extension_install_mode
                     .value();
                 match install_mode {
@@ -514,7 +514,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
         match result {
             Ok(()) => {
                 let socket_path = transport.socket_path().clone();
-                let bork_owns_control_master = transport.bork_owns_control_master();
+                let krust_owns_control_master = transport.krust_owns_control_master();
                 let connection_label = connection_label_for_session_info(&session_info);
                 self.state = SshInitState::AwaitingConnect {
                     session_id,
@@ -524,7 +524,7 @@ impl<T: EventLoopSender> RemoteServerController<T> {
                 self.connect_session_for_current_identity(
                     session_id,
                     socket_path,
-                    bork_owns_control_master,
+                    krust_owns_control_master,
                     connection_label,
                     ctx,
                 );
@@ -559,13 +559,13 @@ impl<T: EventLoopSender> RemoteServerController<T> {
         &mut self,
         session_id: SessionId,
         socket_path: PathBuf,
-        bork_owns_control_master: bool,
+        krust_owns_control_master: bool,
         connection_label: String,
         ctx: &mut ModelContext<Self>,
     ) {
         let auth_context = self.build_auth_context(ctx);
         let transport =
-            SshTransport::new(socket_path, auth_context.clone(), bork_owns_control_master);
+            SshTransport::new(socket_path, auth_context.clone(), krust_owns_control_master);
         RemoteServerManager::handle(ctx).update(ctx, |mgr, ctx| {
             mgr.connect_session(
                 session_id,

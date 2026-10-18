@@ -5,8 +5,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use bork_errors::report_error;
-use bork_multi_agent_api as api;
+use krust_errors::report_error;
+use krust_multi_agent_api as api;
 
 use crate::ai::agent::task::helper::TaskExt as _;
 

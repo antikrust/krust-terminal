@@ -1,5 +1,5 @@
 # Touched-Workspace Discovery — Tech Spec
-Part of the local-to-cloud Oz handoff feature ([REMOTE-1486](https://linear.app/borkdotdev/issue/REMOTE-1486)). Full feature behavior in `PRODUCT.md`; the orchestrator and UI that consume this module live in `TECH.md`.
+Part of the local-to-cloud Oz handoff feature ([REMOTE-1486](https://linear.app/krustdotdev/issue/REMOTE-1486)). Full feature behavior in `PRODUCT.md`; the orchestrator and UI that consume this module live in `TECH.md`.
 ## Context
 The handoff flow needs two pieces of derived state from the local conversation that the existing cloud-agent infra doesn't already produce: a list of git repos and orphan files the local agent has touched (consumed by the snapshot pipeline in the sibling branch), and a repo-aware default env pick for the new cloud-mode pane's env selector. Both derivations are pure / async and have no UI of their own — they're a library that the parent stack branch wires up.
 This branch contains only the library; nothing in-tree calls it yet, so the module is gated with `#![allow(dead_code)]` and the `sort_environments_by_recency` visibility bump is removed by the parent branch when the consumers land.

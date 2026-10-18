@@ -22,7 +22,7 @@ use async_channel::Sender;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloud_object_client::ObjectPermissionUpdateResult;
-use bork_graphql::object_permissions::AccessLevel;
+use krust_graphql::object_permissions::AccessLevel;
 
 use crate::cloud_object::model::actions::{ObjectActionHistory, ObjectActionType};
 use crate::cloud_object::model::generic_string_model::GenericStringObjectId;
@@ -350,12 +350,12 @@ impl ObjectClient for FakeObjectClient {
         unimplemented!("FakeObjectClient::give_up_notebook_edit_access")
     }
 
-    async fn get_bork_drive_updates(
+    async fn get_krust_drive_updates(
         &self,
         _message_sender: Sender<ObjectUpdateMessage>,
         _stream_ready_sender: Sender<()>,
     ) -> Result<()> {
-        unimplemented!("FakeObjectClient::get_bork_drive_updates")
+        unimplemented!("FakeObjectClient::get_krust_drive_updates")
     }
 
     async fn fetch_single_cloud_object(&self, _id: ServerId) -> Result<GetCloudObjectResponse> {

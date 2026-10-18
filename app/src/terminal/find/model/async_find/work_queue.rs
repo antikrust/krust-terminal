@@ -10,7 +10,7 @@ use std::ops::RangeInclusive;
 use std::sync::{Arc, Mutex};
 
 use event_listener::Event;
-use borkui::EntityId;
+use krustui::EntityId;
 
 use super::BlockInfo;
 use crate::terminal::block_list_element::GridType;

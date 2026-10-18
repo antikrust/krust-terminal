@@ -5,17 +5,17 @@
 macro_rules! send_telemetry_sync_from_ctx {
     ($event:expr, $ctx:expr) => {
         #[allow(unused_imports)]
-        use bork_core::telemetry::TelemetryEvent as _;
+        use krust_core::telemetry::TelemetryEvent as _;
         let event = $event;
         if event.enablement_state().is_enabled() {
             let server_api =
-                <$crate::server::server_api::ServerApiProvider as borkui::SingletonEntity>::handle(
+                <$crate::server::server_api::ServerApiProvider as krustui::SingletonEntity>::handle(
                     $ctx,
                 )
                 .as_ref($ctx)
                 .get();
             let privacy_settings_snapshot =
-                <$crate::settings::PrivacySettings as borkui::SingletonEntity>::handle($ctx)
+                <$crate::settings::PrivacySettings as krustui::SingletonEntity>::handle($ctx)
                     .as_ref($ctx)
                     .get_snapshot($ctx);
             let _ = $ctx.spawn(
@@ -40,16 +40,16 @@ macro_rules! send_telemetry_sync_from_ctx {
 macro_rules! send_telemetry_sync_from_app_ctx {
     ($event:expr, $app_ctx:expr) => {
         #[allow(unused_imports)]
-        use bork_core::telemetry::TelemetryEvent as _;
+        use krust_core::telemetry::TelemetryEvent as _;
         if $event.enablement_state().is_enabled() {
             let server_api =
-                <$crate::server::server_api::ServerApiProvider as borkui::SingletonEntity>::handle(
+                <$crate::server::server_api::ServerApiProvider as krustui::SingletonEntity>::handle(
                     $app_ctx,
                 )
                 .as_ref($app_ctx)
                 .get();
             let privacy_settings_snapshot =
-                <$crate::settings::PrivacySettings as borkui::SingletonEntity>::handle($app_ctx)
+                <$crate::settings::PrivacySettings as krustui::SingletonEntity>::handle($app_ctx)
                     .as_ref($app_ctx)
                     .get_snapshot($app_ctx);
             $app_ctx
@@ -75,12 +75,12 @@ macro_rules! send_telemetry_sync_from_app_ctx {
 macro_rules! send_telemetry_on_executor {
     ($auth_state: expr, $event:expr, $executor:expr) => {
         #[allow(unused_imports)]
-        use bork_core::telemetry::TelemetryEvent as _;
+        use krust_core::telemetry::TelemetryEvent as _;
         let event = $event;
         if event.enablement_state().is_enabled() {
             let user_id = $auth_state.user_id().map(|uid| uid.as_string());
             let anonymous_id = $auth_state.anonymous_id();
-            borkui::record_telemetry_on_executor!(
+            krustui::record_telemetry_on_executor!(
                 user_id,
                 anonymous_id,
                 event.name().into(),

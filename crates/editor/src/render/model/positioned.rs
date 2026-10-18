@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use string_offset::CharOffset;
 use sum_tree::{Cursor, Dimension};
-use borkui_core::geometry::vector::Vector2F;
-use borkui_core::text_layout::Line;
-use borkui_core::units::{IntoPixels, Pixels};
+use krustui_core::geometry::vector::Vector2F;
+use krustui_core::text_layout::Line;
+use krustui_core::units::{IntoPixels, Pixels};
 
 use super::{
     BlockItem, BlockSpacing, HorizontalRuleConfig, ImageBlockConfig, LaidOutEmbeddedItem,

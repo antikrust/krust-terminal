@@ -4,9 +4,9 @@ use futures::future::{BoxFuture, FutureExt as _};
 use remote_server::proto::{
     file_context_proto, FileContextProto, ReadFileContextFile, ReadFileContextRequest,
 };
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, SingletonEntity};
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::remote_server::manager::RemoteServerManager;
 

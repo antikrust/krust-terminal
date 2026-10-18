@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use bork_editor::model::CoreEditorModel;
-use bork_editor::render::model::{
+use krust_editor::model::CoreEditorModel;
+use krust_editor::render::model::{
     BlockItem, HitTestOptions, LineCount, Location, RenderLineLocation,
 };
-use borkui::units::Pixels;
-use borkui::{AppContext, ViewContext};
+use krustui::units::Pixels;
+use krustui::{AppContext, ViewContext};
 
 use super::{CodeReviewView, CodeReviewViewState, FILE_HEADER_HEIGHT};
 use crate::code::buffer_location::LocalOrRemotePath;

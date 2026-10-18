@@ -8,22 +8,22 @@ use lazy_static::lazy_static;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::Icon;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::Icon;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Dismiss, Empty, Expanded, Flex, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, ScrollbarWidth, SelectableArea, SelectionHandle, Stack,
     Text,
 };
-use borkui::keymap::{Context, EditableBinding, FixedBinding, Keystroke};
-use borkui::ui_components::components::UiComponent as _;
-use borkui::{
+use krustui::keymap::{Context, EditableBinding, FixedBinding, Keystroke};
+use krustui::ui_components::components::UiComponent as _;
+use krustui::{
     AppContext, Element, Entity, EntityId, EventContext, ModelHandle, SingletonEntity,
     TypedActionView, UpdateView, View, ViewContext, ViewHandle,
 };
@@ -61,7 +61,7 @@ use crate::settings::InputModeSettings;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::model::block::Block;
 use crate::terminal::TerminalModel;
-use crate::themes::theme::{Blend, Fill, BorkTheme};
+use crate::themes::theme::{Blend, Fill, KrustTheme};
 use crate::ui_components::blended_colors;
 use crate::ui_components::json_tree::{
     render_json_tree, CopyJsonFn, JsonTreeColors, JsonTreeState, PathSegment, ToggleFn,
@@ -124,7 +124,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -267,7 +267,7 @@ fn first_line_ellipsized(text: &str) -> String {
 /// over the neutral surface. Deliberately NOT theme-derived — the accent may
 /// be any color (green read as "success"), and theme ANSI blues vary wildly
 /// (some are washed-out enough to render as light grey).
-fn tool_card_fill(theme: &BorkTheme) -> Fill {
+fn tool_card_fill(theme: &KrustTheme) -> Fill {
     const TOOL_BLUE: pathfinder_color::ColorU = pathfinder_color::ColorU {
         r: 59,
         g: 130,
@@ -276,7 +276,7 @@ fn tool_card_fill(theme: &BorkTheme) -> Fill {
     };
     theme
         .surface_2()
-        .blend(&Fill::Solid(bork_core::ui::color::coloru_with_opacity(
+        .blend(&Fill::Solid(krust_core::ui::color::coloru_with_opacity(
             TOOL_BLUE, 50,
         )))
 }
@@ -402,7 +402,7 @@ pub struct RequestedCommandView {
     header_mouse_state: MouseStateHandle,
     is_editing: bool,
 
-    // A requested command can either be copied directly off of one citation (such as a Bork Drive
+    // A requested command can either be copied directly off of one citation (such as a Krust Drive
     // object), derived from one or more citations, or be unrelated to any citations.
     // A given citation should only appear once per block.
     copied_from_citation: Option<AIAgentCitation>,
@@ -956,7 +956,7 @@ impl RequestedCommandView {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::Info
-                                .to_borkui_icon(
+                                .to_krustui_icon(
                                     blended_colors::text_sub(theme, theme.surface_1()).into(),
                                 )
                                 .finish(),
@@ -1954,7 +1954,7 @@ impl View for RequestedCommandView {
                     },
                     theme.nonactive_ui_detail().into(),
                     theme.active_ui_detail().into(),
-                    borkui::elements::Fill::None,
+                    krustui::elements::Fill::None,
                 )
                 .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
                 .with_propagate_mousewheel_if_not_handled(true)

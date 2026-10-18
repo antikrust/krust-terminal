@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/krust_terminal/src/model/LICENSE-ALACRITTY.
 
 #[path = "ansi_handler.rs"]
 mod ansi_handler;
@@ -28,15 +28,15 @@ use string_offset::ByteOffset;
 use unicode_general_category::{get_general_category, GeneralCategory};
 use unicode_width::UnicodeWidthChar;
 use urlocator::{UrlLocation, UrlLocator};
-use bork_core::features::FeatureFlag;
-use bork_core::semantic_selection::{SemanticSelection, SMART_SELECT_MATCH_WINDOW_LIMIT};
-use bork_core::{safe_assert, safe_assert_eq};
-use bork_errors::report_error;
-use bork_terminal::model::grid::{CellType, FlatStorage};
-pub use bork_terminal::model::TermMode;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use bork_util::path::CleanPathResult;
-use borkui::color::ColorU;
+use krust_core::features::FeatureFlag;
+use krust_core::semantic_selection::{SemanticSelection, SMART_SELECT_MATCH_WINDOW_LIMIT};
+use krust_core::{safe_assert, safe_assert_eq};
+use krust_errors::report_error;
+use krust_terminal::model::grid::{CellType, FlatStorage};
+pub use krust_terminal::model::TermMode;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krust_util::path::CleanPathResult;
+use krustui::color::ColorU;
 
 use super::displayed_output::DisplayedOutput;
 use super::grapheme_cursor::{self, GraphemeCursor};
@@ -391,8 +391,8 @@ impl AbsoluteRectangle {
 }
 
 /// Whether or not this Grid should keep track of a "Reset Grid" OSC. On Windows, ConPTY has an internal
-/// grid that needs to be kept in sync with Bork's grids. We do this via clearing the ConPTY
-/// grid before Bork starts populating a new grid.
+/// grid that needs to be kept in sync with Krust's grids. We do this via clearing the ConPTY
+/// grid before Krust starts populating a new grid.
 ///
 /// See here for more: https://docs.google.com/document/d/11fU_vVW8CH72W92QUnFJ1Kl31fGWNGbjkQQCK3TUaYk/edit?usp=sharing
 #[derive(Default, Clone, Copy)]
@@ -2669,7 +2669,7 @@ impl GridHandler {
     /// appropriately.
     #[cfg(test)]
     pub(super) fn input_at_cursor(&mut self, text: &str) {
-        use bork_terminal::model::VisiblePoint;
+        use krust_terminal::model::VisiblePoint;
 
         let columns = self.columns();
         let mut last_row = self.grid.cursor.point.row;

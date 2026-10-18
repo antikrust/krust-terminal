@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_util::path::LineAndColumnArg;
-use borkui::elements::{Align, ConstrainedBox, Container, Flex, Icon, ParentElement, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_util::path::LineAndColumnArg;
+use krustui::elements::{Align, ConstrainedBox, Container, Flex, Icon, ParentElement, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;

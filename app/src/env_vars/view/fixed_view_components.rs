@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::features::FeatureFlag;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Rect, Shrinkable, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{Element, ViewContext};
+use krustui::fonts::Weight;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{Element, ViewContext};
 
 use crate::drive::sharing::{ContentEditability, SharingAccessLevel};
 use crate::env_vars::active_env_var_collection_data::TrashStatus;
@@ -67,7 +67,7 @@ impl EnvVarCollectionView {
                     .with_children([
                         ConstrainedBox::new(
                             Icon::Trash
-                                .to_borkui_icon(appearance.theme().foreground())
+                                .to_krustui_icon(appearance.theme().foreground())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -241,7 +241,7 @@ impl EnvVarCollectionView {
                 TextAndIcon::new(
                     TextAndIconAlignment::TextFirst,
                     "Load",
-                    Icon::TerminalInput.to_borkui_icon(appearance.theme().active_ui_text_color()),
+                    Icon::TerminalInput.to_krustui_icon(appearance.theme().active_ui_text_color()),
                     MainAxisSize::Min,
                     MainAxisAlignment::SpaceBetween,
                     Vector2F::new(10., 10.),

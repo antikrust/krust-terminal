@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{Entity, EntityId, ModelContext, SingletonEntity};
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
@@ -125,7 +125,7 @@ impl WaitForEventsExecutor {
         let watchdog_tool_call_id = tool_call_id.clone();
         let watchdog_handle = ctx.spawn(
             async move {
-                borkui::r#async::Timer::after(timeout).await;
+                krustui::r#async::Timer::after(timeout).await;
             },
             move |me, (), ctx| {
                 me.fire_watchdog_if_current(

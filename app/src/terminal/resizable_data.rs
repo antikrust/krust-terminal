@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 
-use borkui::elements::{resizable_state_handle, ResizableStateHandle};
-use borkui::{Entity, SingletonEntity, WindowId};
+use krustui::elements::{resizable_state_handle, ResizableStateHandle};
+use krustui::{Entity, SingletonEntity, WindowId};
 
 use crate::app_state::WindowSnapshot;
 
 pub const DEFAULT_UNIVERSAL_SEARCH_WIDTH: f32 = 700.;
-pub const DEFAULT_BORK_AI_WIDTH: f32 = 410.;
+pub const DEFAULT_KRUST_AI_WIDTH: f32 = 410.;
 pub const DEFAULT_VOLTRON_WIDTH: f32 = 700.;
-pub const DEFAULT_BORK_DRIVE_INDEX_WIDTH: f32 = 300.;
+pub const DEFAULT_KRUST_DRIVE_INDEX_WIDTH: f32 = 300.;
 pub const DEFAULT_SETTINGS_PANEL_WIDTH: f32 = 194.;
 pub const DEFAULT_LEFT_PANEL_WIDTH: f32 = 240.;
 pub const DEFAULT_RIGHT_PANEL_WIDTH: f32 = 480.;
 /// A naming system for the ResizableStateHandles
 pub enum ModalType {
     UniversalSearchWidth,
-    BorkAIWidth,
+    KrustAIWidth,
     VoltronWidth,
-    BorkDriveIndexWidth,
+    KrustDriveIndexWidth,
     SettingsPanelWidth,
     LeftPanelWidth,
     RightPanelWidth,
@@ -27,9 +27,9 @@ pub enum ModalType {
 /// of session restoration.
 pub struct ModalSizes {
     pub universal_search_width: ResizableStateHandle,
-    pub bork_ai_width: ResizableStateHandle,
+    pub krust_ai_width: ResizableStateHandle,
     pub voltron_width: ResizableStateHandle,
-    pub bork_drive_index_width: ResizableStateHandle,
+    pub krust_drive_index_width: ResizableStateHandle,
     pub settings_panel_width: ResizableStateHandle,
     pub left_panel_width: ResizableStateHandle,
     pub right_panel_width: ResizableStateHandle,
@@ -45,15 +45,15 @@ impl ModalSizes {
         let universal_search_width = window_snapshot
             .universal_search_width
             .unwrap_or(DEFAULT_UNIVERSAL_SEARCH_WIDTH);
-        let bork_ai_width = window_snapshot
-            .bork_ai_width
-            .unwrap_or(DEFAULT_BORK_AI_WIDTH);
+        let krust_ai_width = window_snapshot
+            .krust_ai_width
+            .unwrap_or(DEFAULT_KRUST_AI_WIDTH);
         let voltron_width = window_snapshot
             .voltron_width
             .unwrap_or(DEFAULT_VOLTRON_WIDTH);
-        let bork_drive_index_width = window_snapshot
-            .bork_drive_index_width
-            .unwrap_or(DEFAULT_BORK_DRIVE_INDEX_WIDTH);
+        let krust_drive_index_width = window_snapshot
+            .krust_drive_index_width
+            .unwrap_or(DEFAULT_KRUST_DRIVE_INDEX_WIDTH);
         let settings_panel_width = DEFAULT_SETTINGS_PANEL_WIDTH;
         let left_panel_width = window_snapshot.left_panel_width.unwrap_or(left_panel_size);
         let right_panel_width = window_snapshot
@@ -62,9 +62,9 @@ impl ModalSizes {
 
         Self {
             universal_search_width: resizable_state_handle(universal_search_width),
-            bork_ai_width: resizable_state_handle(bork_ai_width),
+            krust_ai_width: resizable_state_handle(krust_ai_width),
             voltron_width: resizable_state_handle(voltron_width),
-            bork_drive_index_width: resizable_state_handle(bork_drive_index_width),
+            krust_drive_index_width: resizable_state_handle(krust_drive_index_width),
             settings_panel_width: resizable_state_handle(settings_panel_width),
             left_panel_width: resizable_state_handle(left_panel_width),
             right_panel_width: resizable_state_handle(right_panel_width),
@@ -74,9 +74,9 @@ impl ModalSizes {
     pub fn default_with_panel_defaults(left_default: f32, right_default: f32) -> Self {
         ModalSizes {
             universal_search_width: resizable_state_handle(DEFAULT_UNIVERSAL_SEARCH_WIDTH),
-            bork_ai_width: resizable_state_handle(DEFAULT_BORK_AI_WIDTH),
+            krust_ai_width: resizable_state_handle(DEFAULT_KRUST_AI_WIDTH),
             voltron_width: resizable_state_handle(DEFAULT_VOLTRON_WIDTH),
-            bork_drive_index_width: resizable_state_handle(DEFAULT_BORK_DRIVE_INDEX_WIDTH),
+            krust_drive_index_width: resizable_state_handle(DEFAULT_KRUST_DRIVE_INDEX_WIDTH),
             settings_panel_width: resizable_state_handle(DEFAULT_SETTINGS_PANEL_WIDTH),
             left_panel_width: resizable_state_handle(left_default),
             right_panel_width: resizable_state_handle(right_default),
@@ -87,9 +87,9 @@ impl ModalSizes {
     pub fn get_resizable_state_handle(&self, modal: ModalType) -> ResizableStateHandle {
         match modal {
             ModalType::UniversalSearchWidth => self.universal_search_width.clone(),
-            ModalType::BorkAIWidth => self.bork_ai_width.clone(),
+            ModalType::KrustAIWidth => self.krust_ai_width.clone(),
             ModalType::VoltronWidth => self.voltron_width.clone(),
-            ModalType::BorkDriveIndexWidth => self.bork_drive_index_width.clone(),
+            ModalType::KrustDriveIndexWidth => self.krust_drive_index_width.clone(),
             ModalType::SettingsPanelWidth => self.settings_panel_width.clone(),
             ModalType::LeftPanelWidth => self.left_panel_width.clone(),
             ModalType::RightPanelWidth => self.right_panel_width.clone(),
@@ -102,9 +102,9 @@ impl Default for ModalSizes {
     fn default() -> Self {
         Self {
             universal_search_width: resizable_state_handle(DEFAULT_UNIVERSAL_SEARCH_WIDTH),
-            bork_ai_width: resizable_state_handle(DEFAULT_BORK_AI_WIDTH),
+            krust_ai_width: resizable_state_handle(DEFAULT_KRUST_AI_WIDTH),
             voltron_width: resizable_state_handle(DEFAULT_VOLTRON_WIDTH),
-            bork_drive_index_width: resizable_state_handle(DEFAULT_BORK_DRIVE_INDEX_WIDTH),
+            krust_drive_index_width: resizable_state_handle(DEFAULT_KRUST_DRIVE_INDEX_WIDTH),
             settings_panel_width: resizable_state_handle(DEFAULT_SETTINGS_PANEL_WIDTH),
             left_panel_width: resizable_state_handle(DEFAULT_LEFT_PANEL_WIDTH),
             right_panel_width: resizable_state_handle(DEFAULT_RIGHT_PANEL_WIDTH),

@@ -17,7 +17,7 @@ machine had: one small coder model, two small general ones. The judge is
 held constant so that reviewer size is the only thing varying.
 
 ```bash
-COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock cargo test -p bork --lib -- --ignored --nocapture a_real_committee
+COMMITTEE_HOST=http://192.168.1.150:11434 COMMITTEE_FIXTURE=stock cargo test -p krust --lib -- --ignored --nocapture a_real_committee
 ```
 
 ## By mode

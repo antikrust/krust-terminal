@@ -5,10 +5,10 @@ use std::{io, process};
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use typed_path::UnixPathBuf;
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::session_id::SessionId;
-use bork_errors::report_error;
-use bork_util::path::{canonicalize_git_bash_path, is_msys2_path, bork_shell_path};
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::session_id::SessionId;
+use krust_errors::report_error;
+use krust_util::path::{canonicalize_git_bash_path, is_msys2_path, krust_shell_path};
 
 use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::bootstrap::{generate_session_id, init_shell_script_for_shell};
@@ -24,14 +24,14 @@ pub const BASH_SHELL_PATH: &str = "/bin/bash";
 pub const FISH_SHELL_PATH: &str = "/bin/fish";
 
 /// Returns an iterator of additional PATH entries to append to the shell's PATH.
-/// * On macOS, this includes `$APP_PATH/Contents/Resources/bin`, in which we put a wrapper around the Bork CLI.
+/// * On macOS, this includes `$APP_PATH/Contents/Resources/bin`, in which we put a wrapper around the Krust CLI.
 /// * On all other platforms, this is empty.
 pub fn extra_path_entries() -> impl Iterator<Item = PathBuf> {
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
             use itertools::Either;
 
-            if let Some(resources_path) = bork_core::paths::bundled_resources_dir() {
+            if let Some(resources_path) = krust_core::paths::bundled_resources_dir() {
                 let bin_path = resources_path.join("bin");
                 Either::Left(std::iter::once(bin_path))
             } else {
@@ -44,7 +44,7 @@ pub fn extra_path_entries() -> impl Iterator<Item = PathBuf> {
 }
 
 /// Returns `true` if the given `path_or_command` is a valid, executable command or path to a
-/// executable binary for one of Bork's supported shell types (bash, fish, zsh).
+/// executable binary for one of Krust's supported shell types (bash, fish, zsh).
 pub fn is_valid_path_or_command_for_supported_shell(path_or_command: &str) -> bool {
     supported_shell_path_and_type(path_or_command).is_some()
 }
@@ -65,7 +65,7 @@ pub enum ShellStarter {
 
 impl ShellStarter {
     /// Constructs a `ShellStarter` represent the shell binary (and corresponding arguments) to be
-    /// used to spawn a shell process for a new top-level Bork session. If a WSL Distribution is
+    /// used to spawn a shell process for a new top-level Krust session. If a WSL Distribution is
     /// given, then it will always construct a `ShellStarter` starting the default shell for that
     /// WSL Distribution.
     ///
@@ -159,21 +159,21 @@ impl ShellStarter {
             }
         }
 
-        if let Some(bork_shell_env_var) = bork_shell_path() {
-            let (bork_shell_path, shell_type) = supported_shell_path_and_type(&bork_shell_env_var)
+        if let Some(krust_shell_env_var) = krust_shell_path() {
+            let (krust_shell_path, shell_type) = supported_shell_path_and_type(&krust_shell_env_var)
                 .unwrap_or_else(|| {
-                    panic!("Cannot spawn shell; $BORK_SHELL_PATH is invalid: {bork_shell_env_var}")
+                    panic!("Cannot spawn shell; $KRUST_SHELL_PATH is invalid: {krust_shell_env_var}")
                 });
             let session_id = generate_session_id();
             let args = arguments_for_session_spawning_command(
-                bork_shell_path.as_path().to_string_lossy().as_ref(),
+                krust_shell_path.as_path().to_string_lossy().as_ref(),
                 shell_type,
                 session_id,
             );
             return Some(
                 ShellStarterSource::Environment(DirectShellStarter {
                     args,
-                    shell_path: bork_shell_path,
+                    shell_path: krust_shell_path,
                     shell_type,
                     session_id,
                 })
@@ -325,7 +325,7 @@ pub struct DirectShellStarter {
     shell_type: ShellType,
     shell_path: PathBuf,
 
-    /// Arguments to be passed to the shell binary at [`shell_path`] when spawning a new Bork
+    /// Arguments to be passed to the shell binary at [`shell_path`] when spawning a new Krust
     /// session.
     args: Vec<OsString>,
 
@@ -341,7 +341,7 @@ pub struct WslShellStarter {
     shell_type: ShellType,
     shell_path: String,
 
-    /// Arguments to be passed to the shell binary at [`shell_path`] when spawning a new Bork
+    /// Arguments to be passed to the shell binary at [`shell_path`] when spawning a new Krust
     /// session.
     args: Vec<OsString>,
     distribution: String,
@@ -357,10 +357,10 @@ pub enum ShellStarterSource {
     /// The user chose the path by setting a custom shell path in settings or selecting a WSL
     /// distribution.
     Override(ShellStarter),
-    /// The user chose the path to the shell by setting the `BORK_SHELL_PATH` environment variable.
+    /// The user chose the path to the shell by setting the `KRUST_SHELL_PATH` environment variable.
     Environment(DirectShellStarter),
     /// The default shell for the user (as indicated by the user's passwd entry on UNIX).
-    /// On Windows, this an ordered list of shells hardcoded _by Bork_.
+    /// On Windows, this an ordered list of shells hardcoded _by Krust_.
     UserDefault(DirectShellStarter),
     /// We weren't able to find a shell that could be bootstrapped for the user.
     Fallback {
@@ -583,7 +583,7 @@ impl WslShellStarter {
             .output();
         let home_dir =
             decode_wsl_path_result(command_result).filter(|s| !s.as_bytes().is_empty())?;
-        bork_util::path::convert_wsl_to_windows_host_path(
+        krust_util::path::convert_wsl_to_windows_host_path(
             &home_dir.to_typed_path(),
             &self.distribution,
         )
@@ -625,7 +625,7 @@ fn arguments_for_session_spawning_command(
             // The --no-rcs option executes the minimal level of startup files so we can
             // take over. The one exception: "Commands are first read from /etc/zshenv; this cannot be overridden."
             // The -g option sets the HIST_IGNORE_SPACE option, which ignores a command from history if it
-            // begins with a space. We use this to hide Bork bootstrap commands from the history.
+            // begins with a space. We use this to hide Krust bootstrap commands from the history.
             vec![
                 "-c".to_owned().into(),
                 format!("exec -a -zsh '{resolved_shell_path}' -g --no-rcs").into(),
@@ -643,8 +643,8 @@ fn arguments_for_session_spawning_command(
              * 3. The rcfile option reads the startup script from a file
              * 4. Process substitution i.e. <() send the output of a process via
              * /dev/fd/<n> (or temp files if this is unavailable) to another process
-             * 5. Send an InitShell message to Bork through escape sequences.
-             * The bork_send_message function is inlined here.
+             * 5. Send an InitShell message to Krust through escape sequences.
+             * The krust_send_message function is inlined here.
              * 6. We disable PS2 and the line editor to work around a gnarly bug involving
              * garbage being inserted in every line. We further disable PS1 and echo'ing
              * in order to show nothing to the user when we input characters. We later
@@ -688,9 +688,9 @@ fn arguments_for_session_spawning_command(
                     // we want fish to source config files for us (we don't
                     // manually do so in the bootstrap script like we do for zsh, for example).
                     // `-f no-mark-prompt` disables OSC 133 (the non-standard FinalTerm escape codes).
-                    // Fish's implementation of this breaks Bork by emitting `OSC 133 A` but not
+                    // Fish's implementation of this breaks Krust by emitting `OSC 133 A` but not
                     // `OSC 133 B` afterwards, which we have assumed. This is a temporary workaround.
-                    // See this issue: https://github.com/borkdotdev/Bork/issues/7588
+                    // See this issue: https://github.com/krustdotdev/Krust/issues/7588
                     r#"exec '{}' -f no-mark-prompt --login --init-command '{}'"#,
                     resolved_shell_path,
                     init_shell_script_for_shell(ShellType::Fish, &crate::ASSETS, session_id)
@@ -831,7 +831,7 @@ fn decode_wsl_path_result(result: io::Result<process::Output>) -> Option<UnixPat
 /// 2. A UTF-16 encoded CRLF.
 /// 3. A UTF-16 error message.
 /// See this ticket for an example and why this is necessary:
-/// https://linear.app/borkdotdev/issue/CORE-3539
+/// https://linear.app/krustdotdev/issue/CORE-3539
 fn take_until_utf16_crlf(bytes: Vec<u8>) -> Vec<u8> {
     const UTF16_CRLF: &[u8] = b"\r\0\n\0";
     match bytes

@@ -1,5 +1,5 @@
-use borkui::prelude::ChildView;
-use borkui::{Element, EntityId, View, ViewContext, ViewHandle};
+use krustui::prelude::ChildView;
+use krustui::{Element, EntityId, View, ViewContext, ViewHandle};
 
 use super::{InitStepBlock, InitStepKind};
 use crate::ai::agent::conversation::AIConversationId;
@@ -18,7 +18,7 @@ use crate::terminal::view::init_environment::InitEnvironmentBlock;
 use crate::terminal::view::ssh_remote_server_choice_view::SshRemoteServerChoiceView;
 use crate::terminal::view::ssh_remote_server_failed_banner::SshRemoteServerFailedBanner;
 use crate::terminal::view::ssh_tmux_deprecation_banner::SshTmuxDeprecationBanner;
-use crate::terminal::borkify::success_block::BorkifySuccessBlock;
+use crate::terminal::krustify::success_block::KrustifySuccessBlock;
 use crate::terminal::TerminalView;
 
 /// Specifies where to insert rich content in the blocklist.
@@ -253,8 +253,8 @@ pub enum RichContentMetadata {
     SshTmuxDeprecationBanner {
         handle: ViewHandle<SshTmuxDeprecationBanner>,
     },
-    BorkifySuccessBlock {
-        bootstrap_success_block_handle: ViewHandle<BorkifySuccessBlock>,
+    KrustifySuccessBlock {
+        bootstrap_success_block_handle: ViewHandle<KrustifySuccessBlock>,
     },
     TelemetryBanner {
         telemetry_banner_handle: ViewHandle<TelemetryBanner>,

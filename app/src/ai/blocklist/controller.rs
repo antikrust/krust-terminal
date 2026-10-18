@@ -27,11 +27,11 @@ use parking_lot::FairMutex;
 use pending_response_streams::PendingResponseStreams;
 use session_sharing_protocol::common::ParticipantId;
 pub use slash_command::*;
-use bork_core::assertions::safe_assert;
-use bork_errors::report_error;
-use bork_multi_agent_api::{message, Task, ToolType};
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::assertions::safe_assert;
+use krust_errors::report_error;
+use krust_multi_agent_api::{message, Task, ToolType};
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use self::response_stream::{ResponseStream, ResponseStreamEvent};
 use super::action_model::{BlocklistAIActionEvent, BlocklistAIActionModel};
@@ -116,11 +116,11 @@ impl SessionContext {
         &self.current_working_directory
     }
 
-    /// Returns the remote host ID if this is a `BorkifiedRemote` session with
+    /// Returns the remote host ID if this is a `KrustifiedRemote` session with
     /// a connected `RemoteServerClient`.
-    pub fn host_id(&self) -> Option<&bork_core::HostId> {
+    pub fn host_id(&self) -> Option<&krust_core::HostId> {
         match &self.session_type {
-            Some(SessionType::BorkifiedRemote { host_id }) => host_id.as_ref(),
+            Some(SessionType::KrustifiedRemote { host_id }) => host_id.as_ref(),
             Some(SessionType::Local) | None => None,
         }
     }
@@ -128,17 +128,17 @@ impl SessionContext {
     /// Returns `true` if this is a remote session (regardless of whether
     /// the remote server client is connected).
     pub fn is_remote(&self) -> bool {
-        matches!(self.session_type, Some(SessionType::BorkifiedRemote { .. }))
+        matches!(self.session_type, Some(SessionType::KrustifiedRemote { .. }))
     }
 
     pub fn skill_path_origin(&self) -> SkillPathOrigin {
         match &self.session_type {
-            Some(SessionType::BorkifiedRemote {
+            Some(SessionType::KrustifiedRemote {
                 host_id: Some(host_id),
             }) => SkillPathOrigin::Remote {
                 host_id: host_id.clone(),
             },
-            Some(SessionType::BorkifiedRemote { host_id: None }) => SkillPathOrigin::Unavailable,
+            Some(SessionType::KrustifiedRemote { host_id: None }) => SkillPathOrigin::Unavailable,
             Some(SessionType::Local) | None => SkillPathOrigin::Local,
         }
     }
@@ -332,12 +332,12 @@ pub struct BlocklistAIController {
     shared_session_state: shared_session::SharedSessionState,
 
     /// Ambient agent task ID attached to this controller. This is a property of the controller, and not an individual
-    /// conversation, because the ambient agent task driver owns the entire Bork window working on a task, and any
+    /// conversation, because the ambient agent task driver owns the entire Krust window working on a task, and any
     /// sessions within it. In the future, one task may span several sessions with background processes.
     ambient_agent_task_id: Option<AmbientAgentTaskId>,
 
     /// Per-session directory for downloading file attachments.
-    /// Set by the agent driver based on the workspace directory (e.g. `{working_dir}/.bork/attachments`).
+    /// Set by the agent driver based on the workspace directory (e.g. `{working_dir}/.krust/attachments`).
     attachments_download_dir: Option<std::path::PathBuf>,
 
     /// Pending auto-resume tasks that are waiting for network connectivity.
@@ -2889,7 +2889,7 @@ impl BlocklistAIController {
                             return;
                         };
                         match event {
-                            bork_multi_agent_api::response_event::Type::Init(init_event) => {
+                            krust_multi_agent_api::response_event::Type::Init(init_event) => {
                                 history_model.update(ctx, |history_model, ctx| {
                                     history_model.initialize_output_for_response_stream(
                                         &stream_id,
@@ -2910,7 +2910,7 @@ impl BlocklistAIController {
                                     }
                                 });
                             }
-                            bork_multi_agent_api::response_event::Type::Finished(
+                            krust_multi_agent_api::response_event::Type::Finished(
                                 finished_event,
                             ) => {
                                 self.handle_response_stream_finished(
@@ -2921,7 +2921,7 @@ impl BlocklistAIController {
                                     ctx,
                                 );
                             }
-                            bork_multi_agent_api::response_event::Type::ClientActions(actions) => {
+                            krust_multi_agent_api::response_event::Type::ClientActions(actions) => {
                                 let client_actions = actions.actions;
                                 let skill_path_origin = SessionContext::from_session(
                                     self.active_session.as_ref(ctx),
@@ -3230,7 +3230,7 @@ impl BlocklistAIController {
     pub(super) fn handle_response_stream_finished(
         &mut self,
         stream_id: &ResponseStreamId,
-        mut finished_event: bork_multi_agent_api::response_event::StreamFinished,
+        mut finished_event: krust_multi_agent_api::response_event::StreamFinished,
         conversation_id: AIConversationId,
         did_request_contain_user_query: bool,
         ctx: &mut ModelContext<Self>,
@@ -3254,7 +3254,7 @@ impl BlocklistAIController {
 
         let history_model = BlocklistAIHistoryModel::handle(ctx);
         match finished_event.reason {
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::Done(_)) | None => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::Done(_)) | None => {
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_successfully(
                         stream_id,
@@ -3264,7 +3264,7 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::Other(_)) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::Other(_)) => {
                 let error_message = "Response stream finished unexpectedly (with finish reason `Other`).";
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_with_error(
@@ -3282,7 +3282,7 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::ContextWindowExceeded(_)) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::ContextWindowExceeded(_)) => {
                 let error_message = "Input exceeded context window limit.";
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_with_error(
@@ -3295,7 +3295,7 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::QuotaLimit(_)) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::QuotaLimit(_)) => {
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_with_error(
                         RenderableAIError::QuotaLimit {
@@ -3309,7 +3309,7 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::LlmUnavailable(_)) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::LlmUnavailable(_)) => {
                 let error_message = "The LLM is currently unavailable.";
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_with_error(
@@ -3327,8 +3327,8 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::InvalidApiKey(details)) => {
-                use bork_multi_agent_api::LlmProvider;
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::InvalidApiKey(details)) => {
+                use krust_multi_agent_api::LlmProvider;
                 let is_aws_bedrock = details
                     .provider
                     .try_into()
@@ -3365,8 +3365,8 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::InternalError(
-                bork_multi_agent_api::response_event::stream_finished::InternalError{ message})) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::InternalError(
+                krust_multi_agent_api::response_event::stream_finished::InternalError{ message})) => {
                 let error_message = format!(
                     "Response stream finished unexpectedly with internal error: {message}",
                 );
@@ -3386,7 +3386,7 @@ impl BlocklistAIController {
                     );
                 });
             }
-            Some(bork_multi_agent_api::response_event::stream_finished::Reason::MaxTokenLimit(_)) => {
+            Some(krust_multi_agent_api::response_event::stream_finished::Reason::MaxTokenLimit(_)) => {
                 let error_message = "Input exceeded context window limit.";
                 history_model.update(ctx, |history_model, ctx| {
                     history_model.mark_response_stream_completed_with_error(
@@ -3458,9 +3458,9 @@ fn input_for_query(
         .and_then(|c| c.get_task(task_id))
         .and_then(|task| {
             if task.is_root_task() {
-                Some(bork_multi_agent_api::AgentType::Primary)
+                Some(krust_multi_agent_api::AgentType::Primary)
             } else if task.is_cli_subagent() {
-                Some(bork_multi_agent_api::AgentType::Cli)
+                Some(krust_multi_agent_api::AgentType::Cli)
             } else {
                 None
             }

@@ -1,19 +1,19 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use bork_errors::report_error;
-use bork_util::path::LineAndColumnArg;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krust_errors::report_error;
+use krust_util::path::LineAndColumnArg;
+use krustui::elements::{
     resizable_state_handle, ChildView, ConstrainedBox, Container, CrossAxisAlignment, DragBarSide,
     Element, Empty, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     Resizable, ResizableStateHandle, Shrinkable,
 };
-use borkui::platform::{Cursor, FilePickerConfiguration};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::{Cursor, FilePickerConfiguration};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -38,7 +38,7 @@ use crate::pane_group::{
 };
 #[cfg(feature = "local_fs")]
 use crate::server::telemetry::CodePanelsFileOpenEntrypoint;
-use crate::server::telemetry::{FileTreeSource, BorkDriveSource};
+use crate::server::telemetry::{FileTreeSource, KrustDriveSource};
 use crate::settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier};
 use crate::terminal::resizable_data::{ModalType, ResizableData};
 use crate::ui_components::buttons::{icon_button, icon_button_with_color};
@@ -59,9 +59,9 @@ use crate::workspace::view::global_search::view::{
 };
 use crate::workspace::view::{
     LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME,
-    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_BORK_DRIVE_BINDING_NAME,
+    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_KRUST_DRIVE_BINDING_NAME,
     OPEN_GLOBAL_SEARCH_BINDING_NAME, TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME,
-    TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_BORK_DRIVE_BINDING_NAME,
+    TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_KRUST_DRIVE_BINDING_NAME,
 };
 use crate::workspace::WorkspaceAction;
 use crate::TelemetryEvent;
@@ -71,7 +71,7 @@ struct MouseStateHandles {
     project_explorer_button: MouseStateHandle,
     conversation_list_view_button: MouseStateHandle,
     global_search_button: MouseStateHandle,
-    bork_drive_button: MouseStateHandle,
+    krust_drive_button: MouseStateHandle,
     tabs_button: MouseStateHandle,
     chat_button: MouseStateHandle,
     chat_detach_button: MouseStateHandle,
@@ -84,7 +84,7 @@ pub enum LeftPanelAction {
     GlobalSearch {
         entry_focus: GlobalSearchEntryFocus,
     },
-    BorkDrive,
+    KrustDrive,
     ConversationListView,
     Tabs,
     /// Fork: the global chat room, embedded in the panel (detachable into its
@@ -100,7 +100,7 @@ pub enum LeftPanelEvent {
     ActiveViewChanged(ToolPanelView),
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     FileTree(pane_group::Event),
-    BorkDrive(DrivePanelEvent),
+    KrustDrive(DrivePanelEvent),
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     OpenFileWithTarget {
         location: LocalOrRemotePath,
@@ -111,7 +111,7 @@ pub enum LeftPanelEvent {
     ShowDeleteConfirmationDialog {
         conversation_id: AIConversationId,
         conversation_title: String,
-        terminal_view_id: Option<borkui::EntityId>,
+        terminal_view_id: Option<krustui::EntityId>,
     },
 }
 
@@ -121,7 +121,7 @@ pub enum ToolPanelView {
     GlobalSearch {
         entry_focus: GlobalSearchEntryFocus,
     },
-    BorkDrive,
+    KrustDrive,
     ConversationListView,
     Tabs,
     /// Fork: the global chat room.
@@ -131,7 +131,7 @@ pub enum ToolPanelView {
 /// Encapsulates the active view state to enforce that all mutations go through
 /// `active_view_state::set`, which handles necessary side effects.
 mod active_view_state {
-    use borkui::ViewContext;
+    use krustui::ViewContext;
 
     use super::ToolPanelView;
 
@@ -171,9 +171,9 @@ mod active_view_state {
 }
 
 pub struct ToolbeltButtonConfig {
-    pub icon: bork_core::ui::Icon,
+    pub icon: krust_core::ui::Icon,
     /// Optional icon to use when the given toolbelt option is in an active state.
-    pub active_icon: Option<bork_core::ui::Icon>,
+    pub active_icon: Option<krust_core::ui::Icon>,
     pub tooltip_text: String,
     pub action: LeftPanelAction,
     /// Whether the button should be rendered with an "active" state.
@@ -192,7 +192,7 @@ pub struct LeftPanelView {
     resizable_state_handle: ResizableStateHandle,
     mouse_state_handles: MouseStateHandles,
     close_button_mouse_state: MouseStateHandle,
-    bork_drive_view: ViewHandle<DrivePanel>,
+    krust_drive_view: ViewHandle<DrivePanel>,
     conversation_list_view: ViewHandle<ConversationListView>,
     /// Fork: the embedded global chat room (same view the Chat tab uses).
     chat_view: ViewHandle<ChatPaneView>,
@@ -246,12 +246,12 @@ impl LeftPanelView {
                 resizable_state_handle(600.0)
             }
         };
-        let bork_drive_view = ctx.add_typed_action_view(DrivePanel::new);
+        let krust_drive_view = ctx.add_typed_action_view(DrivePanel::new);
         let conversation_list_view = ctx.add_typed_action_view(ConversationListView::new);
         let chat_view = ctx.add_typed_action_view(ChatPaneView::new);
 
-        ctx.subscribe_to_view(&bork_drive_view, |_me, _, event, ctx| {
-            ctx.emit(LeftPanelEvent::BorkDrive(event.clone()));
+        ctx.subscribe_to_view(&krust_drive_view, |_me, _, event, ctx| {
+            ctx.emit(LeftPanelEvent::KrustDrive(event.clone()));
         });
 
         ctx.subscribe_to_view(&conversation_list_view, |_me, _, event, ctx| match event {
@@ -271,7 +271,7 @@ impl LeftPanelView {
             }
         });
 
-        let active_view = views.first().copied().unwrap_or(ToolPanelView::BorkDrive);
+        let active_view = views.first().copied().unwrap_or(ToolPanelView::KrustDrive);
         let toolbelt_buttons = views
             .iter()
             .map(|view| Self::create_toolbelt_button_config(view, ctx))
@@ -370,7 +370,7 @@ impl LeftPanelView {
             resizable_state_handle,
             mouse_state_handles: Default::default(),
             close_button_mouse_state: Default::default(),
-            bork_drive_view,
+            krust_drive_view,
             conversation_list_view,
             chat_view,
             active_view: active_view_state::new(active_view),
@@ -475,17 +475,17 @@ impl LeftPanelView {
                     tooltip_keybinding_names,
                 }
             }
-            ToolPanelView::BorkDrive => {
+            ToolPanelView::KrustDrive => {
                 let tooltip_keybinding_names = vec![
-                    LEFT_PANEL_BORK_DRIVE_BINDING_NAME,
-                    TOGGLE_BORK_DRIVE_BINDING_NAME,
+                    LEFT_PANEL_KRUST_DRIVE_BINDING_NAME,
+                    TOGGLE_KRUST_DRIVE_BINDING_NAME,
                 ];
 
                 ToolbeltButtonConfig {
-                    icon: Icon::BorkDrive,
+                    icon: Icon::KrustDrive,
                     active_icon: None,
                     tooltip_text: "Library".to_string(),
-                    action: LeftPanelAction::BorkDrive,
+                    action: LeftPanelAction::KrustDrive,
                     render_with_active_state: false,
                     tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
                     tooltip_keybinding_names,
@@ -530,7 +530,7 @@ impl LeftPanelView {
 
     fn get_or_create_global_search_view_for_pane_group(
         &mut self,
-        pane_group_id: borkui::EntityId,
+        pane_group_id: krustui::EntityId,
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<GlobalSearchView> {
         if let Some(view) = self
@@ -556,7 +556,7 @@ impl LeftPanelView {
 
     fn get_or_create_file_tree_view_for_pane_group(
         &mut self,
-        pane_group_id: borkui::EntityId,
+        pane_group_id: krustui::EntityId,
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<FileTreeView> {
         if let Some(view) = self
@@ -614,16 +614,16 @@ impl LeftPanelView {
         self.active_view.get() == ToolPanelView::Tabs
     }
 
-    pub fn is_bork_drive_active(&self) -> bool {
-        self.active_view.get() == ToolPanelView::BorkDrive
+    pub fn is_krust_drive_active(&self) -> bool {
+        self.active_view.get() == ToolPanelView::KrustDrive
     }
 
     pub fn is_file_tree_active(&self) -> bool {
         self.active_view.get() == ToolPanelView::ProjectExplorer
     }
 
-    pub fn bork_drive_view(&self) -> &ViewHandle<DrivePanel> {
-        &self.bork_drive_view
+    pub fn krust_drive_view(&self) -> &ViewHandle<DrivePanel> {
+        &self.krust_drive_view
     }
 
     pub(crate) fn auto_expand_active_file_tree_to_most_recent_directory(
@@ -785,10 +785,10 @@ impl LeftPanelView {
                     ctx,
                 );
             }
-            ToolPanelView::BorkDrive => {
-                ctx.focus(&self.bork_drive_view);
-                self.bork_drive_view.update(ctx, |view, ctx| {
-                    view.reset_focused_index_in_bork_drive(true, ctx);
+            ToolPanelView::KrustDrive => {
+                ctx.focus(&self.krust_drive_view);
+                self.krust_drive_view.update(ctx, |view, ctx| {
+                    view.reset_focused_index_in_krust_drive(true, ctx);
                 });
             }
             ToolPanelView::ConversationListView => {
@@ -965,7 +965,7 @@ impl LeftPanelView {
                 LeftPanelAction::GlobalSearch { .. } => {
                     matches!(self.active_view.get(), ToolPanelView::GlobalSearch { .. })
                 }
-                LeftPanelAction::BorkDrive => self.active_view.get() == ToolPanelView::BorkDrive,
+                LeftPanelAction::KrustDrive => self.active_view.get() == ToolPanelView::KrustDrive,
                 LeftPanelAction::ConversationListView => {
                     self.active_view.get() == ToolPanelView::ConversationListView
                 }
@@ -985,7 +985,7 @@ impl LeftPanelView {
         let action = match &button_config.action {
             LeftPanelAction::ProjectExplorer => WorkspaceAction::OpenProjectExplorer,
             LeftPanelAction::GlobalSearch { .. } => WorkspaceAction::OpenGlobalSearch,
-            LeftPanelAction::BorkDrive => WorkspaceAction::OpenBorkDrive,
+            LeftPanelAction::KrustDrive => WorkspaceAction::OpenKrustDrive,
             LeftPanelAction::ConversationListView => WorkspaceAction::OpenConversationListView,
             LeftPanelAction::Tabs => WorkspaceAction::OpenVerticalTabsPanel,
             LeftPanelAction::Chat => WorkspaceAction::OpenChatPanel,
@@ -1100,20 +1100,20 @@ impl LeftPanelView {
                     send_telemetry_from_ctx!(TelemetryEvent::GlobalSearchOpened, ctx);
                 }
             }
-            LeftPanelAction::BorkDrive => {
-                active_view_state::set(self, ToolPanelView::BorkDrive, ctx);
+            LeftPanelAction::KrustDrive => {
+                active_view_state::set(self, ToolPanelView::KrustDrive, ctx);
                 if force_open {
                     send_telemetry_from_ctx!(
-                        TelemetryEvent::BorkDriveOpened {
-                            source: BorkDriveSource::ForceOpened,
+                        TelemetryEvent::KrustDriveOpened {
+                            source: KrustDriveSource::ForceOpened,
                             is_code_mode_v2: true
                         },
                         ctx
                     );
                 } else {
                     send_telemetry_from_ctx!(
-                        TelemetryEvent::BorkDriveOpened {
-                            source: BorkDriveSource::LeftPanelToolbelt,
+                        TelemetryEvent::KrustDriveOpened {
+                            source: KrustDriveSource::LeftPanelToolbelt,
                             is_code_mode_v2: true
                         },
                         ctx
@@ -1146,7 +1146,7 @@ impl LeftPanelView {
 
     fn deactivate_file_tree_view_for_pane_group(
         &self,
-        pane_group_id: borkui::EntityId,
+        pane_group_id: krustui::EntityId,
         ctx: &mut ViewContext<Self>,
     ) {
         if let Some(view) = self
@@ -1304,7 +1304,7 @@ impl View for LeftPanelView {
                         ctx.focus(&view);
                     }
                 }
-                ToolPanelView::BorkDrive => ctx.focus(&self.bork_drive_view),
+                ToolPanelView::KrustDrive => ctx.focus(&self.krust_drive_view),
                 ToolPanelView::ConversationListView => ctx.focus(&self.conversation_list_view),
                 ToolPanelView::Tabs => {}
                 ToolPanelView::Chat => ctx.focus(&self.chat_view),
@@ -1326,7 +1326,7 @@ impl LeftPanelView {
             LeftPanelAction::GlobalSearch { .. } => {
                 self.mouse_state_handles.global_search_button.clone()
             }
-            LeftPanelAction::BorkDrive => self.mouse_state_handles.bork_drive_button.clone(),
+            LeftPanelAction::KrustDrive => self.mouse_state_handles.krust_drive_button.clone(),
             LeftPanelAction::ConversationListView => self
                 .mouse_state_handles
                 .conversation_list_view_button
@@ -1410,9 +1410,9 @@ impl LeftPanelView {
                     Shrinkable::new(1.0, Container::new(Empty::new().finish()).finish()).finish()
                 }
             }
-            ToolPanelView::BorkDrive => Shrinkable::new(
+            ToolPanelView::KrustDrive => Shrinkable::new(
                 1.0,
-                Container::new(ChildView::new(&self.bork_drive_view).finish())
+                Container::new(ChildView::new(&self.krust_drive_view).finish())
                     .with_padding_left(2.)
                     .with_padding_right(2.)
                     .finish(),
@@ -1544,7 +1544,7 @@ impl LeftPanelView {
         })
         .finish();
 
-        if borkui::platform::is_mobile_device() {
+        if krustui::platform::is_mobile_device() {
             return panel_content;
         }
 
@@ -1569,7 +1569,7 @@ impl LeftPanelView {
 /// Where the pinned project folders are stored between sessions — a small
 /// JSON list in the app state directory, alongside the other GUI state.
 fn project_folders_store_path() -> PathBuf {
-    bork_core::paths::state_dir().join("project_folders.json")
+    krust_core::paths::state_dir().join("project_folders.json")
 }
 
 /// Loads the pinned project folders saved by a previous session. Best-effort:

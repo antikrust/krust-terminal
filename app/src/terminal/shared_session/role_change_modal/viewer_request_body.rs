@@ -1,12 +1,12 @@
 use session_sharing_protocol::common::Role;
-use borkui::elements::{
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, MainAxisAlignment, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::{BODY_PADDING, HEADER_FONT_SIZE, MODAL_PADDING, TEXT_FONT_SIZE};
 use crate::appearance::Appearance;

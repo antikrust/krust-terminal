@@ -9,10 +9,10 @@ use iso8601_duration::Duration as Iso8601Duration;
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::SessionId;
 use url::Url;
-use bork_core::ui::theme::BorkTheme;
-use bork_errors::report_error;
-use borkui::color::ColorU;
-use borkui::{SingletonEntity, View, ViewContext};
+use krust_core::ui::theme::KrustTheme;
+use krust_errors::report_error;
+use krustui::color::ColorU;
+use krustui::{SingletonEntity, View, ViewContext};
 
 use super::AmbientAgentTaskId;
 use crate::ai::artifacts::{deserialize_artifacts, Artifact};
@@ -74,7 +74,7 @@ impl AgentSource {
             AgentSource::Slack => "Slack",
             AgentSource::Cli => "CLI",
             AgentSource::ScheduledAgent => "Scheduled",
-            AgentSource::Interactive | AgentSource::CloudMode => "Bork App",
+            AgentSource::Interactive | AgentSource::CloudMode => "Krust App",
             AgentSource::WebApp => "Oz Web",
             AgentSource::GitHubAction => "GitHub Action",
         }
@@ -443,7 +443,7 @@ impl AmbientAgentTaskState {
         }
     }
 
-    pub fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &KrustTheme) -> (Icon, ColorU) {
         match self {
             AmbientAgentTaskState::Queued
             | AmbientAgentTaskState::Pending

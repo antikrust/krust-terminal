@@ -5,9 +5,9 @@ use std::sync::OnceLock;
 
 use command::blocking::Command;
 use freedesktop_desktop_entry::DesktopEntry;
-use bork_errors::report_error;
-use bork_util::path::LineAndColumnArg;
-use borkui::AppContext;
+use krust_errors::report_error;
+use krust_util::path::LineAndColumnArg;
+use krustui::AppContext;
 
 use super::Editor;
 

@@ -38,11 +38,11 @@ use session_sharing_protocol::sharer::{
     SessionTerminatedReason, TeamAccessLevelUpdateResponse, UpdatePendingUserRoleResponse,
     UpstreamMessage,
 };
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_server_client::iap::IapManager;
-use borkui::r#async::Timer;
-use borkui::{Entity, ModelContext, RequestState, RetryOption, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_server_client::iap::IapManager;
+use krustui::r#async::Timer;
+use krustui::{Entity, ModelContext, RequestState, RetryOption, SingletonEntity};
 use websocket::{Message, Sink, Stream, WebSocket, WebsocketMessage as _};
 
 use crate::auth::{AuthStateProvider, UserUid};
@@ -102,7 +102,7 @@ macro_rules! sharer_warn {
 macro_rules! sharer_error {
     ($network:expr, $($arg:tt)+) => {{
         let (session_id, source_task_id) = $network.log_context();
-        bork_errors::report_error!(
+        krust_errors::report_error!(
             anyhow::anyhow!("{}", format_args!($($arg)+)),
             extra: {
                 "session_id" => ?session_id,
@@ -376,7 +376,7 @@ impl Network {
         active_prompt: ActivePrompt,
         selection: Selection,
         input_replica_id: ReplicaId,
-        terminal_view_id: borkui::EntityId,
+        terminal_view_id: krustui::EntityId,
         universal_developer_input_context: UniversalDeveloperInputContext,
         lifetime: Lifetime,
         source: SharedSessionSource,
@@ -1645,7 +1645,7 @@ impl Network {
 
     /// Stores the event if it's an OrderedTerminalEvent, and sends the message to the server if we're connected.
     /// If we're not connected, the event will be flushed to the server once we've connected.
-    /// TODO(roland): non OrderedTerminalEvents (like bork prompt) can be dropped if we're not connected. For non OrderedTerminalEvents,
+    /// TODO(roland): non OrderedTerminalEvents (like krust prompt) can be dropped if we're not connected. For non OrderedTerminalEvents,
     /// we only need the latest value and can drop old values. We can send the latest value of needed events as part of reconnection.
     fn send_message_to_server(&mut self, message: UpstreamMessage) {
         if let UpstreamMessage::OrderedTerminalEvent(event) = &message {
@@ -1793,8 +1793,8 @@ pub fn failed_to_initialize_session_user_error(reason: &FailedToInitializeSessio
 pub fn failed_to_add_guests_user_error(reason: &FailedToAddGuestsReason) -> String {
     match reason {
         FailedToAddGuestsReason::Invalid => "Something went wrong. Please try again.",
-        FailedToAddGuestsReason::NotBorkUsers => {
-            "One or more emails were not associated with Bork accounts."
+        FailedToAddGuestsReason::NotKrustUsers => {
+            "One or more emails were not associated with Krust accounts."
         }
         FailedToAddGuestsReason::GuestAlreadyAdded => {
             "One or more emails have already been added to the session."

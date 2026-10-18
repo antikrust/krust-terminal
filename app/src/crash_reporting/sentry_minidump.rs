@@ -26,7 +26,7 @@ use sentry::protocol::{Attachment, AttachmentType};
 use sentry::{Breadcrumb, Level};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::ToSentryTags;
 
@@ -58,7 +58,7 @@ pub fn init() {
 pub fn uninit() {
     let maybe_guard = { GUARD.lock().take() };
     // Ensure we drop the `MinidumpGuard` after releasing the GUARD mutex. If there's an
-    // error stopping the server, we should log it as a Sentry breadcrumb in the Bork
+    // error stopping the server, we should log it as a Sentry breadcrumb in the Krust
     // process, but not forward the breadcrumb to the server process.
     std::mem::drop(maybe_guard);
 }
@@ -120,9 +120,9 @@ pub struct MinidumpGuard {
 pub fn run_server(socket_path: &Path) -> anyhow::Result<()> {
     // For troubleshooting, attempt to log from the minidump server. There's not much we can really
     // do if crash reporting fails, so creating the log file itself is best-effort.
-    let log_dir = bork_core::paths::state_dir().join(bork_core::paths::BORK_LOGS_DIR);
+    let log_dir = krust_core::paths::state_dir().join(krust_core::paths::KRUST_LOGS_DIR);
     let _ = std::fs::create_dir_all(&log_dir);
-    let log_path = log_dir.join("bork-minidump.log");
+    let log_path = log_dir.join("krust-minidump.log");
     let log_target = File::create(log_path)
         .map(|file| env_logger::Target::Pipe(Box::new(file)))
         .unwrap_or_else(|_| env_logger::Target::Stdout);
@@ -242,7 +242,7 @@ fn send_crash_report(details: Option<String>, dump: Option<minidumper::MinidumpB
 
         Some(Attachment {
             buffer,
-            filename: "bork-minidump.dmp".to_string(),
+            filename: "krust-minidump.dmp".to_string(),
             ty: Some(AttachmentType::Minidump),
             ..Default::default()
         })
@@ -272,7 +272,7 @@ impl MinidumpGuard {
             // On macOS, the maximum length of a socket path is fairly short, so use the temp directory.
             std::env::temp_dir().join(socket_name)
         } else {
-            bork_core::paths::state_dir().join(socket_name)
+            krust_core::paths::state_dir().join(socket_name)
         };
 
         let child =
@@ -308,7 +308,7 @@ impl MinidumpGuard {
         })
         .context("Failed to attach crash signal handler")?;
 
-        // Ensure that the crash server process can ptrace Bork.
+        // Ensure that the crash server process can ptrace Krust.
         #[cfg(target_os = "linux")]
         crash_handler.set_ptracer(Some(child.id()));
 

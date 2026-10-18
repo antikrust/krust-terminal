@@ -114,7 +114,7 @@ pub enum FailedToInitializeSessionReason {
     },
     /// The sharer does not have any remaining quota.
     NoUserQuotaRemaining { quota_type: QuotaType },
-    /// The sharer could not be attributed to a Bork user.
+    /// The sharer could not be attributed to a Krust user.
     UserNotFound,
     /// Something unexpectedly went wrong.
     InternalServerError {
@@ -317,7 +317,7 @@ impl std::fmt::Debug for ReconnectToken {
     }
 }
 
-/// The `bork` server framework uses [`FromStr`] to deserialize
+/// The `krust` server framework uses [`FromStr`] to deserialize
 /// the string from the route.
 impl std::str::FromStr for ReconnectToken {
     type Err = core::convert::Infallible;

@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use session_sharing_protocol::common::SessionId;
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, SingletonEntity};
 
 use super::{
     artifacts_match_filter, AgentManagementFilters, AgentRunDisplayStatus, ArtifactFilter,

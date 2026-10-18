@@ -5,13 +5,13 @@ use ai::index::full_source_code_embedding::manager::{
     CodebaseIndexManager, CodebaseIndexManagerEvent,
 };
 use settings::Setting;
-use bork_util::path::user_friendly_path;
-use borkui::elements::{
+use krust_util::path::user_friendly_path;
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

@@ -1,18 +1,18 @@
 ---
-name: "Run Bork locally with shell"
-command: "BORK_SHELL_PATH={{shell}} cargo run"
-description: "Runs bork with the particular shell so devs don't need to change their login shell to test a different shell locally"
+name: "Run Krust locally with shell"
+command: "KRUST_SHELL_PATH={{shell}} cargo run"
+description: "Runs krust with the particular shell so devs don't need to change their login shell to test a different shell locally"
 arguments:
   - name: shell
     description: path of shell to use
-author: Bork Team
+author: Krust Team
 shells: []
 ---
-name: "Run Bork locally with shell 2: Electric Boogaloo"
-command: "BORK_SHELL_PATH={{shell}} cargo run"
-description: "Runs bork with the particular shell so devs don't need to change their login shell to test a different shell locally"
+name: "Run Krust locally with shell 2: Electric Boogaloo"
+command: "KRUST_SHELL_PATH={{shell}} cargo run"
+description: "Runs krust with the particular shell so devs don't need to change their login shell to test a different shell locally"
 arguments:
   - name: shell
     description: path of shell to use
-author: Bork Team
+author: Krust Team
 shells: []

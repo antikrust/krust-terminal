@@ -8,27 +8,27 @@ use parking_lot::Mutex;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_editor::editor::EditorView;
-use bork_editor::render::element::lens_element::RichTextElementLens;
-use bork_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
-use bork_editor::render::model::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_editor::editor::EditorView;
+use krust_editor::render::element::lens_element::RichTextElementLens;
+use krust_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
+use krust_editor::render::model::{
     gutter_expansion_button_types, BlockLocation, ExpansionType, LineCount, RenderState,
 };
-use borkui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use borkui::elements::{
+use krustui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use krustui::elements::{
     Align, Axis, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Empty, F32Ext, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Point, Radius, ScrollData, Stack, Text, ZIndex,
 };
-use borkui::event::DispatchedEvent;
-use borkui::fonts::FamilyId;
-use borkui::ui_components::components::UiComponent;
-use borkui::units::{IntoPixels, Pixels};
-use borkui::{
+use krustui::event::DispatchedEvent;
+use krustui::fonts::FamilyId;
+use krustui::ui_components::components::UiComponent;
+use krustui::units::{IntoPixels, Pixels};
+use krustui::{
     AfterLayoutContext, AppContext, ClipBounds, Element, Event, EventContext, LayoutContext,
     ModelHandle, PaintContext, SingletonEntity, SizeConstraint,
 };
@@ -944,7 +944,7 @@ impl<V: EditorView> EditorWrapper<V> {
             line_number_config.text_color
         };
         let icon = ConstrainedBox::new(
-            borkui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
+            krustui::elements::Icon::new(expansion_type.icon().into(), icon_color).finish(),
         )
         .with_width(16.)
         .with_height(16.)
@@ -996,7 +996,7 @@ impl<V: EditorView> EditorWrapper<V> {
 
             let container = Container::new(
                 ConstrainedBox::new(
-                    borkui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
+                    krustui::elements::Icon::new(gutter_button.icon().into(), icon_color).finish(),
                 )
                 .with_width(icon_size)
                 .with_height(icon_size)
@@ -1036,7 +1036,7 @@ impl<V: EditorView> EditorWrapper<V> {
         });
 
         if enabled {
-            button = button.with_cursor(borkui::platform::Cursor::PointingHand);
+            button = button.with_cursor(krustui::platform::Cursor::PointingHand);
 
             if let Some(on_click_action) = on_click_action {
                 let action = on_click_action.clone();

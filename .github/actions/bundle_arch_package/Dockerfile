@@ -8,7 +8,7 @@ ARG USER_GID=$USER_UID
 
 # Set the packager name in makepkg.conf (so it doesn't say "Unknown Packager")
 # when someone queries package info for our packages.
-RUN echo 'PACKAGER="Bork Linux Maintainers <linux-maintainers@bork.baby>"' >> /etc/makepkg.conf
+RUN echo 'PACKAGER="Krust Linux Maintainers <linux-maintainers@krust.baby>"' >> /etc/makepkg.conf
 
 # Fetch package lists and install sudo, git, and protobuf (git is needed by
 # cargo to resolve git dependencies during license generation, and protobuf

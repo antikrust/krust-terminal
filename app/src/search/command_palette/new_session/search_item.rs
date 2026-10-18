@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use super::new_session_option::NewSessionOption;
 use crate::appearance::Appearance;

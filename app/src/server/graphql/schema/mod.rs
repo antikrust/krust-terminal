@@ -1,11 +1,11 @@
 pub mod util;
 use anyhow::{bail, Result};
 pub use util::{action_type_to_gql_action_type, object_action_history_from_gql};
-use bork_graphql::generic_string_object::GenericStringObjectFormat;
-use bork_graphql::mutations::update_generic_string_object::{
+use krust_graphql::generic_string_object::GenericStringObjectFormat;
+use krust_graphql::mutations::update_generic_string_object::{
     GenericStringObjectUpdate, UpdateGenericStringObjectResult,
 };
-use bork_graphql::object::ObjectUpdateSuccess;
+use krust_graphql::object::ObjectUpdateSuccess;
 
 use crate::cloud_object::{
     RevisionAndLastEditor, ServerAIExecutionProfile, ServerAIFact, ServerAmbientAgentEnvironment,
@@ -16,10 +16,10 @@ use crate::cloud_object::{
 use crate::server::graphql::get_user_facing_error_message;
 
 fn boxed_rejected_generic_string_object<T>(
-    object: bork_graphql::generic_string_object::GenericStringObject,
+    object: krust_graphql::generic_string_object::GenericStringObject,
 ) -> Result<Box<dyn ServerObject>>
 where
-    T: TryFromGql<GqlType = bork_graphql::generic_string_object::GenericStringObject>
+    T: TryFromGql<GqlType = krust_graphql::generic_string_object::GenericStringObject>
         + ServerObject
         + 'static,
 {

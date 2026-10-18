@@ -13,9 +13,9 @@ use instant::Instant;
 #[cfg(feature = "local_fs")]
 use repo_metadata::entry::{BudgetExceededBehavior, IgnoredPathStrategy};
 use repo_metadata::Repository;
-use bork_core::safe_error;
-use bork_errors::report_error;
-use borkui_core::{Entity, ModelContext, ModelHandle};
+use krust_core::safe_error;
+use krust_errors::report_error;
+use krustui_core::{Entity, ModelContext, ModelHandle};
 
 use super::fragment_metadata::{
     FragmentMetadata, LeafToFragmentMetadata, LeafToFragmentMetadataUpdates,
@@ -50,11 +50,11 @@ cfg_if::cfg_if! {
             matches_gitignores,
             full_source_code_embedding::sync_client::CodebaseIndexSyncOperation,
         };
-        use bork_core::send_telemetry_from_ctx;
-        use bork_core::interval_timer::IntervalTimer;
-        use borkui_core::r#async::Timer;
-        use borkui_core::SingletonEntity;
-        use bork_core::sync_queue::SyncQueue;
+        use krust_core::send_telemetry_from_ctx;
+        use krust_core::interval_timer::IntervalTimer;
+        use krustui_core::r#async::Timer;
+        use krustui_core::SingletonEntity;
+        use krust_core::sync_queue::SyncQueue;
         use sha2::Digest;
     }
 }
@@ -71,7 +71,7 @@ const MERKLE_TREE_BUILD_TIME: &str = "merkle_tree_build_time";
 const SYNC_TIME: &str = "sync_time";
 
 const SUPPORTED_IGNORES: [&str; 4] = [
-    ".borkindexingignore",
+    ".krustindexingignore",
     ".cursorignore",
     ".cursorindexingignore",
     ".codeiumignore",
@@ -597,7 +597,7 @@ impl CodebaseIndex {
         let mut flushed_fragment_result = FlushFragmentResult::default();
 
         if !changed_files.deletions().is_empty() {
-            if bork_core::channel::ChannelState::enable_debug_features() {
+            if krust_core::channel::ChannelState::enable_debug_features() {
                 log::info!(
                     "Trying to remove changed files: {:?}",
                     changed_files.deletions()
@@ -663,7 +663,7 @@ impl CodebaseIndex {
         }
 
         if !changed_files.upsertions.is_empty() {
-            if bork_core::channel::ChannelState::enable_debug_features() {
+            if krust_core::channel::ChannelState::enable_debug_features() {
                 log::debug!(
                     "Trying to upsert changed files: {:?}",
                     &changed_files.upsertions

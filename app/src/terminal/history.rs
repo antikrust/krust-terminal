@@ -4,9 +4,9 @@ use std::sync::Arc;
 use chrono::{DateTime, Local, TimeZone as _};
 use futures::Future;
 use serde::{Deserialize, Serialize};
-use bork_core::command::ExitCode;
-use bork_errors::report_error;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_core::command::ExitCode;
+use krust_errors::report_error;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::model::block::{AgentInteractionMetadata, Block, SerializedAIMetadata, SerializedBlock};
 use super::shell::ShellType;

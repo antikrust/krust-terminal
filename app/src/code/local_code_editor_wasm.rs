@@ -4,12 +4,12 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use ai::diff_validation::DiffType;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::model::LineCount;
-use bork_util::file::{FileLoadError, FileSaveError};
-use borkui::elements::MouseStateHandle;
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::model::LineCount;
+use krust_util::file::{FileLoadError, FileSaveError};
+use krustui::elements::MouseStateHandle;
+use krustui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
 
@@ -112,7 +112,7 @@ impl View for LocalCodeEditorView {
         "LocalCodeEditorView"
     }
     fn render(&self, _app: &AppContext) -> Box<dyn Element> {
-        borkui::elements::Empty::new().finish()
+        krustui::elements::Empty::new().finish()
     }
 }
 
@@ -129,5 +129,5 @@ pub fn render_unsaved_circle_with_tooltip(
     _right_margin: f32,
     _appearance: &Appearance,
 ) -> Box<dyn Element> {
-    borkui::elements::Empty::new().finish()
+    krustui::elements::Empty::new().finish()
 }

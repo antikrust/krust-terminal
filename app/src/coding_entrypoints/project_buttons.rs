@@ -2,22 +2,22 @@ use std::borrow::Cow;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::blend::Blend as _;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::blend::Blend as _;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krustui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Expanded,
     Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Radius, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::EditableBinding;
-use borkui::platform::file_picker::FilePickerError;
-use borkui::platform::{Cursor, FilePickerConfiguration};
-use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::EditableBinding;
+use krustui::platform::file_picker::FilePickerError;
+use krustui::platform::{Cursor, FilePickerConfiguration};
+use krustui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
 };
 
@@ -26,7 +26,7 @@ use crate::util::bindings::{keybinding_name_to_display_string, BindingGroup, Cus
 const BUTTON_MIN_WIDTH: f32 = 149.;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -108,7 +108,7 @@ impl ProjectButtons {
 
         Hoverable::new(mouse_state, move |state| {
             let icon_el = Container::new(
-                ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
+                ConstrainedBox::new(icon.to_krustui_icon(icon_color).finish())
                     .with_height(20.)
                     .with_width(20.)
                     .finish(),

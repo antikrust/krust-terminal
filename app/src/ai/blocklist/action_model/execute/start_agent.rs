@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use shell_words::split as split_shell_words;
-use bork_cli::agent::Harness;
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};

@@ -1,7 +1,7 @@
-//! Running app-side server for local Bork control requests.
+//! Running app-side server for local Krust control requests.
 //!
 //! This module owns the in-process listener, discovery registration, credential
-//! broker socket, and request handoff from Axum into the BorkUI model graph.
+//! broker socket, and request handoff from Axum into the KrustUI model graph.
 //! It complements `crates/local_control/src/discovery.rs`: that shared module
 //! defines how clients find and validate candidate instances, while this module
 //! creates the app-owned endpoints and publishes their routing metadata through
@@ -53,7 +53,7 @@
 //! outside this boundary.
 //!
 //! The Settings > Scripting gates used here are local-only settings backed by
-//! Bork's secure storage provider.
+//! Krust's secure storage provider.
 //!
 //! Discovery records never include raw bearer tokens: discovery only exposes
 //! endpoint metadata and credential broker references while Scripting is enabled.
@@ -93,8 +93,8 @@ use permissions::ensure_feature_enabled;
 use permissions::{ensure_action_allowed, ensure_protocol_version};
 #[cfg(unix)]
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use bork_core::channel::ChannelState;
-use borkui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
+use krust_core::channel::ChannelState;
+use krustui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
 
 #[cfg(any(unix, test))]
 const MAX_ACTIVE_CREDENTIALS: usize = 128;
@@ -111,7 +111,7 @@ struct ControlServerState {
     expected_host: String,
     credentials: Arc<Mutex<HashMap<String, CredentialGrant>>>,
 }
-/// Process-local publisher, credential broker, and HTTP server for one Bork instance.
+/// Process-local publisher, credential broker, and HTTP server for one Krust instance.
 ///
 /// Holding the runtime and registration keeps both listeners and the discovery
 /// route alive. Dropping them stops request handling and removes the app's
@@ -151,7 +151,7 @@ impl LocalControlServer {
 
     /// Starts, refreshes, or removes local-control publication as settings change.
     fn refresh_for_settings(&mut self, ctx: &mut ModelContext<Self>) -> Result<(), ControlError> {
-        if !permissions::bork_control_cli_enabled() {
+        if !permissions::krust_control_cli_enabled() {
             self.stop(ctx);
             return Ok(());
         }
@@ -403,9 +403,9 @@ async fn handle_credential_broker_connection(
 }
 
 #[cfg(unix)]
-/// Requires the kernel-reported peer UID to match Bork's effective UID.
+/// Requires the kernel-reported peer UID to match Krust's effective UID.
 ///
-/// This excludes other OS users but does not distinguish trusted Bork code from
+/// This excludes other OS users but does not distinguish trusted Krust code from
 /// arbitrary processes already running as the same user.
 fn ensure_same_user_peer(stream: &tokio::net::UnixStream) -> Result<(), ControlError> {
     ensure_peer_uid(stream, unsafe { libc::geteuid() })

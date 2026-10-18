@@ -10,16 +10,16 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ::settings::{Setting, ToggleableSetting};
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_errors::report_if_error;
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Element, Empty, Flex,
     MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     render_separator, render_sub_header, MatchData, PageTitleWidget, PageType, SettingsPageMeta,
@@ -45,7 +45,7 @@ use crate::appearance::Appearance;
 use crate::editor::{EditorView, SingleLineEditorOptions};
 use crate::settings::ai::AISettings;
 use crate::util::bindings::CustomAction;
-use borkui::windowing::WindowManager;
+use krustui::windowing::WindowManager;
 
 const VERTICAL_MARGIN: f32 = 16.;
 const OLLAMA_DOWNLOAD_URL: &str = "https://ollama.com/download";
@@ -343,7 +343,7 @@ impl OllamaPageView {
                     });
                 }
             },
-            borkui::platform::FilePickerConfiguration::new().folders_only(),
+            krustui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -536,7 +536,7 @@ impl OllamaPageView {
                         me.migration_progress = None;
                         // `apply_models_dir_override` only ever *sets*
                         // `OLLAMA_MODELS` (never clears it, in case the
-                        // user's own shell set it independently of Bork) —
+                        // user's own shell set it independently of Krust) —
                         // but resetting to default is the one place the
                         // user explicitly asked to stop overriding it, so
                         // clear the env var here too.
@@ -615,7 +615,7 @@ impl OllamaPageView {
                 me.committee_leaderboard = leaderboard;
                 me.catalog_loading = false;
                 // Sync the model picker to what's actually on disk — this
-                // catches models pulled outside Bork (e.g. `ollama pull` in a
+                // catches models pulled outside Krust (e.g. `ollama pull` in a
                 // terminal), which wouldn't otherwise appear until restart.
                 crate::ai::harness_availability::HarnessAvailabilityModel::handle(ctx).update(
                     ctx,
@@ -1105,7 +1105,7 @@ impl SettingsWidget for InstalledWidget {
                         Shrinkable::new(1.0, render_sub_header(appearance, "Installed", None))
                             .finish(),
                     )
-                    .with_child(borkui::elements::Expanded::new(1., Empty::new().finish()).finish())
+                    .with_child(krustui::elements::Expanded::new(1., Empty::new().finish()).finish())
                     .with_child(model_folder_header(view, appearance))
                     .finish(),
             )
@@ -1199,7 +1199,7 @@ impl SettingsWidget for InstalledWidget {
                             appearance.ui_font_family(),
                             appearance.ui_font_size(),
                         )
-                        .with_style(borkui::fonts::Properties::default().weight(Weight::Medium))
+                        .with_style(krustui::fonts::Properties::default().weight(Weight::Medium))
                         .finish(),
                     );
                     row.add_child(
@@ -1472,7 +1472,7 @@ impl SettingsWidget for CatalogWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(
-                            borkui::elements::Expanded::new(
+                            krustui::elements::Expanded::new(
                                 1.,
                                 ChildView::new(&view.model_input).finish(),
                             )
@@ -1683,7 +1683,7 @@ impl SettingsWidget for RemoteHostsWidget {
         column.add_child(
             Container::new(body_text(
                 "Use the models on another computer running Ollama. Give it the machine's \
-                 address and Bork will ask what it has; those models then appear in the \
+                 address and Krust will ask what it has; those models then appear in the \
                  model picker, and can serve on the committee, like models installed here. \
                  Ollama only listens to its own machine by default, so set \
                  OLLAMA_HOST=0.0.0.0 there first.",
@@ -1700,7 +1700,7 @@ impl SettingsWidget for RemoteHostsWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(
-                            borkui::elements::Expanded::new(
+                            krustui::elements::Expanded::new(
                                 1.,
                                 ChildView::new(&view.remote_input).finish(),
                             )
@@ -1757,7 +1757,7 @@ impl SettingsWidget for RemoteHostsWidget {
 
             let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
             row.add_child(
-                borkui::elements::Expanded::new(1., body_text(&host.display(), appearance))
+                krustui::elements::Expanded::new(1., body_text(&host.display(), appearance))
                     .finish(),
             );
             row.add_child(
@@ -2060,7 +2060,7 @@ impl SettingsWidget for CommitteeWidget {
             Container::new(sub_text(
                 "A small model that loses the plot repeats one finding hundreds of \
                  times, so anything past this count is dropped and the transcript says \
-                 which model went bork. Repeats are always collapsed regardless — raise \
+                 which model went krust. Repeats are always collapsed regardless — raise \
                  this only for a diff big enough to honestly hold that many distinct \
                  defects.",
                 appearance,
@@ -2250,7 +2250,7 @@ fn render_catalog_entry(
             appearance.ui_font_family(),
             appearance.ui_font_size(),
         )
-        .with_style(borkui::fonts::Properties::default().weight(Weight::Medium))
+        .with_style(krustui::fonts::Properties::default().weight(Weight::Medium))
         .finish(),
     );
     card.add_child(sub_text(&entry.description, appearance));
@@ -2402,8 +2402,8 @@ fn progress_row(fraction: f32, width: f32, appearance: &Appearance) -> Box<dyn E
             UiComponentStyles {
                 // A visible track (outline) behind the accent-filled portion,
                 // rather than the page background, so the empty part still
-                // reads as a bar. `.into()` bridges bork_core's theme `Fill`
-                // to borkui's element `Fill`.
+                // reads as a bar. `.into()` bridges krust_core's theme `Fill`
+                // to krustui's element `Fill`.
                 background: Some(theme.outline().into()),
                 foreground: Some(theme.accent().into()),
                 width: Some(width),
@@ -2571,15 +2571,15 @@ fn fit_badge(fit: Fit, appearance: &Appearance) -> Option<Box<dyn Element>> {
         Container::new(
             Text::new(label.to_string(), appearance.ui_font_family(), 10.)
                 .with_color(color.into_solid())
-                .with_style(borkui::fonts::Properties::default().weight(Weight::Bold))
+                .with_style(krustui::fonts::Properties::default().weight(Weight::Bold))
                 .finish(),
         )
         .with_horizontal_padding(6.)
         .with_vertical_padding(2.)
-        .with_corner_radius(borkui::elements::CornerRadius::with_all(
-            borkui::elements::Radius::Pixels(4.),
+        .with_corner_radius(krustui::elements::CornerRadius::with_all(
+            krustui::elements::Radius::Pixels(4.),
         ))
-        .with_border(borkui::elements::Border::all(1.).with_border_fill(color))
+        .with_border(krustui::elements::Border::all(1.).with_border_fill(color))
         .finish(),
     )
 }

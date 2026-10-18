@@ -8,7 +8,7 @@
 #   - OUT_DIR: The directory into which we should place the final package.
 #   - CARGO_TARGET_OUTPUT_DIR: The cargo target directory containing build output.
 #   - RELEASE_CHANNEL: The release channel we're bundling (e.g.: "dev").
-#   - BUNDLE_ID: The app ID for the bundle (e.g.: "bork.baby.BorkDev").
+#   - BUNDLE_ID: The app ID for the bundle (e.g.: "krust.baby.KrustDev").
 #   - EXECUTABLE_PATH: The path to the compiled executable we want to install.
 #   - BINARY_NAME: The name that the compiled executable should have on the target machine.
 #   - ARTIFACT: Which artifact to build: app or cli.
@@ -19,19 +19,19 @@ set -e
 if [ "$ARTIFACT" = "cli" ]; then
   CHANNEL_SUFFIX="${BINARY_NAME#oz}"
 else
-  CHANNEL_SUFFIX="${BINARY_NAME#bork}"
+  CHANNEL_SUFFIX="${BINARY_NAME#krust}"
 fi
-REPO_NAME="borkdotdev$CHANNEL_SUFFIX"
+REPO_NAME="krustdotdev$CHANNEL_SUFFIX"
 
 # On Linux, we keep the `-stable` suffix for stable to avoid package conflicts.
-# The binary name is still `oz`, and the repo name is still `borkdotdev`.
+# The binary name is still `oz`, and the repo name is still `krustdotdev`.
 if [ "$ARTIFACT" = "cli" -a "$RELEASE_CHANNEL" = "stable" ]; then
   CHANNEL_SUFFIX="-stable"
 fi
 
 ARTIFACT="${ARTIFACT:-app}"
 if [ "$ARTIFACT" = "app" ]; then
-  PACKAGE_NAME="bork-terminal$CHANNEL_SUFFIX"
+  PACKAGE_NAME="krust-terminal$CHANNEL_SUFFIX"
 elif [ "$ARTIFACT" = "cli" ]; then
   PACKAGE_NAME="oz$CHANNEL_SUFFIX"
 else
@@ -78,11 +78,11 @@ sed \
      s#@@BUNDLEID@@#$BUNDLE_ID#g; \
      s#@@REPO_NAME@@#$REPO_NAME#g; \
      s#@@RELEASE_CHANNEL@@#$RELEASE_CHANNEL#g" \
-    < "$WORKSPACE_ROOT_DIR/resources/linux/rpm/$ARTIFACT/bork.spec.template" \
-    > "$RPMBUILD_DIR/SPEC/bork.spec"
+    < "$WORKSPACE_ROOT_DIR/resources/linux/rpm/$ARTIFACT/krust.spec.template" \
+    > "$RPMBUILD_DIR/SPEC/krust.spec"
 
 # Build the actual package.
-fakeroot rpmbuild -v -bb "$RPMBUILD_DIR/SPEC/bork.spec" --target="$ARCH" --define "_topdir $RPMBUILD_DIR"
+fakeroot rpmbuild -v -bb "$RPMBUILD_DIR/SPEC/krust.spec" --target="$ARCH" --define "_topdir $RPMBUILD_DIR"
 
 # Copy the package to the output directory.
 RPM_NAME="$PACKAGE_NAME-$VERSION-$RELEASE.$ARCH.rpm"
@@ -92,10 +92,10 @@ cp "$RPMBUILD_DIR/RPMS/$ARCH/$RPM_NAME" "$OUT_DIR"
 # should have already been added to the gpg-agent with a preset passphrase.
 if [ "${GITHUB_ACTIONS}" == "true" ]; then
   # Import our signing key's public key into rpm so the signature can be
-  # verified. There's no real signing infra set up for Bork yet (no key
-  # published at releases.bork.baby), so this is expected to fail for now --
+  # verified. There's no real signing infra set up for Krust yet (no key
+  # published at releases.krust.baby), so this is expected to fail for now --
   # same tolerance as the rpmsign call below, which already no-ops without it.
-  sudo rpm --import https://releases.bork.baby/linux/keys/bork.asc || true
+  sudo rpm --import https://releases.krust.baby/linux/keys/krust.asc || true
 
   # We use batch mode with tty-based pin entry to ensure that the build doesn't
   # hang waiting on user input if, for some reason, we failed to preset the
@@ -105,7 +105,7 @@ if [ "${GITHUB_ACTIONS}" == "true" ]; then
   # the build.
   rpmsign \
     --verbose \
-    --addsign --key-id "linux-maintainers@bork.baby" \
+    --addsign --key-id "linux-maintainers@krust.baby" \
     --define "_gpg_sign_cmd_extra_args --batch --yes --pinentry-mode loopback" --define "_gpg_digest_algo sha256" \
     "$OUT_DIR/$RPM_NAME" \
     || true

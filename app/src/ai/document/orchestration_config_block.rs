@@ -7,18 +7,18 @@ use std::collections::HashMap;
 use ai::agent::action::RunAgentsExecutionMode;
 use ai::agent::orchestration_config::OrchestrationConfigStatus;
 use pathfinder_geometry::vector::vec2f;
-use bork_cli::agent::Harness;
-use bork_core::send_telemetry_from_ctx;
-use borkui::elements::{
+use krust_cli::agent::Harness;
+use krust_core::send_telemetry_from_ctx;
+use krustui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -438,11 +438,11 @@ impl OrchestrationConfigBlockView {
         let mut filled_defaults = false;
         if needs_host {
             // Prefer the workspace default (or the dev env-var override)
-            // over the bare "bork" fallback so self-hosted teams see
+            // over the bare "krust" fallback so self-hosted teams see
             // their default pre-selected. Mirrors the Oz webapp's
             // `HostSelector` initial-selection behavior.
             let default_host = oc::resolve_default_host_slug(ctx)
-                .unwrap_or_else(|| oc::ORCHESTRATION_BORK_WORKER_HOST.to_string());
+                .unwrap_or_else(|| oc::ORCHESTRATION_KRUST_WORKER_HOST.to_string());
             self.edit_state.set_worker_host(default_host);
             filled_defaults = true;
         }
@@ -465,7 +465,7 @@ impl OrchestrationConfigBlockView {
 
         let initial_host = match &self.edit_state.execution_mode {
             RunAgentsExecutionMode::Remote { worker_host, .. } => worker_host.as_str(),
-            RunAgentsExecutionMode::Local => oc::ORCHESTRATION_BORK_WORKER_HOST,
+            RunAgentsExecutionMode::Local => oc::ORCHESTRATION_KRUST_WORKER_HOST,
         };
         let host_handle = ctx.add_typed_action_view(HostPicker::new);
         // Paint the open menu in the overlay layer so it doesn't get covered
@@ -579,7 +579,7 @@ impl View for OrchestrationConfigBlockView {
 
         let header_row = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
-            .with_child(borkui::elements::Expanded::new(1.0, header_label).finish())
+            .with_child(krustui::elements::Expanded::new(1.0, header_label).finish())
             .with_child(
                 ui_builder
                     .switch(self.toggle_switch_state.clone())
@@ -617,9 +617,9 @@ impl View for OrchestrationConfigBlockView {
 
             // "View details" link row
             let chevron_icon = if self.details_expanded {
-                bork_core::ui::Icon::ChevronDown
+                krust_core::ui::Icon::ChevronDown
             } else {
-                bork_core::ui::Icon::ChevronRight
+                krust_core::ui::Icon::ChevronRight
             };
             let disabled_text_color = blended_colors::text_disabled(theme, theme.background());
             let details_text = Text::new(
@@ -631,7 +631,7 @@ impl View for OrchestrationConfigBlockView {
             .finish();
             let chevron = ConstrainedBox::new(
                 chevron_icon
-                    .to_borkui_icon(bork_core::ui::theme::Fill::Solid(disabled_text_color))
+                    .to_krustui_icon(krust_core::ui::theme::Fill::Solid(disabled_text_color))
                     .finish(),
             )
             .with_width(14.)
@@ -660,7 +660,7 @@ impl View for OrchestrationConfigBlockView {
             if self.details_expanded {
                 // Cloud / Local mode toggle (full width)
                 let active_seg_bg =
-                    bork_core::ui::theme::color::internal_colors::accent_overlay_2(theme);
+                    krust_core::ui::theme::color::internal_colors::accent_overlay_2(theme);
                 column.add_child(
                     Container::new(oc::render_mode_toggle(
                         self.edit_state.execution_mode.is_remote(),
@@ -714,8 +714,8 @@ impl View for OrchestrationConfigBlockView {
         let card = Container::new(column.finish())
             .with_uniform_padding(12.)
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
-            .with_background(bork_core::ui::theme::color::internal_colors::accent_overlay_1(theme))
-            .with_border(borkui::elements::Border::all(1.).with_border_fill(theme.accent()))
+            .with_background(krust_core::ui::theme::color::internal_colors::accent_overlay_1(theme))
+            .with_border(krustui::elements::Border::all(1.).with_border_fill(theme.accent()))
             .finish();
 
         let mut stack = Stack::new().with_child(card);

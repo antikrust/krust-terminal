@@ -1,16 +1,16 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::Properties;
-use borkui::fonts::Weight::Bold;
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
+use krustui::fonts::Properties;
+use krustui::fonts::Weight::Bold;
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, EntityId, EventContext, SingletonEntity};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
@@ -245,7 +245,7 @@ pub(crate) fn conversation_navigation_card_with_icon(
         if let Some((icon, color)) = icon {
             row.add_child(
                 Container::new(
-                    ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(color)).finish())
+                    ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(color)).finish())
                         .with_width(16.)
                         .with_height(16.)
                         .finish(),
@@ -265,7 +265,7 @@ pub(crate) fn conversation_navigation_card_with_icon(
             Container::new(
                 ConstrainedBox::new(
                     Icon::ChevronRight
-                        .to_borkui_icon(blended_colors::text_sub(theme, theme.background()).into())
+                        .to_krustui_icon(blended_colors::text_sub(theme, theme.background()).into())
                         .finish(),
                 )
                 .with_height(20.)

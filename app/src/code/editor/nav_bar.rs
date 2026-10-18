@@ -1,18 +1,18 @@
 #![cfg_attr(target_family = "wasm", allow(dead_code, unused_imports))]
 // Adding this file level gate as some of the code around editability is not used in WASM yet.
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use bork_editor::model::CoreEditorModel;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krust_editor::model::CoreEditorModel;
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CrossAxisAlignment, Flex, MouseStateHandle,
     ParentElement, Shrinkable,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::units::IntoPixels;
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::units::IntoPixels;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

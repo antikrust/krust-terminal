@@ -1,7 +1,7 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::elements::Align;
-use borkui_core::Element;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::elements::Align;
+use krustui_core::Element;
 
 use super::onboarding_visual::{OnboardingVisual, Pill, RectPct};
 

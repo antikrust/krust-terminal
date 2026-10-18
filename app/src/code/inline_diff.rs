@@ -5,15 +5,15 @@ use ai::diff_validation::DiffType;
 #[cfg(not(target_family = "wasm"))]
 use futures::FutureExt;
 #[cfg(not(target_family = "wasm"))]
-use bork_files::{FileModel, FileModelEvent};
-use bork_util::file::FileId;
+use krust_files::{FileModel, FileModelEvent};
+use krust_util::file::FileId;
 #[cfg(not(target_family = "wasm"))]
-use bork_util::file::FileSaveError;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::elements::ChildView;
+use krust_util::file::FileSaveError;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::elements::ChildView;
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
-use borkui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::SingletonEntity;
+use krustui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::diff_viewer::{DiffViewer, DisplayMode};
 use super::editor::scroll::{ScrollPosition, ScrollTrigger};

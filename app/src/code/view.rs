@@ -5,28 +5,28 @@ use lsp::LspManagerModel;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::icons::ICON_DIMENSIONS;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_util::path::LineAndColumnArg;
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::icons::ICON_DIMENSIONS;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_util::path::LineAndColumnArg;
 #[cfg(feature = "local_fs")]
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     AcceptedByDropTarget, Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Draggable, DraggableState, DropTarget, Empty,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, Padding, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect,
     SavePosition, Shrinkable, Stack, Text,
 };
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::keymap::EditableBinding;
-use borkui::text::point::Point;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::keymap::EditableBinding;
+use krustui::text::point::Point;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     id, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -45,7 +45,7 @@ use crate::code::{EditorTabBarDropTargetData, ImmediateSaveError, SaveOutcome, S
 use crate::editor::InteractionState;
 use crate::input::Vector2F;
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::notebooks::file::{renders_in_bork_notebook_viewer, MarkdownDisplayMode};
+use crate::notebooks::file::{renders_in_krust_notebook_viewer, MarkdownDisplayMode};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view::header::components::{
     render_pane_header_buttons, render_pane_header_title_text, render_three_column_header,
@@ -281,7 +281,7 @@ impl CodeView {
         let renders_in_notebook_viewer = self
             .tab_at(self.active_tab_index)
             .and_then(|t| t.location.as_ref())
-            .map(|loc| renders_in_bork_notebook_viewer(std::path::Path::new(&loc.display_path())))
+            .map(|loc| renders_in_krust_notebook_viewer(std::path::Path::new(&loc.display_path())))
             .unwrap_or(false);
 
         if !renders_in_notebook_viewer {
@@ -388,8 +388,8 @@ impl CodeView {
                             ctx,
                         )
                         .with_horizontal_scrollbar_appearance(
-                            borkui::elements::new_scrollable::ScrollableAppearance::new(
-                                borkui::elements::ScrollbarWidth::Auto,
+                            krustui::elements::new_scrollable::ScrollableAppearance::new(
+                                krustui::elements::ScrollbarWidth::Auto,
                                 true,
                             ),
                         )
@@ -432,8 +432,8 @@ impl CodeView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                borkui::elements::new_scrollable::ScrollableAppearance::new(
-                    borkui::elements::ScrollbarWidth::Auto,
+                krustui::elements::new_scrollable::ScrollableAppearance::new(
+                    krustui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             )
@@ -2063,11 +2063,11 @@ impl CodeView {
 
             let renders_in_notebook_viewer = local_path
                 .as_ref()
-                .map(renders_in_bork_notebook_viewer)
+                .map(renders_in_krust_notebook_viewer)
                 .unwrap_or_else(|| {
                     active_location
                         .map(|loc| {
-                            renders_in_bork_notebook_viewer(std::path::Path::new(
+                            renders_in_krust_notebook_viewer(std::path::Path::new(
                                 &loc.display_path(),
                             ))
                         })

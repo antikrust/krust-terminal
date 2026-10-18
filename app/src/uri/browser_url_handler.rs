@@ -1,9 +1,9 @@
 use url::Url;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::web_intent_parser::WebIntent;
 
-const DEFAULT_TITLE: &str = "Bork";
+const DEFAULT_TITLE: &str = "Krust";
 const BASE_APP_PATH: &str = "/app";
 
 pub fn update_browser_url(url: Option<Url>, force_redirect: bool) {
@@ -26,7 +26,7 @@ pub fn update_browser_url(url: Option<Url>, force_redirect: bool) {
                 .unwrap_or_else(|_| {
                     report_error!("Failed to replace browser state");
                     crate::platform::wasm::emit_event(
-                        crate::platform::wasm::BorkEvent::ErrorLogged {
+                        crate::platform::wasm::KrustEvent::ErrorLogged {
                             error: String::from("Failed to replace browser state"),
                         },
                     );

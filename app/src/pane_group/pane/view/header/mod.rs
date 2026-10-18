@@ -3,18 +3,18 @@ use std::fmt::Debug;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use sharing::SharedPaneContent;
-use bork_core::features::FeatureFlag;
-use bork_core::settings::Setting;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::settings::Setting;
+use krust_errors::report_error;
+use krustui::elements::{
     AcceptedByDropTarget, Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, Draggable, DraggableState, Empty, Flex, Hoverable,
     Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds,
     Radius, SavePosition, Shrinkable, Stack, Text,
 };
-use borkui::presenter::ChildView;
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -800,7 +800,7 @@ impl<P: BackingView> View for PaneHeader<P> {
         let element = match header_content {
             HeaderContent::Standard(mut header) => {
                 // On mobile devices, always show icons since hover effects don't work with touch
-                if borkui::platform::is_mobile_device() {
+                if krustui::platform::is_mobile_device() {
                     header.options.always_show_icons = true;
                 }
                 self.render_standard_header(header, app)

@@ -1,8 +1,8 @@
 //! Module to attribute AI-generated requested commands
-//! to known documents (e.g. Bork Drive objects).
+//! to known documents (e.g. Krust Drive objects).
 
 use markdown_parser::{parse_markdown, FormattedTextLine};
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::ai::agent::AIAgentCitation;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -21,16 +21,16 @@ pub(crate) fn is_command_copied_from_document(
     let command = command.trim();
 
     match document {
-        AIAgentCitation::BorkDriveObject { uid } => {
-            is_command_copied_from_bork_drive_object(command, uid, shell_type, ctx)
+        AIAgentCitation::KrustDriveObject { uid } => {
+            is_command_copied_from_krust_drive_object(command, uid, shell_type, ctx)
         }
         _ => false,
     }
 }
 
 /// Returns true iff the `command` is directly copied from the
-/// Bork Drive object identified by `object_uid`.
-fn is_command_copied_from_bork_drive_object(
+/// Krust Drive object identified by `object_uid`.
+fn is_command_copied_from_krust_drive_object(
     command: &str,
     object_uid: &str,
     shell_type: Option<ShellType>,

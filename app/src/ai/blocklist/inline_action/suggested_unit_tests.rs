@@ -3,16 +3,16 @@ use std::sync::Arc;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use bork_core::settings::ToggleableSetting;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::settings::ToggleableSetting;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     SavePosition, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -169,7 +169,7 @@ impl SuggestedUnitTestsView {
     fn render_icon(&self, appearance: &Appearance) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
-                borkui::elements::Icon::new(
+                krustui::elements::Icon::new(
                     Icon::Code2.into(),
                     appearance
                         .theme()

@@ -1,8 +1,8 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use bork_errors::{report_error, report_if_error};
-use borkui::keymap::Keystroke;
-use borkui::{AppContext, DisplayIdx, ModelContext};
+use krust_errors::{report_error, report_if_error};
+use krustui::keymap::Keystroke;
+use krustui::{AppContext, DisplayIdx, ModelContext};
 
 use crate::root_view::{update_quake_window_bounds, QuakeModePinPosition};
 use crate::settings::{

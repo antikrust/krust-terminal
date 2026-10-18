@@ -2,18 +2,18 @@ use std::ops::Range;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::elements::{
     ChildAnchor, Container, CrossAxisAlignment, Flex, Highlight, Hoverable, MouseStateHandle,
     OffsetPositioning, ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds,
     SavePosition, Stack, Text,
 };
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::platform::Cursor;
-use borkui_core::text_layout::TextStyle;
-use borkui_core::ui_components::components::UiComponent;
-use borkui_core::{
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::platform::Cursor;
+use krustui_core::text_layout::TextStyle;
+use krustui_core::ui_components::components::UiComponent;
+use krustui_core::{
     AfterLayoutContext, AppContext, Element, LayoutContext, SingletonEntity, SizeConstraint,
     WeakViewHandle,
 };
@@ -164,8 +164,8 @@ impl RenderableBlock for RenderableHiddenSection {
     fn dispatch_event(
         &mut self,
         _model: &RenderState,
-        event: &borkui_core::event::DispatchedEvent,
-        ctx: &mut borkui_core::EventContext,
+        event: &krustui_core::event::DispatchedEvent,
+        ctx: &mut krustui_core::EventContext,
         app: &AppContext,
     ) -> bool {
         self.element.dispatch_event(event, ctx, app)

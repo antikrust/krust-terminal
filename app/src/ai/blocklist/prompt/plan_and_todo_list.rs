@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Fill, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, Stack, Text, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity as _, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -207,7 +207,7 @@ impl PlanAndTodoListView {
         let icon_element = Container::new(
             ConstrainedBox::new(
                 Icon::Compass
-                    .to_borkui_icon(if self.is_in_agent_view {
+                    .to_krustui_icon(if self.is_in_agent_view {
                         theme.sub_text_color(blended_colors::neutral_1(theme).into())
                     } else {
                         internal_colors::fg_overlay_7(appearance.theme())
@@ -430,8 +430,8 @@ impl PlanAndTodoListView {
                     OffsetPositioning::offset_from_save_position_element(
                         TODO_BUTTON_SAVE_POSITION_ID,
                         vec2f(0., 4.),
-                        borkui::elements::PositionedElementOffsetBounds::WindowByPosition,
-                        borkui::elements::PositionedElementAnchor::BottomLeft,
+                        krustui::elements::PositionedElementOffsetBounds::WindowByPosition,
+                        krustui::elements::PositionedElementAnchor::BottomLeft,
                         ChildAnchor::TopLeft,
                     )
                 }
@@ -439,8 +439,8 @@ impl PlanAndTodoListView {
                     OffsetPositioning::offset_from_save_position_element(
                         TODO_BUTTON_SAVE_POSITION_ID,
                         vec2f(0., -4.),
-                        borkui::elements::PositionedElementOffsetBounds::WindowByPosition,
-                        borkui::elements::PositionedElementAnchor::TopLeft,
+                        krustui::elements::PositionedElementOffsetBounds::WindowByPosition,
+                        krustui::elements::PositionedElementAnchor::TopLeft,
                         ChildAnchor::BottomLeft,
                     )
                 }
@@ -464,7 +464,7 @@ impl View for PlanAndTodoListView {
         "PlanAndTodoListView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
 
         // Calculate icon size

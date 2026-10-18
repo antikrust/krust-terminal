@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use style::{DENIED_MODAL_WIDTH, MODAL_HEIGHT, MODAL_WIDTH};
-use bork_core::ui::appearance::Appearance;
-use borkui::keymap::FixedBinding;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krustui::keymap::FixedBinding;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -55,7 +55,7 @@ pub enum ShareSessionModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

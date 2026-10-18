@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use bork_core::features::FeatureFlag;
-use bork_graphql::object_permissions::OwnerType;
-use bork_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_graphql::object_permissions::OwnerType;
+use krust_graphql::queries::api_keys::ApiKeyProperties as GqlApiKeyProperties;
+use krustui::elements::{
     resizable_state_handle, Align, Border, ChildView, ConstrainedBox, Container,
     CrossAxisAlignment, DragBarSide, Element, Empty, Expanded, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, Padding, ParentElement, Resizable,
     ResizableStateHandle, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::platform::{
     CreateApiKeyModal, CreateApiKeyModalEvent, CreateApiKeyModalViewState, ExpireApiKeyButton,
@@ -40,7 +40,7 @@ use crate::util::time_format::format_approx_duration_from_now_utc;
 
 const MODAL_WIDTH: f32 = 460.;
 const MODAL_HEIGHT: f32 = 320.;
-const API_KEY_DOCS_URL: &str = "https://therob.lol/bork-terminal/help/reference/cli/api-keys";
+const API_KEY_DOCS_URL: &str = "https://therob.lol/krust-terminal/help/reference/cli/api-keys";
 const API_KEY_NAME_COLUMN_DEFAULT_WIDTH: f32 = 220.;
 const API_KEY_NAME_COLUMN_MIN_WIDTH: f32 = 120.;
 const API_KEY_KEY_COLUMN_WIDTH: f32 = 120.;
@@ -200,7 +200,7 @@ impl PlatformPageView {
                         right: 24.,
                     }),
                     font_size: Some(16.),
-                    font_weight: Some(borkui::fonts::Weight::Bold),
+                    font_weight: Some(krustui::fonts::Weight::Bold),
                     ..Default::default()
                 })
                 .with_body_style(UiComponentStyles {
@@ -847,7 +847,7 @@ impl PlatformPageWidget {
                     .with_child(
                         ConstrainedBox::new(
                             Icon::Key
-                                .to_borkui_icon(appearance.theme().nonactive_ui_text_color())
+                                .to_krustui_icon(appearance.theme().nonactive_ui_text_color())
                                 .finish(),
                         )
                         .with_width(48.)

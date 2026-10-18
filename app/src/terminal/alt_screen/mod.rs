@@ -1,5 +1,5 @@
 use settings::Setting as _;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::alt_screen_reporting::AltScreenReporting;
 use super::model::grid::grid_handler::TermMode;

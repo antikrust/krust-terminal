@@ -1,19 +1,19 @@
 use asset_macro::bundled_or_fetched_asset;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Align, Border, CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DropShadow, Flex, FormattedTextElement, Image, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::FixedBinding;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::FixedBinding;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -49,7 +49,7 @@ const LEFT_PANEL_WIDTH: f32 = 330.;
 const RIGHT_PANEL_WIDTH: f32 = 325.;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -110,7 +110,7 @@ impl CodexModal {
 
         // Title
         let title = FormattedTextElement::from_str(
-            "Use Codex models in Bork",
+            "Use Codex models in Krust",
             appearance.ui_font_family(),
             24.,
         )

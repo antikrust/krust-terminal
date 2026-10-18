@@ -1,7 +1,7 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use borkui::platform::SystemTheme;
-use borkui::AppContext;
+use krustui::platform::SystemTheme;
+use krustui::AppContext;
 
 use crate::themes::theme::{RespectSystemTheme, SelectedSystemThemes, ThemeKind};
 

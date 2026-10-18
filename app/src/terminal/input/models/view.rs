@@ -3,11 +3,11 @@ use std::sync::LazyLock;
 
 use ai::api_keys::{ApiKeyManager, ApiKeyManagerEvent};
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{ChildView, MainAxisSize};
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{ChildView, MainAxisSize};
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity as _, View, ViewContext,
     ViewHandle,
 };
@@ -164,7 +164,7 @@ impl InlineModelSelectorView {
                     .on_click(|ctx| {
                         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: String::new(),
-                            section: Some(SettingsSection::BorkAgent),
+                            section: Some(SettingsSection::KrustAgent),
                         });
                     })
             });
@@ -536,7 +536,7 @@ impl View for InlineModelSelectorView {
         "InlineModelSelectorView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

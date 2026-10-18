@@ -6,13 +6,13 @@ use itertools::Itertools as _;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use version_compare::Version;
-use bork::integration_testing::terminal::util::{
+use krust::integration_testing::terminal::util::{
     current_shell_starter_and_version, default_histfile_directory, ExpectedOutput,
 };
-use bork::integration_testing::view_getters;
-use bork::terminal::shell;
-use bork::terminal::shell::ShellType;
-use borkui_core::{App, WindowId};
+use krust::integration_testing::view_getters;
+use krust::terminal::shell;
+use krust::terminal::shell::ShellType;
+use krustui_core::{App, WindowId};
 
 use crate::builder::cargo_target_tmpdir;
 
@@ -130,7 +130,7 @@ pub fn write_rc_files_for_test<P, C>(
     }
 }
 
-/// Writes the same `rc_contents` for all possible shell types supported by Bork.
+/// Writes the same `rc_contents` for all possible shell types supported by Krust.
 pub fn write_all_rc_files_for_test<P, C>(dir: P, rc_contents: C)
 where
     P: AsRef<Path>,

@@ -4,8 +4,8 @@
 //! rendering an empty face.
 
 use settings::Setting as _;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::{App, SingletonEntity as _};
+use krustui::assets::asset_cache::AssetSource;
+use krustui::{App, SingletonEntity as _};
 
 use super::*;
 use crate::test_util::settings::initialize_settings_for_tests;

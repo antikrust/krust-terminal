@@ -1,25 +1,25 @@
 use settings::{RespectUserSyncSetting, SyncToCloud};
-use bork::features::FeatureFlag;
-use bork::integration_testing::notebook::{
+use krust::features::FeatureFlag;
+use krust::integration_testing::notebook::{
     assert_cloud_preference_exists, assert_notebook_contents, assert_notebook_metadata_revision,
 };
-use bork::integration_testing::step::{
+use krust::integration_testing::step::{
     new_step_with_default_assertions, new_step_with_default_assertions_for_pane,
 };
-use bork::integration_testing::tab::assert_pane_title;
-use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use bork::integration_testing::view_getters::single_terminal_view_for_tab;
-use bork::integration_testing::workflow::assert_workflow_metadata_revision;
-use bork::integration_testing::{self};
-use bork::settings::Preference;
-use bork::sqlite_testing::set_user_and_hostname_for_blocks;
-use bork::terminal::model::session::get_local_hostname;
-use bork::terminal::model::terminal_model::BlockIndex;
-use bork::terminal::shell::ShellType;
-use bork::terminal::{History, ShellHost, TerminalView};
-use bork::workspace::Workspace;
-use borkui_core::integration::{AssertionOutcome, TestStep};
-use borkui_core::{async_assert_eq, SingletonEntity, ViewHandle};
+use krust::integration_testing::tab::assert_pane_title;
+use krust::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use krust::integration_testing::view_getters::single_terminal_view_for_tab;
+use krust::integration_testing::workflow::assert_workflow_metadata_revision;
+use krust::integration_testing::{self};
+use krust::settings::Preference;
+use krust::sqlite_testing::set_user_and_hostname_for_blocks;
+use krust::terminal::model::session::get_local_hostname;
+use krust::terminal::model::terminal_model::BlockIndex;
+use krust::terminal::shell::ShellType;
+use krust::terminal::{History, ShellHost, TerminalView};
+use krust::workspace::Workspace;
+use krustui_core::integration::{AssertionOutcome, TestStep};
+use krustui_core::{async_assert_eq, SingletonEntity, ViewHandle};
 
 use super::{new_builder, Builder, TEST_ONLY_ASSETS};
 use crate::util::{get_local_user, tab_title_in_home_dir};
@@ -76,7 +76,7 @@ pub fn test_session_restoration() -> Builder {
 /// always get added. The mock data for this case looks like this:
 /// | command            | output       | shell | user       | host          |
 /// | ------------------ | ------------ | ----- | ---------- | ------------- |
-/// | echo $TERM_PROGRAM | BorkTerminal | zsh   | local:user | local:host    |
+/// | echo $TERM_PROGRAM | KrustTerminal | zsh   | local:user | local:host    |
 /// | pwd                | /            | bash  | local:user | local:host    |
 /// | uname              | Linux        | zsh   | andy       | ubuntu-test   |
 /// | mkdir secrets      | secrets      | NULL  | NULL       | NULL          |
@@ -416,8 +416,8 @@ pub fn test_restore_snapshot_with_test_json_object() -> Builder {
 
 /// Tests restoring a snapshot that has multiple objects with the same shareable_object_id
 /// in the metadata table.  This test verifies a regression introduced in
-/// https://github.com/borkdotdev/bork-internal/pull/7406 and fixed in
-/// https://github.com/borkdotdev/bork-internal/pull/7480
+/// https://github.com/krustdotdev/krust-internal/pull/7406 and fixed in
+/// https://github.com/krustdotdev/krust-internal/pull/7480
 ///
 /// The two objects have server ids Workflow-ftv7on4HwTeixO2xF5hmKf and Notebook-Flbu686H9XDCHZlYRriVpB
 /// and shareable_object_id 2.

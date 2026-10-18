@@ -3,31 +3,31 @@ use std::sync::LazyLock;
 
 use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use bork_search_core::inline_menu::{InlineMenuResultsUpdate, InlineMenuSelection};
-use borkui::color::ColorU;
-use borkui::elements::drag_resize::drag_resize_handle;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krust_search_core::inline_menu::{InlineMenuResultsUpdate, InlineMenuSelection};
+use krustui::color::ColorU;
+use krustui::elements::drag_resize::drag_resize_handle;
+use krustui::elements::{
     ChildAnchor, Clipped, DispatchEventResult, DragResizeElement, DragResizeHandle, EventHandler,
     Expanded, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, ResizeEndFn,
     ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, SizeConstraintCondition,
     SizeConstraintSwitch, Stack, UniformList, UniformListState,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::prelude::{
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::prelude::{
     Align, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, SavePosition,
     Text,
 };
-use borkui::scene::{Border, CornerRadius, Radius};
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::scene::{Border, CornerRadius, Radius};
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -132,8 +132,8 @@ impl<A: InlineMenuAction> QueryResultRendererExt for QueryResultRenderer<A> {
         is_selected: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use borkui::elements::{DispatchEventResult, EventHandler, Hoverable};
-        use borkui::platform::Cursor;
+        use krustui::elements::{DispatchEventResult, EventHandler, Hoverable};
+        use krustui::platform::Cursor;
 
         if self.search_result.is_static_separator() {
             return self.render_inline_with_highlight_state(ItemHighlightState::Default, true, app);
@@ -190,7 +190,7 @@ impl<A: InlineMenuAction> QueryResultRendererExt for QueryResultRenderer<A> {
         is_static_separator: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use borkui::elements::{MainAxisSize, Shrinkable};
+        use krustui::elements::{MainAxisSize, Shrinkable};
 
         let appearance = Appearance::as_ref(app);
         let icon = self.search_result.render_icon(highlight_state, appearance);
@@ -828,7 +828,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuView<A, T> {
         let drag_indicator = Hoverable::new(self.drag_indicator_mouse_state.clone(), |_| {
             ConstrainedBox::new(
                 Icon::DragIndicator
-                    .to_borkui_icon(Fill::Solid(
+                    .to_krustui_icon(Fill::Solid(
                         theme.disabled_text_color(header_bg.into()).into_solid(),
                     ))
                     .finish(),
@@ -932,7 +932,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuView<A, T> {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();

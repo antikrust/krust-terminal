@@ -1,11 +1,11 @@
 use ai::api_keys::ApiKeyManager;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, HyperlinkLens, MainAxisAlignment, MainAxisSize, ParentElement,
 };
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::ai::blocklist::error_color;
 use crate::ai::AIRequestUsageModel;
@@ -306,7 +306,7 @@ impl PromptAlertView {
                     } else {
                         text_fragments.push(FormattedTextFragment::hyperlink(
                             CONTACT_SUPPORT_TEXT,
-                            "mailto:support@bork.baby".to_owned(),
+                            "mailto:support@krust.baby".to_owned(),
                         ));
                     }
                 } else {
@@ -330,7 +330,7 @@ impl PromptAlertView {
                         "use your own API keys",
                         WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "api".to_string(),
-                            section: Some(SettingsSection::BorkAgent),
+                            section: Some(SettingsSection::KrustAgent),
                         },
                     ));
                 }
@@ -437,7 +437,7 @@ impl View for PromptAlertView {
             chip_row.add_child(
                 ConstrainedBox::new(
                     Icon::AlertTriangle
-                        .to_borkui_icon(error_color(appearance.theme()).into())
+                        .to_krustui_icon(error_color(appearance.theme()).into())
                         .finish(),
                 )
                 .with_width(icon_size)

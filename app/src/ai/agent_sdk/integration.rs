@@ -1,12 +1,12 @@
 use futures::future;
-use bork_cli::integration::{CreateIntegrationArgs, IntegrationCommand, UpdateIntegrationArgs};
-use bork_cli::provider::ProviderType;
-use bork_cli::GlobalOptions;
-use bork_graphql::mutations::create_simple_integration::CreateSimpleIntegrationOutput;
-use bork_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use bork_graphql::queries::get_simple_integrations::SimpleIntegrationsOutput;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::integration::{CreateIntegrationArgs, IntegrationCommand, UpdateIntegrationArgs};
+use krust_cli::provider::ProviderType;
+use krust_cli::GlobalOptions;
+use krust_graphql::mutations::create_simple_integration::CreateSimpleIntegrationOutput;
+use krust_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use krust_graphql::queries::get_simple_integrations::SimpleIntegrationsOutput;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::common::{EnvironmentChoice, ResolveConfigurationError};
 use super::integration_output;
@@ -65,8 +65,8 @@ impl IntegrationCommandRunner {
 
     fn create(&self, args: CreateIntegrationArgs, ctx: &mut ModelContext<Self>) {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let bork_drive_sync_future = super::common::refresh_bork_drive(ctx);
-        let setup_future = future::try_join(refresh_future, bork_drive_sync_future);
+        let krust_drive_sync_future = super::common::refresh_krust_drive(ctx);
+        let setup_future = future::try_join(refresh_future, krust_drive_sync_future);
 
         ctx.spawn(setup_future, move |runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -377,8 +377,8 @@ impl IntegrationCommandRunner {
 
     fn update(&self, args: UpdateIntegrationArgs, ctx: &mut ModelContext<Self>) {
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let bork_drive_sync_future = super::common::refresh_bork_drive(ctx);
-        let setup_future = future::try_join(refresh_future, bork_drive_sync_future);
+        let krust_drive_sync_future = super::common::refresh_krust_drive(ctx);
+        let setup_future = future::try_join(refresh_future, krust_drive_sync_future);
 
         ctx.spawn(setup_future, move |runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -521,7 +521,7 @@ impl IntegrationCommandRunner {
     }
 }
 
-impl borkui::Entity for IntegrationCommandRunner {
+impl krustui::Entity for IntegrationCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for IntegrationCommandRunner {}

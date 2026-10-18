@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::standardized_path::StandardizedPath;
 
 use crate::entry::{DirectoryEntry, Entry, FileId, FileMetadata};
 use crate::file_tree_store::{FileTreeEntry, FileTreeEntryState};

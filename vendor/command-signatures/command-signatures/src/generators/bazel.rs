@@ -1,5 +1,5 @@
 use regex::Regex;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResultsCollector, Importance,
     Order, Priority, Suggestion,
 };

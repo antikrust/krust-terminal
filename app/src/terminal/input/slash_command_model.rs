@@ -1,9 +1,9 @@
 use ai::skills::SkillReference;
 use input_classifier::InputType;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_search_core::inline_menu::InputDrivenInlineMenuLifecycle;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_search_core::inline_menu::InputDrivenInlineMenuLifecycle;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::blocklist::{
     BlocklistAIInputEvent, BlocklistAIInputModel, InputTypeAutoDetectionSource,

@@ -1,5 +1,5 @@
-use bork_util::path::LineAndColumnArg;
-use borkui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use krust_util::path::LineAndColumnArg;
+use krustui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use super::{
     DetachType, PaneConfiguration, PaneContent, PaneId, PaneView, ShareableLink, ShareableLinkError,

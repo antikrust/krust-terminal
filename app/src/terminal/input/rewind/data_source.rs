@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use ai::agent::action_result::RequestFileEditsResult;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use borkui::{AppContext, Entity, SingletonEntity};
+use krustui::{AppContext, Entity, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{AIAgentActionResultType, AIAgentExchangeId, AIAgentInput};

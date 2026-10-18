@@ -1,4 +1,4 @@
-use borkui::AppContext;
+use krustui::AppContext;
 
 use super::search_item::DiffSetSearchItem;
 use crate::code_review::diff_state::DiffMode;
@@ -53,6 +53,6 @@ impl SyncDataSource for DiffSetDataSource {
     }
 }
 
-impl borkui::Entity for DiffSetDataSource {
+impl krustui::Entity for DiffSetDataSource {
     type Event = ();
 }

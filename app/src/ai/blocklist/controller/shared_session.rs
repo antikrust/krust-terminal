@@ -5,12 +5,12 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use session_sharing_protocol::common::{AgentAttachment, ParticipantId, ServerConversationToken};
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_multi_agent_api::client_action::Action;
-use bork_multi_agent_api::message::Message;
-use bork_multi_agent_api::response_event::{stream_finished, ClientActions};
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_multi_agent_api::client_action::Action;
+use krust_multi_agent_api::message::Message;
+use krust_multi_agent_api::response_event::{stream_finished, ClientActions};
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::response_stream::ResponseStreamId;
 use super::{BlocklistAIController, RequestInput, SessionContext};
@@ -89,20 +89,20 @@ impl BlocklistAIController {
     /// Apply agent session events to the current conversation state.
     pub fn handle_shared_session_response_event(
         &mut self,
-        resp: bork_multi_agent_api::ResponseEvent,
+        resp: krust_multi_agent_api::ResponseEvent,
         ctx: &mut ModelContext<Self>,
     ) {
         let Some(kind) = resp.r#type else {
             return;
         };
         match kind {
-            bork_multi_agent_api::response_event::Type::Init(init) => {
+            krust_multi_agent_api::response_event::Type::Init(init) => {
                 self.on_shared_init(init, ctx)
             }
-            bork_multi_agent_api::response_event::Type::ClientActions(actions) => {
+            krust_multi_agent_api::response_event::Type::ClientActions(actions) => {
                 self.on_shared_client_actions(actions, ctx)
             }
-            bork_multi_agent_api::response_event::Type::Finished(finished) => {
+            krust_multi_agent_api::response_event::Type::Finished(finished) => {
                 self.on_shared_finished(finished, ctx);
             }
         }
@@ -110,7 +110,7 @@ impl BlocklistAIController {
 
     fn on_shared_init(
         &mut self,
-        init_event: bork_multi_agent_api::response_event::StreamInit,
+        init_event: krust_multi_agent_api::response_event::StreamInit,
         ctx: &mut ModelContext<Self>,
     ) {
         let stream_id = ResponseStreamId::for_shared_session(&init_event);
@@ -294,7 +294,7 @@ impl BlocklistAIController {
 
     fn on_shared_client_actions(
         &mut self,
-        actions: bork_multi_agent_api::response_event::ClientActions,
+        actions: krust_multi_agent_api::response_event::ClientActions,
         ctx: &mut ModelContext<Self>,
     ) {
         if self
@@ -412,7 +412,7 @@ impl BlocklistAIController {
 
     fn on_shared_finished(
         &mut self,
-        finished: bork_multi_agent_api::response_event::StreamFinished,
+        finished: krust_multi_agent_api::response_event::StreamFinished,
         ctx: &mut ModelContext<Self>,
     ) {
         if self
@@ -524,10 +524,10 @@ impl BlocklistAIController {
                         .map(|u| u.to_proto_combined())
                         .collect(),
                     tool_usage_metadata: Some(conversation.tool_usage_metadata().into()),
-                    bork_token_usage: conversation
+                    krust_token_usage: conversation
                         .token_usage()
                         .iter()
-                        .filter_map(|u| u.to_proto_bork_usage())
+                        .filter_map(|u| u.to_proto_krust_usage())
                         .collect(),
                     byok_token_usage: conversation
                         .token_usage()
@@ -551,9 +551,9 @@ impl BlocklistAIController {
         // We use "Done" reason rather than a specific cancellation reason because
         // the proto doesn't have explicit variants for UserCommandExecuted or ManuallyCancelled.
         // TODO: we should probably add representations for said variants in the proto for this usecase.
-        let finished_event = bork_multi_agent_api::ResponseEvent {
-            r#type: Some(bork_multi_agent_api::response_event::Type::Finished(
-                bork_multi_agent_api::response_event::StreamFinished {
+        let finished_event = krust_multi_agent_api::ResponseEvent {
+            r#type: Some(krust_multi_agent_api::response_event::Type::Finished(
+                krust_multi_agent_api::response_event::StreamFinished {
                     reason: Some(stream_finished::Reason::Done(stream_finished::Done {})),
                     conversation_usage_metadata: usage_metadata,
                     token_usage: vec![],
@@ -623,12 +623,12 @@ impl BlocklistAIController {
     pub fn link_forked_conversation_token(
         &mut self,
         forked_from_token: &str,
-        event: &bork_multi_agent_api::ResponseEvent,
+        event: &krust_multi_agent_api::ResponseEvent,
         ctx: &mut ModelContext<Self>,
     ) {
         // Extract the new server conversation id from the StreamInit event
         let new_conversation_id = match &event.r#type {
-            Some(bork_multi_agent_api::response_event::Type::Init(init)) => {
+            Some(krust_multi_agent_api::response_event::Type::Init(init)) => {
                 init.conversation_id.as_str()
             }
             // Only StreamInit events have conversation_id.

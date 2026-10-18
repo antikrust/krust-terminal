@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use pathfinder_color::ColorU;
 use string_offset::CharOffset;
-use borkui_core::elements::{Axis, scroll_delta_for_pointer_movement};
-use borkui_core::fonts::FamilyId;
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::text_layout::TextFrame;
-use borkui_core::units::{IntoPixels, Pixels};
+use krustui_core::elements::{Axis, scroll_delta_for_pointer_movement};
+use krustui_core::fonts::FamilyId;
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::text_layout::TextFrame;
+use krustui_core::units::{IntoPixels, Pixels};
 
 use crate::content::text::{FormattedTable, table_cell_offset_maps};
 use crate::render::element::table::{
@@ -211,7 +211,7 @@ fn cells_in_range_entire_table() {
 }
 
 fn single_line_cell_layout(char_count: usize, line_height: f32, line_width: f32) -> CellLayout {
-    use borkui_core::text_layout::CaretPosition;
+    use krustui_core::text_layout::CaretPosition;
     let mut carets = Vec::with_capacity(char_count);
     let char_width = if char_count > 0 {
         line_width / char_count as f32

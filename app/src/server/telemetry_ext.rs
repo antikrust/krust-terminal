@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::execution_mode;
-use borkui::telemetry::EventPayload;
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::execution_mode;
+use krustui::telemetry::EventPayload;
 
 use super::telemetry::rudder_message::{
     BatchMessage as RudderBatchMessage, BatchMessageItem as RudderBatchMessageItem,
@@ -16,7 +16,7 @@ pub trait TelemetryExt {
     fn to_rudder_batch_message(self) -> RudderBatchMessage;
 }
 
-impl TelemetryExt for borkui::telemetry::Event {
+impl TelemetryExt for krustui::telemetry::Event {
     fn to_rudder_batch_message(self) -> RudderBatchMessage {
         let message = match self.payload {
             EventPayload::IdentifyUser {

@@ -1,15 +1,15 @@
 //! Secure local setting that gates local control.
 //!
 //! This setting is local-only, kept out of the user-visible settings file, and
-//! persisted through Bork's secure storage provider. It is the authoritative
+//! persisted through Krust's secure storage provider. It is the authoritative
 //! enablement bit for local control.
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{SecureSetting, Setting, SupportedPlatforms, SyncToCloud};
-use bork_core::channel::{Channel, ChannelState};
-use borkui::{AppContext, ModelContext};
-use borkui_extras::secure_storage;
+use krust_core::channel::{Channel, ChannelState};
+use krustui::{AppContext, ModelContext};
+use krustui_extras::secure_storage;
 
 const LOCAL_CONTROL_MODE_STORAGE_KEY: &str = "LocalControlMode";
 

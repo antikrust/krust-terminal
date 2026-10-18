@@ -9,18 +9,18 @@ use session_sharing_protocol::common::{
 use session_sharing_protocol::sharer::{RoleUpdateReason, SessionEndedReason, SessionSourceType};
 use session_sharing_protocol::viewer::RoleUpdatedReason;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::MouseStateHandle;
-use borkui::platform::Cursor;
-use borkui::r#async::Timer;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::units::IntoLines;
-use borkui::{AppContext, Element, ModelHandle, SingletonEntity, ViewContext};
+use krust_core::features::FeatureFlag;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::MouseStateHandle;
+use krustui::platform::Cursor;
+use krustui::r#async::Timer;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::units::IntoLines;
+use krustui::{AppContext, Element, ModelHandle, SingletonEntity, ViewContext};
 
 use super::adapter::{Adapter, Kind, Participant};
 use super::cloud_conversation_continuation::{
@@ -1195,7 +1195,7 @@ impl TerminalView {
                 for viewer in active_viewers {
                     if let Some(existing_viewer) = shared_session.viewers().get(viewer.id()) {
                         // A change to the viewer's ACL may have originated from
-                        // bork-server, so we need to update the avatar's role.
+                        // krust-server, so we need to update the avatar's role.
                         existing_viewer.avatar.update(ctx, |avatar, ctx| {
                             if avatar.role() != viewer.role {
                                 avatar.set_role(viewer.role);

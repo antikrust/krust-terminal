@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_if_error;
-use borkui::{App, EntityId, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_if_error;
+use krustui::{App, EntityId, ModelHandle, SingletonEntity};
 
 use super::AgentNotificationsModel;
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;

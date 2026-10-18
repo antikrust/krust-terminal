@@ -1,14 +1,14 @@
 /// Common functionality used across different AI Assistant components.
 use markdown_parser::{parse_markdown, CodeBlockText, FormattedText, FormattedTextLine};
 use pathfinder_color::ColorU;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, HighlightedHyperlink, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, ModelHandle};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, ModelHandle};
 
 use super::panel::AIAssistantAction;
 use super::requests::Requests;

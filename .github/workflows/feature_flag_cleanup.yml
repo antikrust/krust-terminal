@@ -14,7 +14,7 @@ jobs:
   analyze:
     name: Analyze feature flags
     runs-on: namespace-profile-ubuntu-small
-    if: github.repository_owner == 'borkdotdev'
+    if: github.repository_owner == 'krustdotdev'
     permissions:
       contents: read
       pull-requests: read
@@ -36,7 +36,7 @@ jobs:
           echo "analyzed_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Find old feature flags
-        uses: borkdotdev/oz-agent-action@main
+        uses: krustdotdev/oz-agent-action@main
         with:
           prompt: |
             Your task is to find and list any feature flags which have been enabled by default for more than 3 months.
@@ -44,7 +44,7 @@ jobs:
             There will always be at least one such flag.
 
             ## Context
-            Feature flags are defined in bork_core/src/features.rs. They're enabled by default in app/Cargo.toml, using the default feature list. The mapping between Cargo features and app features is in the enabled_features function of app/src/lib.rs.
+            Feature flags are defined in krust_core/src/features.rs. They're enabled by default in app/Cargo.toml, using the default feature list. The mapping between Cargo features and app features is in the enabled_features function of app/src/lib.rs.
 
             ## Recommended Procedure
             1. Use `git blame` on the Cargo.toml file to identify when each feature flag was enabled by default.
@@ -64,7 +64,7 @@ jobs:
               * "date_enabled" - the date on which the feature flag was enabled by default
               * "enabling_commit" - the Git commit in which the feature flag was enabled by default
             * You are running as part of a GitHub automation and must not commit or push any changes. Another agent will process the file you produce.
-          bork_api_key: ${{ secrets.OSS_BORK_API_KEY }}
+          krust_api_key: ${{ secrets.OSS_KRUST_API_KEY }}
           share: team
 
       - name: Upload feature flag log
@@ -168,7 +168,7 @@ jobs:
 
       - name: Clean up the unused feature flag
         id: cleanup_agent
-        uses: borkdotdev/oz-agent-action@main
+        uses: krustdotdev/oz-agent-action@main
         with:
           prompt: |
             The feature flag ${{ needs.analyze.outputs.flag_name }} is now enabled by default.
@@ -179,7 +179,7 @@ jobs:
 
             You are running as part of a GitHub automation that runs with a read-only token and will package your changes into a patch for a separate job to commit. Do not create a branch, do not commit, do not push, do not create a PR, and do not call `gh`. Leave your changes in the working tree only.
           share: team
-          bork_api_key: ${{ secrets.OSS_BORK_API_KEY }}
+          krust_api_key: ${{ secrets.OSS_KRUST_API_KEY }}
 
       - name: Generate cleanup patch
         env:
@@ -243,7 +243,7 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           commit-message: "Clean up ${{ needs.analyze.outputs.flag_name }} feature flag"
           branch: "oz-agent/cleanup-feature-flag-${{ needs.analyze.outputs.flag_name }}"
-          author: "Oz Agent <oz-agent@bork.baby>"
+          author: "Oz Agent <oz-agent@krust.baby>"
           delete-branch: true
           reviewers: ${{ needs.analyze.outputs.reviewers }}
           title: "Clean up ${{ needs.analyze.outputs.flag_name }} feature flag"
@@ -265,5 +265,5 @@ jobs:
           payload: |
             channel: "#oncall-client"
             # Follows https://api.slack.com/reference/surfaces/formatting#mentioning-users.
-            # S09SSGE729E is the user group ID for @eng-bork-3.
+            # S09SSGE729E is the user group ID for @eng-krust-3.
             text: "🧹 New feature flag cleanup PR for `${{ needs.analyze.outputs.flag_name }}`: ${{ steps.create_pr.outputs.pull-request-url }}! <!subteam^S09SSGE729E> please review\nSee logs at https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -30,10 +30,10 @@ pub use noop_command_executor::NoOpCommandExecutor;
 #[cfg(feature = "local_tty")]
 pub use remote_command_executor::RemoteCommandExecutor;
 pub use shared::{shell_escape_single_quotes, shell_quote_arg, ExecutorCommandEvent};
-use bork_completer::completer::CommandOutput;
+use krust_completer::completer::CommandOutput;
 #[cfg(feature = "local_tty")]
-use bork_errors::report_error;
-use borkui::ModelContext;
+use krust_errors::report_error;
+use krustui::ModelContext;
 
 use super::SessionInfo;
 use crate::terminal::event::ExecutedExecutorCommandEvent;
@@ -151,7 +151,7 @@ fn new_command_executor_for_local_tty_session(
     use msys2_command_executor::MSYS2CommandExecutor;
     use remote_server_executor::RemoteServerCommandExecutor;
     use settings::Setting as _;
-    use borkui::SingletonEntity as _;
+    use krustui::SingletonEntity as _;
     use wsl_command_executor::WslCommandExecutor;
 
     use super::IsSSHWrapperSession;
@@ -211,7 +211,7 @@ fn new_command_executor_for_local_tty_session(
     //
     // TODO(advait): For production this should be a dedicated
     // `SandboxCommandExecutor` that runs generators via
-    // `sbx exec bork-sandbox-<id> -- sh -c "<cmd>"` (analogous to
+    // `sbx exec krust-sandbox-<id> -- sh -c "<cmd>"` (analogous to
     // how `LocalCommandExecutor` spawns fresh subprocesses for the
     // host-shell path). That would avoid serializing generators
     // through the user's live PTY (slower, blocked by long-running
@@ -291,7 +291,7 @@ fn new_command_executor_for_local_tty_session(
                 }
             }
         }
-        BootstrapSessionType::BorkifiedRemote
+        BootstrapSessionType::KrustifiedRemote
             if is_ssh_wrapper_session
                 && !FeatureFlag::InBandGeneratorsForSSH.is_enabled()
                 && !force_use_in_band_generators =>
@@ -316,7 +316,7 @@ fn new_command_executor_for_local_tty_session(
                 // This code path exists as a fail-safe for disabling in-band
                 // generators if some unforeseen severe issue surfaces during or
                 // shortly after subshells launch. The setting that triggers this
-                // codepath is only accessible via a user defaults command that a Bork
+                // codepath is only accessible via a user defaults command that a Krust
                 // engineer would have given to the user via some first-hand
                 // correspondence (e.g. GitHub issues).
                 log::info!("creating a no-op executor!");
@@ -351,7 +351,7 @@ fn new_command_executor_for_local_tty_session(
 pub mod testing {
     use anyhow::anyhow;
     use command::r#async::Command;
-    use bork_completer::completer::CommandOutput;
+    use krust_completer::completer::CommandOutput;
 
     use super::*;
     use crate::terminal::shell::ShellType;

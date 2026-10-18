@@ -1,10 +1,10 @@
-//! General-purpose administrative commands in the Bork CLI.
+//! General-purpose administrative commands in the Krust CLI.
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use bork_cli::agent::OutputFormat;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, SingletonEntity};
+use krust_cli::agent::OutputFormat;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
 use crate::auth::user::PrincipalType;
@@ -117,7 +117,7 @@ struct WhoamiOutput {
 /// Singleton model that provides a `ModelContext` for the `whoami` command's async work.
 struct WhoamiRunner;
 
-impl borkui::Entity for WhoamiRunner {
+impl krustui::Entity for WhoamiRunner {
     type Event = ();
 }
 
@@ -221,7 +221,7 @@ pub fn whoami(ctx: &mut AppContext, output_format: OutputFormat) -> Result<()> {
     Ok(())
 }
 
-/// Log out of Bork using the same logic as the app.
+/// Log out of Krust using the same logic as the app.
 pub fn logout(ctx: &mut AppContext) -> Result<()> {
     let auth_state = AuthStateProvider::as_ref(ctx).get();
     if !auth_state.is_logged_in() {

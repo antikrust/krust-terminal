@@ -155,7 +155,7 @@ fn renders_sequence_fragments() {
 fn renders_note_right_of_participant_with_escaped_semicolon() {
     let svg = render_sequence_diagram_to_svg(
         r#"sequenceDiagram
-    participant S as bork-server
+    participant S as krust-server
     Note right of S: previous segment already charged#59; new segment starts fresh"#,
         &MermaidTheme::default(),
     )

@@ -1,4 +1,4 @@
-# Note that BORK_SESSION_ID is expected to have been set when executing commands to
+# Note that KRUST_SESSION_ID is expected to have been set when executing commands to
 # emit the InitShell payload, which includes the session ID.
 begin
 # We wrap ourselves in a begin block because these are effectively injected
@@ -11,7 +11,7 @@ begin
 set -l saved_fish_private_mode $fish_private_mode
 set -g fish_private_mode 1
 
-# Disable fish autosuggestions - because input goes through Bork's editor instead,
+# Disable fish autosuggestions - because input goes through Krust's editor instead,
 # they are never actionable, and the extra output can cause problems.
 set -g fish_autosuggestion_enabled 0
 
@@ -21,7 +21,7 @@ set -g DCS_START \u1b\u50\u24
 
 # Appended to $DCS_START to signal that the following message is JSON-encoded.
 # The Rust app also receives non-JSON-encoded DCS's sent from
-# _bork_run_generator_command_internal, which instead end in 'e' (0x65).
+# _krust_run_generator_command_internal, which instead end in 'e' (0x65).
 set -g DCS_JSON_MARKER 'd'
 
 set -g DCS_END \x1b\x5c
@@ -34,55 +34,55 @@ set -g OSC_PARAM_SEPARATOR ';'
 
 set -g RESET_GRID_OSC (printf '\e]9279\a')
 
-if test -n "$BORK_INITIAL_WORKING_DIR"
-    cd "$BORK_INITIAL_WORKING_DIR" >/dev/null 2>&1
-    set -e BORK_INITIAL_WORKING_DIR
+if test -n "$KRUST_INITIAL_WORKING_DIR"
+    cd "$KRUST_INITIAL_WORKING_DIR" >/dev/null 2>&1
+    set -e KRUST_INITIAL_WORKING_DIR
 end
 
-# Append additional PATH entries if provided via BORK_PATH_APPEND.
-if test -n "$BORK_PATH_APPEND"
-    set -gx --path PATH "$PATH:$BORK_PATH_APPEND"
-    set -e BORK_PATH_APPEND
+# Append additional PATH entries if provided via KRUST_PATH_APPEND.
+if test -n "$KRUST_PATH_APPEND"
+    set -gx --path PATH "$PATH:$KRUST_PATH_APPEND"
+    set -e KRUST_PATH_APPEND
 end
 
-function bork_send_json_message
+function krust_send_json_message
     # Sends a message to the controlling terminal as a DSC control sequence.
-    set -l escaped_json (bork_hex_encode_string "$argv")
-    if [ "$BORK_USING_WINDOWS_CON_PTY" = true ]
+    set -l escaped_json (krust_hex_encode_string "$argv")
+    if [ "$KRUST_USING_WINDOWS_CON_PTY" = true ]
         echo -n "$OSC_START$DCS_JSON_MARKER$OSC_PARAM_SEPARATOR$escaped_json$OSC_END"
     else
         echo -n "$DCS_START$DCS_JSON_MARKER$escaped_json$DCS_END"
     end
 end
 
-function bork_maybe_send_reset_grid_osc
-    # Note that $BORK_USING_WINDOWS_CON_PTY is set in the init shell script.
-    if [ "$BORK_USING_WINDOWS_CON_PTY" = true ]
+function krust_maybe_send_reset_grid_osc
+    # Note that $KRUST_USING_WINDOWS_CON_PTY is set in the init shell script.
+    if [ "$KRUST_USING_WINDOWS_CON_PTY" = true ]
         printf $RESET_GRID_OSC
     end
 end
 
 
-# bork_hex_encode_string hex-encodes the given string with `od`.
-function bork_hex_encode_string 
+# krust_hex_encode_string hex-encodes the given string with `od`.
+function krust_hex_encode_string 
   echo "$argv" | od -An -v -tx1 | command tr -d ' \n'
 end
 
 # A list of PIDs for running in-band command(s). This is used to kill running
 # in-band commands in preexec for a user command, so they do not interfere with
 # user command output.
-set -g _bork_generator_pids ''
+set -g _krust_generator_pids ''
 
 # Runs the given command in the background, records its PID in
-# _BORK_GENERATOR_PIDS_STARTED_TMP_FILE, and adds its PID from the file when
+# _KRUST_GENERATOR_PIDS_STARTED_TMP_FILE, and adds its PID from the file when
 # the job is completed.
 #
 # Usage:
-#   _bork_run_generator_command_internal <command_id> '<command>'
+#   _krust_run_generator_command_internal <command_id> '<command>'
 #
 # The first argument is the command's ID, which is included in the DCS string sent
 # to the rust app. The second argument is the command string itself.
-function  _bork_run_generator_command_internal
+function  _krust_run_generator_command_internal
     set -l command_id $argv[1]
     set -l command (string join -- ' ' (string escape $argv[2]))
     # Fish cannot run shell functions in the background, so in order to run
@@ -100,10 +100,10 @@ function  _bork_run_generator_command_internal
     # N.B. Fish shell variables cannot contain null characters, so the command output must be
     # immediately hex encoded before being stored in a variable.
     fish -c "
-        set -l bork_using_windows_con_pty $BORK_USING_WINDOWS_CON_PTY;
+        set -l krust_using_windows_con_pty $KRUST_USING_WINDOWS_CON_PTY;
         set -l reset_grid_osc $RESET_GRID_OSC;
-        function bork_maybe_send_reset_grid_osc
-            if [ \"\$bork_using_windows_con_pty\" = true ]
+        function krust_maybe_send_reset_grid_osc
+            if [ \"\$krust_using_windows_con_pty\" = true ]
                 printf \$reset_grid_osc
             end
         end
@@ -120,14 +120,14 @@ function  _bork_run_generator_command_internal
         set -l LC_ALL \"C\"
         set -l byte_count (string length \"\$hex_encoded_message\")
         echo -n \"\$OSC_START_GENERATOR_OUTPUT\$byte_count;\$hex_encoded_message\$OSC_END_GENERATOR_OUTPUT\"
-        bork_maybe_send_reset_grid_osc" 2> /dev/null &
+        krust_maybe_send_reset_grid_osc" 2> /dev/null &
         
     set -l command_pid $last_pid
-    set -a _bork_generator_pids $command_pid
+    set -a _krust_generator_pids $command_pid
 
-    # Remove the command's PID from _bork_generator_pids when the command exits.
+    # Remove the command's PID from _krust_generator_pids when the command exits.
     function on_command_{$command_pid}_finish --on-process-exit $command_pid --inherit-variable command_pid
-        set -g _bork_generator_pids (string replace $command_pid '' $_bork_generator_pids)
+        set -g _krust_generator_pids (string replace $command_pid '' $_krust_generator_pids)
 
         # Erase this function after the pids list is updated above so we don't create an infinite number of
         # functions that could pollute the user's context (nested functions are still existing in the global
@@ -136,7 +136,7 @@ function  _bork_run_generator_command_internal
 
         # Note: If we're on windows, we send a reset grid to erase any cursor mutations caused by
         # the in-band command.
-        bork_maybe_send_reset_grid_osc
+        krust_maybe_send_reset_grid_osc
     end
 end
 
@@ -148,29 +148,29 @@ end
 # not substituted until the command string is actually evaluated.
 #
 # Usage:
-#   bork_run_generator_command <command_id> '<command> <arg1> ... <argn>'
-function bork_run_generator_command
-    # Setting this environment variable allows bork_precmd to detect if a generator
+#   krust_run_generator_command <command_id> '<command> <arg1> ... <argn>'
+function krust_run_generator_command
+    # Setting this environment variable allows krust_precmd to detect if a generator
     # command or a user command has just completed.
-    set -g _BORK_GENERATOR_COMMAND 1
-    _bork_run_generator_command_internal $argv
+    set -g _KRUST_GENERATOR_COMMAND 1
+    _krust_run_generator_command_internal $argv
 end
 
 # Run before a command is executed.
-function bork_preexec --on-event fish_preexec
-    set -l command (bork_escape_json "$argv")
-    bork_send_json_message "{\"hook\": \"Preexec\", \"value\": {\"command\": \"$command\", \"session_id\": $BORK_SESSION_ID}}"
-    bork_maybe_send_reset_grid_osc
+function krust_preexec --on-event fish_preexec
+    set -l command (krust_escape_json "$argv")
+    krust_send_json_message "{\"hook\": \"Preexec\", \"value\": {\"command\": \"$command\", \"session_id\": $KRUST_SESSION_ID}}"
+    krust_maybe_send_reset_grid_osc
 
     # If this preexec is called for user command, kill ongoing generator command jobs.
-    if test (! string match -q "bork_run_generator_command*" $argv[1])
-        for pid in $_bork_generator_pids
+    if test (! string match -q "krust_run_generator_command*" $argv[1])
+        for pid in $_krust_generator_pids
             # Suppress stderr output; kill writes to stderr if any of the given
             # PIDS are not running (which might rarely be the case due to race
             # conditions in checking which PIDS to cancel and this kill command.
             kill -9 $pids >/dev/null 2>/dev/null
         end
-        set -g _bork_generator_pids ''
+        set -g _krust_generator_pids ''
     end
 end
 
@@ -181,25 +181,25 @@ end
 #
 # We wrap in a local function instead of exporting the variable directly in
 # order to avoid interfering with manually-run git commands by the user.
-function bork_git
+function krust_git
     GIT_OPTIONAL_LOCKS=0 command git $argv
 end
 
 # Wrap fish prompt function output with OSC prompt marker sequences,
 # so that we can direct the prompt bytes to the appropriate grids.
-function bork_update_prompt_vars
+function krust_update_prompt_vars
   # Back up the original fish_prompt if not already done
-  if not functions -q bork_original_fish_prompt
-    functions -c fish_prompt bork_original_fish_prompt
+  if not functions -q krust_original_fish_prompt
+    functions -c fish_prompt krust_original_fish_prompt
   end
 
   # Back up the original fish_right_prompt if it exists and not already backed up
-  if functions -q fish_right_prompt; and not functions -q bork_original_fish_right_prompt
-    functions -c fish_right_prompt bork_original_fish_right_prompt
+  if functions -q fish_right_prompt; and not functions -q krust_original_fish_right_prompt
+    functions -c fish_right_prompt krust_original_fish_right_prompt
   end
 
   # If not honoring PS1, set both prompts to be empty
-  if test "$BORK_HONOR_PS1" = "0"
+  if test "$KRUST_HONOR_PS1" = "0"
     function fish_prompt; echo -n ""; end
     function fish_right_prompt; echo -n ""; end
   # If honoring PS1, add prefix/suffix to both prompts
@@ -207,7 +207,7 @@ function bork_update_prompt_vars
 
     function end_prompt        
       echo -n (printf '\x1b')
-      if test "$BORK_HONOR_PS1" != "1" && [ "$BORK_USING_WINDOWS_CON_PTY" = true ]
+      if test "$KRUST_HONOR_PS1" != "1" && [ "$KRUST_USING_WINDOWS_CON_PTY" = true ]
         echo -n "]133;B$RESET_GRID_OSC"
       else
         echo -n ']133;B'
@@ -220,43 +220,43 @@ function bork_update_prompt_vars
       echo -n (printf '\x1b')
       echo -n ']133;A'
       echo -n (printf '\x07')
-      bork_original_fish_prompt
+      krust_original_fish_prompt
       end_prompt
     end
 
-    # Check if bork_original_fish_right_prompt was backed up before redefining fish_right_prompt
-    if functions -q bork_original_fish_right_prompt
+    # Check if krust_original_fish_right_prompt was backed up before redefining fish_right_prompt
+    if functions -q krust_original_fish_right_prompt
       function fish_right_prompt
         echo -n (printf '\x1b')
         echo -n ']133;P;k=r'
         echo -n (printf '\x07')
-        bork_original_fish_right_prompt
+        krust_original_fish_right_prompt
         end_prompt
       end
     end
   end
 end
 
-# Changes the BORK_HONOR_PS1 variable to 1, to indicate we want to use the user's custom prompt. Restores
-# the original fish prompt functions (which we set to empty for Bork prompt) by calling bork_update_prompt_vars
+# Changes the KRUST_HONOR_PS1 variable to 1, to indicate we want to use the user's custom prompt. Restores
+# the original fish prompt functions (which we set to empty for Krust prompt) by calling krust_update_prompt_vars
 # to refresh the prompt. We force a repaint of the prompt to ensure the change is reflected immediately.
-function bork_change_prompt_modes_to_ps1
-  set -x BORK_HONOR_PS1 "1"
+function krust_change_prompt_modes_to_ps1
+  set -x KRUST_HONOR_PS1 "1"
 
   # Restores fish_prompt and fish_right_prompt.
-  bork_update_prompt_vars
+  krust_update_prompt_vars
   # Forces a repaint of the current prompt to ensure the change is reflected immediately.
   commandline -f repaint
 end
 
-# Changes the BORK_HONOR_PS1 variable to 0, to indicate we want to use the Bork prompt. Saves and clears
-# the fish prompt functions (which we set to empty for Bork prompt) by calling bork_update_prompt_vars
+# Changes the KRUST_HONOR_PS1 variable to 0, to indicate we want to use the Krust prompt. Saves and clears
+# the fish prompt functions (which we set to empty for Krust prompt) by calling krust_update_prompt_vars
 # to refresh the prompt. We force a repaint of the prompt to ensure the change is reflected immediately.
-function bork_change_prompt_modes_to_bork_prompt
-  set -x BORK_HONOR_PS1 "0"
+function krust_change_prompt_modes_to_krust_prompt
+  set -x KRUST_HONOR_PS1 "0"
 
   # Updates fish_prompt and fish_right_prompt to be empty.
-  bork_update_prompt_vars
+  krust_update_prompt_vars
   # Forces a repaint of the current prompt to ensure the change is reflected immediately.
   commandline -f repaint
 end
@@ -264,7 +264,7 @@ end
 set block_id 0
 # Run before the prompt is displayed. We also need to trigger this on "fish_posterror", as
 # submitting a command containing a syntax error will not trigger "fish_preexec" or "fish_prompt".
-function bork_precmd --on-event fish_prompt --on-event fish_posterror
+function krust_precmd --on-event fish_prompt --on-event fish_posterror
     # Handle prompt behavior (we do this first to make sure the exit status is from the command,
     # rather than from our own code)
     set -l exit_code $status
@@ -278,14 +278,14 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
         set exit_code 1
     end
 
-    set -l next_block_id "precmd-$BORK_SESSION_ID-$block_id"
-    bork_send_json_message "{\"hook\": \"CommandFinished\", \"value\": {\"exit_code\": $exit_code, \"next_block_id\": \"$next_block_id\", \"session_id\": $BORK_SESSION_ID}}"
-    bork_maybe_send_reset_grid_osc
+    set -l next_block_id "precmd-$KRUST_SESSION_ID-$block_id"
+    krust_send_json_message "{\"hook\": \"CommandFinished\", \"value\": {\"exit_code\": $exit_code, \"next_block_id\": \"$next_block_id\", \"session_id\": $KRUST_SESSION_ID}}"
+    krust_maybe_send_reset_grid_osc
 
     set block_id (math $block_id + 1)
 
-    if ! test -z $_BORK_GENERATOR_COMMAND
-        set -e _BORK_GENERATOR_COMMAND
+    if ! test -z $_KRUST_GENERATOR_COMMAND
+        set -e _KRUST_GENERATOR_COMMAND
         set -l escaped_json "{\"hook\": \"Precmd\", \"value\": {
         \"exit_code\": $exit_code,
         \"next_block_id\": \"$next_block_id\",
@@ -296,10 +296,10 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
         \"virtual_env\": \"\",
         \"conda_env\": \"\",
         \"node_version\": \"\",
-        \"session_id\": $BORK_SESSION_ID,
+        \"session_id\": $KRUST_SESSION_ID,
         \"is_after_in_band_command\": true
         }}"
-        bork_send_json_message $escaped_json
+        krust_send_json_message $escaped_json
         return 0
     end
 
@@ -312,12 +312,12 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
     bind \cP "commandline ''"
 
     # We use the ESC-p bindkey for this ("p" for PS1/custom prompt).
-    bind \ep bork_change_prompt_modes_to_ps1
+    bind \ep krust_change_prompt_modes_to_ps1
 
-    # We use the ESC-w bindkey for this ("w" for Bork prompt).
-    bind \ew bork_change_prompt_modes_to_bork_prompt
+    # We use the ESC-w bindkey for this ("w" for Krust prompt).
+    bind \ew krust_change_prompt_modes_to_krust_prompt
 
-    bind \ei bork_report_input
+    bind \ei krust_report_input
 
     # Define local variables in appropriate outer block for fish variable scoping.
     # See https://stackoverflow.com/a/53685510.
@@ -327,9 +327,9 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
     set -l escaped_pwd
     if set -q WSL_DISTRO_NAME
         # In WSL, avoid symlinks b/c on Windows `std::fs` is unable to resolve symlink inside WSL containers.
-        set escaped_pwd (bork_escape_json (pwd -P))
+        set escaped_pwd (krust_escape_json (pwd -P))
     else
-        set escaped_pwd (bork_escape_json $PWD)
+        set escaped_pwd (krust_escape_json $PWD)
     end
 
     set -l escaped_virtual_env ""
@@ -342,19 +342,19 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
     # blocks created during the bootstrap process don't have visible
     # prompts, and we don't want to invoke `git` before we've sourced the
     # user's rcfiles and have a fully-populated PATH.
-    if test -n "$BORK_BOOTSTRAPPED"
+    if test -n "$KRUST_BOOTSTRAPPED"
       if test -n "$VIRTUAL_ENV"
-          set escaped_virtual_env (bork_escape_json "$VIRTUAL_ENV")
+          set escaped_virtual_env (krust_escape_json "$VIRTUAL_ENV")
       end
       if test -n "$CONDA_DEFAULT_ENV"
-          set escaped_conda_env (bork_escape_json "$CONDA_DEFAULT_ENV")
+          set escaped_conda_env (krust_escape_json "$CONDA_DEFAULT_ENV")
       end
       
         # Get the Node.js version, but only when the Node.js Version chip is enabled.
-        # Bork sets BORK_PROMPT_NODE_VERSION_ENABLED to "0" when the chip is not in the
+        # Krust sets KRUST_PROMPT_NODE_VERSION_ENABLED to "0" when the chip is not in the
         # prompt (defaulting to enabled when unset), so we avoid spawning `node` on
         # every prompt when the chip is not shown.
-        if test "$BORK_PROMPT_NODE_VERSION_ENABLED" != "0"; and command -v node > /dev/null 2>&1
+        if test "$KRUST_PROMPT_NODE_VERSION_ENABLED" != "0"; and command -v node > /dev/null 2>&1
             # Check for package.json in current directory and parent directories
             set current_dir (pwd)
             set found_package_json false
@@ -398,15 +398,15 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
                     # `node --version` when the directory or PATH changes (PATH changes
                     # on `nvm use`). Use global cache vars so they persist across calls.
                     set -l node_cache_key "$PWD:$PATH"
-                    if test "$node_cache_key" = "$_BORK_NODE_VERSION_CACHE_KEY"
-                        set escaped_node_version "$_BORK_NODE_VERSION_CACHE_VALUE"
+                    if test "$node_cache_key" = "$_KRUST_NODE_VERSION_CACHE_KEY"
+                        set escaped_node_version "$_KRUST_NODE_VERSION_CACHE_VALUE"
                     else
                         set -l node_version (node --version 2>/dev/null)
                         if test -n "$node_version"
-                            set escaped_node_version (bork_escape_json "$node_version")
+                            set escaped_node_version (krust_escape_json "$node_version")
                         end
-                        set -g _BORK_NODE_VERSION_CACHE_KEY "$node_cache_key"
-                        set -g _BORK_NODE_VERSION_CACHE_VALUE "$escaped_node_version"
+                        set -g _KRUST_NODE_VERSION_CACHE_KEY "$node_cache_key"
+                        set -g _KRUST_NODE_VERSION_CACHE_VALUE "$escaped_node_version"
                     end
                 end
             end
@@ -415,32 +415,32 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
       set -l git_branch ""
       set -l git_head ""
       if command -q git
-          set git_branch (bork_git symbolic-ref --short HEAD 2> /dev/null)
+          set git_branch (krust_git symbolic-ref --short HEAD 2> /dev/null)
           if test -z "$git_branch"
               # Fallback to the git commit hash if we aren't on a named branch.
-              set git_head (bork_git rev-parse --short HEAD 2> /dev/null)
+              set git_head (krust_git rev-parse --short HEAD 2> /dev/null)
           else
               set git_head "$git_branch"
           end
       end
-      set escaped_git_head (bork_escape_json "$git_head")
-      set escaped_git_branch (bork_escape_json "$git_branch")
+      set escaped_git_head (krust_escape_json "$git_head")
+      set escaped_git_branch (krust_escape_json "$git_branch")
     end
 
-    bork_update_prompt_vars
+    krust_update_prompt_vars
     # This is used solely for prompt previews, when we're using prompt markers with combined grid.
     # We need to use this since fish does not have a way to ignore printable characters for cursor
-    # positioning (unlike zsh/bash), so we need a separate mechanism to send the prompt to Bork
-    # in the case of Bork prompt (for previewing the PS1). We send an escaped version of the raw prompt
-    # bytes via a hex string (in a JSON payload) to Bork.
-    # Note that we are CALLING the `bork_original_fish_prompt` function on the next line and assigning the
+    # positioning (unlike zsh/bash), so we need a separate mechanism to send the prompt to Krust
+    # in the case of Krust prompt (for previewing the PS1). We send an escaped version of the raw prompt
+    # bytes via a hex string (in a JSON payload) to Krust.
+    # Note that we are CALLING the `krust_original_fish_prompt` function on the next line and assigning the
     # outputted string to the local variable `raw_prompt_for_preview`.
-    set -l raw_prompt_for_preview (bork_original_fish_prompt)
-    # We encode the prompt as a hex string to pass it to Bork.
-    set escaped_prompt (bork_escape_prompt "$raw_prompt_for_preview")
+    set -l raw_prompt_for_preview (krust_original_fish_prompt)
+    # We encode the prompt as a hex string to pass it to Krust.
+    set escaped_prompt (krust_escape_prompt "$raw_prompt_for_preview")
 
     set -l escaped_json
-    if test "$BORK_HONOR_PS1" = "1"
+    if test "$KRUST_HONOR_PS1" = "1"
       # Don't send lprompt or rprompt in this case - we'll use prompt markers for both directly!
       set escaped_json "{\"hook\": \"Precmd\", \"value\": {
       \"exit_code\": $exit_code,
@@ -453,7 +453,7 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
       \"virtual_env\": \"$escaped_virtual_env\",
       \"conda_env\": \"$escaped_conda_env\",
       \"node_version\": \"$escaped_node_version\",
-      \"session_id\": $BORK_SESSION_ID
+      \"session_id\": $KRUST_SESSION_ID
       }}"
     else
       # We send an lprompt to use for prompt preview purposes only (we still use prompt markers for active prompts).
@@ -468,15 +468,15 @@ function bork_precmd --on-event fish_prompt --on-event fish_posterror
       \"virtual_env\": \"$escaped_virtual_env\",
       \"conda_env\": \"$escaped_conda_env\",
       \"node_version\": \"$escaped_node_version\",
-      \"session_id\": $BORK_SESSION_ID
+      \"session_id\": $KRUST_SESSION_ID
       }}"
     end
-    bork_send_json_message $escaped_json
+    krust_send_json_message $escaped_json
 end
 
-function bork_escape_prompt
+function krust_escape_prompt
     # To match the implementation of PS1 support in bash / zsh, we use the same method of encoding
-    # the prompt as a hex string so that it can be interpreted on the Bork side
+    # the prompt as a hex string so that it can be interpreted on the Krust side
     # Note: before converting the prompt to a hex string, we remove any multi-line newlines and
     # replace them with a single space (to avoid prompts that span multiple empty lines)
     echo "$argv" | command tr '\n\n' ' ' | command od -An -v -tx1 | command tr -d ' \n'
@@ -487,7 +487,7 @@ end
 # Specifically, special characters like backspace, tab, form feed, carriage return, and newlines
 # are replaced with escaped equivalents. Double quotes and literal backslash characters are also
 # backslash-escaped.
-function bork_escape_json
+function krust_escape_json
     # Explanation of the sed replacements (each command is separated by a `;`):
     # s/(["\\])/\\\1/g - Replace all double-quote (") and backslash (\) characters with the escaped versions (\" and \\)
     # s/\b/\\b/g - Replace all backspace characters with \b
@@ -504,13 +504,13 @@ function bork_escape_json
     string join \n $argv | command sed -E 's/(["\\\\])/\\\\\\1/g; s/'\b'/\\\\b/g; s/'\t'/\\\\t/g; s/'\f'/\\\\f/g; s/'\r'/\\\\r/g; $!s/$/\\\\n/' | command tr -d '\n'
 end
 
-function bork_bootstrapped
+function krust_bootstrapped
   set -l histfile_directory
   set histfile_directory "$XDG_DATA_HOME"
   if test -z "$histfile_directory"
         set histfile_directory "$HOME/.local/share"
   end
-  set -l escaped_histfile (bork_escape_json "$histfile_directory/fish/fish_history")
+  set -l escaped_histfile (krust_escape_json "$histfile_directory/fish/fish_history")
 
   set -l vi_mode_enabled ""
   if [ "$fish_key_bindings" = "fish_vi_key_bindings" ]
@@ -537,54 +537,54 @@ function bork_bootstrapped
     end
   end
 
-  set -l escaped_abbr (bork_escape_json (abbr --show))
-  set -l escaped_aliases (bork_escape_json (alias))
-  set -l env_var_names (bork_escape_json (set --names))
-  set -l function_names (bork_escape_json (functions -an))
-  set -l escaped_builtins (bork_escape_json (builtin -n))
+  set -l escaped_abbr (krust_escape_json (abbr --show))
+  set -l escaped_aliases (krust_escape_json (alias))
+  set -l env_var_names (krust_escape_json (set --names))
+  set -l function_names (krust_escape_json (functions -an))
+  set -l escaped_builtins (krust_escape_json (builtin -n))
   # Note "keywords" is set to an empty string since fish includes keywords as a
   # part of its builtins (e.g. "for", "while", etc.).
-  set -l escaped_editor (bork_escape_json "$EDITOR")
-  set -l escaped_shell_path (bork_escape_json (status fish-path))
-  set -l escaped_json "{\"hook\": \"Bootstrapped\", \"value\": {\"histfile\": \"$escaped_histfile\", \"session_id\": $BORK_SESSION_ID, \"shell\": \"fish\", \"home_dir\": \"$HOME\", \"path\": \"$PATH\", \"editor\": \"$escaped_editor\", \"abbreviations\": \"$escaped_abbr\", \"aliases\": \"$escaped_aliases\", \"function_names\": \"$function_names\", \"env_var_names\": \"$env_var_names\", \"builtins\": \"$escaped_builtins\", \"keywords\": \"\", \"shell_version\": \"$FISH_VERSION\", \"vi_mode_enabled\": \"$vi_mode_enabled\", \"os_category\": \"$os_category\", \"linux_distribution\": \"$linux_distribution\", \"wsl_name\": \"$WSL_DISTRO_NAME\", \"shell_path\": \"$escaped_shell_path\"}}"
-  bork_send_json_message $escaped_json
+  set -l escaped_editor (krust_escape_json "$EDITOR")
+  set -l escaped_shell_path (krust_escape_json (status fish-path))
+  set -l escaped_json "{\"hook\": \"Bootstrapped\", \"value\": {\"histfile\": \"$escaped_histfile\", \"session_id\": $KRUST_SESSION_ID, \"shell\": \"fish\", \"home_dir\": \"$HOME\", \"path\": \"$PATH\", \"editor\": \"$escaped_editor\", \"abbreviations\": \"$escaped_abbr\", \"aliases\": \"$escaped_aliases\", \"function_names\": \"$function_names\", \"env_var_names\": \"$env_var_names\", \"builtins\": \"$escaped_builtins\", \"keywords\": \"\", \"shell_version\": \"$FISH_VERSION\", \"vi_mode_enabled\": \"$vi_mode_enabled\", \"os_category\": \"$os_category\", \"linux_distribution\": \"$linux_distribution\", \"wsl_name\": \"$WSL_DISTRO_NAME\", \"shell_path\": \"$escaped_shell_path\"}}"
+  krust_send_json_message $escaped_json
 end
 
-function bork_init_shell
+function krust_init_shell
     set -l  init_shell "{\"hook\": \"InitShell\", \"value\": {\"shell\": \"$argv\"}}"
-    bork_hex_encode_string "$init_shell"
+    krust_hex_encode_string "$init_shell"
 end
 
-# Add a key binding to report the current input buffer to Bork. We can override
-# any user-defined binds here because user input goes through Bork's editor, not
+# Add a key binding to report the current input buffer to Krust. We can override
+# any user-defined binds here because user input goes through Krust's editor, not
 # the fish line editor.
 # This is arbitrarily bound to ESC-i in all supported shells ("i" for input).
 # Binding to ESC-1 caused bootstrap failures with vi keybindings.
-function bork_report_input
-    set -l escaped_input (bork_escape_json (commandline))
-    bork_send_json_message "{ \"hook\": \"InputBuffer\", \"value\": { \"buffer\": \"$escaped_input\", \"session_id\": $BORK_SESSION_ID } }"
+function krust_report_input
+    set -l escaped_input (krust_escape_json (commandline))
+    krust_send_json_message "{ \"hook\": \"InputBuffer\", \"value\": { \"buffer\": \"$escaped_input\", \"session_id\": $KRUST_SESSION_ID } }"
     # This prevents fish from rendering typeahead as background output once we've collected it.
     commandline ''
 end
 
 function clear
-    bork_send_json_message "{\"hook\": \"Clear\", \"value\": {\"session_id\": $BORK_SESSION_ID}}"
+    krust_send_json_message "{\"hook\": \"Clear\", \"value\": {\"session_id\": $KRUST_SESSION_ID}}"
 end
 
-function bork_finish_update
+function krust_finish_update
   set -l update_id "$argv[1]"
-  bork_send_json_message "{\"hook\": \"FinishUpdate\", \"value\": { \"update_id\": \"$update_id\", \"session_id\": $BORK_SESSION_ID}}"
+  krust_send_json_message "{\"hook\": \"FinishUpdate\", \"value\": { \"update_id\": \"$update_id\", \"session_id\": $KRUST_SESSION_ID}}"
 end
 
 
-# Check if the bork apt source file has been renamed to `borkdotdev.list.distUpgrade` due to an ubuntu version update.
-# If this occurred, we want to rename the source file back to `borkdotdev.list` to ensure updates can proceed.
-# We purposefully skip this if either the `borkdotdev.list` file already exists (indicating that the user has already
-# done this themselves) _or_ if a `borkdotdev.sources` file exists (which is the new Deb822 format for source files).
+# Check if the krust apt source file has been renamed to `krustdotdev.list.distUpgrade` due to an ubuntu version update.
+# If this occurred, we want to rename the source file back to `krustdotdev.list` to ensure updates can proceed.
+# We purposefully skip this if either the `krustdotdev.list` file already exists (indicating that the user has already
+# done this themselves) _or_ if a `krustdotdev.sources` file exists (which is the new Deb822 format for source files).
 # The `.sources` file could only exist if a user manually created it; Ubuntu doesn't create one automatically for the
-# bork source file due to a bug in its update flow where it considers our source file to be "invalid" because it
+# krust source file due to a bug in its update flow where it considers our source file to be "invalid" because it
 # contains a `signed-by` key.
-function bork_handle_dist_upgrade
+function krust_handle_dist_upgrade
   set -l source_file_name "$argv[1]"
 
   # The `apt-config shell` command outputs an environment variable assignment in POSIX-compliant syntax. Therefore,
@@ -603,7 +603,7 @@ end
 
 # The SSH logic only applies to local sessions, because we don't yet have support for bootstrapping
 # recursive SSH sessions.
-if test "$BORK_IS_LOCAL_SHELL_SESSION" = "1"
+if test "$KRUST_IS_LOCAL_SHELL_SESSION" = "1"
     function is_interactive_ssh_session
         # Parse through all ssh options, as defined in the ssh man pages.  Send
         # stderr to /dev/null to silence argparse output when an option is invalid.
@@ -628,9 +628,9 @@ if test "$BORK_IS_LOCAL_SHELL_SESSION" = "1"
         end
     end
 
-    function bork_ssh_helper
-        set -l init_shell_zsh (bork_init_shell "zsh")
-        set -l init_shell_bash (bork_init_shell "bash")
+    function krust_ssh_helper
+        set -l init_shell_zsh (krust_init_shell "zsh")
+        set -l init_shell_bash (krust_init_shell "bash")
         set -l remote_session_id (command od -An -N8 -tu8 /dev/urandom 2>/dev/null | command tr -d ' \n')
         if test -z "$remote_session_id"; or test "$remote_session_id" = "0"
             # If we cannot generate a non-zero random token, run plain SSH instead.
@@ -641,7 +641,7 @@ if test "$BORK_IS_LOCAL_SHELL_SESSION" = "1"
         # If the user's SSH config sets a RemoteCommand for this destination,
         # OpenSSH refuses to also run our bootstrap as a command-line remote
         # command, aborting with "Cannot execute command-line and remote
-        # command." Borkification is structurally impossible there, so fall back
+        # command." Krustification is structurally impossible there, so fall back
         # to plain SSH. `ssh -G` prints `remotecommand none` when unset.
         set -l user_remote_command (command ssh -G $argv 2>/dev/null | command sed -n 's/^remotecommand //p')
         if test -n "$user_remote_command"; and test "$user_remote_command" != "none"
@@ -652,30 +652,30 @@ if test "$BORK_IS_LOCAL_SHELL_SESSION" = "1"
         # Hex-encode the ZSH environment script we use to bootstrap remote zsh b/c it contains control characters
         # We decode on the SSH server using xxd if its available, otherwise fall back to a for-loop over each byte
         # and use printf to convert back to plaintext
-        set -l zsh_env_script (printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; BORK_SESSION_ID='$remote_session_id'; BORK_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@; BORK_HONOR_PS1='$BORK_HONOR_PS1'; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $BORK_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n"); printf '"'"'\x1b\x50\x24\x64%s\x1b\x5c'"'"' $_msg; unset _hostname _user _msg' | command od -An -v -tx1 | command tr -d ' \n')
+        set -l zsh_env_script (printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; KRUST_SESSION_ID='$remote_session_id'; KRUST_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@; KRUST_HONOR_PS1='$KRUST_HONOR_PS1'; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $KRUST_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n"); printf '"'"'\x1b\x50\x24\x64%s\x1b\x5c'"'"' $_msg; unset _hostname _user _msg' | command od -An -v -tx1 | command tr -d ' \n')
 
         # Optionally attach to an existing ControlMaster the user already
         # runs for this destination instead of creating our own. Resolve
         # the user's configured ControlPath with `ssh -G` (which expands
         # tokens like %h/%p/%r/%C into a literal path), then verify the
         # master is alive with `ssh -O check`. Both probes are local-only
-        # commands. On any failure we fall back to creating a Bork-owned
+        # commands. On any failure we fall back to creating a Krust-owned
         # master, preserving the existing behavior.
-        set -l control_path "$SSH_SOCKET_DIR/$BORK_SESSION_ID"
+        set -l control_path "$SSH_SOCKET_DIR/$KRUST_SESSION_ID"
         set -l control_master_mode "yes"
         set -l external_control_master "false"
-        if test "$BORK_SSH_REUSE_CONTROL_MASTER" = "1"
+        if test "$KRUST_SSH_REUSE_CONTROL_MASTER" = "1"
             set -l user_control_path (command ssh -G $argv 2>/dev/null | command sed -n 's/^controlpath //p')
             # Skip when no ControlPath is configured, and reject resolved
             # paths containing characters we cannot safely embed in the SSH
             # hook JSON below (e.g. an unexpanded % token, quotes, or
-            # whitespace); in those cases fall back to a Bork-owned master.
+            # whitespace); in those cases fall back to a Krust-owned master.
             if test -n "$user_control_path"
                 and test "$user_control_path" != "none"
                 and string match --quiet --regex '^[A-Za-z0-9._/~@:+,-]+$' -- "$user_control_path"
                 if command ssh -O check -o ControlPath="$user_control_path" $argv >/dev/null 2>&1
                     # A live master exists: multiplex through it and let the
-                    # client know Bork does not own it.
+                    # client know Krust does not own it.
                     set control_path "$user_control_path"
                     set control_master_mode "no"
                     set external_control_master "true"
@@ -692,15 +692,15 @@ if test "$BORK_IS_LOCAL_SHELL_SESSION" = "1"
         command ssh -o ControlMaster=$control_master_mode -o ControlPath="$control_path" \
         -t $argv \
 "
-export TERM_PROGRAM='BorkTerminal'
-test -n '$BORK_CLIENT_VERSION' && export BORK_CLIENT_VERSION='$BORK_CLIENT_VERSION'
+export TERM_PROGRAM='KrustTerminal'
+test -n '$KRUST_CLIENT_VERSION' && export KRUST_CLIENT_VERSION='$KRUST_CLIENT_VERSION'
 # Only forward the protocol version if it was set locally (i.e. the HOANotifications feature flag is on).
-test -n '$BORK_CLI_AGENT_PROTOCOL_VERSION' && export BORK_CLI_AGENT_PROTOCOL_VERSION='$BORK_CLI_AGENT_PROTOCOL_VERSION'
-hook="'$(printf "{\"hook\": \"SSH\", \"value\": {\"socket_path\": \"'$control_path'\", \"remote_shell\": \"%s\", \"session_id\": '"$BORK_SESSION_ID"', \"remote_session_id\": '"$remote_session_id"', \"external_control_master\": '"$external_control_master"'}}" "${SHELL##*/}" | command od -An -v -tx1 | command tr -d " \n")'"
+test -n '$KRUST_CLI_AGENT_PROTOCOL_VERSION' && export KRUST_CLI_AGENT_PROTOCOL_VERSION='$KRUST_CLI_AGENT_PROTOCOL_VERSION'
+hook="'$(printf "{\"hook\": \"SSH\", \"value\": {\"socket_path\": \"'$control_path'\", \"remote_shell\": \"%s\", \"session_id\": '"$KRUST_SESSION_ID"', \"remote_session_id\": '"$remote_session_id"', \"external_control_master\": '"$external_control_master"'}}" "${SHELL##*/}" | command od -An -v -tx1 | command tr -d " \n")'"
 printf '$DCS_START$DCS_JSON_MARKER%s$DCS_END' "'$hook'"
 
 if test "'"${SHELL##*/}" != "bash" -a "${SHELL##*/}" != "zsh"'"; then
-  # Emulate the SSHD logic to print the MotD. Because the Bork SSH wrapper passes
+  # Emulate the SSHD logic to print the MotD. Because the Krust SSH wrapper passes
   # a command to run, SSHD does a quiet login, updating utmp and other login
   # state, but not printing the MotD. For bash and zsh, this is instead handled
   # by our bootstrap script.
@@ -731,31 +731,31 @@ bash)
       stty raw
       HISTCONTROL=ignorespace
       HISTIGNORE=" *"
-      BORK_SESSION_ID='$remote_session_id'
-      BORK_HONOR_PS1="'$BORK_HONOR_PS1'"
+      KRUST_SESSION_ID='$remote_session_id'
+      KRUST_HONOR_PS1="'$KRUST_HONOR_PS1'"
       _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || uname -n)
       _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER)
-      _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $BORK_SESSION_ID, \"shell\": \"bash\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
-      BORK_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@
-      if [[ "'$OS'" == Windows_NT ]]; then BORK_IN_MSYS2=true; else BORK_IN_MSYS2=false; fi
+      _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $KRUST_SESSION_ID, \"shell\": \"bash\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n")'"
+      KRUST_USING_WINDOWS_CON_PTY=@@USING_CON_PTY_BOOLEAN@@
+      if [[ "'$OS'" == Windows_NT ]]; then KRUST_IN_MSYS2=true; else KRUST_IN_MSYS2=false; fi
       printf '\''"'\x1b\x50\x24\x64%s\x1b\x5c'"'\'' \""'$_msg'"\"'
       unset _hostname _user _msg
     )
     ;;
-zsh) BORK_TMP_DIR="'$(mktemp -d borktmp.XXXXXX)'"
+zsh) KRUST_TMP_DIR="'$(mktemp -d krusttmp.XXXXXX)'"
 local ZSH_ENV_SCRIPT='$zsh_env_script'
 if [[ "'$?'" == 0 ]]; then
   if command -v xxd >/dev/null 2>&1; then
-    echo "'$ZSH_ENV_SCRIPT'" | command xxd -p -r > "'$BORK_TMP_DIR'"/.zshenv
+    echo "'$ZSH_ENV_SCRIPT'" | command xxd -p -r > "'$KRUST_TMP_DIR'"/.zshenv
   else
     for i in {0..\$((\${#ZSH_ENV_SCRIPT} - 1))..2}; do
       builtin printf "'"\x${ZSH_ENV_SCRIPT:$i:2}"'"
-    done > "'$BORK_TMP_DIR'"/.zshenv
+    done > "'$KRUST_TMP_DIR'"/.zshenv
   fi
 else
-  echo \"Failed to bootstrap bork. Continuing with a non-bootstrapped shell.\"
+  echo \"Failed to bootstrap krust. Continuing with a non-bootstrapped shell.\"
 fi
-TMPPREFIX="'$HOME/.zshtmp-'" BORK_SSH_RCFILES="'${ZDOTDIR:-$HOME}'" ZDOTDIR="'$BORK_TMP_DIR'" exec -l zsh -g $TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE
+TMPPREFIX="'$HOME/.zshtmp-'" KRUST_SSH_RCFILES="'${ZDOTDIR:-$HOME}'" ZDOTDIR="'$KRUST_TMP_DIR'" exec -l zsh -g $TRACE_FLAG_IF_KRUST_SHELL_DEBUG_MODE
     ;;
 esac
 "
@@ -763,15 +763,15 @@ esac
 
     function ssh
         if is_interactive_ssh_session $argv
-            bork_send_json_message "{\"hook\": \"PreInteractiveSSHSession\", \"value\": {\"session_id\": $BORK_SESSION_ID}}"
+            krust_send_json_message "{\"hook\": \"PreInteractiveSSHSession\", \"value\": {\"session_id\": $KRUST_SESSION_ID}}"
 
-            if [ "$BORK_USE_SSH_WRAPPER" = "1" ]
-                if test $BORK_SHELL_DEBUG_MODE
-                    set -g TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE "-x"
+            if [ "$KRUST_USE_SSH_WRAPPER" = "1" ]
+                if test $KRUST_SHELL_DEBUG_MODE
+                    set -g TRACE_FLAG_IF_KRUST_SHELL_DEBUG_MODE "-x"
                 else
-                    set -g TRACE_FLAG_IF_BORK_SHELL_DEBUG_MODE ""
+                    set -g TRACE_FLAG_IF_KRUST_SHELL_DEBUG_MODE ""
                 end
-                bork_ssh_helper $argv
+                krust_ssh_helper $argv
             else
                 command ssh $argv
             end
@@ -781,10 +781,10 @@ esac
     end
 end
 
-bork_precmd
+krust_precmd
 
 # Print the MotD if this is a login shell. Normally, login(1) or pam_motd(8)
-# would do this. However, Bork does not use login(1) for local sessions and for
+# would do this. However, Krust does not use login(1) for local sessions and for
 # remote sessions, SSHD thinks it is starting a non-interactive session, so it
 # does not print PAM messages.
 if status --is-login
@@ -797,8 +797,8 @@ if status --is-login
   end
 end
 
-bork_bootstrapped
+krust_bootstrapped
 
-set -g BORK_BOOTSTRAPPED 1
+set -g KRUST_BOOTSTRAPPED 1
 set -g fish_private_mode $saved_fish_private_mode
 end

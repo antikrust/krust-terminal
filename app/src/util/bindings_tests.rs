@@ -1,6 +1,6 @@
-use borkui::keymap::{EditableBinding, Keystroke, Trigger};
-use borkui::platform::OperatingSystem;
-use borkui::App;
+use krustui::keymap::{EditableBinding, Keystroke, Trigger};
+use krustui::platform::OperatingSystem;
+use krustui::App;
 
 use crate::terminal;
 use crate::util::bindings::{keybinding_name_to_display_string, trigger_to_keystroke};

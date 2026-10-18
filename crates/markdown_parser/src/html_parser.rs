@@ -27,7 +27,7 @@ const PHRASING_ELEMENT_TAGS: &[&str] = &[
     "span", "i", "code", "strong", "em", "br", "a", "s", "u", "ins",
 ];
 
-pub const BORK_EMBED_ATTRIBUTE_NAME: &str = "data-bork-embedded-item";
+pub const KRUST_EMBED_ATTRIBUTE_NAME: &str = "data-krust-embedded-item";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ListArg {
@@ -266,7 +266,7 @@ pub fn parse_html(html: &str) -> Result<FormattedText> {
                 result.push_back(match node_name.as_str() {
                     // If it's a code block, process its children node as plain text.
                     "pre" => {
-                        if let Some(val) = get_attribute(&attrs.borrow(), BORK_EMBED_ATTRIBUTE_NAME)
+                        if let Some(val) = get_attribute(&attrs.borrow(), KRUST_EMBED_ATTRIBUTE_NAME)
                         {
                             FormattedTextLine::Embedded(Mapping::from_iter([(
                                 Value::String("id".to_string()),
@@ -445,7 +445,7 @@ fn parse_phrasing_content(nodes: &[Rc<Node>], text_styling: Styling) -> Formatte
                     "u" | "ins" => decorated_styling.underline = true,
                     "code" => decorated_styling.inline_code = true,
                     // TODO: We need to add more phrasing styling we support (e.g. links) here.
-                    // https://linear.app/borkdotdev/issue/CLD-335/add-html-parsing-for-headers-and-lists
+                    // https://linear.app/krustdotdev/issue/CLD-335/add-html-parsing-for-headers-and-lists
                     _ => (),
                 };
 

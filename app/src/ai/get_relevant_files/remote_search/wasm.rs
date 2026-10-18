@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use borkui::{AppContext, ModelContext};
+use krustui::{AppContext, ModelContext};
 
 use crate::ai::agent::{AIAgentActionId, SearchCodebaseFailureReason, SearchCodebaseResult};
 use crate::ai::blocklist::SessionContext;

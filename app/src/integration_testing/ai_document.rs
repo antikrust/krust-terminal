@@ -1,5 +1,5 @@
-use borkui::integration::{AssertionCallback, TestStep};
-use borkui::{async_assert, App, SingletonEntity, TypedActionView, WindowId};
+use krustui::integration::{AssertionCallback, TestStep};
+use krustui::{async_assert, App, SingletonEntity, TypedActionView, WindowId};
 
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::ai::document::ai_document_model::{AIDocumentModel, AIDocumentVersion};

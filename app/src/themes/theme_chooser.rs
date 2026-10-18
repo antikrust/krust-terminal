@@ -1,22 +1,22 @@
 use pathfinder_color::ColorU;
 use settings::Setting as _;
-use bork_editor::editor::NavigationKey;
-use bork_errors::report_if_error;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krust_errors::report_if_error;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     Align, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, Empty, EventHandler, Fill, Flex, Hoverable, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Rect, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use borkui::fonts::{FamilyId, Weight};
-use borkui::geometry::vector::vec2f;
-use borkui::keymap::FixedBinding;
-use borkui::platform::{Cursor, SystemTheme};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::windowing::{StateEvent, WindowManager};
-use borkui::{
+use krustui::fonts::{FamilyId, Weight};
+use krustui::geometry::vector::vec2f;
+use krustui::keymap::FixedBinding;
+use krustui::platform::{Cursor, SystemTheme};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::windowing::{StateEvent, WindowManager};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, Tracked, TypedActionView,
     UpdateModel, View, ViewContext, ViewHandle,
 };
@@ -34,12 +34,12 @@ use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::{respect_system_theme, ThemeSettings};
 use crate::themes::theme::{
-    RespectSystemTheme, SelectedSystemThemes, ThemeKind, BorkTheme, BorkThemeConfig,
+    RespectSystemTheme, SelectedSystemThemes, ThemeKind, KrustTheme, KrustThemeConfig,
 };
 use crate::ui_components::buttons::{close_button, icon_button};
 use crate::ui_components::icons;
 use crate::ui_components::window_focus_dimming::WindowFocusDimming;
-use crate::user_config::{load_theme_configs, themes_dir, BorkConfig, BorkConfigUpdateEvent};
+use crate::user_config::{load_theme_configs, themes_dir, KrustConfig, KrustConfigUpdateEvent};
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightData, TrafficLightSide};
 use crate::window_settings::WindowSettings;
 use crate::workspace::PANEL_HEADER_HEIGHT;
@@ -142,7 +142,7 @@ pub struct ThemeChooser {
     mode: ThemeChooserMode,
     search_editor: ViewHandle<EditorView>,
     tips_completed: ModelHandle<TipsCompleted>,
-    window_id: borkui::WindowId,
+    window_id: krustui::WindowId,
 }
 
 #[derive(Debug)]
@@ -157,7 +157,7 @@ pub enum ThemeChooserAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", ThemeChooserAction::Up, id!("ThemeChooser")),
@@ -167,7 +167,7 @@ pub fn init(app: &mut AppContext) {
     ]);
 }
 
-fn theme_chooser_items(theme_config: &BorkThemeConfig) -> Vec<ThemeChooserItem> {
+fn theme_chooser_items(theme_config: &KrustThemeConfig) -> Vec<ThemeChooserItem> {
     let mut theme_items: Vec<ThemeChooserItem> = theme_config
         .theme_items()
         .map(|(key, theme)| ThemeChooserItem::new(key.clone(), theme.clone()))
@@ -195,9 +195,9 @@ impl ThemeChooser {
             me.handle_editor_event(event, ctx);
         });
 
-        let bork_config_handle = BorkConfig::handle(ctx);
-        ctx.subscribe_to_model(&bork_config_handle, |me, _, event, ctx| {
-            if let BorkConfigUpdateEvent::Themes = event {
+        let krust_config_handle = KrustConfig::handle(ctx);
+        ctx.subscribe_to_model(&krust_config_handle, |me, _, event, ctx| {
+            if let KrustConfigUpdateEvent::Themes = event {
                 me.update_themes(ctx);
                 ctx.notify();
             }
@@ -216,7 +216,7 @@ impl ThemeChooser {
             }
         });
 
-        let themes = theme_chooser_items(BorkConfig::as_ref(ctx).theme_config());
+        let themes = theme_chooser_items(KrustConfig::as_ref(ctx).theme_config());
 
         Self {
             themes: Tracked::new(themes),
@@ -278,8 +278,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&BorkConfig::handle(ctx), move |bork_config, ctx| {
-                    bork_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&KrustConfig::handle(ctx), move |krust_config, ctx| {
+                    krust_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_and_save_theme(&theme, ctx);
@@ -291,8 +291,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&BorkConfig::handle(ctx), move |bork_config, ctx| {
-                    bork_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&KrustConfig::handle(ctx), move |krust_config, ctx| {
+                    krust_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_latest_theme(ctx);
@@ -483,7 +483,7 @@ impl ThemeChooser {
     }
 
     fn update_themes(&mut self, ctx: &mut ViewContext<Self>) {
-        *self.themes = theme_chooser_items(BorkConfig::as_ref(ctx).theme_config());
+        *self.themes = theme_chooser_items(KrustConfig::as_ref(ctx).theme_config());
     }
 
     fn up(&mut self, ctx: &mut ViewContext<Self>) {
@@ -758,16 +758,16 @@ impl ThemeChooser {
                     .collect::<Vec<_>>()
                     .into_iter()
             });
-            let bork_theme = appearance.theme();
+            let krust_theme = appearance.theme();
 
             Scrollable::vertical(
                 self.scroll_state.clone(),
                 list.finish_scrollable(),
                 SCROLLBAR_WIDTH,
-                bork_theme
-                    .disabled_text_color(bork_theme.surface_2())
+                krust_theme
+                    .disabled_text_color(krust_theme.surface_2())
                     .into(),
-                bork_theme.main_text_color(bork_theme.surface_2()).into(),
+                krust_theme.main_text_color(krust_theme.surface_2()).into(),
                 Fill::None,
             )
             .finish()
@@ -812,7 +812,7 @@ impl View for ThemeChooser {
         Some(AccessibilityContent::new(
                 "Theme chooser. Unfortunately, theme chooser window isn't compatible with screen readers yet.",
                 "Press escape to close.",
-                BorkA11yRole::WindowRole,
+                KrustA11yRole::WindowRole,
         ))
     }
 
@@ -842,21 +842,21 @@ impl View for ThemeChooser {
 #[derive(Clone)]
 struct ThemeChooserItem {
     pub kind: ThemeKind,
-    bork_theme: BorkTheme,
+    krust_theme: KrustTheme,
     mouse_state: MouseStateHandle,
 }
 
 impl ThemeChooserItem {
-    pub fn new(kind: ThemeKind, bork_theme: BorkTheme) -> Self {
+    pub fn new(kind: ThemeKind, krust_theme: KrustTheme) -> Self {
         Self {
             kind,
-            bork_theme,
+            krust_theme,
             mouse_state: MouseStateHandle::default(),
         }
     }
 
     fn render_thumbnail(&self, font_family: FamilyId) -> Box<dyn Element> {
-        theme::render_preview(&self.bork_theme, font_family, None)
+        theme::render_preview(&self.krust_theme, font_family, None)
     }
 
     pub fn render(

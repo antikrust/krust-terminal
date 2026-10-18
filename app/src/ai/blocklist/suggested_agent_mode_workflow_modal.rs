@@ -3,16 +3,16 @@ use std::default::Default;
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     ChildAnchor, Empty, OffsetPositioning, PositionedElementAnchor, PositionedElementOffsetBounds,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::FixedBinding;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::FixedBinding;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -66,7 +66,7 @@ pub enum SuggestedAgentModeWorkflowModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::current_prompt::CurrentPrompt;
 use super::prompt::Prompt;
 use super::{chips_to_string, ChipResult, ChipValue};
 use crate::context_chips::ContextChipKind;
-use crate::settings::BorkPromptSeparator;
+use crate::settings::KrustPromptSeparator;
 
 /// Struct that holds a point in time snapshot of a prompt (chips are no longer interactive)
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -14,8 +14,8 @@ pub struct PromptSnapshot {
     chips: Vec<ChipResult>,
 
     same_line_prompt_enabled: bool,
-    /// The separator to use as a trailing character at the end of Bork prompt, if any.
-    separator: BorkPromptSeparator,
+    /// The separator to use as a trailing character at the end of Krust prompt, if any.
+    separator: KrustPromptSeparator,
 }
 
 impl PromptSnapshot {
@@ -58,7 +58,7 @@ impl PromptSnapshot {
     pub fn from_chips(
         chips: Vec<ChipResult>,
         same_line_prompt_enabled: bool,
-        separator: BorkPromptSeparator,
+        separator: KrustPromptSeparator,
     ) -> Self {
         Self {
             chips,
@@ -86,7 +86,7 @@ impl PromptSnapshot {
         self.same_line_prompt_enabled
     }
 
-    pub(super) fn separator(&self) -> BorkPromptSeparator {
+    pub(super) fn separator(&self) -> KrustPromptSeparator {
         self.separator
     }
 }

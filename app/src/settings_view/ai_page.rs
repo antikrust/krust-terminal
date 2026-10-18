@@ -8,28 +8,28 @@ use pathfinder_geometry::vector::vec2f;
 use regex::Regex;
 use settings::{Setting, ToggleableSetting};
 use strum::IntoEnumIterator;
-use bork_core::context_flag::ContextFlag;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::color::contrast::MinimumAllowedContrast;
-use bork_core::ui::color::ContrastingColor;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_core::context_flag::ContextFlag;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::color::contrast::MinimumAllowedContrast;
+use krust_core::ui::color::ContrastingColor;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Dismiss, Empty, Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable,
     HyperlinkLens, HyperlinkUrl, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::{ContextPredicate, Keystroke};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::slider::SliderStateHandle;
-use borkui::ui_components::switch::{SwitchStateHandle, TooltipConfig};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::{ContextPredicate, Keystroke};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::slider::SliderStateHandle;
+use krustui::ui_components::switch::{SwitchStateHandle, TooltipConfig};
+use krustui::{
     id, Action, AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -89,7 +89,7 @@ use crate::settings::{
     AIAutoDetectionEnabled, AICommandDenylist, AISettingsChangedEvent,
     AgentModeCodingPermissionsType, AgentModeCommandExecutionDenylist,
     AgentModeCommandExecutionPredicate, AgentModeQuerySuggestionsEnabled, AwsBedrockAutoLogin,
-    AwsBedrockCredentialsEnabled, CanUseBorkCreditsForFallback, CodeSettings,
+    AwsBedrockCredentialsEnabled, CanUseKrustCreditsForFallback, CodeSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
     LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
@@ -97,7 +97,7 @@ use crate::settings::{
     RuleSuggestionsEnabled, ShouldRenderCLIAgentToolbar,
     ShouldRenderUseAgentToolbarForUserCommands, ShouldShowOzUpdatesInZeroState, ShowAgentTips,
     ShowConversationHistory, ShowHintText, SwearMode, ThinkingDisplayMode, VoiceInputEnabled,
-    BorkDriveContextEnabled,
+    KrustDriveContextEnabled,
 };
 use crate::terminal::session_settings::{SessionSettings, SessionSettingsChangedEvent};
 use crate::terminal::CLIAgent;
@@ -114,8 +114,8 @@ use crate::workspaces::user_workspaces::UserWorkspacesEvent;
 /// When `None`, the page shows all widgets (legacy/full view).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AISubpage {
-    /// The main "BorkAgent" page: global AI toggle + Active AI + Input + Other sections.
-    BorkAgent,
+    /// The main "KrustAgent" page: global AI toggle + Active AI + Input + Other sections.
+    KrustAgent,
     /// Agent profiles and permissions.
     Profiles,
     /// Knowledge / Rules settings.
@@ -123,7 +123,7 @@ pub enum AISubpage {
     /// Third-party CLI agent settings.
     ThirdPartyCLIAgents,
     /// Grok (xAI) subscription — its own page rather than a row buried in the
-    /// Bork Agent page's API-keys section.
+    /// Krust Agent page's API-keys section.
     Grok,
     /// Personal provider keys and custom endpoints. Split off the AI Manager
     /// page: your own keys are for providers this app calls directly, which is
@@ -134,7 +134,7 @@ pub enum AISubpage {
 impl AISubpage {
     pub fn from_section(section: SettingsSection) -> Option<Self> {
         match section {
-            SettingsSection::BorkAgent => Some(Self::BorkAgent),
+            SettingsSection::KrustAgent => Some(Self::KrustAgent),
             SettingsSection::AgentProfiles => Some(Self::Profiles),
             SettingsSection::Knowledge => Some(Self::Knowledge),
             SettingsSection::ThirdPartyCLIAgents => Some(Self::ThirdPartyCLIAgents),
@@ -153,7 +153,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use bork_errors::{report_error, report_if_error};
+use krust_errors::{report_error, report_if_error};
 
 use crate::ai::{AIRequestUsageModel, AIRequestUsageModelEvent};
 use crate::appearance::{Appearance, AppearanceEvent};
@@ -189,8 +189,8 @@ const GIT_OPERATIONS_AUTOGEN_DESCRIPTION: &str =
     "Let AI generate commit messages and pull request titles and descriptions.";
 const WISPR_FLOW_URL: &str = "https://wisprflow.ai/";
 const CUSTOM_INFERENCE_LEARN_MORE_URL: &str =
-    "https://therob.lol/bork-terminal/help/agent-platform/inference/custom-inference-endpoint/";
-const CUSTOM_INFERENCE_TERMS_URL: &str = "https://www.bork.baby/legal/terms-of-service";
+    "https://therob.lol/krust-terminal/help/agent-platform/inference/custom-inference-endpoint/";
+const CUSTOM_INFERENCE_TERMS_URL: &str = "https://www.krust.baby/legal/terms-of-service";
 const CUSTOM_INFERENCE_INFO_TOOLTIP_MAX_WIDTH: f32 = 320.;
 const CUSTOM_ENDPOINT_MODAL_MAX_HEIGHT_PERCENTAGE: f32 = 0.8;
 
@@ -206,7 +206,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             context,
             flags::IS_ANY_AI_ENABLED,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
 
@@ -217,7 +217,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
             flags::IS_ACTIVE_AI_ENABLED,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
 
@@ -234,7 +234,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
             flags::AI_INPUT_AUTODETECTION_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())],
         app,
     );
@@ -247,7 +247,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
             flags::NLD_IN_TERMINAL_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| FeatureFlag::AgentView.is_enabled())],
         app,
     );
@@ -260,7 +260,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ACTIVE_AI_ENABLED)),
             flags::INTELLIGENT_AUTOSUGGESTIONS_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
@@ -272,7 +272,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ACTIVE_AI_ENABLED)),
             flags::PROMPT_SUGGESTIONS_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
@@ -286,7 +286,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 & id!(flags::PROMPT_SUGGESTIONS_FLAG)),
             flags::CODE_SUGGESTIONS_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
@@ -301,7 +301,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             ),
             None,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| FeatureFlag::AgentTips.is_enabled())],
         app,
     );
@@ -324,12 +324,12 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             ),
             None,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| FeatureFlag::AgentView.is_enabled())],
         app,
     );
     {
-        use borkui::keymap::FixedBinding;
+        use krustui::keymap::FixedBinding;
 
         use crate::settings::ThinkingDisplayMode;
 
@@ -350,13 +350,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                     )),
                     ai_context.clone() & !id!(context_flag),
                 )
-                .with_group(bindings::BindingGroup::BorkAi.as_str())
+                .with_group(bindings::BindingGroup::KrustAi.as_str())
             })
             .collect();
         app.register_fixed_bindings(mode_bindings);
     }
     {
-        use borkui::keymap::FixedBinding;
+        use krustui::keymap::FixedBinding;
 
         let ai_context = context.clone() & id!(flags::IS_ANY_AI_ENABLED);
         let mode_bindings: Vec<FixedBinding> = OrchestrationMessageDisplayMode::iter()
@@ -379,13 +379,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                     )),
                     ai_context.clone() & !id!(context_flag),
                 )
-                .with_group(bindings::BindingGroup::BorkAi.as_str())
+                .with_group(bindings::BindingGroup::KrustAi.as_str())
             })
             .collect();
         app.register_fixed_bindings(mode_bindings);
     }
     if FeatureFlag::QueueSlashCommand.is_enabled() {
-        use borkui::keymap::FixedBinding;
+        use krustui::keymap::FixedBinding;
 
         let ai_context = context.clone() & id!(flags::IS_ANY_AI_ENABLED);
         let mode_bindings: Vec<FixedBinding> = PromptSubmissionMode::iter()
@@ -401,7 +401,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                     )),
                     ai_context.clone() & !id!(context_flag),
                 )
-                .with_group(bindings::BindingGroup::BorkAi.as_str())
+                .with_group(bindings::BindingGroup::KrustAi.as_str())
             })
             .collect();
         app.register_fixed_bindings(mode_bindings);
@@ -427,7 +427,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                         & id!(flags::PROMPT_SUBMISSION_INTERRUPT)
                         & !id!(context_flag),
                 )
-                .with_group(bindings::BindingGroup::BorkAi.as_str())
+                .with_group(bindings::BindingGroup::KrustAi.as_str())
             })
             .collect();
         app.register_fixed_bindings(lrc_mode_bindings);
@@ -441,7 +441,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ACTIVE_AI_ENABLED)),
             flags::NATURAL_LANGUAGE_AUTOSUGGESTIONS_FLAG,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| FeatureFlag::PredictAMQueries.is_enabled())],
         app,
     );
@@ -470,7 +470,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
             flags::IS_VOICE_INPUT_ENABLED,
         )
-        .with_group(bindings::BindingGroup::BorkAi)
+        .with_group(bindings::BindingGroup::KrustAi)
         .with_enabled(|| cfg!(feature = "voice_input"))],
         app,
     );
@@ -491,7 +491,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             ),
             None,
         )
-        .with_group(bindings::BindingGroup::BorkAi)],
+        .with_group(bindings::BindingGroup::KrustAi)],
         app,
     );
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
@@ -504,21 +504,21 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::INCLUDE_AGENT_COMMANDS_IN_HISTORY_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "swear mode",
                 builder(SettingsAction::AI(AISettingsPageAction::ToggleSwearMode)),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::SWEAR_MODE_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "misery mode",
                 builder(SettingsAction::AI(AISettingsPageAction::ToggleMiseryMode)),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::MISERY_MODE_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "conversation history in tools panel",
                 builder(SettingsAction::AI(
@@ -527,7 +527,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::SHOW_CONVERSATION_HISTORY,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "model picker in prompt",
                 builder(SettingsAction::AI(
@@ -536,7 +536,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::SHOW_BASE_MODEL_PICKER_IN_PROMPT_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "coding agent toolbar",
                 builder(SettingsAction::AI(
@@ -545,7 +545,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 context,
                 flags::CLI_AGENT_FOOTER_ENABLED,
             )
-            .with_group(bindings::BindingGroup::BorkAi),
+            .with_group(bindings::BindingGroup::KrustAi),
         ],
         app,
     );
@@ -557,7 +557,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::AI_RULES_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| FeatureFlag::AIRules.is_enabled()),
             ToggleSettingActionPair::new(
                 "Suggested Rules",
@@ -567,19 +567,19 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::SUGGESTED_RULES_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| {
                 FeatureFlag::AIRules.is_enabled() && FeatureFlag::SuggestedRules.is_enabled()
             }),
             ToggleSettingActionPair::new(
                 "Library as agent context",
                 builder(SettingsAction::AI(
-                    AISettingsPageAction::ToggleBorkDriveContext,
+                    AISettingsPageAction::ToggleKrustDriveContext,
                 )),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
-                flags::BORK_DRIVE_CONTEXT_FLAG,
+                flags::KRUST_DRIVE_CONTEXT_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| FeatureFlag::AIRules.is_enabled()),
             ToggleSettingActionPair::new(
                 "Auto-spawn servers from third-party agents",
@@ -587,7 +587,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::FILE_BASED_MCP_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| {
                 FeatureFlag::McpServer.is_enabled()
                     && FeatureFlag::FileBasedMcp.is_enabled()
@@ -599,14 +599,14 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
         vec![
             ToggleSettingActionPair::new(
-                "Bork credit fallback",
+                "Krust credit fallback",
                 builder(SettingsAction::AI(
-                    AISettingsPageAction::ToggleCanUseBorkCreditsForFallback,
+                    AISettingsPageAction::ToggleCanUseKrustCreditsForFallback,
                 )),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
-                flags::BORK_CREDIT_FALLBACK_FLAG,
+                flags::KRUST_CREDIT_FALLBACK_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .is_supported_on_current_platform(
                 UserWorkspaces::as_ref(app).is_byo_api_key_enabled(app)
                     || UserWorkspaces::as_ref(app).is_custom_inference_enabled(app),
@@ -619,7 +619,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::CLI_AGENT_FOOTER_ENABLED)),
                 flags::AUTO_TOGGLE_RICH_INPUT_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| FeatureFlag::CLIAgentRichInput.is_enabled()),
             ToggleSettingActionPair::new(
                 "auto open Rich Input when a coding agent session starts",
@@ -629,7 +629,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::CLI_AGENT_FOOTER_ENABLED)),
                 flags::AUTO_OPEN_RICH_INPUT_ON_CLI_AGENT_START_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| FeatureFlag::CLIAgentRichInput.is_enabled()),
             ToggleSettingActionPair::new(
                 "auto dismiss Rich Input after prompt submission",
@@ -639,7 +639,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 &(context.clone() & id!(flags::CLI_AGENT_FOOTER_ENABLED)),
                 flags::AUTO_DISMISS_RICH_INPUT_AFTER_SUBMIT_FLAG,
             )
-            .with_group(bindings::BindingGroup::BorkAi)
+            .with_group(bindings::BindingGroup::KrustAi)
             .with_enabled(|| FeatureFlag::CLIAgentRichInput.is_enabled()),
         ],
         app,
@@ -1074,7 +1074,7 @@ impl AISettingsPageView {
         });
         // The coding agent footer command editor is always enabled,
         // independent of the global AI toggle, because it controls
-        // third-party coding agents rather than Bork's own AI.
+        // third-party coding agents rather than Krust's own AI.
         Self::update_editor_interaction_state(
             cli_agent_footer_command_editor.as_ref(ctx).editor().clone(),
             true,
@@ -1725,7 +1725,7 @@ impl AISettingsPageView {
         });
         #[cfg(feature = "local_fs")]
         {
-            let is_enabled = bork_core::features::FeatureFlag::CustomModelRouters.is_enabled()
+            let is_enabled = krust_core::features::FeatureFlag::CustomModelRouters.is_enabled()
                 && is_any_ai_enabled;
             add_router_button.update(ctx, |button, ctx| {
                 button.set_disabled(!is_enabled, ctx);
@@ -1915,13 +1915,13 @@ impl AISettingsPageView {
                 }
             });
         }
-        // Subscribe to BorkConfig to refresh router views when files change.
+        // Subscribe to KrustConfig to refresh router views when files change.
         #[cfg(feature = "local_fs")]
         ctx.subscribe_to_model(
-            &crate::user_config::BorkConfig::handle(ctx),
+            &crate::user_config::KrustConfig::handle(ctx),
             |me, _, event, ctx| {
-                use crate::user_config::BorkConfigUpdateEvent;
-                if matches!(event, BorkConfigUpdateEvent::ModelConfigs) {
+                use crate::user_config::KrustConfigUpdateEvent;
+                if matches!(event, KrustConfigUpdateEvent::ModelConfigs) {
                     me.router_views = Self::create_router_views(ctx);
                     ctx.notify();
                 }
@@ -2082,7 +2082,7 @@ impl AISettingsPageView {
     /// Returns `true` when the active Agent Mode default model is already served
     /// by a credential the user has: a BYO key/subscription for its provider, or
     /// one of their custom-endpoint models. `auto` models report `false` since
-    /// they always consume Bork credits.
+    /// they always consume Krust credits.
     fn active_base_model_is_byo_covered(ctx: &AppContext) -> bool {
         let (active_id, active_provider) = {
             let prefs = LLMPreferences::as_ref(ctx);
@@ -2115,7 +2115,7 @@ impl AISettingsPageView {
         // Exclude only confirmed paid plans. Solo/individual users have no
         // `current_workspace`, and billing may not have loaded yet (Unknown), so
         // treat both as eligible and rely on the out-of-credits check below to
-        // filter anyone who can still run Bork-hosted models. (A strict
+        // filter anyone who can still run Krust-hosted models. (A strict
         // `is_free_plan()` check here meant solo free users — the common case —
         // never saw the prompt.)
         let on_paid_plan = UserWorkspaces::as_ref(ctx)
@@ -2190,7 +2190,7 @@ impl AISettingsPageView {
         let current_default = Self::active_base_model_display_name(ctx);
         let description = format!(
             "You added your own {provider_name} API key, but your default model is currently set \
-             to {current_default}, which won't work without Bork credits. Would you like to change \
+             to {current_default}, which won't work without Krust credits. Would you like to change \
              your default model?"
         );
         self.show_set_default_model_modal(description, choices, ctx);
@@ -2236,7 +2236,7 @@ impl AISettingsPageView {
         let current_default = Self::active_base_model_display_name(ctx);
         let description = format!(
             "You added the \"{}\" custom endpoint, but your default model is currently set to \
-             {current_default}, which won't work without Bork credits. Would you like to change \
+             {current_default}, which won't work without Krust credits. Would you like to change \
              your default model?",
             endpoint.name
         );
@@ -2556,7 +2556,7 @@ impl AISettingsPageView {
     /// other completion is ignored once the view-owned attempt state is cleared.
     #[cfg(not(target_family = "wasm"))]
     fn start_grok_oauth(&mut self, ctx: &mut ViewContext<Self>) {
-        use bork_core::safe_error;
+        use krust_core::safe_error;
 
         use crate::view_components::{DismissibleToast, ToastLink};
         use crate::workspace::WorkspaceAction;
@@ -2684,7 +2684,7 @@ impl AISettingsPageView {
     /// attempt's PKCE verifier.
     #[cfg(not(target_family = "wasm"))]
     fn submit_grok_code(&mut self, code: String, ctx: &mut ViewContext<Self>) {
-        use bork_core::safe_error;
+        use krust_core::safe_error;
 
         use crate::view_components::DismissibleToast;
         use crate::ToastStack;
@@ -2813,7 +2813,7 @@ impl AISettingsPageView {
                     widgets.push(Box::new(CloudAgentComputerUseWidget::default()));
                 }
             }
-            Some(AISubpage::BorkAgent) => {
+            Some(AISubpage::KrustAgent) => {
                 // Oz page: global toggle + Active AI + Input + Other
                 widgets.push(Box::new(GlobalAIWidget::default()));
                 if ai_settings
@@ -3417,12 +3417,12 @@ impl AISettingsPageView {
         ctx: &mut ViewContext<Self>,
     ) -> Vec<ViewHandle<super::custom_router_view::CustomRouterView>> {
         use super::custom_router_view::{CustomRouterView, CustomRouterViewEvent};
-        use crate::user_config::BorkConfig;
-        if !bork_core::features::FeatureFlag::CustomModelRouters.is_enabled() {
+        use crate::user_config::KrustConfig;
+        if !krust_core::features::FeatureFlag::CustomModelRouters.is_enabled() {
             return Vec::new();
         }
         let routers: Vec<crate::ai::custom_model_routers::CustomModelRouter> =
-            BorkConfig::as_ref(ctx).custom_model_routers().clone();
+            KrustConfig::as_ref(ctx).custom_model_routers().clone();
         routers
             .into_iter()
             .map(|router| {
@@ -3441,7 +3441,7 @@ impl AISettingsPageView {
                             #[cfg(feature = "local_fs")]
                             {
                                 if let Err(e) =
-                                    crate::user_config::BorkConfig::delete_custom_model_router(path)
+                                    crate::user_config::KrustConfig::delete_custom_model_router(path)
                                 {
                                     log::warn!("Failed to delete custom router: {e:?}");
                                 }
@@ -3570,7 +3570,7 @@ impl View for AISettingsPageView {
         "AISettingsPage"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         self.page.render(self, app)
     }
 }
@@ -3613,7 +3613,7 @@ pub enum AISettingsPageAction {
     ToggleCLIAgentToolbar,
     ToggleUseAgentToolbar,
     ToggleVoiceInput,
-    ToggleCanUseBorkCreditsForFallback,
+    ToggleCanUseKrustCreditsForFallback,
     HyperlinkClick(HyperlinkUrl),
     ToggleCodebaseContext,
     ToggleShowInputHintText,
@@ -3643,7 +3643,7 @@ pub enum AISettingsPageAction {
     RemoveDirectoryFromCodeReadAllowlist(PathBuf),
     ToggleRules,
     ToggleRuleSuggestions,
-    ToggleBorkDriveContext,
+    ToggleKrustDriveContext,
     SetApplyCodeDiffs(ActionPermission),
     SetReadFiles(ActionPermission),
     SetExecuteCommands(ActionPermission),
@@ -4017,10 +4017,10 @@ impl TypedActionView for AISettingsPageView {
                 }
                 ctx.notify();
             }
-            AISettingsPageAction::ToggleCanUseBorkCreditsForFallback => {
+            AISettingsPageAction::ToggleCanUseKrustCreditsForFallback => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings
-                        .can_use_bork_credits_for_fallback
+                        .can_use_krust_credits_for_fallback
                         .toggle_and_save_value(ctx));
                 });
                 ctx.notify();
@@ -4277,10 +4277,10 @@ impl TypedActionView for AISettingsPageView {
                 });
                 ctx.notify();
             }
-            AISettingsPageAction::ToggleBorkDriveContext => {
+            AISettingsPageAction::ToggleKrustDriveContext => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     let _ = settings
-                        .bork_drive_context_enabled
+                        .krust_drive_context_enabled
                         .toggle_and_save_value(ctx);
                 });
                 ctx.notify();
@@ -4493,7 +4493,7 @@ impl TypedActionView for AISettingsPageView {
                 ctx.notify();
             }
             AISettingsPageAction::ToggleAgentAttribution => {
-                // The updated value syncs to bork-server automatically via
+                // The updated value syncs to krust-server automatically via
                 // `CloudPreferencesSyncer` as a `JsonPreference` GSO keyed
                 // `Global_AgentAttributionEnabled`; no bespoke server call needed.
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -4545,7 +4545,7 @@ impl SettingsPageMeta for AISettingsPageView {
         // The credit-usage counters are rendered by `UsageWidget`, which now
         // lives on the General subpage (ThirdPartyCLIAgents) — the former
         // Profiles content was merged there. Other AI subpages don't display
-        // usage, so refreshing it there is a pointless bork-server round-trip
+        // usage, so refreshing it there is a pointless krust-server round-trip
         // on every page open.
         if matches!(
             self.active_subpage,
@@ -4763,7 +4763,7 @@ impl SettingsWidget for GlobalAIWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "oz bork agent global ai a.i. active next command prompt code diffs suggestion suggested suggestions \
+        "oz krust agent global ai a.i. active next command prompt code diffs suggestion suggested suggestions \
                 agent mode natural language detection input hint api keys bring your own byo google anthropic openai"
     }
 
@@ -4845,13 +4845,13 @@ impl UsageWidget {
         is_unlimited: bool,
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
-    ) -> Box<dyn borkui::Element> {
+    ) -> Box<dyn krustui::Element> {
         let mut row = Flex::row();
         if used >= limit || workspace_is_delinquent_due_to_payment_issue {
             row.add_child(
                 ConstrainedBox::new(
                     Icon::AlertTriangle
-                        .to_borkui_icon(appearance.theme().ui_error_color().into())
+                        .to_krustui_icon(appearance.theme().ui_error_color().into())
                         .finish(),
                 )
                 .with_height(16.)
@@ -4910,7 +4910,7 @@ impl UsageWidget {
         is_unlimited: bool,
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
-    ) -> Box<dyn borkui::Element> {
+    ) -> Box<dyn krustui::Element> {
         let request_usage_details = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::End)
             .with_child(self.render_request_usage_count(
@@ -5071,7 +5071,7 @@ impl SettingsWidget for UsageWidget {
                 }
             } else {
                 vec![
-                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@bork.baby"),
+                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@krust.baby"),
                     FormattedTextFragment::plain_text(" for more AI usage."),
                 ]
             }
@@ -5171,8 +5171,8 @@ impl ActiveAIWidget {
     fn render_next_command_section(
         &self,
         view: &AISettingsPageView,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
 
@@ -5199,8 +5199,8 @@ impl ActiveAIWidget {
     fn render_prompt_suggestions_section(
         &self,
         view: &AISettingsPageView,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -5226,8 +5226,8 @@ impl ActiveAIWidget {
     fn render_suggested_code_banners_section(
         &self,
         view: &AISettingsPageView,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -5253,8 +5253,8 @@ impl ActiveAIWidget {
     fn render_natural_language_autosuggestions_section(
         &self,
         view: &AISettingsPageView,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -5280,8 +5280,8 @@ impl ActiveAIWidget {
     fn render_git_operations_autogen_section(
         &self,
         view: &AISettingsPageView,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -5845,7 +5845,7 @@ impl AgentsWidget {
         dropdown_menu: &ViewHandle<Dropdown<AISettingsPageAction>>,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
         let header = Container::new(render_body_item_label_with_icon::<AISettingsPageAction>(
             header_text.into(),
@@ -5865,7 +5865,7 @@ impl AgentsWidget {
         let alert_icon = Container::new(
             ConstrainedBox::new(
                 Icon::AlertCircle
-                    .to_borkui_icon(
+                    .to_krustui_icon(
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_2()),
@@ -5943,7 +5943,7 @@ impl AgentsWidget {
         );
         render_ai_list(
             "Command denylist",
-            "Regular expressions to match commands that the Bork Agent should always ask permission to execute.",
+            "Regular expressions to match commands that the Krust Agent should always ask permission to execute.",
             list,
             view,
             ai_settings,
@@ -5978,7 +5978,7 @@ impl AgentsWidget {
 
         render_ai_list(
             "Command allowlist",
-            "Regular expressions to match commands that can be automatically executed by the Bork Agent.",
+            "Regular expressions to match commands that can be automatically executed by the Krust Agent.",
             list,
             view,
             ai_settings,
@@ -6080,7 +6080,7 @@ impl AgentsWidget {
             appearance,
             "Base model",
             Some(
-                "This model serves as the primary engine behind the Bork Agent. It powers most interactions and invokes other models for tasks like planning or code generation when necessary. Bork may automatically switch to alternate models based on model availability or for auxiliary tasks such as conversation summarization.",
+                "This model serves as the primary engine behind the Krust Agent. It powers most interactions and invokes other models for tasks like planning or code generation when necessary. Krust may automatically switch to alternate models based on model availability or for auxiliary tasks such as conversation summarization.",
             ),
             Some(show_in_prompt_checkbox),
             LocalOnlyIconState::Hidden,
@@ -6096,7 +6096,7 @@ impl AgentsWidget {
         view: &AISettingsPageView,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
         let code_settings = CodeSettings::as_ref(app);
         let toggle = render_ai_setting_toggle::<CodebaseContextEnabled>(
@@ -6111,11 +6111,11 @@ impl AgentsWidget {
 
         let codebase_context_description = vec![
             FormattedTextFragment::plain_text(
-                "Allow the Bork Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ",
+                "Allow the Krust Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ",
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://therob.lol/bork-terminal/help/agent-platform/capabilities/codebase-context",
+                "https://therob.lol/krust-terminal/help/agent-platform/capabilities/codebase-context",
             ),
         ];
         let description = Container::new(
@@ -6184,7 +6184,7 @@ impl AgentsWidget {
         let subtext = {
             let subtext_fragments = vec![
                 FormattedTextFragment::plain_text(
-                    "You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Bork Agent has when interacting with them. ",
+                    "You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Krust Agent has when interacting with them. ",
                 ),
                 FormattedTextFragment::hyperlink_action(
                     "Add a server",
@@ -6193,7 +6193,7 @@ impl AgentsWidget {
                 FormattedTextFragment::plain_text(" or "),
                 FormattedTextFragment::hyperlink(
                     "learn more about MCPs.",
-                    "https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp",
+                    "https://therob.lol/krust-terminal/help/agent-platform/capabilities/mcp",
                 ),
             ];
 
@@ -6265,7 +6265,7 @@ impl AgentsWidget {
         {
             let allowlist = self.render_mcp_list(
                 "MCP allowlist",
-                "Allow the Bork Agent to call these MCP servers.",
+                "Allow the Krust Agent to call these MCP servers.",
                 &view.mcp_allowlist_dropdown,
                 BlocklistAIPermissions::as_ref(app).get_mcp_allowlist(app, None),
                 view.mcp_allowlist_mouse_state_handles.clone(),
@@ -6282,7 +6282,7 @@ impl AgentsWidget {
         {
             let denylist = self.render_mcp_list(
                 "MCP denylist",
-                "The Bork Agent will always ask for permission before calling any MCP servers on this list.",
+                "The Krust Agent will always ask for permission before calling any MCP servers on this list.",
                 &view.mcp_denylist_dropdown,
                 BlocklistAIPermissions::as_ref(app).get_mcp_denylist(app, None),
                 view.mcp_denylist_mouse_state_handles.clone(),
@@ -6598,8 +6598,8 @@ impl InputWidget {
         view: &AISettingsPageView,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let is_toggleable = ai_settings.is_any_ai_enabled(app);
         let is_nld_enabled = *ai_settings.ai_autodetection_enabled_internal.value();
 
@@ -6629,7 +6629,7 @@ impl InputWidget {
                         FormattedTextFragment::plain_text("Encountered an incorrect detection? "),
                         FormattedTextFragment::hyperlink(
                             "Let us know",
-                            "https://borkdotdev.typeform.com/to/offrTIpq",
+                            "https://krustdotdev.typeform.com/to/offrTIpq",
                         ),
                     ]
                 });
@@ -6688,7 +6688,7 @@ impl InputWidget {
                     ),
                     FormattedTextFragment::hyperlink(
                         "Let us know",
-                        "https://borkdotdev.typeform.com/to/offrTIpq",
+                        "https://krustdotdev.typeform.com/to/offrTIpq",
                     ),
                 ]
             });
@@ -6792,12 +6792,12 @@ impl SettingsWidget for MCPServersWidget {
 
         let mcp_description = vec![
             FormattedTextFragment::plain_text(
-                "Add MCP servers to extend the Bork Agent's capabilities. \
+                "Add MCP servers to extend the Krust Agent's capabilities. \
             MCP servers expose data sources or tools to agents through a standardized interface, essentially acting like plugins. ",
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp",
+                "https://therob.lol/krust-terminal/help/agent-platform/capabilities/mcp",
             ),
         ];
 
@@ -6843,7 +6843,7 @@ impl SettingsWidget for MCPServersWidget {
                                 ),
                                 FormattedTextFragment::hyperlink(
                                     "See supported providers.",
-                                    "https://therob.lol/bork-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
+                                    "https://therob.lol/krust-terminal/help/agent-platform/capabilities/mcp#file-based-mcp-servers",
                                 ),
                             ]
                         });
@@ -6901,7 +6901,7 @@ struct AIFactWidget {
     rules_link_index: HighlightedHyperlink,
     manage_rules_button: MouseStateHandle,
     rule_suggestions_toggle: SwitchStateHandle,
-    bork_drive_context_toggle: SwitchStateHandle,
+    krust_drive_context_toggle: SwitchStateHandle,
 }
 
 impl AIFactWidget {
@@ -6910,7 +6910,7 @@ impl AIFactWidget {
         view: &AISettingsPageView,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
         let toggle = render_ai_setting_toggle::<MemoryEnabled>(
             "Rules",
@@ -6924,11 +6924,11 @@ impl AIFactWidget {
 
         let rules_description = vec![
             FormattedTextFragment::plain_text(
-                "Rules help the Bork Agent follow your conventions, whether for codebases or specific workflows. ",
+                "Rules help the Krust Agent follow your conventions, whether for codebases or specific workflows. ",
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://therob.lol/bork-terminal/help/agent-platform/capabilities/rules",
+                "https://therob.lol/krust-terminal/help/agent-platform/capabilities/rules",
             ),
         ];
         let description = Container::new(
@@ -6961,7 +6961,7 @@ impl AIFactWidget {
         &self,
         view: &AISettingsPageView,
         ai_settings: &AISettings,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
         let toggle = render_ai_setting_toggle::<RuleSuggestionsEnabled>(
             "Suggested Rules",
@@ -6985,24 +6985,24 @@ impl AIFactWidget {
             .finish()
     }
 
-    fn render_bork_drive_context_toggle(
+    fn render_krust_drive_context_toggle(
         &self,
         view: &AISettingsPageView,
         ai_settings: &AISettings,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
-        let toggle = render_ai_setting_toggle::<BorkDriveContextEnabled>(
+        let toggle = render_ai_setting_toggle::<KrustDriveContextEnabled>(
             "Library as agent context",
-            AISettingsPageAction::ToggleBorkDriveContext,
-            *ai_settings.bork_drive_context_enabled,
+            AISettingsPageAction::ToggleKrustDriveContext,
+            *ai_settings.krust_drive_context_enabled,
             ai_settings.is_any_ai_enabled(app),
-            self.bork_drive_context_toggle.clone(),
+            self.krust_drive_context_toggle.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         );
 
         let description = render_ai_setting_description(
-            "The Bork Agent can leverage your Library Contents to tailor responses to your personal and team developer workflows and environments. This includes any Workflows, Notebooks, and Environment Variables.",
+            "The Krust Agent can leverage your Library Contents to tailor responses to your personal and team developer workflows and environments. This includes any Workflows, Notebooks, and Environment Variables.",
             ai_settings.is_any_ai_enabled(app),
             app,
         );
@@ -7018,7 +7018,7 @@ impl SettingsWidget for AIFactWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "agent oz ai a.i. knowledge fact memory memories rules bork drive context workflows notebooks environment variables"
+        "agent oz ai a.i. knowledge fact memory memories rules krust drive context workflows notebooks environment variables"
     }
 
     fn should_render(&self, _app: &AppContext) -> bool {
@@ -7060,7 +7060,7 @@ impl SettingsWidget for AIFactWidget {
 
         column
             .with_child(button)
-            .with_child(self.render_bork_drive_context_toggle(view, ai_settings, app))
+            .with_child(self.render_krust_drive_context_toggle(view, ai_settings, app))
             .finish()
     }
 }
@@ -7076,8 +7076,8 @@ impl VoiceWidget {
         &self,
         view: &AISettingsPageView,
         appearance: &Appearance,
-        app: &borkui::AppContext,
-    ) -> Box<dyn borkui::Element> {
+        app: &krustui::AppContext,
+    ) -> Box<dyn krustui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_any_ai_enabled(app);
         let mut column = Flex::column().with_child(render_ai_setting_toggle::<VoiceInputEnabled>(
@@ -7092,7 +7092,7 @@ impl VoiceWidget {
 
         let voice_input_description_text_fragments = vec![
             FormattedTextFragment::plain_text(
-                "Voice input allows you to control Bork by speaking directly to your terminal (powered by ",
+                "Voice input allows you to control Krust by speaking directly to your terminal (powered by ",
             ),
             FormattedTextFragment::hyperlink("Wispr Flow", WISPR_FLOW_URL),
             FormattedTextFragment::plain_text(")."),
@@ -7383,7 +7383,7 @@ impl SettingsWidget for OtherAIWidget {
         // TODO: OpenConversationLayoutPreference should not depend on local_fs, but it lives under the external editor settings
         // which does require local_fs. It was a mistake to put it there, but now we keep it there for backward compatibility.
         #[cfg(feature = "local_fs")]
-        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenKrustNewSettingsModes.is_enabled() {
             use crate::util::file::external_editor::settings::OpenConversationLayoutPreference;
 
             column.add_child(render_dropdown_item(
@@ -7439,7 +7439,7 @@ impl SettingsWidget for CLIAgentWidget {
 
         // The Coding Agents section is always enabled, independent of the
         // global AI toggle, because these settings control third-party coding
-        // agents (Claude Code, Codex, Gemini CLI) rather than Bork's own AI.
+        // agents (Claude Code, Codex, Gemini CLI) rather than Krust's own AI.
         let cli_agent_footer_toggle = render_ai_setting_toggle::<ShouldRenderCLIAgentToolbar>(
             "Show coding agent toolbar",
             AISettingsPageAction::ToggleCLIAgentToolbar,
@@ -7533,7 +7533,7 @@ impl SettingsWidget for CLIAgentWidget {
                             on_click_action: None,
                             secondary_text: None,
                             tooltip_override_text: Some(
-                                "Requires the Bork plugin for your coding agent".to_owned(),
+                                "Requires the Krust plugin for your coding agent".to_owned(),
                             ),
                         }),
                         LocalOnlyIconState::for_setting(
@@ -7761,7 +7761,7 @@ impl SettingsWidget for AgentAttributionWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "agent attribution commit pull request co-author author credit oz bork"
+        "agent attribution commit pull request co-author author credit oz krust"
     }
 
     fn render(
@@ -7942,7 +7942,7 @@ impl SettingsWidget for CloudAgentComputerUseWidget {
             )
             .with_child(toggle_row)
             .with_child(render_ai_setting_description(
-                "Enable computer use in cloud agent conversations started from the Bork app.",
+                "Enable computer use in cloud agent conversations started from the Krust app.",
                 !is_disabled,
                 app,
             ))
@@ -8075,7 +8075,7 @@ impl SettingsWidget for CloudHandoffWidget {
                 );
                 column.add_child(auto_handoff_on_sleep_row);
                 column.add_child(render_ai_setting_description(
-                    "When macOS is about to sleep, automatically moves the most recently focused running local Bork Agent conversation to Cloud Mode so it can keep working.",
+                    "When macOS is about to sleep, automatically moves the most recently focused running local Krust Agent conversation to Cloud Mode so it can keep working.",
                     true,
                     app,
                 ));
@@ -8126,7 +8126,7 @@ struct ApiKeysWidget {
     grok_connecting_button: ViewHandle<ActionButton>,
     grok_disconnect_button: ViewHandle<ActionButton>,
 
-    can_use_bork_credits_for_fallback: SwitchStateHandle,
+    can_use_krust_credits_for_fallback: SwitchStateHandle,
     upgrade_highlight_index: HighlightedHyperlink,
     openai_team_key_info_tooltip: MouseStateHandle,
     anthropic_team_key_info_tooltip: MouseStateHandle,
@@ -8361,7 +8361,7 @@ impl ApiKeysWidget {
             grok_connecting_button,
             grok_disconnect_button,
 
-            can_use_bork_credits_for_fallback: Default::default(),
+            can_use_krust_credits_for_fallback: Default::default(),
             upgrade_highlight_index: Default::default(),
             openai_team_key_info_tooltip: Default::default(),
             anthropic_team_key_info_tooltip: Default::default(),
@@ -8407,7 +8407,7 @@ impl ApiKeysWidget {
         let icon_color = appearance.theme().active_ui_text_color();
 
         Hoverable::new(mouse_state, move |state| {
-            let icon = ConstrainedBox::new(Icon::Info.to_borkui_icon(icon_color).finish())
+            let icon = ConstrainedBox::new(Icon::Info.to_krustui_icon(icon_color).finish())
                 .with_width(13.)
                 .with_height(13.)
                 .finish();
@@ -8558,7 +8558,7 @@ impl ApiKeysWidget {
 
         if show_provider_keys {
             add_paragraph(vec![FormattedTextFragment::plain_text(
-                "Use your own API keys from model providers for Bork Agent. API keys are used to make requests to your chosen model provider. Using auto models or models you do not have available API keys for will consume Bork credits.",
+                "Use your own API keys from model providers for Krust Agent. API keys are used to make requests to your chosen model provider. Using auto models or models you do not have available API keys for will consume Krust credits.",
             )]);
         }
 
@@ -8570,7 +8570,7 @@ impl ApiKeysWidget {
 
         if show_provider_keys || show_custom_endpoints {
             add_paragraph(vec![FormattedTextFragment::plain_text(
-                "API keys added here are stored only on this device, not on Bork's servers.",
+                "API keys added here are stored only on this device, not on Krust's servers.",
             )]);
             add_paragraph(vec![FormattedTextFragment::hyperlink(
                 "Learn more",
@@ -8604,7 +8604,7 @@ impl ApiKeysWidget {
         let icon = Container::new(
             ConstrainedBox::new(
                 Icon::Info
-                    .to_borkui_icon(appearance.theme().active_ui_text_color())
+                    .to_krustui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_width(13.)
@@ -8624,9 +8624,9 @@ impl ApiKeysWidget {
                 FormattedTextFragment::plain_text(
                     "By using BYOK or custom endpoints, you agree to use them only as permitted by ",
                 ),
-                FormattedTextFragment::hyperlink("Bork's Terms of Service", CUSTOM_INFERENCE_TERMS_URL),
+                FormattedTextFragment::hyperlink("Krust's Terms of Service", CUSTOM_INFERENCE_TERMS_URL),
                 FormattedTextFragment::plain_text(
-                    ". BYOK and custom endpoints are intended for individual use and small teams. Companies or organizations with more than 10 employees should use Bork Business or Enterprise.",
+                    ". BYOK and custom endpoints are intended for individual use and small teams. Companies or organizations with more than 10 employees should use Krust Business or Enterprise.",
                 ),
             ])])
         };
@@ -8756,7 +8756,7 @@ impl ApiKeysWidget {
 
     /// The whole content of the "Grok" settings subpage: a header, the
     /// connect/disconnect row, and — mid-connect — the paste-the-code
-    /// fallback. Moved off the Bork Agent page's API-keys section so Grok
+    /// fallback. Moved off the Krust Agent page's API-keys section so Grok
     /// stands on its own, the cloud-model counterpart to the Ollama page.
     fn render_grok_page(
         &self,
@@ -8830,7 +8830,7 @@ impl ApiKeysWidget {
                     .finish(),
             )
             .with_child(
-                ConstrainedBox::new(Icon::XLogo.to_borkui_icon(text_color).finish())
+                ConstrainedBox::new(Icon::XLogo.to_krustui_icon(text_color).finish())
                     .with_width(14.)
                     .with_height(14.)
                     .finish(),
@@ -8856,7 +8856,7 @@ impl ApiKeysWidget {
 
         let description = Container::new(
             Text::new(
-                "Connect your SuperGrok subscription to use Grok models in the Bork Agent through your xAI account.",
+                "Connect your SuperGrok subscription to use Grok models in the Krust Agent through your xAI account.",
                 appearance.ui_font_family(),
                 CONTENT_FONT_SIZE,
             )
@@ -8890,7 +8890,7 @@ impl ApiKeysWidget {
             };
             let check = ConstrainedBox::new(
                 Icon::Check
-                    .to_borkui_icon(appearance.theme().ansi_fg_green().into())
+                    .to_krustui_icon(appearance.theme().ansi_fg_green().into())
                     .finish(),
             )
             .with_width(12.)
@@ -8956,25 +8956,25 @@ impl ApiKeysWidget {
             .finish()
     }
 
-    fn render_bork_credit_fallback_toggle(
+    fn render_krust_credit_fallback_toggle(
         &self,
         view: &AISettingsPageView,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let ai_settings = AISettings::as_ref(app);
 
-        let toggle = render_ai_setting_toggle::<CanUseBorkCreditsForFallback>(
-            "Bork credit fallback",
-            AISettingsPageAction::ToggleCanUseBorkCreditsForFallback,
-            *ai_settings.can_use_bork_credits_for_fallback,
+        let toggle = render_ai_setting_toggle::<CanUseKrustCreditsForFallback>(
+            "Krust credit fallback",
+            AISettingsPageAction::ToggleCanUseKrustCreditsForFallback,
+            *ai_settings.can_use_krust_credits_for_fallback,
             ai_settings.is_any_ai_enabled(app),
-            self.can_use_bork_credits_for_fallback.clone(),
+            self.can_use_krust_credits_for_fallback.clone(),
             &view.local_only_icon_tooltip_states,
             app,
         );
 
         let description = render_ai_setting_description(
-            "When enabled, agent requests may be routed to one of Bork's provided models in the event of an error. Bork will prioritize using your API keys over your Bork credits.",
+            "When enabled, agent requests may be routed to one of Krust's provided models in the event of an error. Krust will prioritize using your API keys over your Krust credits.",
             ai_settings.is_any_ai_enabled(app),
             app,
         );
@@ -9069,7 +9069,7 @@ impl SettingsWidget for ApiKeysWidget {
         // controls belong on the other AI pages, not here.
         //
         // Fork: connecting a SuperGrok subscription is between the user and
-        // xAI — no Bork account or BYOK plan involved — so the page follows
+        // xAI — no Krust account or BYOK plan involved — so the page follows
         // only the AI master switch, not `provider_keys_enabled`.
         if view.active_subpage == Some(AISubpage::Grok) {
             return self.render_grok_page(view, appearance, is_any_ai_enabled, app);
@@ -9205,10 +9205,10 @@ impl SettingsWidget for ApiKeysWidget {
         // Grok's connect row used to live here; it now has its own subpage
         // (rendered by render_grok_page via the early return above).
 
-        // Bork credit fallback applies to member-provided API keys, not custom endpoints.
+        // Krust credit fallback applies to member-provided API keys, not custom endpoints.
         if is_byo_enabled && show_provider_keys {
             column.add_child(
-                Container::new(self.render_bork_credit_fallback_toggle(view, app))
+                Container::new(self.render_krust_credit_fallback_toggle(view, app))
                     .with_margin_top(16.)
                     .finish(),
             );
@@ -9222,7 +9222,7 @@ impl SettingsWidget for ApiKeysWidget {
             {
                 if team.billing_metadata.customer_type == CustomerType::Enterprise {
                     vec![
-                        FormattedTextFragment::hyperlink("Contact sales", "mailto:sales@bork.baby"),
+                        FormattedTextFragment::hyperlink("Contact sales", "mailto:sales@krust.baby"),
                         FormattedTextFragment::plain_text(
                             " to enable bringing your own API keys on your Enterprise plan.",
                         ),
@@ -9511,9 +9511,9 @@ impl AwsBedrockWidget {
         let are_credentials_enabled = user_workspaces.is_aws_bedrock_credentials_enabled(app);
         let is_usage_enabled = is_section_enabled && are_credentials_enabled;
         let toggle_description = if is_admin_enforced {
-            "Bork loads and sends local AWS CLI credentials for Bedrock-supported models. This setting is managed by your organization.".to_string()
+            "Krust loads and sends local AWS CLI credentials for Bedrock-supported models. This setting is managed by your organization.".to_string()
         } else {
-            "Bork loads and sends local AWS CLI credentials for Bedrock-supported models."
+            "Krust loads and sends local AWS CLI credentials for Bedrock-supported models."
                 .to_string()
         };
 
@@ -9589,7 +9589,7 @@ impl AwsBedrockWidget {
                 .user_facing_components();
 
             let icon = Container::new(
-                ConstrainedBox::new(icon.to_borkui_icon(title_color).finish())
+                ConstrainedBox::new(icon.to_krustui_icon(title_color).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish(),
@@ -9735,7 +9735,7 @@ impl SettingsWidget for AwsBedrockWidget {
 }
 
 /// Stable `&'static str` id for the custom model routers settings widget,
-/// exposed for the `bork://settings?widget=custom_router` deeplink (see
+/// exposed for the `krust://settings?widget=custom_router` deeplink (see
 /// `settings_widget_deeplink_target`).
 pub(crate) fn custom_model_routers_widget_id() -> &'static str {
     CustomModelRoutersWidget::static_widget_id()
@@ -9774,14 +9774,14 @@ impl SettingsWidget for CustomModelRoutersWidget {
             .with_child({
                 #[cfg(feature = "local_fs")]
                 {
-                    borkui::elements::Container::new(view.add_router_button.as_ref(app).render(app))
+                    krustui::elements::Container::new(view.add_router_button.as_ref(app).render(app))
                         .with_margin_bottom(4.)
                         .with_margin_top(-4.)
                         .finish()
                 }
                 #[cfg(not(feature = "local_fs"))]
                 {
-                    borkui::elements::Empty::new().finish()
+                    krustui::elements::Empty::new().finish()
                 }
             })
             .finish();
@@ -9803,10 +9803,10 @@ impl SettingsWidget for CustomModelRoutersWidget {
         #[cfg(feature = "local_fs")]
         let column = {
             use super::custom_router_view::render_router_error_card;
-            use crate::user_config::BorkConfig;
+            use crate::user_config::KrustConfig;
             let mut c = column;
             // Error cards (files that failed to parse) — shown first
-            let errors = BorkConfig::as_ref(app).custom_model_router_errors();
+            let errors = KrustConfig::as_ref(app).custom_model_router_errors();
             for error in errors.iter() {
                 c.add_child(
                     Container::new(render_router_error_card(
@@ -9821,7 +9821,7 @@ impl SettingsWidget for CustomModelRoutersWidget {
             // Router summary cards
             for view_handle in &view.router_views {
                 c.add_child(
-                    Container::new(borkui::elements::ChildView::new(view_handle).finish())
+                    Container::new(krustui::elements::ChildView::new(view_handle).finish())
                         .with_margin_top(8.)
                         .finish(),
                 );
@@ -9839,9 +9839,9 @@ impl SettingsWidget for CustomModelRoutersWidget {
 }
 
 mod styles {
-    use bork_core::ui::appearance::Appearance;
-    use bork_core::ui::theme::Fill;
-    use borkui::{AppContext, SingletonEntity};
+    use krust_core::ui::appearance::Appearance;
+    use krust_core::ui::theme::Fill;
+    use krustui::{AppContext, SingletonEntity};
 
     // Apply a negative margin to the description text so it appears closer to the main
     // settings option text.

@@ -1,8 +1,8 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::Element;
-use borkui::prelude::Container;
-use borkui::scene::Border;
-use borkui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::Element;
+use krustui::prelude::Container;
+use krustui::scene::Border;
+use krustui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::terminal::input::inline_menu::model::InlineMenuModel;

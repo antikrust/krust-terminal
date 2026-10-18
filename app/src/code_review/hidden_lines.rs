@@ -2,8 +2,8 @@ use std::ops::Range;
 
 use ai::diff_validation::DiffDelta;
 use rangemap::RangeSet;
-use bork_editor::content::text::LineCount;
-use bork_editor::render::model::LineCount as RenderLineCount;
+use krust_editor::content::text::LineCount;
+use krust_editor::render::model::LineCount as RenderLineCount;
 
 /// The number of context lines to show before and after each change
 const CONTEXT_LINES: usize = 4;

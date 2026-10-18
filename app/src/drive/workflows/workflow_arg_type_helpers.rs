@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bork_errors::report_error;
-use borkui::{AppContext, SingletonEntity, ViewHandle};
+use krust_errors::report_error;
+use krustui::{AppContext, SingletonEntity, ViewHandle};
 
 use super::enum_creation_dialog::{EnumCreationDialog, WorkflowEnumData};
 use super::workflow_arg_selector::WorkflowArgSelector;
@@ -32,10 +32,10 @@ impl ArgumentTypeEditor for super::modal::ArgumentEditorRow {
 /// Get all workflow enums in the space, filtering to only show the shared ones
 pub fn load_workflow_enums_with_owner<V>(
     owner: Owner,
-    ctx: &mut borkui::ViewContext<V>,
+    ctx: &mut krustui::ViewContext<V>,
 ) -> HashMap<SyncId, WorkflowEnumData>
 where
-    V: borkui::View,
+    V: krustui::View,
 {
     let cloud_model = CloudModel::as_ref(ctx);
     cloud_model
@@ -61,7 +61,7 @@ pub fn load_argument_into_selector(
     selector: &mut WorkflowArgSelector,
     argument: &Argument,
     all_workflow_enums: &mut HashMap<SyncId, WorkflowEnumData>,
-    ctx: &mut borkui::ViewContext<WorkflowArgSelector>,
+    ctx: &mut krustui::ViewContext<WorkflowArgSelector>,
 ) {
     let selected_type = argument.arg_type.clone().into();
     selector.set_selected_type(selected_type, ctx);
@@ -149,9 +149,9 @@ pub fn extract_typed_argument_from_selector(
 pub fn save_enum<V>(
     enum_data: &WorkflowEnumData,
     owner: Option<Owner>,
-    ctx: &mut borkui::ViewContext<V>,
+    ctx: &mut krustui::ViewContext<V>,
 ) where
-    V: borkui::View,
+    V: krustui::View,
 {
     let Some(variants) = enum_data.new_data.clone() else {
         return;
@@ -199,10 +199,10 @@ pub fn create_enum<V, T>(
     all_workflow_enums: &mut HashMap<SyncId, WorkflowEnumData>,
     arguments_rows: &[T],
     pending_argument_editor_row: &mut Option<ArgumentEditorRowIndex>,
-    ctx: &mut borkui::ViewContext<V>,
+    ctx: &mut krustui::ViewContext<V>,
 ) where
     T: ArgumentTypeEditor,
-    V: borkui::View,
+    V: krustui::View,
 {
     let enum_id = enum_data.id;
     let enum_name = enum_data.name.clone();
@@ -240,10 +240,10 @@ pub fn edit_enum<V, T>(
     all_workflow_enums: &mut HashMap<SyncId, WorkflowEnumData>,
     arguments_rows: &[T],
     pending_argument_editor_row: &mut Option<ArgumentEditorRowIndex>,
-    ctx: &mut borkui::ViewContext<V>,
+    ctx: &mut krustui::ViewContext<V>,
 ) where
     T: ArgumentTypeEditor,
-    V: borkui::View,
+    V: krustui::View,
 {
     let enum_id = enum_data.id;
     let enum_name = &enum_data.name;
@@ -287,10 +287,10 @@ pub fn load_enum<V>(
     id: &SyncId,
     all_workflow_enums: &HashMap<SyncId, WorkflowEnumData>,
     enum_creation_dialog: &ViewHandle<EnumCreationDialog>,
-    ctx: &mut borkui::ViewContext<V>,
+    ctx: &mut krustui::ViewContext<V>,
 ) -> bool
 where
-    V: borkui::View,
+    V: krustui::View,
 {
     match all_workflow_enums.get(id) {
         // If we have local variants for this enum, pass them in

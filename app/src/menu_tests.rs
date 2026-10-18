@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::{App, TypedActionView};
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::{App, TypedActionView};
 
 use super::{Menu, MenuAction, MenuItem, MenuItemFields, SelectAction, SubMenu};
 

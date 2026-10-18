@@ -1,8 +1,8 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::color::internal_colors;
-use bork_util::path::user_friendly_path;
-use borkui::elements::{
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::color::internal_colors;
+use krust_util::path::user_friendly_path;
+use krustui::elements::{
     AnchorPair, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Fill as ElementFill, Flex,
     Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior, MouseStateHandle,
@@ -10,12 +10,12 @@ use borkui::elements::{
     PositionedElementOffsetBounds, PositioningAxis, Radius, SavePosition, Shrinkable, Stack, Text,
     XAxisAnchor, YAxisAnchor,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::text_input::TextInput;
-use borkui::{AppContext, SingletonEntity, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::text_input::TextInput;
+use krustui::{AppContext, SingletonEntity, ViewHandle};
 
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
 use crate::ai::agent_conversations_model::{
@@ -120,7 +120,7 @@ pub fn render_static_item(props: StaticItemProps<'_>, app: &AppContext) -> Box<d
 
     let icon_color = theme.main_text_color(theme.background());
     let icon = Container::new(
-        ConstrainedBox::new(Icon::Plus.to_borkui_icon(icon_color).finish())
+        ConstrainedBox::new(Icon::Plus.to_krustui_icon(icon_color).finish())
             .with_width(appearance.ui_font_size())
             .with_height(appearance.ui_font_size())
             .finish(),

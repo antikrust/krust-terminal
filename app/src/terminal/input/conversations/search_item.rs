@@ -2,12 +2,12 @@
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::theme::Fill;
+use krustui::elements::{ConstrainedBox, Container, Highlight, ParentElement, Shrinkable, Text};
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::prelude::{Align, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize};
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent_conversations_model::AgentConversationEntry;
 use crate::ai::conversation_status_ui::render_status_element;

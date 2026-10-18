@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 use super::{AgentConversation, AgentConversationData, AgentConversationSummary, ModelTokenUsage};
 
@@ -426,10 +426,10 @@ fn model_token_usage_replays_custom_endpoint_usage_by_model_id() {
 #[allow(deprecated)]
 #[test]
 fn model_token_usage_replay_skips_non_custom_endpoint_entries() {
-    let bork_only = ModelTokenUsage {
-        model_id: "bork-model".to_string(),
-        bork_tokens: 4,
+    let krust_only = ModelTokenUsage {
+        model_id: "krust-model".to_string(),
+        krust_tokens: 4,
         ..Default::default()
     };
-    assert!(bork_only.to_proto_custom_endpoint_usage().is_none());
+    assert!(krust_only.to_proto_custom_endpoint_usage().is_none());
 }

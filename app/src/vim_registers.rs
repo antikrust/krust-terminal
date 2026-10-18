@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use settings::Setting as _;
 use vim::vim::MotionType;
-use borkui::clipboard::ClipboardContent;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::clipboard::ClipboardContent;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::settings::AppEditorSettings;
 

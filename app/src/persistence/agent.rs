@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::SqliteConnection;
 use prost::Message;
-use bork_errors::report_error;
-use bork_multi_agent_api as api;
+use krust_errors::report_error;
+use krust_multi_agent_api as api;
 
 use super::model::{AgentConversation, AgentConversationData, AgentConversationSummary};
 use super::ConversationSummaryBackfill;

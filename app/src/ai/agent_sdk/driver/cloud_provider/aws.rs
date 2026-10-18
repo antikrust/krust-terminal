@@ -7,9 +7,9 @@ use std::time::Duration;
 use anyhow::Context;
 use tempfile::{Builder, NamedTempFile};
 use vec1::Vec1;
-use bork_core::safe_info;
-use bork_managed_secrets::ManagedSecretManager;
-use borkui::{ModelSpawner, SingletonEntity};
+use krust_core::safe_info;
+use krust_managed_secrets::ManagedSecretManager;
+use krustui::{ModelSpawner, SingletonEntity};
 
 use super::super::terminal::TerminalDriver;
 use super::{CloudProvider, CloudProviderSetupError, Result};
@@ -21,7 +21,7 @@ use crate::ai::cloud_environments::AwsProviderConfig;
 /// set this to the current maximum task duration.
 const IDENTITY_TOKEN_DURATION: Duration = Duration::from_hours(3);
 
-/// AWS STS audience for Bork Oz OIDC federation.
+/// AWS STS audience for Krust Oz OIDC federation.
 const AWS_AUDIENCE: &str = "sts.amazonaws.com";
 
 /// Provides AWS Web Identity credentials for the agent session.
@@ -96,7 +96,7 @@ impl CloudProvider for AwsCloudProvider {
                     ManagedSecretManager::handle(ctx)
                         .as_ref(ctx)
                         .issue_task_identity_token(
-                            bork_managed_secrets::client::IdentityTokenOptions {
+                            krust_managed_secrets::client::IdentityTokenOptions {
                                 audience,
                                 requested_duration: duration,
                                 subject_template,

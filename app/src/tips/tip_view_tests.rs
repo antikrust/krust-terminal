@@ -1,6 +1,6 @@
-use borkui::elements::{ChildView, Empty, SavePosition};
-use borkui::platform::WindowStyle;
-use borkui::{App, ViewHandle};
+use krustui::elements::{ChildView, Empty, SavePosition};
+use krustui::platform::WindowStyle;
+use krustui::{App, ViewHandle};
 
 use super::*;
 

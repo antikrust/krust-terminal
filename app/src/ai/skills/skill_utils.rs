@@ -10,12 +10,12 @@ use ai::skills::{
 };
 use lazy_static::lazy_static;
 use siphasher::sip::SipHasher;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::prelude::MouseStateHandle;
-use borkui::{AppContext, Element, EventContext, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::prelude::MouseStateHandle;
+use krustui::{AppContext, Element, EventContext, SingletonEntity};
 
 use super::{SkillDescriptor, SkillManager};
 use crate::ai::agent::conversation::AIConversationId;
@@ -96,7 +96,7 @@ impl SkillDeduplicator {
 ///
 /// Two skills are considered duplicates only when they share the same owning directory
 /// **and** identical content — which is the common case when a tool like `npx skills`
-/// symlinks the same skill under `~/.agents/skills/`, `~/.bork/skills/`, `~/.claude/skills/`, etc.
+/// symlinks the same skill under `~/.agents/skills/`, `~/.krust/skills/`, `~/.claude/skills/`, etc.
 ///
 /// Each element of `skill_paths` is a `(dir_path, skill_file_path)` tuple where
 /// `dir_path` is the directory that owns the skill.

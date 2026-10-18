@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use anyhow::Context;
 #[cfg(test)]
 pub use tests::TestModel;
-use bork_errors::report_if_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_if_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::ServerExperiment;
 use crate::persistence::ModelEvent;

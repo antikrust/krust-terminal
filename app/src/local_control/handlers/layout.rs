@@ -6,8 +6,8 @@ use ::local_control::protocol::{TabCreateParams, TabType, TargetSelector};
 use ::local_control::{ActionKind, ControlError, ErrorCode, InstanceId};
 use serde::Serialize;
 #[cfg(feature = "local_tty")]
-use borkui::SingletonEntity;
-use borkui::{ModelContext, TypedActionView};
+use krustui::SingletonEntity;
+use krustui::{ModelContext, TypedActionView};
 
 use crate::local_control::resolver::{
     decode_params, target_window_id_for_target, validate_tab_create_target, workspace_for_window,

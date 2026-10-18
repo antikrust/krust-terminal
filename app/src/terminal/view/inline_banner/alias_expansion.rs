@@ -1,5 +1,5 @@
-use borkui::elements::{MouseStateHandle, Text};
-use borkui::Element;
+use krustui::elements::{MouseStateHandle, Text};
+use krustui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerButtonState, InlineBannerCloseButton,
@@ -88,7 +88,7 @@ pub fn render_alias_expansion_banner(
         InlineBannerStyle::VeryLowPriority,
         appearance,
         InlineBannerContent {
-            title: "Bork can auto-expand aliases.".into(),
+            title: "Krust can auto-expand aliases.".into(),
             buttons,
             content: Some(content),
             close_button: Some(close_button),

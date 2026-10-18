@@ -1,15 +1,15 @@
-//! Support for pane contents that are shareable, like sessions and Bork Drive objects.
+//! Support for pane contents that are shareable, like sessions and Krust Drive objects.
 //!
 //! This is tightly coupled to the pane header so that different overlays (context menus, the
 //! sharing dialog, and so on) are correctly displayed.
 
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{ConstrainedBox, MouseStateHandle, ParentElement};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, ViewContext, ViewHandle};
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{ConstrainedBox, MouseStateHandle, ParentElement};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, ViewContext, ViewHandle};
 
 use super::{Event, OpenOverlay, PaneHeader, PaneHeaderAction};
 use crate::drive::sharing::dialog::{SharingDialog, SharingDialogEvent};
@@ -66,18 +66,18 @@ impl<P: BackingView> PaneHeader<P> {
         &self.shared_content.sharing_dialog
     }
 
-    pub fn has_shareable_object<C: borkui::ViewAsRef>(&self, ctx: &C) -> bool {
+    pub fn has_shareable_object<C: krustui::ViewAsRef>(&self, ctx: &C) -> bool {
         self.sharing_dialog().as_ref(ctx).has_target()
     }
 
-    pub fn has_shareable_shared_session<C: borkui::ViewAsRef>(&self, ctx: &C) -> bool {
+    pub fn has_shareable_shared_session<C: krustui::ViewAsRef>(&self, ctx: &C) -> bool {
         self.sharing_dialog()
             .as_ref(ctx)
             .has_shared_session_target()
     }
 
-    pub fn is_sharing_dialog_enabled<C: borkui::ViewAsRef>(&self, ctx: &C) -> bool {
-        // Fork: Bork Drive objects are local-only, so panes backed by Drive
+    pub fn is_sharing_dialog_enabled<C: krustui::ViewAsRef>(&self, ctx: &C) -> bool {
+        // Fork: Krust Drive objects are local-only, so panes backed by Drive
         // objects (notebooks, workflows, env vars) never offer the sharing
         // dialog — sharing them is file export instead. Shared sessions are
         // a separate feature and keep their flag-gated behavior.

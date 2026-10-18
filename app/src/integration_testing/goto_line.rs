@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use bork_editor::content::buffer::ToBufferPoint;
-use borkui::integration::AssertionCallback;
-use borkui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
+use krust_editor::content::buffer::ToBufferPoint;
+use krustui::integration::AssertionCallback;
+use krustui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
 
 use crate::code::editor::goto_line::view::GoToLineView;
 use crate::code::editor::view::CodeEditorView;

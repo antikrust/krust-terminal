@@ -12,14 +12,14 @@ use indexmap::IndexSet;
 use remote_server::manager::RemoteServerManager;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
-use bork_core::SessionId;
+use krust_core::SessionId;
 #[cfg(feature = "local_fs")]
-use bork_errors::report_error;
+use krust_errors::report_error;
 #[cfg(feature = "local_fs")]
-use bork_util::remote_path::RemotePath;
+use krust_util::remote_path::RemotePath;
 #[cfg(feature = "local_fs")]
-use borkui::{AppContext, SingletonEntity as _};
-use borkui::{Entity, EntityId, ModelContext, ModelHandle, ViewHandle};
+use krustui::{AppContext, SingletonEntity as _};
+use krustui::{Entity, EntityId, ModelContext, ModelHandle, ViewHandle};
 
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]

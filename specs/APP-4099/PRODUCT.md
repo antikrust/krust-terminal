@@ -2,34 +2,34 @@
 
 ## Summary
 
-Bork currently appends `?server_id=<uuid>` to the redirect URI used during MCP OAuth flows. Some OAuth servers normalize or strip query parameters from redirect URIs during Dynamic Client Registration (DCR), then reject subsequent authorization requests because the URI in the request no longer exactly matches the registered one. This breaks OAuth authentication for any MCP server whose OAuth provider performs exact redirect URI comparison, which is the RFC-recommended default.
+Krust currently appends `?server_id=<uuid>` to the redirect URI used during MCP OAuth flows. Some OAuth servers normalize or strip query parameters from redirect URIs during Dynamic Client Registration (DCR), then reject subsequent authorization requests because the URI in the request no longer exactly matches the registered one. This breaks OAuth authentication for any MCP server whose OAuth provider performs exact redirect URI comparison, which is the RFC-recommended default.
 
-The fix is to use a clean redirect URI (`bork://mcp/oauth2callback`) throughout the flow and route incoming callbacks using the standard OAuth `state` parameter instead.
+The fix is to use a clean redirect URI (`krust://mcp/oauth2callback`) throughout the flow and route incoming callbacks using the standard OAuth `state` parameter instead.
 
 ## Problem
 
-When a user attempts to connect to an OAuth-protected MCP server, Bork:
+When a user attempts to connect to an OAuth-protected MCP server, Krust:
 
-1. Registers the client via DCR, sending `redirect_uris: ["bork://mcp/oauth2callback?server_id=<uuid>"]`
-2. Some OAuth servers normalize this URI during registration (stripping the query parameter), storing only `bork://mcp/oauth2callback`
-3. Bork then sends the authorization request with `redirect_uri=bork://mcp/oauth2callback?server_id=<uuid>`
+1. Registers the client via DCR, sending `redirect_uris: ["krust://mcp/oauth2callback?server_id=<uuid>"]`
+2. Some OAuth servers normalize this URI during registration (stripping the query parameter), storing only `krust://mcp/oauth2callback`
+3. Krust then sends the authorization request with `redirect_uri=krust://mcp/oauth2callback?server_id=<uuid>`
 4. The OAuth server rejects the request with `unknown_redirect_uri` because RFC 6749 §3.1.2.2 requires exact string comparison and the two URIs no longer match
 
 Additionally, even when DCR succeeds with the full URI, the practice of embedding client-routing data in the `redirect_uri` violates the spirit of RFC 6749, which recommends using the `state` parameter for client-specific context.
 
-This issue blocks Bork users from connecting to MCP servers backed by strict OAuth providers (e.g. Hydra/ORY, some enterprise identity providers), with no workaround available within Bork.
+This issue blocks Krust users from connecting to MCP servers backed by strict OAuth providers (e.g. Hydra/ORY, some enterprise identity providers), with no workaround available within Krust.
 
 ## Goals
 
 - MCP OAuth flows succeed with OAuth servers that perform exact string comparison on redirect URIs
-- The `redirect_uri` used in DCR and authorization requests is identical and free of Bork-internal routing parameters
+- The `redirect_uri` used in DCR and authorization requests is identical and free of Krust-internal routing parameters
 - Server routing for incoming OAuth callbacks uses the standard `state` parameter
 - Multiple simultaneous MCP OAuth flows continue to work correctly
 - Existing MCP servers that already have successful cached credentials are unaffected
 
 ## Non-goals
 
-- Changing how Bork handles non-MCP OAuth flows (e.g. GitHub integration auth, Bork Drive auth)
+- Changing how Krust handles non-MCP OAuth flows (e.g. GitHub integration auth, Krust Drive auth)
 - Modifying the `rmcp` crate's CSRF token generation or validation logic
 - Supporting MCP servers that send back a modified `state` value in the callback (such servers would also break rmcp's existing CSRF validation, which is a separate issue)
 
@@ -42,32 +42,32 @@ Figma: none provided (no UI changes in this fix)
 ### Normal OAuth connection flow (after fix)
 
 1. User adds or enables an OAuth-protected MCP server in Settings → MCP
-2. Bork opens the server's OAuth authorization URL in the user's browser, as today
+2. Krust opens the server's OAuth authorization URL in the user's browser, as today
 3. The user completes authorization in the browser
-4. The browser redirects to `bork://mcp/oauth2callback?code=<code>&state=<csrf_token>` — no `server_id` appended
-5. Bork handles the callback, exchanges the code for tokens, and connects the server
+4. The browser redirects to `krust://mcp/oauth2callback?code=<code>&state=<csrf_token>` — no `server_id` appended
+5. Krust handles the callback, exchanges the code for tokens, and connects the server
 6. The MCP server appears as connected in Settings → MCP, as today
 
 The user experience is identical to the current flow. The change is entirely internal.
 
 ### Error behavior
 
-- If the callback `state` parameter is missing or does not match any active OAuth flow, Bork logs an error and the server remains in an unauthenticated state. The user may retry by toggling the server off and on
+- If the callback `state` parameter is missing or does not match any active OAuth flow, Krust logs an error and the server remains in an unauthenticated state. The user may retry by toggling the server off and on
 - This error behavior is the same as the current behavior when `server_id` is missing or unrecognized
 
 ### Invariants
 
 - The `redirect_uri` registered during DCR is always `{scheme}://mcp/oauth2callback` with no query parameters
 - The `redirect_uri` used in the authorization request is always identical to the one used in DCR
-- The `state` parameter in the authorization URL is an opaque CSRF token generated by rmcp; Bork does not modify it
+- The `state` parameter in the authorization URL is an opaque CSRF token generated by rmcp; Krust does not modify it
 - The `state` value from the OAuth callback is used both for server routing and for CSRF validation (passed through to rmcp's `handle_callback`)
 - Each active OAuth flow has a unique `state` (CSRF token), allowing concurrent flows for different servers to be routed independently
 
 ## Success Criteria
 
-- Bork successfully completes an MCP OAuth flow with an OAuth provider that rejects redirect URIs containing query parameters (e.g. Hydra/ORY)
+- Krust successfully completes an MCP OAuth flow with an OAuth provider that rejects redirect URIs containing query parameters (e.g. Hydra/ORY)
 - The `redirect_uri` sent in the authorization request exactly matches the URI registered during DCR
-- Bork correctly routes OAuth callbacks to the right server using the `state` parameter
+- Krust correctly routes OAuth callbacks to the right server using the `state` parameter
 - Concurrent OAuth flows for two different MCP servers both complete successfully
 - MCP servers with pre-existing cached credentials continue to connect without re-authenticating
 

@@ -1,10 +1,10 @@
-# Bork Tab Config
-# Stored in ~/.bork/tab_configs/ — rename this file and edit anytime!
+# Krust Tab Config
+# Stored in ~/.krust/tab_configs/ — rename this file and edit anytime!
 #
 # Tip: Ask Oz to update this tab config for you using /skills -> /update-tab-config!
 #   e.g. "/update-tab-config turn this into a 2x2 tab config with one pane running my dev server"
 #
-# Docs at https://therob.lol/bork-terminal/help/terminal/windows/tab-configs
+# Docs at https://therob.lol/krust-terminal/help/terminal/windows/tab-configs
 
 name = "My Tab Config"
 

@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{ChildView, Empty};
-use borkui::platform::WindowStyle;
-use borkui::{App, AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{ChildView, Empty};
+use krustui::platform::WindowStyle;
+use krustui::{App, AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::*;
 use crate::server::server_api::ServerApiProvider;

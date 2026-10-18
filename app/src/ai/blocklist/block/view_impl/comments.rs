@@ -1,11 +1,11 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krustui::elements::{
     Axis, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, Hoverable, MouseState, ParentElement, Radius, Text, Wrap, WrapFillEntireRun,
 };
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent::comment::ReviewComment;
 use crate::ai::agent::icons::addressed_comment_icon;
@@ -163,7 +163,7 @@ fn comment_icon(is_addressed: bool, appearance: &Appearance) -> Box<dyn Element>
         addressed_comment_icon(appearance).finish()
     } else {
         Icon::MessageText
-            .to_borkui_icon(
+            .to_krustui_icon(
                 appearance
                     .theme()
                     .sub_text_color(appearance.theme().background()),

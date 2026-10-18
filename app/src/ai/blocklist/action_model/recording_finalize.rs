@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use ai::agent::action_result::{RecordingStopped, StopRecordingResult};
 use futures::channel::oneshot;
-use borkui::r#async::Timer;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::r#async::Timer;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::recording_controller::{
     ActiveRecording, FinalizationClaim, RecordingController, StopRecordingControllerError,

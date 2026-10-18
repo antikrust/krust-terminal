@@ -1,4 +1,4 @@
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     Alias, CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Suggestion,
 };
@@ -381,7 +381,7 @@ mod tests {
         npm_registry_search_generator, workspace_generator, workspace_packages_generator,
         yarn_workspace_names_generator,
     };
-    use bork_completion_metadata::{GeneratorResults, Suggestion};
+    use krust_completion_metadata::{GeneratorResults, Suggestion};
 
     #[test]
     pub fn test_workspace_generator() {

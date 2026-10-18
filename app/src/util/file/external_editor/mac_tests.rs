@@ -1,18 +1,18 @@
-use super::is_bork_bundle;
+use super::is_krust_bundle;
 
 #[test]
-fn is_bork_bundle_recognises_bork_channels() {
-    assert!(is_bork_bundle("bork.baby.Bork"));
-    assert!(is_bork_bundle("bork.baby.BorkDev"));
-    assert!(is_bork_bundle("bork.baby.BorkPreview"));
-    assert!(is_bork_bundle("bork.baby.Bork"));
+fn is_krust_bundle_recognises_krust_channels() {
+    assert!(is_krust_bundle("krust.baby.Krust"));
+    assert!(is_krust_bundle("krust.baby.KrustDev"));
+    assert!(is_krust_bundle("krust.baby.KrustPreview"));
+    assert!(is_krust_bundle("krust.baby.Krust"));
 }
 
 #[test]
-fn is_bork_bundle_rejects_other_apps() {
-    assert!(!is_bork_bundle("com.microsoft.VSCode"));
-    assert!(!is_bork_bundle("com.apple.TextEdit"));
-    assert!(!is_bork_bundle("dev.zed.Zed"));
-    assert!(!is_bork_bundle("invalid"));
-    assert!(!is_bork_bundle(""));
+fn is_krust_bundle_rejects_other_apps() {
+    assert!(!is_krust_bundle("com.microsoft.VSCode"));
+    assert!(!is_krust_bundle("com.apple.TextEdit"));
+    assert!(!is_krust_bundle("dev.zed.Zed"));
+    assert!(!is_krust_bundle("invalid"));
+    assert!(!is_krust_bundle(""));
 }

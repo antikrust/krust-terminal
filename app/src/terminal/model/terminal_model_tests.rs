@@ -4,11 +4,11 @@ use std::sync::Arc;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::{DateTime, Local};
 use vec1::vec1;
-use bork_core::command::ExitCode;
-use bork_core::features::FeatureFlag;
-use bork_terminal::model::ansi::ClearMode;
-use borkui::r#async::executor::Background;
-use borkui::text::{str_to_byte_vec, SelectionType};
+use krust_core::command::ExitCode;
+use krust_core::features::FeatureFlag;
+use krust_terminal::model::ansi::ClearMode;
+use krustui::r#async::executor::Background;
+use krustui::text::{str_to_byte_vec, SelectionType};
 
 use super::*;
 use crate::terminal::color;
@@ -199,7 +199,7 @@ fn ignores_non_inline_iterm_file_payload_without_overwriting_cwd_file() {
     let temp_dir = tempfile::tempdir().unwrap();
     let target_path = temp_dir.path().join(".zshenv");
     let original_bytes = b"ORIGINAL=1\n";
-    let attacker_bytes = b"touch /tmp/bork-pwned\n";
+    let attacker_bytes = b"touch /tmp/krust-pwned\n";
     fs::write(&target_path, original_bytes).unwrap();
 
     let mut terminal = TerminalModel::mock(None, None);
@@ -220,7 +220,7 @@ fn ignores_multipart_non_inline_iterm_file_payload_without_overwriting_cwd_file(
     let temp_dir = tempfile::tempdir().unwrap();
     let target_path = temp_dir.path().join(".zshenv");
     let original_bytes = b"ORIGINAL=1\n";
-    let attacker_bytes = b"touch /tmp/bork-pwned\n";
+    let attacker_bytes = b"touch /tmp/krust-pwned\n";
     fs::write(&target_path, original_bytes).unwrap();
 
     let mut terminal = TerminalModel::mock(None, None);
@@ -386,7 +386,7 @@ pub fn test_restored_empty_command_block() {
         !restored_block.is_command_empty(),
         "The empty block should have nonzero length"
     );
-    // The mocked terminal model comes with a BorkInput block and the active block.
+    // The mocked terminal model comes with a KrustInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), 3);
 }
 
@@ -399,7 +399,7 @@ fn test_restored_blocks_on_different_host() {
         SerializedBlock {
             id: BlockId::new(),
             stylized_command: str_to_byte_vec("echo $TERM_PROGRAM"),
-            stylized_output: str_to_byte_vec("BorkTerminal"),
+            stylized_output: str_to_byte_vec("KrustTerminal"),
             pwd: Some("/".to_owned()),
             git_head: None,
             git_branch_name: None,
@@ -546,7 +546,7 @@ fn test_restored_blocks_on_different_host() {
         .into(),
     ];
     let model = TerminalModel::mock(Some(&restored_blocks), None);
-    // The mocked terminal model comes with a BorkInput block and the active block.
+    // The mocked terminal model comes with a KrustInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), restored_blocks.len() + 2);
     for restored_block in model
         .block_list()
@@ -561,7 +561,7 @@ fn test_restored_blocks_on_different_host() {
     }
     let blocks = model.block_list().blocks();
     assert_eq!(blocks[0].command_to_string(), "echo $TERM_PROGRAM",);
-    assert_eq!(blocks[0].output_to_string(), "BorkTerminal",);
+    assert_eq!(blocks[0].output_to_string(), "KrustTerminal",);
     assert_eq!(blocks[1].command_to_string(), "pwd",);
     assert_eq!(blocks[1].output_to_string(), "/",);
     assert_eq!(blocks[2].command_to_string(), "uname",);

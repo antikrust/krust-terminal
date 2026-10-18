@@ -1,11 +1,11 @@
 use asset_macro::bundled_or_fetched_asset;
 use pathfinder_color::ColorU;
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::color::{coloru_with_opacity, OPAQUE};
-use bork_core::ui::theme::color::CustomDetails;
-use bork_core::ui::theme::{
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::color::{coloru_with_opacity, OPAQUE};
+use krust_core::ui::theme::color::CustomDetails;
+use krust_core::ui::theme::{
     AnsiColor, AnsiColors, Details, Fill, HorizontalGradient, Image, TerminalColors,
-    VerticalGradient, BorkTheme,
+    VerticalGradient, KrustTheme,
 };
 
 const DARK_MODE_NORMAL_COLORS: AnsiColors = AnsiColors::new(
@@ -259,8 +259,8 @@ pub(super) fn adeberry_colors() -> TerminalColors {
 }
 
 /// Default bundled themes
-pub fn dark_theme() -> BorkTheme {
-    BorkTheme::new(
+pub fn dark_theme() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x050505FF)),
         ColorU::from_u32(0xffffffff),
         Fill::Solid(ColorU::from_u32(0x19AAD8FF)),
@@ -272,8 +272,8 @@ pub fn dark_theme() -> BorkTheme {
     )
 }
 
-pub fn light_theme() -> BorkTheme {
-    BorkTheme::new(
+pub fn light_theme() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::white()),
         ColorU::new(17, 17, 17, OPAQUE),
         Fill::Solid(ColorU::from_u32(0x00c2ffff)),
@@ -285,8 +285,8 @@ pub fn light_theme() -> BorkTheme {
     )
 }
 
-pub(super) fn dracula() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn dracula() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x282A36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xFF79C6FF)),
@@ -298,8 +298,8 @@ pub(super) fn dracula() -> BorkTheme {
     )
 }
 
-pub(super) fn solarized_light() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn solarized_light() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0xFDF6E3FF)),
         ColorU::from_u32(0x586E75FF),
         Fill::Solid(ColorU::from_u32(0x66B5A9FF)),
@@ -311,8 +311,8 @@ pub(super) fn solarized_light() -> BorkTheme {
     )
 }
 
-pub(super) fn solarized_dark() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn solarized_dark() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x002B36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xCB4B16FF)),
@@ -324,8 +324,8 @@ pub(super) fn solarized_dark() -> BorkTheme {
     )
 }
 
-pub(super) fn gruvbox_dark() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn gruvbox_dark() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x282828FF)),
         ColorU::from_u32(0xEBDBB2FF),
         Fill::Solid(ColorU::from_u32(0xFC802DFF)),
@@ -337,8 +337,8 @@ pub(super) fn gruvbox_dark() -> BorkTheme {
     )
 }
 
-pub(super) fn gruvbox_light() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn gruvbox_light() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBF1C7FF)),
         ColorU::from_u32(0x3C3836FF),
         Fill::Solid(ColorU::from_u32(0xAD3B14FF)),
@@ -351,8 +351,8 @@ pub(super) fn gruvbox_light() -> BorkTheme {
 }
 
 /// Bundled gradient themes
-pub(super) fn cyber_wave() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn cyber_wave() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::black().blend(&coloru_with_opacity(ColorU::from_u32(0x00C2FFFF), 20)),
             ColorU::black(),
@@ -370,8 +370,8 @@ pub(super) fn cyber_wave() -> BorkTheme {
     )
 }
 
-pub(super) fn willow_dream() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn willow_dream() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x206169FF),
             ColorU::from_u32(0x022F27FF),
@@ -389,8 +389,8 @@ pub(super) fn willow_dream() -> BorkTheme {
     )
 }
 
-pub(super) fn fancy_dracula() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn fancy_dracula() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x252630FF),
             ColorU::from_u32(0x3D3F4FFF),
@@ -408,8 +408,8 @@ pub(super) fn fancy_dracula() -> BorkTheme {
     )
 }
 
-pub(super) fn phenomenon() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn phenomenon() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x121212FF)),
         ColorU::from_u32(0xFAF9F6FF),
         Fill::Solid(ColorU::from_u32(0x2E5D9EFF)),
@@ -425,8 +425,8 @@ pub(super) fn phenomenon() -> BorkTheme {
 }
 
 /// Bundled themes with background images
-pub(super) fn jellyfish() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn jellyfish() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1718FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x538682FF)),
@@ -441,8 +441,8 @@ pub(super) fn jellyfish() -> BorkTheme {
     )
 }
 
-pub(super) fn koi() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn koi() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x211719FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0xFF3131FF)),
@@ -457,8 +457,8 @@ pub(super) fn koi() -> BorkTheme {
     )
 }
 
-pub(super) fn leafy() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn leafy() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::black()),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x55972DFF)),
@@ -473,8 +473,8 @@ pub(super) fn leafy() -> BorkTheme {
     )
 }
 
-pub(super) fn marble() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn marble() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0xE3E3E3FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0x585858FF)),
@@ -489,11 +489,11 @@ pub(super) fn marble() -> BorkTheme {
     )
 }
 
-pub(super) fn pink_city() -> BorkTheme {
+pub(super) fn pink_city() -> KrustTheme {
     let details = CustomDetails {
         ..CustomDetails::lighter_details()
     };
-    BorkTheme::new(
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBEFF6FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0xE10087FF)),
@@ -508,8 +508,8 @@ pub(super) fn pink_city() -> BorkTheme {
     )
 }
 
-pub(super) fn snowy() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn snowy() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0xFFFFFFFF),
             ColorU::from_u32(0xDEE6EBFF),
@@ -527,8 +527,8 @@ pub(super) fn snowy() -> BorkTheme {
     )
 }
 
-pub(super) fn red_rock() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn red_rock() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x211719FF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x4C3435FF), 45)),
@@ -548,8 +548,8 @@ pub(super) fn red_rock() -> BorkTheme {
     )
 }
 
-pub(super) fn dark_city() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn dark_city() -> KrustTheme {
+    KrustTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x01181FFF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x1A363FFF), 45)),
@@ -569,8 +569,8 @@ pub(super) fn dark_city() -> BorkTheme {
     )
 }
 
-pub(super) fn solar_flare() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn solar_flare() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1C18FF)),
         ColorU::from_u32(0xDDE6EEFF),
         Fill::Solid(ColorU::from_u32(0x34895CFF)),
@@ -585,8 +585,8 @@ pub(super) fn solar_flare() -> BorkTheme {
     )
 }
 
-pub(super) fn adeberry() -> BorkTheme {
-    BorkTheme::new(
+pub(super) fn adeberry() -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),

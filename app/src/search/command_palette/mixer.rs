@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use strum_macros::IntoStaticStr;
-use bork_util::path::LineAndColumnArg;
-use borkui::keymap::BindingId;
-use borkui::{EntityId, WindowId};
+use krust_util::path::LineAndColumnArg;
+use krustui::keymap::BindingId;
+use krustui::{EntityId, WindowId};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::drive::CloudObjectTypeAndId;
@@ -28,7 +28,7 @@ pub enum CommandPaletteItemAction {
     OpenNotebook {
         id: SyncId,
     },
-    ViewInBorkDrive {
+    ViewInKrustDrive {
         id: CloudObjectTypeAndId,
     },
     InvokeEnvironmentVariables {
@@ -116,7 +116,7 @@ impl CommandPaletteItemAction {
             CommandPaletteItemAction::OpenLaunchConfiguration { .. } => {
                 ItemSummary::LaunchConfiguration
             }
-            CommandPaletteItemAction::ViewInBorkDrive { id } => match id {
+            CommandPaletteItemAction::ViewInKrustDrive { id } => match id {
                 CloudObjectTypeAndId::Notebook(_)
                 | CloudObjectTypeAndId::Folder(_)
                 | CloudObjectTypeAndId::GenericStringObject { .. } => ItemSummary::CloudObject,

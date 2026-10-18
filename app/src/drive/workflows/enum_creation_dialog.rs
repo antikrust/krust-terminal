@@ -2,18 +2,18 @@ use std::rc::Rc;
 
 use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, IntoStaticStr};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Fill, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, ScrollbarWidth, Shrinkable,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
-use borkui::{
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::toggle_menu::{ToggleMenuItem, ToggleMenuStateHandle};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -596,7 +596,7 @@ impl EnumCreationDialog {
             .with_centered_text_label(label_text.to_owned())
             .with_style(UiComponentStyles {
                 font_size: Some(BUTTON_FONT_SIZE),
-                font_weight: Some(borkui::fonts::Weight::Normal),
+                font_weight: Some(krustui::fonts::Weight::Normal),
                 ..Default::default()
             });
 
@@ -607,7 +607,7 @@ impl EnumCreationDialog {
         button
             .build()
             .on_click(move |ctx, _, _| ctx.dispatch_typed_action(action.clone()))
-            .with_cursor(borkui::platform::Cursor::PointingHand)
+            .with_cursor(krustui::platform::Cursor::PointingHand)
             .finish()
     }
 

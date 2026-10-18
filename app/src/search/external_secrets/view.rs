@@ -3,14 +3,14 @@ use std::ops::Range;
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use borkui::elements::{
+use krustui::elements::{
     Align, ConstrainedBox, Container, CornerRadius, Dismiss, Empty, Fill, Flex, ParentElement,
     Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, Shrinkable,
     UniformList, UniformListState,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -364,7 +364,7 @@ impl TypedActionView for ExternalSecretsMenu {
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use borkui::elements::{Border, DropShadow, ScrollbarWidth};
+    use krustui::elements::{Border, DropShadow, ScrollbarWidth};
 
     use crate::appearance::Appearance;
     use crate::themes::theme::Fill;

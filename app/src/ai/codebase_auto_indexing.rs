@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::settings::CodeSettings;
 use crate::workspaces::user_workspaces::UserWorkspaces;

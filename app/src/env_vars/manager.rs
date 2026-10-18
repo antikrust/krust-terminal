@@ -1,7 +1,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WeakViewHandle};
+use krustui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WeakViewHandle};
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::Owner;

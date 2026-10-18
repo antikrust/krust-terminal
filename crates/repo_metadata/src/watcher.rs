@@ -6,8 +6,8 @@ use std::pin::Pin;
 
 #[cfg(feature = "local_fs")]
 use futures::{future::OptionFuture, FutureExt as _};
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
 use crate::repository::SubscriberId;
 use crate::{RepoMetadataError, Repository};

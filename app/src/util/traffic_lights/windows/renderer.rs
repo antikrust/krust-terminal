@@ -3,14 +3,14 @@
 use std::sync::Arc;
 
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::{Fill, BorkTheme};
-use borkui::elements::{
+use krust_core::ui::theme::{Fill, KrustTheme};
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::FamilyId;
-use borkui::platform::FullscreenState;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::FamilyId;
+use krustui::platform::FullscreenState;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::util::traffic_lights::windows::RendererState;
 use crate::util::traffic_lights::windows_only::WINDOWS_BRIGHT_RED;
@@ -50,28 +50,28 @@ impl WindowsTrafficLightIcon {
         }
     }
 
-    fn background_hover_color(&self, theme: &BorkTheme) -> Fill {
+    fn background_hover_color(&self, theme: &KrustTheme) -> Fill {
         match self {
             Self::Close => WINDOWS_BRIGHT_RED.into(),
             Self::Minimize | Self::Maximize | Self::Restore => theme.surface_3(),
         }
     }
 
-    fn icon_hover_color(&self, theme: &BorkTheme) -> ColorU {
+    fn icon_hover_color(&self, theme: &KrustTheme) -> ColorU {
         match self {
             Self::Close => ColorU::white(),
             Self::Minimize | Self::Maximize | Self::Restore => self.icon_color(theme),
         }
     }
 
-    fn icon_color(&self, theme: &BorkTheme) -> ColorU {
+    fn icon_color(&self, theme: &KrustTheme) -> ColorU {
         theme.foreground().into_solid()
     }
 
     fn render(
         &self,
         mouse_state_handle: MouseStateHandle,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         icon_font_family: FamilyId,
         action_name: &'static str,
     ) -> Box<dyn Element> {
@@ -109,7 +109,7 @@ impl WindowsTrafficLightIcon {
 fn render_tab_row_with_glyph_icons(
     fullscreen_state: FullscreenState,
     mouse_states: &TrafficLightMouseStates,
-    theme: &BorkTheme,
+    theme: &KrustTheme,
     icon_font_family: FamilyId,
 ) -> Box<dyn Element> {
     let flex = Flex::row()
@@ -160,7 +160,7 @@ impl TrafficLightData {
         &self,
         fullscreen_state: FullscreenState,
         mouse_states: &TrafficLightMouseStates,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         match RendererState::handle(app).as_ref(app).icon_font_family() {
@@ -187,7 +187,7 @@ impl TrafficLightData {
         &self,
         fullscreen_state: FullscreenState,
         mouse_states: &TrafficLightMouseStates,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
     ) -> Box<dyn Element> {
         let fg_color = theme.foreground().into_solid();
         ConstrainedBox::new(

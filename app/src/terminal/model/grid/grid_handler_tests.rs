@@ -1,11 +1,11 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/krust_terminal/src/model/LICENSE-ALACRITTY.
 
 use std::ops::BitOrAssign;
 
-use bork_terminal::model::char_or_str::CharOrStr;
-use bork_util::path::LineAndColumnArg;
-use borkui::text::words::is_default_word_boundary;
+use krust_terminal::model::char_or_str::CharOrStr;
+use krust_util::path::LineAndColumnArg;
+use krustui::text::words::is_default_word_boundary;
 
 use super::*;
 use crate::terminal::model::blockgrid::BlockGrid;
@@ -84,9 +84,9 @@ fn regex_right() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
         testing66\r\n\
-        Bork\n\
+        Krust\n\
         123\r\n\
-        Bork\r\n\
+        Krust\r\n\
         123\
     ");
 
@@ -109,9 +109,9 @@ fn regex_left() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
         testing66\r\n\
-        Bork\n\
+        Krust\n\
         123\r\n\
-        Bork\r\n\
+        Krust\r\n\
         123\
     ");
 
@@ -133,7 +133,7 @@ fn regex_left() {
 fn nested_regex() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
-        Wa -> Bork -> rp\r\n\
+        Wa -> Krust -> rp\r\n\
         rp\
     ");
 
@@ -562,12 +562,12 @@ fn test_line_to_fragments() {
 
 #[test]
 fn test_secrets_serialization() {
-    let mut blockgrid = mock_blockgrid("foo zach@bork.baby bar");
+    let mut blockgrid = mock_blockgrid("foo zach@krust.baby bar");
     blockgrid.maybe_enable_secret_obfuscation(ObfuscateSecrets::Yes);
     blockgrid.grid_handler_mut().mark_secret_range(
         Point::new(0, 4)..=Point::new(0, 16),
         IsObfuscated::Yes,
-        "zach@bork.baby".to_string(),
+        "zach@krust.baby".to_string(),
         SecretLevel::User,
     );
 
@@ -594,7 +594,7 @@ fn test_secrets_serialization() {
         .expect("should unobfuscate secret");
 
     assert_eq!(
-        "foo zach@bork.baby bar",
+        "foo zach@krust.baby bar",
         blockgrid.grid_handler.bounds_to_string(
             Point::new(0, 0),
             Point::new(0, 21),
@@ -702,7 +702,7 @@ fn test_find_url_with_delimiter() {
         None
     );
 
-    let blockgrid = mock_blockgrid("https://google.com/search?q=bork");
+    let blockgrid = mock_blockgrid("https://google.com/search?q=krust");
     assert_eq!(
         blockgrid
             .grid_handler
@@ -743,7 +743,7 @@ fn test_find_url_wide_characters() {
 #[test]
 fn test_find_url_omits_trailing_periods() {
     // Test that it omits a single trailing period.
-    let blockgrid = mock_blockgrid("Visit https://github.com/borkdotdev/Bork/issues.");
+    let blockgrid = mock_blockgrid("Visit https://github.com/krustdotdev/Krust/issues.");
     assert_eq!(
         blockgrid
             .grid_handler
@@ -761,7 +761,7 @@ fn test_find_url_omits_trailing_periods() {
     );
 
     // Test that it omits multiple trailing periods.
-    let blockgrid = mock_blockgrid("Visit https://github.com/borkdotdev/Bork/issues...");
+    let blockgrid = mock_blockgrid("Visit https://github.com/krustdotdev/Krust/issues...");
     assert_eq!(
         blockgrid
             .grid_handler
@@ -779,7 +779,7 @@ fn test_find_url_omits_trailing_periods() {
     );
 
     // Test that it handles a period in the middle of the URL path somewhere.
-    let blockgrid = mock_blockgrid("Visit https://github.com/bork.baby/Bork/issues.");
+    let blockgrid = mock_blockgrid("Visit https://github.com/krust.baby/Krust/issues.");
     assert_eq!(
         blockgrid
             .grid_handler

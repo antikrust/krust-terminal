@@ -1,21 +1,21 @@
 use std::path::PathBuf;
 
-use borkui::elements::{
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element,
     Fill as ElementFill, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, Padding,
     ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::checkbox::Checkbox;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::checkbox::Checkbox;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 /// Registers keybindings for the new-worktree modal (ESC to close).
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
     app.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
         NewWorktreeModalAction::Escape,
@@ -23,7 +23,7 @@ pub fn init(app: &mut AppContext) {
     )]);
 }
 
-use bork_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::color::internal_colors;
 
 use crate::ai::persisted_workspace::PersistedWorkspace;
 use crate::appearance::Appearance;
@@ -356,8 +356,8 @@ impl View for NewWorktreeModal {
 
             // X close icon
             let close_icon = ConstrainedBox::new(
-                bork_core::ui::Icon::X
-                    .to_borkui_icon(theme.sub_text_color(theme.background()))
+                krust_core::ui::Icon::X
+                    .to_krustui_icon(theme.sub_text_color(theme.background()))
                     .finish(),
             )
             .with_width(CLOSE_ICON_SIZE)
@@ -371,7 +371,7 @@ impl View for NewWorktreeModal {
                 .with_child(esc_badge)
                 .finish();
 
-            let close_hoverable = borkui::elements::Hoverable::new(
+            let close_hoverable = krustui::elements::Hoverable::new(
                 self.close_button_mouse_state.clone(),
                 move |_state| close_button,
             )

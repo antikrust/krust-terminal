@@ -1,5 +1,5 @@
 //! This module contains all auxiliary code for hitting the Transcribe endpoint in
-//! bork-server that serves Voice.
+//! krust-server that serves Voice.
 
 mod api;
 

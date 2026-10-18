@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
 
 use typed_path::TypedPathBuf;
-use bork_completer::completer::{EngineDirEntry, EngineFileType};
-use bork_util::file_type::is_binary_file;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{AppContext, Entity, ModelContext};
+use krust_completer::completer::{EngineDirEntry, EngineFileType};
+use krust_util::file_type::is_binary_file;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{AppContext, Entity, ModelContext};
 
 use super::display_menu::GenericMenuItem;
 use crate::completer::SessionContext;

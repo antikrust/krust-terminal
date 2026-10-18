@@ -13,16 +13,16 @@ use super::{
 use crate::terminal::model::session::LocalCommandExecutor;
 use crate::terminal::shell::ShellType;
 
-const PLUGIN_KEY: &str = "bork@claude-code-bork";
-const PLATFORM_PLUGIN_KEY: &str = "oz-harness-support@claude-code-bork";
+const PLUGIN_KEY: &str = "krust@claude-code-krust";
+const PLATFORM_PLUGIN_KEY: &str = "oz-harness-support@claude-code-krust";
 
-const MARKETPLACE_REPO: &str = "borkdotdev/claude-code-bork";
-const MARKETPLACE_NAME: &str = "claude-code-bork";
+const MARKETPLACE_REPO: &str = "krustdotdev/claude-code-krust";
+const MARKETPLACE_NAME: &str = "claude-code-krust";
 
-// Keep in sync with the plugin version in borkdotdev/claude-code-bork.
+// Keep in sync with the plugin version in krustdotdev/claude-code-krust.
 // (See the Versioning section of that repo's README.)
 const MINIMUM_PLUGIN_VERSION: &str = "2.1.0";
-// Keep in sync with the oz-harness-support plugin version in borkdotdev/claude-code-bork.
+// Keep in sync with the oz-harness-support plugin version in krustdotdev/claude-code-krust.
 const MINIMUM_PLATFORM_PLUGIN_VERSION: &str = "1.1.2";
 
 pub(super) struct ClaudeCodePluginManager {
@@ -145,11 +145,11 @@ impl CliAgentPluginManager for ClaudeCodePluginManager {
     }
 
     fn install_success_message(&self) -> &'static str {
-        "Bork plugin installed. Please run /reload-plugins to activate."
+        "Krust plugin installed. Please run /reload-plugins to activate."
     }
 
     fn update_success_message(&self) -> &'static str {
-        "Bork plugin updated. Please run /reload-plugins to activate."
+        "Krust plugin updated. Please run /reload-plugins to activate."
     }
 
     fn install_instructions(&self) -> &'static PluginInstructions {
@@ -211,18 +211,18 @@ impl CliAgentPluginManager for ClaudeCodePluginManager {
 
 static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
     PluginInstructions {
-        title: "Install Bork Plugin for Claude Code",
+        title: "Install Krust Plugin for Claude Code",
         subtitle: "Ensure that jq is installed on your machine. Then, run these commands.",
         steps: &[
             PluginInstructionStep {
-                description: "Add the Bork plugin marketplace repository",
-                command: "claude plugin marketplace add borkdotdev/claude-code-bork",
+                description: "Add the Krust plugin marketplace repository",
+                command: "claude plugin marketplace add krustdotdev/claude-code-krust",
                 executable: true,
                 link: None,
             },
             PluginInstructionStep {
-                description: "Install the Bork plugin",
-                command: "claude plugin install bork@claude-code-bork",
+                description: "Install the Krust plugin",
+                command: "claude plugin install krust@claude-code-krust",
                 executable: true,
                 link: None,
             },
@@ -236,24 +236,24 @@ static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
 });
 
 static UPDATE_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| PluginInstructions {
-    title: "Update Bork Plugin for Claude Code",
+    title: "Update Krust Plugin for Claude Code",
     subtitle: "Run the following commands.",
     steps: &[
         PluginInstructionStep {
             description: "Remove the existing marketplace (if present)",
-            command: "claude plugin marketplace remove claude-code-bork",
+            command: "claude plugin marketplace remove claude-code-krust",
             executable: true,
             link: None,
         },
         PluginInstructionStep {
             description: "Re-add the marketplace",
-            command: "claude plugin marketplace add borkdotdev/claude-code-bork",
+            command: "claude plugin marketplace add krustdotdev/claude-code-krust",
             executable: true,
             link: None,
         },
         PluginInstructionStep {
             description: "Install the latest plugin version",
-            command: "claude plugin install bork@claude-code-bork",
+            command: "claude plugin install krust@claude-code-krust",
             executable: true,
             link: None,
         },
@@ -285,7 +285,7 @@ fn check_plugin_installed(claude_dir: &Path, plugin_key: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Reads the installed version string for the Bork plugin, if present.
+/// Reads the installed version string for the Krust plugin, if present.
 fn installed_version(claude_dir: &Path) -> Option<String> {
     installed_plugin_version(claude_dir, PLUGIN_KEY)
 }

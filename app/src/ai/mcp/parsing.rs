@@ -67,7 +67,7 @@ enum CodexServerEntry {
         #[serde(default)]
         env_vars: Vec<String>,
         /// Working directory for the server process.
-        /// Mapped to `working_directory` in Bork JSON.
+        /// Mapped to `working_directory` in Krust JSON.
         cwd: Option<String>,
     },
     /// A remote server reached over streamable HTTP.

@@ -2,7 +2,7 @@
 
 #import "services.h"
 
-@implementation BorkServicesProvider
+@implementation KrustServicesProvider
 
 // Opens a new tab for each file URL in the pasteboard, with the initial
 // directory set to the provided path (or parent directory, if the path
@@ -32,30 +32,30 @@
             [filePaths addObject:url.path];
         }
 
-        NSMutableArray<NSURL *> *borkUrls = [NSMutableArray array];
+        NSMutableArray<NSURL *> *krustUrls = [NSMutableArray array];
         for (NSString *path in filePaths) {
             NSURLComponents *components = [[[NSURLComponents alloc] init] autorelease];
-            NSString *scheme = bork_services_provider_custom_url_scheme();
+            NSString *scheme = krust_services_provider_custom_url_scheme();
             [components setScheme:scheme];
             [components setHost:@"action"];
             [components setPath:action];
             NSMutableArray *queryItems = [NSMutableArray array];
             [queryItems addObject:[NSURLQueryItem queryItemWithName:@"path" value:path]];
             [components setQueryItems:queryItems];
-            [borkUrls addObject:components.URL];
+            [krustUrls addObject:components.URL];
         };
 
         NSApplication *app = [NSApplication sharedApplication];
-        bork_app_open_urls(app, borkUrls);
+        krust_app_open_urls(app, krustUrls);
     }
 }
 
 @end
 
-// Creates a new BorkServicesProvider and registers it as the global services
+// Creates a new KrustServicesProvider and registers it as the global services
 // provider for the application
-void bork_register_services_provider() {
-    BorkServicesProvider *provider = [[BorkServicesProvider alloc] init];
+void krust_register_services_provider() {
+    KrustServicesProvider *provider = [[KrustServicesProvider alloc] init];
 
     // Set the global NSServices provider for the application.  This holds a
     // strong reference to the provider, so we don't have to worry about it

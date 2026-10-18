@@ -1,3 +1,3 @@
-// Re-export from bork_core so existing `remote_server::HostId` imports
+// Re-export from krust_core so existing `remote_server::HostId` imports
 // continue to work.
-pub use bork_core::HostId;
+pub use krust_core::HostId;

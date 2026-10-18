@@ -10,8 +10,8 @@ use std::{
 use is_executable::IsExecutable as _;
 #[cfg(not(target_family = "wasm"))]
 use itertools::Itertools as _;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, SingletonEntity};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::remote_server::manager::RemoteServerManager;
 

@@ -1,4 +1,4 @@
-use bork_terminal::model::Point;
+use krust_terminal::model::Point;
 
 use super::{AbsolutePoint, AbsoluteRectangle, GridHandler};
 use crate::terminal::model::image_map::ImagePlacementData;

@@ -1,18 +1,18 @@
 name: "Docubot"
-description: "Helps Bork engineers identify PRs that need documentation updates in GitBook"
+description: "Helps Krust engineers identify PRs that need documentation updates in GitBook"
 inputs:
   prompt:
-    description: "Prompt to send to Bork"
+    description: "Prompt to send to Krust"
     required: true
-  bork_api_key:
-    description: "Bork API key"
+  krust_api_key:
+    description: "Krust API key"
     required: true
-  bork_channel:
-    description: "Bork release channel (e.g., dev, preview, stable)"
+  krust_channel:
+    description: "Krust release channel (e.g., dev, preview, stable)"
     required: false
     default: "dev"
   profile_id:
-    description: "Bork profile ID"
+    description: "Krust profile ID"
     required: false
   github_token:
     description: "GitHub token for cloning private repositories"
@@ -20,14 +20,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Bork CLI
-      uses: ./.github/actions/setup_bork_cli
+    - name: Setup Krust CLI
+      uses: ./.github/actions/setup_krust_cli
       with:
-        bork_channel: ${{ inputs.bork_channel }}
-    - name: Clone Bork GitBook repository
+        krust_channel: ${{ inputs.krust_channel }}
+    - name: Clone Krust GitBook repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
-        repository: borkdotdev/gitbook
+        repository: krustdotdev/gitbook
         token: ${{ inputs.github_token }}
         path: gitbook
     - name: Create prompt file
@@ -120,19 +120,19 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        git config user.name "Bork Agent"
-        git config user.email "agent@bork.baby"
+        git config user.name "Krust Agent"
+        git config user.email "agent@krust.baby"
     
-    - name: Run Bork agent
+    - name: Run Krust agent
       shell: bash
       env:
-        BORK_API_KEY: ${{ inputs.bork_api_key }}
+        KRUST_API_KEY: ${{ inputs.krust_api_key }}
         GH_TOKEN: ${{ inputs.github_token }}
         PROFILE_ID: ${{ inputs.profile_id }}
       run: |
         set -euo pipefail
         # Determine the CLI command name based on channel suffix
-        case "${{ inputs.bork_channel }}" in
+        case "${{ inputs.krust_channel }}" in
           stable|stable_release|"") suffix="" ;;
           preview|preview_release) suffix="-preview" ;;
           dev|dev_release) suffix="-dev" ;;
@@ -140,7 +140,7 @@ runs:
           integration|integration_test) suffix="-integration" ;;
           *) suffix="" ;;
         esac
-        cmd="bork-cli${suffix}"
+        cmd="krust-cli${suffix}"
 
         # Basic check the binary exists
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -151,17 +151,17 @@ runs:
         # Execute the agent run
         "$cmd" agent run \
           --prompt "$(cat prompt.output.txt)" \
-          --api-key "$BORK_API_KEY" \
+          --api-key "$KRUST_API_KEY" \
           --cwd "$GITHUB_WORKSPACE" \
           ${PROFILE_ID:+--profile "$PROFILE_ID"}
-    - name: Upload Bork logs
+    - name: Upload Krust logs
       if: ${{ always() }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: bork-logs.log
-        path: /home/runner/.local/state/bork-terminal-dev/bork_dev.log
+        name: krust-logs.log
+        path: /home/runner/.local/state/krust-terminal-dev/krust_dev.log
         if-no-files-found: ignore
-    - name: Upload Bork prompt
+    - name: Upload Krust prompt
       if: ${{ always() }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:

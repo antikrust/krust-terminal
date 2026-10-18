@@ -20,7 +20,7 @@ impl ControlActionRequestId {
 }
 
 /// Higher-level control messages that don't correspond 1:1 to terminal actions/inputs
-/// (or imply a bork-specific action outside of their normal terminal use).
+/// (or imply a krust-specific action outside of their normal terminal use).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ControlAction {
     /// Request that a shared-session AI conversation be cancelled by the sharer.

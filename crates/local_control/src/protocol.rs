@@ -1,4 +1,4 @@
-//! Wire protocol envelopes and error types for Bork local control.
+//! Wire protocol envelopes and error types for Krust local control.
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -89,7 +89,7 @@ pub struct DirectionParams {
     pub direction: Direction,
 }
 
-/// Parameters for opening a file in Bork's app/editor state.
+/// Parameters for opening a file in Krust's app/editor state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileOpenParams {
@@ -311,7 +311,7 @@ pub enum ControlResult {
     Content { data: serde_json::Value },
 }
 
-/// Top-level request sent by a local-control client to a Bork instance.
+/// Top-level request sent by a local-control client to a Krust instance.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RequestEnvelope {
     pub protocol_version: u32,
@@ -372,7 +372,7 @@ impl Action {
     }
 }
 
-/// Top-level response returned by a Bork instance for a control request.
+/// Top-level response returned by a Krust instance for a control request.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ResponseEnvelope {
     pub protocol_version: u32,

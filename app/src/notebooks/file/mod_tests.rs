@@ -7,13 +7,13 @@ use repo_metadata::watcher::DirectoryWatcher;
 #[cfg(feature = "local_fs")]
 use repo_metadata::RepoMetadataModel;
 use string_offset::CharOffset;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::render::model::BlockItem;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_editor::render::model::BlockItem;
 #[cfg(feature = "local_fs")]
-use bork_files::FileModel;
-use borkui::platform::WindowStyle;
-use borkui::{App, SingletonEntity, View};
+use krust_files::FileModel;
+use krustui::platform::WindowStyle;
+use krustui::{App, SingletonEntity, View};
 
 use super::{FileNotebookView, FileState, MarkdownDisplayMode, SourceFile};
 use crate::auth::auth_manager::AuthManager;

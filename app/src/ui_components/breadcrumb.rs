@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 
 use itertools::{Itertools, Position};
-use borkui::elements::{
+use krustui::elements::{
     CrossAxisAlignment, Flex, Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, EventContext};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, EventContext};
 
 use crate::appearance::Appearance;
 

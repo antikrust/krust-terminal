@@ -9,13 +9,13 @@ use flate2::read::ZlibDecoder;
 use pathfinder_geometry::vector::Vector2F;
 use rand::Rng;
 #[cfg(feature = "local_fs")]
-use bork_errors::report_error;
-use borkui::assets::asset_cache::Asset;
-use borkui::image_cache::{
+use krust_errors::report_error;
+use krustui::assets::asset_cache::Asset;
+use krustui::image_cache::{
     resize_dimensions, CustomHeaderCreationError, CustomImageFormat, CustomImageHeader, FitType,
     ImageType,
 };
-use borkui::util::{parse_i32, parse_u32};
+use krustui::util::{parse_i32, parse_u32};
 
 use super::escape_sequences::C1;
 

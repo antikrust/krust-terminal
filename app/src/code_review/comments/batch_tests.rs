@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use chrono::Local;
-use bork_editor::render::model::LineCount;
-use borkui::App;
+use krust_editor::render::model::LineCount;
+use krustui::App;
 
 use crate::code::buffer_location::LocalOrRemotePath;
 use crate::code::editor::line::EditorLineLocation;

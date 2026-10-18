@@ -11,8 +11,8 @@ use enclose::enclose;
 use futures::StreamExt;
 use rand::prelude::StdRng;
 use test::Network;
-use borkui::color::ColorU;
-use borkui::{App, ModelHandle};
+use krustui::color::ColorU;
+use krustui::{App, ModelHandle};
 
 use super::*;
 use crate::editor::soft_wrap::ClampDirection;
@@ -4156,7 +4156,7 @@ fn test_merging_selections_with_remote_edits() {
     })
 }
 
-// See https://github.com/borkdotdev/bork-internal/pull/9249 for discussion
+// See https://github.com/krustdotdev/krust-internal/pull/9249 for discussion
 // about possible strategies to address this.
 #[ignore = "The test points out an eventual consistency problem with selections."]
 #[test]

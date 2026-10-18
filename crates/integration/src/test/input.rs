@@ -1,25 +1,25 @@
 use std::time::Duration;
 
-use bork::features::FeatureFlag;
-use bork::integration_testing::clipboard::write_to_clipboard;
-use bork::integration_testing::input::{
+use krust::features::FeatureFlag;
+use krust::integration_testing::clipboard::write_to_clipboard;
+use krust::integration_testing::input::{
     assert_autosuggestion_state, input_contains_string, input_is_empty,
     latest_buffer_operations_are_empty, open_inline_model_selector_from_chip,
     tab_completions_menu_is_open, toggle_inline_model_selector_from_chip, AutosuggestionState,
 };
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::terminal::util::{
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::terminal::util::{
     current_shell_starter_and_version, ExpectedExitStatus,
 };
-use bork::integration_testing::terminal::{
+use krust::integration_testing::terminal::{
     execute_command_for_single_terminal_in_tab, wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::view_getters::{
+use krust::integration_testing::view_getters::{
     single_input_view_for_tab, single_terminal_view_for_tab,
 };
-use bork::terminal::shell::ShellType;
-use borkui_core::integration::TestStep;
-use borkui_core::{async_assert_eq, Event};
+use krust::terminal::shell::ShellType;
+use krustui_core::integration::TestStep;
+use krustui_core::{async_assert_eq, Event};
 
 use super::new_builder;
 use crate::Builder;
@@ -285,7 +285,7 @@ pub fn test_middle_click_paste() -> Builder {
 /// Checks that the git branch prompt chip value is correctly populated.
 pub fn test_git_prompt_chips() -> Builder {
     // Note that we can't use the OUT_DIR for the temp directory
-    // here because that would put us in the bork repo. We need to
+    // here because that would put us in the krust repo. We need to
     // be in a place in the filesystem that's not already a git repo.
     new_builder()
         .set_should_run_test(|| {

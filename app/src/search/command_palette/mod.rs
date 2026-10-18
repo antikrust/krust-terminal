@@ -13,7 +13,7 @@ mod selected_items;
 pub mod separator_search_item;
 pub mod tabs;
 pub mod view;
-pub mod bork_drive;
+pub mod krust_drive;
 mod zero_state;
 
 use filter_chip_renderer::FilterChipRenderer;

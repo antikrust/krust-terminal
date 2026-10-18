@@ -1,10 +1,10 @@
 use std::ops::Range;
 
 use ai::diff_validation::DiffType;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use borkui::elements::new_scrollable::ScrollableAppearance;
-use borkui::elements::ScrollbarWidth;
-use borkui::{AppContext, View, ViewContext, ViewHandle};
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krustui::elements::new_scrollable::ScrollableAppearance;
+use krustui::elements::ScrollbarWidth;
+use krustui::{AppContext, View, ViewContext, ViewHandle};
 
 use super::editor::scroll::ScrollWheelBehavior;
 use super::editor::view::CodeEditorView;

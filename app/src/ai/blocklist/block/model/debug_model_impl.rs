@@ -1,4 +1,4 @@
-use borkui::{AppContext, ViewContext};
+use krustui::{AppContext, ViewContext};
 
 use crate::ai::{
     agent::{

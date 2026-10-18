@@ -4,9 +4,9 @@
 //! drag/drop chips between left, right, and unused banks.
 
 use settings::Setting as _;
-use bork_errors::report_if_error;
-use borkui::keymap::FixedBinding;
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krust_errors::report_if_error;
+use krustui::keymap::FixedBinding;
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::toolbar_item::AgentToolbarItemKind;
 use crate::appearance::AppearanceEvent;
@@ -264,7 +264,7 @@ impl View for AgentToolbarInlineEditor {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

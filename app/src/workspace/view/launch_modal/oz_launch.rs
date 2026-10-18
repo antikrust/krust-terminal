@@ -1,8 +1,8 @@
 use asset_macro::bundled_or_fetched_asset;
 use markdown_parser::{FormattedTextFragment, FormattedTextLine};
-use bork_core::send_telemetry_from_ctx;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::send_telemetry_from_ctx;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::{AppContext, SingletonEntity};
 
 use super::{CTAButton, CheckboxConfig, LaunchModalEvent, Slide};
 use crate::ai::ambient_agents::telemetry::{CloudAgentTelemetryEvent, CloudModeEntryPoint};
@@ -82,7 +82,7 @@ impl Slide for OzLaunchSlide {
             }
             OzLaunchSlide::AgentManagement => "Track local and cloud agents seamlessly",
             OzLaunchSlide::LaunchCredits => {
-                "1,000 free cloud agent credits when you upgrade to Bork Build"
+                "1,000 free cloud agent credits when you upgrade to Krust Build"
             }
         }
     }
@@ -100,10 +100,10 @@ impl Slide for OzLaunchSlide {
                 "Oz agents can be defined using the standard Skills format. You can use the built in scheduler to setup agents to run autonomously at set intervals, or use the Oz SDK or API to programmatically start and manage Oz agents."
             }
             OzLaunchSlide::AgentManagement => {
-                "View all of your agents across local and cloud sessions in the Bork app or at [oz.bork.baby](https://oz.bork.baby). Join live agent sessions, continue tasks locally, and steer agents with one click."
+                "View all of your agents across local and cloud sessions in the Krust app or at [oz.krust.baby](https://oz.krust.baby). Join live agent sessions, continue tasks locally, and steer agents with one click."
             }
             OzLaunchSlide::LaunchCredits => {
-                "Upgrade to Build this month and receive 1,000 extra credits to try using Oz. Credits are only eligible for Oz runs in Bork-hosted cloud environments."
+                "Upgrade to Build this month and receive 1,000 extra credits to try using Oz. Credits are only eligible for Oz runs in Krust-hosted cloud environments."
             }
         }
     }
@@ -189,7 +189,7 @@ impl Slide for OzLaunchSlide {
         ) && !matches!(ugc_setting, UgcCollectionEnablementSetting::Enable)
     }
 
-    fn on_close(&self, ctx: &mut borkui::ViewContext<super::LaunchModal<Self>>) {
+    fn on_close(&self, ctx: &mut krustui::ViewContext<super::LaunchModal<Self>>) {
         ctx.dispatch_typed_action(&WorkspaceAction::StartAgentOnboardingTutorial(
             OnboardingTutorial::NoProject {
                 intention: OnboardingIntention::AgentDrivenDevelopment,
@@ -198,6 +198,6 @@ impl Slide for OzLaunchSlide {
     }
 }
 
-pub fn init(app: &mut borkui::AppContext) {
+pub fn init(app: &mut krustui::AppContext) {
     super::init::<OzLaunchSlide>(app);
 }

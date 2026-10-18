@@ -2,14 +2,14 @@
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use borkui::elements::{ConstrainedBox, Container, Highlight, Shrinkable, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::scene::{CornerRadius, Radius};
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krustui::elements::{ConstrainedBox, Container, Highlight, Shrinkable, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::scene::{CornerRadius, Radius};
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::agent::AIAgentExchangeId;
 use crate::appearance::Appearance;
@@ -65,7 +65,7 @@ impl SearchItem for UserQuerySearchItem {
         // Once this search item is used by multiple sources,
         // we'll want to set this icon based on which source is generating this item.
         let icon = Container::new(
-            ConstrainedBox::new(Icon::ArrowSplit.to_borkui_icon(color).finish())
+            ConstrainedBox::new(Icon::ArrowSplit.to_krustui_icon(color).finish())
                 .with_width(appearance.monospace_font_size())
                 .with_height(appearance.monospace_font_size())
                 .finish(),

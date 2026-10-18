@@ -1,9 +1,9 @@
-use borkui::elements::MouseStateHandle;
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::elements::MouseStateHandle;
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::dialog::{dialog_styles, Dialog};

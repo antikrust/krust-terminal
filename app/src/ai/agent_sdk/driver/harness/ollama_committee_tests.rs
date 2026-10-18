@@ -667,7 +667,7 @@ fn a_repetition_loop_collapses_to_one_finding() {
     // The message has to name the misbehaviour and quote what it looped
     // on, not just report a count.
     let note = note.expect("the transcript must say what the model did");
-    assert!(note.contains("went bork"), "note: {note}");
+    assert!(note.contains("went krust"), "note: {note}");
     assert!(
         note.contains("got stuck repeating \"Incorrect calculation of share amounts\" 100 times"),
         "note: {note}"
@@ -692,7 +692,7 @@ fn distinct_findings_survive_but_the_cap_holds() {
     let (kept, note) = sanitize_findings(varied, &bounds, DEFAULT_FINDINGS_CAP);
     assert_eq!(kept.len(), DEFAULT_FINDINGS_CAP);
     let note = note.unwrap();
-    assert!(note.contains("went bork"), "note: {note}");
+    assert!(note.contains("went krust"), "note: {note}");
     assert!(note.contains("more than 12 findings"), "note: {note}");
 
     // The note quotes the cap that actually applied, so a user who raised
@@ -741,9 +741,9 @@ fn out_of_range_lines_are_cleared_without_losing_the_finding() {
     );
     assert_eq!(kept.len(), 1, "the finding survives");
     assert_eq!(kept[0].line, None, "the false citation does not");
-    // One bad line number is sloppiness, not borking — no accusation.
+    // One bad line number is sloppiness, not krusting — no accusation.
     let note = note.unwrap();
-    assert!(!note.contains("went bork"), "note: {note}");
+    assert!(!note.contains("went krust"), "note: {note}");
     assert!(
         note.contains("cited 1 line the diff never reaches"),
         "note: {note}"
@@ -1410,7 +1410,7 @@ fn truncation_respects_char_boundaries_and_short_input() {
 /// it takes minutes — run it deliberately:
 ///
 /// ```sh
-/// cargo test -p bork committee_reviews_a_planted_bug -- --ignored --nocapture
+/// cargo test -p krust committee_reviews_a_planted_bug -- --ignored --nocapture
 /// ```
 #[test]
 #[ignore = "hits the live local Ollama service and loads real models"]

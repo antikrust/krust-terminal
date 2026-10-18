@@ -6,14 +6,14 @@ use rangemap::RangeSet;
 use string_offset::CharOffset;
 use sum_tree::SumTree;
 use vec1::{Vec1, vec1};
-use borkui_core::assets::asset_cache::AssetSource;
-use borkui_core::color::ColorU;
-use borkui_core::elements::ListIndentLevel;
-use borkui_core::fonts::FamilyId;
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::text_layout::TextFrame;
-use borkui_core::units::{IntoPixels, Pixels};
+use krustui_core::assets::asset_cache::AssetSource;
+use krustui_core::color::ColorU;
+use krustui_core::elements::ListIndentLevel;
+use krustui_core::fonts::FamilyId;
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::text_layout::TextFrame;
+use krustui_core::units::{IntoPixels, Pixels};
 
 use super::debug::Describe;
 use super::test_utils::{layout_paragraph, layout_paragraphs};
@@ -927,7 +927,7 @@ fn test_multiselect_autoscroll_bounding_box() {
     );
 }
 
-// 18:09:15 [INFO] [bork_editor::render::model] Initial tree:
+// 18:09:15 [INFO] [krust_editor::render::model] Initial tree:
 // -------- 0.00px / 0 characters --------
 // Hidden (3067 characters, 87 lines, 20.00px tall)
 // -------- 20.00px / 3067 characters --------
@@ -1030,7 +1030,7 @@ fn test_dedupe_hidden_ranges_logged_tree_is_unchanged() {
     assert_eq!(initial, resulting);
 }
 
-// 18:09:14 [INFO] [bork_editor::render::model] Initial tree:
+// 18:09:14 [INFO] [krust_editor::render::model] Initial tree:
 // -------- 0.00px / 0 characters --------
 // Hidden (3066 characters, 87 lines, 20.00px tall)
 // -------- 20.00px / 3067 characters --------
@@ -1155,17 +1155,17 @@ fn make_test_cell_layout() -> CellLayout {
         line_char_ranges: vec![CharOffset::from(0)..CharOffset::from(3)],
         line_widths: vec![30.0],
         line_caret_positions: vec![vec![
-            borkui_core::text_layout::CaretPosition {
+            krustui_core::text_layout::CaretPosition {
                 position_in_line: 0.0,
                 start_offset: 0,
                 last_offset: 0,
             },
-            borkui_core::text_layout::CaretPosition {
+            krustui_core::text_layout::CaretPosition {
                 position_in_line: 10.0,
                 start_offset: 1,
                 last_offset: 1,
             },
-            borkui_core::text_layout::CaretPosition {
+            krustui_core::text_layout::CaretPosition {
                 position_in_line: 20.0,
                 start_offset: 2,
                 last_offset: 2,
@@ -1394,7 +1394,7 @@ fn test_link_at_offset_uses_cached_cell_links() {
                 FormattedTextFragment {
                     text: "bc".into(),
                     styles: FormattedTextStyles {
-                        hyperlink: Some(Hyperlink::Url("https://bork.baby".into())),
+                        hyperlink: Some(Hyperlink::Url("https://krust.baby".into())),
                         ..Default::default()
                     },
                 },
@@ -1409,7 +1409,7 @@ fn test_link_at_offset_uses_cached_cell_links() {
     };
     table.cell_links = vec![
         vec![
-            vec![ParsedUrl::new(1..3, "https://bork.baby".into())],
+            vec![ParsedUrl::new(1..3, "https://krust.baby".into())],
             vec![],
         ],
         vec![vec![], vec![]],
@@ -1417,11 +1417,11 @@ fn test_link_at_offset_uses_cached_cell_links() {
 
     assert_eq!(
         table.link_at_offset(CharOffset::from(1)),
-        Some("https://bork.baby".into())
+        Some("https://krust.baby".into())
     );
     assert_eq!(
         table.link_at_offset(CharOffset::from(2)),
-        Some("https://bork.baby".into())
+        Some("https://krust.baby".into())
     );
     assert_eq!(table.link_at_offset(CharOffset::from(0)), None);
     assert_eq!(table.link_at_offset(CharOffset::from(3)), None);

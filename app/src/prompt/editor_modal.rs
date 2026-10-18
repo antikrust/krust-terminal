@@ -2,18 +2,18 @@ use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
 use serde::Serialize;
 use settings::Setting as _;
-use bork_core::ui::theme::Fill;
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krust_errors::report_if_error;
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -25,7 +25,7 @@ use crate::context_chips::{
     available_chips, ChipAvailability, ChipRuntimeCapabilities, ContextChipKind,
 };
 use crate::server::telemetry::{PromptChoice, TelemetryEvent};
-use crate::settings::{FontSettings, BorkPromptSeparator};
+use crate::settings::{FontSettings, KrustPromptSeparator};
 use crate::terminal::blockgrid_element::BlockGridElement;
 use crate::terminal::model::blockgrid::BlockGrid;
 use crate::terminal::model::ObfuscateSecrets;
@@ -54,12 +54,12 @@ const MODAL_CONTENT_FONT_SIZE: f32 = 14.;
 const CHECKBOX_SIZE: f32 = 16.;
 
 const MODAL_TITLE: &str = "Edit prompt";
-const BORK_PROMPT_SECTION_HEADER: &str = "Bork terminal prompt";
+const KRUST_PROMPT_SECTION_HEADER: &str = "Krust terminal prompt";
 const SHELL_PROMPT_SECTION_HEADER: &str = "Shell prompt (PS1)";
 const RESTORE_DEFAULT_BUTTON: &str = "Restore default";
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -83,8 +83,8 @@ pub enum EditorModalEvent {
 struct MouseStateHandles {
     cancel_button_handle: MouseStateHandle,
     save_button_handle: MouseStateHandle,
-    restore_default_bork_prompt_handle: MouseStateHandle,
-    bork_prompt_mouse_state_handle: MouseStateHandle,
+    restore_default_krust_prompt_handle: MouseStateHandle,
+    krust_prompt_mouse_state_handle: MouseStateHandle,
     ps1_mouse_state_handle: MouseStateHandle,
     same_line_prompt_checkbox_state_handle: MouseStateHandle,
 }
@@ -110,11 +110,11 @@ pub struct EditorModal {
     /// used for saving changes.
     same_line_prompt_enabled: bool,
 
-    /// Dropdown to select the separator for the Bork prompt, in the case of
-    /// same line prompt. This separator is added at the end of the Bork prompt.
-    bork_prompt_separator_dropdown: ViewHandle<Dropdown<EditorModalAction>>,
-    /// The separator currently selected for the Bork prompt.
-    bork_prompt_separator: BorkPromptSeparator,
+    /// Dropdown to select the separator for the Krust prompt, in the case of
+    /// same line prompt. This separator is added at the end of the Krust prompt.
+    krust_prompt_separator_dropdown: ViewHandle<Dropdown<EditorModalAction>>,
+    /// The separator currently selected for the Krust prompt.
+    krust_prompt_separator: KrustPromptSeparator,
 
     /// True if there was any change while the modal was open.
     is_dirty: bool,
@@ -125,17 +125,17 @@ pub struct EditorModal {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PromptType {
     PS1,
-    Bork,
-    BorkDefault,
+    Krust,
+    KrustDefault,
 }
 
 impl PromptType {
-    fn bork_prompt_from_settings(app: &AppContext) -> PromptType {
+    fn krust_prompt_from_settings(app: &AppContext) -> PromptType {
         let session_settings = SessionSettings::as_ref(app);
         if matches!(*session_settings.saved_prompt, PromptSelection::Default) {
-            PromptType::BorkDefault
+            PromptType::KrustDefault
         } else {
-            PromptType::Bork
+            PromptType::Krust
         }
     }
 
@@ -144,7 +144,7 @@ impl PromptType {
         if *session_settings.honor_ps1 {
             PromptType::PS1
         } else {
-            Self::bork_prompt_from_settings(app)
+            Self::krust_prompt_from_settings(app)
         }
     }
 }
@@ -155,10 +155,10 @@ pub enum EditorModalAction {
     Save,
     Chip(ChipConfiguratorAction),
     UsePS1,
-    UseBorkPrompt,
-    ResetBorkPrompt,
+    UseKrustPrompt,
+    ResetKrustPrompt,
     ToggleSameLinePrompt,
-    SetBorkPromptSeparator { separator: BorkPromptSeparator },
+    SetKrustPromptSeparator { separator: KrustPromptSeparator },
 }
 
 impl EditorModal {
@@ -170,40 +170,40 @@ impl EditorModal {
             .value()
             .same_line_prompt_enabled();
 
-        let bork_prompt_separator = match SessionSettings::as_ref(ctx).saved_prompt.value() {
+        let krust_prompt_separator = match SessionSettings::as_ref(ctx).saved_prompt.value() {
             PromptSelection::CustomChipSelection(config) => config.separator(),
-            // If the "default Bork prompt" i.e. no context chips, is selected, then default to no Bork prompt separator.
-            _ => BorkPromptSeparator::None,
+            // If the "default Krust prompt" i.e. no context chips, is selected, then default to no Krust prompt separator.
+            _ => KrustPromptSeparator::None,
         };
-        let bork_prompt_separator_label = bork_prompt_separator.dropdown_item_label().to_owned();
+        let krust_prompt_separator_label = krust_prompt_separator.dropdown_item_label().to_owned();
 
-        let bork_prompt_separator_dropdown = ctx.add_typed_action_view(|ctx| {
+        let krust_prompt_separator_dropdown = ctx.add_typed_action_view(|ctx| {
             let mut dropdown = Dropdown::new(ctx);
             dropdown.set_top_bar_max_width(DROPDOWN_WIDTH);
             dropdown.set_menu_width(DROPDOWN_WIDTH, ctx);
             let items = vec![
                 DropdownItem::new(
-                    BorkPromptSeparator::None.dropdown_item_label(),
-                    EditorModalAction::SetBorkPromptSeparator {
-                        separator: BorkPromptSeparator::None,
+                    KrustPromptSeparator::None.dropdown_item_label(),
+                    EditorModalAction::SetKrustPromptSeparator {
+                        separator: KrustPromptSeparator::None,
                     },
                 ),
                 DropdownItem::new(
-                    BorkPromptSeparator::PercentSign.dropdown_item_label(),
-                    EditorModalAction::SetBorkPromptSeparator {
-                        separator: BorkPromptSeparator::PercentSign,
+                    KrustPromptSeparator::PercentSign.dropdown_item_label(),
+                    EditorModalAction::SetKrustPromptSeparator {
+                        separator: KrustPromptSeparator::PercentSign,
                     },
                 ),
                 DropdownItem::new(
-                    BorkPromptSeparator::DollarSign.dropdown_item_label(),
-                    EditorModalAction::SetBorkPromptSeparator {
-                        separator: BorkPromptSeparator::DollarSign,
+                    KrustPromptSeparator::DollarSign.dropdown_item_label(),
+                    EditorModalAction::SetKrustPromptSeparator {
+                        separator: KrustPromptSeparator::DollarSign,
                     },
                 ),
                 DropdownItem::new(
-                    BorkPromptSeparator::ChevronSymbol.dropdown_item_label(),
-                    EditorModalAction::SetBorkPromptSeparator {
-                        separator: BorkPromptSeparator::ChevronSymbol,
+                    KrustPromptSeparator::ChevronSymbol.dropdown_item_label(),
+                    EditorModalAction::SetKrustPromptSeparator {
+                        separator: KrustPromptSeparator::ChevronSymbol,
                     },
                 ),
             ];
@@ -215,7 +215,7 @@ impl EditorModal {
             }
 
             dropdown.set_items(items, ctx);
-            dropdown.set_selected_by_name(bork_prompt_separator_label, ctx);
+            dropdown.set_selected_by_name(krust_prompt_separator_label, ctx);
             dropdown
         });
 
@@ -246,8 +246,8 @@ impl EditorModal {
             prompt_type,
             chip_runtime_capabilities: Default::default(),
             same_line_prompt_enabled,
-            bork_prompt_separator_dropdown,
-            bork_prompt_separator,
+            krust_prompt_separator_dropdown,
+            krust_prompt_separator,
         }
     }
 
@@ -308,16 +308,16 @@ impl EditorModal {
         ctx.notify();
     }
 
-    /// Updates the state of the Bork prompt separator dropdown to be enabled/disabled based on the current state of the modal.
-    fn update_bork_separator_dropdown_state(&mut self, ctx: &mut ViewContext<Self>) {
-        // If we are using the Bork prompt and SLP is enabled, then we enable the dropdown. Otherwise, disable it.
+    /// Updates the state of the Krust prompt separator dropdown to be enabled/disabled based on the current state of the modal.
+    fn update_krust_separator_dropdown_state(&mut self, ctx: &mut ViewContext<Self>) {
+        // If we are using the Krust prompt and SLP is enabled, then we enable the dropdown. Otherwise, disable it.
         if self.prompt_type != PromptType::PS1 && self.same_line_prompt_enabled {
-            self.bork_prompt_separator_dropdown
+            self.krust_prompt_separator_dropdown
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_enabled(ctx);
                 });
         } else {
-            self.bork_prompt_separator_dropdown
+            self.krust_prompt_separator_dropdown
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_disabled(ctx);
                 });
@@ -328,17 +328,17 @@ impl EditorModal {
         if self.is_dirty {
             match self.prompt_type {
                 PromptType::PS1 => {
-                    // TODO: we need to stop the Bork prompt generators from running at this point
+                    // TODO: we need to stop the Krust prompt generators from running at this point
                     SessionSettings::handle(ctx).update(ctx, |settings, ctx| {
                         report_if_error!(settings.honor_ps1.set_value(true, ctx));
                     });
                 }
-                PromptType::BorkDefault => {
+                PromptType::KrustDefault => {
                     Prompt::handle(ctx).update(ctx, |prompt, ctx| {
                         report_if_error!(prompt.reset(ctx));
                     });
                 }
-                PromptType::Bork => {
+                PromptType::Krust => {
                     let new_setup = self
                         .chip_configurator
                         .used_chips
@@ -362,7 +362,7 @@ impl EditorModal {
                         report_if_error!(prompt.update(
                             new_setup,
                             self.same_line_prompt_enabled,
-                            self.bork_prompt_separator,
+                            self.krust_prompt_separator,
                             ctx
                         ));
                     });
@@ -371,8 +371,8 @@ impl EditorModal {
 
             let prompt_info = match self.prompt_type {
                 PromptType::PS1 => PromptChoice::PS1,
-                PromptType::BorkDefault => PromptChoice::Default,
-                PromptType::Bork => PromptChoice::Custom {
+                PromptType::KrustDefault => PromptChoice::Default,
+                PromptType::Krust => PromptChoice::Custom {
                     builtin_chips: self
                         .chip_configurator
                         .used_chips
@@ -419,33 +419,33 @@ impl TypedActionView for EditorModal {
                 let mutated = self.chip_configurator.handle_action(chip_action, ctx);
                 if mutated {
                     self.is_dirty = true;
-                    self.prompt_type = PromptType::Bork;
+                    self.prompt_type = PromptType::Krust;
                 }
                 ctx.notify();
             }
             Self::Action::UsePS1 => {
                 self.is_dirty = true;
                 self.prompt_type = PromptType::PS1;
-                // Disable the Bork separator dropdown (only applies to Bork prompt).
-                self.update_bork_separator_dropdown_state(ctx);
+                // Disable the Krust separator dropdown (only applies to Krust prompt).
+                self.update_krust_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::UseBorkPrompt => {
+            Self::Action::UseKrustPrompt => {
                 self.is_dirty = true;
-                self.prompt_type = PromptType::bork_prompt_from_settings(ctx);
-                // Enable the Bork separator dropdown, if SLP is on.
-                self.update_bork_separator_dropdown_state(ctx);
+                self.prompt_type = PromptType::krust_prompt_from_settings(ctx);
+                // Enable the Krust separator dropdown, if SLP is on.
+                self.update_krust_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::ResetBorkPrompt => {
+            Self::Action::ResetKrustPrompt => {
                 self.is_dirty = true;
-                self.prompt_type = PromptType::BorkDefault;
+                self.prompt_type = PromptType::KrustDefault;
 
                 let default_prompt = PromptConfiguration::default_prompt();
                 self.same_line_prompt_enabled = default_prompt.same_line_prompt_enabled();
-                self.bork_prompt_separator = default_prompt.separator();
-                // Disable the Bork separator dropdown, since SLP is off for the default Bork prompt.
-                self.update_bork_separator_dropdown_state(ctx);
+                self.krust_prompt_separator = default_prompt.separator();
+                // Disable the Krust separator dropdown, since SLP is off for the default Krust prompt.
+                self.update_krust_separator_dropdown_state(ctx);
                 let restored_chips = default_prompt.chip_kinds();
                 self.update_used_chips(restored_chips, ctx);
                 ctx.notify();
@@ -454,16 +454,16 @@ impl TypedActionView for EditorModal {
                 self.is_dirty = true;
                 self.same_line_prompt_enabled = !self.same_line_prompt_enabled;
 
-                // In case we had previously picked default Bork prompt, but now the user toggled
+                // In case we had previously picked default Krust prompt, but now the user toggled
                 // same line prompt - it's no longer the default prompt.
-                self.prompt_type = PromptType::Bork;
+                self.prompt_type = PromptType::Krust;
 
-                self.update_bork_separator_dropdown_state(ctx);
+                self.update_krust_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::SetBorkPromptSeparator { separator } => {
+            Self::Action::SetKrustPromptSeparator { separator } => {
                 self.is_dirty = true;
-                self.bork_prompt_separator = *separator;
+                self.krust_prompt_separator = *separator;
                 ctx.notify();
             }
         }
@@ -503,7 +503,7 @@ impl EditorModal {
             .span(MODAL_TITLE.to_string())
             .with_style(UiComponentStyles {
                 font_size: Some(MODAL_TITLE_FONT_SIZE),
-                font_weight: Some(borkui::fonts::Weight::Bold),
+                font_weight: Some(krustui::fonts::Weight::Bold),
                 ..Default::default()
             })
             .build()
@@ -512,7 +512,7 @@ impl EditorModal {
 
     fn render_unused_chips(&self, appearance: &Appearance) -> Box<dyn Element> {
         self.chip_configurator.render_unused_chips_bank(
-            EditorModalAction::UseBorkPrompt,
+            EditorModalAction::UseKrustPrompt,
             EditorModalAction::Chip,
             appearance,
         )
@@ -520,7 +520,7 @@ impl EditorModal {
 
     fn render_used_chips(&self, appearance: &Appearance) -> Box<dyn Element> {
         self.chip_configurator.render_used_drop_zone(
-            EditorModalAction::UseBorkPrompt,
+            EditorModalAction::UseKrustPrompt,
             EditorModalAction::Chip,
             appearance,
         )
@@ -580,13 +580,13 @@ impl EditorModal {
         .finish()
     }
 
-    fn render_restore_default_bork_prompt_button(
+    fn render_restore_default_krust_prompt_button(
         &self,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let button = Hoverable::new(
             self.mouse_state_handles
-                .restore_default_bork_prompt_handle
+                .restore_default_krust_prompt_handle
                 .clone(),
             |_state| {
                 appearance
@@ -600,17 +600,17 @@ impl EditorModal {
                     .finish()
             },
         )
-        .on_click(|ctx, _, _| ctx.dispatch_typed_action(EditorModalAction::ResetBorkPrompt))
+        .on_click(|ctx, _, _| ctx.dispatch_typed_action(EditorModalAction::ResetKrustPrompt))
         .with_cursor(Cursor::PointingHand);
 
-        if matches!(self.prompt_type, PromptType::BorkDefault) && !self.is_dirty {
+        if matches!(self.prompt_type, PromptType::KrustDefault) && !self.is_dirty {
             button.disable().finish()
         } else {
             button.finish()
         }
     }
 
-    // TODO: consider supporting SLP with the new Bork prompt.
+    // TODO: consider supporting SLP with the new Krust prompt.
     #[allow(dead_code)]
     fn render_same_line_prompt_section(&self, appearance: &Appearance) -> Box<dyn Element> {
         let label = appearance
@@ -666,14 +666,14 @@ impl EditorModal {
                 .finish(),
             )
             .with_child(
-                Container::new(ChildView::new(&self.bork_prompt_separator_dropdown).finish())
+                Container::new(ChildView::new(&self.krust_prompt_separator_dropdown).finish())
                     .with_margin_left(DROPDOWN_LABEL_MARGIN_RIGHT)
                     .finish(),
             )
             .finish()
     }
 
-    fn render_bork_prompt_section(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_krust_prompt_section(&self, appearance: &Appearance) -> Box<dyn Element> {
         let body = Flex::column()
             .with_child(
                 Container::new(self.render_unused_chips(appearance))
@@ -691,30 +691,30 @@ impl EditorModal {
             .with_child(
                 appearance
                     .ui_builder()
-                    .span(BORK_PROMPT_SECTION_HEADER.to_string())
+                    .span(KRUST_PROMPT_SECTION_HEADER.to_string())
                     .with_style(UiComponentStyles {
                         font_size: Some(MODAL_CONTENT_FONT_SIZE),
-                        font_weight: Some(borkui::fonts::Weight::Semibold),
+                        font_weight: Some(krustui::fonts::Weight::Semibold),
                         ..Default::default()
                     })
                     .build()
                     .finish(),
             )
-            .with_child(self.render_restore_default_bork_prompt_button(appearance))
+            .with_child(self.render_restore_default_krust_prompt_button(appearance))
             .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
             .with_main_axis_size(MainAxisSize::Max)
             .finish();
 
         self.render_prompt_section(
             appearance,
-            matches!(self.prompt_type, PromptType::Bork | PromptType::BorkDefault),
+            matches!(self.prompt_type, PromptType::Krust | PromptType::KrustDefault),
             header_row,
             None,
             body,
             self.mouse_state_handles
-                .bork_prompt_mouse_state_handle
+                .krust_prompt_mouse_state_handle
                 .clone(),
-            EditorModalAction::UseBorkPrompt,
+            EditorModalAction::UseKrustPrompt,
         )
     }
 
@@ -743,7 +743,7 @@ impl EditorModal {
             .span(SHELL_PROMPT_SECTION_HEADER.to_string())
             .with_style(UiComponentStyles {
                 font_size: Some(MODAL_CONTENT_FONT_SIZE),
-                font_weight: Some(borkui::fonts::Weight::Semibold),
+                font_weight: Some(krustui::fonts::Weight::Semibold),
                 ..Default::default()
             })
             .build()
@@ -810,9 +810,9 @@ impl EditorModal {
 
         // We disable the save button in a couple of cases:
         // - there are no changes
-        // - the Bork prompt is used but there are no chips selected
+        // - the Krust prompt is used but there are no chips selected
         let save_disabled = !self.is_dirty
-            || (matches!(self.prompt_type, PromptType::Bork)
+            || (matches!(self.prompt_type, PromptType::Krust)
                 && self.chip_configurator.used_chips.is_empty());
         let save_button = self.render_primary_button(
             "Save changes".to_string(),
@@ -861,7 +861,7 @@ impl View for EditorModal {
             ConstrainedBox::new(
                 column
                     .with_child(
-                        Container::new(self.render_bork_prompt_section(appearance))
+                        Container::new(self.render_krust_prompt_section(appearance))
                             .with_margin_bottom(MARGIN_BETWEEN_MODAL_SECTIONS)
                             .finish(),
                     )

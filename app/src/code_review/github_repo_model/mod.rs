@@ -1,4 +1,4 @@
-use borkui::{AppContext, Entity, ModelContext, ModelHandle};
+use krustui::{AppContext, Entity, ModelContext, ModelHandle};
 
 #[cfg(feature = "local_fs")]
 mod local;

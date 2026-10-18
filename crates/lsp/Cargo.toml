@@ -2,10 +2,10 @@
 name = "lsp"
 version = "0.1.0"
 edition = "2021"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 publish.workspace = true
 license.workspace = true
-description = "Language Server Protocol implementation for Bork"
+description = "Language Server Protocol implementation for Krust"
 
 [features]
 local_fs = []
@@ -30,10 +30,10 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
-bork_core = { workspace = true }
-bork_errors.workspace = true
-bork_util.workspace = true
-borkui_core.workspace = true
+krust_core = { workspace = true }
+krust_errors.workspace = true
+krust_util.workspace = true
+krustui_core.workspace = true
 instant.workspace = true
 http_client = { workspace = true }
 cfg-if.workspace = true

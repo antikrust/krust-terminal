@@ -1,6 +1,6 @@
 use chrono::{Local, TimeZone};
-use bork_core::execution_mode::{AppExecutionMode, ExecutionMode};
-use borkui::{App, ModelHandle, ReadModel, UpdateModel};
+use krust_core::execution_mode::{AppExecutionMode, ExecutionMode};
+use krustui::{App, ModelHandle, ReadModel, UpdateModel};
 
 use super::*;
 use crate::auth::{AuthManager, AuthStateProvider};

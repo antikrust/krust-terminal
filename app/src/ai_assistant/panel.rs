@@ -3,29 +3,29 @@ use std::time::Duration;
 
 use chrono::Local;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_editor::editor::NavigationKey;
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     resizable_state_handle, Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DispatchEventResult, DragBarSide, Element, Empty, EventHandler, Fill, Flex,
     HyperlinkUrl, Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Radius,
     Resizable, ResizableStateHandle, SavePosition, Shrinkable, Stack, Text,
 };
-use borkui::fonts::Properties;
-use borkui::keymap::{EditableBinding, FixedBinding};
-use borkui::platform::Cursor;
-use borkui::presenter::ChildView;
-use borkui::r#async::Timer;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Properties;
+use krustui::keymap::{EditableBinding, FixedBinding};
+use krustui::platform::Cursor;
+use krustui::presenter::ChildView;
+use krustui::r#async::Timer;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
 
-use super::execution_context::BorkAiExecutionContext;
+use super::execution_context::KrustAiExecutionContext;
 use super::requests::{Event as RequestsEvent, RequestStatus, Requests};
 use super::transcript::{Transcript, TranscriptEvent};
 use super::utils::{render_prepared_response_button, render_request_limit_info, TranscriptPart};
@@ -41,8 +41,8 @@ use crate::input_suggestions::{Event as InputSuggestionsEvent, InputSuggestions}
 use crate::send_telemetry_from_ctx;
 use crate::server::server_api::ai::AIClient;
 use crate::server::server_api::ServerApi;
-use crate::server::telemetry::{TelemetryEvent, BorkAIActionType};
-use crate::terminal::resizable_data::{ModalType, ResizableData, DEFAULT_BORK_AI_WIDTH};
+use crate::server::telemetry::{TelemetryEvent, KrustAIActionType};
+use crate::terminal::resizable_data::{ModalType, ResizableData, DEFAULT_KRUST_AI_WIDTH};
 use crate::ui_components::blended_colors;
 use crate::ui_components::buttons::icon_button;
 use crate::util::bindings::{cmd_or_ctrl_shift, CustomAction};
@@ -69,7 +69,7 @@ const BODY_FONT_SIZE: f32 = 13.;
 const TITLE_FONT_SIZE: f32 = 16.;
 const ZERO_STATE_HELP_TEXT_FONT_SIZE: f32 = 12.;
 
-const ZERO_STATE_HELP_TEXT: &str = "Shift + ctrl + space a block or text selection to ask Bork AI.";
+const ZERO_STATE_HELP_TEXT: &str = "Shift + ctrl + space a block or text selection to ask Krust AI.";
 const SCRIPT_ZERO_STATE_PROMPT: &str = "Write a script to connect to an AWS EC2 instance.";
 const GIT_ZERO_STATE_PROMPT: &str = "How do I undo the most recent commits in git?";
 const FILES_ZERO_STATE_PROMPT: &str = "How do I find all files containing specific text?";
@@ -140,33 +140,33 @@ pub enum AIAssistantAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::custom(
         CustomAction::CloseCurrentSession,
         AIAssistantAction::ClosePanel,
-        "Close Bork AI",
+        "Close Krust AI",
         id!("AIAssistantPanel"),
     )]);
 
     app.register_editable_bindings([
         EditableBinding::new(
             "ai_assistant_panel:focus_terminal_input",
-            "Focus Terminal Input From Bork AI",
+            "Focus Terminal Input From Krust AI",
             AIAssistantAction::FocusTerminalInput,
         )
         .with_context_predicate(id!("AIAssistantPanel"))
         .with_key_binding(cmd_or_ctrl_shift("l")),
         EditableBinding::new(
             "ai_assistant_panel:reset_context",
-            "Restart Bork AI",
+            "Restart Krust AI",
             AIAssistantAction::ResetContext,
         )
         .with_context_predicate(id!("AIAssistantPanel"))
         .with_key_binding("ctrl-l"),
         EditableBinding::new(
             "ai_assistant_panel:reset_context",
-            "Restart Bork AI",
+            "Restart Krust AI",
             AIAssistantAction::ResetContext,
         )
         .with_context_predicate(id!("AIAssistantPanel"))
@@ -227,12 +227,12 @@ impl AIAssistantPanelView {
         let resizable_data_handle = ResizableData::handle(ctx);
         let resizable_state_handle = match resizable_data_handle
             .as_ref(ctx)
-            .get_handle(ctx.window_id(), ModalType::BorkAIWidth)
+            .get_handle(ctx.window_id(), ModalType::KrustAIWidth)
         {
             Some(handle) => handle,
             None => {
-                report_error!("Couldn't retrieve bork ai resizable state handle.");
-                resizable_state_handle(DEFAULT_BORK_AI_WIDTH)
+                report_error!("Couldn't retrieve krust ai resizable state handle.");
+                resizable_state_handle(DEFAULT_KRUST_AI_WIDTH)
             }
         };
 
@@ -263,7 +263,7 @@ impl AIAssistantPanelView {
             .as_ref(ctx)
             .session(window_id)
             .as_ref()
-            .map(BorkAiExecutionContext::new);
+            .map(KrustAiExecutionContext::new);
         self.requests_model.update(ctx, |requests, _| {
             requests.update_ai_execution_context(ai_execution_context);
         });
@@ -286,7 +286,7 @@ impl AIAssistantPanelView {
     fn format_as_code_block(&self, content: &str) -> String {
         // Intentionally choose a language that won't be interpreted as a shell language
         // i.e. (*sh)
-        format!("```bork\n{}\n```", content.trim())
+        format!("```krust\n{}\n```", content.trim())
     }
 
     // TODO: reconsider if we should be doing all the formatting in here as opposed
@@ -418,7 +418,7 @@ impl AIAssistantPanelView {
         }
 
         send_telemetry_from_ctx!(
-            TelemetryEvent::OpenedBorkAI {
+            TelemetryEvent::OpenedKrustAI {
                 source: ask_type.into()
             },
             ctx
@@ -444,7 +444,7 @@ impl AIAssistantPanelView {
                     self.issue_request(buffer_text, ctx);
                 } else {
                     // Only send this event if the user tried to execute with a longer than permitted prompt.
-                    send_telemetry_from_ctx!(TelemetryEvent::BorkAICharacterLimitExceeded, ctx);
+                    send_telemetry_from_ctx!(TelemetryEvent::KrustAICharacterLimitExceeded, ctx);
                 }
                 ctx.notify();
             }
@@ -655,14 +655,14 @@ impl AIAssistantPanelView {
         let time_now = Local::now();
 
         result.push_str(&format!(
-            "## Bork AI Transcript ({})\n\n",
+            "## Krust AI Transcript ({})\n\n",
             time_now.format("%x %l:%M %p")
         ));
 
         for part in transcript {
             result.push_str(&format!("Prompt: {}\n\n", part.raw_user_prompt().trim()));
             result.push_str(&format!(
-                "Bork AI: {}\n\n",
+                "Krust AI: {}\n\n",
                 part.raw_assistant_answer().trim()
             ));
         }
@@ -719,7 +719,7 @@ impl AIAssistantPanelView {
                         .with_style(UiComponentStyles {
                             font_family_id: Some(appearance.ui_font_family()),
                             font_size: Some(TITLE_FONT_SIZE),
-                            font_weight: Some(borkui::fonts::Weight::Semibold),
+                            font_weight: Some(krustui::fonts::Weight::Semibold),
                             font_color: Some(appearance.theme().active_ui_text_color().into()),
                             ..Default::default()
                         })
@@ -845,7 +845,7 @@ impl AIAssistantPanelView {
                         BODY_FONT_SIZE,
                     )
                     .with_style(Properties {
-                        weight: borkui::fonts::Weight::Bold,
+                        weight: krustui::fonts::Weight::Bold,
                         ..Default::default()
                     })
                     .with_color(appearance.theme().ui_error_color())
@@ -1023,8 +1023,8 @@ impl TypedActionView for AIAssistantPanelView {
             ResetContext => {
                 self.reset_context(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::BorkAIAction {
-                        action_type: BorkAIActionType::Restart
+                    TelemetryEvent::KrustAIAction {
+                        action_type: KrustAIActionType::Restart
                     },
                     ctx
                 );
@@ -1032,8 +1032,8 @@ impl TypedActionView for AIAssistantPanelView {
             CopyTranscript => {
                 self.copy_transcript(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::BorkAIAction {
-                        action_type: BorkAIActionType::CopyTranscript
+                    TelemetryEvent::KrustAIAction {
+                        action_type: KrustAIActionType::CopyTranscript
                     },
                     ctx
                 );
@@ -1043,7 +1043,7 @@ impl TypedActionView for AIAssistantPanelView {
             }
             PreparedPrompt(prompt) => {
                 self.issue_request(prompt.to_string(), ctx);
-                send_telemetry_from_ctx!(TelemetryEvent::UsedBorkAIPreparedPrompt { prompt }, ctx);
+                send_telemetry_from_ctx!(TelemetryEvent::UsedKrustAIPreparedPrompt { prompt }, ctx);
             }
             ClickedUrl(url) => {
                 ctx.open_url(&url.url);
@@ -1052,8 +1052,8 @@ impl TypedActionView for AIAssistantPanelView {
                 ctx.clipboard()
                     .write(ClipboardContent::plain_text(content.to_string()));
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::BorkAIAction {
-                        action_type: BorkAIActionType::CopyAnswer
+                    TelemetryEvent::KrustAIAction {
+                        action_type: KrustAIActionType::CopyAnswer
                     },
                     ctx
                 );
@@ -1137,7 +1137,7 @@ impl View for AIAssistantPanelView {
             .finish(),
             OffsetPositioning::offset_from_parent(
                 vec2f(0., HEADER_HEIGHT),
-                borkui::elements::ParentOffsetBounds::Unbounded,
+                krustui::elements::ParentOffsetBounds::Unbounded,
                 ParentAnchor::TopLeft,
                 ChildAnchor::BottomLeft,
             ),

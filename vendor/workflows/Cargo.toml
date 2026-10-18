@@ -5,6 +5,6 @@ members = [
 ]
 
 [workspace.package]
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 license = "Apache-2.0"
 publish = false

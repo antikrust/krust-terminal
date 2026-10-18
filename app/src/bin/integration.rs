@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
-use bork_cli::WorkerCommand;
-use bork_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, BorkServerConfig};
-use bork_core::AppId;
+use krust_cli::WorkerCommand;
+use krust_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, KrustServerConfig};
+use krust_core::AppId;
 
 #[derive(Debug, Default, Parser, Clone)]
-#[command(name = "bork-integration")]
+#[command(name = "krust-integration")]
 #[clap(args_conflicts_with_subcommands = true)]
 pub struct Args {
     #[command(subcommand)]
@@ -18,15 +18,15 @@ pub fn main() -> Result<()> {
         ChannelConfig {
             app_id: AppId::new(
                 "dev",
-                "bork",
+                "krust",
                 if cfg!(target_os = "macos") {
-                    "Bork-Integration"
+                    "Krust-Integration"
                 } else {
-                    "BorkIntegration"
+                    "KrustIntegration"
                 },
             ),
-            logfile_name: "bork_integration.log".into(),
-            server_config: BorkServerConfig {
+            logfile_name: "krust_integration.log".into(),
+            server_config: KrustServerConfig {
                 firebase_auth_api_key: "".into(),
                 // Use an IP in the IANA testing range, with the TCP discard port, to
                 // black-hole server traffic.
@@ -58,12 +58,12 @@ pub fn main() -> Result<()> {
                 // GUI application), do so.  This must occur before init_logging, as the
                 // terminal server sets up its own logger, and attempting to set a second
                 // logger leads to a panic.
-                bork::terminal::local_tty::server::run_terminal_server(args);
+                krust::terminal::local_tty::server::run_terminal_server(args);
                 return Ok(());
             }
             #[cfg(not(target_family = "wasm"))]
             WorkerCommand::RemoteServerProxy(_) | WorkerCommand::RemoteServerDaemon(_) => {
-                return bork::run();
+                return krust::run();
             }
             // This is a catch-all to handle the plugin host, which the integration test crate doesn't have a feature flag for.
             #[allow(unreachable_patterns)]
@@ -71,5 +71,5 @@ pub fn main() -> Result<()> {
         }
     }
 
-    bork::run()
+    krust::run()
 }

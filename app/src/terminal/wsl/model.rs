@@ -1,7 +1,7 @@
 use itertools::Itertools as _;
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
-use borkui_extras::user_preferences::registry_backed::KEY_NOT_FOUND_ERR;
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
+use krustui_extras::user_preferences::registry_backed::KEY_NOT_FOUND_ERR;
 use windows_registry::CURRENT_USER;
 use windows_result::Error as WindowsError;
 

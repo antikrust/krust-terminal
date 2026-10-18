@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use borkui::r#async::executor::Background;
+use krustui::r#async::executor::Background;
 
 use crate::auth::auth_state::AuthState;
 use crate::send_telemetry_on_executor;
 use crate::server::telemetry::{DownloadSource, TelemetryEvent};
 
-/// Determine the Bork download method (if possible) and send a telemetry event reporting that
+/// Determine the Krust download method (if possible) and send a telemetry event reporting that
 /// method
 pub fn determine_and_report(auth_state: Arc<AuthState>, executor: Arc<Background>) {
     let telemetry_executor = executor.clone();
@@ -23,16 +23,16 @@ pub fn determine_and_report(auth_state: Arc<AuthState>, executor: Arc<Background
         .detach();
 }
 
-/// Try to determine what method was used to download Bork. Currently, on macOS, we only support
+/// Try to determine what method was used to download Krust. Currently, on macOS, we only support
 /// two download methods:
 ///
 /// 1. The default download from our website.
 /// 2. Via `homebrew`
 ///
-/// To determine if Bork was installed with Homebrew, we run `brew list --cask bork`. That command
-/// will return an failure error code if Bork was not installed with Homebrew. It will also fail
+/// To determine if Krust was installed with Homebrew, we run `brew list --cask krust`. That command
+/// will return an failure error code if Krust was not installed with Homebrew. It will also fail
 /// to launch entirely if Homebrew isn't installed. In either of those cases, we treat the download
-/// as being from the Bork website.
+/// as being from the Krust website.
 #[cfg(target_os = "macos")]
 async fn check_download_source() -> DownloadSource {
     use std::env;
@@ -54,7 +54,7 @@ async fn check_download_source() -> DownloadSource {
     }
 
     let result = command::r#async::Command::new("brew")
-        .args(["list", "--cask", "bork"])
+        .args(["list", "--cask", "krust"])
         .env("HOMEBREW_NO_AUTO_UPDATE", "1")
         .env("PATH", new_path)
         .stdin(Stdio::null())

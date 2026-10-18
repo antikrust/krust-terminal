@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::icons::Icon;
-use borkui_core::keymap::Keystroke;
-use borkui_core::platform::OperatingSystem;
-use borkui_core::prelude::*;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::icons::Icon;
+use krustui_core::keymap::Keystroke;
+use krustui_core::platform::OperatingSystem;
+use krustui_core::prelude::*;
 
 use crate::Component;
 

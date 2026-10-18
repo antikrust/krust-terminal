@@ -3,8 +3,8 @@ mod tab_config_step;
 mod welcome_banner;
 
 pub use hoa_onboarding_flow::{init, HoaOnboardingFlow, HoaOnboardingFlowEvent, HoaOnboardingStep};
-use bork_core::user_preferences::GetUserPreferences;
-use borkui::AppContext;
+use krust_core::user_preferences::GetUserPreferences;
+use krustui::AppContext;
 
 const HAS_COMPLETED_HOA_ONBOARDING_KEY: &str = "HasCompletedHOAOnboarding";
 

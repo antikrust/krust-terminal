@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
-use borkui::elements::{
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Shrinkable,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::Element;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::terminal::view::{InlineBannerId, TerminalAction};
@@ -147,7 +147,7 @@ impl CodebaseIndexSpeedbumpBannerState {
         let info_icon = Container::new(
             ConstrainedBox::new(
                 Icon::Info
-                    .to_borkui_icon(theme.active_ui_text_color())
+                    .to_krustui_icon(theme.active_ui_text_color())
                     .finish(),
             )
             .with_width(appearance.ui_font_size() * 1.2)

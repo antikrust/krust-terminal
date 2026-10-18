@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use borkui::Entity;
+use krustui::Entity;
 
 #[derive(
     Debug,

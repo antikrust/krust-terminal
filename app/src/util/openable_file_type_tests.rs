@@ -2,26 +2,26 @@ use std::path::Path;
 
 #[cfg(feature = "local_fs")]
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
+use krust_core::features::FeatureFlag;
 
 use super::*;
 
 #[test]
 fn test_binary_files_not_openable() {
-    assert!(is_file_openable_in_bork(Path::new("image.png")).is_none());
-    assert!(is_file_openable_in_bork(Path::new("video.mp4")).is_none());
-    assert!(is_file_openable_in_bork(Path::new("binary.exe")).is_none());
-    assert!(is_file_openable_in_bork(Path::new("archive.zip")).is_none());
+    assert!(is_file_openable_in_krust(Path::new("image.png")).is_none());
+    assert!(is_file_openable_in_krust(Path::new("video.mp4")).is_none());
+    assert!(is_file_openable_in_krust(Path::new("binary.exe")).is_none());
+    assert!(is_file_openable_in_krust(Path::new("archive.zip")).is_none());
 }
 
 #[test]
 #[cfg(feature = "local_fs")]
-fn test_open_code_panels_file_editor_default_is_bork() {
+fn test_open_code_panels_file_editor_default_is_krust() {
     use crate::util::file::external_editor::settings::OpenCodePanelsFileEditor;
 
     assert_eq!(
         OpenCodePanelsFileEditor::default_value(),
-        EditorChoice::Bork
+        EditorChoice::Krust
     );
 }
 
@@ -41,10 +41,10 @@ fn test_resolve_file_target_markdown_viewer_precedence() {
 
 #[test]
 #[cfg(feature = "local_fs")]
-fn test_resolve_file_target_bork_uses_default_layout() {
+fn test_resolve_file_target_krust_uses_default_layout() {
     let target = resolve_file_target_with_editor_choice(
         Path::new("data.txt"),
-        EditorChoice::Bork,
+        EditorChoice::Krust,
         true, /* prefer_markdown_viewer */
         EditorLayout::NewTab,
         None,
@@ -57,7 +57,7 @@ fn test_resolve_file_target_bork_uses_default_layout() {
 /// external editor or the system default app, even when user settings prefer one.
 #[test]
 #[cfg(feature = "local_fs")]
-fn test_resolve_file_target_to_open_in_bork_never_leaves_bork() {
+fn test_resolve_file_target_to_open_in_krust_never_leaves_krust() {
     use crate::util::file::external_editor::settings::{
         OpenCodePanelsFileEditor, OpenConversationLayoutPreference, OpenFileEditor, OpenFileLayout,
         PreferMarkdownViewer, PreferTabbedEditorView,
@@ -74,13 +74,13 @@ fn test_resolve_file_target_to_open_in_bork_never_leaves_bork() {
         open_conversation_layout_preference: OpenConversationLayoutPreference::new(None),
     };
     for path in ["README.md", "data.txt", "main.rs", "image.png", "script.sh"] {
-        let target = resolve_file_target_to_open_in_bork(Path::new(path), &settings, None);
+        let target = resolve_file_target_to_open_in_krust(Path::new(path), &settings, None);
         assert!(
             matches!(
                 target,
                 FileTarget::CodeEditor(_) | FileTarget::MarkdownViewer(_)
             ),
-            "{path} must resolve to an in-Bork surface, got {target:?}"
+            "{path} must resolve to an in-Krust surface, got {target:?}"
         );
     }
 }
@@ -90,7 +90,7 @@ fn test_resolve_file_target_to_open_in_bork_never_leaves_bork() {
 fn test_resolve_file_target_binary_is_system_generic() {
     let target = resolve_file_target_with_editor_choice(
         Path::new("image.png"),
-        EditorChoice::Bork,
+        EditorChoice::Krust,
         true, /* prefer_markdown_viewer */
         EditorLayout::SplitPane,
         None,
@@ -113,32 +113,32 @@ fn test_resolve_file_target_binary_uses_env_editor() {
 }
 
 #[test]
-fn test_renders_in_bork_notebook_viewer() {
+fn test_renders_in_krust_notebook_viewer() {
     // Markdown always renders in the notebook viewer, independent of the flag.
     let off = FeatureFlag::JupyterNotebookRendering.override_enabled(false);
-    assert!(renders_in_bork_notebook_viewer(Path::new("README.md")));
-    assert!(!renders_in_bork_notebook_viewer(Path::new(
+    assert!(renders_in_krust_notebook_viewer(Path::new("README.md")));
+    assert!(!renders_in_krust_notebook_viewer(Path::new(
         "notebook.ipynb"
     )));
-    assert!(!renders_in_bork_notebook_viewer(Path::new("main.rs")));
+    assert!(!renders_in_krust_notebook_viewer(Path::new("main.rs")));
     drop(off);
 
     // With the flag on, Jupyter notebooks also render in the notebook viewer.
     let _on = FeatureFlag::JupyterNotebookRendering.override_enabled(true);
-    assert!(renders_in_bork_notebook_viewer(Path::new("notebook.ipynb")));
-    assert!(renders_in_bork_notebook_viewer(Path::new("README.md")));
-    assert!(!renders_in_bork_notebook_viewer(Path::new("main.rs")));
+    assert!(renders_in_krust_notebook_viewer(Path::new("notebook.ipynb")));
+    assert!(renders_in_krust_notebook_viewer(Path::new("README.md")));
+    assert!(!renders_in_krust_notebook_viewer(Path::new("main.rs")));
 }
 
 #[test]
 #[cfg(feature = "local_fs")]
 fn test_resolve_file_target_jupyter_notebook_flag_on() {
     let _flag = FeatureFlag::JupyterNotebookRendering.override_enabled(true);
-    // Even with prefer_markdown_viewer off and an explicit Bork editor choice,
+    // Even with prefer_markdown_viewer off and an explicit Krust editor choice,
     // a Jupyter notebook routes to the notebook viewer (not the JSON editor).
     let target = resolve_file_target_with_editor_choice(
         Path::new("analysis.ipynb"),
-        EditorChoice::Bork,
+        EditorChoice::Krust,
         false, /* prefer_markdown_viewer */
         EditorLayout::SplitPane,
         None,
@@ -154,7 +154,7 @@ fn test_resolve_file_target_jupyter_notebook_flag_off() {
     // exactly as it does today.
     let target = resolve_file_target_with_editor_choice(
         Path::new("analysis.ipynb"),
-        EditorChoice::Bork,
+        EditorChoice::Krust,
         true, /* prefer_markdown_viewer */
         EditorLayout::SplitPane,
         None,
@@ -165,19 +165,19 @@ fn test_resolve_file_target_jupyter_notebook_flag_off() {
 #[test]
 fn test_markdown_files() {
     assert_eq!(
-        is_file_openable_in_bork(Path::new("README.md")),
+        is_file_openable_in_krust(Path::new("README.md")),
         Some(OpenableFileType::Markdown)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("doc.markdown")),
+        is_file_openable_in_krust(Path::new("doc.markdown")),
         Some(OpenableFileType::Markdown)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("README")),
+        is_file_openable_in_krust(Path::new("README")),
         Some(OpenableFileType::Markdown)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("CHANGELOG")),
+        is_file_openable_in_krust(Path::new("CHANGELOG")),
         Some(OpenableFileType::Markdown)
     );
 }
@@ -186,19 +186,19 @@ fn test_markdown_files() {
 #[cfg(feature = "local_fs")]
 fn test_code_files() {
     assert_eq!(
-        is_file_openable_in_bork(Path::new("main.rs")),
+        is_file_openable_in_krust(Path::new("main.rs")),
         Some(OpenableFileType::Code)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("app.js")),
+        is_file_openable_in_krust(Path::new("app.js")),
         Some(OpenableFileType::Code)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("script.py")),
+        is_file_openable_in_krust(Path::new("script.py")),
         Some(OpenableFileType::Code)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("config.json")),
+        is_file_openable_in_krust(Path::new("config.json")),
         Some(OpenableFileType::Code)
     );
 }
@@ -207,19 +207,19 @@ fn test_code_files() {
 #[cfg(not(feature = "local_fs"))]
 fn test_code_files() {
     assert_eq!(
-        is_file_openable_in_bork(Path::new("main.rs")),
+        is_file_openable_in_krust(Path::new("main.rs")),
         Some(OpenableFileType::Text)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("app.js")),
+        is_file_openable_in_krust(Path::new("app.js")),
         Some(OpenableFileType::Text)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("script.py")),
+        is_file_openable_in_krust(Path::new("script.py")),
         Some(OpenableFileType::Text)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("config.json")),
+        is_file_openable_in_krust(Path::new("config.json")),
         Some(OpenableFileType::Text)
     );
 }
@@ -228,15 +228,15 @@ fn test_code_files() {
 fn test_text_files() {
     // Files that are text but don't have language support
     assert_eq!(
-        is_file_openable_in_bork(Path::new("data.txt")),
+        is_file_openable_in_krust(Path::new("data.txt")),
         Some(OpenableFileType::Text)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("data.csv")),
+        is_file_openable_in_krust(Path::new("data.csv")),
         Some(OpenableFileType::Text)
     );
     assert_eq!(
-        is_file_openable_in_bork(Path::new("file.svg")),
+        is_file_openable_in_krust(Path::new("file.svg")),
         Some(OpenableFileType::Text)
     );
 }

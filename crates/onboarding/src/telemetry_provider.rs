@@ -1,5 +1,5 @@
-use bork_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
-use borkui_core::{AppContext, ModelContext};
+use krust_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
+use krustui_core::{AppContext, ModelContext};
 
 /// A mock telemetry context provider for the onboarding binary that logs events
 /// instead of sending them to a server.

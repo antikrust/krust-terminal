@@ -1,9 +1,9 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::{Fill, BorkTheme};
-use borkui::color::ColorU;
-use borkui::elements::{ConstrainedBox, Container, CornerRadius, Radius};
-use borkui::Element;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::{Fill, KrustTheme};
+use krustui::color::ColorU;
+use krustui::elements::{ConstrainedBox, Container, CornerRadius, Radius};
+use krustui::Element;
 
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
 use crate::ai::agent_conversations_model::AgentRunDisplayStatus;
@@ -13,17 +13,17 @@ use crate::ui_components::icons::Icon;
 pub const STATUS_ELEMENT_PADDING: f32 = 2.;
 
 pub trait StatusElementStyle {
-    fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU);
+    fn status_icon_and_color(&self, theme: &KrustTheme) -> (Icon, ColorU);
 }
 
 impl StatusElementStyle for ConversationStatus {
-    fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU) {
+    fn status_icon_and_color(&self, theme: &KrustTheme) -> (Icon, ColorU) {
         ConversationStatus::status_icon_and_color(self, theme, StatusColorStyle::Standard)
     }
 }
 
 impl StatusElementStyle for AgentRunDisplayStatus {
-    fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU) {
+    fn status_icon_and_color(&self, theme: &KrustTheme) -> (Icon, ColorU) {
         AgentRunDisplayStatus::status_icon_and_color(self, theme)
     }
 }
@@ -38,7 +38,7 @@ pub fn render_status_element(
     let (icon, color) = status.status_icon_and_color(theme);
 
     Container::new(
-        ConstrainedBox::new(icon.to_borkui_icon(Fill::from(color)).finish())
+        ConstrainedBox::new(icon.to_krustui_icon(Fill::from(color)).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish(),

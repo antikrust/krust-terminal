@@ -1,6 +1,6 @@
 # TECH.md — Remote Server: Error Handling & Abort
 
-Linear: [APP-3987](https://linear.app/borkdotdev/issue/APP-3987)
+Linear: [APP-3987](https://linear.app/krustdotdev/issue/APP-3987)
 
 ## 1. Problem
 

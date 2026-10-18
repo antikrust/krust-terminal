@@ -7,18 +7,18 @@ use std::{fs::copy, io::Write};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 #[cfg(feature = "local_fs")]
-use bork_core::ui::theme::BorkTheme;
-use borkui::elements::{
+use krust_core::ui::theme::KrustTheme;
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     EventHandler, Fill, Flex, Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Rect, SavePosition, Shrinkable, Text,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::text_input::TextInput;
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::text_input::TextInput;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -221,7 +221,7 @@ impl ThemeCreatorBody {
     /// Note: the image option should be (original_theme_image_path, theme_name, image_extension).
     #[cfg(feature = "local_fs")]
     pub fn write_theme<T>(
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         dir: PathBuf,
         theme_yaml_file_name: String,
         image_option: Option<(PathBuf, String, &str)>,

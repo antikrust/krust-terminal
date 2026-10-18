@@ -8,19 +8,19 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     resizable_state_handle, Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, Fill, Flex, MouseStateHandle, OffsetPositioning, OffsetType,
     ParentElement, ParentOffsetBounds, PositionedElementOffsetBounds, PositioningAxis, Radius,
     Resizable, ResizableStateHandle, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, Shrinkable, Stack, UniformList, UniformListState, XAxisAnchor, YAxisAnchor,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -29,10 +29,10 @@ use super::ai_queries::AIQueriesDataSource;
 use super::env_var_collections::EnvVarCollectionDataSource;
 use super::history::history_data_source_for_session;
 use super::notebooks::notebooks_data_source;
-use super::bork_ai::BorkAIDataSource;
+use super::krust_ai::KrustAIDataSource;
 use super::workflows::{cloud_workflows_data_source, WorkflowsDataSource};
 use super::zero_state::{CommandSearchZeroStateEvent, CommandSearchZeroStateView};
-use crate::ai_assistant::execution_context::BorkAiExecutionContext;
+use crate::ai_assistant::execution_context::KrustAiExecutionContext;
 use crate::ai_assistant::GenerateCommandsFromNaturalLanguageError;
 use crate::appearance::Appearance;
 use crate::auth::auth_manager::AuthManager;
@@ -218,7 +218,7 @@ impl CommandSearchView {
         &mut self,
         session_id: SessionId,
         session_context: Option<SessionContext>,
-        ai_execution_context: Option<BorkAiExecutionContext>,
+        ai_execution_context: Option<KrustAiExecutionContext>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.mixer.update(ctx, |mixer, ctx| {
@@ -229,11 +229,11 @@ impl CommandSearchView {
             // will show up higher in the list (i.e.: further away from the input).
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
-                    BorkAIDataSource::new(self.ai_client.clone(), None),
+                    KrustAIDataSource::new(self.ai_client.clone(), None),
                     HashSet::from([QueryFilter::NaturalLanguage]),
                 );
                 mixer.add_async_source(
-                    BorkAIDataSource::new(self.ai_client.clone(), ai_execution_context),
+                    KrustAIDataSource::new(self.ai_client.clone(), ai_execution_context),
                     HashSet::from([QueryFilter::NaturalLanguage]),
                     AddAsyncSourceOptions {
                         debounce_interval: Some(Duration::from_millis(50)),
@@ -351,7 +351,7 @@ impl CommandSearchView {
         initial_query: String,
         query_filter: Option<QueryFilter>,
         menu_positioning: MenuPositioning,
-        ai_execution_context: Option<BorkAiExecutionContext>,
+        ai_execution_context: Option<KrustAiExecutionContext>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.reset_command_search_mixer(session_id, session_context, ai_execution_context, ctx);
@@ -500,9 +500,9 @@ impl CommandSearchView {
                 AcceptHistory(_)
                 | AcceptWorkflow(_)
                 | AcceptNotebook(_)
-                | OpenBorkAI
+                | OpenKrustAI
                 | AcceptEnvVarCollection(_)
-                | TranslateUsingBorkAI
+                | TranslateUsingKrustAI
                 | AcceptAIQuery(_) => false,
             };
 
@@ -520,7 +520,7 @@ impl CommandSearchView {
             ctx.emit_a11y_content(AccessibilityContent::new(
                 a11y_content,
                 a11y_help_content,
-                BorkA11yRole::UserAction,
+                KrustA11yRole::UserAction,
             ));
 
             // Recompute the result index - the incoming index is the index in the
@@ -578,7 +578,7 @@ impl CommandSearchView {
             .build()
             .finish();
         let row = Flex::row()
-            .with_main_axis_size(borkui::elements::MainAxisSize::Max)
+            .with_main_axis_size(krustui::elements::MainAxisSize::Max)
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(Shrinkable::new(1., text).finish());
 
@@ -641,7 +641,7 @@ impl CommandSearchView {
 
         Container::new(
             Flex::row()
-                .with_main_axis_size(borkui::elements::MainAxisSize::Max)
+                .with_main_axis_size(krustui::elements::MainAxisSize::Max)
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_child(Shrinkable::new(1., text).finish())
                 .finish(),
@@ -660,7 +660,7 @@ impl CommandSearchView {
         user_id: UserUid,
     ) -> Box<dyn Element> {
         let mut row = Flex::row()
-            .with_main_axis_size(borkui::elements::MainAxisSize::Max)
+            .with_main_axis_size(krustui::elements::MainAxisSize::Max)
             .with_cross_axis_alignment(CrossAxisAlignment::Center);
 
         let upgrade_link = team_uid
@@ -995,11 +995,11 @@ impl View for CommandSearchView {
         Some(AccessibilityContent::new(
             "Command Search".to_owned(),
             "Search your history, workflows, and more.  Use the Up and Down arrows to browse search results after typing.  Press Enter to accept a selected result, inserting it into the terminal input.  Press Escape to close.".to_owned(),
-            BorkA11yRole::MenuRole,
+            KrustA11yRole::MenuRole,
         ))
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let mixer = self.mixer.as_ref(app);
 
@@ -1118,7 +1118,7 @@ impl CommandSearchView {
 pub mod styles {
     use lazy_static::lazy_static;
     use pathfinder_color::ColorU;
-    use borkui::elements::{Border, DropShadow, ScrollbarWidth};
+    use krustui::elements::{Border, DropShadow, ScrollbarWidth};
 
     use crate::appearance::Appearance;
     use crate::themes::theme::Fill;

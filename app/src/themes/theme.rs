@@ -4,16 +4,16 @@ use std::path::{Component, Path, PathBuf};
 
 use anyhow::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-pub use bork_core::ui::color::blend::Blend;
-use bork_core::ui::color::pick_foreground_color;
-pub use bork_core::ui::theme::*;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::color::ColorU;
-use borkui::elements::{
+pub use krust_core::ui::color::blend::Blend;
+use krust_core::ui::color::pick_foreground_color;
+pub use krust_core::ui::theme::*;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::color::ColorU;
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, Element, Empty, Flex, ParentElement, Rect,
     Shrinkable, Stack, Text,
 };
-use borkui::fonts::FamilyId;
+use krustui::fonts::FamilyId;
 
 use super::default_themes::*;
 use super::theme_creator::{pick_accent_color_from_options, top_colors_for_image};
@@ -409,7 +409,7 @@ impl InMemoryThemeOptions {
         self.path = path;
     }
 
-    pub fn theme(&self) -> BorkTheme {
+    pub fn theme(&self) -> KrustTheme {
         let bg_color = self.chosen_bg_color();
         let fg_color = pick_foreground_color(bg_color);
         let possible_accent_colors: Vec<ColorU> = self
@@ -428,7 +428,7 @@ impl InMemoryThemeOptions {
             (Details::Lighter, light_mode_colors())
         };
 
-        BorkTheme::new(
+        KrustTheme::new(
             bg_color.into(),
             fg_color,
             accent_color.into(),
@@ -449,14 +449,14 @@ impl InMemoryThemeOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct BorkThemeConfig {
-    theme_map: HashMap<ThemeKind, BorkTheme>,
+pub struct KrustThemeConfig {
+    theme_map: HashMap<ThemeKind, KrustTheme>,
 }
 
-impl BorkThemeConfig {
+impl KrustThemeConfig {
     pub fn new() -> Self {
         // preload with built-in themes
-        let theme_map: HashMap<ThemeKind, BorkTheme> = HashMap::from_iter([
+        let theme_map: HashMap<ThemeKind, KrustTheme> = HashMap::from_iter([
             (ThemeKind::Dark, dark_theme()),
             (ThemeKind::Light, light_theme()),
             (ThemeKind::SolarizedDark, solarized_dark()),
@@ -479,10 +479,10 @@ impl BorkThemeConfig {
             (ThemeKind::SolarFlare, solar_flare()),
             (ThemeKind::Adeberry, adeberry()),
         ]);
-        BorkThemeConfig { theme_map }
+        KrustThemeConfig { theme_map }
     }
 
-    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: BorkTheme) {
+    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: KrustTheme) {
         self.theme_map.insert(theme_name, theme);
     }
 
@@ -490,16 +490,16 @@ impl BorkThemeConfig {
         CustomTheme::new(name, path).into()
     }
 
-    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &BorkTheme)> {
+    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &KrustTheme)> {
         self.theme_map.iter()
     }
 
-    pub fn theme(&self, name: &ThemeKind) -> BorkTheme {
+    pub fn theme(&self, name: &ThemeKind) -> KrustTheme {
         self.theme_map.get(name).cloned().unwrap_or_else(dark_theme)
     }
 }
 
-impl Default for BorkThemeConfig {
+impl Default for KrustThemeConfig {
     fn default() -> Self {
         Self::new()
     }
@@ -568,8 +568,8 @@ pub struct PromptColors {
     pub input_prompt_ssh: ColorU,
 }
 
-impl From<BorkTheme> for PromptColors {
-    fn from(theme: BorkTheme) -> Self {
+impl From<KrustTheme> for PromptColors {
+    fn from(theme: KrustTheme) -> Self {
         PromptColors {
             input_prompt_conversation_management: theme.terminal_colors().normal.white.into(),
             input_prompt_pwd: theme.terminal_colors().normal.magenta.into(),
@@ -592,7 +592,7 @@ impl From<BorkTheme> for PromptColors {
 }
 
 pub fn render_preview(
-    theme: &BorkTheme,
+    theme: &KrustTheme,
     font_family: FamilyId,
     form_factor: Option<f32>,
 ) -> Box<dyn Element> {
@@ -674,9 +674,9 @@ pub fn render_preview(
         thumbnail.add_child(
             Shrinkable::new(
                 1.,
-                borkui::elements::Image::new(
+                krustui::elements::Image::new(
                     background_image.source(),
-                    borkui::elements::CacheOption::BySize,
+                    krustui::elements::CacheOption::BySize,
                 )
                 .cover()
                 .finish(),

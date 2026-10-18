@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use borkui::{App, AssetProvider, View, ViewHandle, WindowId};
+use krustui::{App, AssetProvider, View, ViewHandle, WindowId};
 
 pub mod agent_mode;
 pub mod ai_document;
@@ -36,7 +36,7 @@ pub mod terminal;
 pub mod themes;
 pub mod type_getters;
 pub mod view_getters;
-pub mod bork_drive;
+pub mod krust_drive;
 pub mod window;
 pub mod workflow;
 pub mod workspace;

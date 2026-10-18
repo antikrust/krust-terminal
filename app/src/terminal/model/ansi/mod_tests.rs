@@ -3,8 +3,8 @@ use std::io;
 use std::path::PathBuf;
 
 use hex;
-use bork_core::command::ExitCode;
-use borkui::color::ColorU;
+use krust_core::command::ExitCode;
+use krustui::color::ColorU;
 
 use super::*;
 use crate::terminal::model::ansi::InputBufferValue;
@@ -237,9 +237,9 @@ impl Handler for MockHandler {
             .push(DProtoHook::InitSubshell { value: data })
     }
 
-    fn sourced_rc_file(&mut self, data: SourcedRcFileForBorkValue) {
+    fn sourced_rc_file(&mut self, data: SourcedRcFileForKrustValue) {
         self.d_proto_hooks
-            .push(DProtoHook::SourcedRcFileForBork { value: data })
+            .push(DProtoHook::SourcedRcFileForKrust { value: data })
     }
 
     fn pluggable_notification(&mut self, title: Option<String>, body: String) {
@@ -948,7 +948,7 @@ fn parse_dcs_input_buffer() {
 
 #[test]
 fn parse_sourced_rc_file_hook() {
-    let rc_file_hook = r#"{"hook": "SourcedRcFileForBork", "value": { "shell": "zsh" }}"#;
+    let rc_file_hook = r#"{"hook": "SourcedRcFileForKrust", "value": { "shell": "zsh" }}"#;
     let bytes = [
         UNENCODED_JSON_DCS_START,
         &Vec::from(rc_file_hook.as_bytes()),
@@ -960,9 +960,9 @@ fn parse_sourced_rc_file_hook() {
 
     assert_eq!(handler.d_proto_hooks.len(), 1);
     match handler.d_proto_hooks.first().unwrap() {
-        DProtoHook::SourcedRcFileForBork { value } => assert_eq!(
+        DProtoHook::SourcedRcFileForKrust { value } => assert_eq!(
             *value,
-            SourcedRcFileForBorkValue {
+            SourcedRcFileForKrustValue {
                 shell: "zsh".to_owned(),
                 uname: None,
             }
@@ -974,7 +974,7 @@ fn parse_sourced_rc_file_hook() {
 #[test]
 fn parse_sourced_rc_file_hook_with_uname() {
     let rc_file_hook =
-        r#"{"hook": "SourcedRcFileForBork", "value": { "shell": "zsh", "uname": "Darwin" }}"#;
+        r#"{"hook": "SourcedRcFileForKrust", "value": { "shell": "zsh", "uname": "Darwin" }}"#;
     let bytes = [
         UNENCODED_JSON_DCS_START,
         &Vec::from(rc_file_hook.as_bytes()),
@@ -986,9 +986,9 @@ fn parse_sourced_rc_file_hook_with_uname() {
 
     assert_eq!(handler.d_proto_hooks.len(), 1);
     match handler.d_proto_hooks.first().unwrap() {
-        DProtoHook::SourcedRcFileForBork { value } => assert_eq!(
+        DProtoHook::SourcedRcFileForKrust { value } => assert_eq!(
             *value,
-            SourcedRcFileForBorkValue {
+            SourcedRcFileForKrustValue {
                 shell: "zsh".to_owned(),
                 uname: Some("Darwin".to_owned()),
             }

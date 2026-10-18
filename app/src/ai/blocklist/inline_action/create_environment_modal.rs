@@ -1,5 +1,5 @@
-use borkui::elements::{ChildView, Element, Empty};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::elements::{ChildView, Element, Empty};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::settings_view::handoff_environment_creation_modal::{
     HandoffEnvironmentCreationModal, HandoffEnvironmentCreationModalEvent,

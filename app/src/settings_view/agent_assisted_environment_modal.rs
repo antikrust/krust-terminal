@@ -15,20 +15,20 @@ use ai::index::full_source_code_embedding::manager::CodebaseIndexManagerEvent;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 use git2::Repository as GitRepository;
 use pathfinder_color::ColorU;
-use bork_core::features::FeatureFlag;
-use bork_core::paths::home_relative_path;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::paths::home_relative_path;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Align, Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Empty, Expanded, Flex,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::file_picker::FilePickerError;
-use borkui::platform::FilePickerConfiguration;
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::file_picker::FilePickerError;
+use krustui::platform::FilePickerConfiguration;
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::modal::MODAL_BACKDROP_OPACITY;
@@ -522,7 +522,7 @@ impl AgentAssistedEnvironmentModal {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_text_color().into(),
             theme.active_ui_text_color().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .with_padding_start(0.)

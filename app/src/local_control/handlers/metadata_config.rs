@@ -8,8 +8,8 @@ use ::local_control::protocol::{
 use ::local_control::{ActionKind, ControlError, ErrorCode, InstanceId};
 use serde_json::json;
 use settings::Setting as _;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::{ModelContext, SingletonEntity as _, WindowId};
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::{ModelContext, SingletonEntity as _, WindowId};
 
 use super::metadata::{
     pane_entries_for_tabs, tab_entries_for_windows, PaneEntry, TabEntry, WindowEntry,
@@ -24,7 +24,7 @@ use crate::pane_group::PaneId;
 use crate::settings::{AccessibilitySettings, FontSettings, InputSettings, ThemeSettings};
 use crate::tab::SelectedTabColor;
 use crate::themes::theme::{SelectedSystemThemes, ThemeKind};
-use crate::user_config::BorkConfig;
+use crate::user_config::KrustConfig;
 use crate::window_settings::ZoomLevel;
 use crate::WindowSettings;
 
@@ -664,7 +664,7 @@ fn theme_kind_for_name(
     name: &str,
     ctx: &ModelContext<LocalControlBridge>,
 ) -> Result<ThemeKind, ControlError> {
-    let matches = BorkConfig::as_ref(ctx)
+    let matches = KrustConfig::as_ref(ctx)
         .theme_config()
         .theme_items()
         .filter_map(|(kind, _)| (public_theme_name(kind) == name).then_some(kind.clone()))
@@ -740,13 +740,13 @@ fn u32_setting_value(key: &str, value: &serde_json::Value) -> Result<u32, Contro
 fn accessibility_verbosity_value(
     key: &str,
     value: &serde_json::Value,
-) -> Result<borkui::accessibility::AccessibilityVerbosity, ControlError> {
+) -> Result<krustui::accessibility::AccessibilityVerbosity, ControlError> {
     match string_setting_value(key, value)?.as_str() {
         "Verbose" | "verbose" | "VERBOSE" => {
-            Ok(borkui::accessibility::AccessibilityVerbosity::Verbose)
+            Ok(krustui::accessibility::AccessibilityVerbosity::Verbose)
         }
         "Concise" | "concise" | "CONCISE" => {
-            Ok(borkui::accessibility::AccessibilityVerbosity::Concise)
+            Ok(krustui::accessibility::AccessibilityVerbosity::Concise)
         }
         _ => Err(ControlError::new(
             ErrorCode::InvalidParams,

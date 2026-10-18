@@ -1,4 +1,4 @@
-use borkui::{App, EntityId};
+use krustui::{App, EntityId};
 
 use super::*;
 use crate::ai::blocklist::BlocklistAIHistoryModel;

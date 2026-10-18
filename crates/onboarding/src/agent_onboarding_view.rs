@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use ai::LLMId;
 use instant::Instant;
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use borkui_core::assets::asset_cache::AssetSource;
-use borkui_core::image_cache::ImageType;
-use borkui_core::windowing::state::{ApplicationStage, StateEvent};
-use borkui_core::windowing::WindowManager;
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krustui_core::assets::asset_cache::AssetSource;
+use krustui_core::image_cache::ImageType;
+use krustui_core::windowing::state::{ApplicationStage, StateEvent};
+use krustui_core::windowing::WindowManager;
 
 use crate::components::feature_optout_dialog::{render_feature_optout_dialog, FeatureOptOutDialog};
 use crate::model::{
@@ -28,20 +28,20 @@ const PLAN_ACTIVATED_TOAST_DURATION: Duration = Duration::from_secs(5);
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::{button, Component as _, Options as _};
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::{Fill, BorkTheme};
-use bork_core::ui::Icon;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::{Fill, KrustTheme};
+use krust_core::ui::Icon;
+use krustui_core::elements::{
     Align, CacheOption, ChildAnchor, ConstrainedBox, Container, CrossAxisAlignment, Dismiss, Empty,
     Flex, Image, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Rect, Shrinkable, Stack,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::keymap::macros::*;
-use borkui_core::keymap::{FixedBinding, Keystroke};
-use borkui_core::presenter::ChildView;
-use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use borkui_core::{
+use krustui_core::fonts::Weight;
+use krustui_core::keymap::macros::*;
+use krustui_core::keymap::{FixedBinding, Keystroke};
+use krustui_core::presenter::ChildView;
+use krustui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -135,7 +135,7 @@ impl AgentOnboardingView {
     /// Creates a new AgentOnboardingView.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        theme_picker_themes: [BorkTheme; 4],
+        theme_picker_themes: [KrustTheme; 4],
         skippable: bool,
         models: Vec<OnboardingModelInfo>,
         default_model_id: LLMId,
@@ -330,7 +330,7 @@ impl AgentOnboardingView {
         ctx.focus_self();
 
         // Preload customize-slide images so they're ready when the user reaches that slide.
-        if FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
+        if FeatureFlag::OpenKrustNewSettingsModes.is_enabled() {
             Self::preload_onboarding_images(ctx);
         }
 
@@ -346,7 +346,7 @@ impl AgentOnboardingView {
     /// Eagerly loads all onboarding slide images into the asset cache
     /// so they display instantly when the user navigates between slides.
     fn preload_onboarding_images(ctx: &mut ViewContext<Self>) {
-        let asset_cache = borkui_core::assets::asset_cache::AssetCache::as_ref(ctx);
+        let asset_cache = krustui_core::assets::asset_cache::AssetCache::as_ref(ctx);
         // Preload the shared background image used on all right panels.
         asset_cache.load_asset::<ImageType>(AssetSource::Bundled {
             path: crate::slides::layout::ONBOARDING_BG_PATH,
@@ -424,7 +424,7 @@ impl AgentOnboardingView {
             appearance,
             FeatureOptOutDialog {
                 title: "Are you sure you don't want AI?",
-                body: "Without AI, you'll still get Bork's terminal experience, but you'll miss \
+                body: "Without AI, you'll still get Krust's terminal experience, but you'll miss \
                        our agentic features like automatic fixes for terminal errors.",
                 features: &[],
                 close_button,
@@ -459,7 +459,7 @@ impl AgentOnboardingView {
 
         self.show_plan_activated_toast = true;
         let _ = ctx.spawn(
-            borkui_core::r#async::Timer::after(PLAN_ACTIVATED_TOAST_DURATION),
+            krustui_core::r#async::Timer::after(PLAN_ACTIVATED_TOAST_DURATION),
             |me: &mut Self, _, ctx| {
                 if me.show_plan_activated_toast {
                     me.show_plan_activated_toast = false;
@@ -483,7 +483,7 @@ impl AgentOnboardingView {
         let ui_builder = appearance.ui_builder();
 
         let check_icon = ConstrainedBox::new(Box::new(
-            Icon::CheckSkinny.to_borkui_icon(Fill::Solid(text_color)),
+            Icon::CheckSkinny.to_krustui_icon(Fill::Solid(text_color)),
         ))
         .with_width(ICON_SIZE)
         .with_height(ICON_SIZE)

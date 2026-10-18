@@ -6,16 +6,16 @@
 //! overlay, while settings consumers can render the sections inline.
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{Action, Element};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{Action, Element};
 
 use super::{ChipConfigurator, ChipConfiguratorAction};
 use crate::Appearance;
@@ -130,7 +130,7 @@ fn render_header(title: &str, appearance: &Appearance) -> Box<dyn Element> {
         .span(title.to_string())
         .with_style(UiComponentStyles {
             font_size: Some(MODAL_TITLE_FONT_SIZE),
-            font_weight: Some(borkui::fonts::Weight::Bold),
+            font_weight: Some(krustui::fonts::Weight::Bold),
             ..Default::default()
         })
         .build()
@@ -170,7 +170,7 @@ fn render_section_label(label: &str, appearance: &Appearance) -> Box<dyn Element
         .span(label.to_string())
         .with_style(UiComponentStyles {
             font_size: Some(MODAL_CONTENT_FONT_SIZE),
-            font_weight: Some(borkui::fonts::Weight::Semibold),
+            font_weight: Some(krustui::fonts::Weight::Semibold),
             ..Default::default()
         })
         .build()

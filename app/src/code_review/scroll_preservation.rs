@@ -1,9 +1,9 @@
-use bork_core::features::FeatureFlag;
-use borkui::elements::ScrollOffset;
-use borkui::units::Pixels;
+use krust_core::features::FeatureFlag;
+use krustui::elements::ScrollOffset;
+use krustui::units::Pixels;
 #[cfg(not(target_family = "wasm"))]
-use borkui::{AppContext, WeakViewHandle};
-use borkui::{ViewContext, ViewHandle};
+use krustui::{AppContext, WeakViewHandle};
+use krustui::{ViewContext, ViewHandle};
 
 #[cfg(not(target_family = "wasm"))]
 use super::FILE_HEADER_HEIGHT;

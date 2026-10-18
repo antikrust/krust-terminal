@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use bork_errors::report_if_error;
-use borkui::presenter::ChildView;
-use borkui::{
+use krust_errors::report_if_error;
+use krustui::presenter::ChildView;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

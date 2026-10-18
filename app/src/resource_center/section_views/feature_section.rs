@@ -1,11 +1,11 @@
-use borkui::elements::{
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
     MouseState, MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     Action, AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, WindowId,
 };
@@ -29,7 +29,7 @@ use crate::themes::theme::Fill;
 pub enum FeatureSection {
     WhatsNew,
     GettingStarted,
-    MaximizeBork,
+    MaximizeKrust,
     AdvancedSetup,
 }
 
@@ -38,7 +38,7 @@ impl FeatureSection {
         match self {
             FeatureSection::WhatsNew => "What's New?",
             FeatureSection::GettingStarted => "Getting Started",
-            FeatureSection::MaximizeBork => "Maximize Bork",
+            FeatureSection::MaximizeKrust => "Maximize Krust",
             FeatureSection::AdvancedSetup => "Advanced Setup",
         }
     }

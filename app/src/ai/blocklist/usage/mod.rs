@@ -1,6 +1,6 @@
-use bork_core::ui::theme::{Fill, BorkTheme};
-use bork_core::ui::Icon;
-use borkui::Element;
+use krust_core::ui::theme::{Fill, KrustTheme};
+use krust_core::ui::Icon;
+use krustui::Element;
 
 pub mod conversation_usage_view;
 pub mod rollup;
@@ -40,7 +40,7 @@ pub fn icon_for_context_window_usage(context_window_usage: f32) -> Icon {
 
 pub fn render_context_window_usage_icon(
     context_window_usage: f32,
-    theme: &BorkTheme,
+    theme: &KrustTheme,
     color_override: Option<Fill>,
 ) -> Box<dyn Element> {
     let icon = icon_for_context_window_usage(context_window_usage);
@@ -51,7 +51,7 @@ pub fn render_context_window_usage_icon(
         color_override.unwrap_or_else(|| theme.main_text_color(theme.background()))
     };
 
-    icon.to_borkui_icon(fill).finish()
+    icon.to_krustui_icon(fill).finish()
 }
 
 #[cfg(test)]

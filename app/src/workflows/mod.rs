@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 pub use cloud_object_models::{CloudWorkflow, CloudWorkflowModel, WorkflowId};
 use serde::{Deserialize, Serialize};
-use bork_core::context_flag::ContextFlag;
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::context_flag::ContextFlag;
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, SingletonEntity};
 
 pub mod categories;
 use anyhow::Result;
@@ -29,8 +29,8 @@ use crate::cloud_object::{
     CloudModelType, CloudObjectEventEntrypoint, CloudObjectUpsertParams, CreateCloudObjectResult,
     CreateObjectRequest, GenericServerObject, ObjectType, Revision, UpdateCloudObjectResult,
 };
-use crate::drive::items::workflow::BorkDriveWorkflow;
-use crate::drive::items::BorkDriveItem;
+use crate::drive::items::workflow::KrustDriveWorkflow;
+use crate::drive::items::KrustDriveItem;
 use crate::drive::CloudObjectTypeAndId;
 use crate::notebooks::{NotebookId, NotebookLocation};
 use crate::persistence::ModelEvent;
@@ -53,25 +53,25 @@ pub enum WorkflowSource {
         team_uid: ServerId,
     },
     PersonalCloud,
-    BorkAI,
+    KrustAI,
     Notebook {
         notebook_id: Option<NotebookId>,
         team_uid: Option<ServerId>,
         location: NotebookLocation,
     },
 
-    /// A hardcoded workflow type that allows Bork to surface features as Workflows (e.g.
+    /// A hardcoded workflow type that allows Krust to surface features as Workflows (e.g.
     /// a command to see our network log)
     App,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, PartialOrd)]
 pub enum WorkflowSelectionSource {
-    BorkDrive,
+    KrustDrive,
     CommandPalette,
     UniversalSearch,
     Voltron,
-    BorkAI,
+    KrustAI,
     Notebook,
     SlashMenu,
     UpArrowHistory,
@@ -142,7 +142,7 @@ impl WorkflowViewMode {
 pub enum AIWorkflowOrigin {
     CommandSearch,
     AgentMode,
-    LegacyBorkAI,
+    LegacyKrustAI,
 }
 
 /// Wrapper type for a workflow that may be saved locally or using cloud sync.
@@ -152,7 +152,7 @@ pub enum WorkflowType {
     Local(Workflow),
     /// Saved workflows from personal or team collections, saved using cloud-sync.
     Cloud(Box<CloudWorkflow>),
-    /// Ephemeral/transient workflows created from Bork AI output
+    /// Ephemeral/transient workflows created from Krust AI output
     AIGenerated {
         workflow: Workflow,
         origin: AIWorkflowOrigin,
@@ -316,17 +316,17 @@ impl CloudModelType for CloudWorkflowModel {
             .await
     }
 
-    fn renders_in_bork_drive(&self) -> bool {
+    fn renders_in_krust_drive(&self) -> bool {
         true
     }
 
-    fn to_bork_drive_item(
+    fn to_krust_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         workflow: &CloudWorkflow,
-    ) -> Option<Box<dyn BorkDriveItem>> {
-        Some(Box::new(BorkDriveWorkflow::new(
+    ) -> Option<Box<dyn KrustDriveItem>> {
+        Some(Box::new(KrustDriveWorkflow::new(
             self.cloud_object_type_and_id(id),
             workflow.clone(),
         )))

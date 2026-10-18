@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use borkui::elements::{ConstrainedBox, Container, Icon};
-use borkui::{AppContext, Element};
+use krustui::elements::{ConstrainedBox, Container, Icon};
+use krustui::{AppContext, Element};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::mixer::AIContextMenuSearchableAction;

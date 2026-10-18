@@ -1,6 +1,6 @@
 use anyhow::Result;
 use convert_case::{Case, Casing};
-use bork_workflows_types::Workflow;
+use krust_workflows_types::Workflow;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
 /// Writes a `workflows` function into the module at path `parent_modules`. The generated function
 /// will look approximately like:
 /// ```ignore
-/// use bork_workflows_metadata::*;
+/// use krust_workflows_metadata::*;
 /// pub fn workflows() -> Vec<Workflow> {
 ///     vec![
 ///         foo::workflow(),
@@ -80,7 +80,7 @@ fn write_workflows_function(
     mut parent_module: File,
     workflows_added: &mut Vec<String>,
 ) -> Result<()> {
-    writeln!(parent_module, "\nuse bork_workflows_types::*;")?;
+    writeln!(parent_module, "\nuse krust_workflows_types::*;")?;
     writeln!(parent_module, "pub fn workflows() -> Vec<Workflow> {{")?;
     writeln!(parent_module, "vec![")?;
     for workflows in workflows_added {
@@ -95,7 +95,7 @@ fn write_workflows_function(
 /// Writes a Workflow into the path at `src/generated_workflows/<file_name>.rs`. The generated Rust
 /// will look like:
 /// ```ignore
-/// use bork_workflows_metadata::*;
+/// use krust_workflows_metadata::*;
 /// pub fn workflow -> Workflow {
 ///    Workflow {
 ///      ...
@@ -105,7 +105,7 @@ fn write_workflows_function(
 fn write_workflow(workflow: Workflow, file_name: &str) -> Result<()> {
     let module = std::fs::File::create(format!("src/generated_workflows/{file_name}.rs"))?;
 
-    writeln!(&module, "use bork_workflows_types::*;")?;
+    writeln!(&module, "use krust_workflows_types::*;")?;
     writeln!(&module, r#"pub fn workflow() -> Workflow {{"#)?;
     writeln!(&module, "{}", uneval::to_string(workflow)?)?;
     writeln!(&module, "}}")?;

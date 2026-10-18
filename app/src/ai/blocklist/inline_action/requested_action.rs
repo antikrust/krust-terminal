@@ -1,6 +1,6 @@
 //! This module contains rendering functions for various requested inline actions that have not yet
 //! been transformed into a [`View`] component. This currently encompasses UI for file retrieval,
-//! environmental variable collection, and SSH Borkification, to name a few.
+//! environmental variable collection, and SSH Krustification, to name a few.
 //!
 //! There's quite a bit of duplication between function-based inline actions and view-based inline
 //! actions. Moreover, the header rendering functions here don't make use of the HeaderConfig.
@@ -14,15 +14,15 @@ use std::borrow::Cow;
 use lazy_static::lazy_static;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors::neutral_2;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors::neutral_2;
+use krustui::elements::{
     Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     FormattedTextElement, MainAxisAlignment, ParentElement, Radius, Shrinkable, Wrap, WrapFill,
 };
-use borkui::fonts::FamilyId;
-use borkui::keymap::Keystroke;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::FamilyId;
+use krustui::keymap::Keystroke;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use super::inline_action_header::HeaderConfig;
 use crate::ai::blocklist::block::view_impl::WithContentItemSpacing;

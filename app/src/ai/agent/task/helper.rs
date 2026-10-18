@@ -1,6 +1,6 @@
 //! This module contains traits and trait implementations for exposing helper methods for accessing
 //! proto fields.
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 pub trait TaskExt {
     fn parent_id(&self) -> Option<&str>;
@@ -37,7 +37,7 @@ pub trait SubagentExt {
     fn is_computer_use(&self) -> bool;
     fn is_summarization(&self) -> bool;
     fn is_conversation_search(&self) -> bool;
-    fn is_bork_documentation_search(&self) -> bool;
+    fn is_krust_documentation_search(&self) -> bool;
     fn type_name(&self) -> &'static str;
 }
 
@@ -195,11 +195,11 @@ impl SubagentExt for api::message::tool_call::Subagent {
         })
     }
 
-    fn is_bork_documentation_search(&self) -> bool {
+    fn is_krust_documentation_search(&self) -> bool {
         self.metadata.as_ref().is_some_and(|metadata| {
             matches!(
                 metadata,
-                api::message::tool_call::subagent::Metadata::BorkDocumentationSearch(_)
+                api::message::tool_call::subagent::Metadata::KrustDocumentationSearch(_)
             )
         })
     }
@@ -213,7 +213,7 @@ impl SubagentExt for api::message::tool_call::Subagent {
             Some(Metadata::ComputerUse(_)) => "computer_use",
             Some(Metadata::Summarization(_)) => "summarization",
             Some(Metadata::ConversationSearch(_)) => "conversation_search",
-            Some(Metadata::BorkDocumentationSearch(_)) => "bork_documentation_search",
+            Some(Metadata::KrustDocumentationSearch(_)) => "krust_documentation_search",
             None => "unknown",
         }
     }

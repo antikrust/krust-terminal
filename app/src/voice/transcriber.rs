@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use borkui::{Entity, SingletonEntity};
+use krustui::{Entity, SingletonEntity};
 
 use crate::server::server_api::TranscribeError;
 

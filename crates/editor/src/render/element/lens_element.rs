@@ -1,11 +1,11 @@
 use std::ops::Range;
 
-use borkui_core::elements::Point;
-use borkui_core::event::DispatchedEvent;
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::Vector2F;
-use borkui_core::units::IntoPixels;
-use borkui_core::{
+use krustui_core::elements::Point;
+use krustui_core::event::DispatchedEvent;
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::Vector2F;
+use krustui_core::units::IntoPixels;
+use krustui_core::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, ModelHandle,
     PaintContext, SizeConstraint, WeakViewHandle,
 };

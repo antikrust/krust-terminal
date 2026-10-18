@@ -1,6 +1,6 @@
 # Handoff Environment Selection: PWD-Based Overlap at Activation — Tech Spec
 Product spec: `specs/APP-4427/PRODUCT.md`
-Linear: [APP-4427](https://linear.app/borkdotdev/issue/APP-4427)
+Linear: [APP-4427](https://linear.app/krustdotdev/issue/APP-4427)
 
 ## Context
 Environment auto-selection for `&` handoff has two layers:

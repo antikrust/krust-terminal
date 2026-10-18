@@ -8,15 +8,15 @@ pub use onboarding::OnboardingIntention;
 use pathfinder_geometry::vector::Vector2F;
 use session_sharing_protocol::common::Role;
 use session_sharing_protocol::sharer::RoleUpdateReason;
-use bork_util::user_input::UserInput;
-use borkui::elements::HyperlinkUrl;
-use borkui::event::ModifiersState;
-use borkui::units::Lines;
-use borkui::EntityId;
+use krust_util::user_input::UserInput;
+use krustui::elements::HyperlinkUrl;
+use krustui::event::ModifiersState;
+use krustui::units::Lines;
+use krustui::EntityId;
 
 use super::inline_banner::{
     AnonymousUserLoginBannerAction, AwsBedrockLoginBannerAction, AwsCliNotInstalledBannerAction,
-    OpenInBorkBannerAction, VimModeBannerAction,
+    OpenInKrustBannerAction, VimModeBannerAction,
 };
 use super::{
     AliasExpansionBannerAction, ContextMenuAction, GridHighlightedLink, InputContextMenuAction,
@@ -67,7 +67,7 @@ pub enum OnboardingVersion {
 /// This represents whether entering a subshell for a particular command should become automatic in
 /// the future, or to ask again.
 #[derive(Clone, Debug)]
-pub enum RememberForBorkification {
+pub enum RememberForKrustification {
     /// If yes, need to transmit the command itself so it can be persisted to user-defaults
     RememberSubshellCommand(String),
     RememberSSHHost(String),
@@ -75,22 +75,22 @@ pub enum RememberForBorkification {
     DoNotRememberSSHHost,
 }
 
-impl RememberForBorkification {
+impl RememberForKrustification {
     pub fn as_bool(&self) -> bool {
         match self {
-            RememberForBorkification::RememberSubshellCommand(_) => true,
-            RememberForBorkification::RememberSSHHost(_) => true,
-            RememberForBorkification::DoNotRememberSubshellCommand => false,
-            RememberForBorkification::DoNotRememberSSHHost => false,
+            RememberForKrustification::RememberSubshellCommand(_) => true,
+            RememberForKrustification::RememberSSHHost(_) => true,
+            RememberForKrustification::DoNotRememberSubshellCommand => false,
+            RememberForKrustification::DoNotRememberSSHHost => false,
         }
     }
 
     pub fn is_ssh(&self) -> bool {
         match self {
-            RememberForBorkification::RememberSSHHost(_) => true,
-            RememberForBorkification::DoNotRememberSSHHost => true,
-            RememberForBorkification::RememberSubshellCommand(_) => false,
-            RememberForBorkification::DoNotRememberSubshellCommand => false,
+            RememberForKrustification::RememberSSHHost(_) => true,
+            RememberForKrustification::DoNotRememberSSHHost => true,
+            RememberForKrustification::RememberSubshellCommand(_) => false,
+            RememberForKrustification::DoNotRememberSubshellCommand => false,
         }
     }
 }
@@ -265,12 +265,12 @@ pub enum TerminalAction {
     },
     CopyRichContentSecret(RichContentSecretTooltipInfo),
     ShowInFileExplorer(PathBuf),
-    OpenFileInBork(PathBuf),
+    OpenFileInKrust(PathBuf),
     #[cfg(feature = "local_fs")]
-    OpenCodeInBork {
+    OpenCodeInKrust {
         path: PathBuf,
         layout: crate::util::file::external_editor::settings::EditorLayout,
-        line_col: Option<bork_util::path::LineAndColumnArg>,
+        line_col: Option<krust_util::path::LineAndColumnArg>,
     },
     OpenWorkflowModal,
     OpenWorkflowModalForAIWorkflow(Workflow),
@@ -289,14 +289,14 @@ pub enum TerminalAction {
     },
     /// Starts a subshell in the active session.
     TriggerSubshellBootstrap,
-    /// If the user says "no" to Borkification, possibly requesting not to be asked again
-    DismissBorkifyBanner(RememberForBorkification),
+    /// If the user says "no" to Krustification, possibly requesting not to be asked again
+    DismissKrustifyBanner(RememberForKrustification),
     /// Triggers the banner asking to turn the running block into a subshell. The String is the
     /// command that the user entered.
     ShowSubshellBanner(String),
     InsertMostRecentCommandCorrection,
     AliasExpansionBanner(AliasExpansionBannerAction),
-    OpenInBorkBanner(OpenInBorkBannerAction),
+    OpenInKrustBanner(OpenInKrustBannerAction),
     OpenBlockFilterEditor(BlockIndex),
     OnboardingFlow(OnboardingVersion),
     ImportSettings,
@@ -347,7 +347,7 @@ pub enum TerminalAction {
     GenerateCodebaseIndex,
     /// This is for debugging, dev only for now
     LoadAgentModeConversation,
-    ShowBorkifySettings,
+    ShowKrustifySettings,
     /// Removes a pending attachment (image or file) by index in the unified list.
     DeleteAttachment {
         index: usize,
@@ -393,9 +393,9 @@ pub enum TerminalAction {
     DismissCodeToolbeltTooltip,
     /// Start a Language Server for the current working directory (if supported)
     StartLspServer,
-    /// Start the guided Bork Environment setup flow (inserts the inline setup block).
+    /// Start the guided Krust Environment setup flow (inserts the inline setup block).
     SetupCloudEnvironment(Vec<String>),
-    /// Start the guided Bork Environment setup flow immediately (no inline setup block).
+    /// Start the guided Krust Environment setup flow immediately (no inline setup block).
     SetupCloudEnvironmentAndStart(Vec<String>),
     /// Show the environment setup mode selector to choose between remote GitHub or local agent flow.
     TriggerEnvironmentSetupSelection(Vec<String>),
@@ -607,9 +607,9 @@ impl fmt::Debug for TerminalAction {
             CopyGridSecret(_) => f.write_str("CopyGridSecret"),
             CopyRichContentSecret(_) => f.write_str("CopyRichContentSecret"),
             ShowInFileExplorer(_) => f.write_str("ShowInFileExplorer"),
-            OpenFileInBork(_) => f.write_str("OpenFileInBork"),
+            OpenFileInKrust(_) => f.write_str("OpenFileInKrust"),
             #[cfg(feature = "local_fs")]
-            OpenCodeInBork { .. } => f.write_str("OpenCodeInBork"),
+            OpenCodeInKrust { .. } => f.write_str("OpenCodeInKrust"),
             OpenWorkflowModal => f.write_str("OpenWorkflowModal"),
             OpenWorkflowModalForAIWorkflow(_) => f.write_str("OpenWorkflowModalForAIWorkflow"),
             OpenWorkflowModalForBlock(block_index) => {
@@ -625,11 +625,11 @@ impl fmt::Debug for TerminalAction {
             OpenBlockListContextMenu => f.write_str("OpenBlockListContextMenu"),
             AskAIAssistant { block_index } => write!(f, "AskAIAssistant({block_index:?})"),
             TriggerSubshellBootstrap => f.write_str("TriggerSubshellBootstrap"),
-            DismissBorkifyBanner(remember) => write!(f, "DismissBorkifyBanner({remember:?})"),
+            DismissKrustifyBanner(remember) => write!(f, "DismissKrustifyBanner({remember:?})"),
             ShowSubshellBanner(_) => f.write_str("ShowSubshellBanner"),
             InsertMostRecentCommandCorrection => f.write_str("InsertMostRecentCommandCorrection"),
             AliasExpansionBanner(action) => write!(f, "AliasExpansionBanner({action:?}"),
-            OpenInBorkBanner(action) => write!(f, "OpenInBorkBanner({action:?})"),
+            OpenInKrustBanner(action) => write!(f, "OpenInKrustBanner({action:?})"),
             OpenBlockFilterEditor(block_index) => {
                 write!(f, "OpenBlockFilterEditor({block_index:?})")
             }
@@ -685,7 +685,7 @@ impl fmt::Debug for TerminalAction {
             ShowInitializationBlock => write!(f, "ShowInitializationBlock"),
             GenerateCodebaseIndex => write!(f, "GenerateIndexForRepo"),
             LoadAgentModeConversation => write!(f, "LoadAgentModeConversation"),
-            ShowBorkifySettings => write!(f, "ShowBorkifySettings"),
+            ShowKrustifySettings => write!(f, "ShowKrustifySettings"),
             DeleteAttachment { index } => write!(f, "DeleteAttachment({index:?})"),
             OpenAttachmentLightbox { index } => {
                 write!(f, "OpenAttachmentLightbox({index:?})")

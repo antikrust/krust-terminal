@@ -1,14 +1,14 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 
 /// An unique reference to a skill.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum SkillReference {
     /// A skill identified by the path to its SKILL.md file.
     Path(LocalOrRemotePath),
-    /// A bundled skill distributed with Bork.
+    /// A bundled skill distributed with Krust.
     BundledSkillId(String),
 }
 
@@ -18,8 +18,8 @@ impl SkillReference {
     /// id for a bundled skill.
     ///
     /// Unlike [`Display`](fmt::Display), which renders the canonical
-    /// `@bork-skill:<id>` reference form for bundled skills, this omits the
-    /// internal `@bork-skill:` prefix so bundled-skill copy reads the same way
+    /// `@krust-skill:<id>` reference form for bundled skills, this omits the
+    /// internal `@krust-skill:` prefix so bundled-skill copy reads the same way
     /// as path-based skill copy. Use this for anything a user sees; keep
     /// `Display` for canonical/round-trippable reference strings.
     pub fn display_label(&self) -> String {
@@ -34,19 +34,19 @@ impl fmt::Display for SkillReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SkillReference::Path(path) => path.display_path().fmt(f),
-            SkillReference::BundledSkillId(id) => write!(f, "@bork-skill:{id}"),
+            SkillReference::BundledSkillId(id) => write!(f, "@krust-skill:{id}"),
         }
     }
 }
 
-impl From<SkillReference> for bork_multi_agent_api::skill_descriptor::SkillReference {
+impl From<SkillReference> for krust_multi_agent_api::skill_descriptor::SkillReference {
     fn from(reference: SkillReference) -> Self {
         match reference {
             SkillReference::Path(path) => {
-                bork_multi_agent_api::skill_descriptor::SkillReference::Path(path.display_path())
+                krust_multi_agent_api::skill_descriptor::SkillReference::Path(path.display_path())
             }
             SkillReference::BundledSkillId(id) => {
-                bork_multi_agent_api::skill_descriptor::SkillReference::BundledSkillId(id)
+                krust_multi_agent_api::skill_descriptor::SkillReference::BundledSkillId(id)
             }
         }
     }

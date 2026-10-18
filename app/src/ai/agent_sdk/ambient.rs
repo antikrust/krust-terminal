@@ -1,4 +1,4 @@
-//! Commands to interact with ambient agents on Bork's platform.
+//! Commands to interact with ambient agents on Krust's platform.
 use std::io::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,19 +7,19 @@ use anyhow::{anyhow, Context as _};
 use comfy_table::Cell;
 use futures::{future, StreamExt};
 use serde::Serialize;
-use bork_cli::agent::{Harness, OutputFormat, Prompt, RunCloudArgs};
-use bork_cli::json_filter::JsonOutput;
-use bork_cli::task::{
+use krust_cli::agent::{Harness, OutputFormat, Prompt, RunCloudArgs};
+use krust_cli::json_filter::JsonOutput;
+use krust_cli::task::{
     ArtifactTypeArg, ExecutionLocationArg, ListTasksArgs, MessageCommand, MessageDeliveredArgs,
     MessageListArgs, MessageReadArgs, MessageSendArgs, MessageWatchArgs, RunSortByArg,
     RunSourceArg, RunStateArg, TaskGetArgs,
 };
-use bork_cli::{GlobalOptions, SortOrderArg};
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use borkui::platform::TerminationMode;
-use borkui::r#async::{Spawnable, Timer};
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::{GlobalOptions, SortOrderArg};
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krustui::platform::TerminationMode;
+use krustui::r#async::{Spawnable, Timer};
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::common::{parse_ambient_task_id, EnvironmentChoice, ResolveConfigurationError};
 use crate::ai::agent::{extract_user_query_mode, UserQueryMode};
@@ -240,8 +240,8 @@ impl AmbientAgentRunner {
         }
 
         let refresh_future = super::common::refresh_workspace_metadata(ctx);
-        let bork_drive_sync_future = super::common::refresh_bork_drive(ctx);
-        let setup_future = future::try_join(refresh_future, bork_drive_sync_future);
+        let krust_drive_sync_future = super::common::refresh_krust_drive(ctx);
+        let setup_future = future::try_join(refresh_future, krust_drive_sync_future);
 
         ctx.spawn(setup_future, move |_runner, setup_result, ctx| {
             if let Err(err) = setup_result {
@@ -564,7 +564,7 @@ impl AmbientAgentRunner {
                             }
                             AmbientAgentEvent::TimedOut => {
                                 let task_id_str = spawned_task_id.as_ref().map_or_else(|| "unknown".to_string(), |id| id.to_string());
-                                println!("Agent session with run ID {task_id_str} is not ready after {}s. Check for a sharing link in the ambient agent management panel. See https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/managing-cloud-agents for details.", TASK_STATUS_POLLING_DURATION.as_secs());
+                                println!("Agent session with run ID {task_id_str} is not ready after {}s. Check for a sharing link in the ambient agent management panel. See https://therob.lol/krust-terminal/help/agent-platform/cloud-agents/managing-cloud-agents for details.", TASK_STATUS_POLLING_DURATION.as_secs());
                             }
                         },
                         Err(err) => {
@@ -581,7 +581,7 @@ impl AmbientAgentRunner {
                     if should_open {
                         if let Some(session_join_info) = session_join_info {
                             let url =
-                                match (super::is_running_in_bork(), session_join_info.session_id) {
+                                match (super::is_running_in_krust(), session_join_info.session_id) {
                                     (true, Some(session_id)) => {
                                         shared_session::join_native_intent(&session_id)
                                     }
@@ -1020,12 +1020,12 @@ fn task_id_from_run_id(run_id: &str) -> Option<AmbientAgentTaskId> {
 }
 
 fn task_id_from_oz_run_id_env() -> anyhow::Result<Option<AmbientAgentTaskId>> {
-    match std::env::var(bork_cli::OZ_RUN_ID_ENV) {
+    match std::env::var(krust_cli::OZ_RUN_ID_ENV) {
         Ok(run_id) => parse_ambient_task_id(&run_id, "Invalid OZ_RUN_ID").map(Some),
         Err(std::env::VarError::NotPresent) => Ok(None),
         Err(std::env::VarError::NotUnicode(_)) => Err(anyhow!(
             "{} is set but is not valid Unicode",
-            bork_cli::OZ_RUN_ID_ENV
+            krust_cli::OZ_RUN_ID_ENV
         )),
     }
 }
@@ -1423,7 +1423,7 @@ impl AmbientAgentRunner {
     }
 }
 
-impl borkui::Entity for AmbientAgentRunner {
+impl krustui::Entity for AmbientAgentRunner {
     type Event = ();
 }
 

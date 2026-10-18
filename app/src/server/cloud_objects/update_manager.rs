@@ -13,14 +13,14 @@ use futures::stream::AbortHandle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_graphql::mcp_gallery_template::MCPGalleryTemplate;
-use bork_graphql::object_permissions::AccessLevel;
-use bork_graphql::scalars::time::ServerTimestamp;
-use bork_util::sync::Condition;
-use borkui::r#async::{FutureId, Timer};
-use borkui::{
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_graphql::mcp_gallery_template::MCPGalleryTemplate;
+use krust_graphql::object_permissions::AccessLevel;
+use krust_graphql::scalars::time::ServerTimestamp;
+use krust_util::sync::Condition;
+use krustui::r#async::{FutureId, Timer};
+use krustui::{
     duration_with_jitter, AppContext, Entity, ModelContext, ModelHandle, RequestState, RetryOption,
     SingletonEntity,
 };
@@ -2708,8 +2708,8 @@ impl UpdateManager {
         ctx: &mut ModelContext<Self>,
     ) where
         P: 'static + FnMut(Arc<dyn ObjectClient>) -> S,
-        S: borkui::r#async::Spawnable + Future<Output = anyhow::Result<R>>,
-        <S as Future>::Output: borkui::r#async::SpawnableOutput,
+        S: krustui::r#async::Spawnable + Future<Output = anyhow::Result<R>>,
+        <S as Future>::Output: krustui::r#async::SpawnableOutput,
         F: 'static + FnMut(R, &mut AppContext) -> Option<ServerPermissions>,
     {
         let object_client = self.object_client.clone();
@@ -2770,8 +2770,8 @@ impl UpdateManager {
         mut on_success: impl FnMut(&mut Self, M, &mut ModelContext<Self>) + 'static,
     ) where
         P: 'static + FnMut(Arc<dyn ObjectClient>) -> S,
-        S: borkui::r#async::Spawnable + Future<Output = anyhow::Result<M>>,
-        <S as Future>::Output: borkui::r#async::SpawnableOutput,
+        S: krustui::r#async::Spawnable + Future<Output = anyhow::Result<M>>,
+        <S as Future>::Output: krustui::r#async::SpawnableOutput,
     {
         let cloud_model = CloudModel::handle(ctx);
         let uid = server_id.uid();
@@ -3515,7 +3515,7 @@ impl UpdateManager {
         ctx: &mut ModelContext<Self>,
     ) {
         self.create_object(
-            // TODO(INT-789): support creating folders as bork packs
+            // TODO(INT-789): support creating folders as krust packs
             CloudFolderModel::new(&name, false),
             owner,
             client_id,
@@ -4744,7 +4744,7 @@ impl UpdateManager {
             let new_folder = CloudFolderModel {
                 name: new_name,
                 is_open: folder.model().is_open,
-                is_bork_pack: folder.model().is_bork_pack,
+                is_krust_pack: folder.model().is_krust_pack,
             };
             self.update_object(new_folder, folder_id, revision, ctx);
         } else {

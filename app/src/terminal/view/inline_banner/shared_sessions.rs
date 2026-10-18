@@ -1,11 +1,11 @@
 //! The rendering logic for shared session banners.
 use chrono::{DateTime, Datelike, Local};
-use borkui::elements::{
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize,
     ParentElement, Radius, Rect, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::Element;
+use krustui::fonts::{Properties, Weight};
+use krustui::Element;
 
 use crate::appearance::Appearance;
 

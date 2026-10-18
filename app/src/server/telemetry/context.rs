@@ -5,9 +5,9 @@ use std::sync::OnceLock;
 
 use serde::Serialize;
 use serde_json::{json, Value};
-use bork_errors::report_error;
+use krust_errors::report_error;
 #[cfg(target_family = "wasm")]
-use borkui::platform::wasm;
+use krustui::platform::wasm;
 
 use super::rudder_message::Message as RudderMessage;
 use crate::server::OperatingSystemInfo;

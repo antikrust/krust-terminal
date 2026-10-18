@@ -17,16 +17,16 @@ use instant::Instant;
 use itertools::Itertools;
 pub use query::query_conversation_entries;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use bork_cli::agent::Harness;
-use bork_core::execution_mode::AppExecutionMode;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::BorkTheme;
-use bork_errors::report_error;
-use borkui::color::ColorU;
-use borkui::r#async::Timer;
-use borkui::windowing::{StateEvent, WindowManager};
-use borkui::{
+use krust_cli::agent::Harness;
+use krust_core::execution_mode::AppExecutionMode;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::KrustTheme;
+use krust_errors::report_error;
+use krustui::color::ColorU;
+use krustui::r#async::Timer;
+use krustui::windowing::{StateEvent, WindowManager};
+use krustui::{
     duration_with_jitter, AppContext, Entity, EntityId, ModelContext, ModelHandle, RequestState,
     SingletonEntity, WindowId,
 };
@@ -494,7 +494,7 @@ impl AgentRunDisplayStatus {
         )
     }
 
-    pub fn status_icon_and_color(&self, theme: &BorkTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &KrustTheme) -> (Icon, ColorU) {
         match self {
             AgentRunDisplayStatus::TaskQueued
             | AgentRunDisplayStatus::TaskPending

@@ -1,17 +1,17 @@
-//! Settings UI for local scripting and Bork control permissions.
+//! Settings UI for local scripting and Krust control permissions.
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 use settings::Setting as _;
 #[cfg(target_os = "macos")]
-use bork_core::channel::ChannelState;
-use bork_errors::report_if_error;
-use borkui::elements::{ChildView, Element, MouseStateHandle};
+use krust_core::channel::ChannelState;
+use krust_errors::report_if_error;
+use krustui::elements::{ChildView, Element, MouseStateHandle};
 #[cfg(target_os = "macos")]
-use borkui::ui_components::button::ButtonVariant;
+use krustui::ui_components::button::ButtonVariant;
 #[cfg(target_os = "macos")]
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     render_body_item, LocalOnlyIconState, MatchData, PageType, SettingsPageMeta,
@@ -31,7 +31,7 @@ use crate::workspace::{cli_install, ToastStack};
 pub enum ScriptingSettingsPageAction {
     SetLocalControlMode(LocalControlMode),
     #[cfg(target_os = "macos")]
-    InstallBorkControlCli,
+    InstallKrustControlCli,
 }
 
 pub struct ScriptingSettingsPageView {
@@ -39,7 +39,7 @@ pub struct ScriptingSettingsPageView {
     local_only_icon_tooltip_states: RefCell<HashMap<String, MouseStateHandle>>,
     local_control_mode_dropdown: ViewHandle<Dropdown<ScriptingSettingsPageAction>>,
     #[cfg(target_os = "macos")]
-    borkctrl_installing: bool,
+    krustctrl_installing: bool,
 }
 
 impl ScriptingSettingsPageView {
@@ -51,7 +51,7 @@ impl ScriptingSettingsPageView {
         });
         Self::update_local_control_mode_dropdown(local_control_mode_dropdown.clone(), ctx);
 
-        if FeatureFlag::BorkControlCli.is_enabled() {
+        if FeatureFlag::KrustControlCli.is_enabled() {
             ctx.subscribe_to_model(&LocalControlSettings::handle(ctx), |view, _, _, ctx| {
                 Self::update_local_control_mode_dropdown(
                     view.local_control_mode_dropdown.clone(),
@@ -63,7 +63,7 @@ impl ScriptingSettingsPageView {
 
         #[cfg(target_os = "macos")]
         let widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
-            Box::new(BorkControlCliInstallWidget::default()),
+            Box::new(KrustControlCliInstallWidget::default()),
             Box::new(LocalControlModeWidget),
         ];
         #[cfg(not(target_os = "macos"))]
@@ -75,7 +75,7 @@ impl ScriptingSettingsPageView {
             local_only_icon_tooltip_states: RefCell::new(HashMap::new()),
             local_control_mode_dropdown,
             #[cfg(target_os = "macos")]
-            borkctrl_installing: false,
+            krustctrl_installing: false,
         }
     }
 
@@ -105,23 +105,23 @@ impl ScriptingSettingsPageView {
     }
 
     #[cfg(target_os = "macos")]
-    fn install_borkctrl(&mut self, ctx: &mut ViewContext<Self>) {
-        if self.borkctrl_installing || cli_install::is_borkctrl_installed() {
+    fn install_krustctrl(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.krustctrl_installing || cli_install::is_krustctrl_installed() {
             return;
         }
 
-        self.borkctrl_installing = true;
+        self.krustctrl_installing = true;
         ctx.notify();
         let window_id = ctx.window_id();
         ctx.spawn(
-            async { cli_install::install_borkctrl() },
+            async { cli_install::install_krustctrl() },
             move |view, result, ctx| {
-                view.borkctrl_installing = false;
+                view.krustctrl_installing = false;
                 match result {
                     Ok(()) => {
-                        let command_name = ChannelState::channel().borkctrl_command_name();
+                        let command_name = ChannelState::channel().krustctrl_command_name();
                         let message = format!(
-                            "Successfully installed the Bork Control CLI! You can now run '{command_name}' from the command line."
+                            "Successfully installed the Krust Control CLI! You can now run '{command_name}' from the command line."
                         );
                         ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
                             toast_stack.add_ephemeral_toast(
@@ -132,7 +132,7 @@ impl ScriptingSettingsPageView {
                         });
                     }
                     Err(error) => {
-                        let message = format!("Failed to install Bork Control command: {error}");
+                        let message = format!("Failed to install Krust Control command: {error}");
                         log::warn!("{message}");
                         ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
                             toast_stack.add_persistent_toast(
@@ -165,7 +165,7 @@ impl TypedActionView for ScriptingSettingsPageView {
                 ctx.notify();
             }
             #[cfg(target_os = "macos")]
-            ScriptingSettingsPageAction::InstallBorkControlCli => self.install_borkctrl(ctx),
+            ScriptingSettingsPageAction::InstallKrustControlCli => self.install_krustctrl(ctx),
         }
     }
 }
@@ -186,7 +186,7 @@ impl SettingsPageMeta for ScriptingSettingsPageView {
     }
 
     fn should_render(&self, _ctx: &AppContext) -> bool {
-        cfg!(not(target_family = "wasm")) && FeatureFlag::BorkControlCli.is_enabled()
+        cfg!(not(target_family = "wasm")) && FeatureFlag::KrustControlCli.is_enabled()
     }
 
     fn update_filter(&mut self, query: &str, ctx: &mut ViewContext<Self>) -> MatchData {
@@ -210,16 +210,16 @@ impl From<ViewHandle<ScriptingSettingsPageView>> for SettingsPageViewHandle {
 
 #[cfg(target_os = "macos")]
 #[derive(Default)]
-struct BorkControlCliInstallWidget {
+struct KrustControlCliInstallWidget {
     install_button_mouse_state: MouseStateHandle,
 }
 
 #[cfg(target_os = "macos")]
-impl SettingsWidget for BorkControlCliInstallWidget {
+impl SettingsWidget for KrustControlCliInstallWidget {
     type View = ScriptingSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "bork control cli command borkctrl install scripting"
+        "krust control cli command krustctrl install scripting"
     }
 
     fn render(
@@ -228,9 +228,9 @@ impl SettingsWidget for BorkControlCliInstallWidget {
         appearance: &Appearance,
         _app: &AppContext,
     ) -> Box<dyn Element> {
-        let installed = cli_install::is_borkctrl_installed();
-        let disabled = view.borkctrl_installing || installed;
-        let label = if view.borkctrl_installing {
+        let installed = cli_install::is_krustctrl_installed();
+        let disabled = view.krustctrl_installing || installed;
+        let label = if view.krustctrl_installing {
             "Installing…"
         } else if installed {
             "Installed"
@@ -253,19 +253,19 @@ impl SettingsWidget for BorkControlCliInstallWidget {
             button
                 .build()
                 .on_click(|ctx, _, _| {
-                    ctx.dispatch_typed_action(ScriptingSettingsPageAction::InstallBorkControlCli);
+                    ctx.dispatch_typed_action(ScriptingSettingsPageAction::InstallKrustControlCli);
                 })
                 .finish()
         };
 
         render_body_item::<ScriptingSettingsPageAction>(
-            "Bork Control CLI command".into(),
+            "Krust Control CLI command".into(),
             None,
             LocalOnlyIconState::Hidden,
             ToggleState::Enabled,
             appearance,
             button,
-            Some("Install the borkctrl command for scripting Bork from your terminal.".to_owned()),
+            Some("Install the krustctrl command for scripting Krust from your terminal.".to_owned()),
         )
     }
 }
@@ -275,7 +275,7 @@ impl SettingsWidget for LocalControlModeWidget {
     type View = ScriptingSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "scripting bork control automation borkctrl local cli scripts disabled enabled"
+        "scripting krust control automation krustctrl local cli scripts disabled enabled"
     }
 
     fn render(
@@ -285,7 +285,7 @@ impl SettingsWidget for LocalControlModeWidget {
         app: &AppContext,
     ) -> Box<dyn Element> {
         render_body_item::<ScriptingSettingsPageAction>(
-            "borkctrl CLI".into(),
+            "krustctrl CLI".into(),
             None,
             LocalOnlyIconState::for_setting(
                 LocalControlModeSetting::storage_key(),
@@ -296,7 +296,7 @@ impl SettingsWidget for LocalControlModeWidget {
             ToggleState::Enabled,
             appearance,
             ChildView::new(&view.local_control_mode_dropdown).finish(),
-            Some("borkctrl allows for scripting Bork's UI. Use with care.".to_owned()),
+            Some("krustctrl allows for scripting Krust's UI. Use with care.".to_owned()),
         )
     }
 }

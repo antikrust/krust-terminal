@@ -1,5 +1,5 @@
-use borkui::async_assert;
-use borkui::integration::AssertionCallback;
+use krustui::async_assert;
+use krustui::integration::AssertionCallback;
 
 use crate::integration_testing::view_getters::{command_palette_view, workspace_view};
 

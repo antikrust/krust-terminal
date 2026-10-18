@@ -14,8 +14,8 @@ use std::time::Duration;
 use background_task::spawn_find_task;
 use parking_lot::FairMutex;
 use sum_tree::SeekBias;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{EntityId, ModelContext};
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{EntityId, ModelContext};
 use work_queue::FindWorkQueue;
 
 use super::rich_content::{FindableRichContentHandle, RichContentMatchId};
@@ -1353,7 +1353,7 @@ pub fn collect_block_info(block_list: &BlockList, config: &AsyncFindConfig) -> V
     while let Some(item) = cursor.item() {
         match item {
             BlockHeightItem::Block(height)
-                if height.into_lines() > borkui::units::Lines::zero() =>
+                if height.into_lines() > krustui::units::Lines::zero() =>
             {
                 let summary = cursor.start();
                 block_info.push(BlockInfo::Terminal {
@@ -1363,7 +1363,7 @@ pub fn collect_block_info(block_list: &BlockList, config: &AsyncFindConfig) -> V
             }
             BlockHeightItem::RichContent(rich_content_item)
                 if rich_content_item.last_laid_out_height.into_lines()
-                    > borkui::units::Lines::zero() =>
+                    > krustui::units::Lines::zero() =>
             {
                 block_info.push(BlockInfo::RichContent {
                     view_id: rich_content_item.view_id,

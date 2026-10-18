@@ -5,16 +5,16 @@ use std::path::{Path, PathBuf};
 use itertools::Itertools as _;
 use repo_metadata::repositories::DetectedRepositories;
 use uuid::Uuid;
-use bork_core::features::FeatureFlag;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::{FileMCPWatcher, FileMCPWatcherEvent, MCPProvider};
 use crate::ai::mcp::templatable_installation::TemplatableMCPServerInstallation;
 use crate::ai::mcp::ParsedTemplatableMCPServerResult;
 use crate::settings::ai::AISettings;
 use crate::settings::AISettingsChangedEvent;
-use crate::bork_managed_paths_watcher::bork_managed_mcp_config_path;
+use crate::krust_managed_paths_watcher::krust_managed_mcp_config_path;
 
 /// Singleton model to manage file-based MCP servers.
 #[derive(Default)]
@@ -244,7 +244,7 @@ impl FileBasedMCPManager {
     /// config location.
     ///
     /// "Global" means the installation was detected outside of a user repository:
-    /// - For `MCPProvider::Bork`: the logical root for `~/.bork*/.mcp.json`.
+    /// - For `MCPProvider::Krust`: the logical root for `~/.krust*/.mcp.json`.
     /// - For any other provider: the user's home directory (e.g. `~/.claude.json`).
     ///
     /// Project-scoped installations (those detected inside a repo) are not considered
@@ -260,7 +260,7 @@ impl FileBasedMCPManager {
                         return false;
                     }
                     match provider {
-                        MCPProvider::Bork => Self::is_global_bork_root(root_path),
+                        MCPProvider::Krust => Self::is_global_krust_root(root_path),
                         MCPProvider::Claude | MCPProvider::Codex | MCPProvider::Agents => {
                             home_dir.as_ref().is_some_and(|home| root_path == home)
                         }
@@ -270,31 +270,31 @@ impl FileBasedMCPManager {
     }
 
     /// Returns `true` if the server identified by `hash` is referenced from the global
-    /// Bork config (`~/.bork/.mcp.json`). Global Bork servers always auto-spawn.
-    fn is_global_bork_server(&self, hash: u64) -> bool {
+    /// Krust config (`~/.krust/.mcp.json`). Global Krust servers always auto-spawn.
+    fn is_global_krust_server(&self, hash: u64) -> bool {
         self.file_based_servers_by_root
             .iter()
             .any(|(root_path, provider_map)| {
-                Self::is_global_bork_root(root_path)
+                Self::is_global_krust_root(root_path)
                     && provider_map
-                        .get(&MCPProvider::Bork)
+                        .get(&MCPProvider::Krust)
                         .is_some_and(|hashes| hashes.contains(&hash))
             })
     }
 
-    fn is_global_bork_root(root_path: &Path) -> bool {
-        bork_managed_mcp_config_path().is_some_and(|path| root_path == path.root_path.as_path())
+    fn is_global_krust_root(root_path: &Path) -> bool {
+        krust_managed_mcp_config_path().is_some_and(|path| root_path == path.root_path.as_path())
     }
     fn auto_start_decision(&self, hash: u64, file_based_mcp_enabled: bool) -> AutoStartDecision {
-        let server_type = if self.is_global_bork_server(hash) {
-            FileBasedMCPServerType::GlobalBork
+        let server_type = if self.is_global_krust_server(hash) {
+            FileBasedMCPServerType::GlobalKrust
         } else if self.is_global_server(hash) {
             FileBasedMCPServerType::GlobalThirdParty
         } else {
             FileBasedMCPServerType::ProjectScoped
         };
         let should_autostart = match server_type {
-            FileBasedMCPServerType::GlobalBork => true,
+            FileBasedMCPServerType::GlobalKrust => true,
             FileBasedMCPServerType::GlobalThirdParty => file_based_mcp_enabled,
             FileBasedMCPServerType::ProjectScoped => false,
         };
@@ -317,8 +317,8 @@ impl FileBasedMCPManager {
         let mcp_enabled = AISettings::as_ref(ctx).is_file_based_mcp_enabled(ctx);
 
         // Partition servers into three buckets based on scope:
-        // - Global Bork: always auto-spawn.
-        // - Global non-Bork: auto-spawn iff the toggle is on.
+        // - Global Krust: always auto-spawn.
+        // - Global non-Krust: auto-spawn iff the toggle is on.
         // - Project-scoped (any provider): never auto-spawn; require explicit opt-in
         //   via the "Detected from {provider}" section of the MCP settings.
         let mut to_spawn = Vec::new();
@@ -407,7 +407,7 @@ impl FileBasedMCPManager {
 
     fn handle_file_based_mcp_enabled_change(&mut self, ctx: &mut ModelContext<Self>) {
         // Only global third-party servers are affected by the toggle:
-        // - Global Bork servers always spawn regardless of the toggle.
+        // - Global Krust servers always spawn regardless of the toggle.
         // - Project-scoped servers (any provider) are never auto-spawned and their
         //   running state is managed per-card via the MCP settings UI; toggling the
         //   setting must not spawn or despawn them.
@@ -429,7 +429,7 @@ impl FileBasedMCPManager {
                     .collect_vec(),
             });
         } else {
-            // Toggle on: spawn global third-party servers (global Bork servers are
+            // Toggle on: spawn global third-party servers (global Krust servers are
             // already running; project-scoped servers are unaffected).
             ctx.emit(FileBasedMCPManagerEvent::SpawnServers {
                 installations: global_third_party_servers,
@@ -484,11 +484,11 @@ impl FileBasedMCPManager {
     /// when its config does not specify `working_directory`.
     ///
     /// The spawn root is the directory the config was discovered in, with one
-    /// exception: global Bork installs are discovered in `~/.bork*/`, which
+    /// exception: global Krust installs are discovered in `~/.krust*/`, which
     /// isn't a useful cwd for spawned processes, so they are remapped to the
     /// home directory instead.
     /// - Project-scoped installations: the repo root.
-    /// - Global installations (`~/.bork/.mcp.json`, `~/.claude.json`, etc.): the
+    /// - Global installations (`~/.krust/.mcp.json`, `~/.claude.json`, etc.): the
     ///   home directory.
     ///
     /// If the installation is referenced from multiple roots, the lexicographically
@@ -504,11 +504,11 @@ impl FileBasedMCPManager {
             .sorted()
             .next()?;
 
-        // Global Bork installs live under `~/.bork*/`, which is internal Bork
+        // Global Krust installs live under `~/.krust*/`, which is internal Krust
         // state rather than a meaningful working directory. Map them to the
-        // home dir so all global installs (Bork and third-party) share a
+        // home dir so all global installs (Krust and third-party) share a
         // consistent cwd.
-        if self.is_global_bork_server(hash) {
+        if self.is_global_krust_server(hash) {
             return dirs::home_dir().or(Some(discovery_root));
         }
         Some(discovery_root)
@@ -522,9 +522,9 @@ struct AutoStartDecision {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum FileBasedMCPServerType {
-    /// A file-based MCP server detected from Bork's global managed config.
-    GlobalBork,
-    /// A file-based MCP server detected from a non-Bork provider's global user config.
+    /// A file-based MCP server detected from Krust's global managed config.
+    GlobalKrust,
+    /// A file-based MCP server detected from a non-Krust provider's global user config.
     GlobalThirdParty,
     /// A file-based MCP server detected from a project/repository-scoped config.
     ProjectScoped,

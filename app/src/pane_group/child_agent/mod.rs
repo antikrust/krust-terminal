@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use bork_cli::agent::Harness;
-use bork_errors::report_error;
-use borkui::{EntityId, SingletonEntity, ViewContext, ViewHandle};
+use krust_cli::agent::Harness;
+use krust_errors::report_error;
+use krustui::{EntityId, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::agent::RenderableAIError;

@@ -16,21 +16,21 @@ use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_geometry::vector::vec2f;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use bork_core::features::FeatureFlag;
-use bork_core::platform::SessionPlatform;
-use bork_core::settings::ToggleableSetting;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::CLAUDE_ORANGE;
-use bork_core::ui::theme::color::internal_colors::{fg_overlay_6, neutral_1, neutral_4};
-use bork_core::ui::theme::Fill;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_errors::report_error;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::platform::SessionPlatform;
+use krust_core::settings::ToggleableSetting;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::CLAUDE_ORANGE;
+use krust_core::ui::theme::color::internal_colors::{fg_overlay_6, neutral_1, neutral_4};
+use krust_core::ui::theme::Fill;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_errors::report_error;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Flex,
     FormattedTextElement, HighlightedHyperlink, Hoverable, MainAxisAlignment, MainAxisSize,
@@ -39,10 +39,10 @@ use borkui::elements::{
     SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use borkui::keymap::{EditableBinding, FixedBinding, Keystroke};
-use borkui::platform::{Cursor, OperatingSystem};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::{EditableBinding, FixedBinding, Keystroke};
+use krustui::platform::{Cursor, OperatingSystem};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -149,7 +149,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -489,8 +489,8 @@ impl CodeDiffView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                borkui::elements::new_scrollable::ScrollableAppearance::new(
-                    borkui::elements::ScrollbarWidth::Auto,
+                krustui::elements::new_scrollable::ScrollableAppearance::new(
+                    krustui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             )
@@ -1158,7 +1158,7 @@ impl CodeDiffView {
 
     fn render_scroll_icon_for_inline_banner(&self, appearance: &Appearance) -> Box<dyn Element> {
         let background = appearance.theme().foreground();
-        let icon = borkui::elements::Icon::new(
+        let icon = krustui::elements::Icon::new(
             Icon::ArrowDown.into(),
             appearance.theme().main_text_color(background).into_solid(),
         )
@@ -1364,7 +1364,7 @@ impl CodeDiffView {
             }
             CodeDiffState::WaitingForUser => {
                 if self.display_mode().is_inline_banner() {
-                    borkui::elements::Icon::new(
+                    krustui::elements::Icon::new(
                         Icon::Code2.into(),
                         appearance
                             .theme()
@@ -1541,7 +1541,7 @@ impl CodeDiffView {
 
         // Renders the 'open config' button only when every MCP config file in this diff
         // belongs to the same provider. Mixed-provider diffs (e.g. editing both a Claude
-        // config and a Bork config at once) show no badge to avoid misleading attribution.
+        // config and a Krust config at once) show no badge to avoid misleading attribution.
         // MCP config actions currently operate on local paths only.
         let local_file_paths: Vec<PathBuf> = file_locations
             .iter()
@@ -1875,7 +1875,7 @@ impl CodeDiffView {
                 },
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                borkui::elements::Fill::None,
+                krustui::elements::Fill::None,
             )
             .with_horizontal_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Custom(4.), true))
             .with_propagate_mousewheel_if_not_handled(true)
@@ -2529,7 +2529,7 @@ impl View for CodeDiffView {
         root_stack.finish()
     }
 
-    fn keymap_context(&self, _app: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, _app: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self.display_mode().is_full_pane() {
@@ -3033,7 +3033,7 @@ impl BackingView for CodeDiffView {
             title: "Requested Edit".to_string(),
             title_secondary: None,
             title_style: None,
-            title_clip_config: borkui::text_layout::ClipConfig::start(),
+            title_clip_config: krustui::text_layout::ClipConfig::start(),
             title_max_width: None,
             left_of_title: None,
             right_of_title: None,

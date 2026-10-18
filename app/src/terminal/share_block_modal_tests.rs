@@ -1,4 +1,4 @@
-use borkui::browser::escape_html_attribute;
+use krustui::browser::escape_html_attribute;
 
 #[test]
 fn escape_html_attribute_escapes_attribute_breakout_characters() {
@@ -11,7 +11,7 @@ fn escape_html_attribute_escapes_attribute_breakout_characters() {
 #[test]
 fn escape_html_attribute_leaves_safe_text_unchanged() {
     assert_eq!(
-        escape_html_attribute("embedded bork block"),
-        "embedded bork block"
+        escape_html_attribute("embedded krust block"),
+        "embedded krust block"
     );
 }

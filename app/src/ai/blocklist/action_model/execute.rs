@@ -72,15 +72,15 @@ pub use suggest_prompt::PromptSuggestionExecutor;
 use upload_artifact::UploadArtifactExecutor;
 use use_computer::UseComputerExecutor;
 use wait_for_events::WaitForEventsExecutor;
-use bork_core::execution_mode::AppExecutionMode;
+use krust_core::execution_mode::AppExecutionMode;
 #[cfg(feature = "local_fs")]
-use bork_files::{FileModel, TextFileReadResult};
+use krust_files::{FileModel, TextFileReadResult};
 #[cfg(feature = "local_fs")]
-use bork_util::file::FileLoadError;
+use krust_util::file::FileLoadError;
 #[cfg(feature = "local_fs")]
-use bork_util::file_type::is_buffer_binary;
-use borkui::r#async::{Spawnable, SpawnableOutput};
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_util::file_type::is_buffer_binary;
+use krustui::r#async::{Spawnable, SpawnableOutput};
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use self::search_codebase::SearchCodebaseExecutor;
 use crate::ai::agent::conversation::AIConversationId;
@@ -1238,11 +1238,11 @@ async fn should_read_as_binary(path: &std::path::Path) -> bool {
     is_file_content_binary_async(path).await
 }
 
-/// Async sibling of [`bork_util::file_type::is_file_content_binary`]. Reads
+/// Async sibling of [`krust_util::file_type::is_file_content_binary`]. Reads
 /// the first 1 KiB of `path` asynchronously and returns `true` if the content
 /// looks binary according to [`is_buffer_binary`]. Returns `true` on any I/O
 /// error so callers default to the binary code path. Kept local to this
-/// module so `bork_util` doesn't need to grow an `async_fs` dependency.
+/// module so `krust_util` doesn't need to grow an `async_fs` dependency.
 #[cfg(feature = "local_fs")]
 async fn is_file_content_binary_async(path: &std::path::Path) -> bool {
     const CHUNK_SIZE: usize = 1024;

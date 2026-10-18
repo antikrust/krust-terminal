@@ -1,9 +1,9 @@
 use pathfinder_geometry::vector::vec2f;
 use string_offset::ByteOffset;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::model::CoreEditorModel;
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krust_core::ui::appearance::Appearance;
+use krust_editor::model::CoreEditorModel;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::MenuSource;
 use crate::auth::AuthStateProvider;

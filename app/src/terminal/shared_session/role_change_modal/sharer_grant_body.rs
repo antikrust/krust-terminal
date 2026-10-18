@@ -1,12 +1,12 @@
-use borkui::elements::{
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, MainAxisAlignment, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::text::Span;
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::text::Span;
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::{MODAL_PADDING, TEXT_FONT_SIZE};
 use crate::appearance::Appearance;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bork_editor::render::model::LineCount;
+use krust_editor::render::model::LineCount;
 
 use crate::ai::agent::DiffSetHunk;
 use crate::code_review::diff_state::{DiffLineType, FileDiff};
@@ -10,7 +10,7 @@ cfg_if::cfg_if! {
         use crate::ai::agent::{AIAgentAttachment, CurrentHead, DiffBase};
         use crate::ai::blocklist::BlocklistAIContextModel;
         use crate::code_review::{diff_state::DiffMode, DiffSetScope};
-        use borkui::{AppContext, ModelHandle};
+        use krustui::{AppContext, ModelHandle};
     }
 }
 /// Converts file diffs into a map keyed by repo-relative path strings.

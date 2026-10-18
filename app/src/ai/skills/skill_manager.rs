@@ -9,10 +9,10 @@ use ai::skills::{
 pub use file_watchers::{
     extract_skill_parent_directory, read_skills_from_directories, SkillWatcher, SkillWatcherEvent,
 };
-use bork_core::features::FeatureFlag;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(test)]
 use super::bundled::{
@@ -40,7 +40,7 @@ pub struct SkillManager {
     /// Reverse lookup: skill name → set of paths with that name.
     /// This allows efficient lookup by skill name without scanning all paths.
     skills_by_name: HashMap<String, HashSet<LocalOrRemotePath>>,
-    /// Skills bundled into Bork for the local host and connected remote hosts.
+    /// Skills bundled into Krust for the local host and connected remote hosts.
     bundled_skills: BundledSkills,
     /// Home directories published by connected remote hosts.
     ///

@@ -1,11 +1,11 @@
-use borkui::elements::{
+use krustui::elements::{
     Align, ClippedScrollStateHandle, ClippedScrollable, Container, Element, Empty, Fill, Flex,
     Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::platform::Cursor;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WindowId,
 };
@@ -125,9 +125,9 @@ impl ResourceCenterMainView {
                             }
                             None => !is_tips_completed && !is_onboarded,
                         },
-                        // Expand Maximize Bork section once user has completed welcome tips,
+                        // Expand Maximize Krust section once user has completed welcome tips,
                         // and keep open after users have completed/skipped all tips
-                        FeatureSection::MaximizeBork => match ChannelState::app_version() {
+                        FeatureSection::MaximizeKrust => match ChannelState::app_version() {
                             Some(version) => {
                                 match Settings::has_changelog_been_shown(version, ctx) {
                                     true => is_tips_completed || is_onboarded,

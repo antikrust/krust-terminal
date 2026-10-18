@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub const PROTOCOL_VERSION: u32 = 1;
 
-/// Level of Bork hierarchy or orthogonal product noun an action targets.
+/// Level of Krust hierarchy or orthogonal product noun an action targets.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetScope {
@@ -111,7 +111,7 @@ macro_rules! define_action_catalog {
             ),+ $(,)?
         }
     )+ $(,)?) => {
-        /// Stable protocol name for every approved `borkctrl` action.
+        /// Stable protocol name for every approved `krustctrl` action.
         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
         pub enum ActionKind {
             $($(#[serde(rename = $name)] $variant,)+)+
@@ -274,8 +274,8 @@ define_action_catalog! {
         SurfaceCommandSearchOpen => { name: "surface.command_search.open", status: Implemented, target: Surface, params: Query, result: Acknowledgement },
         SurfaceThemePickerOpen => { name: "surface.theme_picker.open", status: Implemented, target: Surface, params: None, result: Acknowledgement },
         SurfaceKeybindingsOpen => { name: "surface.keybindings.open", status: Implemented, target: Surface, params: None, result: Acknowledgement },
-        SurfaceBorkDriveOpen => { name: "surface.bork_drive.open", status: Implemented, target: Surface, params: None, result: Acknowledgement },
-        SurfaceBorkDriveToggle => { name: "surface.bork_drive.toggle", status: Implemented, target: Surface, params: None, result: Acknowledgement },
+        SurfaceKrustDriveOpen => { name: "surface.krust_drive.open", status: Implemented, target: Surface, params: None, result: Acknowledgement },
+        SurfaceKrustDriveToggle => { name: "surface.krust_drive.toggle", status: Implemented, target: Surface, params: None, result: Acknowledgement },
         SurfaceResourceCenterToggle => { name: "surface.resource_center.toggle", status: Implemented, target: Surface, params: None, result: Acknowledgement },
         SurfaceAiAssistantToggle => { name: "surface.ai_assistant.toggle", status: Implemented, target: Surface, params: None, result: Acknowledgement },
         SurfaceCodeReviewOpen => { name: "surface.code_review.open", status: Implemented, target: Surface, params: None, result: Acknowledgement },

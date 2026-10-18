@@ -1,11 +1,11 @@
 use futures::Future;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_errors::report_error;
+use krustui::elements::{
     Align, Flex, Hoverable, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
 };
-use borkui::presenter::ChildView;
-use borkui::windowing::{StateEvent, WindowManager};
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::windowing::{StateEvent, WindowManager};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -16,7 +16,7 @@ use super::drive_helpers::{
     has_feature_gated_anonymous_user_reached_workflow_limit,
 };
 use super::index::{DriveIndex, DriveIndexAction, DriveIndexEvent};
-use super::items::BorkDriveItemId;
+use super::items::KrustDriveItemId;
 use super::{CloudObjectTypeAndId, DriveObjectType};
 use crate::ai::document::ai_document_model::AIDocumentId;
 use crate::ai::facts::CloudAIFactModel;
@@ -39,12 +39,12 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 pub const MIN_SIDEBAR_WIDTH: f32 = 250.;
 pub const MAX_SIDEBAR_WIDTH_RATIO: f32 = 0.75;
 
-pub const BORK_DRIVE_POSITION_ID: &str = "bork_drive";
+pub const KRUST_DRIVE_POSITION_ID: &str = "krust_drive";
 
-/// The sidebar that houses Bork Drive.
+/// The sidebar that houses Krust Drive.
 /// `DrivePanel` is different from `DriveIndex` in that it is responsible for
-/// how Bork Drive interacts with the workspace and the rest of the app, whereas
-/// `DriveIndex` is the main bork drive view and responsible for the internals of Bork Drive.
+/// how Krust Drive interacts with the workspace and the rest of the app, whereas
+/// `DriveIndex` is the main krust drive view and responsible for the internals of Krust Drive.
 pub struct DrivePanel {
     index_view: ViewHandle<DriveIndex>,
     mouse_state_handles: MouseStateHandles,
@@ -87,7 +87,7 @@ pub enum DrivePanelEvent {
     OpenNotebook(NotebookSource),
     OpenEnvVarCollection(EnvVarCollectionSource),
     OpenWorkflowInPane(WorkflowOpenSource, WorkflowViewMode),
-    FocusBorkDrive,
+    FocusKrustDrive,
     AttachPlanAsContext(AIDocumentId),
 }
 
@@ -320,7 +320,7 @@ impl DrivePanel {
             DriveIndexEvent::OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
                 self.open_workflow_modal_with_existing(*workflow_id, ctx)
             }
-            DriveIndexEvent::FocusBorkDrive => ctx.emit(DrivePanelEvent::FocusBorkDrive),
+            DriveIndexEvent::FocusKrustDrive => ctx.emit(DrivePanelEvent::FocusKrustDrive),
             DriveIndexEvent::OpenSharedObjectsCreationDeniedModal(object_type, team_uid) => ctx
                 .emit(DrivePanelEvent::OpenSharedObjectsCreationDeniedModal(
                     *object_type,
@@ -474,7 +474,7 @@ impl DrivePanel {
 
     pub fn set_selected_object(
         &mut self,
-        id: Option<BorkDriveItemId>,
+        id: Option<KrustDriveItemId>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index_view, ctx| {
@@ -614,7 +614,7 @@ impl DrivePanel {
 
     pub fn expand_section_for_drive_item_id(
         &mut self,
-        item_id: BorkDriveItemId,
+        item_id: KrustDriveItemId,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index, ctx| {
@@ -622,21 +622,21 @@ impl DrivePanel {
         })
     }
 
-    /// This functions scrolls the relevant Bork Drive item into view.
-    pub fn scroll_item_into_view(&mut self, item_id: BorkDriveItemId, ctx: &mut ViewContext<Self>) {
+    /// This functions scrolls the relevant Krust Drive item into view.
+    pub fn scroll_item_into_view(&mut self, item_id: KrustDriveItemId, ctx: &mut ViewContext<Self>) {
         self.index_view.update(ctx, |index, ctx| {
             index.scroll_item_into_view(item_id, ctx);
         })
     }
 
-    /// This functions sets the index of a focused Bork Drive item.
+    /// This functions sets the index of a focused Krust Drive item.
     pub fn set_focused_index(&mut self, focused_index: Option<usize>, ctx: &mut ViewContext<Self>) {
         self.index_view.update(ctx, |index, ctx| {
             index.set_focused_index(focused_index, true, ctx);
         })
     }
 
-    pub fn set_focused_item(&mut self, item_id: BorkDriveItemId, ctx: &mut ViewContext<Self>) {
+    pub fn set_focused_item(&mut self, item_id: KrustDriveItemId, ctx: &mut ViewContext<Self>) {
         self.index_view.update(ctx, |index, ctx| {
             ctx.focus(&self.index_view);
             index.set_focused_item(item_id, true, ctx);
@@ -650,27 +650,27 @@ impl DrivePanel {
         source: SharingDialogSource,
         ctx: &mut ViewContext<Self>,
     ) {
-        let bork_drive_item_id = BorkDriveItemId::Object(object_id);
+        let krust_drive_item_id = KrustDriveItemId::Object(object_id);
         self.index_view.update(ctx, |index, ctx| {
-            index.set_focused_item(bork_drive_item_id, true, ctx);
-            index.toggle_share_dialog(&bork_drive_item_id, invitee_email, source, ctx);
+            index.set_focused_item(krust_drive_item_id, true, ctx);
+            index.toggle_share_dialog(&krust_drive_item_id, invitee_email, source, ctx);
         });
     }
 
-    pub fn has_bork_drive_initialized_sections(
+    pub fn has_krust_drive_initialized_sections(
         &self,
         app: &AppContext,
     ) -> impl Future<Output = ()> {
         self.index_view.as_ref(app).has_initialized_sections()
     }
 
-    pub fn reset_focused_index_in_bork_drive(
+    pub fn reset_focused_index_in_krust_drive(
         &mut self,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index, ctx| {
-            index.reset_focused_index_in_bork_drive(should_scroll, ctx);
+            index.reset_focused_index_in_krust_drive(should_scroll, ctx);
         })
     }
 
@@ -693,7 +693,7 @@ impl DrivePanel {
 
 impl View for DrivePanel {
     fn ui_name() -> &'static str {
-        "BorkDrivePanel"
+        "KrustDrivePanel"
     }
 
     fn on_focus(&mut self, focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
@@ -702,14 +702,14 @@ impl View for DrivePanel {
         }
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let body = Hoverable::new(
             self.mouse_state_handles.focus_panel_mouse_state.clone(),
             |_| {
                 Align::new(
                     SavePosition::new(
                         ChildView::new(&self.index_view).finish(),
-                        BORK_DRIVE_POSITION_ID,
+                        KRUST_DRIVE_POSITION_ID,
                     )
                     .finish(),
                 )
@@ -724,7 +724,7 @@ impl View for DrivePanel {
 
         let mut col = Flex::column();
         col.add_child(Shrinkable::new(1., body).finish());
-        col.with_main_axis_size(borkui::elements::MainAxisSize::Max)
+        col.with_main_axis_size(krustui::elements::MainAxisSize::Max)
             .finish()
     }
 }
@@ -742,7 +742,7 @@ impl TypedActionView for DrivePanel {
             DrivePanelAction::FocusDriveIndex => {
                 ctx.focus(&self.index_view);
                 // should_scroll is set to false here in order to not let menu clicks autoscroll WD index
-                self.reset_focused_index_in_bork_drive(false, ctx);
+                self.reset_focused_index_in_krust_drive(false, ctx);
             }
         }
     }

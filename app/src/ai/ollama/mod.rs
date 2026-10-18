@@ -1,6 +1,6 @@
 //! Local model support via Ollama.
 //!
-//! Bork already ships an Ollama *harness* (see
+//! Krust already ships an Ollama *harness* (see
 //! `ai::agent_sdk::driver::harness::ollama_stream_exec`) that runs two
 //! hardcoded code models. This module is the user-facing half: which models
 //! exist, which are installed, whether one stands a chance on this machine,

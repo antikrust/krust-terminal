@@ -11,14 +11,14 @@ on:
         type: string
 jobs:
   update_dedupe:
-    if: github.repository_owner == 'borkdotdev'
+    if: github.repository_owner == 'krustdotdev'
     permissions:
       contents: write
       pull-requests: write
-    uses: borkdotdev/oz-for-oss/.github/workflows/update-dedupe.yml@main
+    uses: krustdotdev/oz-for-oss/.github/workflows/update-dedupe.yml@main
     with:
       lookback_days: ${{ github.event.inputs.lookback_days || '7' }}
     secrets:
       OZ_MGMT_GHA_APP_ID: ${{ secrets.OZ_MGMT_GHA_APP_ID }}
       OZ_MGMT_GHA_PRIVATE_KEY: ${{ secrets.OZ_MGMT_GHA_PRIVATE_KEY }}
-      OSS_BORK_API_KEY: ${{ secrets.OSS_BORK_API_KEY }}
+      OSS_KRUST_API_KEY: ${{ secrets.OSS_KRUST_API_KEY }}

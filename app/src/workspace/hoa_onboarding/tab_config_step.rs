@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use borkui::elements::{
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::geometry::vector::Vector2F;
-use borkui::{Element, EventContext};
+use krustui::fonts::{Properties, Weight};
+use krustui::geometry::vector::Vector2F;
+use krustui::{Element, EventContext};
 
 use crate::appearance::Appearance;
 use crate::tab_configs::session_config::SessionType;

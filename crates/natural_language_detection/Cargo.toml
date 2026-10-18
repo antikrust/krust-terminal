@@ -1,5 +1,5 @@
 [package]
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 name = "natural_language_detection"
 version = "0.1.0"
 edition = "2021"

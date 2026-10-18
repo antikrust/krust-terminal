@@ -4,19 +4,19 @@ use std::sync::Arc;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Stack, Text, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::fonts::{Cache, FamilyId, Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Cache, FamilyId, Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, EntityId, Gradient, ModelHandle, SingletonEntity, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -80,12 +80,12 @@ pub fn render_git_diff_stats_content(
     let icon_element = if has_changes {
         // Use file icon when there are changes
         Icon::File
-            .to_borkui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+            .to_krustui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
             .finish()
     } else {
         // Use diff icon when there are no changes
         Icon::Diff
-            .to_borkui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+            .to_krustui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
             .finish()
     };
 
@@ -168,7 +168,7 @@ pub fn render_git_diff_stats_content(
 
 fn git_branch_status_icon(icon: Icon, color: ColorU, icon_size: f32) -> Box<dyn Element> {
     Container::new(
-        ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(color)).finish())
+        ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(color)).finish())
             .with_height(icon_size)
             .with_width(icon_size)
             .finish(),
@@ -715,7 +715,7 @@ impl GitBranch {
 
         if branch.is_linked_worktree {
             return PromptChipShellCommand::Echo {
-                message: "The branch is already checked out in another worktree, but Bork couldn't find its path.",
+                message: "The branch is already checked out in another worktree, but Krust couldn't find its path.",
             };
         }
 
@@ -1638,10 +1638,10 @@ impl DisplayChip {
             .as_ref()
             .map(|ctx| match ctx.session.session_type() {
                 SessionType::Local => true,
-                SessionType::BorkifiedRemote { host_id: Some(_) } => {
+                SessionType::KrustifiedRemote { host_id: Some(_) } => {
                     FeatureFlag::RemoteCodeReview.is_enabled()
                 }
-                SessionType::BorkifiedRemote { host_id: None } => false,
+                SessionType::KrustifiedRemote { host_id: None } => false,
             })
             .unwrap_or(false);
 
@@ -2325,7 +2325,7 @@ pub(crate) fn render_udi_chip(config: UdiChipConfig, appearance: &Appearance) ->
     if let Some(icon) = config.icon {
         content.add_child(
             Container::new(
-                ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(config.color)).finish())
+                ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(config.color)).finish())
                     .with_height(icon_size)
                     .with_width(icon_size)
                     .finish(),

@@ -7,8 +7,8 @@
 //! is reordering it back in the source window removed the visible drop zone and
 //! made the slot oscillate every frame.
 
-use borkui::geometry::vector::{vec2f, Vector2F};
-use borkui::WindowId;
+use krustui::geometry::vector::{vec2f, Vector2F};
+use krustui::WindowId;
 
 use super::CrossWindowTabDrag;
 

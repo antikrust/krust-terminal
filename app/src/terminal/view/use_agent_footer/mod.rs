@@ -5,7 +5,7 @@
 //! Gemini CLI, Codex), it displays a specialized footer with additional functionality.
 
 use base64::Engine;
-use borkui::clipboard::{ClipboardContent, ImageData};
+use krustui::clipboard::{ClipboardContent, ImageData};
 
 use crate::ai::agent::ImageContext;
 use crate::ai::blocklist::agent_view::agent_input_footer::{
@@ -16,7 +16,7 @@ use crate::terminal::shared_session::{
     SharedSessionActionSource, SharedSessionScrollbackType, SharedSessionSource,
 };
 use crate::util::image::{infer_mime_type, MAX_IMAGE_SIZE_BYTES_FOR_CLI_AGENT, MIME_SNIFF_BYTES};
-mod borkify_footer;
+mod krustify_footer;
 
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
@@ -24,24 +24,24 @@ use std::time::Duration;
 
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::settings::Setting;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::contrast::{
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::settings::Setting;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::contrast::{
     high_enough_contrast, pick_best_foreground_color, MinimumAllowedContrast,
 };
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_errors::report_error;
-use bork_terminal::model::escape_sequences::{BRACKETED_PASTE_END, BRACKETED_PASTE_START};
-use borkify_footer::{BorkifyFooterView, BorkifyFooterViewEvent};
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_errors::report_error;
+use krust_terminal::model::escape_sequences::{BRACKETED_PASTE_END, BRACKETED_PASTE_START};
+use krustify_footer::{KrustifyFooterView, KrustifyFooterViewEvent};
+use krustui::elements::{
     ChildView, Container, CrossAxisAlignment, Empty, Expanded, Flex, MainAxisSize, ParentElement,
 };
-use borkui::keymap::Keystroke;
-use borkui::r#async::Timer;
-use borkui::{
+use krustui::keymap::Keystroke;
+use krustui::r#async::Timer;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -266,11 +266,11 @@ impl TerminalView {
             UseAgentToolbarEvent::HideRichInput => {
                 self.close_cli_agent_rich_input_and_disable_auto_toggle(ctx);
             }
-            UseAgentToolbarEvent::Borkify => {
+            UseAgentToolbarEvent::Krustify => {
                 self.hide_use_agent_footer_in_blocklist(ctx);
                 self.handle_action(&TerminalAction::TriggerSubshellBootstrap, ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::BorkifyFooterAcceptedBorkify { is_ssh: false },
+                    TelemetryEvent::KrustifyFooterAcceptedKrustify { is_ssh: false },
                     ctx
                 );
             }
@@ -294,8 +294,8 @@ impl TerminalView {
     ) -> bool {
         let ai_settings = AISettings::as_ref(app);
 
-        // If the borkify footer is active, a subshell was detected and we should show the footer.
-        if self.use_agent_footer.as_ref(app).is_borkify_active(app) {
+        // If the krustify footer is active, a subshell was detected and we should show the footer.
+        if self.use_agent_footer.as_ref(app).is_krustify_active(app) {
             return true;
         }
 
@@ -308,7 +308,7 @@ impl TerminalView {
         if cli_agent.is_some() {
             // For CLI agent commands, only check the CLI agent footer setting.
             // This is independent of the global AI toggle so that users who
-            // disable Bork AI still get the footer for third-party coding agents.
+            // disable Krust AI still get the footer for third-party coding agents.
             if !*ai_settings.should_render_cli_agent_footer {
                 return false;
             }
@@ -420,7 +420,7 @@ impl TerminalView {
 
         if !self.model.lock().is_alt_screen_active() {
             self.use_agent_footer.update(ctx, |footer, ctx| {
-                footer.clear_borkify(ctx);
+                footer.clear_krustify(ctx);
             });
             self.hide_use_agent_footer_in_blocklist(ctx);
         }
@@ -1051,8 +1051,8 @@ pub struct UseAgentToolbar {
     // Shared agent input footer (renders CLI agent mode when a CLI session is active).
     agent_input_footer: ViewHandle<AgentInputFooter>,
 
-    // Borkify footer UI (shown when a subshell/SSH command is detected).
-    borkify_footer_view: ViewHandle<BorkifyFooterView>,
+    // Krustify footer UI (shown when a subshell/SSH command is detected).
+    krustify_footer_view: ViewHandle<KrustifyFooterView>,
 
     // `true` if the user has dismissed the footer.
     //
@@ -1079,7 +1079,7 @@ impl UseAgentToolbar {
             .with_icon(Icon::Oz)
             .with_keybinding(KeystrokeSource::Fixed(USE_AGENT_KEYSTROKE.clone()), ctx)
             .with_size(button_size)
-            .with_tooltip("Ask the Bork agent to assist")
+            .with_tooltip("Ask the Krust agent to assist")
             .with_tooltip_alignment(TooltipAlignment::Left)
             .on_click(|ctx| {
                 ctx.dispatch_typed_action(TerminalAction::SetInputModeAgent);
@@ -1093,7 +1093,7 @@ impl UseAgentToolbar {
             .with_icon(Icon::Oz)
             .with_keybinding(KeystrokeSource::Fixed(USE_AGENT_KEYSTROKE.clone()), ctx)
             .with_size(button_size)
-            .with_tooltip("Ask the Bork agent to resume")
+            .with_tooltip("Ask the Krust agent to resume")
             .with_tooltip_alignment(TooltipAlignment::Left)
             .on_click(|ctx| {
                 ctx.dispatch_typed_action(TerminalAction::SetInputModeAgent);
@@ -1125,11 +1125,11 @@ impl UseAgentToolbar {
             me.handle_agent_input_footer_event(event, ctx);
         });
 
-        let borkify_footer_view =
-            ctx.add_typed_action_view(|ctx| BorkifyFooterView::new(terminal_model.clone(), ctx));
+        let krustify_footer_view =
+            ctx.add_typed_action_view(|ctx| KrustifyFooterView::new(terminal_model.clone(), ctx));
 
-        ctx.subscribe_to_view(&borkify_footer_view, |me, _, event, ctx| {
-            me.handle_borkify_footer_event(event, ctx);
+        ctx.subscribe_to_view(&krustify_footer_view, |me, _, event, ctx| {
+            me.handle_krustify_footer_event(event, ctx);
         });
 
         ctx.subscribe_to_model(model_event_dispatcher, |me, _, event, ctx| {
@@ -1155,7 +1155,7 @@ impl UseAgentToolbar {
             dismiss_button,
             dont_show_again_button,
             agent_input_footer,
-            borkify_footer_view,
+            krustify_footer_view,
             terminal_model,
             did_user_dismiss: false,
         }
@@ -1202,19 +1202,19 @@ impl UseAgentToolbar {
         }
     }
 
-    fn handle_borkify_footer_event(
+    fn handle_krustify_footer_event(
         &mut self,
-        event: &BorkifyFooterViewEvent,
+        event: &KrustifyFooterViewEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
-            BorkifyFooterViewEvent::Borkify => {
-                ctx.emit(UseAgentToolbarEvent::Borkify);
+            KrustifyFooterViewEvent::Krustify => {
+                ctx.emit(UseAgentToolbarEvent::Krustify);
             }
-            BorkifyFooterViewEvent::UseAgent => {
+            KrustifyFooterViewEvent::UseAgent => {
                 ctx.emit(UseAgentToolbarEvent::UseAgent);
             }
-            BorkifyFooterViewEvent::Dismiss => {
+            KrustifyFooterViewEvent::Dismiss => {
                 ctx.emit(UseAgentToolbarEvent::Dismiss);
             }
         }
@@ -1223,7 +1223,7 @@ impl UseAgentToolbar {
     pub(in crate::terminal) fn notify_and_notify_children(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.notify();
         self.agent_input_footer.update(ctx, |_, ctx| ctx.notify());
-        self.borkify_footer_view.update(ctx, |_, ctx| ctx.notify());
+        self.krustify_footer_view.update(ctx, |_, ctx| ctx.notify());
         self.button.update(ctx, |_, ctx| ctx.notify());
         self.give_control_back_button
             .update(ctx, |_, ctx| ctx.notify());
@@ -1243,26 +1243,26 @@ impl UseAgentToolbar {
             .map(|session| session.agent)
     }
 
-    /// Activates the borkify footer. When active, the footer shows the
-    /// borkify view instead of the CLI agent or regular "Use agent" views.
-    pub(in crate::terminal) fn show_borkify(&mut self, ctx: &mut ViewContext<Self>) {
-        self.borkify_footer_view.update(ctx, |view, ctx| {
+    /// Activates the krustify footer. When active, the footer shows the
+    /// krustify view instead of the CLI agent or regular "Use agent" views.
+    pub(in crate::terminal) fn show_krustify(&mut self, ctx: &mut ViewContext<Self>) {
+        self.krustify_footer_view.update(ctx, |view, ctx| {
             view.show(ctx);
         });
         ctx.notify();
     }
 
-    /// Deactivates the borkify footer so it reverts to its default behavior.
-    pub(in crate::terminal) fn clear_borkify(&mut self, ctx: &mut ViewContext<Self>) {
-        self.borkify_footer_view.update(ctx, |view, ctx| {
+    /// Deactivates the krustify footer so it reverts to its default behavior.
+    pub(in crate::terminal) fn clear_krustify(&mut self, ctx: &mut ViewContext<Self>) {
+        self.krustify_footer_view.update(ctx, |view, ctx| {
             view.clear(ctx);
         });
         ctx.notify();
     }
 
-    /// Returns whether the borkify footer is currently active.
-    pub(in crate::terminal) fn is_borkify_active(&self, app: &AppContext) -> bool {
-        self.borkify_footer_view.as_ref(app).is_active()
+    /// Returns whether the krustify footer is currently active.
+    pub(in crate::terminal) fn is_krustify_active(&self, app: &AppContext) -> bool {
+        self.krustify_footer_view.as_ref(app).is_active()
     }
 
     /// Returns whether there's a current CLI agent (like Claude Code).
@@ -1294,8 +1294,8 @@ pub enum UseAgentToolbarEvent {
     OpenRichInput,
     /// Hide the rich input editor (same as Escape).
     HideRichInput,
-    /// User chose to borkify the subshell.
-    Borkify,
+    /// User chose to krustify the subshell.
+    Krustify,
     /// User chose to use the agent.
     UseAgent,
 }
@@ -1310,9 +1310,9 @@ impl View for UseAgentToolbar {
     }
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
-        // If the borkify footer is active, delegate rendering to the borkify footer view.
-        if self.borkify_footer_view.as_ref(app).is_active() {
-            return ChildView::new(&self.borkify_footer_view).finish();
+        // If the krustify footer is active, delegate rendering to the krustify footer view.
+        if self.krustify_footer_view.as_ref(app).is_active() {
+            return ChildView::new(&self.krustify_footer_view).finish();
         }
 
         // Hide the toolbar entirely when CLI rich input is open,

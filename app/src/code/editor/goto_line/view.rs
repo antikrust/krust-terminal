@@ -1,10 +1,10 @@
 #![cfg_attr(target_family = "wasm", allow(dead_code, unused_imports))]
 
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, DropShadow, Flex,
     ParentElement, Radius, Text,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

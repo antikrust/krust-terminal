@@ -2,9 +2,9 @@
 
 The "real service" behind ACCOUNT-DESIGN.md phase 5: a single-binary Rust
 server (crates/account_server) that stores accounts and **opaque, versioned
-settings documents**. It is our own version of what Bork's cloud did for
+settings documents**. It is our own version of what Krust's cloud did for
 settings sync, shrunk to one box: the client keeps its cloud-objects
-machinery and will simply point its transport here instead of Bork's GraphQL
+machinery and will simply point its transport here instead of Krust's GraphQL
 backend.
 
 Design rules (from the 2026-07-19 discussion):

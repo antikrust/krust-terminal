@@ -1,9 +1,9 @@
 [package]
 name = "repo_metadata"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 version = "0.1.0"
 edition = "2021"
-description = "Repository metadata utilities for Bork"
+description = "Repository metadata utilities for Krust"
 publish.workspace = true
 license.workspace = true
 
@@ -21,10 +21,10 @@ serde_json.workspace = true
 thiserror.workspace = true
 walkdir.workspace = true
 itertools.workspace = true
-borkui_core.workspace = true
-bork_core.workspace = true
-bork_errors.workspace = true
-bork_util.workspace = true
+krustui_core.workspace = true
+krust_core.workspace = true
+krust_errors.workspace = true
+krust_util.workspace = true
 ignore = "0.4.23"
 once_cell.workspace = true
 log.workspace = true
@@ -48,4 +48,4 @@ anyhow.workspace = true
 env_logger.workspace = true
 futures = "0.3"
 virtual-fs.workspace = true
-borkui = { workspace = true, features = ["test-util"] }
+krustui = { workspace = true, features = ["test-util"] }

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use bork_managed_secrets::{ManagedSecretValue, UploadKey, init_envelope};
+use krust_managed_secrets::{ManagedSecretValue, UploadKey, init_envelope};
 use wasm_bindgen::prelude::*;
 
 /// Called once when the WASM module is instantiated.

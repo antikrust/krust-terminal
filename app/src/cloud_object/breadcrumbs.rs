@@ -1,8 +1,8 @@
-use borkui::AppContext;
+use krustui::AppContext;
 
 use super::{CloudObject, Space};
 use crate::drive::folders::CloudFolder;
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::drive::CloudObjectTypeAndId;
 use crate::ui_components::breadcrumb::Breadcrumb;
 
@@ -49,10 +49,10 @@ pub enum ContainingObjectKind {
 }
 
 impl ContainingObjectKind {
-    pub fn into_item_id(self) -> BorkDriveItemId {
+    pub fn into_item_id(self) -> KrustDriveItemId {
         match self {
-            ContainingObjectKind::Space(space) => BorkDriveItemId::Space(space),
-            ContainingObjectKind::Object(object) => BorkDriveItemId::Object(object),
+            ContainingObjectKind::Space(space) => KrustDriveItemId::Space(space),
+            ContainingObjectKind::Object(object) => KrustDriveItemId::Object(object),
         }
     }
 }

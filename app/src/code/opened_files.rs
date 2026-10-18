@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 
 use instant::Instant;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 /// Tracks opened files within a single repository.
 /// Keys are repo-relative file paths (e.g. `src/main.rs`).

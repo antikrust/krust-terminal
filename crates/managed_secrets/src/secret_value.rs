@@ -1,7 +1,7 @@
 use std::fmt;
 
 use serde::Serialize;
-use bork_graphql::managed_secrets::ManagedSecretType;
+use krust_graphql::managed_secrets::ManagedSecretType;
 
 #[derive(Serialize)]
 #[serde(untagged)]

@@ -12,7 +12,7 @@ person can deploy, back up, and reason about in an afternoon.
 
 1. **Standalone, forever.** The crate depends on workspace utility deps plus
    `argon2` (password hashing), `rcgen` (certificate generation), and
-   `axum-server` (TLS serving). It must never depend on `app/` or any bork
+   `axum-server` (TLS serving). It must never depend on `app/` or any krust
    UI/model crate, and must build and run alone on a bare Linux box (`cargo
    build -p account_server --release` → one binary, bundled SQLite, no
    runtime deps). If a change needs types shared with the client, define a
@@ -121,7 +121,7 @@ product decision first:
   existing `Credentials`/`AuthToken` header path (`Credentials::ApiKey`
   first for end-to-end testing).
 - `cloud_preferences_syncer` keeps its payload construction; only its
-  transport (Bork's cloud-objects GraphQL) is replaced with
+  transport (Krust's cloud-objects GraphQL) is replaced with
   `GET/PUT /v1/settings/{scope}`, the 409 body feeding the existing
   local/remote reconciliation.
 - Account page `team` field ↔ `GET/PUT /v1/account`.

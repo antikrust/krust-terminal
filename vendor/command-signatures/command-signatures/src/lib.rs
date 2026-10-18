@@ -8,14 +8,14 @@ pub use generators::dynamic_command_signature_data;
 
 #[cfg(feature = "embed-signatures")]
 use assets::Assets;
-pub use bork_completion_metadata::*;
+pub use krust_completion_metadata::*;
 
 #[cfg(feature = "embed-signatures")]
 pub fn signature_by_name(name: impl AsRef<str>) -> Option<Signature> {
     let file_path = format!("{}.json", name.as_ref());
     Assets::get(&file_path).and_then(|embedded_file| {
         let json_content = std::str::from_utf8(&embedded_file.data).ok()?;
-        let fig_command: bork_completion_metadata::fig_types::Command =
+        let fig_command: krust_completion_metadata::fig_types::Command =
             serde_json::from_str(json_content).ok()?;
         let signatures: Vec<Signature> = fig_command.into();
         debug_assert!(
@@ -45,7 +45,7 @@ pub fn commands() -> Vec<Signature> {
         .filter_map(|embedded_file| {
             let embedded_data = embedded_file?.data;
             let json_content = std::str::from_utf8(&embedded_data).ok()?;
-            let fig_command: bork_completion_metadata::fig_types::Command =
+            let fig_command: krust_completion_metadata::fig_types::Command =
                 serde_json::from_str(json_content).ok()?;
             Some(Vec::from(fig_command))
         })

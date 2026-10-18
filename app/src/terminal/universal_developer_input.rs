@@ -7,24 +7,24 @@ use std::sync::Arc;
 use pathfinder_color::ColorU;
 #[cfg(not(target_family = "wasm"))]
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::contrast::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::contrast::{
     foreground_color_with_minimum_contrast, MinimumAllowedContrast,
 };
-use bork_core::ui::color::{coloru_with_opacity, Opacity, Rgb};
-use bork_core::ui::theme;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::color::{coloru_with_opacity, Opacity, Rgb};
+use krust_core::ui::theme;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     ChildView, Clipped, Container, CornerRadius, CrossAxisAlignment, Fill, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Radius, Rect, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch,
 };
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::ui_components::segmented_control::{
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::ui_components::segmented_control::{
     RenderableOptionConfig, SegmentedControl, SegmentedControlEvent, TooltipConfig,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity as _, TypedActionView,
     View, ViewAsRef, ViewContext, ViewHandle,
 };
@@ -126,23 +126,23 @@ impl AtContextMenuDisabledReason {
                 let session_type = session.session_type();
                 let has_connected_remote_server = matches!(
                     session_type,
-                    SessionType::BorkifiedRemote { host_id: Some(_) }
+                    SessionType::KrustifiedRemote { host_id: Some(_) }
                 );
                 // The @ menu requires repo metadata which is only available for:
                 // - Local sessions
-                // - BorkifiedRemote sessions with a connected remote server (host_id is Some)
+                // - KrustifiedRemote sessions with a connected remote server (host_id is Some)
                 //
                 // Block when:
                 // - SSH wrapper session without a remote server upgrade
-                // - BorkifiedRemote still connecting (host_id is None)
+                // - KrustifiedRemote still connecting (host_id is None)
                 //
                 // Note: is_ssh_wrapper_session() is set at bootstrap time and stays true
-                // even after the session transitions to BorkifiedRemote with a host_id.
+                // even after the session transitions to KrustifiedRemote with a host_id.
                 // So we must check has_connected_remote_server first to avoid
                 // incorrectly blocking upgraded sessions.
                 let is_ssh_without_remote_server = !has_connected_remote_server
                     && (session.is_ssh_wrapper_session()
-                        || matches!(session_type, SessionType::BorkifiedRemote { host_id: None }));
+                        || matches!(session_type, SessionType::KrustifiedRemote { host_id: None }));
                 let is_subshell = session.subshell_info().is_some();
                 (is_ssh_without_remote_server, is_subshell)
             })
@@ -791,7 +791,7 @@ impl View for UniversalDeveloperInputButtonBar {
         "UniversalDeveloperInputButtonBar"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
         #[cfg(feature = "voice_input")]
@@ -800,7 +800,7 @@ impl View for UniversalDeveloperInputButtonBar {
         // Helper function to create a 1px vertical divider
         let create_divider = || {
             Container::new(
-                borkui::elements::ConstrainedBox::new(
+                krustui::elements::ConstrainedBox::new(
                     Rect::new().with_background(theme.surface_3()).finish(),
                 )
                 .with_width(1.0)
@@ -812,7 +812,7 @@ impl View for UniversalDeveloperInputButtonBar {
             .finish()
         };
 
-        let build_buttons = |model_selector_element: Box<dyn borkui::Element>| {
+        let build_buttons = |model_selector_element: Box<dyn krustui::Element>| {
             // Create a horizontal layout with buttons arranged in a row
             let mut buttons = Flex::row()
                 .with_main_axis_size(MainAxisSize::Max)

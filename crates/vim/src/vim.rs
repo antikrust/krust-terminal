@@ -1,6 +1,6 @@
-use bork_core::safe_info;
-use borkui_core::keymap::Keystroke;
-use borkui_core::{Entity, ModelContext, ModelHandle, ViewContext};
+use krust_core::safe_info;
+use krustui_core::keymap::Keystroke;
+use krustui_core::{Entity, ModelContext, ModelHandle, ViewContext};
 
 use crate::register::{valid_register_name, BLACK_HOLE_REGISTER};
 
@@ -1793,8 +1793,8 @@ pub struct VimState<'a> {
     pub showcmd: &'a str,
 }
 
-/// This struct is a wrapper around the VimFSA that turns it into a borkui_core::Entity. We want to keep
-/// the VimFSA independent of our UI framework, so anything involving borkui should live here
+/// This struct is a wrapper around the VimFSA that turns it into a krustui_core::Entity. We want to keep
+/// the VimFSA independent of our UI framework, so anything involving krustui should live here
 /// instead.
 #[derive(Default)]
 pub struct VimModel {

@@ -1,12 +1,12 @@
 # Release: fires on a version tag (v*). Each lane builds Release and bundles
-# with Bork's existing script/{linux,windows}/bundle tooling, attaches its
+# with Krust's existing script/{linux,windows}/bundle tooling, attaches its
 # artifacts to a Forgejo release on the tag, and the linux lane finally rsyncs
 # everything (incl. the locally-built macOS dmg, if present) to the website.
 #
 # macOS note: there is no Forgejo mac runner -- the mac is the local main build.
 # Build the dmg locally with `script/macos/bundle -c oss` and either attach it to
 # the release in the UI, or drop it under dist/macos/ on the linux runner's
-# checkout before the upload step (see BORK_MAC_DMG below).
+# checkout before the upload step (see KRUST_MAC_DMG below).
 #
 # A tag containing "-test" does everything EXCEPT the website upload -- use e.g.
 # v0.0.1-test to rehearse a release without touching the live site.
@@ -134,11 +134,11 @@ jobs:
           # release+LTO codegen/linking (repeatedly OOM-killed rustc even with
           # 16G extra swap added). Trade build time for actually completing.
           export CARGO_BUILD_JOBS=2
-          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/bork-release.log
+          ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/krust-release.log
       - name: report failure as an issue
         if: failure()
         run: |
-          body=$(tail -c 60000 /tmp/bork-release.log | jq -Rs .)
+          body=$(tail -c 60000 /tmp/krust-release.log | jq -Rs .)
           curl -sf -X POST -H "Authorization: token ${{ github.token }}" -H "Content-Type: application/json" \
             -d "{\"title\": \"CI failure: linux release bundle @ ${{ github.sha }}\", \"body\": $body}" \
             "https://shithub.space/api/v1/repos/${{ github.repository }}/issues" || true
@@ -176,7 +176,7 @@ jobs:
             curl -sfL -H "Authorization: token $T" -o "dist/windows/$name" "$url" && echo "fetched $name"
           done
           # If a locally-built mac dmg was staged on this runner, keep it.
-          [ -n "${BORK_MAC_DMG:-}" ] && [ -f "$BORK_MAC_DMG" ] && cp "$BORK_MAC_DMG" dist/macos/ || true
+          [ -n "${KRUST_MAC_DMG:-}" ] && [ -f "$KRUST_MAC_DMG" ] && cp "$KRUST_MAC_DMG" dist/macos/ || true
       - name: upload to derp.baby
         if: ${{ !contains(github.ref_name, '-test') }}
-        run: ./tools/upload-bork-packages.sh
+        run: ./tools/upload-krust-packages.sh

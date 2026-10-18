@@ -1,9 +1,9 @@
-use borkui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::elements::{Container, CornerRadius, Dismiss, MouseStateHandle, Radius};
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

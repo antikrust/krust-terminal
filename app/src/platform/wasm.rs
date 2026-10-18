@@ -1,6 +1,6 @@
 use js_sys::ReferenceError;
 use thiserror::Error;
-pub use bork_web_event_bus::{emit_event, BorkEvent};
+pub use krust_web_event_bus::{emit_event, KrustEvent};
 use wasm_bindgen::{JsCast, JsValue};
 
 /// This function should be called early in application initialization to ensure that
@@ -24,7 +24,7 @@ mod ffi {
 
     #[wasm_bindgen]
     extern "C" {
-        #[wasm_bindgen(js_name = "borkUserHandoff", catch)]
+        #[wasm_bindgen(js_name = "krustUserHandoff", catch)]
         pub fn user_handoff() -> Result<Option<String>, JsValue>;
     }
 }

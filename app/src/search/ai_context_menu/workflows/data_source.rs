@@ -1,5 +1,5 @@
 use fuzzy_match::FuzzyMatchResult;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::search_item::WorkflowSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -126,6 +126,6 @@ impl SyncDataSource for WorkflowDataSource {
     }
 }
 
-impl borkui::Entity for WorkflowDataSource {
+impl krustui::Entity for WorkflowDataSource {
     type Event = ();
 }

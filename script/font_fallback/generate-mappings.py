@@ -10,8 +10,8 @@ that directory already exists, it is assumed that the fonts have previously been
 downloaded and skips downloading them again.
 
 Assumptions:
-- The fallback fonts in the prod `bork-static-assets` bucket are identical to the
-  ones stored in the staging `bork-server-staging-static-assets` bucket.
+- The fallback fonts in the prod `krust-static-assets` bucket are identical to the
+  ones stored in the staging `krust-server-staging-static-assets` bucket.
 - For each font family in the bucket, there is a variant that contains "Regular"
   in the filename.
 
@@ -74,7 +74,7 @@ def download_fallback_fonts():
         return
 
     os.mkdir(FONT_DOWNLOAD_DIR)
-    command = f"gcloud storage cp 'gs://bork-static-assets/fallback-fonts/**/*Regular*.ttf' '{FONT_DOWNLOAD_DIR}'"
+    command = f"gcloud storage cp 'gs://krust-static-assets/fallback-fonts/**/*Regular*.ttf' '{FONT_DOWNLOAD_DIR}'"
     return_code = subprocess.call(command, shell=True)
     if return_code != 0:
         sys.exit("Failed to download fonts from GCP")

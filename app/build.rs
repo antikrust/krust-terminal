@@ -1,5 +1,5 @@
 // We can use `std::process:Command` here because this is invoked within a build script,
-// _not_ within the Bork binary (where it could cause a terminal to temporarily flash on
+// _not_ within the Krust binary (where it could cause a terminal to temporarily flash on
 // Windows).
 #![allow(clippy::disallowed_types)]
 
@@ -11,11 +11,11 @@ use anyhow::Result;
 use cfg_aliases::cfg_aliases;
 use sha2::Digest;
 use walkdir::WalkDir;
-use bork_util::assets::{
+use krust_util::assets::{
     ASSETS_DIR, ASYNC_ASSETS_DIR, CONPTY_DLL_FILE, DXCOMPILER_DLL_FILE, DXIL_DLL_FILE,
     OPEN_CONSOLE_EXE_FILE, REMOTE_ASSETS_DIR, WINDOWS_ASSETS_DIR,
 };
-use bork_util::path::app_target_dir;
+use krust_util::path::app_target_dir;
 
 fn main() -> Result<()> {
     cfg_aliases! {
@@ -42,11 +42,11 @@ fn main() -> Result<()> {
 
         cc::Build::new()
             .file("src/platform/mac/objc/services.m")
-            .compile("bork_objc");
+            .compile("krust_objc");
 
         // Build the dock tile plugin
-        println!("cargo:rerun-if-changed=DockTilePlugin/BorkDockTilePlugin.m");
-        println!("cargo:rerun-if-changed=DockTilePlugin/BorkDockTilePlugin.h");
+        println!("cargo:rerun-if-changed=DockTilePlugin/KrustDockTilePlugin.m");
+        println!("cargo:rerun-if-changed=DockTilePlugin/KrustDockTilePlugin.h");
         println!("cargo:rerun-if-changed=DockTilePlugin/Info.plist");
         println!("cargo:rerun-if-changed=DockTilePlugin/Makefile");
 
@@ -64,8 +64,8 @@ fn main() -> Result<()> {
         // Copy the dock tile plugin to the output directory
         let profile = get_build_profile_name();
         let target_dir = app_target_dir(&profile).expect("Failed to get app target directory");
-        let plugin_src = Path::new("DockTilePlugin/BorkDockTilePlugin.docktileplugin");
-        let plugin_dst = target_dir.join("BorkDockTilePlugin.docktileplugin");
+        let plugin_src = Path::new("DockTilePlugin/KrustDockTilePlugin.docktileplugin");
+        let plugin_dst = target_dir.join("KrustDockTilePlugin.docktileplugin");
 
         if !status.success() {
             fs::remove_dir_all(plugin_src).expect("Failed to clean up plugin directory");
@@ -144,7 +144,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-/// If `bork-channel-config` is available on PATH and the `release_bundle` feature is enabled,
+/// If `krust-channel-config` is available on PATH and the `release_bundle` feature is enabled,
 /// invoke the config generator binary and write the JSON output to `OUT_DIR` so it can be
 /// embedded via `include_str!` in the binary entry points.
 fn generate_channel_config_if_needed(target_family: &str, target_os: &str) {
@@ -153,10 +153,10 @@ fn generate_channel_config_if_needed(target_family: &str, target_os: &str) {
         return;
     }
 
-    let config_bin = "bork-channel-config";
+    let config_bin = "krust-channel-config";
 
     // Check if the config binary is available on PATH. If not, we can't generate embedded
-    // configs. This is expected for external contributors building Bork OSS.
+    // configs. This is expected for external contributors building Krust OSS.
     if Command::new(config_bin)
         .arg("--help")
         .stdout(std::process::Stdio::null())
@@ -280,7 +280,7 @@ fn build_and_link_sentry() {
         // remote macOS hosts fail with:
         //   dyld: Library not loaded: @rpath/libswiftCore.dylib
         //   Reason: no LC_RPATH's found
-        // See: https://github.com/borkdotdev/bork/issues/12631
+        // See: https://github.com/krustdotdev/krust/issues/12631
         println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
     }
 
@@ -331,7 +331,7 @@ fn compile_sentry_objc_lib(sentry_framework_path: &str) {
     cc::Build::new()
         .file("src/platform/mac/objc/crash_reporting.m")
         .flag(format!("-F{sentry_framework_path}").as_str())
-        .compile("bork_sentry_objc");
+        .compile("krust_sentry_objc");
 }
 
 #[cfg(unix)]
@@ -390,7 +390,7 @@ fn copy_async_assets() {
                 let mut hasher = sha2::Sha256::new();
                 hasher.update(&contents);
                 let hash: [u8; 32] = hasher.finalize().into();
-                let new_relative_path = bork_util::assets::hashed_asset_path(
+                let new_relative_path = krust_util::assets::hashed_asset_path(
                     asset_path
                         .strip_prefix(&asset_dir)
                         .expect("asset in unexpected location"),
@@ -406,7 +406,7 @@ fn copy_async_assets() {
     }
 }
 
-/// Copies the DLLs needed to run Bork on Windows.
+/// Copies the DLLs needed to run Krust on Windows.
 ///
 /// They are organized as follows:
 /// - `conpty.dll`
@@ -466,7 +466,7 @@ fn embed_resource_file(target_dir: &Path) {
     use std::io::Write;
 
     let version = env::var("GIT_RELEASE_TAG").unwrap_or("v0".to_owned());
-    let app_name = env::var("BORK_APP_NAME").unwrap_or("Bork".to_owned());
+    let app_name = env::var("KRUST_APP_NAME").unwrap_or("Krust".to_owned());
     let bin_name = env::var("CARGO_BIN_NAME").unwrap_or("local".to_owned());
 
     let icon_path = Path::new("channels")
@@ -507,7 +507,7 @@ BEGIN
             VALUE "LegalCopyright",   "© 2025, Denver Technologies, Inc\0"
             VALUE "InternalName",     "\0"
             VALUE "OriginalFilename", "\0"
-            VALUE "ProductName",      "Bork\0"
+            VALUE "ProductName",      "Krust\0"
             VALUE "ProductVersion",   "{version}\0"
         END
     END

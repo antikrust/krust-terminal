@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use bork_core::settings::Setting as _;
-use borkui::{App, AppContext, SingletonEntity, ViewContext};
+use krust_core::settings::Setting as _;
+use krustui::{App, AppContext, SingletonEntity, ViewContext};
 
 use super::super::{AIBlockMetadata, RichContentMetadata, RichContentType};
 use super::*;

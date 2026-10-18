@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use ai::api_keys::ApiKeyManager;
-use bork_core::features::FeatureFlag;
-use bork_multi_agent_api as api;
-use borkui::{App, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_multi_agent_api as api;
+use krustui::{App, SingletonEntity};
 
 use super::{
     artifact_from_fork_proto, footer_model_token_usage, AIConversation,
@@ -275,7 +275,7 @@ fn custom_endpoint_usage_metadata(
         token_usage: vec![],
         tool_usage_metadata: None,
         total_input_tokens: 0,
-        bork_token_usage: HashMap::new(),
+        krust_token_usage: HashMap::new(),
         byok_token_usage: HashMap::new(),
         context_window_segments: Vec::new(),
         custom_endpoint_token_usage: HashMap::from([(
@@ -700,7 +700,7 @@ fn credits_usage_metadata(
         token_usage: vec![],
         tool_usage_metadata: None,
         total_input_tokens: 0,
-        bork_token_usage: HashMap::new(),
+        krust_token_usage: HashMap::new(),
         byok_token_usage: HashMap::new(),
         context_window_segments: Vec::new(),
         custom_endpoint_token_usage: HashMap::new(),
@@ -779,7 +779,7 @@ fn footer_model_token_usage_keeps_custom_endpoint_usage_distinct_from_same_label
             token_usage: vec![],
             tool_usage_metadata: None,
             total_input_tokens: 0,
-            bork_token_usage: HashMap::new(),
+            krust_token_usage: HashMap::new(),
             byok_token_usage: HashMap::from([(
                 "Resolved custom".to_string(),
                 api::response_event::stream_finished::ModelTokenUsage {
@@ -821,8 +821,8 @@ fn footer_model_token_usage_keeps_custom_endpoint_usage_distinct_from_same_label
                 .get(&category),
             Some(&6)
         );
-        assert_eq!(byok_usage.bork_tokens, 0);
-        assert_eq!(custom_usage.bork_tokens, 0);
+        assert_eq!(byok_usage.krust_tokens, 0);
+        assert_eq!(custom_usage.krust_tokens, 0);
         assert_eq!(custom_usage.byok_tokens, 0);
     });
 }
@@ -844,7 +844,7 @@ fn footer_model_token_usage_preserves_unresolved_custom_endpoint_usage_with_fall
             token_usage: vec![],
             tool_usage_metadata: None,
             total_input_tokens: 0,
-            bork_token_usage: HashMap::new(),
+            krust_token_usage: HashMap::new(),
             byok_token_usage: HashMap::new(),
             custom_endpoint_token_usage: HashMap::from([(
                 "missing-config-key".to_string(),
@@ -873,7 +873,7 @@ fn footer_model_token_usage_preserves_unresolved_custom_endpoint_usage_with_fall
                 .get(&category),
             Some(&9)
         );
-        assert_eq!(custom_usage.bork_tokens, 0);
+        assert_eq!(custom_usage.krust_tokens, 0);
     });
 }
 

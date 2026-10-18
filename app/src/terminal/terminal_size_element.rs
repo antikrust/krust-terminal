@@ -1,11 +1,11 @@
 use std::any::Any;
 
 use async_channel::Sender;
-use borkui::elements::Point;
-use borkui::event::DispatchedEvent;
-use borkui::geometry::rect::RectF;
-use borkui::geometry::vector::Vector2F;
-use borkui::{
+use krustui::elements::Point;
+use krustui::event::DispatchedEvent;
+use krustui::geometry::rect::RectF;
+use krustui::geometry::vector::Vector2F;
+use krustui::{
     AfterLayoutContext, AppContext, Element, Event, EventContext, LayoutContext, PaintContext,
     SizeConstraint,
 };

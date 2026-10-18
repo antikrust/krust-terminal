@@ -8,23 +8,23 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use settings::Setting as _;
 use url::Url;
-use bork_core::context_flag::ContextFlag;
-use bork_editor::editor::NavigationKey;
-use bork_editor::model::{CoreEditorModel, RichTextEditorModel};
-use bork_errors::{report_error, report_if_error};
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_core::context_flag::ContextFlag;
+use krust_editor::editor::NavigationKey;
+use krust_editor::model::{CoreEditorModel, RichTextEditorModel};
+use krust_errors::{report_error, report_if_error};
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     Align, Clipped, ConstrainedBox, Container, CrossAxisAlignment, DispatchEventResult, Empty,
     EventHandler, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     SavePosition, Shrinkable, Stack,
 };
-use borkui::keymap::{EditableBinding, FixedBinding};
-use borkui::presenter::ChildView;
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::{EditableBinding, FixedBinding};
+use krustui::presenter::ChildView;
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, BlurContext, Element, Entity, FocusContext, ModelAsRef, ModelHandle,
     SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
@@ -52,9 +52,9 @@ use crate::cloud_object::model::view::{Editor, EditorState};
 use crate::cloud_object::{CloudObject, CloudObjectEventEntrypoint, ObjectType, Owner, Space};
 use crate::drive::drive_helpers::has_feature_gated_anonymous_user_reached_notebook_limit;
 use crate::drive::export::ExportManager;
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::drive::sharing::ShareableObject;
-use crate::drive::{CloudObjectTypeAndId, OpenBorkDriveObjectSettings};
+use crate::drive::{CloudObjectTypeAndId, OpenKrustDriveObjectSettings};
 use crate::editor::{
     EditOrigin, EditorView, Event as EditorEvent, InteractionState, PropagateAndNoOpNavigationKeys,
     SingleLineEditorOptions, TextColors, TextOptions,
@@ -133,7 +133,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -207,7 +207,7 @@ enum NotebookSyncError {
     FeatureNotAvailable,
 }
 
-/// A view that allows viewing/execution and editing of a Bork notebook.
+/// A view that allows viewing/execution and editing of a Krust notebook.
 /// We don't currently persist any data.
 pub struct NotebookView {
     /// This is a stateful component that shows information about the notebook like its location
@@ -249,7 +249,7 @@ pub enum NotebookEvent {
         source: WorkflowSource,
     },
     EditWorkflow(SyncId),
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
     Pane(PaneEvent),
     MoveToSpace {
         cloud_object_type_and_id: CloudObjectTypeAndId,
@@ -279,7 +279,7 @@ pub enum NotebookAction {
     ResetFontSize,
     ConflictResolutionBannerRefreshClicked,
     FocusTerminalInput,
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
     ContextMenu(ContextMenuAction), // right click context menu
     MoveToSpace {
         cloud_object_type_and_id: CloudObjectTypeAndId,
@@ -590,7 +590,7 @@ impl NotebookView {
                 {
                     self.pane_configuration.update(ctx, |pane_config, ctx| {
                         pane_config
-                            .set_shareable_object(Some(ShareableObject::BorkDriveObject(id)), ctx);
+                            .set_shareable_object(Some(ShareableObject::KrustDriveObject(id)), ctx);
                     })
                 }
             }
@@ -1192,8 +1192,8 @@ impl NotebookView {
         });
     }
 
-    fn view_in_bork_drive(&mut self, id: BorkDriveItemId, ctx: &mut ViewContext<Self>) {
-        ctx.emit(NotebookEvent::ViewInBorkDrive(id));
+    fn view_in_krust_drive(&mut self, id: KrustDriveItemId, ctx: &mut ViewContext<Self>) {
+        ctx.emit(NotebookEvent::ViewInKrustDrive(id));
     }
 
     fn move_to_team_owner(
@@ -1413,9 +1413,9 @@ impl NotebookView {
         }
 
         // Fork: no "Copy link" — Drive objects are local-only, and object
-        // links point at Bork's servers. Sharing is file export.
+        // links point at Krust's servers. Sharing is file export.
 
-        if !borkui::platform::is_mobile_device()
+        if !krustui::platform::is_mobile_device()
             && !ContextFlag::HideOpenOnDesktopButton.is_enabled()
             && *UserAppInstallDetectionSettings::as_ref(ctx)
                 .user_app_installation_detected
@@ -1494,7 +1494,7 @@ impl NotebookView {
     pub fn wait_for_initial_load_then_load(
         &mut self,
         notebook_id: SyncId,
-        settings: &OpenBorkDriveObjectSettings,
+        settings: &OpenKrustDriveObjectSettings,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -1533,7 +1533,7 @@ impl NotebookView {
     fn fetch_and_load_notebook(
         &mut self,
         notebook_id: ServerId,
-        settings: &OpenBorkDriveObjectSettings,
+        settings: &OpenKrustDriveObjectSettings,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -1577,7 +1577,7 @@ impl NotebookView {
     pub fn load(
         &mut self,
         notebook: CloudNotebook,
-        settings: &OpenBorkDriveObjectSettings,
+        settings: &OpenKrustDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) -> SpawnedFutureHandle {
         self.set_title(&notebook.model().title, ctx);
@@ -1587,7 +1587,7 @@ impl NotebookView {
             self.pane_configuration
                 .update(ctx, |pane_configuration, ctx| {
                     pane_configuration.set_shareable_object(
-                        Some(ShareableObject::BorkDriveObject(server_id)),
+                        Some(ShareableObject::KrustDriveObject(server_id)),
                         ctx,
                     );
                 });
@@ -1666,8 +1666,8 @@ impl NotebookView {
                 source: SharingDialogSource::InviteeRequest,
             });
         } else if let Some(focused_folder_id) = settings.focused_folder_id.map(SyncId::ServerId) {
-            self.view_in_bork_drive(
-                BorkDriveItemId::Object(CloudObjectTypeAndId::Folder(focused_folder_id)),
+            self.view_in_krust_drive(
+                KrustDriveItemId::Object(CloudObjectTypeAndId::Folder(focused_folder_id)),
                 ctx,
             );
         }
@@ -1842,7 +1842,7 @@ impl NotebookView {
         if let Some(notebook) = CloudModel::as_ref(ctx).get_notebook(&id) {
             self.load(
                 notebook.clone(),
-                &OpenBorkDriveObjectSettings::default(),
+                &OpenKrustDriveObjectSettings::default(),
                 ctx,
             );
         }
@@ -1917,7 +1917,7 @@ impl NotebookView {
                     .with_children([
                         ConstrainedBox::new(
                             icons::Icon::Trash
-                                .to_borkui_icon(appearance.theme().foreground())
+                                .to_krustui_icon(appearance.theme().foreground())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -2159,7 +2159,7 @@ impl View for NotebookView {
     fn accessibility_contents(&self, ctx: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new_without_help(
             format!("{} notebook", self.title(ctx)),
-            BorkA11yRole::TextRole,
+            KrustA11yRole::TextRole,
         ))
     }
 
@@ -2177,7 +2177,7 @@ impl View for NotebookView {
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let mut content = Flex::column();
         content.extend(self.render_trash_banner(app));
         content.add_child(self.render_title(app));
@@ -2230,7 +2230,7 @@ impl View for NotebookView {
         SavePosition::new(stack.finish(), &self.view_position_id).finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         match self.mode_app_ctx(app) {
@@ -2281,7 +2281,7 @@ impl TypedActionView for NotebookView {
             NotebookAction::ResetFontSize => {
                 self.apply_font_size_to_setting(NotebookFontSize::default_value(), ctx)
             }
-            NotebookAction::ViewInBorkDrive(id) => self.view_in_bork_drive(*id, ctx),
+            NotebookAction::ViewInKrustDrive(id) => self.view_in_krust_drive(*id, ctx),
             NotebookAction::FocusTerminalInput => {
                 ctx.emit(NotebookEvent::Pane(PaneEvent::FocusActiveSession))
             }

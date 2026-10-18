@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 /// Refresh the access token this long before its hard expiry
 pub const GEAP_REFRESH_LEAD_TIME: Duration = Duration::from_secs(5 * 60);

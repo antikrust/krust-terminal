@@ -7,7 +7,7 @@
 //! an Anthropic Messages-API-shaped `content` array; tool calls and their
 //! results correlate via `tool_use.id` / `tool_result.tool_use_id`. Some
 //! `system` subtypes (`hook_started`, `hook_response`, `post_turn_summary`)
-//! and the top-level `rate_limit_event` type are noise from Bork's own
+//! and the top-level `rate_limit_event` type are noise from Krust's own
 //! notification-hook plugin and rate-limit telemetry — they carry no
 //! renderable content and are skipped.
 
@@ -54,7 +54,7 @@ fn system_events(system: SystemLine) -> Vec<TurnEvent> {
             cwd: system.cwd,
         }],
         // hook_started/hook_response/post_turn_summary/etc: bookkeeping
-        // from Bork's own notification hook, not agent output.
+        // from Krust's own notification hook, not agent output.
         _ => Vec::new(),
     }
 }

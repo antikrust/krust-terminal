@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     Align, CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, Image, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -24,7 +24,7 @@ const HERO_HEIGHT: f32 = 92.;
 const HERO_IMAGE_PATH: &str = "async/png/onboarding/auto_handoff_sleep_banner.png";
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -182,7 +182,7 @@ impl AutoHandoffSleepModal {
 
     fn render_description(appearance: &Appearance) -> Box<dyn Element> {
         Text::new(
-            "Give Bork the option to automatically move active local agents to the cloud when \
+            "Give Krust the option to automatically move active local agents to the cloud when \
              your computer sleeps.",
             appearance.ui_font_family(),
             14.,
@@ -237,7 +237,7 @@ impl View for AutoHandoffSleepModal {
         "AutoHandoffSleepModal"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &krustui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

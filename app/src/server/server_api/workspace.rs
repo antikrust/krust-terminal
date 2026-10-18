@@ -3,21 +3,21 @@ use async_trait::async_trait;
 use cynic::{MutationBuilder, QueryBuilder};
 #[cfg(test)]
 use mockall::{automock, predicate::*};
-use bork_graphql::error::UserFacingErrorInterface;
-use bork_graphql::mutations::purchase_addon_credits::{
+use krust_graphql::error::UserFacingErrorInterface;
+use krust_graphql::mutations::purchase_addon_credits::{
     PurchaseAddonCredits, PurchaseAddonCreditsInput, PurchaseAddonCreditsResult,
     PurchaseAddonCreditsVariables,
 };
-use bork_graphql::mutations::stripe_billing_portal::{
+use krust_graphql::mutations::stripe_billing_portal::{
     StripeBillingPortal, StripeBillingPortalInput, StripeBillingPortalResult,
     StripeBillingPortalVariables,
 };
-use bork_graphql::mutations::update_workspace_settings::{
+use krust_graphql::mutations::update_workspace_settings::{
     AddonCreditsSettingsInput, UpdateWorkspaceSettings, UpdateWorkspaceSettingsInput,
     UpdateWorkspaceSettingsResult, UpdateWorkspaceSettingsVariables,
     UsageBasedPricingSettingsInput,
 };
-use bork_graphql::queries::get_ai_overages_for_workspace::{
+use krust_graphql::queries::get_ai_overages_for_workspace::{
     GetAiOveragesForWorkspace, GetAiOveragesForWorkspaceVariables, UserResult,
 };
 

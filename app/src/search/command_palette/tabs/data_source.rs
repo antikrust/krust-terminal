@@ -1,4 +1,4 @@
-use borkui::{AppContext, Entity};
+use krustui::{AppContext, Entity};
 
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
 use crate::search::command_palette::tabs::SearchItem;

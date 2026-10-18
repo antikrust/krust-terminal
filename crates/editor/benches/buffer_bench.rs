@@ -3,10 +3,10 @@ use std::fs;
 use criterion::{Criterion, criterion_group, criterion_main};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
-use bork_editor::content::buffer::Buffer;
-use bork_editor::content::selection_model::BufferSelectionModel;
-use bork_editor::content::text::IndentBehavior;
-use borkui_core::{App, ModelHandle};
+use krust_editor::content::buffer::Buffer;
+use krust_editor::content::selection_model::BufferSelectionModel;
+use krust_editor::content::text::IndentBehavior;
+use krustui_core::{App, ModelHandle};
 
 const EDIT_SAMPLE_SIZE: usize = 10;
 const MAX_EDIT_REPLACEMENT_LENGTH: usize = 20;

@@ -1,8 +1,8 @@
-use bork::integration_testing::clipboard::assert_clipboard_contains_string;
-use bork::integration_testing::command_palette::open_command_palette_and_run_action;
-use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use bork::integration_testing::view_getters::pane_group_view;
-use borkui_core::integration::{AssertionOutcome, TestStep};
+use krust::integration_testing::clipboard::assert_clipboard_contains_string;
+use krust::integration_testing::command_palette::open_command_palette_and_run_action;
+use krust::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use krust::integration_testing::view_getters::pane_group_view;
+use krustui_core::integration::{AssertionOutcome, TestStep};
 
 use super::{new_builder, Builder};
 use crate::util::write_all_rc_files_for_test;

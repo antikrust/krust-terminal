@@ -1,9 +1,9 @@
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use borkui::keymap::Keystroke;
-use borkui::{EntityId, SingletonEntity, ViewContext};
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krustui::keymap::Keystroke;
+use krustui::{EntityId, SingletonEntity, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::{

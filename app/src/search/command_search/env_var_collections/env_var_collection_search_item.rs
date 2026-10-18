@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, MainAxisAlignment,
     MainAxisSize, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::env_vars::CloudEnvVarCollection;

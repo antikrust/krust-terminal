@@ -1,5 +1,5 @@
-use bork_cli::agent::Harness;
-use borkui::{AppContext, EntityId, ModelHandle, SingletonEntity};
+use krust_cli::agent::Harness;
+use krustui::{AppContext, EntityId, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{

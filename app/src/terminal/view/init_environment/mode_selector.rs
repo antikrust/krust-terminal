@@ -1,17 +1,17 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss,
     DropShadow, Element, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -74,7 +74,7 @@ pub struct EnvironmentSetupModeSelector {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new(
@@ -228,7 +228,7 @@ impl EnvironmentSetupModeSelector {
                 (base_background, base_border)
             };
 
-            let avatar_icon = ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
+            let avatar_icon = ConstrainedBox::new(icon.to_krustui_icon(icon_color).finish())
                 .with_width(AVATAR_ICON_SIZE)
                 .with_height(AVATAR_ICON_SIZE)
                 .finish();

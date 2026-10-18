@@ -8,16 +8,16 @@ use lsp::supported_servers::LSPServerType;
 use lsp_server_selector::{create_lsp_server_selector, LSPServerInfo};
 pub use model::{InitProjectModel, InitProjectModelEvent, InitStepKind};
 use model::{InitStepData, InitStepStatus};
-use bork_core::ui::theme::Fill;
+use krust_core::ui::theme::Fill;
 #[cfg(feature = "local_fs")]
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_errors::report_error;
+use krustui::elements::{
     Border, ChildView, Container, CrossAxisAlignment, Empty, Flex, MouseStateHandle, ParentElement,
     Text,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -42,11 +42,11 @@ use crate::view_components::DismissibleToast;
 use crate::workspace::ToastStack;
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
-const ONBOARDING_TEXT: &str = "Great - let's begin setting up this project! Would you like to give me permission to index this codebase? It allows me to quickly understand context and provide more targeted solutions when working in this codebase. No code is stored on Bork servers.";
+const ONBOARDING_TEXT: &str = "Great - let's begin setting up this project! Would you like to give me permission to index this codebase? It allows me to quickly understand context and provide more targeted solutions when working in this codebase. No code is stored on Krust servers.";
 const ALREADY_SETUP_TEXT: &str = "It looks like this project has already been initialized. You can re-generate the AGENTS.md for this codebase by clicking the button below.";
-// Native Bork rules file format.
-pub const FILES_TO_CHECK: [&str; 2] = ["AGENTS.md", "BORK.md"];
-// File formats that can be linked to BORK.md.
+// Native Krust rules file format.
+pub const FILES_TO_CHECK: [&str; 2] = ["AGENTS.md", "KRUST.md"];
+// File formats that can be linked to KRUST.md.
 pub const LINKABLE_FILES: [&str; 7] = [
     "CLAUDE.md",
     ".cursorrules",
@@ -497,7 +497,7 @@ impl InitStepBlock {
     /// Renders a success completion state with check icon.
     fn render_success_completion(text: &str, app: &AppContext) -> Box<dyn Element> {
         RenderableAction::new(text, app)
-            .with_icon(Icon::Check.to_borkui_icon(Fill::success()).finish())
+            .with_icon(Icon::Check.to_krustui_icon(Fill::success()).finish())
             .with_content_item_spacing()
             .render(app)
             .finish()
@@ -506,7 +506,7 @@ impl InitStepBlock {
     /// Renders a skipped/cancelled completion state with X icon.
     fn render_skipped_completion(text: &str, app: &AppContext) -> Box<dyn Element> {
         RenderableAction::new(text, app)
-            .with_icon(Icon::X.to_borkui_icon(Fill::error()).finish())
+            .with_icon(Icon::X.to_krustui_icon(Fill::error()).finish())
             .with_content_item_spacing()
             .render(app)
             .finish()
@@ -673,7 +673,7 @@ impl InitStepBlock {
         match indexing_result {
             CodebaseIndexingResult::Accepted => {
                 RenderableAction::new("Codebase index started", app)
-                    .with_icon(Icon::Check.to_borkui_icon(Fill::success()).finish())
+                    .with_icon(Icon::Check.to_krustui_icon(Fill::success()).finish())
                     .with_action_button(
                         Appearance::as_ref(app)
                             .ui_builder()
@@ -829,7 +829,7 @@ impl InitStepBlock {
                 };
                 Self::render_ready_with_buttons(
                     action_view,
-                    "Would you like to create an AGENTS.md file? Bork can create one for you with project specific rules, context, and conventions inferred from your codebase. The agent will use this context as it codes.",
+                    "Would you like to create an AGENTS.md file? Krust can create one for you with project specific rules, context, and conventions inferred from your codebase. The agent will use this context as it codes.",
                     app,
                 )
             }
@@ -929,7 +929,7 @@ impl InitStepBlock {
                 button_disabled, ..
             } => {
                 let mut action = RenderableAction::new("Project rules configured", app)
-                    .with_icon(Icon::Check.to_borkui_icon(Fill::success()).finish());
+                    .with_icon(Icon::Check.to_krustui_icon(Fill::success()).finish());
                 if init_completed {
                     action = action.with_action_button(Self::regenerate_button(
                         &mouse_states.regenerate_button,
@@ -941,7 +941,7 @@ impl InitStepBlock {
             }
             ProjectScopedRulesResult::AlreadyExists { button_disabled } => {
                 let mut action = RenderableAction::new("Project rules already configured", app)
-                    .with_icon(Icon::Check.to_borkui_icon(Fill::success()).finish());
+                    .with_icon(Icon::Check.to_krustui_icon(Fill::success()).finish());
                 if init_completed {
                     action = action.with_action_button(Self::regenerate_button(
                         &mouse_states.regenerate_button,
@@ -1223,7 +1223,7 @@ impl TypedActionView for InitStepBlock {
             InitProjectBlockAction::GenerateRules => {
                 send_telemetry_from_ctx!(
                     TelemetryEvent::AgentModeSetupProjectScopedRulesAction {
-                        action: AgentModeSetupProjectScopedRulesActionType::GenerateBorkMd,
+                        action: AgentModeSetupProjectScopedRulesActionType::GenerateKrustMd,
                     },
                     ctx
                 );
@@ -1235,7 +1235,7 @@ impl TypedActionView for InitStepBlock {
             InitProjectBlockAction::RegenerateRules => {
                 send_telemetry_from_ctx!(
                     TelemetryEvent::AgentModeSetupProjectScopedRulesAction {
-                        action: AgentModeSetupProjectScopedRulesActionType::RegenerateBorkMd,
+                        action: AgentModeSetupProjectScopedRulesActionType::RegenerateKrustMd,
                     },
                     ctx
                 );

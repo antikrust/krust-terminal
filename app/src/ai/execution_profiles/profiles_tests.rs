@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use bork_core::features::FeatureFlag;
-use bork_graphql::object_permissions::AccessLevel;
-use borkui::{App, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_graphql::object_permissions::AccessLevel;
+use krustui::{App, SingletonEntity};
 
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::{

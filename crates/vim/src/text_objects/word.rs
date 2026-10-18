@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use string_offset::CharOffset;
-use borkui_core::text::TextBuffer;
+use krustui_core::text::TextBuffer;
 
 use crate::vim::WordType;
 use crate::word_iterator::CharacterKind;

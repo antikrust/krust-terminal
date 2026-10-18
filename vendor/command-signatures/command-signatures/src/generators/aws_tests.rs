@@ -1,4 +1,4 @@
-use bork_completion_metadata::Suggestion;
+use krust_completion_metadata::Suggestion;
 
 use super::aws::{parse_ec2_ids, parse_s3_buckets};
 

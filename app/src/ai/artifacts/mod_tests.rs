@@ -164,8 +164,8 @@ fn download_success_message_includes_filename_and_directory() {
 
 #[test]
 fn converts_graphql_file_artifact() {
-    let artifact = Artifact::try_from(bork_graphql::ai::AIConversationArtifact::FileArtifact(
-        bork_graphql::ai::FileArtifact {
+    let artifact = Artifact::try_from(krust_graphql::ai::AIConversationArtifact::FileArtifact(
+        krust_graphql::ai::FileArtifact {
             artifact_uid: "artifact-file-1".into(),
             filepath: "outputs/report.txt".to_string(),
             mime_type: "text/plain".to_string(),

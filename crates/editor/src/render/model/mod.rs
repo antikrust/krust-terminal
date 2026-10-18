@@ -21,26 +21,26 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 use vec1::Vec1;
 use vim::vim::{MotionType, VimMode};
-use bork_core::channel::ChannelState;
-use bork_core::ui::Icon;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_errors::report_error;
-use borkui_core::assets::asset_cache::AssetSource;
-use borkui_core::color::ColorU;
-use borkui_core::elements::{
+use krust_core::channel::ChannelState;
+use krust_core::ui::Icon;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_errors::report_error;
+use krustui_core::assets::asset_cache::AssetSource;
+use krustui_core::color::ColorU;
+use krustui_core::elements::{
     Border, Fill, ListIndentLevel, ListNumbering, Margin, MouseStateHandle, Padding, ScrollData,
 };
-use borkui_core::fonts::{FamilyId, Properties, Weight};
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::{Vector2F, vec2f};
-use borkui_core::platform::LineStyle;
-use borkui_core::text_layout::{CaretPosition, LayoutCache, Line, TextFrame};
-use borkui_core::text_selection_utils::{
+use krustui_core::fonts::{FamilyId, Properties, Weight};
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::{Vector2F, vec2f};
+use krustui_core::platform::LineStyle;
+use krustui_core::text_layout::{CaretPosition, LayoutCache, Line, TextFrame};
+use krustui_core::text_selection_utils::{
     NewlineTickParams, calculate_tick_width, create_newline_tick_rect,
     selection_crosses_newline_offset_based,
 };
-use borkui_core::units::{IntoPixels, Pixels};
-use borkui_core::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
+use krustui_core::units::{IntoPixels, Pixels};
+use krustui_core::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
 
 pub use self::char_cell_display::{DisplayLattice, DisplayRow, DisplayRowKind};
 use self::location::WrapDirection;
@@ -943,7 +943,7 @@ impl CharCellState {
     /// channel (no font engine): the channel only carries an `EditDelta` (not the
     /// full text this rebuild needs) and is async, whereas TUI cursor queries need
     /// fresh `line_starts` synchronously within the same frame as the edit.
-    /// [`on_buffer_version_updated`](bork_editor::model::CoreEditorModel::on_buffer_version_updated)
+    /// [`on_buffer_version_updated`](krust_editor::model::CoreEditorModel::on_buffer_version_updated)
     /// is the guaranteed-synchronous post-edit hook that calls this.
     ///
     /// `text` should be the buffer's current plain text (without any trailing
@@ -1335,7 +1335,7 @@ impl ColumnUnit {
 }
 
 /// A character offset within a [`TextFrame`]. These offsets count characters in the Rust string
-/// passed to [`borkui_core::text_layout::LayoutCache::layout_text()`].
+/// passed to [`krustui_core::text_layout::LayoutCache::layout_text()`].
 ///
 /// Frame offsets often, but not always, correspond to glyph indices and caret positions. However,
 /// they do not line up 1:1 if a glyph or grapheme contains multiple characters
@@ -2409,7 +2409,7 @@ impl RenderState {
     /// built through `CodeEditorModel::new_tui`, which always has one.
     ///
     /// `styles` is stored on the struct for API compatibility but is **not used** for rendering
-    /// in CharCell mode. Callers (e.g. `bork_tui`) should supply a minimal stub.
+    /// in CharCell mode. Callers (e.g. `krust_tui`) should supply a minimal stub.
     pub fn new_tui(
         terminal_width: u16,
         styles: RichTextStyles,
@@ -5119,7 +5119,7 @@ impl<'a> Positioned<'a, Paragraph> {
                 vec2f(underline_width, UNDERLINE_THICKNESS),
             );
 
-            let dash = borkui_core::scene::Dash {
+            let dash = krustui_core::scene::Dash {
                 dash_length: DASHED_UNDERLINE_DASH_LENGTH,
                 gap_length: DASHED_UNDERLINE_GAP_LENGTH,
                 force_consistent_gap_length: true,
@@ -5128,7 +5128,7 @@ impl<'a> Positioned<'a, Paragraph> {
                 .scene
                 .draw_rect_without_hit_recording(underline_rect)
                 .with_border(
-                    borkui_core::scene::Border::bottom(UNDERLINE_THICKNESS)
+                    krustui_core::scene::Border::bottom(UNDERLINE_THICKNESS)
                         .with_dashed_border(dash)
                         .with_border_color(color),
                 );

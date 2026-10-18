@@ -7,7 +7,7 @@
 use std::ops::Range;
 
 use ai::diff_validation::{DiffDelta, DiffType};
-use bork_core::HostId;
+use krust_core::HostId;
 
 /// The base content and file path for a diff.
 #[derive(Clone)]

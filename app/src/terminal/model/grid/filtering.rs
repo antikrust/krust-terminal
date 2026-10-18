@@ -3,7 +3,7 @@ use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
 use itertools::Itertools as _;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::GridHandler;
 use crate::terminal::model::find::RegexDFAs;

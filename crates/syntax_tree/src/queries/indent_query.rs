@@ -3,8 +3,8 @@ use std::ops::Range;
 
 use arborium::tree_sitter::{Node, Query, QueryCursor, Tree};
 use streaming_iterator::StreamingIterator;
-use bork_editor::content::buffer::Buffer;
-use borkui_core::text::point::Point;
+use krust_editor::content::buffer::Buffer;
+use krustui_core::text::point::Point;
 
 use super::highlight_query::TextBuffer;
 

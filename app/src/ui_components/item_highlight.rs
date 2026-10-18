@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{CornerRadius, MouseState, Radius};
-use borkui::Element;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{CornerRadius, MouseState, Radius};
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
 
 /// Shared item highlight state for left-panel style lists (file tree, global search results,
-/// bork drive rows, etc.).
+/// krust drive rows, etc.).
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ItemHighlightState {
     None,

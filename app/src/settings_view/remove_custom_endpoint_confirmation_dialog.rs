@@ -1,10 +1,10 @@
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Border, ChildView, Container, CornerRadius, Dismiss, Empty, Flex, ParentElement, Radius, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

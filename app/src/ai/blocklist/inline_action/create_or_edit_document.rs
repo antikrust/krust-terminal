@@ -1,12 +1,12 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::icons::Icon as CoreIcon;
-use bork_core::ui::theme::color::internal_colors::neutral_2;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::icons::Icon as CoreIcon;
+use krust_core::ui::theme::color::internal_colors::neutral_2;
+use krustui::elements::{
     Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex,
     Hoverable, Icon, MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::blocklist::block::view_impl::WithContentItemSpacing;
 use crate::ai::blocklist::inline_action::inline_action_header::{
@@ -103,7 +103,7 @@ impl CreateOrEditDocumentAction {
             .with_vertical_padding(INLINE_ACTION_VERTICAL_PADDING)
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
             .with_background_color(neutral_2(theme))
-            .with_border(borkui::elements::Border::all(1.).with_border_fill(theme.surface_2()))
+            .with_border(krustui::elements::Border::all(1.).with_border_fill(theme.surface_2()))
             .finish();
 
         Hoverable::new(self.mouse_state, move |_mouse_state| content)

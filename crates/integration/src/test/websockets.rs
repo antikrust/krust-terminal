@@ -1,9 +1,9 @@
-use bork::integration_testing::assertions::{
+use krust::integration_testing::assertions::{
     assert_websocket_has_not_started, assert_websocket_has_started, create_a_personal_workflow,
     join_a_workspace,
 };
-use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use bork::integration_testing::{self};
+use krust::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use krust::integration_testing::{self};
 
 use super::{new_builder, TEST_ONLY_ASSETS};
 use crate::Builder;

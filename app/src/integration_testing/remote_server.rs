@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
-use bork_core::{HostId, SessionId};
-use bork_errors::report_error;
-use borkui::integration::{
+use krust_core::{HostId, SessionId};
+use krust_errors::report_error;
+use krustui::integration::{
     AssertionCallback, AssertionOutcome, AssertionWithDataCallback, StepDataMap, TestStep,
 };
-use borkui::{async_assert, async_assert_eq, App, SingletonEntity, WindowId};
+use krustui::{async_assert, async_assert_eq, App, SingletonEntity, WindowId};
 
 use crate::integration_testing::view_getters::single_terminal_view_for_tab;
 use crate::remote_server::manager::{

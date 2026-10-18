@@ -12,8 +12,8 @@ use repo_metadata::entry::{is_file_parsable, BudgetExceededBehavior, IgnoredPath
 use repo_metadata::RepositoryUpdate;
 use streaming_iterator::StreamingIterator;
 use syntax_tree::TextSlice;
-use bork_errors::report_error;
-use bork_util::standardized_path::StandardizedPath;
+use krust_errors::report_error;
+use krust_util::standardized_path::StandardizedPath;
 
 use crate::index::file_outline::{FileOutline, Outline, Symbol};
 use crate::index::{Entry, FileId, FileMetadata, THREADPOOL};

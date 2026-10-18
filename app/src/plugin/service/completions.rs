@@ -4,7 +4,7 @@
 //! This IPC is hosted by the rust app process and called by the plugin process when plugins
 //! register command signatures.
 use serde::{Deserialize, Serialize};
-use bork_completer::signatures::CommandSignature;
+use krust_completer::signatures::CommandSignature;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RegisterCommandSignatureRequest {

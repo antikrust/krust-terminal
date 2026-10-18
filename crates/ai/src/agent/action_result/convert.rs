@@ -1,9 +1,9 @@
 use chrono::{DateTime, Local};
-use bork_multi_agent_api::apply_file_diffs_result::success::UpdatedFileContent;
-use bork_multi_agent_api::ask_user_question_result::answer_item::{
+use krust_multi_agent_api::apply_file_diffs_result::success::UpdatedFileContent;
+use krust_multi_agent_api::ask_user_question_result::answer_item::{
     self, Answer as AskUserQuestionAnswer,
 };
-use bork_multi_agent_api::{self as api};
+use krust_multi_agent_api::{self as api};
 
 use super::*;
 use crate::agent::action_result::ShellCommandError;

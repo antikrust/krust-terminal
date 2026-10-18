@@ -22,7 +22,7 @@ impl std::fmt::Display for SessionId {
     }
 }
 
-/// The `bork` server framework uses [`FromStr`] to deserialize
+/// The `krust` server framework uses [`FromStr`] to deserialize
 /// the string from the route.
 impl std::str::FromStr for SessionId {
     type Err = uuid::Error;
@@ -60,7 +60,7 @@ impl std::fmt::Debug for SessionSecret {
     }
 }
 
-/// The `bork` server framework uses [`FromStr`] to deserialize
+/// The `krust` server framework uses [`FromStr`] to deserialize
 /// the string from the route.
 impl std::str::FromStr for SessionSecret {
     type Err = core::convert::Infallible;

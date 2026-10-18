@@ -1,1 +1,1 @@
-pub use bork_core::ui::theme::color::internal_colors::*;
+pub use krust_core::ui::theme::color::internal_colors::*;

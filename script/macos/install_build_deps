@@ -1,5 +1,5 @@
 #!/bin/sh
 #
-# Installs macOS-specific build dependencies required to build Bork.
+# Installs macOS-specific build dependencies required to build Krust.
 
 xcodebuild -downloadComponent MetalToolchain

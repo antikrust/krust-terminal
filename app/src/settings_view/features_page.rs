@@ -6,31 +6,31 @@ use std::time::Duration;
 use ::settings::{Setting, ToggleableSetting};
 use lazy_static::lazy_static;
 use strum::IntoEnumIterator;
-use bork_core::channel::ChannelState;
-use bork_core::context_flag::ContextFlag;
-use bork_core::semantic_selection::{
+use krust_core::channel::ChannelState;
+use krust_core::context_flag::ContextFlag;
+use krust_core::semantic_selection::{
     SemanticSelection, SemanticSelectionChangedEvent, SmartSelectEnabled,
 };
-use bork_errors::{report_error, report_if_error};
-use borkui::elements::{
+use krust_errors::{report_error, report_if_error};
+use krustui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss,
     DispatchEventResult, Element, Empty, EventHandler, Fill, Flex, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseState, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::keymap::{ContextPredicate, FixedBinding, Keystroke};
-use borkui::platform::{Cursor, GraphicsBackend};
-use borkui::rendering::GPUPowerPreference;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{
+use krustui::keymap::{ContextPredicate, FixedBinding, Keystroke};
+use krustui::platform::{Cursor, GraphicsBackend};
+use krustui::rendering::GPUPowerPreference;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{
     Action, AppContext, DisplayIdx, Entity, EventContext, ModelHandle, SingletonEntity, Tracked,
     TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use {
     crate::settings::ForceX11, crate::settings::LinuxAppConfiguration,
-    borkui::platform::linux::windowing_system_is_customizable,
+    krustui::platform::linux::windowing_system_is_customizable,
 };
 
 use super::keybindings::KeyBindingModifyingState;
@@ -102,7 +102,7 @@ use crate::terminal::settings::{
 };
 use crate::terminal::{BlockListSettings, PreserveInputFocusOnBlockSelection, SnackbarEnabled};
 use crate::undo_close::UndoCloseSettings;
-use crate::user_config::{BorkConfig, BorkConfigUpdateEvent};
+use crate::user_config::{KrustConfig, KrustConfigUpdateEvent};
 use crate::util::bindings::{
     keybinding_name_to_display_string, reset_keybinding_to_default, set_custom_keybinding,
 };
@@ -126,7 +126,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     context: &ContextPredicate,
     builder: fn(SettingsAction) -> T,
 ) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     // Add all of the toggle settings from the Features Page that you want to show up on the Command Palette here.
     let mut toggle_binding_pairs = vec![
@@ -304,7 +304,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     ];
 
     toggle_binding_pairs.push(ToggleSettingActionPair::new(
-        "reuse existing SSH ControlMaster in the Bork SSH wrapper",
+        "reuse existing SSH ControlMaster in the Krust SSH wrapper",
         builder(SettingsAction::FeaturesPageToggle(
             FeaturesPageAction::ToggleSshReuseControlMaster,
         )),
@@ -713,13 +713,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         id!("Workspace"),
     )]);
 
-    if DefaultTerminal::can_bork_become_default() {
+    if DefaultTerminal::can_krust_become_default() {
         app.register_fixed_bindings([FixedBinding::empty(
-            "Make Bork the default terminal",
+            "Make Krust the default terminal",
             builder(SettingsAction::FeaturesPageToggle(
-                FeaturesPageAction::MakeBorkDefaultTerminal,
+                FeaturesPageAction::MakeKrustDefaultTerminal,
             )),
-            context.to_owned() & !id!(flags::BORK_IS_DEFAULT_TERMINAL),
+            context.to_owned() & !id!(flags::KRUST_IS_DEFAULT_TERMINAL),
         )]);
     }
 }
@@ -809,7 +809,7 @@ pub enum FeaturesPageAction {
     ToggleShowTerminalInputMessageLine,
     TogglePreserveInputFocusOnBlockSelection,
     ToggleAgentInAppNotifications,
-    MakeBorkDefaultTerminal,
+    MakeKrustDefaultTerminal,
     SetCodeEditorLineNumberMode(CodeEditorLineNumberMode),
 }
 
@@ -830,7 +830,7 @@ const NOTIFICATION_CHECKBOX_MARGIN_RIGHT: f32 = 5.;
 const NOTIFICATION_EDITOR_MARGIN: f32 = 5.;
 
 const NOTIFICATIONS_DOCS_URL: &str =
-    "https://therob.lol/bork-terminal/help/terminal/more-features/notifications";
+    "https://therob.lol/krust-terminal/help/terminal/more-features/notifications";
 
 /// WARNING: this constant was computed manually by determining the pixel width
 /// of the quake mode dropdowns based on the number of expanded items in the flex row.
@@ -1311,9 +1311,9 @@ impl FeaturesPageAction {
                     ),
                 }
             }
-            Self::MakeBorkDefaultTerminal => TelemetryEvent::FeaturesPageAction {
-                action: "MakeBorkDefaultTerminal".to_string(),
-                value: to_string(DefaultTerminal::as_ref(ctx).is_bork_default()),
+            Self::MakeKrustDefaultTerminal => TelemetryEvent::FeaturesPageAction {
+                action: "MakeKrustDefaultTerminal".to_string(),
+                value: to_string(DefaultTerminal::as_ref(ctx).is_krust_default()),
             },
             Self::ToggleAutoOpenCodeReviewPane => TelemetryEvent::FeaturesPageAction {
                 action: "ToggleAutoOpenCodeReviewPane".to_string(),
@@ -2036,7 +2036,7 @@ impl TypedActionView for FeaturesPageView {
                 self.force_x11_changed = true;
                 // This is a workaround to make sure the user sees the new text that is added to the description after changing the setting.
                 // Without scrolling, the new description text gets cut off.
-                self.page.scroll_by(borkui::units::Pixels::new(40.));
+                self.page.scroll_by(krustui::units::Pixels::new(40.));
                 ctx.notify();
             }
             ToggleQuitOnLastWindowClosed => {
@@ -2105,9 +2105,9 @@ impl TypedActionView for FeaturesPageView {
                     }
                 }
             }
-            MakeBorkDefaultTerminal => {
+            MakeKrustDefaultTerminal => {
                 DefaultTerminal::handle(ctx).update(ctx, |default_terminal, ctx| {
-                    default_terminal.make_bork_default(ctx);
+                    default_terminal.make_krust_default(ctx);
                 });
             }
             SetCodeEditorLineNumberMode(mode) => {
@@ -2373,8 +2373,8 @@ impl FeaturesPageView {
         let default_session_mode_dropdown = ctx.add_typed_action_view(FilterableDropdown::new);
         Self::update_default_session_mode_dropdown(default_session_mode_dropdown.clone(), ctx);
 
-        ctx.subscribe_to_model(&BorkConfig::handle(ctx), |me, _, event, ctx| {
-            if matches!(event, BorkConfigUpdateEvent::TabConfigs) {
+        ctx.subscribe_to_model(&KrustConfig::handle(ctx), |me, _, event, ctx| {
+            if matches!(event, KrustConfigUpdateEvent::TabConfigs) {
                 Self::update_default_session_mode_dropdown(
                     me.default_session_mode_dropdown.clone(),
                     ctx,
@@ -2690,7 +2690,7 @@ impl FeaturesPageView {
 
         #[cfg(feature = "local_fs")]
         {
-            if !FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
+            if !FeatureFlag::OpenKrustNewSettingsModes.is_enabled() {
                 let external_editor_settings =
                     crate::util::file::external_editor::EditorSettings::as_ref(ctx);
                 if external_editor_settings
@@ -2740,12 +2740,12 @@ impl FeaturesPageView {
         }
 
         if FeatureFlag::AutoOpenCodeReviewPane.is_enabled()
-            && !FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
+            && !FeatureFlag::OpenKrustNewSettingsModes.is_enabled()
         {
             general_widgets.push(Box::new(AutoOpenCodeReviewPaneWidget::default()));
         }
 
-        if DefaultTerminal::can_bork_become_default() {
+        if DefaultTerminal::can_krust_become_default() {
             general_widgets.push(Box::new(DefaultTerminalWidget::default()));
         }
 
@@ -3658,7 +3658,7 @@ impl FeaturesPageView {
                     .collect();
 
                 // Append each loaded tab config
-                let tab_configs = BorkConfig::as_ref(ctx).tab_configs().to_vec();
+                let tab_configs = KrustConfig::as_ref(ctx).tab_configs().to_vec();
                 for config in &tab_configs {
                     if let Some(path) = &config.source_path {
                         items.push(DropdownItem::new(
@@ -4356,7 +4356,7 @@ impl SettingsPageMeta for FeaturesPageView {
     }
 
     fn on_page_selected(&mut self, _: bool, ctx: &mut ViewContext<Self>) {
-        // On MacOS, we rely on [`borkui::platform::AppCallbacks::on_screen_changed`] to update and
+        // On MacOS, we rely on [`krustui::platform::AppCallbacks::on_screen_changed`] to update and
         // notify on the [`DisplayCount`] model. However, no mechanism exists on Linux to trigger
         // that callback. As a workaround, we check for updates here where quake mode is
         // configured.
@@ -4576,7 +4576,7 @@ impl SettingsWidget for SessionRestorationWidget {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/sessions/session-restoration"
+                    "https://therob.lol/krust-terminal/help/terminal/sessions/session-restoration"
                         .into(),
                 )),
                 secondary_text: None,
@@ -4609,7 +4609,7 @@ impl SettingsWidget for SessionRestorationWidget {
             let link = ui_builder
                 .link(
                     "See docs.".to_owned(),
-                    Some("https://therob.lol/bork-terminal/help/terminal/sessions/session-restoration".to_owned()),
+                    Some("https://therob.lol/krust-terminal/help/terminal/sessions/session-restoration".to_owned()),
                     None,
                     self.docs_link.clone(),
                 )
@@ -4662,7 +4662,7 @@ impl SettingsWidget for SnackbarHeaderWidget {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/blocks/sticky-command-header"
+                    "https://therob.lol/krust-terminal/help/terminal/blocks/sticky-command-header"
                         .into(),
                 )),
                 secondary_text: None,
@@ -4828,9 +4828,9 @@ impl SettingsWidget for LoginItemWidget {
         let general_settings = GeneralSettings::as_ref(app);
         let ui_builder = appearance.ui_builder();
         #[cfg(target_os = "macos")]
-        let label = "Start Bork at login (requires macOS 13+)";
+        let label = "Start Krust at login (requires macOS 13+)";
         #[cfg(not(target_os = "macos"))]
-        let label = "Start Bork at login";
+        let label = "Start Krust at login";
         render_body_item::<FeaturesPageAction>(
             label.into(),
             None,
@@ -5094,7 +5094,7 @@ impl SettingsWidget for DefaultTerminalWidget {
     type View = FeaturesPageView;
 
     fn search_terms(&self) -> &str {
-        "bork default terminal application"
+        "krust default terminal application"
     }
 
     fn render(
@@ -5105,9 +5105,9 @@ impl SettingsWidget for DefaultTerminalWidget {
     ) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
         let default_terminal = DefaultTerminal::as_ref(app);
-        if default_terminal.is_bork_default() {
+        if default_terminal.is_krust_default() {
             ui_builder
-                .wrappable_text("Bork is the default terminal", true)
+                .wrappable_text("Krust is the default terminal", true)
                 .with_style(UiComponentStyles {
                     font_color: Some(appearance.theme().disabled_ui_text_color().into()),
                     margin: Some(Coords::default().bottom(16.)),
@@ -5118,10 +5118,10 @@ impl SettingsWidget for DefaultTerminalWidget {
         } else {
             ui_builder
                 .link(
-                    "Make Bork the default terminal".to_string(),
+                    "Make Krust the default terminal".to_string(),
                     None,
                     Some(Box::new(|ctx| {
-                        ctx.dispatch_typed_action(FeaturesPageAction::MakeBorkDefaultTerminal);
+                        ctx.dispatch_typed_action(FeaturesPageAction::MakeKrustDefaultTerminal);
                     })),
                     self.link_state.clone(),
                 )
@@ -5213,7 +5213,7 @@ impl SettingsWidget for DesktopNotificationsWidget {
         let ui_builder = appearance.ui_builder();
         let mut column = Flex::column();
         column.add_child(render_body_item::<FeaturesPageAction>(
-            "Receive desktop notifications from Bork".into(),
+            "Receive desktop notifications from Krust".into(),
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(NOTIFICATIONS_DOCS_URL.into())),
@@ -5594,7 +5594,7 @@ impl SettingsWidget for ExtraMetaKeysWidget {
 }
 
 /// Stable `&'static str` id for the global-hotkey settings widget, exposed for
-/// the `bork://settings?widget=global_hotkey` deeplink (see
+/// the `krust://settings?widget=global_hotkey` deeplink (see
 /// `settings_widget_deeplink_target`).
 pub(crate) fn global_hotkey_widget_id() -> &'static str {
     GlobalHotkeyWidget::static_widget_id()
@@ -5636,7 +5636,7 @@ impl SettingsWidget for GlobalHotkeyWidget {
                             .link(
                                 "See docs.".to_owned(),
                                 Some(
-                                    "https://therob.lol/bork-terminal/help/terminal/windows/global-hotkey"
+                                    "https://therob.lol/krust-terminal/help/terminal/windows/global-hotkey"
                                         .to_owned(),
                                 ),
                                 None,
@@ -6796,7 +6796,7 @@ impl SettingsWidget for MouseReportingWidget {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/more-features/full-screen-apps#mouse-and-scroll-reporting"
+                    "https://therob.lol/krust-terminal/help/terminal/more-features/full-screen-apps#mouse-and-scroll-reporting"
                         .into(),
                 )),
                 secondary_text: None,
@@ -7061,7 +7061,7 @@ impl SettingsWidget for SmartSelectWidget {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/more-features/text-selection"
+                    "https://therob.lol/krust-terminal/help/terminal/more-features/text-selection"
                         .into(),
                 )),
                 secondary_text: None,
@@ -7349,7 +7349,7 @@ impl SettingsWidget for WorkflowsInCommandSearch {
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_link.clone(),
                 on_click_action: Some(FeaturesPageAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/entry/yaml-workflows".into(),
+                    "https://therob.lol/krust-terminal/help/terminal/entry/yaml-workflows".into(),
                 )),
                 secondary_text: None,
                 tooltip_override_text: None,
@@ -7559,17 +7559,17 @@ impl SettingsWidget for WindowSystemWidget {
                     may be blurry if your Wayland compositor is using fraction scaling (ex: 125%)."
                 .to_string();
         if view.force_x11_changed {
-            secondary_text.push_str("\n\nRestart Bork for changes to take effect.");
+            secondary_text.push_str("\n\nRestart Krust for changes to take effect.");
         }
-        let bork_theme = appearance.theme();
+        let krust_theme = appearance.theme();
         children.add_child(
             appearance
                 .ui_builder()
                 .wrappable_text(secondary_text, true)
                 .with_style(UiComponentStyles {
                     font_color: Some(
-                        bork_theme
-                            .sub_text_color(bork_theme.background())
+                        krust_theme
+                            .sub_text_color(krust_theme.background())
                             .into_solid(),
                     ),
                     ..Default::default()

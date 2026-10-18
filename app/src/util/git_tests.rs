@@ -27,12 +27,12 @@ async fn git(repo: &Path, args: &[&str]) -> String {
 fn repository_info_from_gh_output_parses_name_and_owner() {
     assert_eq!(
         super::repository_info_from_gh_output(
-            r#"{"name":"bork-internal","owner":{"login":"borkdotdev"}}"#
+            r#"{"name":"krust-internal","owner":{"login":"krustdotdev"}}"#
         )
         .unwrap(),
         RepositoryInfo {
-            name: "bork-internal".to_owned(),
-            owner: Some("borkdotdev".to_owned()),
+            name: "krust-internal".to_owned(),
+            owner: Some("krustdotdev".to_owned()),
         }
     );
 }
@@ -72,14 +72,14 @@ async fn get_repository_info_returns_none_when_gh_cannot_resolve_github_repo() {
 #[cfg(feature = "local_fs")]
 #[test]
 fn repository_info_from_gh_output_rejects_missing_name() {
-    assert!(super::repository_info_from_gh_output(r#"{"owner":{"login":"borkdotdev"}}"#).is_err());
+    assert!(super::repository_info_from_gh_output(r#"{"owner":{"login":"krustdotdev"}}"#).is_err());
 }
 
 #[cfg(feature = "local_fs")]
 #[test]
 fn repository_info_from_gh_output_rejects_missing_owner_login() {
     assert!(
-        super::repository_info_from_gh_output(r#"{"name":"bork-internal","owner":{}}"#).is_err()
+        super::repository_info_from_gh_output(r#"{"name":"krust-internal","owner":{}}"#).is_err()
     );
 }
 
@@ -87,11 +87,11 @@ fn repository_info_from_gh_output_rejects_missing_owner_login() {
 #[test]
 fn repository_info_from_gh_output_rejects_empty_fields() {
     assert!(
-        super::repository_info_from_gh_output(r#"{"name":"","owner":{"login":"borkdotdev"}}"#)
+        super::repository_info_from_gh_output(r#"{"name":"","owner":{"login":"krustdotdev"}}"#)
             .is_err()
     );
     assert!(super::repository_info_from_gh_output(
-        r#"{"name":"bork-internal","owner":{"login":""}}"#
+        r#"{"name":"krust-internal","owner":{"login":""}}"#
     )
     .is_err());
 }
@@ -126,7 +126,7 @@ async fn get_repository_info_reads_gh_repo_view() {
     let gh_path = fake_bin.path().join("gh");
     fs::write(
         &gh_path,
-        "#!/bin/sh\nprintf '{\"name\":\"bork-internal\",\"owner\":{\"login\":\"borkdotdev\"}}\\n'\n",
+        "#!/bin/sh\nprintf '{\"name\":\"krust-internal\",\"owner\":{\"login\":\"krustdotdev\"}}\\n'\n",
     )
     .expect("failed to write fake gh");
     let mut permissions = fs::metadata(&gh_path).unwrap().permissions();
@@ -144,8 +144,8 @@ async fn get_repository_info_reads_gh_repo_view() {
             .await
             .unwrap(),
         Some(RepositoryInfo {
-            name: "bork-internal".to_owned(),
-            owner: Some("borkdotdev".to_owned()),
+            name: "krust-internal".to_owned(),
+            owner: Some("krustdotdev".to_owned()),
         })
     );
 }
@@ -301,7 +301,7 @@ async fn get_pr_for_branch_does_not_require_origin_remote() {
     let gh_path = fake_bin.path().join("gh");
     fs::write(
         &gh_path,
-        "#!/bin/sh\nprintf '{\"number\":123,\"url\":\"https://github.com/bork/bork/pull/123\",\"state\":\"OPEN\",\"isDraft\":true,\"baseRefName\":\"main\"}\\n'\n",
+        "#!/bin/sh\nprintf '{\"number\":123,\"url\":\"https://github.com/krust/krust/pull/123\",\"state\":\"OPEN\",\"isDraft\":true,\"baseRefName\":\"main\"}\\n'\n",
     )
     .expect("failed to write fake gh");
     let mut permissions = fs::metadata(&gh_path).unwrap().permissions();
@@ -318,7 +318,7 @@ async fn get_pr_for_branch_does_not_require_origin_remote() {
         get_pr_for_branch(&repo, Some(&path_env)).await.unwrap(),
         Some(PrInfo {
             number: 123,
-            url: "https://github.com/bork/bork/pull/123".to_string(),
+            url: "https://github.com/krust/krust/pull/123".to_string(),
             state: "OPEN".to_string(),
             draft: true,
             base_branch: "main".to_string(),

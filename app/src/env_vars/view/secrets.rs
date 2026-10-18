@@ -1,17 +1,17 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, Empty, Fill, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Shrinkable, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::fonts::Weight;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
-use borkui::{Element, ViewContext};
+use krustui::SingletonEntity;
+use krustui::{Element, ViewContext};
 
 use super::env_var_collection::{
     EnvVarCollectionAction, EnvVarCollectionView, VariableRowIndex, CORE_MAX_WIDTH, ROW_SPACING,
@@ -166,7 +166,7 @@ impl EnvVarCollectionView {
         let text_and_icon = TextAndIcon::new(
             TextAndIconAlignment::IconFirst,
             display_name,
-            icon.to_borkui_icon(appearance.theme().active_ui_text_color()),
+            icon.to_krustui_icon(appearance.theme().active_ui_text_color()),
             MainAxisSize::Max,
             MainAxisAlignment::Center,
             vec2f(16., 16.),

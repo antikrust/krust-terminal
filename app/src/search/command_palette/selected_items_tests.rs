@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use borkui::keymap::BindingId;
+use krustui::keymap::BindingId;
 
 use super::*;
 

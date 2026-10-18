@@ -2,7 +2,7 @@
 name = "simple_logger"
 version = "0.1.0"
 edition = "2021"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 publish.workspace = true
 license.workspace = true
 description = "Simple file-based async logger for server stderr output"
@@ -14,8 +14,8 @@ chrono = { workspace = true }
 futures = { workspace = true }
 log = { workspace = true }
 thiserror.workspace = true
-bork_core = { workspace = true }
-borkui_core.workspace = true
+krust_core = { workspace = true }
+krustui_core.workspace = true
 
 [dev-dependencies]
 instant = { workspace = true }

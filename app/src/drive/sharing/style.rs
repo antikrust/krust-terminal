@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::color::ColorU;
-use borkui::elements::{CornerRadius, Radius};
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent as _, UiComponentStyles};
-use borkui::ui_components::text::Span;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::color::ColorU;
+use krustui::elements::{CornerRadius, Radius};
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui::ui_components::text::Span;
 
 /// The padding around ACL items in the sharing dialog.
 pub const ACL_ITEM_PADDING: f32 = 16.;

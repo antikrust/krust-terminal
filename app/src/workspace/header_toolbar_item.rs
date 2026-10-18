@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 use crate::features::FeatureFlag;

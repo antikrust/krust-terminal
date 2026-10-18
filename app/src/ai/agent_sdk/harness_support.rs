@@ -1,18 +1,18 @@
-//! `bork harness-support` CLI dispatch and the singleton model all subcommands run async work on.
+//! `krust harness-support` CLI dispatch and the singleton model all subcommands run async work on.
 //!
 //! Subcommands:
 //! - [`ping`] — fetches the current run by task ID and prints its info.
 //! - [`report_artifact`] — reports an artifact (e.g. a PR) back to the Oz platform.
 use anyhow::Result;
-use bork_cli::agent::OutputFormat;
-use bork_cli::harness_support::{
+use krust_cli::agent::OutputFormat;
+use krust_cli::harness_support::{
     FinishTaskArgs, HarnessSupportArgs, HarnessSupportCommand, NotifyUserArgs, ReportArtifactArgs,
     ReportArtifactCommand, ReportShutdownArgs, TaskStatus,
 };
-use bork_cli::GlobalOptions;
-use bork_core::features::FeatureFlag;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelHandle, SingletonEntity};
+use krust_cli::GlobalOptions;
+use krust_core::features::FeatureFlag;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelHandle, SingletonEntity};
 
 use super::common::set_ambient_task_context_from_run_id;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
@@ -257,7 +257,7 @@ fn report_shutdown(
 /// Singleton model for running async harness-support operations.
 struct HarnessSupportRunner;
 
-impl borkui::Entity for HarnessSupportRunner {
+impl krustui::Entity for HarnessSupportRunner {
     type Event = ();
 }
 

@@ -12,13 +12,13 @@ use instant::SystemTime;
 use selection::BlockListSelection;
 pub use selection::SelectionRange;
 use sum_tree::{Dimension, Item, SeekBias, SumTree};
-use bork_core::command::ExitCode;
-use bork_core::features::FeatureFlag;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use borkui::color::ColorU;
-use borkui::r#async::executor::Background;
-use borkui::units::{IntoLines, IntoPixels, Lines};
-use borkui::{record_trace_event, AppContext, EntityId, ViewHandle};
+use krust_core::command::ExitCode;
+use krust_core::features::FeatureFlag;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krustui::color::ColorU;
+use krustui::r#async::executor::Background;
+use krustui::units::{IntoLines, IntoPixels, Lines};
+use krustui::{record_trace_event, AppContext, EntityId, ViewHandle};
 
 use super::ansi::{Handler, InputBufferValue};
 use super::block::{BlockId, BlockSize, BlockState, SerializedAIMetadata};
@@ -279,12 +279,12 @@ pub struct BlockList {
     bootstrap_stage: BootstrapStage,
 
     padding: BlockPadding,
-    bork_prompt_height_lines: f32,
+    krust_prompt_height_lines: f32,
 
     /// Executor used for spawning threads in the background.
     background_executor: Arc<Background>,
 
-    show_bork_bootstrap_block: bool,
+    show_krust_bootstrap_block: bool,
 
     show_in_band_command_blocks: bool,
 
@@ -308,7 +308,7 @@ pub struct BlockList {
     ///
     /// This isn't a simple boolean 'is_in_band_command_in_flight' because it is possible that
     /// with two in-band commands queued in quick succession, the second command may be written
-    /// to the PTY before bork_precmd is executed after the first command. `bork_precmd` is used
+    /// to the PTY before krust_precmd is executed after the first command. `krust_precmd` is used
     /// to emit the `CommandFinished` hook, and so it would be possible to mistakenly mark the
     /// boolean `false`.
     in_flight_in_band_command_count: usize,
@@ -579,7 +579,7 @@ impl BlockList {
         sizes: BlockSize,
         event_proxy: ChannelEventListener,
         background_executor: Arc<Background>,
-        show_bork_bootstrap_input: bool,
+        show_krust_bootstrap_input: bool,
         show_in_band_command_blocks: bool,
         show_memory_stats: bool,
         honor_ps1: bool,
@@ -591,7 +591,7 @@ impl BlockList {
             sizes,
             event_proxy,
             background_executor,
-            show_bork_bootstrap_input,
+            show_krust_bootstrap_input,
             show_in_band_command_blocks,
             show_memory_stats,
             honor_ps1,
@@ -614,8 +614,8 @@ impl BlockList {
     /// the block as the input and consider that one whole block to create,
     /// feed input into, and finish whereas `complete_active_block_and_advance` will create the _subsequent_
     /// block.
-    /// 3. Create the `BootstrapStage::BorkInput` block through
-    /// `create_bork_input_block`. From here on, there is always a default
+    /// 3. Create the `BootstrapStage::KrustInput` block through
+    /// `create_krust_input_block`. From here on, there is always a default
     /// block which is hidden while it is empty.
     /// 4. We progress through the bootstrap stages with the `complete_active_block_and_advance` function.
     /// 5. After we hit `BootstrapStage::PostBootstrapPrecmd`, it's normal
@@ -628,7 +628,7 @@ impl BlockList {
         sizes: BlockSize,
         event_proxy: ChannelEventListener,
         background_executor: Arc<Background>,
-        show_bork_bootstrap_input: bool,
+        show_krust_bootstrap_input: bool,
         show_in_band_command_blocks: bool,
         show_memory_stats: bool,
         honor_ps1: bool,
@@ -654,9 +654,9 @@ impl BlockList {
             smart_select_override: None,
             bootstrap_stage,
             padding: sizes.block_padding,
-            bork_prompt_height_lines: sizes.bork_prompt_height_lines,
+            krust_prompt_height_lines: sizes.krust_prompt_height_lines,
             background_executor,
-            show_bork_bootstrap_block: show_bork_bootstrap_input,
+            show_krust_bootstrap_block: show_krust_bootstrap_input,
             show_in_band_command_blocks,
             show_memory_stats,
             honor_ps1,
@@ -711,7 +711,7 @@ impl BlockList {
                 }
             }
         }
-        self.create_bork_input_block();
+        self.create_krust_input_block();
     }
 
     pub(super) fn load_shared_session_scrollback(&mut self, scrollback: &[SerializedBlock]) {
@@ -800,16 +800,16 @@ impl BlockList {
 
     /// This is an important function in the block list lifecycle. After this
     /// is called, there's an invariant where we always have an active block.
-    fn create_bork_input_block(&mut self) {
+    fn create_krust_input_block(&mut self) {
         self.create_new_block(
             BlockId::new(),
-            BootstrapStage::BorkInput,
+            BootstrapStage::KrustInput,
             Default::default(),
             None,
         );
         self.start_active_block();
         self.update_active_block_height();
-        self.bootstrap_stage = BootstrapStage::BorkInput;
+        self.bootstrap_stage = BootstrapStage::KrustInput;
     }
 
     pub fn restored_session_ts(&self) -> &Option<DateTime<Local>> {
@@ -1311,7 +1311,7 @@ impl BlockList {
 
     /// Inserts the `item` into the blocklist at the given `index`.
     /// We only want to use this in the block list lifecycle after
-    /// `create_bork_input_block`. For non-block items before then, we should
+    /// `create_krust_input_block`. For non-block items before then, we should
     /// insert the item directly into the sumtree.
     /// Returns the inserted index (according to the TotalCount dimension).
     fn insert_non_block_item_before_block(
@@ -2467,7 +2467,7 @@ impl BlockList {
     }
 
     pub fn set_show_bootstrap_block(&mut self, show_bootstrap_block: bool) {
-        self.show_bork_bootstrap_block = show_bootstrap_block;
+        self.show_krust_bootstrap_block = show_bootstrap_block;
         self.update_blocks_and_sumtree(
             None,
             None,
@@ -2636,7 +2636,7 @@ impl BlockList {
                 let next_block = self.block_at(next_block_index)?;
                 let next_command_is_empty = next_block.is_command_empty();
                 // NOTE: there is a semantic difference here of seeking down to the next "prompt" (in the PS1 case)
-                // vs the next "command" (in the Bork prompt case), when using the combined grid, rather than
+                // vs the next "command" (in the Krust prompt case), when using the combined grid, rather than
                 // directly going to the next "command" in both cases.
                 let grid_type = GridType::PromptAndCommand;
 
@@ -2818,7 +2818,7 @@ impl BlockList {
             self.event_proxy.clone(),
             self.background_executor.clone(),
             bootstrap_stage,
-            self.show_bork_bootstrap_block,
+            self.show_krust_bootstrap_block,
             self.show_in_band_command_blocks,
             self.show_memory_stats,
             self.blocks.len().into(),
@@ -2872,7 +2872,7 @@ impl BlockList {
             self.event_proxy.clone(),
             self.background_executor.clone(),
             self.bootstrap_stage,
-            self.show_bork_bootstrap_block,
+            self.show_krust_bootstrap_block,
             self.show_in_band_command_blocks,
             self.show_memory_stats,
             BlockIndex::zero(),
@@ -2975,7 +2975,7 @@ impl BlockList {
             block_padding: self.padding,
             size: self.size,
             max_block_scroll_limit: self.max_grid_size_limit,
-            bork_prompt_height_lines: self.bork_prompt_height_lines,
+            krust_prompt_height_lines: self.krust_prompt_height_lines,
         }
     }
 
@@ -2984,7 +2984,7 @@ impl BlockList {
         active_block.finish(0);
         self.update_active_block_height();
 
-        self.create_bork_input_block();
+        self.create_krust_input_block();
     }
 
     /// Starts the active block and resets block-to-block state. For local sessions, this is called
@@ -3668,7 +3668,7 @@ impl BlockList {
         let mut contents = String::new();
         for block in self.blocks.iter() {
             match block.bootstrap_stage() {
-                BootstrapStage::BorkInput | BootstrapStage::ScriptExecution => {
+                BootstrapStage::KrustInput | BootstrapStage::ScriptExecution => {
                     contents.push_str(&block.command_to_string());
                     contents.push('\n');
                 }
@@ -3912,10 +3912,10 @@ impl ansi::Handler for BlockList {
             }
             ClearMode::All => {
                 // TODO(alokedesai): Investigate how we can call `clear_visible_screen` here to have
-                // Bork's custom logic for "clear". It's not immediately straightforward because a
+                // Krust's custom logic for "clear". It's not immediately straightforward because a
                 // a running program that writes output, clears the visible screen, and then writes
                 // more output should all be encapsulated within a single block, which wouldn't be
-                // quite right with Bork's custom clear screen logic.
+                // quite right with Krust's custom clear screen logic.
             }
             _ => {}
         }
@@ -4229,7 +4229,7 @@ impl ToTotalIndex for BlockIndex {
 #[cfg(test)]
 #[path = "blocks_tests.rs"]
 mod tests;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 #[cfg(test)]
 pub use self::tests::insert_block;

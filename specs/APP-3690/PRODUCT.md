@@ -1,15 +1,15 @@
 # Product Spec: OpenCode Plugin Install & Update Flow
 
-Linear: [APP-3690](https://linear.app/borkdotdev/issue/APP-3690)
+Linear: [APP-3690](https://linear.app/krustdotdev/issue/APP-3690)
 Figma: none provided
 
 ## Summary
 
-Add install and update chip support for the OpenCode Bork plugin (`opencode-bork`), matching the existing Claude Code chip UX. Clicking the chip opens a modal with manual installation/update instructions.
+Add install and update chip support for the OpenCode Krust plugin (`opencode-krust`), matching the existing Claude Code chip UX. Clicking the chip opens a modal with manual installation/update instructions.
 
 ## Problem
 
-When a user runs OpenCode inside Bork, the Bork plugin enriches the experience with native notifications and session status tracking. Today, Bork has no way to prompt OpenCode users to install or update this plugin — `plugin_manager_for(CLIAgent::OpenCode)` returns `None`.
+When a user runs OpenCode inside Krust, the Krust plugin enriches the experience with native notifications and session status tracking. Today, Krust has no way to prompt OpenCode users to install or update this plugin — `plugin_manager_for(CLIAgent::OpenCode)` returns `None`.
 
 ## Goals
 
@@ -19,7 +19,7 @@ When a user runs OpenCode inside Bork, the Bork plugin enriches the experience w
 
 ## Prerequisites
 
-The `opencode-bork` npm package must be published before this feature ships. The name is currently available on npm.
+The `opencode-krust` npm package must be published before this feature ships. The name is currently available on npm.
 
 ## Non-Goals
 
@@ -59,14 +59,14 @@ When a user starts an OpenCode session and the plugin has never connected (no li
 - Clicking opens a modal with manual install instructions.
 
 **Install instructions modal:**
-- Title: "Install Bork Plugin for OpenCode"
-- Subtitle: "Add the Bork plugin to your OpenCode configuration, then restart OpenCode."
+- Title: "Install Krust Plugin for OpenCode"
+- Subtitle: "Add the Krust plugin to your OpenCode configuration, then restart OpenCode."
 - Steps:
   1. "Add the plugin to your config" — copyable snippet:
      ```json
-     { "plugin": ["opencode-bork"] }
+     { "plugin": ["opencode-krust"] }
      ```
-     with explanatory text: "Add `"opencode-bork"` to the `plugin` array in your `opencode.json` (project root) or `~/.config/opencode/opencode.json` (global)."
+     with explanatory text: "Add `"opencode-krust"` to the `plugin` array in your `opencode.json` (project root) or `~/.config/opencode/opencode.json` (global)."
   2. "Restart OpenCode to activate"
 
 ### Update Chip
@@ -82,13 +82,13 @@ When the plugin is connected but reports a version below `MINIMUM_PLUGIN_VERSION
 **Version detection:**
 - Sole signal: `plugin_version` field from the `SessionStart` event.
 - No filesystem-based version checks. If the plugin hasn't connected, we don't know its version — we show the install chip instead.
-- Since the opencode-bork plugin has never been released, there is no legacy version that predates version reporting. Every installed version will report `plugin_version`.
+- Since the opencode-krust plugin has never been released, there is no legacy version that predates version reporting. Every installed version will report `plugin_version`.
 
 **Update instructions modal:**
-- Title: "Update Bork Plugin for OpenCode"
+- Title: "Update Krust Plugin for OpenCode"
 - Subtitle: "Clear the cached plugin and restart OpenCode to pull the latest version."
 - Steps:
-  1. "Remove the cached plugin" — copyable command: `rm -rf ~/.cache/opencode/node_modules/opencode-bork`
+  1. "Remove the cached plugin" — copyable command: `rm -rf ~/.cache/opencode/node_modules/opencode-krust`
   2. "Restart OpenCode" — "OpenCode will re-download the latest version on startup."
 
 ### Chip Visibility Logic
@@ -117,7 +117,7 @@ Same as Claude Code: install chip and update chip have independent dismiss state
 
 ## Success Criteria
 
-1. Starting an OpenCode session in Bork when the plugin has never connected shows a green "Notifications setup instructions" chip (after a brief debounce).
+1. Starting an OpenCode session in Krust when the plugin has never connected shows a green "Notifications setup instructions" chip (after a brief debounce).
 2. Clicking the chip opens a modal with install instructions including a copyable config snippet.
 3. After the user installs and restarts OpenCode, the plugin connects and the chip disappears.
 4. When the plugin reports a version below `MINIMUM_PLUGIN_VERSION`, the "Plugin update instructions" chip appears.

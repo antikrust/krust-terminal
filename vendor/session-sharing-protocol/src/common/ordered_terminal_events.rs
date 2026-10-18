@@ -42,7 +42,7 @@ pub enum OrderedTerminalEventType {
     // * The start and end of individual requests
     // * Incremental agent output
     // * Echoed user messages and tool call results
-    /// See https://github.com/borkdotdev/bork-proto-apis/blob/6310871f081b5f44b2d4e3e5d8fdfa3008b750b0/apis/multi_agent/v1/response.proto#L16-L17
+    /// See https://github.com/krustdotdev/krust-proto-apis/blob/6310871f081b5f44b2d4e3e5d8fdfa3008b750b0/apis/multi_agent/v1/response.proto#L16-L17
     AgentResponseEvent {
         /// The ID of the participant who sent the query to initiate this agent response.
         response_initiator: Option<ParticipantId>,

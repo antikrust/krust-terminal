@@ -6,8 +6,8 @@ use std::sync::Arc;
 use futures::channel::oneshot;
 use parking_lot::Mutex;
 use tempfile::TempDir;
-use bork_util::path::ShellFamily;
-use borkui::{AddSingletonModel, App, SingletonEntity, WindowId};
+use krust_util::path::ShellFamily;
+use krustui::{AddSingletonModel, App, SingletonEntity, WindowId};
 
 use super::{safe_filename, ExportEvent, ExportId, ExportManager};
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFact, CloudAIFactModel};
@@ -284,7 +284,7 @@ fn test_export_notebook_with_embeds() {
                 r#"
 # This is a notebook
 It has *text*.
-```bork-embedded-object
+```krust-embedded-object
 id: {}
 ```
 
@@ -321,7 +321,7 @@ print("hello")
             r#"
 # This is a notebook
 It has *text*\.
-```bork-embedded-object
+```krust-embedded-object
 ---
 name: Test workflow
 command: echo hello world
@@ -409,7 +409,7 @@ fn test_safe_filename() {
             "allowed $special %characters",
             "allowed $special %characters",
         ),
-        ("bork:drive", "bork_drive"),
+        ("krust:drive", "krust_drive"),
         ("a/b/c/d:e", "a_b_c_d_e"),
         ("the\0sneaky\0null", "the_sneaky_null"),
         ("ascii\x03control\x1bchars", "ascii_control_chars"),

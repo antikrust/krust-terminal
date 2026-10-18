@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use bork_core::ui::appearance::Appearance;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_util::user_input::UserInput;
-use borkui::elements::new_scrollable::ScrollableAppearance;
-use borkui::elements::ScrollbarWidth;
-use borkui::platform::WindowStyle;
-use borkui::{App, TypedActionView, ViewHandle, WindowId};
+use krust_core::ui::appearance::Appearance;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_util::user_input::UserInput;
+use krustui::elements::new_scrollable::ScrollableAppearance;
+use krustui::elements::ScrollbarWidth;
+use krustui::platform::WindowStyle;
+use krustui::{App, TypedActionView, ViewHandle, WindowId};
 
 use super::{CodeEditorRenderOptions, CodeEditorView, CodeEditorViewAction};
 use crate::cloud_object::model::persistence::CloudModel;

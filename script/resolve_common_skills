@@ -2,13 +2,13 @@
 
 set -eo pipefail
 
-COMMON_SKILLS_REPO="borkdotdev/common-skills"
-COMMON_SKILLS_REF="${BORK_COMMON_SKILLS_REF:-main}"
-RAW_BASE_URL="${BORK_COMMON_SKILLS_RAW_BASE_URL:-https://raw.githubusercontent.com/${COMMON_SKILLS_REPO}/${COMMON_SKILLS_REF}/scripts}"
+COMMON_SKILLS_REPO="krustdotdev/common-skills"
+COMMON_SKILLS_REF="${KRUST_COMMON_SKILLS_REF:-main}"
+RAW_BASE_URL="${KRUST_COMMON_SKILLS_RAW_BASE_URL:-https://raw.githubusercontent.com/${COMMON_SKILLS_REPO}/${COMMON_SKILLS_REF}/scripts}"
 RESOLVER_NAME="resolve_common_skills"
 
 execute_resolver_from_dir() {
-  local script_path="${BORK_COMMON_SKILLS_SCRIPTS_DIR%/}/${RESOLVER_NAME}"
+  local script_path="${KRUST_COMMON_SKILLS_SCRIPTS_DIR%/}/${RESOLVER_NAME}"
 
   if [[ -x "${script_path}" ]]; then
     exec "${script_path}" "$@"
@@ -18,7 +18,7 @@ execute_resolver_from_dir() {
     exec bash "${script_path}" "$@"
   fi
 
-  echo "error: could not execute ${RESOLVER_NAME} from BORK_COMMON_SKILLS_SCRIPTS_DIR=${BORK_COMMON_SKILLS_SCRIPTS_DIR}" >&2
+  echo "error: could not execute ${RESOLVER_NAME} from KRUST_COMMON_SKILLS_SCRIPTS_DIR=${KRUST_COMMON_SKILLS_SCRIPTS_DIR}" >&2
   exit 1
 }
 
@@ -50,7 +50,7 @@ execute_resolver_from_remote() {
   return "${status}"
 }
 
-if [[ -n "${BORK_COMMON_SKILLS_SCRIPTS_DIR:-}" ]]; then
+if [[ -n "${KRUST_COMMON_SKILLS_SCRIPTS_DIR:-}" ]]; then
   execute_resolver_from_dir "$@"
 fi
 

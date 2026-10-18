@@ -1,4 +1,4 @@
-use borkui::AppContext;
+use krustui::AppContext;
 
 use crate::channel::ChannelState;
 use crate::server::ids::ServerId;
@@ -20,12 +20,12 @@ impl AdminActions {
 
     /// Open the support email link
     pub fn contact_support(ctx: &mut AppContext) {
-        ctx.open_url("mailto:support@bork.baby");
+        ctx.open_url("mailto:support@krust.baby");
     }
 
     /// Open the contact sales page
     pub fn contact_sales(ctx: &mut AppContext) {
-        ctx.open_url("https://bork.baby/contact-sales");
+        ctx.open_url("https://krust.baby/contact-sales");
     }
 }
 

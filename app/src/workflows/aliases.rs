@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use settings_value::SettingsValue;
-use bork_core::define_settings_group;
-use bork_core::settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use bork_errors::report_error;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_core::define_settings_group;
+use krust_core::settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
+use krust_errors::report_error;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
 use crate::cloud_object::CloudObject as _;

@@ -3,23 +3,23 @@ use std::ops::Range;
 use std::sync::{Arc, Mutex};
 
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::Icon;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::Icon;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Fill, Flex, FormattedTextElement, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, Padding, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement,
     ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::macros::*;
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::text_layout::TextAlignment;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::macros::*;
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::text_layout::TextAlignment;
+use krustui::{
     AppContext, BlurContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -781,7 +781,7 @@ fn render_zero_state(
 
     let chat_icon = ConstrainedBox::new(
         Icon::ChatDashed
-            .to_borkui_icon(theme.sub_text_color(theme.background()))
+            .to_krustui_icon(theme.sub_text_color(theme.background()))
             .finish(),
     )
     .with_width(24.)
@@ -825,7 +825,7 @@ fn render_zero_state(
                 .with_child(
                     ConstrainedBox::new(
                         Icon::Plus
-                            .to_borkui_icon(theme.main_text_color(theme.background()))
+                            .to_krustui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_width(14.)
@@ -908,7 +908,7 @@ fn render_section_header(
     };
     let chevron = ConstrainedBox::new(
         chevron_icon
-            .to_borkui_icon(theme.sub_text_color(theme.background()))
+            .to_krustui_icon(theme.sub_text_color(theme.background()))
             .finish(),
     )
     .with_width(12.)

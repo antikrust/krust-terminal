@@ -77,11 +77,11 @@ fn test_offset_map_placeholders() {
 fn test_end_to_end() {
     // Group imports here so they don't cause "unused import" warnings on other targets.
 
-    use borkui_core::App;
-    use borkui_core::color::ColorU;
-    use borkui_core::elements::Fill;
-    use borkui_core::fonts::Cache as FontCache;
-    use borkui_core::text_layout::LayoutCache;
+    use krustui_core::App;
+    use krustui_core::color::ColorU;
+    use krustui_core::elements::Fill;
+    use krustui_core::fonts::Cache as FontCache;
+    use krustui_core::text_layout::LayoutCache;
 
     use crate::content::buffer::{Buffer, BufferEditAction, EditOrigin};
     use crate::content::selection_model::BufferSelectionModel;
@@ -94,7 +94,7 @@ fn test_end_to_end() {
     };
 
     App::test((), |mut app| async move {
-        let mut font_cache = FontCache::new(Box::new(borkui::platform::current::FontDB::new()));
+        let mut font_cache = FontCache::new(Box::new(krustui::platform::current::FontDB::new()));
         let layout_cache = LayoutCache::new();
         let paragraph_styles = ParagraphStyles {
             font_family: font_cache

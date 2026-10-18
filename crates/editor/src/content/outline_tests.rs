@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use string_offset::CharOffset;
-use borkui_core::App;
+use krustui_core::App;
 
 use crate::content::buffer::Buffer;
 use crate::content::outline::BlockOutline;

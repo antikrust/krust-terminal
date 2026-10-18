@@ -5,7 +5,7 @@ use candle_core::{IndexOp as _, Tensor};
 use candle_onnx::onnx::ModelProto;
 use prost::Message as _;
 use tokenizers::Tokenizer;
-use bork_completer::ParsedTokensSnapshot;
+use krust_completer::ParsedTokensSnapshot;
 
 use super::{ClassificationResult, Model};
 use crate::InputClassifierDecisionSource;

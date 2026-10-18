@@ -1,11 +1,11 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::elements::{
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, Empty, Fill, OffsetPositioning,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Radius, Stack,
 };
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::Element;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::Element;
 
 use crate::appearance::Appearance;
 

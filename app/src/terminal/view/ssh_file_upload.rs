@@ -5,16 +5,16 @@ use itertools::Itertools;
 use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextHeader, FormattedTextLine,
 };
-use bork_core::command::ExitCode;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::blend::Blend as _;
-use borkui::elements::{
+use krust_core::command::ExitCode;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::blend::Blend as _;
+use krustui::elements::{
     Border, Container, CornerRadius, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, MainAxisSize, MouseStateHandle, ParentElement, Radius,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent as _;
-use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent as _;
+use krustui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::terminal::ssh::util::InteractiveSshCommand;
 use crate::ui_components::buttons::icon_button;
@@ -91,7 +91,7 @@ impl TypedActionView for FileUpload {
         &mut self,
         _action: &Self::Action,
         _ctx: &mut ViewContext<Self>,
-    ) -> borkui::accessibility::ActionAccessibilityContent {
+    ) -> krustui::accessibility::ActionAccessibilityContent {
         Default::default()
     }
 }
@@ -101,7 +101,7 @@ impl View for FileUpload {
         "SSH File Upload"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         self.render_file_upload_element(&self.uploads, appearance)
     }
@@ -187,7 +187,7 @@ impl FileUpload {
         }
     }
 
-    /// Creates an sftp command that copies a given local file into the PWD of the borkified ssh session, if any.
+    /// Creates an sftp command that copies a given local file into the PWD of the krustified ssh session, if any.
     fn transfer_file_sftp_command(&self, file_upload: &FileUploadInfo) -> String {
         // "sftp "
         let mut command = String::from("sftp ");

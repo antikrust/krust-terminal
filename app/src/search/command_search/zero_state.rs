@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Container, CornerRadius, Flex, Hoverable, MouseStateHandle, ParentElement, Radius, Text, Wrap,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::search::{FilterChipRenderer, QueryFilter};
@@ -180,7 +180,7 @@ impl View for CommandSearchZeroStateView {
         "CommandSearchZeroStateView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
 
         let command_search_text = Container::new(

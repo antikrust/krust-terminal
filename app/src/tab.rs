@@ -6,11 +6,11 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
-use bork_core::context_flag::ContextFlag;
-use bork_core::ui::builder::UiBuilder;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::AnsiColors;
-use borkui::elements::{
+use krust_core::context_flag::ContextFlag;
+use krust_core::ui::builder::UiBuilder;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::AnsiColors;
+use krustui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DragAxis, Draggable, DraggableState, DropTarget, Element, Empty, Fill,
     Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, Padding,
@@ -18,11 +18,11 @@ use borkui::elements::{
     PositionedElementOffsetBounds, Radius, Rect, SavePosition, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch, Stack, Text,
 };
-use borkui::fonts::Weight;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::text_input::TextInput;
-use borkui::{AppContext, SingletonEntity, ViewHandle};
+use krustui::fonts::Weight;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::text_input::TextInput;
+use krustui::{AppContext, SingletonEntity, ViewHandle};
 
 use crate::ai::agent::conversation::ConversationStatus;
 use crate::ai::conversation_status_ui::{render_status_element, STATUS_ELEMENT_PADDING};
@@ -89,8 +89,8 @@ pub fn uses_vertical_tabs(ctx: &AppContext) -> bool {
     FeatureFlag::VerticalTabs.is_enabled() && *TabSettings::as_ref(ctx).use_vertical_tabs
 }
 
-const BORK_2_TAB_COLOR_OPACITY: Opacity = 25;
-const BORK_2_HOVERED_TAB_COLOR_OPACITY: Opacity = 50;
+const KRUST_2_TAB_COLOR_OPACITY: Opacity = 25;
+const KRUST_2_HOVERED_TAB_COLOR_OPACITY: Opacity = 50;
 const TAB_CLOSE_BUTTON_OPACITY: Opacity = 60;
 const TAB_CLOSE_BUTTON_WIDTH: f32 = 20.0;
 const MAX_TOOLTIP_LENGTH: usize = 80;
@@ -1407,7 +1407,7 @@ impl<'a> TabComponent<'a> {
                 Align::new(
                     ConstrainedBox::new(
                         Icon::PinFilledDiagonal
-                            .to_borkui_icon(theme.main_text_color(theme.background()))
+                            .to_krustui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_width(TAB_PIN_INDICATOR_ICON_SIZE)
@@ -1459,22 +1459,22 @@ impl<'a> TabComponent<'a> {
             Indicator::None => None,
             Indicator::Synced => Some(
                 Icon::LinkHorizontal
-                    .to_borkui_icon(self.styles.synced_input_indicator_color.into())
+                    .to_krustui_icon(self.styles.synced_input_indicator_color.into())
                     .finish(),
             ),
             Indicator::Error => Some(
                 Icon::AlertTriangle
-                    .to_borkui_icon(self.styles.error_color.into())
+                    .to_krustui_icon(self.styles.error_color.into())
                     .finish(),
             ),
             Indicator::Shared => Some(
                 Icon::Sharing
-                    .to_borkui_icon(self.styles.sharing_color.into())
+                    .to_krustui_icon(self.styles.sharing_color.into())
                     .finish(),
             ),
             Indicator::Maximized => Some(
                 Icon::Maximize
-                    .to_borkui_icon(
+                    .to_krustui_icon(
                         self.styles
                             .default
                             .font_color
@@ -1486,7 +1486,7 @@ impl<'a> TabComponent<'a> {
             Indicator::Shell(shell_indicator_type) => Some(
                 shell_indicator_type
                     .to_icon()
-                    .to_borkui_icon(internal_colors::neutral_5(self.appearance.theme()).into())
+                    .to_krustui_icon(internal_colors::neutral_5(self.appearance.theme()).into())
                     .finish(),
             ),
             Indicator::Agent {
@@ -1501,7 +1501,7 @@ impl<'a> TabComponent<'a> {
                     }
                 } else {
                     let icon_color = self.appearance.theme().nonactive_ui_text_color();
-                    Some(Icon::Oz.to_borkui_icon(icon_color).finish())
+                    Some(Icon::Oz.to_krustui_icon(icon_color).finish())
                 }
             }
             Indicator::AmbientAgent => {
@@ -1516,7 +1516,7 @@ impl<'a> TabComponent<'a> {
                 Some(
                     Hoverable::new(mouse_state, move |state| {
                         let mut stack = Stack::new()
-                            .with_child(Icon::OzCloud.to_borkui_icon(icon_color.into()).finish());
+                            .with_child(Icon::OzCloud.to_krustui_icon(icon_color.into()).finish());
 
                         if state.is_hovered() {
                             let tooltip = ui_builder
@@ -1624,9 +1624,9 @@ impl<'a> TabComponent<'a> {
             (bg, border)
         } else {
             let tab_opacity = if is_active || is_hovered {
-                BORK_2_HOVERED_TAB_COLOR_OPACITY
+                KRUST_2_HOVERED_TAB_COLOR_OPACITY
             } else {
-                BORK_2_TAB_COLOR_OPACITY
+                KRUST_2_TAB_COLOR_OPACITY
             };
 
             let bg = if let Some(custom_background) = self.styles.background {
@@ -1656,7 +1656,7 @@ impl<'a> TabComponent<'a> {
             let mut flex_row = Flex::row()
                 .with_main_axis_size(MainAxisSize::Max)
                 .with_main_axis_alignment(MainAxisAlignment::Center)
-                .with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Center);
+                .with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Center);
             if let Some(indicator) = self.render_indicator() {
                 flex_row.add_child(indicator);
             }
@@ -1691,7 +1691,7 @@ impl<'a> TabComponent<'a> {
             } else {
                 // Fallback to terminal icon if no indicator is present
                 Icon::Terminal
-                    .to_borkui_icon(
+                    .to_krustui_icon(
                         self.styles
                             .default
                             .font_color
@@ -1705,7 +1705,7 @@ impl<'a> TabComponent<'a> {
             Flex::row()
                 .with_main_axis_size(MainAxisSize::Max)
                 .with_main_axis_alignment(MainAxisAlignment::Center)
-                .with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Center)
+                .with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Center)
                 .with_child(
                     ConstrainedBox::new(compact_icon)
                         .with_max_width(TAB_INDICATOR_HEIGHT)
@@ -1895,7 +1895,7 @@ impl<'a> TabComponent<'a> {
             Container::new(tab.finish())
                 .with_background_color(
                     self.ui_builder
-                        .bork_theme()
+                        .krust_theme()
                         .background()
                         .into_solid_bias_top_color(),
                 )
@@ -1985,7 +1985,7 @@ impl UiComponent for TabComponent<'_> {
 
                         if let Some(directory) = &tooltip_directory_clone {
                             let folder_icon = Icon::Folder
-                                .to_borkui_icon(ThemeFill::Solid(font_color))
+                                .to_krustui_icon(ThemeFill::Solid(font_color))
                                 .finish();
 
                             let directory_row = Flex::row()
@@ -2018,7 +2018,7 @@ impl UiComponent for TabComponent<'_> {
 
                         if let Some(branch) = &tooltip_git_branch_clone {
                             let branch_icon = Icon::GitBranch
-                                .to_borkui_icon(ThemeFill::Solid(font_color))
+                                .to_krustui_icon(ThemeFill::Solid(font_color))
                                 .finish();
 
                             let branch_row = Flex::row()

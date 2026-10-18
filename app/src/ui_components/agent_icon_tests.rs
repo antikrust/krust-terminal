@@ -11,7 +11,7 @@
 //! Adding a new canonical state is a one-enum-variant + one `expected` arm + one `*_inputs`
 //! arm change; the table test below enforces every surface agrees.
 use chrono::Utc;
-use bork_cli::agent::Harness;
+use krust_cli::agent::Harness;
 
 use super::{
     agent_conversation_entry_icon_variant, agent_icon_variant_for_run,
@@ -72,7 +72,7 @@ impl AgentIconFields {
 enum CanonicalRunState {
     /// Plain terminal, no conversation, no agent activity.
     PlainTerminal,
-    /// Local Bork-native (Oz) conversation, in-progress.
+    /// Local Krust-native (Oz) conversation, in-progress.
     LocalOzInProgress,
     /// Cloud-mode Oz run, in-progress.
     CloudOzInProgress,

@@ -1,13 +1,13 @@
-use bork_completer::meta::SpannedItem;
-use bork_completer::util::parse_current_commands_and_tokens;
-use bork_completer::{ParsedTokenData, ParsedTokensSnapshot};
+use krust_completer::meta::SpannedItem;
+use krust_completer::util::parse_current_commands_and_tokens;
+use krust_completer::{ParsedTokenData, ParsedTokensSnapshot};
 
 use super::*;
 use crate::Context;
 use crate::test_utils::CompletionContext;
 
 async fn mock_parsed_input_token(buffer_text: String) -> ParsedTokensSnapshot {
-    bork_features::mark_initialized();
+    krust_features::mark_initialized();
     let completion_context = CompletionContext::new();
     parse_current_commands_and_tokens(buffer_text, &completion_context).await
 }

@@ -6,23 +6,23 @@ use std::path::PathBuf;
 use std::sync::mpsc::SyncSender;
 
 #[cfg(not(target_family = "wasm"))]
-use bork_cli::agent::Harness;
+use krust_cli::agent::Harness;
 #[cfg(any(feature = "local_tty", not(target_family = "wasm")))]
-use bork_errors::report_error;
+use krust_errors::report_error;
 #[cfg(feature = "local_tty")]
-use borkui::geometry::vector::Vector2F;
+use krustui::geometry::vector::Vector2F;
 #[cfg(not(target_family = "wasm"))]
-use borkui::r#async::FutureExt;
+use krustui::r#async::FutureExt;
 #[cfg(feature = "local_tty")]
-use borkui::ModelHandle;
-use borkui::ViewContext;
+use krustui::ModelHandle;
+use krustui::ViewContext;
 #[cfg(not(target_family = "wasm"))]
-use borkui::{SingletonEntity, View, ViewHandle};
+use krustui::{SingletonEntity, View, ViewHandle};
 
 use super::TerminalView;
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent_sdk::driver::{
-    environment::prepare_environment, terminal::TerminalDriver, BORK_DRIVE_SYNC_TIMEOUT,
+    environment::prepare_environment, terminal::TerminalDriver, KRUST_DRIVE_SYNC_TIMEOUT,
 };
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent_sdk::setup_observability::SetupClientEventReporter;
@@ -253,10 +253,10 @@ impl TerminalView {
         let sync_future = UpdateManager::as_ref(ctx).initial_load_complete();
         ctx.spawn(
             async move {
-                // Wait for Bork Drive initial sync so environment lookup succeeds.
+                // Wait for Krust Drive initial sync so environment lookup succeeds.
 
                 if sync_future
-                    .with_timeout(BORK_DRIVE_SYNC_TIMEOUT)
+                    .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT)
                     .await
                     .is_err()
                 {

@@ -5,10 +5,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use chrono::{OutOfRangeError, Utc};
 use futures::stream::AbortHandle;
-use bork_core::user_preferences::GetUserPreferences as _;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_core::user_preferences::GetUserPreferences as _;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
-use super::execution_context::BorkAiExecutionContext;
+use super::execution_context::KrustAiExecutionContext;
 use super::utils::{markdown_segments_from_text, FormattedTranscriptMessage, TranscriptPart};
 use crate::ai::{RequestLimitInfo, RequestUsageInfo};
 use crate::ai_assistant::utils::{AssistantTranscriptPart, TranscriptPartSubType};
@@ -16,14 +16,14 @@ use crate::auth::AuthStateProvider;
 use crate::send_telemetry_from_ctx;
 use crate::server::server_api::ai::AIClient;
 use crate::server::server_api::ServerApi;
-use crate::server::telemetry::{TelemetryEvent, BorkAIRequestResult};
+use crate::server::telemetry::{TelemetryEvent, KrustAIRequestResult};
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// The key for the corresponding entry in UserDefaults.
 /// Not wiring through Settings for now since this data is only needed by the panel view.
 pub const REQUEST_LIMIT_INFO_CACHE_KEY: &str = "AIAssistantRequestLimitInfo";
 
-/// Tracks the current request status for making Bork AI requests against server.
+/// Tracks the current request status for making Krust AI requests against server.
 pub enum RequestStatus {
     /// There isn't a request in flight right now.
     NotInFlight,
@@ -83,7 +83,7 @@ pub struct Requests {
     /// This list is mutually exclusive from current_transcript.  
     old_transcript_parts: Vec<TranscriptPart>,
 
-    ai_execution_context: Option<BorkAiExecutionContext>,
+    ai_execution_context: Option<KrustAiExecutionContext>,
 }
 
 impl Entity for Requests {
@@ -143,7 +143,7 @@ impl Requests {
 
     pub fn update_ai_execution_context(
         &mut self,
-        ai_execution_context: Option<BorkAiExecutionContext>,
+        ai_execution_context: Option<KrustAiExecutionContext>,
     ) {
         self.ai_execution_context = ai_execution_context;
     }
@@ -165,7 +165,7 @@ impl Requests {
         }
     }
 
-    /// Starts a Bork AI request against the server with the given request prompt.
+    /// Starts a Krust AI request against the server with the given request prompt.
     pub fn issue_request(&mut self, request: String, ctx: &mut ModelContext<Self>) {
         let server_api = self.server_api.clone();
         let raw_request = request.trim();
@@ -232,7 +232,7 @@ impl Requests {
 
                             let req_latency = end_time.signed_duration_since(start_time).num_milliseconds();
                             send_telemetry_from_ctx!(
-                                TelemetryEvent::BorkAIRequestIssued { result: BorkAIRequestResult::Succeeded { latency_ms: req_latency, truncated }},
+                                TelemetryEvent::KrustAIRequestIssued { result: KrustAIRequestResult::Succeeded { latency_ms: req_latency, truncated }},
                                 ctx
                             );
                         }
@@ -282,7 +282,7 @@ impl Requests {
                             });
 
                             send_telemetry_from_ctx!(
-                                TelemetryEvent::BorkAIRequestIssued { result: BorkAIRequestResult::OutOfRequests},
+                                TelemetryEvent::KrustAIRequestIssued { result: KrustAIRequestResult::OutOfRequests},
                                 ctx
                             );
                         }
@@ -306,7 +306,7 @@ impl Requests {
                             });
 
                             send_telemetry_from_ctx!(
-                                TelemetryEvent::BorkAIRequestIssued { result: BorkAIRequestResult::Failed},
+                                TelemetryEvent::KrustAIRequestIssued { result: KrustAIRequestResult::Failed},
                                 ctx
                             );
                         }

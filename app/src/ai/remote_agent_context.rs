@@ -6,13 +6,13 @@ use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
 use remote_server::proto::{
     remote_skill_proto, RemoteAgentContextSnapshot, RemoteContextFileProto, RemoteSkillProto,
 };
-use bork_core::features::FeatureFlag;
-use bork_core::safe_warn;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_core::safe_warn;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::mcp::McpIntegration;
 use super::skills::{BundledSkill, BundledSkillActivation, SkillManager};
@@ -166,7 +166,7 @@ fn bundled_skill_from_protos(host_id: &HostId, skills: &[RemoteSkillProto]) -> B
             proto,
             SkillScope::Bundled,
             None,
-            |_| Some(SkillProvider::Bork),
+            |_| Some(SkillProvider::Krust),
         )?;
         let activation = match metadata.requires_mcp.as_deref() {
             None => BundledSkillActivation::Always,

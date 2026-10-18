@@ -1,6 +1,6 @@
-use borkui::elements::{Container, Flex, Highlight, ParentElement, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::Element;
+use krustui::elements::{Container, Flex, Highlight, ParentElement, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::Element;
 
 use super::new_session_option::NewSessionOption;
 use crate::appearance::Appearance;

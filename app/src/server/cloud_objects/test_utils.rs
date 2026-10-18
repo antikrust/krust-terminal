@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use cloud_object_client::{MockObjectClient, ObjectClient};
 use settings::manager::SettingsManager;
-use bork_core::execution_mode::{AppExecutionMode, ExecutionMode};
-use borkui::{App, ModelHandle, SingletonEntity};
+use krust_core::execution_mode::{AppExecutionMode, ExecutionMode};
+use krustui::{App, ModelHandle, SingletonEntity};
 
 use super::update_manager::UpdateManager;
 use crate::auth::auth_manager::AuthManager;
@@ -17,7 +17,7 @@ use crate::persistence::ModelEvent;
 use crate::server::server_api::ServerApiProvider;
 use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
-use crate::settings::{PrivacySettings, BorkDrivePrivacySettings};
+use crate::settings::{PrivacySettings, KrustDrivePrivacySettings};
 use crate::workspaces::team_tester::TeamTesterStatus;
 use crate::workspaces::update_manager::TeamUpdateManager;
 use crate::workspaces::user_profiles::UserProfiles;
@@ -45,7 +45,7 @@ pub fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| AuthStateProvider::new_for_test());
     app.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
     app.add_singleton_model(AuthManager::new_for_test);
-    BorkDrivePrivacySettings::register(app);
+    KrustDrivePrivacySettings::register(app);
     app.update(PrivacySettings::register_singleton);
     app.add_singleton_model(CloudModel::mock);
     app.add_singleton_model(UserWorkspaces::default_mock);

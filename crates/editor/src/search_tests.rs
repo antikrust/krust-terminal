@@ -1,4 +1,4 @@
-use borkui_core::{App, ModelHandle};
+use krustui_core::{App, ModelHandle};
 
 use super::Searcher;
 use crate::content::buffer::{

@@ -7,20 +7,20 @@ use std::rc::Rc;
 
 use chrono::{Duration, Local};
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
-use bork_core::ui::theme::Fill;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use borkui::elements::new_scrollable::ScrollableAppearance;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
+use krust_core::ui::theme::Fill;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krustui::elements::new_scrollable::ScrollableAppearance;
+use krustui::elements::{
     Border, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
     Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::units::Pixels;
-use borkui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::units::Pixels;
+use krustui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::code::buffer_location::LocalOrRemotePath;
@@ -43,7 +43,7 @@ pub(crate) struct HeaderClickHandler {
 /// (rounded corners, neutral background, outline border).
 fn comment_card_container(
     content: Box<dyn Element>,
-    theme: &bork_core::ui::theme::BorkTheme,
+    theme: &krust_core::ui::theme::KrustTheme,
 ) -> Box<dyn Element> {
     Container::new(content)
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))

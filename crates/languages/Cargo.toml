@@ -1,7 +1,7 @@
 [package]
 name = "languages"
 edition = "2021"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 publish.workspace = true
 license.workspace = true
 
@@ -11,5 +11,5 @@ serde_yaml.workspace = true
 rust-embed.workspace = true
 arborium.workspace = true
 lazy_static.workspace = true
-bork_editor = { path = "../editor" }
-bork_util.workspace = true
+krust_editor = { path = "../editor" }
+krust_util.workspace = true

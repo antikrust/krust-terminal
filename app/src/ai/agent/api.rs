@@ -17,11 +17,11 @@ use futures_lite::Stream;
 use mcp::TemplatableMCPServerInfo;
 pub use r#impl::generate_multi_agent_output;
 use serde::Serialize;
-use bork_core::channel::ChannelState;
-use bork_core::execution_mode::AppExecutionMode;
-use bork_core::features::FeatureFlag;
-use bork_core::user_preferences::GetUserPreferences;
-use borkui::{AppContext, EntityId, SingletonEntity as _};
+use krust_core::channel::ChannelState;
+use krust_core::execution_mode::AppExecutionMode;
+use krust_core::features::FeatureFlag;
+use krust_core::user_preferences::GetUserPreferences;
+use krustui::{AppContext, EntityId, SingletonEntity as _};
 
 use super::{AIAgentInput, MCPContext, MCPServer, RequestMetadata, Suggestions};
 use crate::ai::agent::conversation::AIConversationId;
@@ -96,7 +96,7 @@ pub struct RequestParams {
     pub conversation_token: Option<ServerConversationToken>,
     pub forked_from_conversation_token: Option<ServerConversationToken>,
     pub ambient_agent_task_id: Option<AmbientAgentTaskId>,
-    pub tasks: Vec<bork_multi_agent_api::Task>,
+    pub tasks: Vec<krust_multi_agent_api::Task>,
     pub existing_suggestions: Option<Suggestions>,
     pub metadata: Option<RequestMetadata>,
     pub session_context: SessionContext,
@@ -106,37 +106,37 @@ pub struct RequestParams {
     pub cli_agent_model: LLMId,
     pub computer_use_model: LLMId,
     pub is_memory_enabled: bool,
-    pub bork_drive_context_enabled: bool,
+    pub krust_drive_context_enabled: bool,
     pub context_window_limit: Option<u32>,
     pub mcp_context: Option<MCPContext>,
     pub planning_enabled: bool,
     should_redact_secrets: bool,
 
     /// User-provided API keys for AI providers (BYO API Key).
-    pub api_keys: Option<bork_multi_agent_api::request::settings::ApiKeys>,
+    pub api_keys: Option<krust_multi_agent_api::request::settings::ApiKeys>,
     /// User-provided custom model providers (BYOK endpoints).
     pub custom_model_providers:
-        Option<bork_multi_agent_api::request::settings::CustomModelProviders>,
+        Option<krust_multi_agent_api::request::settings::CustomModelProviders>,
     /// User-defined custom model routers referenced by the current selection. Mirrors
     /// `custom_model_providers`: the selected model's `config_key` indexes into this
     /// registry. `None` when no custom router is selected.
-    pub custom_model_routers: Option<bork_multi_agent_api::request::settings::CustomModelRouters>,
-    pub allow_use_of_bork_credits: bool,
-    pub autonomy_level: bork_multi_agent_api::AutonomyLevel,
-    pub isolation_level: bork_multi_agent_api::IsolationLevel,
+    pub custom_model_routers: Option<krust_multi_agent_api::request::settings::CustomModelRouters>,
+    pub allow_use_of_krust_credits: bool,
+    pub autonomy_level: krust_multi_agent_api::AutonomyLevel,
+    pub isolation_level: krust_multi_agent_api::IsolationLevel,
     pub web_search_enabled: bool,
     pub computer_use_enabled: bool,
     pub ask_user_question_enabled: bool,
     pub research_agent_enabled: bool,
     pub orchestration_enabled: bool,
-    pub supported_tools_override: Option<Vec<bork_multi_agent_api::ToolType>>,
+    pub supported_tools_override: Option<Vec<krust_multi_agent_api::ToolType>>,
     /// The conversation ID of the parent agent that spawned this child agent, if any.
     pub parent_agent_id: Option<String>,
     /// The display name for this agent (e.g. "Agent 1"), assigned by the orchestrator.
     pub agent_name: Option<String>,
 }
 
-pub type Event = Result<bork_multi_agent_api::ResponseEvent, Arc<AIApiError>>;
+pub type Event = Result<krust_multi_agent_api::ResponseEvent, Arc<AIApiError>>;
 
 #[cfg(not(target_family = "wasm"))]
 pub type ResponseStream = Pin<Box<dyn Stream<Item = Event> + Send + 'static>>;
@@ -150,7 +150,7 @@ pub type ResponseStream = Pin<Box<dyn Stream<Item = Event>>>;
 #[derive(Debug, Clone)]
 pub struct ConversationData {
     pub id: AIConversationId,
-    pub tasks: Vec<bork_multi_agent_api::Task>,
+    pub tasks: Vec<krust_multi_agent_api::Task>,
     pub server_conversation_token: Option<ServerConversationToken>,
     pub forked_from_conversation_token: Option<ServerConversationToken>,
     pub ambient_agent_task_id: Option<AmbientAgentTaskId>,
@@ -174,7 +174,7 @@ impl RequestParams {
             cli_agent_model: LLMId::from("test-model"),
             computer_use_model: LLMId::from("test-model"),
             is_memory_enabled: false,
-            bork_drive_context_enabled: false,
+            krust_drive_context_enabled: false,
             context_window_limit: None,
             mcp_context: None,
             planning_enabled: false,
@@ -182,7 +182,7 @@ impl RequestParams {
             api_keys: None,
             custom_model_providers: None,
             custom_model_routers: None,
-            allow_use_of_bork_credits: false,
+            allow_use_of_krust_credits: false,
             autonomy_level: Default::default(),
             isolation_level: Default::default(),
             web_search_enabled: false,
@@ -206,7 +206,7 @@ impl RequestParams {
     ) -> Self {
         let ai_settings = AISettings::as_ref(app);
         let is_memory_enabled = ai_settings.is_memory_enabled(app);
-        let bork_drive_context_enabled = ai_settings.is_bork_drive_context_enabled(app);
+        let krust_drive_context_enabled = ai_settings.is_krust_drive_context_enabled(app);
 
         // Build MCP context - either grouped by server or flat lists based on feature flag
         let mcp_context = if FeatureFlag::MCPGroupedServerContext.is_enabled() {
@@ -297,19 +297,19 @@ impl RequestParams {
                 &request_input.coding_model_id,
             )
         });
-        let allow_use_of_bork_credits = *AISettings::as_ref(app).can_use_bork_credits_for_fallback;
+        let allow_use_of_krust_credits = *AISettings::as_ref(app).can_use_krust_credits_for_fallback;
 
         let app_execution_mode = AppExecutionMode::as_ref(app);
         let autonomy_level = if app_execution_mode.is_autonomous() {
-            bork_multi_agent_api::AutonomyLevel::Unsupervised
+            krust_multi_agent_api::AutonomyLevel::Unsupervised
         } else {
-            bork_multi_agent_api::AutonomyLevel::Supervised
+            krust_multi_agent_api::AutonomyLevel::Supervised
         };
 
         let isolation_level = if app_execution_mode.is_sandboxed() {
-            bork_multi_agent_api::IsolationLevel::Sandbox
+            krust_multi_agent_api::IsolationLevel::Sandbox
         } else {
-            bork_multi_agent_api::IsolationLevel::None
+            krust_multi_agent_api::IsolationLevel::None
         };
 
         let web_search_enabled =
@@ -367,14 +367,14 @@ impl RequestParams {
             cli_agent_model: request_input.cli_agent_model_id.clone(),
             computer_use_model: request_input.computer_use_model_id.clone(),
             is_memory_enabled,
-            bork_drive_context_enabled,
+            krust_drive_context_enabled,
             mcp_context,
             planning_enabled: true,
             should_redact_secrets,
             api_keys,
             custom_model_providers,
             custom_model_routers,
-            allow_use_of_bork_credits,
+            allow_use_of_krust_credits,
             autonomy_level,
             isolation_level,
             web_search_enabled,

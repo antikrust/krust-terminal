@@ -12,14 +12,14 @@ use diesel::SqliteConnection;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
-use bork_multi_agent_api::client_action::{Action, StartNewConversation};
-use bork_multi_agent_api::message::tool_call::Tool;
-use bork_multi_agent_api::response_event::stream_finished::{
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
+use krust_multi_agent_api::client_action::{Action, StartNewConversation};
+use krust_multi_agent_api::message::tool_call::Tool;
+use krust_multi_agent_api::response_event::stream_finished::{
     ConversationUsageMetadata, TokenUsage,
 };
-use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use krustui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::controller::response_stream::ResponseStreamId;
 use super::persistence::{PersistedAIInput, PersistedAIInputType};
@@ -55,7 +55,7 @@ pub use conversation_loader::{
     convert_persisted_conversation_to_ai_conversation_with_metadata, load_conversation_from_server,
     CLIAgentConversation, CloudConversationData,
 };
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 /// Mirrors [`crate::persistence::agent::MAX_PERSISTED_CONVERSATION_COUNT`].
 /// Moot at steady state because the disk-side prune already keeps the
@@ -1345,7 +1345,7 @@ impl BlocklistAIHistoryModel {
         stream_id: &ResponseStreamId,
         conversation_id: AIConversationId,
         terminal_surface_id: EntityId,
-        init_event: bork_multi_agent_api::response_event::StreamInit,
+        init_event: krust_multi_agent_api::response_event::StreamInit,
         ctx: &mut ModelContext<Self>,
     ) {
         let mut should_emit_server_token_assigned = false;
@@ -1546,7 +1546,7 @@ impl BlocklistAIHistoryModel {
         title_override: Option<&str>,
         app: &AppContext,
     ) -> Result<AIConversation, anyhow::Error> {
-        let tasks: Vec<bork_multi_agent_api::Task> = source_conversation
+        let tasks: Vec<krust_multi_agent_api::Task> = source_conversation
             .all_tasks()
             .filter_map(|t| t.source().cloned())
             .collect();
@@ -1693,7 +1693,7 @@ impl BlocklistAIHistoryModel {
         // fork-point exchange whose `tool_call_result` was truncated away are
         // reconciled so every `tool_use` stays paired (see
         // `reconcile_dangling_tool_calls_in_forked_task`).
-        let truncated_tasks: Vec<bork_multi_agent_api::Task> = conversation
+        let truncated_tasks: Vec<krust_multi_agent_api::Task> = conversation
             .all_tasks()
             .filter_map(|t| {
                 if let Some(message_ids_to_retain) = message_ids_to_retain_by_task.get(t.id()) {
@@ -1811,7 +1811,7 @@ impl BlocklistAIHistoryModel {
     pub fn apply_client_actions(
         &mut self,
         response_stream_id: &ResponseStreamId,
-        client_actions: Vec<bork_multi_agent_api::ClientAction>,
+        client_actions: Vec<krust_multi_agent_api::ClientAction>,
         conversation_id: AIConversationId,
         terminal_surface_id: EntityId,
         skill_path_origin: &SkillPathOrigin,
@@ -2665,7 +2665,7 @@ impl BlocklistAIHistoryModel {
     pub fn insert_forked_conversation_from_tasks(
         &mut self,
         conversation_id: AIConversationId,
-        tasks: Vec<bork_multi_agent_api::Task>,
+        tasks: Vec<krust_multi_agent_api::Task>,
         conversation_data: AgentConversationData,
     ) -> anyhow::Result<AIConversation> {
         let mut conversation =
@@ -2707,7 +2707,7 @@ impl BlocklistAIHistoryModel {
     pub fn hydrate_remote_child_placeholder_with_cloud_transcript(
         &mut self,
         local_placeholder_id: AIConversationId,
-        tasks: Vec<bork_multi_agent_api::Task>,
+        tasks: Vec<krust_multi_agent_api::Task>,
         cloud_conversation: AIConversation,
     ) -> anyhow::Result<AIConversation> {
         let placeholder = self
@@ -3319,7 +3319,7 @@ impl From<&AIAgentOutputStatus> for AIQueryHistoryOutputStatus {
 /// anchors the primary agent on the server's run stack), and pairing it with a
 /// synthesized `Cancel` would pop the primary agent on the fork's next
 /// request, breaking the conversation.
-fn is_client_tool_call(tool_call: &bork_multi_agent_api::message::ToolCall) -> bool {
+fn is_client_tool_call(tool_call: &krust_multi_agent_api::message::ToolCall) -> bool {
     !matches!(
         tool_call.tool,
         None | Some(Tool::Server(_)) | Some(Tool::Subagent(_))
@@ -3340,8 +3340,8 @@ fn is_client_tool_call(tool_call: &bork_multi_agent_api::message::ToolCall) -> b
 /// the fork-point exchange were dangling in the source too, and are left
 /// untouched so the fork reproduces the source history faithfully.
 fn reconcile_dangling_tool_calls_in_forked_task(
-    task: &mut bork_multi_agent_api::Task,
-    source_task_messages: &[bork_multi_agent_api::Message],
+    task: &mut krust_multi_agent_api::Task,
+    source_task_messages: &[krust_multi_agent_api::Message],
     fork_point_message_ids: &HashSet<MessageId>,
 ) {
     let fork_point_message_ids: HashSet<&str> =
@@ -3382,7 +3382,7 @@ fn reconcile_dangling_tool_calls_in_forked_task(
 
     // Real results from the source history, keyed by tool_call_id, so a dropped
     // result can be pulled forward.
-    let source_results_by_tool_call_id: HashMap<&str, &bork_multi_agent_api::Message> =
+    let source_results_by_tool_call_id: HashMap<&str, &krust_multi_agent_api::Message> =
         source_task_messages
             .iter()
             .filter_map(|m| m.tool_call_result().map(|r| (r.tool_call_id.as_str(), m)))
@@ -3396,18 +3396,18 @@ fn reconcile_dangling_tool_calls_in_forked_task(
             .unwrap_or_else(|| {
                 // Synthesized `Cancel` carries the call's `request_id` so it
                 // groups into the same exchange as its `tool_call` on restore.
-                bork_multi_agent_api::Message {
+                krust_multi_agent_api::Message {
                     id: Uuid::new_v4().to_string(),
                     task_id: task.id.clone(),
                     server_message_data: String::new(),
                     citations: vec![],
                     fetched_memories: vec![],
-                    message: Some(bork_multi_agent_api::message::Message::ToolCallResult(
-                        bork_multi_agent_api::message::ToolCallResult {
+                    message: Some(krust_multi_agent_api::message::Message::ToolCallResult(
+                        krust_multi_agent_api::message::ToolCallResult {
                             tool_call_id: tool_call_id.clone(),
                             context: None,
                             result: Some(
-                                bork_multi_agent_api::message::tool_call_result::Result::Cancel(()),
+                                krust_multi_agent_api::message::tool_call_result::Result::Cancel(()),
                             ),
                         },
                     )),
@@ -3428,11 +3428,11 @@ fn reconcile_dangling_tool_calls_in_forked_task(
 ///
 /// Always prepends the given prefix to the root task's description.
 fn update_forked_task_properties(
-    tasks: Vec<bork_multi_agent_api::Task>,
+    tasks: Vec<krust_multi_agent_api::Task>,
     prefix: &str,
     preserve_task_ids: bool,
     title_override: Option<&str>,
-) -> Vec<bork_multi_agent_api::Task> {
+) -> Vec<krust_multi_agent_api::Task> {
     let root_description = |current: &str| match title_override {
         Some(title) => title.to_owned(),
         None => format!("{prefix}{current}"),

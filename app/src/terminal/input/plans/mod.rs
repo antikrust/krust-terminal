@@ -5,7 +5,7 @@ mod view;
 
 use ai::document::AIDocumentId;
 pub use view::{InlinePlanMenuEvent, InlinePlanMenuView};
-use borkui::keymap::Keystroke;
+use krustui::keymap::Keystroke;
 
 use crate::ai::document::ai_document_model::AIDocumentVersion;
 use crate::terminal::input::inline_menu::{

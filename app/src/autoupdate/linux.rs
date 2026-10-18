@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use anyhow::{bail, Context as _, Result};
 use channel_versions::VersionInfo;
 use instant::Duration;
-use bork_core::channel::{Channel, ChannelState};
-use bork_terminal::shell::ShellType;
-use borkui::ViewContext;
+use krust_core::channel::{Channel, ChannelState};
+use krust_terminal::shell::ShellType;
+use krustui::ViewContext;
 
 use super::{release_assets_directory_url, DownloadReady, ReadyForRelaunch};
 use crate::workspace::Workspace;
@@ -31,7 +31,7 @@ pub(super) async fn download_update_and_cleanup(
             appimage::download_update_and_cleanup(version_info, &appimage_path, client).await
         }
         UpdateMethod::PackageManager(package_manager) => {
-            log::info!("Detected that Bork was installed using {package_manager:?}");
+            log::info!("Detected that Krust was installed using {package_manager:?}");
             Ok(DownloadReady::Yes)
         }
     }
@@ -121,7 +121,7 @@ mod appimage {
             .as_file_mut()
             .set_permissions(appimage_path.metadata()?.permissions())?;
 
-        // Move new AppImage over the one that launched the current Bork instance.
+        // Move new AppImage over the one that launched the current Krust instance.
         let new_appimage_path = new_appimage.into_temp_path();
         let mv_status = command::r#async::Command::new("mv")
             .arg(new_appimage_path.as_os_str())
@@ -144,15 +144,15 @@ mod appimage {
         let mut command = command::blocking::Command::new(appimage_path);
         // Pass a flag to the app to let it know it was restarted as part of the
         // autoupdate process.
-        command.arg(bork_cli::finish_update_flag());
+        command.arg(krust_cli::finish_update_flag());
         // If we're testing with a local copy of channel_versions.json, have the
         // newly-started binary also reference that same file (so we can test
         // displaying an updated changelog after an autoupdate).
-        if let Ok(path) = std::env::var("BORK_CHANNEL_VERSIONS_PATH") {
-            command.env("BORK_CHANNEL_VERSIONS_PATH", path);
+        if let Ok(path) = std::env::var("KRUST_CHANNEL_VERSIONS_PATH") {
+            command.env("KRUST_CHANNEL_VERSIONS_PATH", path);
         }
 
-        log::info!("Relaunching bork for update...");
+        log::info!("Relaunching krust for update...");
         command.spawn()?;
         Ok(())
     }
@@ -162,8 +162,8 @@ mod package_manager {
     use markdown_parser::{
         FormattedText, FormattedTextFragment, FormattedTextHeader, FormattedTextLine,
     };
-    use borkui::elements::{Container, FormattedTextElement, HighlightedHyperlink};
-    use borkui::{Element, SingletonEntity as _};
+    use krustui::elements::{Container, FormattedTextElement, HighlightedHyperlink};
+    use krustui::{Element, SingletonEntity as _};
 
     use super::*;
     use crate::appearance::Appearance;
@@ -182,16 +182,16 @@ mod package_manager {
         }
     }
 
-    impl borkui::Entity for AutoupdateContextBlock {
+    impl krustui::Entity for AutoupdateContextBlock {
         type Event = ();
     }
 
-    impl borkui::View for AutoupdateContextBlock {
+    impl krustui::View for AutoupdateContextBlock {
         fn ui_name() -> &'static str {
             "AutoupdateContextBlock"
         }
 
-        fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+        fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
             let appearance = Appearance::as_ref(app);
             let theme = appearance.theme();
             let package_manager_name = self.package_manager.to_string();
@@ -205,10 +205,10 @@ mod package_manager {
                     ))],
                 }),
                 FormattedTextLine::Line(vec![
-                    FormattedTextFragment::plain_text("If you installed Bork using "),
+                    FormattedTextFragment::plain_text("If you installed Krust using "),
                     FormattedTextFragment::bold(package_manager_name),
                     FormattedTextFragment::plain_text(
-                        " or a compatible tool, the pre-filled command will update Bork for you.",
+                        " or a compatible tool, the pre-filled command will update Krust for you.",
                     ),
                 ]),
             ];
@@ -216,7 +216,7 @@ mod package_manager {
             if self.package_manager.needs_repository_configuration() {
                 lines.push(FormattedTextLine::Line(vec![
                     FormattedTextFragment::plain_text(
-                        "\nThe command below includes a one-time configuration of the Bork package repository and PGP signing key.",
+                        "\nThe command below includes a one-time configuration of the Krust package repository and PGP signing key.",
                     ),
                 ]));
             }
@@ -229,9 +229,9 @@ mod package_manager {
                     FormattedTextFragment::plain_text(
                         "\nThe ",
                     ),
-                    FormattedTextFragment::inline_code("bork_handle_dist_upgrade"),
+                    FormattedTextFragment::inline_code("krust_handle_dist_upgrade"),
                     FormattedTextFragment::plain_text(
-                        " function ensures the Bork package repository is enabled, as we've detected you recently upgraded your distribution.",
+                        " function ensures the Krust package repository is enabled, as we've detected you recently upgraded your distribution.",
                     ),
                 ]));
             }
@@ -239,10 +239,10 @@ mod package_manager {
             lines.push(FormattedTextLine::Line(vec![
                 FormattedTextFragment::plain_text("\nReview the command below, then "),
                 FormattedTextFragment::bold("press enter"),
-                FormattedTextFragment::plain_text(" to install the update and re-launch Bork.  "),
+                FormattedTextFragment::plain_text(" to install the update and re-launch Krust.  "),
                 FormattedTextFragment::hyperlink(
                     "Please report any issues",
-                    "https://github.com/borkdotdev/Bork/issues/new/choose",
+                    "https://github.com/krustdotdev/Krust/issues/new/choose",
                 ),
             ]));
 
@@ -281,10 +281,10 @@ mod package_manager {
         };
         log::info!("Relaunching using path: {program:?}");
         let mut command = command::blocking::Command::new(program);
-        // Add any arguments that were passed to bork, skipping the first
+        // Add any arguments that were passed to krust, skipping the first
         // argument (the name of the executable) and dropping the flag for
         // finishing an update.
-        let finish_update_flag = bork_cli::finish_update_flag();
+        let finish_update_flag = krust_cli::finish_update_flag();
         command.args(
             std::env::args()
                 .skip(1)
@@ -296,24 +296,24 @@ mod package_manager {
         // If we're testing with a local copy of channel_versions.json, have the
         // newly-started binary also reference that same file (so we can test
         // displaying an updated changelog after an autoupdate).
-        if let Ok(path) = std::env::var("BORK_CHANNEL_VERSIONS_PATH") {
-            command.env("BORK_CHANNEL_VERSIONS_PATH", path);
+        if let Ok(path) = std::env::var("KRUST_CHANNEL_VERSIONS_PATH") {
+            command.env("KRUST_CHANNEL_VERSIONS_PATH", path);
         }
 
-        log::info!("Relaunching bork for update...");
+        log::info!("Relaunching krust for update...");
         command.spawn()?;
         Ok(())
     }
 }
 
-/// Returns which method should be used to update Bork.
+/// Returns which method should be used to update Krust.
 #[derive(Debug)]
 pub(crate) enum UpdateMethod {
-    /// We don't know how to update Bork.
+    /// We don't know how to update Krust.
     Unknown,
-    /// Bork is running as an AppImage and should be updated in-place.
+    /// Krust is running as an AppImage and should be updated in-place.
     AppImage(PathBuf),
-    /// Bork can be updated using the given package manager.
+    /// Krust can be updated using the given package manager.
     PackageManager(PackageManager),
 }
 
@@ -358,12 +358,12 @@ impl PackageManager {
             } => {
                 let dist_upgrade_fn = match shell_type {
                     ShellType::Zsh | ShellType::Bash | ShellType::Fish => {
-                        "bork_handle_dist_upgrade"
+                        "krust_handle_dist_upgrade"
                     }
-                    ShellType::PowerShell => "Bork-Handle-DistUpgrade",
+                    ShellType::PowerShell => "Krust-Handle-DistUpgrade",
                 };
                 // If running with apt, attempt to handle a distribution update that may rename the
-                // bork source file to `{repo_name}.distUpgrade`.
+                // krust source file to `{repo_name}.distUpgrade`.
                 // We explicitly use `or` here instead of `and` to limit the blast radius of this
                 // change, if handling a dist upgrade was unsuccessful we still want to try to
                 // install the new version.
@@ -388,11 +388,11 @@ impl PackageManager {
                 is_signing_key_configured,
             } => {
                 let repo_prefix = if !is_repo_configured {
-                    let cache_dir = bork_core::paths::cache_dir();
+                    let cache_dir = krust_core::paths::cache_dir();
                     let cache_dir_str = cache_dir.display();
                     // Back up the existing pacman.conf file just in case
                     // anything goes wrong, then add the repository config.
-                    format!("mkdir -p {cache_dir_str}{and}\\\ncp /etc/pacman.conf {cache_dir_str}{and}\\\nsudo sh -c \"echo '\n[{repo_name}]\nServer = https://releases.bork.baby/linux/pacman/\\$repo/\\$arch' >> /etc/pacman.conf\"{and}\\\n")
+                    format!("mkdir -p {cache_dir_str}{and}\\\ncp /etc/pacman.conf {cache_dir_str}{and}\\\nsudo sh -c \"echo '\n[{repo_name}]\nServer = https://releases.krust.baby/linux/pacman/\\$repo/\\$arch' >> /etc/pacman.conf\"{and}\\\n")
                 } else {
                     String::new()
                 };
@@ -400,7 +400,7 @@ impl PackageManager {
                     // Retrieve our key from keys.openpgp.org and locally sign
                     // it before retrieving the package repository and
                     // installing the updated package.
-                    format!("sudo pacman-key -r \"linux-maintainers@bork.baby\" --keyserver hkp://keys.openpgp.org:80{and}\\\nsudo pacman-key --lsign-key \"linux-maintainers@bork.baby\"{and}\\\n")
+                    format!("sudo pacman-key -r \"linux-maintainers@krust.baby\" --keyserver hkp://keys.openpgp.org:80{and}\\\nsudo pacman-key --lsign-key \"linux-maintainers@krust.baby\"{and}\\\n")
                 } else {
                     String::new()
                 };
@@ -409,8 +409,8 @@ impl PackageManager {
         };
 
         let finish_update_fn = match shell_type {
-            ShellType::Zsh | ShellType::Bash | ShellType::Fish => "bork_finish_update",
-            ShellType::PowerShell => "Bork-Finish-Update",
+            ShellType::Zsh | ShellType::Bash | ShellType::Fish => "krust_finish_update",
+            ShellType::PowerShell => "Krust-Finish-Update",
         };
         format!("{base_command}{and}{finish_update_fn} {update_id}")
     }
@@ -466,7 +466,7 @@ impl PackageManager {
         match output {
             Ok(output) => {
                 if !output.status.success() {
-                    bail!("Failed to determine which package manager was used to install bork");
+                    bail!("Failed to determine which package manager was used to install krust");
                 }
                 let Ok(stdout) = std::str::from_utf8(&output.stdout) else {
                     bail!("Could not parse package manager detection script output as UTF-8");
@@ -536,17 +536,17 @@ impl std::fmt::Display for PackageManager {
     }
 }
 
-/// Returns whether the bork apt repository is disabled due to a version update.
-/// This occurs if there's a `borkdotdev.list.distUpgrade` file but no `borkdotdev.sources` or
-/// `borkdotdev.list` file.
+/// Returns whether the krust apt repository is disabled due to a version update.
+/// This occurs if there's a `krustdotdev.list.distUpgrade` file but no `krustdotdev.sources` or
+/// `krustdotdev.list` file.
 /// In a traditional Ubuntu distro update, Ubuntu renames each source file from `foo.list` to
 /// `foo.list.distUpgrade`. It then creates a new version of `foo.list` (or `foo.sources` if
 /// updating to Ubuntu 24+) with the repo disabled.
 ///
-/// However, Ubuntu incorrectly thinks the Bork source file is invalid (due to the addition of the
+/// However, Ubuntu incorrectly thinks the Krust source file is invalid (due to the addition of the
 /// `signed-by` key) so it only leaves the `*.distUpgrade` source file. We use the existence of this
-/// file to determine whether we need to run the special `bork_handle_dist_upgrade` function to copy
-/// `borkdotdev.list.distUpgrade` back to `borkdotdev.list` to re-enable the repository.
+/// file to determine whether we need to run the special `krust_handle_dist_upgrade` function to copy
+/// `krustdotdev.list.distUpgrade` back to `krustdotdev.list` to re-enable the repository.
 fn is_apt_repository_disabled_due_to_version_update(repo_name: &str) -> bool {
     let apt_sources_directory = match get_apt_sources_directory() {
         Ok(apt_sources_directory) => apt_sources_directory,
@@ -604,7 +604,7 @@ fn is_pacman_signing_key_installed() -> bool {
             "/etc/pacman.d/gnupg",
             "--list-keys",
             "--with-colons",
-            "linux-maintainers@bork.baby",
+            "linux-maintainers@krust.baby",
         ])
         .output()
     {
@@ -665,21 +665,21 @@ fn is_pacman_signing_key_installed() -> bool {
 
 fn package_name(channel: Channel) -> &'static str {
     match channel {
-        Channel::Stable => "bork-terminal",
-        Channel::Preview => "bork-terminal-preview",
-        Channel::Dev => "bork-terminal-dev",
-        Channel::Integration => "bork-terminal-integration",
-        Channel::Local => "bork-terminal-local",
-        Channel::Oss => "bork",
+        Channel::Stable => "krust-terminal",
+        Channel::Preview => "krust-terminal-preview",
+        Channel::Dev => "krust-terminal-dev",
+        Channel::Integration => "krust-terminal-integration",
+        Channel::Local => "krust-terminal-local",
+        Channel::Oss => "krust",
     }
 }
 
 fn repo_name(channel: Channel) -> String {
     let package_name = package_name(channel);
     let channel_suffix = package_name
-        .strip_prefix("bork-terminal")
+        .strip_prefix("krust-terminal")
         .unwrap_or_default();
-    format!("borkdotdev{channel_suffix}")
+    format!("krustdotdev{channel_suffix}")
 }
 
 #[cfg(test)]

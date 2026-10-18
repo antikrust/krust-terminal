@@ -3,57 +3,57 @@ use async_trait::async_trait;
 use cynic::{MutationBuilder, QueryBuilder};
 #[cfg(test)]
 use mockall::{automock, predicate::*};
-use bork_graphql::mutations::add_invite_link_domain_restriction::{
+use krust_graphql::mutations::add_invite_link_domain_restriction::{
     AddInviteLinkDomainRestriction, AddInviteLinkDomainRestrictionInput,
     AddInviteLinkDomainRestrictionResult, AddInviteLinkDomainRestrictionVariables,
 };
-use bork_graphql::mutations::create_team::{
+use krust_graphql::mutations::create_team::{
     CreateTeam, CreateTeamInput, CreateTeamResult, CreateTeamVariables,
 };
-use bork_graphql::mutations::delete_invite_link_domain_restriction::{
+use krust_graphql::mutations::delete_invite_link_domain_restriction::{
     DeleteInviteLinkDomainRestriction, DeleteInviteLinkDomainRestrictionInput,
     DeleteInviteLinkDomainRestrictionResult, DeleteInviteLinkDomainRestrictionVariables,
 };
-use bork_graphql::mutations::delete_team_invite::{
+use krust_graphql::mutations::delete_team_invite::{
     DeleteTeamInvite, DeleteTeamInviteInput, DeleteTeamInviteResult, DeleteTeamInviteVariables,
 };
-use bork_graphql::mutations::join_team_with_team_discovery::{
+use krust_graphql::mutations::join_team_with_team_discovery::{
     JoinTeamWithTeamDiscovery, JoinTeamWithTeamDiscoveryInput, JoinTeamWithTeamDiscoveryResult,
     JoinTeamWithTeamDiscoveryVariables, TeamDiscoveryEntrypoint,
 };
-use bork_graphql::mutations::remove_user_from_team::{
+use krust_graphql::mutations::remove_user_from_team::{
     RemoveUserFromTeam, RemoveUserFromTeamInput, RemoveUserFromTeamResult,
     RemoveUserFromTeamVariables,
 };
-use bork_graphql::mutations::rename_team::{
+use krust_graphql::mutations::rename_team::{
     RenameTeam, RenameTeamInput, RenameTeamResult, RenameTeamVariables,
 };
-use bork_graphql::mutations::reset_invite_links::{
+use krust_graphql::mutations::reset_invite_links::{
     ResetInviteLinks, ResetInviteLinksInput, ResetInviteLinksResult, ResetInviteLinksVariables,
 };
-use bork_graphql::mutations::send_team_invite_email::{
+use krust_graphql::mutations::send_team_invite_email::{
     SendTeamInviteEmail, SendTeamInviteEmailInput, SendTeamInviteEmailResult,
     SendTeamInviteEmailVariables,
 };
-use bork_graphql::mutations::set_is_invite_link_enabled::{
+use krust_graphql::mutations::set_is_invite_link_enabled::{
     SetIsInviteLinkEnabled, SetIsInviteLinkEnabledInput, SetIsInviteLinkEnabledResult,
     SetIsInviteLinkEnabledVariables,
 };
-use bork_graphql::mutations::set_team_discoverability::{
+use krust_graphql::mutations::set_team_discoverability::{
     SetTeamDiscoverability, SetTeamDiscoverabilityInput, SetTeamDiscoverabilityResult,
     SetTeamDiscoverabilityVariables,
 };
-use bork_graphql::mutations::set_team_member_role::{
+use krust_graphql::mutations::set_team_member_role::{
     SetTeamMemberRole, SetTeamMemberRoleInput, SetTeamMemberRoleResult, SetTeamMemberRoleVariables,
 };
-use bork_graphql::mutations::transfer_team_ownership::{
+use krust_graphql::mutations::transfer_team_ownership::{
     TransferTeamOwnership, TransferTeamOwnershipInput, TransferTeamOwnershipResult,
     TransferTeamOwnershipVariables,
 };
-use bork_graphql::queries::get_discoverable_teams::{
+use krust_graphql::queries::get_discoverable_teams::{
     GetDiscoverableTeams, GetDiscoverableTeamsVariables,
 };
-use bork_graphql::queries::get_workspaces_metadata_for_user::{
+use krust_graphql::queries::get_workspaces_metadata_for_user::{
     GetWorkspacesMetadataForUser, GetWorkspacesMetadataForUserVariables, PricingInfoResult,
 };
 
@@ -175,10 +175,10 @@ impl TeamClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         let metadata = match response.user {
-            bork_graphql::queries::get_workspaces_metadata_for_user::UserResult::UserOutput(
+            krust_graphql::queries::get_workspaces_metadata_for_user::UserResult::UserOutput(
                 user_output,
             ) => user_output.user.into(),
-            bork_graphql::queries::get_workspaces_metadata_for_user::UserResult::Unknown => {
+            krust_graphql::queries::get_workspaces_metadata_for_user::UserResult::Unknown => {
                 return Err(anyhow!("Unable to fetch workspaces metadata"));
             }
         };
@@ -502,7 +502,7 @@ impl TeamClient for ServerApi {
         let result = self.send_graphql_request(operation, None).await?;
 
         match result.user {
-            bork_graphql::queries::get_discoverable_teams::UserResult::UserOutput(user_output) => {
+            krust_graphql::queries::get_discoverable_teams::UserResult::UserOutput(user_output) => {
                 Ok(user_output
                     .user
                     .discoverable_teams
@@ -510,10 +510,10 @@ impl TeamClient for ServerApi {
                     .map(|gql_team_data| Ok(gql_team_data.into()))
                     .collect::<Result<Vec<DiscoverableTeam>>>()?)
             }
-            bork_graphql::queries::get_discoverable_teams::UserResult::UserFacingError(
+            krust_graphql::queries::get_discoverable_teams::UserResult::UserFacingError(
                 user_facing_error,
             ) => Err(anyhow!(get_user_facing_error_message(user_facing_error))),
-            bork_graphql::queries::get_discoverable_teams::UserResult::Unknown => {
+            krust_graphql::queries::get_discoverable_teams::UserResult::Unknown => {
                 Err(anyhow!("unknown error while getting discoverable teams"))
             }
         }

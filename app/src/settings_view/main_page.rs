@@ -4,26 +4,26 @@ use ::settings::{Setting, ToggleableSetting};
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::channel::ChannelState;
-use bork_core::context_flag::ContextFlag;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::icons::Icon;
-use bork_errors::{report_error, report_if_error};
+use krust_core::channel::ChannelState;
+use krust_core::context_flag::ContextFlag;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::icons::Icon;
+use krust_errors::{report_error, report_if_error};
 #[cfg(not(target_family = "wasm"))]
-use bork_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krust_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     Align, Border, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, Image, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::ContextPredicate;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::ContextPredicate;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{
     id, Action, AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -165,7 +165,7 @@ impl From<&MainPageAction> for LoginGatedFeature {
 pub enum MainSettingsPageEvent {
     CheckForUpdate,
     #[allow(dead_code)]
-    OpenBorkDrive,
+    OpenKrustDrive,
     SignupAnonymousUser,
     /// Re-emitted from the embedded billing & usage section.
     Billing(BillingAndUsagePageEvent),
@@ -543,7 +543,7 @@ impl AccountWidget {
                         TextAndIcon::new(
                             TextAndIconAlignment::IconFirst,
                             "Compare plans",
-                            Icon::CoinsStacked.to_borkui_icon(appearance.theme().accent()),
+                            Icon::CoinsStacked.to_krustui_icon(appearance.theme().accent()),
                             MainAxisSize::Min,
                             MainAxisAlignment::Center,
                             vec2f(14., 14.),
@@ -681,7 +681,7 @@ impl AccountWidget {
                             .ui_builder()
                             .link(
                                 "Contact support".into(),
-                                Some("mailto:support@bork.baby".into()),
+                                Some("mailto:support@krust.baby".into()),
                                 None,
                                 self.ui_state_handles.enterprise_contact_us_link.clone(),
                             )
@@ -1048,7 +1048,7 @@ impl SettingsWidget for SettingsSyncWidget {
         let label_info = AdditionalInfo {
             mouse_state: self.tooltip_state.clone(),
             on_click_action: Some(MainPageAction::OpenUrl(
-                "https://therob.lol/bork-terminal/help/terminal/more-features/settings-sync".into(),
+                "https://therob.lol/krust-terminal/help/terminal/more-features/settings-sync".into(),
             )),
             secondary_text: None,
             tooltip_override_text: None,
@@ -1138,7 +1138,7 @@ impl VersionInfoWidget {
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Relaunch Bork",
+                            text: "Relaunch Krust",
                             action: MainPageAction::Relaunch,
                         }),
                     ),
@@ -1155,28 +1155,28 @@ impl VersionInfoWidget {
                             color: faded_text_color,
                         }),
                         Some(CallToActionContent {
-                            text: "Relaunch Bork",
+                            text: "Relaunch Krust",
                             action: MainPageAction::Relaunch,
                         }),
                     ),
                     AutoupdateStage::UnableToUpdateToNewVersion { .. } => (
                         Some(StatusContent {
-                            text: "A new version of Bork is available but can't be installed",
+                            text: "A new version of Krust is available but can't be installed",
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Update Bork manually",
+                            text: "Update Krust manually",
                             // note: the handler for this action is a no-op
                             action: MainPageAction::DownloadUpdate,
                         }),
                     ),
                     AutoupdateStage::UnableToLaunchNewVersion { .. } => (
                         Some(StatusContent {
-                            text: "A new version of Bork is installed but can't be launched.",
+                            text: "A new version of Krust is installed but can't be launched.",
                             color: ansi_red,
                         }),
                         Some(CallToActionContent {
-                            text: "Update Bork manually",
+                            text: "Update Krust manually",
                             // note: the handler for this action is a no-op
                             action: MainPageAction::DownloadUpdate,
                         }),
@@ -1353,7 +1353,7 @@ impl SettingsWidget for IapCredentialsWidget {
             }
             IapCredentialsState::Failed { message, .. } => (format!("Failed: {message}"), ansi_red),
             IapCredentialsState::EnvInjected { .. } => {
-                ("Using injected token (BORK_IAP_TOKEN)".to_string(), active)
+                ("Using injected token (KRUST_IAP_TOKEN)".to_string(), active)
             }
         };
 

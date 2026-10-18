@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use krust_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::tab_configs::session_config::SessionType;
 
@@ -117,7 +117,7 @@ impl TelemetryEvent for TabConfigsTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        bork_core::telemetry::enum_events::<Self>()
+        krust_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -157,4 +157,4 @@ impl TelemetryEventDesc for TabConfigsTelemetryEventDiscriminants {
     }
 }
 
-bork_core::register_telemetry_event!(TabConfigsTelemetryEvent);
+krust_core::register_telemetry_event!(TabConfigsTelemetryEvent);

@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Expanded, Flex, Hoverable,
-    Icon as BorkUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
+    Icon as KrustUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Percentage, Radius, Rect, Stack, Text,
 };
-use borkui::prelude::{Align, CrossAxisAlignment};
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, SingletonEntity as _};
+use krustui::prelude::{Align, CrossAxisAlignment};
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, SingletonEntity as _};
 
 use crate::ai::llms::LLMSpec;
 use crate::appearance::Appearance;
@@ -19,7 +19,7 @@ const CORNER_RADIUS: f32 = 4.0;
 const ROW_SPACING: f32 = 12.0;
 
 pub const MODEL_SPECS_TITLE: &str = "Model Specs";
-pub const MODEL_SPECS_DESCRIPTION: &str = "Bork's benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.";
+pub const MODEL_SPECS_DESCRIPTION: &str = "Krust's benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.";
 
 pub const REASONING_LEVEL_TITLE: &str = "Reasoning level";
 pub const REASONING_LEVEL_DESCRIPTION: &str = "Increased reasoning levels consume more credits and have higher latency, but higher performance for complicated tasks.";
@@ -277,7 +277,7 @@ fn render_info_tooltip(tooltip: CostRowTooltip, appearance: &Appearance) -> Box<
     let tooltip_text = tooltip.text.to_string();
     Hoverable::new(tooltip.mouse_state, move |state| {
         let info_icon = Container::new(
-            ConstrainedBox::new(BorkUiIcon::new("bundled/svg/info.svg", icon_color).finish())
+            ConstrainedBox::new(KrustUiIcon::new("bundled/svg/info.svg", icon_color).finish())
                 .with_width(13.)
                 .with_height(13.)
                 .finish(),

@@ -173,7 +173,7 @@ Stage details (Review):
    repetition loop (one model reported the same finding 100 times) collapses to one
    finding, line numbers past the diff's own hunk extent are cleared — the finding
    survives, the invented citation doesn't — and a report longer than the findings
-   cap is truncated. What was dropped is announced (`went bork — got stuck repeating
+   cap is truncated. What was dropped is announced (`went krust — got stuck repeating
    "…" 100 times. Kept 1 of 100.`) rather than silently swallowed: a reviewer that
    loops is exactly what the user needs to see. The leaderboard counts only what
    survived.
@@ -297,7 +297,7 @@ settings page.
 
 ## Settings and UI
 
-One JSON setting (`agents.bork_agent.other.ollama_committee_config`, never synced),
+One JSON setting (`agents.krust_agent.other.ollama_committee_config`, never synced),
 following the `ollama_model_mode_overrides` string-JSON pattern:
 
 ```json

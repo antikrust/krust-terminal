@@ -2,11 +2,11 @@
 use std::collections::HashSet;
 
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::elements::ChildView;
-use borkui::{AppContext, Element, Entity, EntityId, ModelHandle, View, ViewContext, ViewHandle};
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::elements::ChildView;
+use krustui::{AppContext, Element, Entity, EntityId, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
@@ -268,7 +268,7 @@ impl InlineHistoryMenuView {
                     .on_click(|ctx| {
                         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "commands history".into(),
-                            section: Some(SettingsSection::BorkAgent),
+                            section: Some(SettingsSection::KrustAgent),
                         });
                     })
             });
@@ -542,7 +542,7 @@ impl View for InlineHistoryMenuView {
         "InlineHistoryMenuView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

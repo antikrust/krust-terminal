@@ -4,8 +4,8 @@ use std::iter;
 use std::ops::RangeInclusive;
 
 use itertools::Itertools;
-use borkui::units::Lines;
-use borkui::{AppContext, EntityId};
+use krustui::units::Lines;
+use krustui::{AppContext, EntityId};
 
 use super::rich_content::{FindableRichContentHandle, RichContentMatchId};
 use super::FindOptions;

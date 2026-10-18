@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
-use borkui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
+use krustui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::{file_button_label, Artifact};
 use crate::notebooks::NotebookId;
@@ -139,7 +139,7 @@ fn collect_buttons(
                 notebook_uid,
                 document_uid: _,
             } => {
-                // Only show plan button if synced to Bork Drive (has notebook_uid)
+                // Only show plan button if synced to Krust Drive (has notebook_uid)
                 if let Some(notebook_uid) = notebook_uid {
                     let button_text = title.clone().unwrap_or("Untitled Plan".to_string());
                     let theme = theme.clone();

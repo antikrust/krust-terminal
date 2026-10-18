@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use bork_core::features::FeatureFlag;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krustui::elements::{
     ChildView, Clipped, Container, CrossAxisAlignment, Element, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Wrap,
 };
-use borkui::{
+use krustui::{
     AppContext, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity, TypedActionView,
     View, ViewContext, ViewHandle,
 };

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use borkui::r#async::Timer;
-use borkui::App;
+use krustui::r#async::Timer;
+use krustui::App;
 
 use super::{Event, Heartbeat};
 
@@ -67,7 +67,7 @@ fn test_idle_timeout() {
         // Reset the idle timeout.
         heartbeat.update(
             &mut app,
-            |heartbeat, ctx: &mut borkui::ModelContext<Heartbeat>| {
+            |heartbeat, ctx: &mut krustui::ModelContext<Heartbeat>| {
                 heartbeat.reset_idle_timeout(ctx)
             },
         );

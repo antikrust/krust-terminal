@@ -12,16 +12,16 @@ use parking_lot::Mutex;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use rayon::prelude::*;
 use string_offset::ByteOffset;
-use bork_completer::completer::Description;
-use bork_errors::report_error;
-use borkui::fonts::{Cache as FontCache, FamilyId, Properties};
-use borkui::platform::LineStyle;
-use borkui::text::point::Point;
-use borkui::text_layout::{
+use krust_completer::completer::Description;
+use krust_errors::report_error;
+use krustui::fonts::{Cache as FontCache, FamilyId, Properties};
+use krustui::platform::LineStyle;
+use krustui::text::point::Point;
+use krustui::text_layout::{
     self, default_compute_baseline_position_fn, ClipConfig, ComputeBaselinePositionFn, LayoutCache,
     StyleAndFont, TextAlignment, TextStyle, DEFAULT_TOP_BOTTOM_RATIO,
 };
-use borkui::{AppContext, EntityId, ModelHandle};
+use krustui::{AppContext, EntityId, ModelHandle};
 
 use super::model::EditorModel;
 use super::{

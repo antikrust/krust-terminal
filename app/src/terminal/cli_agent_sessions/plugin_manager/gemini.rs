@@ -13,10 +13,10 @@ use super::{
 use crate::terminal::model::session::LocalCommandExecutor;
 use crate::terminal::shell::ShellType;
 
-const EXTENSION_REPO: &str = "https://github.com/borkdotdev/gemini-cli-bork";
-const EXTENSION_NAME: &str = "gemini-bork";
+const EXTENSION_REPO: &str = "https://github.com/krustdotdev/gemini-cli-krust";
+const EXTENSION_NAME: &str = "gemini-krust";
 
-// Keep in sync with the plugin version in borkdotdev/gemini-bork.
+// Keep in sync with the plugin version in krustdotdev/gemini-krust.
 const MINIMUM_PLUGIN_VERSION: &str = "1.0.0";
 
 pub(super) struct GeminiPluginManager {
@@ -106,11 +106,11 @@ impl CliAgentPluginManager for GeminiPluginManager {
     }
 
     fn install_success_message(&self) -> &'static str {
-        "Bork plugin installed. Please restart Gemini CLI to activate."
+        "Krust plugin installed. Please restart Gemini CLI to activate."
     }
 
     fn update_success_message(&self) -> &'static str {
-        "Bork plugin updated. Please restart Gemini CLI to activate."
+        "Krust plugin updated. Please restart Gemini CLI to activate."
     }
 
     fn install_instructions(&self) -> &'static PluginInstructions {
@@ -123,12 +123,12 @@ impl CliAgentPluginManager for GeminiPluginManager {
 }
 
 static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| PluginInstructions {
-    title: "Install Bork Plugin for Gemini CLI",
+    title: "Install Krust Plugin for Gemini CLI",
     subtitle: "Run the following command, then restart Gemini CLI.",
     steps: &[PluginInstructionStep {
-        description: "Install the Bork extension",
+        description: "Install the Krust extension",
         command:
-            "gemini extensions install https://github.com/borkdotdev/gemini-cli-bork --consent",
+            "gemini extensions install https://github.com/krustdotdev/gemini-cli-krust --consent",
         executable: true,
         link: None,
     }],
@@ -136,11 +136,11 @@ static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| Plu
 });
 
 static UPDATE_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| PluginInstructions {
-    title: "Update Bork Plugin for Gemini CLI",
+    title: "Update Krust Plugin for Gemini CLI",
     subtitle: "Run the following command, then restart Gemini CLI.",
     steps: &[PluginInstructionStep {
-        description: "Update the Bork extension",
-        command: "gemini extensions update gemini-bork",
+        description: "Update the Krust extension",
+        command: "gemini extensions update gemini-krust",
         executable: true,
         link: None,
     }],
@@ -157,7 +157,7 @@ fn check_installed(extensions_dir: &Path) -> bool {
     serde_json::from_str::<Value>(&contents).is_ok()
 }
 
-/// Reads the installed version string for the Bork extension, if present.
+/// Reads the installed version string for the Krust extension, if present.
 fn installed_version(extensions_dir: &Path) -> Option<String> {
     let manifest_path = extensions_dir
         .join(EXTENSION_NAME)

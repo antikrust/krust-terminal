@@ -1,5 +1,5 @@
 # /rename-tab Slash Command Technical Spec
-Linear: [APP-4005](https://linear.app/borkdotdev/issue/APP-4005/add-rename-tab-slash-command)
+Linear: [APP-4005](https://linear.app/krustdotdev/issue/APP-4005/add-rename-tab-slash-command)
 Product spec: `specs/APP-4005/PRODUCT.md`
 ## Problem
 Users can rename tabs today through tab UI interactions, but there is no keyboard-first slash-command path from the terminal or agent input. Technically, this requires connecting two existing subsystems:
@@ -75,7 +75,7 @@ The existing post-match code should then clear the invoking input and emit stati
 This should not fall through to the shell or agent as literal `/rename-tab` text when handled as a slash command.
 ### Preserve CLI-agent rich input restrictions
 Do not add `/rename-tab` to `CLI_AGENT_INPUT_ALLOWED_COMMANDS` in the initial implementation. That input currently intentionally exposes only passthrough-compatible commands (`/prompts`, `/skills`) while composing text for a running CLI agent.
-If the CLI-agent input model later supports Bork-handled workspace commands, this command can be added there as a follow-up by widening the allowlist and ensuring execution is intercepted by Bork rather than written to the PTY.
+If the CLI-agent input model later supports Krust-handled workspace commands, this command can be added there as a follow-up by widening the allowlist and ensuring execution is intercepted by Krust rather than written to the PTY.
 ### Tests
 Use existing unit-test patterns rather than adding integration infrastructure.
 Recommended tests:
@@ -93,7 +93,7 @@ Recommended tests:
 Because this change affects visible UI, perform manual validation in both horizontal and vertical tabs after unit tests pass.
 ## End-to-end flow
 1. User selects `/rename-tab` from the slash-command menu.
-2. Because the command has a required argument and does not execute on selection, Bork inserts `/rename-tab ` into the input.
+2. Because the command has a required argument and does not execute on selection, Krust inserts `/rename-tab ` into the input.
 3. User types the desired tab name and submits the slash command.
 4. `SlashCommandModel` parses the command and argument.
 5. `Input::execute_slash_command` trims and validates the argument.
@@ -111,22 +111,22 @@ No code path should dispatch `WorkspaceAction::RenameActiveTab` for `/rename-tab
 - **Active tab index assumptions**: Do not pass a tab index from `Input`. The workspace should use its own `active_tab_index` at execution time.
 ## Testing and validation
 Run targeted tests first:
-- `cargo test -p bork --lib rename_tab`
-- `cargo test -p bork --lib set_active_tab_name`
-- `cargo test -p bork --lib terminal::input::slash_command_model::tests`
+- `cargo test -p krust --lib rename_tab`
+- `cargo test -p krust --lib set_active_tab_name`
+- `cargo test -p krust --lib terminal::input::slash_command_model::tests`
 Then run formatting/lint checks as appropriate:
 - `cargo fmt --check`
-- `cargo clippy -p bork --lib --tests -- -D warnings`
+- `cargo clippy -p krust --lib --tests -- -D warnings`
 Manual validation:
 1. In horizontal tabs, select `/rename-tab` from the slash-command menu and verify it inserts `/rename-tab ` rather than executing immediately.
 2. In horizontal tabs, type `/rename-tab API server`, press Enter, verify the active tab label changes immediately and the shell does not receive the command.
 3. Type `/rename-tab    ` and verify no tab name is cleared.
 4. Enable vertical tabs and repeat the direct-set flow.
 5. In a split-pane tab, focus a non-primary pane and verify direct-set renames the containing tab only.
-6. In a Bork Agent tab, run `/rename-tab Agent Work` and verify only the tab label changes.
+6. In a Krust Agent tab, run `/rename-tab Agent Work` and verify only the tab label changes.
 7. Verify tab context-menu **Reset tab name** still clears names set by the slash command.
 Because this changes UI behavior, after implementation invoke the `verify-ui-change-in-cloud` skill in an eligible local non-sandboxed environment.
 ## Follow-ups
-- Decide whether CLI-agent rich input should support Bork-handled workspace commands like `/rename-tab`.
+- Decide whether CLI-agent rich input should support Krust-handled workspace commands like `/rename-tab`.
 - Consider adding a command-palette entry or keybinding for direct active-tab rename if users want a non-slash-command keyboard path.
 - Consider adding a dedicated slash-command telemetry source to `TabRenameEvent` only if product analytics need to distinguish slash-command-driven tab renames beyond existing slash-command accepted telemetry.

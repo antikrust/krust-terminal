@@ -6,11 +6,11 @@ use pathfinder_color::ColorU;
 use serde::Serialize;
 use strum_macros::EnumIter;
 use thiserror::Error;
-use bork_core::ui::color::hex_color::HexColorError as UiHexColorError;
-use bork_core::ui::theme::{AnsiColors, BorkTheme};
-use borkui::fonts::FontInfo;
-use borkui::keymap::Keystroke;
-use borkui::DisplayIdx;
+use krust_core::ui::color::hex_color::HexColorError as UiHexColorError;
+use krust_core::ui::theme::{AnsiColors, KrustTheme};
+use krustui::fonts::FontInfo;
+use krustui::keymap::Keystroke;
+use krustui::DisplayIdx;
 
 use super::alacritty_parser::AlacrittyConfig;
 #[cfg(target_os = "macos")]
@@ -26,8 +26,8 @@ use crate::{themes::theme_creator_body::ThemeCreatorBody, user_config};
 
 #[derive(Debug)]
 pub enum ThemeType {
-    LightAndDark { light: BorkTheme, dark: BorkTheme },
-    Single(BorkTheme),
+    LightAndDark { light: KrustTheme, dark: KrustTheme },
+    Single(KrustTheme),
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +40,7 @@ pub enum ThemeError {
 
 #[derive(Clone, Error, Debug)]
 pub enum HotkeyError {
-    #[error("A hotkey window opens in a way Bork does not support")]
+    #[error("A hotkey window opens in a way Krust does not support")]
     UnsupportedWindowType,
     #[error("There are multiple hotkeys configured")]
     MultipleHotkeys,
@@ -390,7 +390,7 @@ pub trait ParseableConfig: PartialEq + Sized + Send {
     /// Reads the file at the given path into the struct implementing ParseableConfig.
     async fn from_file(path: PathBuf) -> Result<Vec<Self>, ConfigError>;
 
-    /// Creates a Bork-readable `Config`. Sets corresponding errors if values have
+    /// Creates a Krust-readable `Config`. Sets corresponding errors if values have
     /// not been configured from the default.
     fn parse(self, fonts: &[FontInfo]) -> Config;
 

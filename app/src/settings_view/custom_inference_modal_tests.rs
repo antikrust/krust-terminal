@@ -1,9 +1,9 @@
 use ai::api_keys::CustomEndpointModel;
 use pathfinder_geometry::vector::vec2f;
-use borkui::platform::WindowStyle;
-use borkui::scene::Scene;
-use borkui::units::Pixels;
-use borkui::{App, EntityIdSet, Presenter, WindowInvalidation};
+use krustui::platform::WindowStyle;
+use krustui::scene::Scene;
+use krustui::units::Pixels;
+use krustui::{App, EntityIdSet, Presenter, WindowInvalidation};
 
 use super::*;
 use crate::test_util::terminal::initialize_app_for_terminal_view;

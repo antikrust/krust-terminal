@@ -1,8 +1,8 @@
 use futures::future::BoxFuture;
 use futures::FutureExt;
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
-use borkui::{Entity, EntityId, ModelContext, ModelHandle};
+use krustui::SingletonEntity;
+use krustui::{Entity, EntityId, ModelContext, ModelHandle};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 #[cfg(not(target_family = "wasm"))]

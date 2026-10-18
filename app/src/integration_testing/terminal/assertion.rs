@@ -1,11 +1,11 @@
 use pathfinder_geometry::rect::RectF;
 use regex::Regex;
 use settings::Setting as _;
-use bork_util::path::user_friendly_path;
-use borkui::integration::{AssertionCallback, AssertionOutcome};
-use borkui::units::Lines;
-use borkui::windowing::WindowManager;
-use borkui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
+use krust_util::path::user_friendly_path;
+use krustui::integration::{AssertionCallback, AssertionOutcome};
+use krustui::units::Lines;
+use krustui::windowing::WindowManager;
+use krustui::{async_assert, async_assert_eq, App, SingletonEntity, ViewHandle, WindowId};
 
 use super::util::ExpectedOutput;
 use crate::integration_testing::view_getters::{
@@ -767,8 +767,8 @@ pub fn assert_scroll_position(
 pub fn validate_git_branch(
     expected_git_branch: Option<String>,
     tab_idx: usize,
-    window_id: borkui::WindowId,
-    app: &borkui::App,
+    window_id: krustui::WindowId,
+    app: &krustui::App,
 ) -> AssertionOutcome {
     let terminal_view = single_terminal_view_for_tab(app, window_id, tab_idx);
     terminal_view.read(app, |view, _ctx| {

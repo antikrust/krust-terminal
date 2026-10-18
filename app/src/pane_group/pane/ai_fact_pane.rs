@@ -1,4 +1,4 @@
-use borkui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use krustui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use super::view::PaneView;
 use super::{

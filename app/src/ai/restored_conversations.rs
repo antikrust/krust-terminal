@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "local_fs")]
 use diesel::SqliteConnection;
-use borkui::{Entity, SingletonEntity};
+use krustui::{Entity, SingletonEntity};
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
 #[cfg_attr(not(any(feature = "local_fs", test)), allow(unused_imports))]

@@ -1,11 +1,11 @@
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, Flex, Highlight, ParentElement, Radius,
     Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::text::Span;
-use borkui::Element;
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::text::Span;
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::launch_configs::launch_config::LaunchConfig;

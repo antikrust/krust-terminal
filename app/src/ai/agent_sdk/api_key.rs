@@ -7,18 +7,18 @@ use chrono::{DateTime, Utc};
 use comfy_table::Cell;
 use inquire::{Confirm, InquireError, Select};
 use serde::Serialize;
-use bork_cli::agent::OutputFormat;
-use bork_cli::api_key::{
+use krust_cli::agent::OutputFormat;
+use krust_cli::api_key::{
     ApiKeyCommand, ApiKeyExpirationArgs, ApiKeySortByArg, CreateApiKeyArgs, ExpireApiKeyArgs,
     ListApiKeysArgs,
 };
-use bork_cli::{GlobalOptions, SortOrderArg};
-use bork_graphql::mutations::expire_api_key::ExpireApiKeyResult;
-use bork_graphql::mutations::generate_api_key::GenerateApiKeyResult;
-use bork_graphql::queries::api_keys::ApiKeyProperties;
-use bork_graphql::scalars::Time;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::{GlobalOptions, SortOrderArg};
+use krust_graphql::mutations::expire_api_key::ExpireApiKeyResult;
+use krust_graphql::mutations::generate_api_key::GenerateApiKeyResult;
+use krust_graphql::queries::api_keys::ApiKeyProperties;
+use krust_graphql::scalars::Time;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::output::{self, TableFormat};
 use crate::server::ids::ApiKeyUid;
@@ -108,7 +108,7 @@ impl ApiKeyCommandRunner {
                     },
                     GenerateApiKeyResult::UserFacingError(e) => {
                         return Err(anyhow!(
-                            bork_graphql::client::get_user_facing_error_message(e)
+                            krust_graphql::client::get_user_facing_error_message(e)
                         ));
                     }
                     GenerateApiKeyResult::Unknown => {
@@ -208,7 +208,7 @@ impl ApiKeyCommandRunner {
                             ExpireApiKeyResult::ExpireApiKeyOutput(output) => output.success,
                             ExpireApiKeyResult::UserFacingError(e) => {
                                 return Err(anyhow!(
-                                    bork_graphql::client::get_user_facing_error_message(e)
+                                    krust_graphql::client::get_user_facing_error_message(e)
                                 ));
                             }
                             ExpireApiKeyResult::Unknown => {
@@ -230,7 +230,7 @@ impl ApiKeyCommandRunner {
     }
 }
 
-impl borkui::Entity for ApiKeyCommandRunner {
+impl krustui::Entity for ApiKeyCommandRunner {
     type Event = ();
 }
 
@@ -428,7 +428,7 @@ fn expires_at_from_args(args: ApiKeyExpirationArgs) -> Result<Option<Time>> {
 fn print_created_api_key(
     result: CreatedApiKeyInfo,
     output_format: OutputFormat,
-    json_output: bork_cli::json_filter::JsonOutput,
+    json_output: krust_cli::json_filter::JsonOutput,
 ) -> Result<()> {
     if json_output.force_json_output() {
         output::print_raw_json(serde_json::to_value(&result)?, &json_output)?;
@@ -451,7 +451,7 @@ fn print_expire_api_key_result(
     key_uid: String,
     expired: bool,
     output_format: OutputFormat,
-    json_output: bork_cli::json_filter::JsonOutput,
+    json_output: krust_cli::json_filter::JsonOutput,
 ) -> Result<()> {
     let result = ExpiredApiKeyInfo { key_uid, expired };
     if json_output.force_json_output() {

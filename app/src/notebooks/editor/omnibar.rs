@@ -4,21 +4,21 @@
 use itertools::Itertools;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
-use bork_editor::content::text::{
+use krust_editor::content::text::{
     BlockType as ContentBlockType, BufferBlockStyle, BufferTextStyle, TextStyles,
     TextStylesWithMetadata,
 };
-use bork_editor::model::RichTextEditorModel;
-use bork_editor::render::model::RenderState;
-use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_editor::model::RichTextEditorModel;
+use krust_editor::render::model::RenderState;
+use krustui::accessibility::{AccessibilityContent, ActionAccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     AnchorPair, Border, ConstrainedBox, Container, CornerRadius, DropShadow, Flex, MainAxisSize,
     MouseStateHandle, OffsetPositioning, OffsetType, ParentElement, Point,
     PositionedElementOffsetBounds, PositioningAxis, Radius, Rect, XAxisAnchor, YAxisAnchor,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, SizeConstraint, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -258,7 +258,7 @@ impl View for Omnibar {
         "Omnibar"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let mut actions = Flex::row().with_main_axis_size(MainAxisSize::Min);
 
@@ -442,12 +442,12 @@ impl TypedActionView for Omnibar {
             OmnibarAction::ConvertBlock(style) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Convert to {}", BlockType::from(style).label()),
-                    BorkA11yRole::UserAction,
+                    KrustA11yRole::UserAction,
                 ))
             }
             OmnibarAction::OpenLinkEditor => ActionAccessibilityContent::from_debug(),
             OmnibarAction::UnstyleLink => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Remove link", BorkA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Remove link", KrustA11yRole::UserAction),
             ),
         }
     }
@@ -483,9 +483,9 @@ impl Compact {
 impl Element for Compact {
     fn layout(
         &mut self,
-        constraint: borkui::SizeConstraint,
-        ctx: &mut borkui::LayoutContext,
-        app: &borkui::AppContext,
+        constraint: krustui::SizeConstraint,
+        ctx: &mut krustui::LayoutContext,
+        app: &krustui::AppContext,
     ) -> Vector2F {
         self.child.layout(
             SizeConstraint {
@@ -500,8 +500,8 @@ impl Element for Compact {
     fn paint(
         &mut self,
         origin: Vector2F,
-        ctx: &mut borkui::PaintContext,
-        app: &borkui::AppContext,
+        ctx: &mut krustui::PaintContext,
+        app: &krustui::AppContext,
     ) {
         self.child.paint(origin, ctx, app)
     }
@@ -516,18 +516,18 @@ impl Element for Compact {
 
     fn dispatch_event(
         &mut self,
-        event: &borkui::event::DispatchedEvent,
-        ctx: &mut borkui::EventContext,
-        app: &borkui::AppContext,
+        event: &krustui::event::DispatchedEvent,
+        ctx: &mut krustui::EventContext,
+        app: &krustui::AppContext,
     ) -> bool {
         self.child.dispatch_event(event, ctx, app)
     }
 
-    fn after_layout(&mut self, ctx: &mut borkui::AfterLayoutContext, app: &AppContext) {
+    fn after_layout(&mut self, ctx: &mut krustui::AfterLayoutContext, app: &AppContext) {
         self.child.after_layout(ctx, app)
     }
 
-    fn z_index(&self) -> Option<borkui::elements::ZIndex> {
+    fn z_index(&self) -> Option<krustui::elements::ZIndex> {
         self.child.z_index()
     }
 

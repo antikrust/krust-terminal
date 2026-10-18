@@ -1,4 +1,4 @@
-use bork_completion_metadata::CommandSignatureGenerators;
+use krust_completion_metadata::CommandSignatureGenerators;
 
 use crate::generators::common::{dependencies_generator, get_scripts_generator};
 

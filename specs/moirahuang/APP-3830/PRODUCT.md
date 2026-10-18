@@ -34,7 +34,7 @@ The sidecar is intended to be a fast path for worktree creation, so ambiguity in
 
 - Redesigning the unified new-session menu layout.
 - Changing how the default worktree tab config is authored or executed.
-- Reworking all Bork menus to use a new selection model.
+- Reworking all Krust menus to use a new selection model.
 - Removing the search field or the pinned `+ Add new repo` footer.
 
 ## Figma / design references

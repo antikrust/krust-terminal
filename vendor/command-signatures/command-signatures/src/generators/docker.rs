@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use serde_json::Result;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, IconType, Suggestion, TemplateFilter,
 };

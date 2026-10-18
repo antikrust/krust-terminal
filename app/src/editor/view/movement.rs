@@ -1,5 +1,5 @@
 use anyhow::Result;
-use borkui::AppContext;
+use krustui::AppContext;
 
 use super::{DisplayMap, DisplayPoint};
 

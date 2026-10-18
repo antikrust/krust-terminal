@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context as _, Result};
-use bork_cli::skill::SkillSpec;
+use krust_cli::skill::SkillSpec;
 
 use super::*;
 
@@ -22,14 +22,14 @@ fn write_skill_file(path: &Path, name: &str, description: &str, body: &str) -> R
 #[test]
 fn resolve_from_skill_dirs_by_directory_scan_resolves_home_skill_dir() -> Result<()> {
     let temp_dir = tempfile::TempDir::new().context("Failed to create temp dir")?;
-    let skill_dir = temp_dir.path().join(".bork").join("skills");
+    let skill_dir = temp_dir.path().join(".krust").join("skills");
     let skill_path = skill_dir.join("my-skill").join("SKILL.md");
 
     write_skill_file(
         &skill_path,
         "my-skill",
         "desc",
-        "# Global Bork skill\n\nUse this one.",
+        "# Global Krust skill\n\nUse this one.",
     )?;
 
     let spec = SkillSpec::without_repo("my-skill".to_string());
@@ -37,7 +37,7 @@ fn resolve_from_skill_dirs_by_directory_scan_resolves_home_skill_dir() -> Result
         .context("Expected to resolve skill from explicit home skill dir")?;
 
     assert_eq!(resolved.skill_path, skill_path);
-    assert!(resolved.instructions.contains("Global Bork skill"));
+    assert!(resolved.instructions.contains("Global Krust skill"));
 
     Ok(())
 }
@@ -49,7 +49,7 @@ fn resolve_from_root_path_by_directory_scan_respects_directory_precedence() -> R
 
     let spec = SkillSpec::without_repo("my-skill".to_string());
     let agents_skill = root.join(".agents/skills/my-skill/SKILL.md");
-    let bork_skill = root.join(".bork/skills/my-skill/SKILL.md");
+    let krust_skill = root.join(".krust/skills/my-skill/SKILL.md");
 
     let claude_skill = root.join(".claude/skills/my-skill/SKILL.md");
     let codex_skill = root.join(".codex/skills/my-skill/SKILL.md");
@@ -61,16 +61,16 @@ fn resolve_from_root_path_by_directory_scan_respects_directory_precedence() -> R
         "# Agents version\n\nUse this one.",
     )?;
     write_skill_file(
-        &bork_skill,
+        &krust_skill,
         "my-skill",
         "desc",
-        "# Bork version\n\nDo not pick this when .agents exists.",
+        "# Krust version\n\nDo not pick this when .agents exists.",
     )?;
     write_skill_file(
         &claude_skill,
         "my-skill",
         "desc",
-        "# Claude version\n\nDo not pick this when .bork exists.",
+        "# Claude version\n\nDo not pick this when .krust exists.",
     )?;
     write_skill_file(
         &codex_skill,
@@ -84,7 +84,7 @@ fn resolve_from_root_path_by_directory_scan_respects_directory_precedence() -> R
 
     assert_eq!(resolved.skill_path, agents_skill);
     assert!(resolved.instructions.contains("Agents version"));
-    assert!(!resolved.instructions.contains("Bork version"));
+    assert!(!resolved.instructions.contains("Krust version"));
     assert!(!resolved.instructions.contains("Claude version"));
     assert!(!resolved.instructions.contains("Codex version"));
     assert!(!resolved.instructions.contains("name:"));
@@ -122,13 +122,13 @@ fn instructions_body_strips_front_matter_using_line_range() -> Result<()> {
 #[test]
 fn parse_org_from_git_url_supports_ssh_and_https() {
     assert_eq!(
-        parse_org_from_git_url("git@github.com:borkdotdev/bork-internal.git"),
-        Some("borkdotdev".to_string())
+        parse_org_from_git_url("git@github.com:krustdotdev/krust-internal.git"),
+        Some("krustdotdev".to_string())
     );
 
     assert_eq!(
-        parse_org_from_git_url("https://github.com/borkdotdev/bork-internal.git"),
-        Some("borkdotdev".to_string())
+        parse_org_from_git_url("https://github.com/krustdotdev/krust-internal.git"),
+        Some("krustdotdev".to_string())
     );
 }
 
@@ -188,7 +188,7 @@ fn resolve_simple_name_uses_directory_precedence() -> Result<()> {
     let root = temp_dir.path();
 
     // Create skills with same name in different directories
-    // Note: .agents/skills has highest precedence, followed by .bork, then .claude.
+    // Note: .agents/skills has highest precedence, followed by .krust, then .claude.
     let agents_skill = root.join(".agents/skills/my-skill/SKILL.md");
     write_skill_file(
         &agents_skill,
@@ -197,12 +197,12 @@ fn resolve_simple_name_uses_directory_precedence() -> Result<()> {
         "# Agents version\n\nThis should be picked by precedence.",
     )?;
 
-    let bork_skill = root.join(".bork/skills/my-skill/SKILL.md");
+    let krust_skill = root.join(".krust/skills/my-skill/SKILL.md");
     write_skill_file(
-        &bork_skill,
+        &krust_skill,
         "my-skill",
         "desc",
-        "# Bork version\n\nThis should lose to .agents but beat .claude.",
+        "# Krust version\n\nThis should lose to .agents but beat .claude.",
     )?;
 
     let claude_skill = root.join(".claude/skills/my-skill/SKILL.md");
@@ -219,7 +219,7 @@ fn resolve_simple_name_uses_directory_precedence() -> Result<()> {
         .context("Expected to resolve skill by name")?;
     assert_eq!(resolved.skill_path, agents_skill);
     assert!(resolved.instructions.contains("Agents version"));
-    assert!(!resolved.instructions.contains("Bork version"));
+    assert!(!resolved.instructions.contains("Krust version"));
     assert!(!resolved.instructions.contains("Claude version"));
 
     Ok(())

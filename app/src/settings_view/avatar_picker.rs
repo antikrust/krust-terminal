@@ -20,21 +20,21 @@
 //! licence condition — it lives on the About page (see [`AVATAR_ATTRIBUTION`]).
 
 use ::settings::Setting as _;
-use bork_core::ui::icons::Icon;
-use bork_errors::report_if_error;
-use borkui::color::ColorU;
-use borkui::elements::{
+use krust_core::ui::icons::Icon;
+use krust_errors::report_if_error;
+use krustui::color::ColorU;
+use krustui::elements::{
     self, Border, CacheOption, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Element, Fill, Flex, Hoverable, Image,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
     Stack, Text, Wrap,
 };
-use borkui::platform::file_picker::FilePickerConfiguration;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::Pixels;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::platform::file_picker::FilePickerConfiguration;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::Pixels;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::settings::identity::{IdentitySettings, MAX_AVATAR_FAVORITES};

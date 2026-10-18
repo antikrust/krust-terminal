@@ -1,7 +1,7 @@
 use futures::channel::oneshot;
-use bork_core::SessionId;
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::App;
+use krust_core::SessionId;
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::App;
 
 use super::{
     HostRequestError, PendingHostRequest, RemoteServerManager, RemoteServerManagerEvent,

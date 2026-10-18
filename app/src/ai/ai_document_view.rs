@@ -3,20 +3,20 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::icons;
-use bork_core::ui::icons::ICON_DIMENSIONS;
-use bork_core::ui::theme::Fill as ThemeFill;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_core::ui::icons;
+use krust_core::ui::icons::ICON_DIMENSIONS;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition, Stack,
 };
-use borkui::keymap::{EditableBinding, FixedBinding};
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::button::ButtonTooltipPosition;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::keymap::{EditableBinding, FixedBinding};
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::button::ButtonTooltipPosition;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     id, AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -29,7 +29,7 @@ use crate::ai::document::ai_document_model::{
 };
 use crate::ai::document::orchestration_config_block::OrchestrationConfigBlockView;
 use crate::appearance::Appearance;
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::drive::sharing::ShareableObject;
 use crate::drive::CloudObjectTypeAndId;
 use crate::editor::InteractionState;
@@ -81,9 +81,9 @@ pub fn init(app: &mut AppContext) {
 
 #[cfg(feature = "local_fs")]
 use anyhow::Context as _;
-use bork_errors::report_error;
+use krust_errors::report_error;
 #[cfg(feature = "local_fs")]
-use bork_util::path::LineAndColumnArg;
+use krust_util::path::LineAndColumnArg;
 
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
@@ -102,12 +102,12 @@ pub enum AIDocumentAction {
     Export,
     CopyAsMarkdown,
     OpenVersionMenu,
-    CreateBorkDriveNotebook,
+    CreateKrustDriveNotebook,
     RevertToDocumentVersion,
     SendUpdatedPlan,
     CopyLink(String),
     CopyPlanId,
-    ShowInBorkDrive,
+    ShowInKrustDrive,
     AttachToActiveSession,
 }
 
@@ -115,9 +115,9 @@ pub enum AIDocumentAction {
 pub enum AIDocumentEvent {
     Pane(PaneEvent),
     CloseRequested,
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
     #[cfg(feature = "local_fs")]
-    OpenCodeInBork {
+    OpenCodeInKrust {
         source: CodeSource,
         layout: EditorLayout,
         line_col: Option<LineAndColumnArg>,
@@ -403,7 +403,7 @@ impl AIDocumentView {
             pane_config.refresh_pane_header_overflow_menu_items(ctx)
         });
 
-        // Create sync button mouse state (for Bork Drive syncing)
+        // Create sync button mouse state (for Krust Drive syncing)
         let sync_button_mouse_state = MouseStateHandle::default();
 
         // Create Update Agent button
@@ -609,7 +609,7 @@ impl AIDocumentView {
             .and_then(|sync_id| sync_id.into_server());
 
         self.pane_configuration.update(ctx, |pc, ctx| {
-            pc.set_shareable_object(server_id.map(ShareableObject::BorkDriveObject), ctx);
+            pc.set_shareable_object(server_id.map(ShareableObject::KrustDriveObject), ctx);
             pc.refresh_pane_header_overflow_menu_items(ctx);
         });
         ctx.notify();
@@ -685,7 +685,7 @@ impl AIDocumentView {
                 .on_click(|ctx, _, _| {
                     ctx.dispatch_typed_action(
                         PaneHeaderAction::<AIDocumentAction, AIDocumentAction>::CustomAction(
-                            AIDocumentAction::CreateBorkDriveNotebook,
+                            AIDocumentAction::CreateKrustDriveNotebook,
                         ),
                     )
                 })
@@ -700,7 +700,7 @@ impl AIDocumentView {
                         Container::new(
                             ConstrainedBox::new(
                                 Icon::RefreshCw04
-                                    .to_borkui_icon(ThemeFill::Solid(color))
+                                    .to_krustui_icon(ThemeFill::Solid(color))
                                     .finish(),
                             )
                             .with_width(16.)
@@ -731,7 +731,7 @@ impl AIDocumentView {
                             Hoverable::new(synced_status_mouse_state, move |state| {
                                 let icon = {
                                     let icon_elem = Icon::RefreshCw04
-                                        .to_borkui_icon(ThemeFill::Solid(color))
+                                        .to_krustui_icon(ThemeFill::Solid(color))
                                         .finish();
                                     ConstrainedBox::new(icon_elem)
                                         .with_width(16.)
@@ -747,8 +747,8 @@ impl AIDocumentView {
                                         tooltip,
                                         OffsetPositioning::offset_from_parent(
                                             vec2f(0., 4.),
-                                            borkui::elements::ParentOffsetBounds::WindowByPosition,
-                                            borkui::elements::ParentAnchor::BottomRight,
+                                            krustui::elements::ParentOffsetBounds::WindowByPosition,
+                                            krustui::elements::ParentAnchor::BottomRight,
                                             ChildAnchor::TopRight,
                                         ),
                                     );
@@ -954,21 +954,21 @@ impl AIDocumentView {
             EditorViewEvent::OpenFile {
                 path,
                 line_and_column_num,
-                force_open_in_bork,
+                force_open_in_krust,
             } => {
                 use crate::util::file::external_editor::EditorSettings;
                 use crate::util::openable_file_type::{
                     is_supported_image_file, resolve_file_target,
                 };
 
-                if *force_open_in_bork {
+                if *force_open_in_krust {
                     let layout = *EditorSettings::as_ref(ctx).open_file_layout;
                     let source = CodeSource::Link {
                         path: path.clone(),
                         range_start: *line_and_column_num,
                         range_end: None,
                     };
-                    ctx.emit(AIDocumentEvent::OpenCodeInBork {
+                    ctx.emit(AIDocumentEvent::OpenCodeInKrust {
                         source,
                         layout,
                         line_col: *line_and_column_num,
@@ -997,7 +997,7 @@ impl AIDocumentView {
     }
 
     /// Bind the underlying editor model to the given window, enabling render/event processing.
-    pub fn bind_window(&self, window_id: borkui::WindowId, ctx: &mut ViewContext<Self>) {
+    pub fn bind_window(&self, window_id: krustui::WindowId, ctx: &mut ViewContext<Self>) {
         self.editor.update(ctx, |editor_view, ctx| {
             editor_view
                 .model()
@@ -1005,9 +1005,9 @@ impl AIDocumentView {
         });
     }
 
-    fn create_bork_drive_notebook(&self, ctx: &mut ViewContext<Self>) {
+    fn create_krust_drive_notebook(&self, ctx: &mut ViewContext<Self>) {
         let success = AIDocumentModel::handle(ctx).update(ctx, |model, ctx| {
-            model.sync_to_bork_drive(self.document_id, ctx)
+            model.sync_to_krust_drive(self.document_id, ctx)
         });
         if !success {
             report_error!("Failed to create Library notebook");
@@ -1017,7 +1017,7 @@ impl AIDocumentView {
     /// Export the current content as a markdown file.
     #[cfg(feature = "local_fs")]
     fn export(&self, ctx: &mut ViewContext<Self>) {
-        use borkui::platform::SaveFilePickerConfiguration;
+        use krustui::platform::SaveFilePickerConfiguration;
 
         use crate::drive::export::safe_filename;
         let markdown = self.editor.as_ref(ctx).markdown_unescaped(ctx);
@@ -1077,7 +1077,7 @@ impl View for AIDocumentView {
         "AIDocumentView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let has_orchestration_config = AIDocumentModel::as_ref(app)
             .get_conversation_id_for_document_id(&self.document_id)
             .and_then(|cid| {
@@ -1109,7 +1109,7 @@ impl View for AIDocumentView {
             .with_padding_left(8.)
             .with_padding_right(8.)
             .finish();
-        content_column.add_child(borkui::elements::Expanded::new(1.0, editor).finish());
+        content_column.add_child(krustui::elements::Expanded::new(1.0, editor).finish());
 
         let mut stack = Stack::new().with_child(content_column.finish());
 
@@ -1157,7 +1157,7 @@ impl TypedActionView for AIDocumentView {
                     );
                 });
             }
-            AIDocumentAction::CreateBorkDriveNotebook => self.create_bork_drive_notebook(ctx),
+            AIDocumentAction::CreateKrustDriveNotebook => self.create_krust_drive_notebook(ctx),
             AIDocumentAction::CopyLink(link) => {
                 send_telemetry_from_ctx!(
                     TelemetryEvent::ObjectLinkCopied { link: link.clone() },
@@ -1274,12 +1274,12 @@ impl TypedActionView for AIDocumentView {
                 // Update UI to reflect the new query
                 self.update_header_buttons(ctx);
             }
-            AIDocumentAction::ShowInBorkDrive => {
+            AIDocumentAction::ShowInKrustDrive => {
                 if let Some(document) =
                     AIDocumentModel::as_ref(ctx).get_current_document(&self.document_id)
                 {
                     if let Some(sync_id) = document.sync_id {
-                        ctx.emit(AIDocumentEvent::ViewInBorkDrive(BorkDriveItemId::Object(
+                        ctx.emit(AIDocumentEvent::ViewInKrustDrive(KrustDriveItemId::Object(
                             CloudObjectTypeAndId::Notebook(sync_id),
                         )));
                     }
@@ -1327,9 +1327,9 @@ impl BackingView for AIDocumentView {
     ) -> Vec<MenuItem<Self::PaneHeaderOverflowMenuAction>> {
         let mut menu_items = vec![];
 
-        // Only show shareable link when the document is synced to Bork Drive
+        // Only show shareable link when the document is synced to Krust Drive
         if let Some(link) =
-            AIDocumentModel::as_ref(ctx).get_document_bork_drive_object_link(&self.document_id, ctx)
+            AIDocumentModel::as_ref(ctx).get_document_krust_drive_object_link(&self.document_id, ctx)
         {
             menu_items.push(
                 MenuItemFields::new("Copy link")
@@ -1339,8 +1339,8 @@ impl BackingView for AIDocumentView {
             );
             menu_items.push(
                 MenuItemFields::new("Show in Library")
-                    .with_on_select_action(AIDocumentAction::ShowInBorkDrive)
-                    .with_icon(Icon::BorkDrive)
+                    .with_on_select_action(AIDocumentAction::ShowInKrustDrive)
+                    .with_icon(Icon::KrustDrive)
                     .into_item(),
             );
         }

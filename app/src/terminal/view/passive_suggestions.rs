@@ -1,4 +1,4 @@
-use borkui::ViewContext;
+use krustui::ViewContext;
 
 use super::TerminalView;
 use crate::server::telemetry::InteractionSource;

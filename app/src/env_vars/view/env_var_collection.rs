@@ -1,19 +1,19 @@
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     Align, AnchorPair, ChildAnchor, Clipped, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CrossAxisAlignment, DispatchEventResult, EventHandler, Fill, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, OffsetType, ParentAnchor,
     ParentElement, ParentOffsetBounds, PositioningAxis, SavePosition, ScrollbarWidth, Shrinkable,
     Stack, XAxisAnchor, YAxisAnchor,
 };
-use borkui::keymap::EditableBinding;
-use borkui::platform::Cursor;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::keymap::EditableBinding;
+use krustui::platform::Cursor;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     id, AppContext, BlurContext, Element, Entity, FocusContext, ModelAsRef, ModelHandle,
     SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
@@ -24,7 +24,7 @@ use crate::ai::blocklist::block::secret_redaction::find_secrets_in_text_with_lev
 use crate::cloud_object::breadcrumbs::ContainingObject;
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
 use crate::cloud_object::{CloudObjectEventEntrypoint, Owner};
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::drive::sharing::{ContentEditability, ShareableObject};
 use crate::editor::EditorView;
 use crate::env_vars::active_env_var_collection_data::{
@@ -70,7 +70,7 @@ const SECTION_SPACING: f32 = 16.;
 
 // Variable rows
 pub(super) const ROW_SPACING: f32 = 8.;
-pub const EDUCATION_TEXT: &str = "Add secret or command. Bork never stores external secrets";
+pub const EDUCATION_TEXT: &str = "Add secret or command. Krust never stores external secrets";
 const VARIABLE_FONT_SIZE: f32 = 13.;
 const DESCRIPTION_EDITOR_CUTOFF: f32 = 30.;
 const DESCRIPTION_BOTTOM_MARGIN: f32 = 12.;
@@ -305,7 +305,7 @@ pub struct EnvVarCollectionView {
 pub enum EnvVarCollectionEvent {
     Pane(PaneEvent),
     UpdatedEnvVarCollection(SyncId),
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
     Invoke(EnvVarCollectionType),
 }
 #[derive(Debug, Clone)]
@@ -341,7 +341,7 @@ pub enum EnvVarCollectionAction {
     ForceClose,
     CloseUnsavedChangesDialog,
     // Breadcrumbs action
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
 }
 
 /// Defines the view for a collection of environment variables
@@ -663,7 +663,7 @@ impl EnvVarCollectionView {
         if let Some(server_id) = env_var_collection.id.into_server() {
             self.pane_configuration.update(ctx, |pane_config, ctx| {
                 pane_config
-                    .set_shareable_object(Some(ShareableObject::BorkDriveObject(server_id)), ctx);
+                    .set_shareable_object(Some(ShareableObject::KrustDriveObject(server_id)), ctx);
             });
         }
 
@@ -959,7 +959,7 @@ impl EnvVarCollectionView {
                 self.update_breadcrumbs(ctx);
                 self.pane_configuration.update(ctx, |pane_config, ctx| {
                     pane_config.set_shareable_object(
-                        Some(ShareableObject::BorkDriveObject(*server_id)),
+                        Some(ShareableObject::KrustDriveObject(*server_id)),
                         ctx,
                     );
                 });
@@ -1094,8 +1094,8 @@ impl EnvVarCollectionView {
             });
     }
 
-    fn view_in_bork_drive(&mut self, id: BorkDriveItemId, ctx: &mut ViewContext<Self>) {
-        ctx.emit(EnvVarCollectionEvent::ViewInBorkDrive(id));
+    fn view_in_krust_drive(&mut self, id: KrustDriveItemId, ctx: &mut ViewContext<Self>) {
+        ctx.emit(EnvVarCollectionEvent::ViewInKrustDrive(id));
     }
 
     // This is a public re-export of close since it's a trait method
@@ -1282,7 +1282,7 @@ impl View for EnvVarCollectionView {
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
         let mut content = Flex::column();
@@ -1305,7 +1305,7 @@ impl View for EnvVarCollectionView {
                             self.breadcrumbs.clone(),
                             appearance,
                             |ctx, _, breadcrumb| {
-                                ctx.dispatch_typed_action(EnvVarCollectionAction::ViewInBorkDrive(
+                                ctx.dispatch_typed_action(EnvVarCollectionAction::ViewInKrustDrive(
                                     breadcrumb.kind.into_item_id(),
                                 ));
                             },
@@ -1535,7 +1535,7 @@ impl TypedActionView for EnvVarCollectionView {
                 self.update_open_modal_state(ctx);
                 ctx.notify();
             }
-            EnvVarCollectionAction::ViewInBorkDrive(id) => self.view_in_bork_drive(*id, ctx),
+            EnvVarCollectionAction::ViewInKrustDrive(id) => self.view_in_krust_drive(*id, ctx),
         }
     }
 }

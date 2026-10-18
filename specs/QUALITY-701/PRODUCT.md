@@ -1,13 +1,13 @@
 # Custom Host Picker for Orchestration
 
-Linear: [QUALITY-701](https://linear.app/borkdotdev/issue/QUALITY-701)
+Linear: [QUALITY-701](https://linear.app/krustdotdev/issue/QUALITY-701)
 
 ## Summary
 
-Adds a host picker to the orchestration UI so a user can choose where their cloud child agents run. Today the host is hardcoded to the default Bork cluster; this lets users target a self-hosted worker host, see the most recently used custom host, and pre-select an admin-configured workspace default. The behavior mirrors the Oz webapp's host selector, adapted to the desktop client's compact picker chrome.
+Adds a host picker to the orchestration UI so a user can choose where their cloud child agents run. Today the host is hardcoded to the default Krust cluster; this lets users target a self-hosted worker host, see the most recently used custom host, and pre-select an admin-configured workspace default. The behavior mirrors the Oz webapp's host selector, adapted to the desktop client's compact picker chrome.
 
 ## Design
-No Figma mock. Design context lives in this Slack thread: https://borkdev.slack.com/archives/C0AAMT5TKC2/p1778542414211539?thread_ts=1778525276.139389&cid=C0AAMT5TKC2 — this implementation follows that direction but keeps things deliberately simpler for the first cut (compact dropdown with an inline custom-mode editor, reusing the existing orchestration picker chrome). Design polish can be a follow-up once the feature is in users' hands.
+No Figma mock. Design context lives in this Slack thread: https://krustdev.slack.com/archives/C0AAMT5TKC2/p1778542414211539?thread_ts=1778525276.139389&cid=C0AAMT5TKC2 — this implementation follows that direction but keeps things deliberately simpler for the first cut (compact dropdown with an inline custom-mode editor, reusing the existing orchestration picker chrome). Design polish can be a follow-up once the feature is in users' hands.
 
 ## Behavior
 
@@ -23,41 +23,41 @@ No Figma mock. Design context lives in this Slack thread: https://borkdev.slack.
 
 4. By default the picker renders as a dropdown showing the currently selected slug. Clicking it opens a menu with the following entries, in this order:
    1. Workspace default slug, when the team has one configured, with a "Default" badge.
-   2. `bork` (the default Bork cluster), always present.
+   2. `krust` (the default Krust cluster), always present.
    3. The user's most recent custom host slug, when set, rendered as a plain slug (no badge).
    4. A `Custom host…` entry that switches the picker into custom mode.
 
-5. Duplicate rows are suppressed. If the recent custom host equals either `bork` or the workspace default, it does not get its own row.
+5. Duplicate rows are suppressed. If the recent custom host equals either `krust` or the workspace default, it does not get its own row.
 
-6. When the user picks `bork`, the workspace default, or a recent slug, the picker closes and the selection is sent to the parent. The selected entry shows in the picker's collapsed state. If the workspace has a configured default, selecting it shows the "Default" badge in the collapsed state too.
+6. When the user picks `krust`, the workspace default, or a recent slug, the picker closes and the selection is sent to the parent. The selected entry shows in the picker's collapsed state. If the workspace has a configured default, selecting it shows the "Default" badge in the collapsed state too.
 
 7. Clicking outside the open menu, or pressing Escape, closes the menu without changing the selection.
 
 ### Custom mode
 
-8. Selecting `Custom host…` swaps the picker top bar for an inline text editor, pre-filled with the current slug (or empty when the current slug is `bork`), and focuses the editor. A small cancel button sits at the right of the editor.
+8. Selecting `Custom host…` swaps the picker top bar for an inline text editor, pre-filled with the current slug (or empty when the current slug is `krust`), and focuses the editor. A small cancel button sits at the right of the editor.
 
 9. Inside the editor the user can type any non-empty slug. Pressing Enter or blurring the editor commits the trimmed value. Pressing Escape or clicking the cancel button reverts to the previous selection without committing.
 
 10. Committing an empty buffer is treated as a revert (no change to the previous selection).
 
-11. Typing `bork` (case-insensitive) and committing collapses back to the standard `bork` selection rather than persisting `bork` as a custom value.
+11. Typing `krust` (case-insensitive) and committing collapses back to the standard `krust` selection rather than persisting `krust` as a custom value.
 
-12. When a non-empty, non-`bork` slug is committed, it becomes the current selection and is promoted to the "recent" row in the menu so it stays visible on the next paint. The slug is also persisted (see invariant 17) so it survives across cards and across app restarts.
+12. When a non-empty, non-`krust` slug is committed, it becomes the current selection and is promoted to the "recent" row in the menu so it stays visible on the next paint. The slug is also persisted (see invariant 17) so it survives across cards and across app restarts.
 
 13. While the editor is in custom mode, the editor's text is vertically centered within the picker box and the box sits at the same y offset as the other pickers in the row.
 
 ### Selection model
 
-14. The picker always has a non-empty selection. Empty input from any source (initial state, blur, blank stream) resolves to `bork`.
+14. The picker always has a non-empty selection. Empty input from any source (initial state, blur, blank stream) resolves to `krust`.
 
-15. When an external caller sets a slug that doesn't match any known menu option (bork, workspace default, recent), the picker switches into custom mode pre-filled with that slug instead of showing a missing menu entry.
+15. When an external caller sets a slug that doesn't match any known menu option (krust, workspace default, recent), the picker switches into custom mode pre-filled with that slug instead of showing a missing menu entry.
 
-16. The picker exposes the workspace default behavior: when a workspace default is configured and no explicit selection exists yet, the picker pre-selects the workspace default rather than `bork`. A developer-only `BORK_CLOUD_MODE_DEFAULT_HOST` environment variable overrides the workspace default for local testing.
+16. The picker exposes the workspace default behavior: when a workspace default is configured and no explicit selection exists yet, the picker pre-selects the workspace default rather than `krust`. A developer-only `KRUST_CLOUD_MODE_DEFAULT_HOST` environment variable overrides the workspace default for local testing.
 
 ### Persistence and recency
 
-17. When the user commits a custom slug, it is persisted as the "last selected host" so the next plan card or confirmation card shows it as the "recent" entry. `bork` and empty values are never persisted as recent (the bork entry is always present unconditionally).
+17. When the user commits a custom slug, it is persisted as the "last selected host" so the next plan card or confirmation card shows it as the "recent" entry. `krust` and empty values are never persisted as recent (the krust entry is always present unconditionally).
 
 18. The recent slug is deduplicated against the workspace default. If the user's most recent slug happens to equal the workspace default, the menu shows only the default row; no separate recent row appears.
 

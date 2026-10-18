@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 pub use fold_map::BufferRows;
 use fold_map::FoldMap;
 use string_offset::CharOffset;
-use borkui::text::point::Point;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle};
+use krustui::text::point::Point;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::buffer::{self, Anchor, Buffer, Edit, StylizedChar, ToCharOffset, ToPoint};
 use crate::editor::soft_wrap::{self, DisplayPointAndClampDirection, SoftWrapPoint, SoftWrapState};

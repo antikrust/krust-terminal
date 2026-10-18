@@ -18,8 +18,8 @@ pub use schemars as _schemars;
 #[doc(hidden)]
 pub use settings_value as _settings_value;
 pub use settings_value::SettingsValue;
-// Re-export borkui_core for use by macros.
-pub use borkui_core;
+// Re-export krustui_core for use by macros.
+pub use krustui_core;
 
 /// Extracts the storage key (last segment after the final `.`) from a toml_path.
 ///
@@ -62,11 +62,11 @@ pub const fn toml_path_hierarchy(path: &str) -> Option<&str> {
 use anyhow::{Context, Result};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use bork_errors::report_error;
-use bork_features::FeatureFlag;
-use borkui_core::{AppContext, Entity, ModelContext};
-use borkui_extras::secure_storage::{self, AppContextExt as _};
-use borkui_extras::user_preferences::UserPreferences;
+use krust_errors::report_error;
+use krust_features::FeatureFlag;
+use krustui_core::{AppContext, Entity, ModelContext};
+use krustui_extras::secure_storage::{self, AppContextExt as _};
+use krustui_extras::user_preferences::UserPreferences;
 
 /// A newtype wrapper for the public preferences backend.
 ///
@@ -100,16 +100,16 @@ impl PublicPreferences {
     }
 
     /// Reloads the backing store from disk.
-    pub fn reload_from_disk(&self) -> Result<(), borkui_extras::user_preferences::Error> {
+    pub fn reload_from_disk(&self) -> Result<(), krustui_extras::user_preferences::Error> {
         self.0.reload_from_disk()
     }
 }
 
-impl borkui_core::Entity for PublicPreferences {
+impl krustui_core::Entity for PublicPreferences {
     type Event = ();
 }
 
-impl borkui_core::SingletonEntity for PublicPreferences {}
+impl krustui_core::SingletonEntity for PublicPreferences {}
 
 /// A newtype wrapper for the private preferences backend.
 ///
@@ -133,11 +133,11 @@ impl Deref for PrivatePreferences {
     }
 }
 
-impl borkui_core::Entity for PrivatePreferences {
+impl krustui_core::Entity for PrivatePreferences {
     type Event = ();
 }
 
-impl borkui_core::SingletonEntity for PrivatePreferences {}
+impl krustui_core::SingletonEntity for PrivatePreferences {}
 
 /// An enum representing the different platforms a setting could apply to.
 #[derive(Debug, Clone)]
@@ -184,12 +184,12 @@ pub enum RespectUserSyncSetting {
 pub enum SettingsMode {
     /// The full desktop GUI application.
     Gui,
-    /// The headless terminal-UI front-end (the `bork_tui` crate).
+    /// The headless terminal-UI front-end (the `krust_tui` crate).
     Tui,
 }
 
 impl SettingsMode {
-    /// Whether settings for this mode are synced to the cloud (Bork Drive). The
+    /// Whether settings for this mode are synced to the cloud (Krust Drive). The
     /// GUI syncs; the TUI keeps its config local so the two surfaces never
     /// clobber shared cloud state.
     pub fn should_sync_to_cloud(self) -> bool {
@@ -246,7 +246,7 @@ pub struct SettingSurfaces(u8);
 impl SettingSurfaces {
     /// The desktop GUI application only.
     pub const GUI: Self = Self(1 << 0);
-    /// The headless terminal-UI front-end (the `bork_tui` crate) only.
+    /// The headless terminal-UI front-end (the `krust_tui` crate) only.
     pub const TUI: Self = Self(1 << 1);
     /// Every surface (currently GUI and TUI).
     pub const ALL: Self = Self(Self::GUI.0 | Self::TUI.0);
@@ -369,7 +369,7 @@ pub trait Setting {
     /// Returns the platforms that this setting is supported on.
     fn supported_platforms() -> SupportedPlatforms;
 
-    /// Returns whether and how this setting is synced to the cloud via Bork Drive.
+    /// Returns whether and how this setting is synced to the cloud via Krust Drive.
     fn sync_to_cloud() -> SyncToCloud;
 
     /// Returns whether this setting is private (not shown in the user-visible settings file).
@@ -441,7 +441,7 @@ pub trait Setting {
     fn set_value_from_cloud_sync(
         &mut self,
         new_value: Self::Value,
-        ctx: &mut borkui_core::ModelContext<Self::Group>,
+        ctx: &mut krustui_core::ModelContext<Self::Group>,
     ) -> anyhow::Result<()>;
 
     /// Sets the value of the setting persisting it to storage.
@@ -457,7 +457,7 @@ pub trait Setting {
     /// Sets the value of the setting to its default and persists it to storage.
     fn set_value_to_default(
         &mut self,
-        ctx: &mut borkui_core::ModelContext<Self::Group>,
+        ctx: &mut krustui_core::ModelContext<Self::Group>,
     ) -> anyhow::Result<()> {
         self.set_value(Self::default_value(), ctx)
     }
@@ -467,7 +467,7 @@ pub trait Setting {
     /// Private settings use the platform-native store; public settings use
     /// the main preferences backend (which may be the TOML settings file).
     fn preferences_for_setting(ctx: &AppContext) -> &dyn UserPreferences {
-        use borkui_core::SingletonEntity;
+        use krustui_core::SingletonEntity;
 
         if Self::is_private() {
             <PrivatePreferences as SingletonEntity>::as_ref(ctx).deref()

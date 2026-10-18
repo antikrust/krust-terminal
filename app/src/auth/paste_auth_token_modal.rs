@@ -8,19 +8,19 @@
 //! depend on.
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use bork_core::safe_error;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::actions::StandardAction;
-use borkui::elements::{
+use krust_core::safe_error;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::actions::StandardAction;
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill,
     Flex, FormattedTextElement, HighlightedHyperlink, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::text_layout::TextAlignment;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::text_layout::TextAlignment;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -40,7 +40,7 @@ const MODAL_WIDTH: f32 = 460.;
 const AUTH_TOKEN_INPUT_BORDER_RADIUS: Radius = Radius::Pixels(4.);
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
     app.register_fixed_bindings([
         FixedBinding::new(
             "enter",
@@ -255,7 +255,7 @@ impl View for PasteAuthTokenModalView {
         let close_button = ui_builder
             .close_button(24., self.close_mouse_state.clone())
             .build()
-            .on_click(|ctx: &mut borkui::EventContext, _, _| {
+            .on_click(|ctx: &mut krustui::EventContext, _, _| {
                 ctx.dispatch_typed_action(PasteAuthTokenModalAction::Cancel);
             })
             .finish();
@@ -406,7 +406,7 @@ impl View for PasteAuthTokenModalView {
         // Dim backdrop with click-to-dismiss behavior (matches the mockup).
         let mut stack = Stack::new();
         stack.add_child(
-            Container::new(borkui::elements::Empty::new().finish())
+            Container::new(krustui::elements::Empty::new().finish())
                 .with_background_color(ColorU::new(0, 0, 0, 179))
                 .finish(),
         );

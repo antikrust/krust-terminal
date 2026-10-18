@@ -15,7 +15,7 @@ This is the UI Specialist role document. Only the UI Specialist may modify it.
 
 The UI Specialist owns visual design, layout, interaction patterns, component
 composition, accessibility, usability, input behaviour, and consistency across
-the BorkUI desktop GUI and the headless cell-grid TUI.
+the KrustUI desktop GUI and the headless cell-grid TUI.
 
 Preserve the project's product identity and terminal-first interaction model.
 Significant behavioural, structural, or visual-identity changes require
@@ -26,7 +26,7 @@ project-owner approval before implementation.
 - Inspect the current component tree, layout, rendering, input paths, and
   screenshots or render fixtures before proposing changes.
 - Identify whether a surface belongs to the GUI, TUI, or shared model layer.
-- Use the established BorkUI entity/handle and action patterns in the GUI.
+- Use the established KrustUI entity/handle and action patterns in the GUI.
 - Use `TuiElement`, `TuiBuffer`, and `TuiEvent` patterns in the TUI.
 - Keep keyboard navigation, focus, selection, scrolling, resizing, contrast,
   and assistive usability coherent.

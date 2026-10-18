@@ -1,12 +1,12 @@
 use pathfinder_color::ColorU;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Wrap, WrapFill,
 };
-use borkui::fonts::FamilyId;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::FamilyId;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

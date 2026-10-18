@@ -1,4 +1,4 @@
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 /// Singleton model that tracks GPU state.
 #[derive(Debug, Default, Clone)]

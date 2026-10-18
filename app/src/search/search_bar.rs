@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use itertools::{Either, Itertools};
-use bork_editor::editor::NavigationKey;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{FamilyId, Properties, Style, Weight};
-use borkui::presenter::ChildView;
-use borkui::{
+use krustui::fonts::{FamilyId, Properties, Style, Weight};
+use krustui::presenter::ChildView;
+use krustui::{
     Action, AppContext, Element, Entity, FocusContext, ModelContext, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, ViewHandle,
 };
@@ -691,7 +691,7 @@ impl<T: Action + Clone> SearchBar<T> {
             for loading_filter in loading_filters.into_iter() {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Loading {} suggestions", loading_filter.display_name()),
-                    BorkA11yRole::MenuItemRole,
+                    KrustA11yRole::MenuItemRole,
                 ));
             }
 
@@ -702,7 +702,7 @@ impl<T: Action + Clone> SearchBar<T> {
             ctx.emit_a11y_content(AccessibilityContent::new(
                 "Error finding results",
                 data_source_err.user_facing_error(),
-                BorkA11yRole::MenuItemRole,
+                KrustA11yRole::MenuItemRole,
             ));
             return;
         }
@@ -712,12 +712,12 @@ impl<T: Action + Clone> SearchBar<T> {
             let a11y_content = match selected_result.accessibility_help_message() {
                 None => AccessibilityContent::new_without_help(
                     a11y_content_text,
-                    BorkA11yRole::MenuItemRole,
+                    KrustA11yRole::MenuItemRole,
                 ),
                 Some(help_message) => AccessibilityContent::new(
                     a11y_content_text,
                     help_message,
-                    BorkA11yRole::MenuItemRole,
+                    KrustA11yRole::MenuItemRole,
                 ),
             };
             ctx.emit_a11y_content(a11y_content);
@@ -909,7 +909,7 @@ impl<T: Action + Clone> View for SearchBar<T> {
             let magnifying_glass = Container::new(
                 ConstrainedBox::new(
                     Icon::Search
-                        .to_borkui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
+                        .to_krustui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
                         .finish(),
                 )
                 .with_height(size)

@@ -1,4 +1,4 @@
-use borkui::{App, Entity, SingletonEntity};
+use krustui::{App, Entity, SingletonEntity};
 
 use super::{ServerExperiment, ServerExperiments};
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};

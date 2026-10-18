@@ -1,7 +1,7 @@
-use bork_core::ui::appearance::Appearance;
-use bork_server_client::auth::AgentIdentity;
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krust_core::ui::appearance::Appearance;
+use krust_server_client::auth::AgentIdentity;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::CreateApiKeyModal;
 use crate::auth::AuthStateProvider;

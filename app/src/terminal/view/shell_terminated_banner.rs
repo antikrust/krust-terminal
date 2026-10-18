@@ -1,16 +1,16 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::builder::UiBuilder;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::BorkTheme;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::*;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent as _;
-use borkui::{Entity, SingletonEntity as _, TypedActionView, View, ViewContext};
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::builder::UiBuilder;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::KrustTheme;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::*;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent as _;
+use krustui::{Entity, SingletonEntity as _, TypedActionView, View, ViewContext};
 
 use crate::terminal::model::terminal_model::ExitReason;
 use crate::ui_components;
@@ -152,7 +152,7 @@ impl TerminationType {
         Container::new(
             ConstrainedBox::new(
                 icon_type
-                    .to_borkui_icon(appearance.theme().background())
+                    .to_krustui_icon(appearance.theme().background())
                     .finish(),
             )
             .with_width(ICON_SIZE)
@@ -183,8 +183,8 @@ impl TerminationType {
                 format!("{pty_spawn_error:#}").into()
             }
             TerminationType::Premature { shell_detail, .. } => format!(
-                "Something went wrong while starting {shell_detail} and Borkifying it, causing the \
-                process to terminate. Borkify script output is displayed here, which may point at \
+                "Something went wrong while starting {shell_detail} and Krustifying it, causing the \
+                process to terminate. Krustify script output is displayed here, which may point at \
                 a cause."
             )
             .into(),
@@ -216,7 +216,7 @@ impl TerminationType {
                         .build()
                         .on_click(|ctx, _, _| {
                             ctx.dispatch_typed_action(Action::OpenUrl(
-                                "https://github.com/borkdotdev/Bork/issues/new/choose".to_string(),
+                                "https://github.com/krustdotdev/Krust/issues/new/choose".to_string(),
                             ));
                         })
                         .finish(),
@@ -226,7 +226,7 @@ impl TerminationType {
                         .build()
                         .on_click(|ctx, _, _| {
                             ctx.dispatch_typed_action(Action::OpenUrl(
-                                "https://therob.lol/bork-terminal/help/support-and-community/troubleshooting-and-support/known-issues#debugging".to_string(),
+                                "https://therob.lol/krust-terminal/help/support-and-community/troubleshooting-and-support/known-issues#debugging".to_string(),
                             ));
                         })
                         .finish(),
@@ -254,7 +254,7 @@ impl TerminationType {
                         .build()
                         .on_click(|ctx, _, _| {
                             ctx.dispatch_typed_action(Action::OpenUrl(
-                                "https://github.com/borkdotdev/Bork/issues/new/choose".to_string(),
+                                "https://github.com/krustdotdev/Krust/issues/new/choose".to_string(),
                             ));
                         })
                         .finish(),
@@ -264,7 +264,7 @@ impl TerminationType {
                         .build()
                         .on_click(|ctx, _, _| {
                             ctx.dispatch_typed_action(Action::OpenUrl(
-                                "https://therob.lol/bork-terminal/help/support-and-community/troubleshooting-and-support/known-issues#debugging".to_string(),
+                                "https://therob.lol/krust-terminal/help/support-and-community/troubleshooting-and-support/known-issues#debugging".to_string(),
                             ));
                         })
                         .finish(),
@@ -276,7 +276,7 @@ impl TerminationType {
 
 fn inverted_color_ui_builder(appearance: &Appearance) -> UiBuilder {
     let theme = appearance.theme();
-    let theme = BorkTheme::new(
+    let theme = KrustTheme::new(
         theme.foreground(),
         theme.background().into_solid(),
         theme.background(),

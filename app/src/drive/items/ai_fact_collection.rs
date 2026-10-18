@@ -1,7 +1,7 @@
-use borkui::elements::MouseStateHandle;
-use borkui::{AppContext, Element};
+use krustui::elements::MouseStateHandle;
+use krustui::{AppContext, Element};
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
 use crate::drive::index::DriveIndexAction;
@@ -10,11 +10,11 @@ use crate::server::ids::ClientId;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct BorkDriveAIFactCollection {
+pub struct KrustDriveAIFactCollection {
     id: ClientId,
 }
 
-impl BorkDriveAIFactCollection {
+impl KrustDriveAIFactCollection {
     pub fn new(id: ClientId) -> Self {
         Self { id }
     }
@@ -24,7 +24,7 @@ impl BorkDriveAIFactCollection {
     }
 }
 
-impl BorkDriveItem for BorkDriveAIFactCollection {
+impl KrustDriveItem for KrustDriveAIFactCollection {
     fn display_name(&self) -> Option<String> {
         Some("Rules".to_string())
     }
@@ -49,8 +49,8 @@ impl BorkDriveItem for BorkDriveAIFactCollection {
         None
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::AIFactCollection
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::AIFactCollection
     }
 
     fn sync_status_icon(
@@ -66,7 +66,7 @@ impl BorkDriveItem for BorkDriveAIFactCollection {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 }

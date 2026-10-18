@@ -22,18 +22,18 @@ use repo_metadata::local_model::IndexedRepoState;
 use repo_metadata::{RepoMetadataModel, RepositoryIdentifier};
 use session_sharing_protocol::sharer::SessionRetentionReason;
 use uuid::Uuid;
-use bork_cli::agent::{Harness, OutputFormat};
-use bork_cli::mcp::MCPSpec;
-use bork_cli::share::ShareRequest;
-use bork_cli::skill::SkillSpec;
-use bork_core::features::FeatureFlag;
-use bork_core::{safe_debug, safe_error, safe_info};
-use bork_errors::{register_error, report_error, report_if_error, ErrorExt};
-use bork_graphql::ai::AgentTaskState;
-use bork_managed_secrets::ManagedSecretValue;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::r#async::{FutureExt, TimeoutError};
-use borkui::{
+use krust_cli::agent::{Harness, OutputFormat};
+use krust_cli::mcp::MCPSpec;
+use krust_cli::share::ShareRequest;
+use krust_cli::skill::SkillSpec;
+use krust_core::features::FeatureFlag;
+use krust_core::{safe_debug, safe_error, safe_info};
+use krust_errors::{register_error, report_error, report_if_error, ErrorExt};
+use krust_graphql::ai::AgentTaskState;
+use krust_managed_secrets::ManagedSecretValue;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::r#async::{FutureExt, TimeoutError};
+use krustui::{
     AppContext, Entity, ModelContext, ModelHandle, ModelSpawner, SingletonEntity, ViewHandle,
 };
 
@@ -161,22 +161,22 @@ const MCP_SERVER_STARTUP_TIMEOUT: Duration = Duration::from_secs(20);
 const HARNESS_SAVE_INTERVAL: Duration = Duration::from_secs(30);
 /// Timeout for individual harness auth preflight commands.
 const PREFLIGHT_CHECK_TIMEOUT: Duration = Duration::from_secs(30);
-pub(crate) const BORK_DRIVE_SYNC_TIMEOUT: Duration = Duration::from_secs(60);
+pub(crate) const KRUST_DRIVE_SYNC_TIMEOUT: Duration = Duration::from_secs(60);
 /// Maximum time to wait for an automatic error resume before propagating the error.
 /// If no follow-up status arrives within this window, the driver terminates with the
 /// original error so the CLI does not hang indefinitely.
 const AUTO_RESUME_TIMEOUT: Duration = Duration::from_secs(120);
-/// Signals to Claude child-harness hooks that Bork already owns the background
+/// Signals to Claude child-harness hooks that Krust already owns the background
 /// message-listener lifecycle, so the plugin should reuse the shared state
 /// files instead of spawning and cleaning up its own listener.
 ///
 /// When this variable is absent, the Claude plugin falls back to its legacy
-/// self-managed listener path so older Bork builds and standalone plugin
+/// self-managed listener path so older Krust builds and standalone plugin
 /// invocations keep working.
 pub(crate) const OZ_MESSAGE_LISTENER_MANAGED_EXTERNALLY_ENV: &str =
     "OZ_MESSAGE_LISTENER_MANAGED_EXTERNALLY";
 /// Optional root directory for the per-session Claude message-listener state
-/// that Bork and the Claude hook scripts share.
+/// that Krust and the Claude hook scripts share.
 pub(crate) const OZ_MESSAGE_LISTENER_STATE_ROOT_ENV: &str = "OZ_MESSAGE_LISTENER_STATE_ROOT";
 // Keep exporting the legacy `OZ_PARENT_*` names to child hooks until the
 // external Claude plugin has fully migrated to the canonical
@@ -321,7 +321,7 @@ pub struct AgentDriverOptions {
     pub mcp_startup_timeout: Option<Duration>,
 }
 
-/// `AgentDriver` is a model for driving an ambient Bork agent to completion.
+/// `AgentDriver` is a model for driving an ambient Krust agent to completion.
 ///
 /// Its primary responsibility is to configure a headless terminal pane and execute an AI query within it.
 pub struct AgentDriver {
@@ -486,7 +486,7 @@ pub enum AgentDriverError {
     #[error("Agent profile \"{0}\" not found")]
     ProfileError(String),
     #[error(
-        "Failed to authenticate with server - please log in via 'oz login', provide an API key via '--api-key <key>', or set the BORK_API_KEY environment variable"
+        "Failed to authenticate with server - please log in via 'oz login', provide an API key via '--api-key <key>', or set the KRUST_API_KEY environment variable"
     )]
     NotLoggedIn,
     #[error("Saved prompt not found for id {0}")]
@@ -502,7 +502,7 @@ pub enum AgentDriverError {
         error: terminal::ShareSessionError,
     },
     #[error("Error syncing Library")]
-    BorkDriveSyncFailed,
+    KrustDriveSyncFailed,
     #[error("Requested environment not found: {0}")]
     EnvironmentNotFound(String),
     #[error("Environment setup failed: {0}")]
@@ -600,8 +600,8 @@ struct ResolvedMcpSpecs {
     ephemeral_installations: Vec<TemplatableMCPServerInstallation>,
 }
 
-impl From<borkui::ModelDropped> for AgentDriverError {
-    fn from(_: borkui::ModelDropped) -> Self {
+impl From<krustui::ModelDropped> for AgentDriverError {
+    fn from(_: krustui::ModelDropped) -> Self {
         AgentDriverError::InvalidRuntimeState
     }
 }
@@ -702,7 +702,7 @@ impl AgentDriver {
 
         // Signal to third-party harnesses (e.g. Claude Code) that we're in a sandbox
         // so they allow root execution with permissive flags.
-        if bork_isolation_platform::detect().is_some() {
+        if krust_isolation_platform::detect().is_some() {
             env_vars.insert(OsString::from("IS_SANDBOX"), OsString::from("1"));
             tracing::Span::current().record("is_sandbox", true);
         }
@@ -711,7 +711,7 @@ impl AgentDriver {
 
         // A view-bound run (terminal → local harness) supplies its own
         // `TerminalDriver` bound to the user's visible terminal via
-        // `create_from_existing_view`; a headless run (the `bork agent run`
+        // `create_from_existing_view`; a headless run (the `krust agent run`
         // CLI path) creates a fresh terminal here. Env vars still reach the
         // harness subprocess through `resolved_env_vars`/`build_runner`, not
         // the terminal shell, so a view-bound run doesn't need them applied
@@ -790,7 +790,7 @@ impl AgentDriver {
     }
 
     /// Creates a driver that runs in its own fresh headless terminal (the
-    /// `bork agent run` CLI path).
+    /// `krust agent run` CLI path).
     #[tracing::instrument(name = "AgentDriver::new", skip_all, err, fields(
         tags.cloud_agent = true,
         task_id = ?options.task_id,
@@ -2377,7 +2377,7 @@ impl AgentDriver {
                 // and then call stop_sharing_session when they're done. To know when streams are finished, we would need to modify start_ordered_terminal_events_listener
                 // to send a message when the streams are finished, flushed, and the websocket is disconnected. For now, we'll just sleep for a second, as this seems
                 // to be enough time for the streams to be finished and the events to be flushed.
-                borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+                krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
                 conversation_status.into_result()
             }
@@ -2519,7 +2519,7 @@ impl AgentDriver {
     }
 
     /// Sets up the third-party harness by subscribing to CLI session events and
-    /// installing the Bork plugin and platform plugin, if applicable.
+    /// installing the Krust plugin and platform plugin, if applicable.
     ///
     /// Returns a oneshot receiver that fires when the harness should exit
     /// (either immediately on completion or after the idle-on-complete timeout).
@@ -2843,7 +2843,7 @@ impl AgentDriver {
         let command_result = loop {
             futures::select! {
                 exit_code = command_handle => break exit_code,
-                _ = borkui::r#async::Timer::after(HARNESS_SAVE_INTERVAL).fuse() => {
+                _ = krustui::r#async::Timer::after(HARNESS_SAVE_INTERVAL).fuse() => {
                     log::debug!("Triggering periodic save of harness conversation data");
                     report_if_error!(runner
                         .save_conversation(SavePoint::Periodic, foreground)
@@ -2868,7 +2868,7 @@ impl AgentDriver {
                         let telemetry_pattern = error.pattern.clone();
                         let _ = foreground
                             .spawn(move |_, ctx| {
-                                use bork_core::telemetry::TelemetryEvent as _;
+                                use krust_core::telemetry::TelemetryEvent as _;
                                 let event =
                                     ThirdPartyHarnessTelemetryEvent::RuntimeErrorDetected {
                                         harness: telemetry_harness,
@@ -3253,7 +3253,7 @@ impl AgentDriver {
                             | SDKConversationOutputStatus::Blocked { .. }
                             | SDKConversationOutputStatus::Cancelled { .. } => {
                                 // Whether to keep the process alive after completion is controlled by
-                                // the `bork agent run --idle-on-complete[=<DURATION>]` flag.
+                                // the `krust agent run --idle-on-complete[=<DURATION>]` flag.
                                 if let Some(idle_timeout) = me.idle_on_complete {
                                     log::info!(
                                         "Ambient agent idle lifecycle: event=idle_timeout_scheduled task_id={:?} terminal_view_id={terminal_id:?} timeout={idle_timeout:?} outcome=non_error_completion",
@@ -3310,7 +3310,7 @@ impl AgentDriver {
             }
         });
 
-        // Subscribe to document model events to emit artifact_created when plans sync to Bork Drive.
+        // Subscribe to document model events to emit artifact_created when plans sync to Krust Drive.
         ctx.subscribe_to_model(&AIDocumentModel::handle(ctx), move |me, _, event, ctx| {
             let AIDocumentModelEvent::DocumentSaveStatusUpdated(document_id) = event else {
                 return;
@@ -3330,7 +3330,7 @@ impl AgentDriver {
 
             // Get the notebook link from the document model
             let Some(notebook_link) =
-                doc_model.get_document_bork_drive_object_link(document_id, ctx)
+                doc_model.get_document_krust_drive_object_link(document_id, ctx)
             else {
                 return;
             };
@@ -3557,7 +3557,7 @@ impl AgentDriver {
                     "slow bootstrap"
                 );
                 eprintln!(
-                    "Warning: Terminal session is slow to bootstrap. See https://therob.lol/bork-terminal/help/support-and-community/troubleshooting-and-support/known-issues#shells to troubleshoot."
+                    "Warning: Terminal session is slow to bootstrap. See https://therob.lol/krust-terminal/help/support-and-community/troubleshooting-and-support/known-issues#shells to troubleshoot."
                 );
             }
             TerminalDriverEvent::EstablishedSharedSession {

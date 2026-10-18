@@ -10,7 +10,7 @@ pub use maa::{
     PassiveSuggestionsEvent as MaaPassiveSuggestionsEvent,
     PassiveSuggestionsModel as MaaPassiveSuggestionsModel,
 };
-use borkui::ModelHandle;
+use krustui::ModelHandle;
 
 #[derive(Clone)]
 pub struct PassiveSuggestionsModels {

@@ -8,7 +8,7 @@ updates:
     schedule:
       interval: "daily"
     assignees:
-      - "borkdotdev/tech-leads"
+      - "krustdotdev/tech-leads"
     registries:
       - github-private
     # Only send security updates, not general version updates.
@@ -18,7 +18,7 @@ updates:
     schedule:
       interval: "daily"
     assignees:
-      - "borkdotdev/tech-leads"
+      - "krustdotdev/tech-leads"
     cooldown:
       # Don't update to any action release that is less than two weeks old.
       default-days: 14
@@ -46,6 +46,6 @@ registries:
     type: git
     url: https://github.com
     username: x-access-token
-    # This is a PAT (personal access token) for the borkmachineuser
+    # This is a PAT (personal access token) for the krustmachineuser
     # GitHub user.
     password: ${{secrets.DEPENDABOT_PRIVATE_REPO_ACCESS_TOKEN}}

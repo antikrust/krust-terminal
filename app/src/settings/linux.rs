@@ -1,6 +1,6 @@
 use settings::macros::define_settings_group;
 use settings::{SupportedPlatforms, SyncToCloud};
-use borkui::platform::linux;
+use krustui::platform::linux;
 
 define_settings_group!(LinuxAppConfiguration,
     settings: [

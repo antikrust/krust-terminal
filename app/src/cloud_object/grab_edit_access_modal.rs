@@ -1,9 +1,9 @@
-use borkui::elements::{Container, Element, MouseStateHandle, Text};
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::elements::{Container, Element, MouseStateHandle, Text};
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::buttons::close_button;

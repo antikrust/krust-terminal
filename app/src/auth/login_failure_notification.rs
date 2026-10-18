@@ -1,15 +1,15 @@
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use borkui::elements::{
+use krustui::elements::{
     Border, ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, Icon, MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::ui_components::components::UiComponent;
-use borkui::{Action, AppContext, Element, SingletonEntity};
+use krustui::ui_components::components::UiComponent;
+use krustui::{Action, AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 
 const LOGIN_TROUBLESHOOTING_DOCS_URL: &str =
-    "https://therob.lol/bork-terminal/help/support-and-community/troubleshooting-and-support/troubleshooting-login-issues";
+    "https://therob.lol/krust-terminal/help/support-and-community/troubleshooting-and-support/troubleshooting-login-issues";
 
 /// Represents reasons why login failed.
 pub enum LoginFailureReason {
@@ -149,7 +149,7 @@ pub fn render<A: Action + Clone>(
 }
 
 mod styles {
-    use borkui::elements::{CornerRadius, Radius};
+    use krustui::elements::{CornerRadius, Radius};
 
     pub const NOTIFICATION_CONTAINER_PADDING: f32 = 8.;
     pub const NOTIFICATION_CONTAINER_CORNER_RADIUS: CornerRadius =

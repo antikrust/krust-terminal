@@ -89,8 +89,8 @@ pub enum Event {
     SourcedRcFileInSubshell(SourcedRcFileInSubshellEvent),
     /// Emitted when the active block's prompt has been updated.
     PromptUpdated,
-    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Bork's settings.
-    /// This can happen in cases such as when the user changes between PS1 and Bork prompt inside
+    /// Emitted when the honor_ps1 state of the shell is out-of-sync with Krust's settings.
+    /// This can happen in cases such as when the user changes between PS1 and Krust prompt inside
     /// of an SSH session (the bindkeys are sent to the SSH session but not the local session, so
     /// they are out-of-sync when the user exits SSH).
     HonorPS1OutOfSync,
@@ -138,7 +138,7 @@ pub enum Event {
     },
     BootstrapPrecmdDone,
     /// A pluggable notification triggered via OSC 9 or OSC 777 escape sequences.
-    /// External programs can use this to trigger notifications in Bork.
+    /// External programs can use this to trigger notifications in Krust.
     ///
     /// References:
     /// - OSC 9: <https://conemu.github.io/en/AnsiEscapeCodes.html#OSC_Operating_system_commands>
@@ -170,9 +170,9 @@ pub enum TerminalMode {
 #[derive(Clone, Debug)]
 pub enum SshLoginStatus {
     /// We have some evidence login is complete but should check again.
-    RecheckBeforeBorkifying,
+    RecheckBeforeKrustifying,
     /// We have high confidence login is complete.
-    ReadyToBorkify,
+    ReadyToKrustify,
 }
 
 #[derive(Clone, Debug)]
@@ -250,7 +250,7 @@ pub enum BlockType {
     /// This is a block containing background process output.
     Background(Arc<SerializedBlock>),
 
-    /// This is a block containing static/hardcoded content (e.g. the subshell Borkification
+    /// This is a block containing static/hardcoded content (e.g. the subshell Krustification
     /// welcome block).
     Static,
 }

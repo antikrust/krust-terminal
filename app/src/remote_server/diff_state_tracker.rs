@@ -10,9 +10,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use itertools::Itertools;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle};
+use krust_util::standardized_path::StandardizedPath;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::protocol::RequestId;
 use super::server_model::ConnectionId;

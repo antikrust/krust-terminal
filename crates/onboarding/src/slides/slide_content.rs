@@ -1,9 +1,9 @@
-use bork_core::ui::appearance::Appearance;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui_core::elements::{
     Align, ClippedScrollStateHandle, ClippedScrollable, Container, CrossAxisAlignment, Flex,
     MainAxisSize, ParentElement, ScrollbarWidth, Shrinkable,
 };
-use borkui_core::Element;
+use krustui_core::Element;
 
 pub fn onboarding_slide_content(
     children: Vec<Box<dyn Element>>,

@@ -1,4 +1,4 @@
-use borkui::App;
+use krustui::App;
 
 use super::InlineMenuModel;
 use crate::terminal::input::inline_menu::{InlineMenuAction, InlineMenuType};

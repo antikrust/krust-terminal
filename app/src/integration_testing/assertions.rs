@@ -1,5 +1,5 @@
-use borkui::integration::TestStep;
-use borkui::{async_assert, async_assert_eq, SingletonEntity};
+use krustui::integration::TestStep;
+use krustui::{async_assert, async_assert_eq, SingletonEntity};
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{CloudObjectEventEntrypoint, CloudObjectLocation, Space};

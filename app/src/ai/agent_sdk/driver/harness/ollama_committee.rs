@@ -1067,10 +1067,10 @@ fn sanitize_findings(
 
     // A stray line number is sloppiness; looping or flooding is the model
     // coming off the rails, and gets named as such.
-    let borked = repeated > 0 || over_cap > 0;
-    let note = if borked {
+    let krusted = repeated > 0 || over_cap > 0;
+    let note = if krusted {
         format!(
-            "went bork — {}. Kept {kept} of {raw_count}.",
+            "went krust — {}. Kept {kept} of {raw_count}.",
             reasons.join(", and ")
         )
     } else {
@@ -1536,7 +1536,7 @@ pub struct ModelStats {
 pub type CommitteeLeaderboard = BTreeMap<String, ModelStats>;
 
 fn leaderboard_path() -> PathBuf {
-    bork_core::paths::state_dir().join(LEADERBOARD_FILE_NAME)
+    krust_core::paths::state_dir().join(LEADERBOARD_FILE_NAME)
 }
 
 /// Loads the standings; every failure is an empty board, never an error —
@@ -1642,7 +1642,7 @@ struct ReviewContinuation {
 /// writes one every time, and a tool that litters the user's repo with files
 /// they didn't ask for gets turned off. `save transcript` moves one out.
 fn transcripts_dir() -> std::path::PathBuf {
-    bork_core::paths::state_dir().join("committee_runs")
+    krust_core::paths::state_dir().join("committee_runs")
 }
 
 /// Transcripts kept before the oldest are swept. Twenty runs is more history
@@ -2109,7 +2109,7 @@ pub fn parse_round_command(prompt: &str) -> Option<PanelRoundKind> {
 // ---------------------------------------------------------------------------
 
 const REVIEWER_SYSTEM_PROMPT: &str = "You are one reviewer on a code-review committee of \
-local models inside bork terminal. You review a git diff and report only concrete defects: \
+local models inside krust terminal. You review a git diff and report only concrete defects: \
 logic errors, broken behavior, security holes, data loss, races, hallucinated APIs. \
 No style nits, no formatting complaints, no praise, no vague advice. \
 Be exhaustive: walk through EVERY function and hunk in the diff separately and report each \
@@ -2183,7 +2183,7 @@ what won out. Respond with STRICT JSON only: \
 \"detail\":\"...\"}],\"summary\":\"...\",\"best_reviewer\":\"model tag or null\"}. Rulings \
 refer to findings by their number.";
 
-const PANEL_SYSTEM_PROMPT: &str = "You are one member of a panel of local models inside bork \
+const PANEL_SYSTEM_PROMPT: &str = "You are one member of a panel of local models inside krust \
 terminal, all answering the same question independently. Answer directly, accurately, and \
 completely from your own knowledge. You cannot run commands or read files. Your answer will \
 be judged against the other panelists', so make it count: correct, specific, no padding. If \

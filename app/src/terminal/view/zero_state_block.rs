@@ -1,17 +1,17 @@
 use settings::Setting;
-use bork_core::ui::Icon;
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_core::ui::Icon;
+use krust_errors::report_if_error;
+use krustui::elements::{
     ChildAnchor, Container, CrossAxisAlignment, Flex, MainAxisSize, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Shrinkable, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::prelude::{vec2f, ConstrainedBox, Cursor, Empty, Hoverable, MouseStateHandle};
-use borkui::scene::{Border, CornerRadius, Radius};
-use borkui::ui_components::checkbox::Checkbox;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::prelude::{vec2f, ConstrainedBox, Cursor, Empty, Hoverable, MouseStateHandle};
+use krustui::scene::{Border, CornerRadius, Radius};
+use krustui::ui_components::checkbox::Checkbox;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -148,8 +148,8 @@ impl View for TerminalViewZeroStateBlock {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        Icon::Bork
-                            .to_borkui_icon(theme.main_text_color(theme.background()))
+                        Icon::Krust
+                            .to_krustui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_height(title_font_size)

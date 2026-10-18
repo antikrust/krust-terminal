@@ -2,14 +2,14 @@
 name = "watcher"
 version = "0.1.0"
 edition = "2021"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 publish.workspace = true
 license.workspace = true
 
 [dependencies]
-bork_errors.workspace = true
+krust_errors.workspace = true
 async-channel.workspace = true
-borkui_core.workspace = true
+krustui_core.workspace = true
 log.workspace = true
 anyhow.workspace = true
 notify-debouncer-full.workspace = true

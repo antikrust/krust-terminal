@@ -1,6 +1,6 @@
 use chrono::Utc;
 use serde_json::json;
-use borkui::telemetry::{Event, EventPayload};
+use krustui::telemetry::{Event, EventPayload};
 
 use super::*;
 

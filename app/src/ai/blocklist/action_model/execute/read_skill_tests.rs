@@ -8,12 +8,12 @@ use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
 use tempfile::TempDir;
-use bork_core::features::FeatureFlag;
-use bork_core::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::{App, ModelHandle};
+use krust_core::features::FeatureFlag;
+use krust_core::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::{App, ModelHandle};
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
@@ -28,7 +28,7 @@ use crate::settings::AISettings;
 use crate::terminal::model::session::active_session::ActiveSession;
 use crate::terminal::model::session::{BootstrapSessionType, SessionId, SessionInfo, Sessions};
 use crate::terminal::model_events::ModelEventDispatcher;
-use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
+use crate::krust_managed_paths_watcher::KrustManagedPathsWatcher;
 
 fn initialize_app(app: &mut App) {
     app.add_singleton_model(DirectoryWatcher::new);
@@ -36,7 +36,7 @@ fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(KrustManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 }
 fn add_test_read_skill_executor(app: &mut App) -> ModelHandle<ReadSkillExecutor> {
@@ -56,7 +56,7 @@ fn bundled_skill(name: &str) -> ParsedSkill {
         path: LocalOrRemotePath::Local(PathBuf::from(format!("/bundled/skills/{name}/SKILL.md"))),
         content: format!("# {name}"),
         line_range: None,
-        provider: SkillProvider::Bork,
+        provider: SkillProvider::Krust,
         scope: SkillScope::Bundled,
     }
 }
@@ -153,7 +153,7 @@ fn disconnected_remote_session_does_not_fall_back_to_client_global_bundled_skill
             sessions.register_session_for_test(
                 SessionInfo::new_for_test()
                     .with_id(session_id)
-                    .with_session_type(BootstrapSessionType::BorkifiedRemote),
+                    .with_session_type(BootstrapSessionType::KrustifiedRemote),
             );
         });
         let (_model_events_tx, model_events_rx) = unbounded();
@@ -204,13 +204,13 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
             path: LocalOrRemotePath::Remote(RemotePath::new(
                 host_id.clone(),
                 StandardizedPath::try_new(
-                    "/opt/bork/resources/bundled/skills/host-specific/SKILL.md",
+                    "/opt/krust/resources/bundled/skills/host-specific/SKILL.md",
                 )
                 .unwrap(),
             )),
             content: "remote rendered content".to_string(),
             line_range: None,
-            provider: SkillProvider::Bork,
+            provider: SkillProvider::Krust,
             scope: SkillScope::Bundled,
         };
         SkillManager::handle(&app).update(&mut app, |manager, _ctx| {
@@ -233,7 +233,7 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
             sessions.register_session_for_test(
                 SessionInfo::new_for_test()
                     .with_id(session_id)
-                    .with_session_type(BootstrapSessionType::BorkifiedRemote),
+                    .with_session_type(BootstrapSessionType::KrustifiedRemote),
             );
         });
         let session = sessions
@@ -273,7 +273,7 @@ fn remote_session_reads_remote_bundled_skill_catalog() {
                 )) => {
                     assert_eq!(
                         content.file_name,
-                        "/opt/bork/resources/bundled/skills/host-specific/SKILL.md"
+                        "/opt/krust/resources/bundled/skills/host-specific/SKILL.md"
                     );
                     assert_eq!(
                         content.content,
@@ -330,17 +330,17 @@ fn test_read_skill_executor_reads_enabled_bundled_skill() {
 }
 
 #[test]
-fn test_read_skill_executor_rejects_bork_control_bundled_skills_when_disabled() {
+fn test_read_skill_executor_rejects_krust_control_bundled_skills_when_disabled() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
         let _bundled_skills = FeatureFlag::BundledSkills.override_enabled(true);
-        let _bork_control_cli = FeatureFlag::BorkControlCli.override_enabled(false);
-        let skill_id = "borkctrl";
+        let _krust_control_cli = FeatureFlag::KrustControlCli.override_enabled(false);
+        let skill_id = "krustctrl";
         SkillManager::handle(&app).update(&mut app, |manager, _ctx| {
             manager.add_bundled_skill_for_testing(
                 skill_id,
                 bundled_skill(skill_id),
-                BundledSkillActivation::RequiresFeature(FeatureFlag::BorkControlCli),
+                BundledSkillActivation::RequiresFeature(FeatureFlag::KrustControlCli),
             );
         });
         let executor_handle = add_test_read_skill_executor(&mut app);

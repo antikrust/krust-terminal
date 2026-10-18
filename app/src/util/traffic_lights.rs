@@ -1,7 +1,7 @@
 //! This module is meant to be a single source of truth for information about the windows' "traffic
 //! light" buttons, the minimize, maximize, and close buttons in the corner of the window, so named
 //! b/c of their resemblance to traffic lights on MacOS. How (whether or not) these are rendered
-//! depends on the platform. The Bork app must use this information to avoid rendering UI elements
+//! depends on the platform. The Krust app must use this information to avoid rendering UI elements
 //! underneath them.
 
 #[cfg(windows)]
@@ -14,11 +14,11 @@ mod custom_unix_chrome {
     pub(super) use pathfinder_color::ColorU;
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     pub(super) use pathfinder_geometry::vector::vec2f;
-    pub(super) use borkui::elements::{
+    pub(super) use krustui::elements::{
         Align, Border, ConstrainedBox, Container, Flex, Hoverable, Icon, ParentElement, Rect,
     };
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-    pub(super) use borkui::elements::{
+    pub(super) use krustui::elements::{
         ChildAnchor, CornerRadius, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Radius,
         Stack,
     };
@@ -33,8 +33,8 @@ use custom_unix_chrome::*;
 mod windows_only {
     pub(super) use pathfinder_color::ColorU;
     pub(super) use pathfinder_geometry::vector::vec2f;
-    pub(super) use bork_core::ui::theme;
-    pub(super) use borkui::elements::{
+    pub(super) use krust_core::ui::theme;
+    pub(super) use krustui::elements::{
         Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Hoverable,
         OffsetPositioning, ParentAnchor, ParentOffsetBounds, Radius, Rect, Stack,
     };
@@ -51,13 +51,13 @@ mod windows_only {
     pub(super) const WINDOWS_BUTTON_PADDING_HORIZONTAL: f32 = 12.;
 }
 
-use borkui::elements::MouseStateHandle;
-use borkui::platform::FullscreenState;
-use borkui::{AppContext, Element, WindowId};
+use krustui::elements::MouseStateHandle;
+use krustui::platform::FullscreenState;
+use krustui::{AppContext, Element, WindowId};
 #[cfg(target_os = "windows")]
 use windows_only::*;
 
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 
 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
 const BUTTON_ICON_SIZE: f32 = 22.;
@@ -153,7 +153,7 @@ impl TrafficLightMouseStates {
     }
 }
 
-/// Data the Bork app needs to avoid rendering anything below the traffic lights.
+/// Data the Krust app needs to avoid rendering anything below the traffic lights.
 #[derive(Clone, Debug)]
 pub struct TrafficLightData {
     width: f32,
@@ -169,7 +169,7 @@ impl TrafficLightData {
     /// Horizontal space needed for the traffic light buttons.
     ///
     /// Normally, we don't need to manually adjust any sizes based on zoom level as it is handled
-    /// by borkui. However, native traffic light buttons (e.g. on macOS) don't scale with zoom, so
+    /// by krustui. However, native traffic light buttons (e.g. on macOS) don't scale with zoom, so
     /// we need to divide by the zoom factor to keep the padding constant.
     pub fn width(&self, zoom_factor: f32) -> f32 {
         if self.scales_with_zoom {
@@ -184,7 +184,7 @@ impl TrafficLightData {
         &self,
         _fullscreen_state: FullscreenState,
         mouse_states: &TrafficLightMouseStates,
-        _theme: &BorkTheme,
+        _theme: &KrustTheme,
         _app: &AppContext,
     ) -> Box<dyn Element> {
         let fullscreen = Self::render_bob_button(
@@ -270,11 +270,11 @@ impl TrafficLightData {
         &self,
         fullscreen_state: FullscreenState,
         mouse_states: &TrafficLightMouseStates,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         _app: &AppContext,
     ) -> Box<dyn Element> {
         if !cfg!(any(target_os = "linux", target_os = "freebsd")) {
-            return borkui::elements::Empty::new().finish();
+            return krustui::elements::Empty::new().finish();
         }
 
         let fg_color = theme.foreground().into_solid();
@@ -406,7 +406,7 @@ impl TrafficLightData {
     fn render_button(
         mouse_state: MouseStateHandle,
         child: Box<dyn Element>,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
     ) -> Hoverable {
         Hoverable::new(mouse_state, |state| {
             let background_color = if state.is_hovered() {
@@ -431,7 +431,7 @@ impl TrafficLightData {
         &self,
         fullscreen_state: FullscreenState,
         mouse_states: &TrafficLightMouseStates,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         self.render_tab_row(fullscreen_state, mouse_states, theme, app)
@@ -530,7 +530,7 @@ impl TrafficLightData {
     fn render_windows_close_button_icon(icon_color: ColorU) -> Box<dyn Element> {
         ConstrainedBox::new(
             IconComponent::X
-                .to_borkui_icon(theme::Fill::Solid(icon_color))
+                .to_krustui_icon(theme::Fill::Solid(icon_color))
                 .finish(),
         )
         .with_height(16.)
@@ -570,9 +570,9 @@ impl TrafficLightData {
         &self,
         _fullscreen_state: FullscreenState,
         _mouse_states: &TrafficLightMouseStates,
-        _theme: &BorkTheme,
+        _theme: &KrustTheme,
         _app: &AppContext,
     ) -> Box<dyn Element> {
-        borkui::elements::Empty::new().finish()
+        krustui::elements::Empty::new().finish()
     }
 }

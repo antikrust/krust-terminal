@@ -16,7 +16,7 @@
 //! COMMITTEE_JUDGE=phi4:14b \
 //! COMMITTEE_FIXTURE=stock \
 //! COMMITTEE_ROUNDS=notes \
-//! cargo test -p bork --lib -- --ignored --nocapture a_real_committee
+//! cargo test -p krust --lib -- --ignored --nocapture a_real_committee
 //! ```
 //!
 //! `COMMITTEE_HOST` is the load-bearing one. Everything it names runs over

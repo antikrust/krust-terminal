@@ -14,9 +14,9 @@ use markdown_parser::{
 };
 use markup5ever::ns;
 use string_offset::CharOffset;
-use borkui_core::elements::{ListIndentLevel, ListNumbering};
-use borkui_core::text::point::Point;
-use borkui_core::{AppContext, ModelContext, ModelHandle};
+use krustui_core::elements::{ListIndentLevel, ListNumbering};
+use krustui_core::text::point::Point;
+use krustui_core::{AppContext, ModelContext, ModelHandle};
 
 use super::buffer::{
     ActionWithSelectionDelta, Buffer, EditOrigin, EditResult, StyledBufferBlock,
@@ -34,7 +34,7 @@ use crate::content::version::BufferVersion;
 /// A Markdown format to serialize a [`Buffer`] into.
 #[derive(Clone, Copy)]
 pub enum MarkdownStyle<'a> {
-    /// The internal Markdown format used in Bork Drive. References are normalized, so the Markdown
+    /// The internal Markdown format used in Krust Drive. References are normalized, so the Markdown
     /// only refers to other objects by their IDs, with no other data.
     Internal,
     /// A Markdown format suitable for external use. If an [`AppContext`] is set, it may be used to

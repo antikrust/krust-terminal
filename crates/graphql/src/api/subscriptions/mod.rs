@@ -1,4 +1,4 @@
-pub mod get_bork_drive_updates;
+pub mod get_krust_drive_updates;
 
 use std::collections::HashMap;
 

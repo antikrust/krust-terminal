@@ -1,1 +1,1 @@
-pub use bork_core::channel::*;
+pub use krust_core::channel::*;

@@ -26,10 +26,10 @@ pub(crate) use gui_input_mode_policy::GuiInputModePolicy;
 pub use inline_agent_view_header::*;
 pub use orchestration_pill_bar::{render_orchestration_breadcrumbs, OrchestrationPillBar};
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::fonts::Properties;
-use borkui::keymap::Keystroke;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::fonts::Properties;
+use krustui::keymap::Keystroke;
 pub use zero_state_block::*;
 
 use crate::terminal::model::TerminalModel;

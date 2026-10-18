@@ -1,5 +1,5 @@
-use borkui::clipboard::ClipboardContent;
-use borkui::integration::TestStep;
+use krustui::clipboard::ClipboardContent;
+use krustui::integration::TestStep;
 
 use super::assert_clipboard_contains_string;
 

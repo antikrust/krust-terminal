@@ -2,7 +2,7 @@
 //! a concrete model per task.
 //!
 //! This module holds the portable definition for **local** (YAML-authored) custom
-//! auto models: each file under `~/.bork/custom_model_routers/` defines exactly
+//! auto models: each file under `~/.krust/custom_model_routers/` defines exactly
 //! one router (see [`parse_model_config_yaml`]), surfaced in the model picker as
 //! synthetic [`LLMInfo`] entries, and serialized inline into outbound agent
 //! requests (`Request.Settings.custom_model_routers`).
@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 /// like `custom_model_providers::{CustomModelProvider, CustomModel}`.
 use api::request::settings::custom_model_routers as proto;
 use serde::{Deserialize, Serialize};
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 use super::llms::{LLMContextWindow, LLMId, LLMInfo, LLMProvider, LLMUsageMetadata};
 
@@ -37,7 +37,7 @@ pub const CLOUD_CUSTOM_ROUTER_PREFIX: &str = "custom-router:cloud:";
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CustomModelRouting {
-    /// Route by Bork-determined task complexity.
+    /// Route by Krust-determined task complexity.
     Complexity(ComplexityRouting),
     /// Route by classifying the prompt against user-authored categories.
     Prompt(PromptRouting),
@@ -116,7 +116,7 @@ impl CustomModelRouter {
             Some(path) => {
                 format!(
                     "{routing_kind} · {}",
-                    bork_core::paths::home_relative_path(path)
+                    krust_core::paths::home_relative_path(path)
                 )
             }
             None => routing_kind.to_owned(),

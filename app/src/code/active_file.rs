@@ -1,7 +1,7 @@
 //! Module containing the definition of [`ActiveFileModel`],
 //! which tracks the currently focused file across an entire PaneGroup.
 
-use borkui::{Entity, ModelContext};
+use krustui::{Entity, ModelContext};
 
 use super::buffer_location::LocalOrRemotePath;
 

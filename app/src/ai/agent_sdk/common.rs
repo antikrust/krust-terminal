@@ -7,13 +7,13 @@ use std::time::Duration;
 
 use futures::TryFutureExt;
 use inquire::{InquireError, Select};
-use bork_cli::agent::Harness;
-use bork_cli::environment::{EnvironmentCreateArgs, EnvironmentUpdateArgs};
-use borkui::r#async::FutureExt;
-use borkui::{AppContext, GetSingletonModelHandle, SingletonEntity as _, UpdateModel};
+use krust_cli::agent::Harness;
+use krust_cli::environment::{EnvironmentCreateArgs, EnvironmentUpdateArgs};
+use krustui::r#async::FutureExt;
+use krustui::{AppContext, GetSingletonModelHandle, SingletonEntity as _, UpdateModel};
 
 use crate::ai::agent::conversation::ServerAIConversationMetadata;
-use crate::ai::agent_sdk::driver::{AgentDriverError, BORK_DRIVE_SYNC_TIMEOUT};
+use crate::ai::agent_sdk::driver::{AgentDriverError, KRUST_DRIVE_SYNC_TIMEOUT};
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::cloud_environments::CloudAmbientAgentEnvironment;
 use crate::ai::llms::{LLMId, LLMPreferences};
@@ -134,13 +134,13 @@ where
     }
 }
 
-/// Refresh Bork Drive before executing an operation.
-pub fn refresh_bork_drive(
+/// Refresh Krust Drive before executing an operation.
+pub fn refresh_krust_drive(
     ctx: &AppContext,
 ) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     UpdateManager::as_ref(ctx)
         .initial_load_complete()
-        .with_timeout(BORK_DRIVE_SYNC_TIMEOUT)
+        .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT)
         .map_err(|_| anyhow::anyhow!("Timed out waiting for Library to sync"))
 }
 
@@ -213,7 +213,7 @@ pub enum EnvironmentChoice {
 
 impl EnvironmentChoice {
     /// Resolve the environment to use when creating an agent integration.
-    /// Bork Drive *must* have been synced first.
+    /// Krust Drive *must* have been synced first.
     pub fn resolve_for_create(
         args: EnvironmentCreateArgs,
         ctx: &AppContext,
@@ -252,7 +252,7 @@ impl EnvironmentChoice {
 
             // If there are no synced environments, require the user to create one or use --no-environment.
             if options.len() == 1 {
-                let cli_name = bork_cli::binary_name().unwrap_or_else(|| "bork".to_string());
+                let cli_name = krust_cli::binary_name().unwrap_or_else(|| "krust".to_string());
                 return Err(ResolveConfigurationError::Other(anyhow::anyhow!(
                     "No environments are configured for this account.\n\
 You can create an environment with `{cli_name} environment create`.\n\
@@ -279,7 +279,7 @@ Without an environment, the agent will not be able to access private repositorie
 
     /// Resolve the environment to use when updating an agent integration. If the user did not
     /// request any changes to the environment, this returns `Ok(None)`.
-    /// Bork Drive *must* have been synced first.
+    /// Krust Drive *must* have been synced first.
     pub fn resolve_for_update(
         args: EnvironmentUpdateArgs,
         ctx: &AppContext,

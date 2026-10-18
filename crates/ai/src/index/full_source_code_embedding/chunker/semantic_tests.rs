@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use languages::language_by_filename;
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::standardized_path::StandardizedPath;
 
 use super::*;
 

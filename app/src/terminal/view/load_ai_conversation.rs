@@ -6,12 +6,12 @@ use std::sync::Arc;
 use itertools::Itertools;
 use prost::Message;
 use vec1::Vec1;
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_multi_agent_api as api;
-use borkui::units::IntoPixels;
-use borkui::{EntityId, ModelHandle, SingletonEntity, ViewContext};
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_multi_agent_api as api;
+use krustui::units::IntoPixels;
+use krustui::{EntityId, ModelHandle, SingletonEntity, ViewContext};
 
 use super::blocklist_filter::exchanges_for_blocklist;
 use super::DEFAULT_AI_BLOCK_HEIGHT;
@@ -98,7 +98,7 @@ pub enum ConversationRestorationInNewPaneType {
         /// True when the fork is paired with a follow-up prompt or summarize that
         /// will be sent immediately after restore.
         /// We skip the `couldn't find original conversation directory` ephemeral
-        /// hint in that case so the borking indicator (gated on
+        /// hint in that case so the krusting indicator (gated on
         /// `ephemeral_message_model.current_message().is_none()` in
         /// `BlocklistAIStatusBar::render`) isn't suppressed by the hint.
         has_initial_query: bool,

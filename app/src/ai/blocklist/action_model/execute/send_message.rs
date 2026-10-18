@@ -7,10 +7,10 @@ use futures::future::BoxFuture;
 #[cfg(not(target_family = "wasm"))]
 use futures::future::Either;
 use futures::FutureExt;
-use bork_core::send_telemetry_from_ctx;
+use krust_core::send_telemetry_from_ctx;
 #[cfg(not(target_family = "wasm"))]
-use borkui::r#async::Timer;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::r#async::Timer;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::conversation::AIConversationId;

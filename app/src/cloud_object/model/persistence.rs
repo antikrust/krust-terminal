@@ -4,10 +4,10 @@ use std::sync::mpsc::SyncSender;
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
 use rand::Rng;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_graphql::scalars::time::ServerTimestamp;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_graphql::scalars::time::ServerTimestamp;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use super::generic_string_model::GenericStringObjectId;
 use crate::ai::execution_profiles::CloudAIExecutionProfile;
@@ -896,7 +896,7 @@ impl CloudModel {
 
             folder.set_model(CloudFolderModel {
                 is_open,
-                is_bork_pack: folder.model().is_bork_pack,
+                is_krust_pack: folder.model().is_krust_pack,
                 name: folder.model().name.clone(),
             });
 
@@ -1098,11 +1098,11 @@ impl CloudModel {
             .count()
     }
 
-    /// Number of cloud objects that have errored in some way and are visible in the Bork Drive index
+    /// Number of cloud objects that have errored in some way and are visible in the Krust Drive index
     pub fn num_visible_errored_objects(&self) -> usize {
         self.objects_by_id
             .values()
-            .filter(|object| object.renders_in_bork_drive() && object.metadata().is_errored())
+            .filter(|object| object.renders_in_krust_drive() && object.metadata().is_errored())
             .count()
     }
 
@@ -1411,7 +1411,7 @@ impl CloudModel {
     pub fn current_revision(&self, id: &SyncId) -> Option<&Revision> {
         self.objects_by_id
             .get(&id.uid())
-            .and_then(|bork_cloud_object| bork_cloud_object.metadata().revision.as_ref())
+            .and_then(|krust_cloud_object| krust_cloud_object.metadata().revision.as_ref())
     }
 
     /// Returns only active (not trashed) notebooks in cloud model.

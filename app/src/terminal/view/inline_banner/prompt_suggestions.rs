@@ -2,19 +2,19 @@ use std::rc::Rc;
 
 use pathfinder_geometry::vector::vec2f;
 use serde::Serialize;
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
-use borkui::elements::{
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
+use krustui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Fill, Flex, HighlightedHyperlink, Hoverable, Icon, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Shrinkable, Stack, Text,
 };
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, EventContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -35,7 +35,7 @@ use crate::settings::InputSettings;
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
 use crate::terminal::view::{ContextMenuAction, InputType, PromptSuggestion, TerminalAction};
 use crate::ui_components::blended_colors;
-use crate::ui_components::icons::Icon as BorkUIIcon;
+use crate::ui_components::icons::Icon as KrustUIIcon;
 use crate::util::bindings::keybinding_name_to_keystroke;
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -124,7 +124,7 @@ pub struct PromptSuggestionBannerState {
 #[allow(clippy::too_many_arguments)]
 fn render_button(
     text: String,
-    icon: BorkUIIcon,
+    icon: KrustUIIcon,
     button_index: usize,
     keystroke: Option<Keystroke>,
     mouse_state: MouseStateHandle,
@@ -313,11 +313,11 @@ fn get_tooltip_text_for_alert_state(alert_state: &PromptAlertState) -> Option<St
     }
 }
 
-/// Free-plan users who run out of Bork-provided AI credits should get a modal
+/// Free-plan users who run out of Krust-provided AI credits should get a modal
 /// offering BYO/upgrade instead of a disabled button. Other disabled states
 /// (offline, payment issues, team overage gates) keep the disabled treatment.
 fn should_open_unavailable_modal(state: &PromptAlertState, app: &AppContext) -> bool {
-    FeatureFlag::OpenBorkNewSettingsModes.is_enabled()
+    FeatureFlag::OpenKrustNewSettingsModes.is_enabled()
         && matches!(state, PromptAlertState::RequestLimitReached)
         && !UserWorkspaces::as_ref(app)
             .current_workspace()
@@ -421,11 +421,11 @@ impl View for PromptSuggestionsView {
                 1.0,
                 render_button(
                     prompt_suggestion.label().clone(),
-                    BorkUIIcon::Oz,
+                    KrustUIIcon::Oz,
                     0,
                     keybinding_name_to_keystroke(ACCEPT_PROMPT_SUGGESTION_KEYBINDING, app),
                     banner_state.accept_button_mouse_state.clone(),
-                    Rc::new(move |ctx: &mut borkui::EventContext<'_>| {
+                    Rc::new(move |ctx: &mut krustui::EventContext<'_>| {
                         if open_unavailable_modal {
                             ctx.dispatch_typed_action(
                                 WorkspaceAction::OpenPromptSuggestionsUnavailableModal,

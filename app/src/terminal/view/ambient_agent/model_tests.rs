@@ -1,5 +1,5 @@
 use url::Url;
-use borkui::{App, EntityId};
+use krustui::{App, EntityId};
 
 use super::*;
 use crate::ai::blocklist::handoff::HandoffLaunchAttachments;
@@ -96,7 +96,7 @@ fn touched_workspace_with_orphan_file() -> TouchedWorkspace {
     }
 }
 
-fn add_model(app: &mut App) -> borkui::ModelHandle<AmbientAgentViewModel> {
+fn add_model(app: &mut App) -> krustui::ModelHandle<AmbientAgentViewModel> {
     app.add_model(|ctx| AmbientAgentViewModel::new(EntityId::new(), ctx))
 }
 
@@ -252,7 +252,7 @@ fn github_auth_url_for_initial_run_includes_focus_cloud_mode_next() {
             };
             model.request = Some(retry_request("fix tests"));
             model.handle_needs_github_auth(
-                "https://example.com/oauth/connect/github?scheme=borkdev".to_string(),
+                "https://example.com/oauth/connect/github?scheme=krustdev".to_string(),
                 "auth required".to_string(),
                 ctx,
             );
@@ -268,7 +268,7 @@ fn github_auth_url_for_initial_run_includes_focus_cloud_mode_next() {
                 .map(|(_, value)| value.into_owned());
             assert_eq!(
                 next,
-                Some("borkdev://action/focus_cloud_mode?source=cloud_setup".to_string())
+                Some("krustdev://action/focus_cloud_mode?source=cloud_setup".to_string())
             );
         });
     });
@@ -575,7 +575,7 @@ fn handoff_request_carries_universal_orchestration_handoff_marker() {
 /// Installs a single-model Agent Mode catalog (also used as the default) so
 /// `get_active_base_model` resolves to it via the profile-default fallback.
 fn install_default_agent_mode_model(
-    model: &borkui::ModelHandle<AmbientAgentViewModel>,
+    model: &krustui::ModelHandle<AmbientAgentViewModel>,
     app: &mut App,
     info: LLMInfo,
 ) {

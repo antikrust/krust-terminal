@@ -1,0 +1,23 @@
+[Desktop Entry]
+# The version of the desktop entry spec this conforms to.
+Version=1.0
+
+Type=Application
+
+Name=Krust
+GenericName=TerminalEmulator
+
+Exec=krust-terminal %U
+StartupWMClass=krust.baby.Krust
+
+Keywords=shell;prompt;command;commandline;cmd;
+
+Icon=krust.baby.Krust
+
+Categories=System;TerminalEmulator;
+
+# Don't run this application within a terminal.
+Terminal=false
+
+# Register ourselves as the handler for krust:// URLs.
+MimeType=x-scheme-handler/krust;

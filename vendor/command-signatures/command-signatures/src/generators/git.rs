@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     Alias, CommandBuilder, CommandSignatureGenerators, Generator, GeneratorName, GeneratorResults,
     GeneratorResultsCollector, IconType, Importance, Order, Priority, Suggestion,
 };
@@ -970,7 +970,7 @@ mod tests {
         post_process_diff_name_only, post_process_files_for_staging,
         post_process_push_refspec_branches, post_process_push_refspec_tags, post_process_tags,
     };
-    use bork_completion_metadata::{
+    use krust_completion_metadata::{
         GeneratorResults, IconType, Importance, Order, Priority, Shell, Suggestion,
     };
 

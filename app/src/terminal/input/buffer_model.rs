@@ -1,4 +1,4 @@
-use borkui::{Entity, ModelContext, ViewHandle};
+use krustui::{Entity, ModelContext, ViewHandle};
 
 use crate::editor::{self, EditorView, Point};
 

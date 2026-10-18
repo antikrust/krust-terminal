@@ -13,8 +13,8 @@ let generatedArgument: Argument = {
     ],
 };
 
-export function activate(bork: Bork) {
-  bork.completions.registerCommandSignature({
+export function activate(krust: Krust) {
+  krust.completions.registerCommandSignature({
     command: {
       name: "jack",
       alias: "j",

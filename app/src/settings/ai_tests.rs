@@ -1,6 +1,6 @@
 use chrono::Utc;
-use bork_graphql::scalars::time::ServerTimestamp;
-use borkui::{App, SingletonEntity};
+use krust_graphql::scalars::time::ServerTimestamp;
+use krustui::{App, SingletonEntity};
 
 use super::*;
 use crate::ai::request_usage_model::{RequestLimitInfo, RequestLimitRefreshDuration};

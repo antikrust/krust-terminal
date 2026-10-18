@@ -14,14 +14,14 @@ use repo_metadata::file_tree_store::{
 use repo_metadata::local_model::IndexedRepoState;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::{FileTreeEntry, RepoMetadataModel};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_core::{send_telemetry_from_ctx, HostId};
-use bork_util::path::LineAndColumnArg;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_core::{send_telemetry_from_ctx, HostId};
+use krust_util::path::LineAndColumnArg;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     AcceptedByDropTarget, Align, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container,
     CrossAxisAlignment, Dismiss, Draggable, DraggableState, Empty, Flex, FormattedTextElement,
     Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
@@ -29,11 +29,11 @@ use borkui::elements::{
     Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList,
     UniformListState,
 };
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::text_layout::TextAlignment;
-use borkui::{
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::text_layout::TextAlignment;
+use krustui::{
     id, AppContext, BlurContext, Element, Entity, EventContext, ModelHandle, SingletonEntity as _,
     TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -58,7 +58,7 @@ use crate::util::openable_file_type::{
 };
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::{
-    resolve_file_target_to_open_in_bork, resolve_file_target_with_editor_choice,
+    resolve_file_target_to_open_in_krust, resolve_file_target_with_editor_choice,
 };
 
 mod editing;
@@ -1041,8 +1041,8 @@ impl FileTreeView {
             .collect();
 
         // Ancestor-dedup only local inputs. Shared with `GlobalSearchView`
-        // via `bork_util::path::group_roots_by_common_ancestor`.
-        let grouping = bork_util::path::group_roots_by_common_ancestor(&local_inputs);
+        // via `krust_util::path::group_roots_by_common_ancestor`.
+        let grouping = krust_util::path::group_roots_by_common_ancestor(&local_inputs);
 
         // Final displayed order: local surviving roots (in input order),
         // followed by preserved remote roots (in their existing order).
@@ -1867,7 +1867,7 @@ impl FileTreeView {
         let expand_icon = match expand_icon {
             Some(icon) => {
                 let chevron_icon_color = item_highlight_state.text_and_icon_color(appearance);
-                icon.to_borkui_icon(chevron_icon_color.into()).finish()
+                icon.to_krustui_icon(chevron_icon_color.into()).finish()
             }
             None => Empty::new().finish(),
         };
@@ -1886,7 +1886,7 @@ impl FileTreeView {
         // Add the icon for the item.
         let icon_color = item_highlight_state.text_and_icon_color(appearance);
         let icon = match render_state.icon {
-            ImageOrIcon::Icon(icon) => icon.to_borkui_icon(icon_color.into()).finish(),
+            ImageOrIcon::Icon(icon) => icon.to_krustui_icon(icon_color.into()).finish(),
             ImageOrIcon::Image(image) => image,
         };
         header_row.add_child(
@@ -2243,7 +2243,7 @@ impl FileTreeView {
     ) {
         let settings = EditorSettings::as_ref(ctx);
         let target = if editor_layout.is_some() {
-            resolve_file_target_to_open_in_bork(path, settings, editor_layout)
+            resolve_file_target_to_open_in_krust(path, settings, editor_layout)
         } else {
             resolve_file_target_with_editor_choice(
                 path,
@@ -2288,7 +2288,7 @@ impl FileTreeView {
                 if is_remote {
                     // Emit a remote open event if we have a host ID.
                     if let Some(host_id) = &root_dir.remote_host_id {
-                        let remote_path = bork_util::remote_path::RemotePath::new(
+                        let remote_path = krust_util::remote_path::RemotePath::new(
                             host_id.clone(),
                             (*metadata.path).clone(),
                         );
@@ -2752,7 +2752,7 @@ impl FileTreeView {
                         ScrollbarWidth::Auto,
                         theme.nonactive_ui_detail().into(),
                         theme.active_ui_detail().into(),
-                        borkui::elements::Fill::None,
+                        krustui::elements::Fill::None,
                     )
                     .with_overlayed_scrollbar()
                     .finish(),
@@ -2799,7 +2799,7 @@ impl FileTreeView {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::AlertTriangle
-                            .to_borkui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+                            .to_krustui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
                             .finish(),
                     )
                     .with_width(24.)
@@ -2864,7 +2864,7 @@ impl FileTreeView {
 
         // Create loading icon
         let loading_icon = Icon::Loading
-            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -2886,7 +2886,7 @@ impl FileTreeView {
         header_row.add_child(loading_icon);
 
         let folder_icon = Icon::Folder
-            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -3020,7 +3020,7 @@ impl View for FileTreeView {
             if let CodingPanelEnablementState::RemoteSession { has_remote_server } = self.enablement
             {
                 // When the session has a remote server connection (Auto SSH
-                // Borkification / mode 1), show a loading state — the server
+                // Krustification / mode 1), show a loading state — the server
                 // may push repo metadata momentarily. For other SSH modes
                 // (tmux, subshell) no data will arrive, so show the disabled
                 // error instead.

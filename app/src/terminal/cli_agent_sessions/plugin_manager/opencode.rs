@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use super::{CliAgentPluginManager, PluginInstructionStep, PluginInstructions};
 
-// Keep in sync with the opencode-bork npm package version.
+// Keep in sync with the opencode-krust npm package version.
 // This version is also hardcoded into UPDATE_INSTRUCTIONS below (so the update
 // instructions tell users to pin to this specific version to force OpenCode's
 // plugin cache to re-fetch). Update both together.
@@ -33,9 +33,9 @@ impl CliAgentPluginManager for OpenCodePluginManager {
 
 static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
     PluginInstructions {
-        title: "Install Bork Plugin for OpenCode",
+        title: "Install Krust Plugin for OpenCode",
         subtitle:
-            "Add the Bork plugin to your OpenCode configuration, then restart OpenCode.",
+            "Add the Krust plugin to your OpenCode configuration, then restart OpenCode.",
         steps: &[
             PluginInstructionStep {
                 description: "Open or create your opencode.json. This can be in your project root, or the global config path:",
@@ -44,8 +44,8 @@ static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
                 link: None,
             },
             PluginInstructionStep {
-                description: "Add \"@bork-dot-dev/opencode-bork\" to the \"plugin\" array in the top-level JSON object:",
-                command: "\"plugin\": [\"@bork-dot-dev/opencode-bork\"]",
+                description: "Add \"@krust-dot-dev/opencode-krust\" to the \"plugin\" array in the top-level JSON object:",
+                command: "\"plugin\": [\"@krust-dot-dev/opencode-krust\"]",
                 executable: false,
                 link: None,
             },
@@ -56,7 +56,7 @@ static INSTALL_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
 
 static UPDATE_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
     PluginInstructions {
-        title: "Update Bork Plugin for OpenCode",
+        title: "Update Krust Plugin for OpenCode",
         subtitle: "Pin the plugin to the latest version in your opencode.json. OpenCode caches plugins per version spec, so changing the pin forces it to re-fetch on restart.",
         steps: &[
             PluginInstructionStep {
@@ -66,8 +66,8 @@ static UPDATE_INSTRUCTIONS: LazyLock<PluginInstructions> = LazyLock::new(|| {
                 link: None,
             },
             PluginInstructionStep {
-                description: "Replace the existing \"@bork-dot-dev/opencode-bork\" entry in the \"plugin\" array with the explicit version:",
-                command: "\"plugin\": [\"@bork-dot-dev/opencode-bork@0.1.5\"]",
+                description: "Replace the existing \"@krust-dot-dev/opencode-krust\" entry in the \"plugin\" array with the explicit version:",
+                command: "\"plugin\": [\"@krust-dot-dev/opencode-krust@0.1.5\"]",
                 executable: false,
                 link: None,
             },

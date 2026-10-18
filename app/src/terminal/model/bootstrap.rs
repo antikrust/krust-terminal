@@ -1,15 +1,15 @@
-use bork_errors::report_error;
+use krust_errors::report_error;
 /// Stages during the course of bootstrapping the shell.  
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BootstrapStage {
-    /// Bork is re-parsing historical blocks for this session. We haven't yet started
+    /// Krust is re-parsing historical blocks for this session. We haven't yet started
     /// bootstrapping.
     RestoreBlocks,
-    /// Bork is writing the bootstrap script into the running shell.
-    BorkInput,
+    /// Krust is writing the bootstrap script into the running shell.
+    KrustInput,
     /// Execution of any shell startup scripts such as .rc or .profile files.
     ScriptExecution,
-    /// Model is fully bootstrapped (i.e the `Bootstrap` message was successfully received by Bork).   
+    /// Model is fully bootstrapped (i.e the `Bootstrap` message was successfully received by Krust).   
     Bootstrapped,
     /// Model is fully bootstrapped and we've received the precmd that results from bootstrapping itself
     PostBootstrapPrecmd,
@@ -18,8 +18,8 @@ pub enum BootstrapStage {
 impl BootstrapStage {
     pub fn next_stage(&self) -> Self {
         match self {
-            BootstrapStage::RestoreBlocks => BootstrapStage::BorkInput,
-            BootstrapStage::BorkInput => BootstrapStage::ScriptExecution,
+            BootstrapStage::RestoreBlocks => BootstrapStage::KrustInput,
+            BootstrapStage::KrustInput => BootstrapStage::ScriptExecution,
             BootstrapStage::ScriptExecution => {
                 report_error!("calling next_stage on a block that should be bootstrapped");
                 BootstrapStage::ScriptExecution
@@ -45,9 +45,9 @@ impl BootstrapStage {
         matches!(self, BootstrapStage::PostBootstrapPrecmd)
     }
 
-    /// BorkInput is the one block that is hidden by default (unless debug mode is on).
+    /// KrustInput is the one block that is hidden by default (unless debug mode is on).
     pub fn is_hidden(&self) -> bool {
-        matches!(self, BootstrapStage::BorkInput)
+        matches!(self, BootstrapStage::KrustInput)
     }
 
     /// We only can have an empty block that's shown if it's a block a user created by hitting enter, or if it's

@@ -1,4 +1,4 @@
-use borkui::r#async::BoxFuture;
+use krustui::r#async::BoxFuture;
 
 use super::*;
 

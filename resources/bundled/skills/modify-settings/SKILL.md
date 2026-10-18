@@ -1,11 +1,11 @@
 ---
 name: modify-settings
-description: View or modify Bork application settings using the bundled JSON schema for guidance
+description: View or modify Krust application settings using the bundled JSON schema for guidance
 ---
 
 # modify-settings
 
-Use this skill when the user wants to view, change, or troubleshoot Bork application settings.
+Use this skill when the user wants to view, change, or troubleshoot Krust application settings.
 
 ## Settings Schema
 
@@ -64,7 +64,7 @@ theme = "light"
 
 A common mistake is to stop one level too early — always count the full depth before writing the TOML section header.
 
-If the file does not exist yet, create it. Bork hot-reloads this file, so changes take effect immediately.
+If the file does not exist yet, create it. Krust hot-reloads this file, so changes take effect immediately.
 
 ## Workflow
 

@@ -5,8 +5,8 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use borkui::elements::ClippedScrollStateHandle;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krustui::elements::ClippedScrollStateHandle;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};

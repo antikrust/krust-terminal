@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::{Find, FindDirection, FindEvent, FindModel};
 use crate::auth::AuthStateProvider;
@@ -17,7 +17,7 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 
 struct MockFindModel;
 
-impl borkui::Entity for MockFindModel {
+impl krustui::Entity for MockFindModel {
     type Event = FindEvent;
 }
 
@@ -28,7 +28,7 @@ impl FindModel for MockFindModel {
     fn match_count(&self) -> usize {
         0
     }
-    fn default_find_direction(&self, _app: &borkui::AppContext) -> FindDirection {
+    fn default_find_direction(&self, _app: &krustui::AppContext) -> FindDirection {
         FindDirection::Down
     }
 }

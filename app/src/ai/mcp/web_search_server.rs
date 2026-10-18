@@ -22,11 +22,11 @@ use serde_json::{json, Value};
 
 const WEB_SEARCH_TOOL_NAME: &str = "web_search";
 const PROTOCOL_VERSION: &str = "2024-11-05";
-const SERVER_NAME: &str = "bork-web-search";
+const SERVER_NAME: &str = "krust-web-search";
 
 /// Runs the server until stdin closes (the MCP client disconnects), then
 /// returns. Called from the `web-search-mcp-server` worker subcommand (see
-/// `bork_cli::WorkerCommand::WebSearchMcpServer`), which is this function's
+/// `krust_cli::WorkerCommand::WebSearchMcpServer`), which is this function's
 /// entire reason to run — the process exits normally once it returns.
 pub fn run_stdio_server() {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -49,7 +49,7 @@ async fn serve() {
         }
 
         let Ok(request) = serde_json::from_str::<Value>(trimmed) else {
-            eprintln!("bork-web-search: failed to parse line: {trimmed}");
+            eprintln!("krust-web-search: failed to parse line: {trimmed}");
             continue;
         };
 
@@ -190,7 +190,7 @@ async fn search_duckduckgo(
         .post("https://html.duckduckgo.com/html/")
         .header(
             "User-Agent",
-            "Mozilla/5.0 (compatible; BorkWebSearchMcp/1.0)",
+            "Mozilla/5.0 (compatible; KrustWebSearchMcp/1.0)",
         )
         .form(&[("q", query)])
         .send()

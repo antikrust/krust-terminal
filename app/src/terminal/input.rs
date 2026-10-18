@@ -58,49 +58,49 @@ use settings::{Setting as _, ToggleableSetting};
 use string_offset::{ByteOffset, CharOffset};
 use vec1::Vec1;
 use vim::vim::{VimHandler, VimMode};
-use bork_cli::agent::Harness;
-use bork_completer::completer::{
+use krust_cli::agent::Harness;
+use krust_completer::completer::{
     self, CompleterOptions, CompletionContext, CompletionsFallbackStrategy, Description, Match,
     MatchStrategy, MatchType, PathSeparators, SuggestionResults,
 };
-use bork_completer::meta::{HasSpan, Spanned};
-use bork_completer::parsers::simple::command_at_cursor_position;
-use bork_completer::parsers::LiteCommand;
-use bork_completer::signatures::CommandRegistry;
-use bork_completer::util::parse_current_commands_and_tokens;
-use bork_core::context_flag::ContextFlag;
-use bork_core::r#async::debounce;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use bork_core::user_preferences::GetUserPreferences as _;
-use bork_editor::editor::NavigationKey;
-use bork_errors::{report_error, report_if_error};
-use bork_util::path::ShellFamily;
-use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
-use borkui::clipboard::{ClipboardContent, ImageData};
-use borkui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
-use borkui::color::ColorU;
-use borkui::elements::{
+use krust_completer::meta::{HasSpan, Spanned};
+use krust_completer::parsers::simple::command_at_cursor_position;
+use krust_completer::parsers::LiteCommand;
+use krust_completer::signatures::CommandRegistry;
+use krust_completer::util::parse_current_commands_and_tokens;
+use krust_core::context_flag::ContextFlag;
+use krust_core::r#async::debounce;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krust_core::user_preferences::GetUserPreferences as _;
+use krust_editor::editor::NavigationKey;
+use krust_errors::{report_error, report_if_error};
+use krust_util::path::ShellFamily;
+use krustui::accessibility::{AccessibilityContent, ActionAccessibilityContent, KrustA11yRole};
+use krustui::clipboard::{ClipboardContent, ImageData};
+use krustui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
+use krustui::color::ColorU;
+use krustui::elements::{
     resizable_state_handle, Align, AnchorPair, ChildAnchor, Clipped, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTargetData, Element, EventHandler,
     Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, OffsetType,
     ParentAnchor, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius,
     ResizableStateHandle, SavePosition, SelectionHandle, Text, Wrap, XAxisAnchor, YAxisAnchor,
 };
-pub use borkui::elements::{ParentElement as _, Stack};
-pub use borkui::geometry::vector::{vec2f, Vector2F};
-use borkui::keymap::{BindingDescription, EditableBinding, FixedBinding, Keystroke};
-use borkui::platform::OperatingSystem;
-use borkui::presenter::ChildView;
+pub use krustui::elements::{ParentElement as _, Stack};
+pub use krustui::geometry::vector::{vec2f, Vector2F};
+use krustui::keymap::{BindingDescription, EditableBinding, FixedBinding, Keystroke};
+use krustui::platform::OperatingSystem;
+use krustui::presenter::ChildView;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
-use borkui::r#async::FutureExt as _;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::chip::Chip;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::IntoPixels;
-pub use borkui::WindowId;
-use borkui::{
+use krustui::r#async::FutureExt as _;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::chip::Chip;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::IntoPixels;
+pub use krustui::WindowId;
+use krustui::{
     end_trace, start_trace, AppContext, Entity, EntityId, FocusContext, ModelAsRef, ModelHandle,
     SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -142,7 +142,7 @@ use super::view::queued_prompts_panel::{QueuedPromptsPanelEvent, QueuedPromptsPa
 use super::view::{
     ExecuteCommandEvent, SyncInputType, TerminalAction, PADDING_LEFT as TERMINAL_VIEW_PADDING_LEFT,
 };
-use super::borkify::SubshellSource;
+use super::krustify::SubshellSource;
 use super::{prompt, History, HistoryEntry, SizeInfo, TerminalModel, UpArrowHistoryConfig};
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -201,7 +201,7 @@ use crate::ai::predict::prompt_suggestions::{
 };
 use crate::ai::skills::{SkillOpenOrigin, SkillTelemetryEvent};
 use crate::ai::AIRequestUsageModel;
-use crate::ai_assistant::execution_context::BorkAiExecutionContext;
+use crate::ai_assistant::execution_context::KrustAiExecutionContext;
 use crate::appearance::{Appearance, AppearanceEvent};
 use crate::channel::{Channel, ChannelState};
 use crate::cloud_object::model::actions::ObjectActionType;
@@ -318,7 +318,7 @@ use crate::terminal::view::{resolve_ai_query_routing, AIQueryRouting, CodeDiffAc
 use crate::terminal::CLIAgent;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
-use crate::user_config::BorkConfig;
+use crate::user_config::KrustConfig;
 use crate::util::bindings::{self, keybinding_name_to_normalized_string, CustomAction};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor;
@@ -410,26 +410,26 @@ const AGENT_MODE_AI_DISABLED_AUTODETECTION_DISABLED_HINT_TEXT: &str = "Run comma
 
 // Rotating hint text options for new Agent Mode conversations
 const AGENT_MODE_HINT_OPTIONS: &[&str] = &[
-    "Bork anything e.g. Deploy my React app to Vercel and set up environment variables",
-    "Bork anything e.g. Help me debug why my Python tests are failing in CI",
-    "Bork anything e.g. Set up a new microservice with Docker and create the deployment pipeline",
-    "Bork anything e.g. Find and fix the memory leak in my Node.js application",
-    "Bork anything e.g. Create a backup script for my PostgreSQL database and schedule it",
-    "Bork anything e.g. Help me migrate my data from MySQL to PostgreSQL",
-    "Bork anything e.g. Set up monitoring and alerts for my AWS infrastructure",
-    "Bork anything e.g. Build a REST API for my mobile app using FastAPI",
-    "Bork anything e.g. Help me optimize my SQL queries that are running slowly",
-    "Bork anything e.g. Create a GitHub Actions workflow to automatically deploy on merge",
-    "Bork anything e.g. Set up Redis caching for my web application",
-    "Bork anything e.g. Help me troubleshoot why my Kubernetes pods keep crashing",
-    "Bork anything e.g. Build a data pipeline to process CSV files and load them into BigQuery",
-    "Bork anything e.g. Set up SSL certificates and configure HTTPS for my domain",
-    "Bork anything e.g. Help me refactor this legacy code to use modern design patterns",
-    "Bork anything e.g. Create unit tests for my authentication service",
-    "Bork anything e.g. Set up log aggregation with ELK stack for my distributed system",
-    "Bork anything e.g. Help me implement OAuth2 authentication in my Express.js app",
-    "Bork anything e.g. Optimize my Docker images to reduce build times and size",
-    "Bork anything e.g. Set up A/B testing infrastructure for my web application",
+    "Krust anything e.g. Deploy my React app to Vercel and set up environment variables",
+    "Krust anything e.g. Help me debug why my Python tests are failing in CI",
+    "Krust anything e.g. Set up a new microservice with Docker and create the deployment pipeline",
+    "Krust anything e.g. Find and fix the memory leak in my Node.js application",
+    "Krust anything e.g. Create a backup script for my PostgreSQL database and schedule it",
+    "Krust anything e.g. Help me migrate my data from MySQL to PostgreSQL",
+    "Krust anything e.g. Set up monitoring and alerts for my AWS infrastructure",
+    "Krust anything e.g. Build a REST API for my mobile app using FastAPI",
+    "Krust anything e.g. Help me optimize my SQL queries that are running slowly",
+    "Krust anything e.g. Create a GitHub Actions workflow to automatically deploy on merge",
+    "Krust anything e.g. Set up Redis caching for my web application",
+    "Krust anything e.g. Help me troubleshoot why my Kubernetes pods keep crashing",
+    "Krust anything e.g. Build a data pipeline to process CSV files and load them into BigQuery",
+    "Krust anything e.g. Set up SSL certificates and configure HTTPS for my domain",
+    "Krust anything e.g. Help me refactor this legacy code to use modern design patterns",
+    "Krust anything e.g. Create unit tests for my authentication service",
+    "Krust anything e.g. Set up log aggregation with ELK stack for my distributed system",
+    "Krust anything e.g. Help me implement OAuth2 authentication in my Express.js app",
+    "Krust anything e.g. Optimize my Docker images to reduce build times and size",
+    "Krust anything e.g. Set up A/B testing infrastructure for my web application",
 ];
 
 fn get_agent_mode_new_conversation_hint_text() -> &'static str {
@@ -863,7 +863,7 @@ struct ViewerCommandExecutionRequest {
 /// Where a command execution request originates from.
 #[derive(Clone)]
 pub enum CommandExecutionSource {
-    /// A non-shared command execution request from Bork AI++.
+    /// A non-shared command execution request from Krust AI++.
     /// Shared commands use the SharedSession variant instead.
     AI {
         /// Metadata associated with the execution.
@@ -1062,7 +1062,7 @@ pub enum Event {
     },
     OpenSettings(SettingsSection),
     #[cfg(feature = "local_fs")]
-    OpenCodeInBork {
+    OpenCodeInKrust {
         source: CodeSource,
         layout: external_editor::settings::EditorLayout,
     },
@@ -1826,7 +1826,7 @@ impl DeferredRemoteOperations {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     if cfg!(feature = "integration_tests") {
         app.register_fixed_bindings([
@@ -1864,7 +1864,7 @@ pub fn init(app: &mut AppContext) {
 
     app.register_editable_bindings([EditableBinding::new(
         "input:insert_network_logging_workflow",
-        "Show Bork network log",
+        "Show Krust network log",
         WorkspaceAction::OpenNetworkLogPane,
     )
     .with_enabled(|| ContextFlag::NetworkLogConsole.is_enabled())]);
@@ -1993,7 +1993,7 @@ pub fn init(app: &mut AppContext) {
                 & id!(flags::IS_ANY_AI_ENABLED)
                 & !id!("AIInput"),
         )
-        .with_group(bindings::BindingGroup::BorkAi.as_str())
+        .with_group(bindings::BindingGroup::KrustAi.as_str())
         .with_custom_action(CustomAction::AISearch),
         EditableBinding::new(
             START_NEW_CONVERSATION_KEYBINDING_NAME,
@@ -2005,7 +2005,7 @@ pub fn init(app: &mut AppContext) {
             },
         )
         .with_enabled(|| !FeatureFlag::AgentView.is_enabled())
-        .with_group(bindings::BindingGroup::BorkAi.as_str())
+        .with_group(bindings::BindingGroup::KrustAi.as_str())
         .with_context_predicate(
             id!("Input") & id!(flags::IS_ANY_AI_ENABLED) & id!("TerminalView_NonEmptyBlockList"),
         )
@@ -2017,7 +2017,7 @@ pub fn init(app: &mut AppContext) {
             InputAction::EnableAutoDetection,
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
-        .with_group(bindings::BindingGroup::BorkAi.as_str())
+        .with_group(bindings::BindingGroup::KrustAi.as_str())
         .with_context_predicate(
             id!("Input")
                 & id!("UniversalDeveloperInput")
@@ -2228,7 +2228,7 @@ impl Input {
         let view = ctx
             .add_typed_action_view(|ctx| HostSelector::new(menu_positioning_provider.clone(), ctx));
         // Env var takes priority over workspace setting for developer testing.
-        let effective_host = std::env::var("BORK_CLOUD_MODE_DEFAULT_HOST")
+        let effective_host = std::env::var("KRUST_CLOUD_MODE_DEFAULT_HOST")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| {
@@ -2276,7 +2276,7 @@ impl Input {
             if !matches!(event, UserWorkspacesEvent::TeamsChanged) {
                 return;
             }
-            let effective_host = std::env::var("BORK_CLOUD_MODE_DEFAULT_HOST")
+            let effective_host = std::env::var("KRUST_CLOUD_MODE_DEFAULT_HOST")
                 .ok()
                 .filter(|s| !s.is_empty())
                 .or_else(|| {
@@ -3140,7 +3140,7 @@ impl Input {
             .app_workflows()
             .cloned()
             .collect_vec();
-        let local_user_workflows = BorkConfig::as_ref(ctx).local_user_workflows().clone();
+        let local_user_workflows = KrustConfig::as_ref(ctx).local_user_workflows().clone();
 
         let workflows_search_view = ctx.add_typed_action_view(|ctx| {
             workflows::CategoriesView::new(local_user_workflows, app_workflows, ctx)
@@ -4520,7 +4520,7 @@ impl Input {
     }
 
     /// Cloud handoff is Oz-only. When this pane's active Agent Mode model can't
-    /// run in a Bork cloud (Oz) agent (e.g. a custom-endpoint/BYOK model or
+    /// run in a Krust cloud (Oz) agent (e.g. a custom-endpoint/BYOK model or
     /// local custom router), shows an explanatory error toast and returns true
     /// so the `&`, footer-chip, and `/handoff` entry points can bail out up
     /// front instead of failing at spawn time.
@@ -4535,7 +4535,7 @@ impl Input {
         ToastStack::handle(ctx).update(ctx, |ts, ctx| {
             ts.add_ephemeral_toast(
                 DismissibleToast::error(
-                    "Custom models can't run in the cloud. Switch to a Bork model to hand off."
+                    "Custom models can't run in the cloud. Switch to a Krust model to hand off."
                         .to_owned(),
                 ),
                 window_id,
@@ -5143,7 +5143,7 @@ impl Input {
 
         self.show_workflows_info_box_on_workflow_selection(
             WorkflowType::Cloud(Box::new(workflow)),
-            WorkflowSource::BorkAI,
+            WorkflowSource::KrustAI,
             WorkflowSelectionSource::SlashMenu,
             None,
             ctx,
@@ -6264,7 +6264,7 @@ impl Input {
                 range_end: None,
             };
             // Emit an event to create a new code pane
-            ctx.emit(Event::OpenCodeInBork {
+            ctx.emit(Event::OpenCodeInKrust {
                 source: code_source,
                 layout: *external_editor::EditorSettings::as_ref(ctx)
                     .open_file_layout
@@ -6438,7 +6438,7 @@ impl Input {
                 }
 
                 // Follow the `agent_indicator` pattern (see `app/src/tab.rs`):
-                //  * `None` (no conversation, empty, passive, or untitled) => new conversation => "Bork anything"
+                //  * `None` (no conversation, empty, passive, or untitled) => new conversation => "Krust anything"
                 //  * `InProgress`                                           => agent running    => "Steer"
                 //  * Any other status                                       => finished         => "Ask a follow up"
                 match self
@@ -6832,7 +6832,7 @@ impl Input {
         });
     }
 
-    /// Predicts the next action using an AI model and past context on blocks within Bork.
+    /// Predicts the next action using an AI model and past context on blocks within Krust.
     /// Populates the autosuggestion with the predicted action, if any. Otherwise, falls back to
     /// existing autosuggestion logic.
     #[cfg_attr(target_family = "wasm", allow(unused_variables))]
@@ -6871,7 +6871,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = BorkAiExecutionContext::new(&session);
+        let context = KrustAiExecutionContext::new(&session);
         let completer_data = self.completer_data();
         let block_context = Some(BlockContext::from_completed_block(&block_completed));
         let previous_result = self.last_intelligent_autosuggestion_result.take();
@@ -6972,7 +6972,7 @@ impl Input {
             }
         });
 
-        // A shell command line is a terminal prompt, not a chat box: the rotating "Bork
+        // A shell command line is a terminal prompt, not a chat box: the rotating "Krust
         // anything e.g. …" hint is written for the agent input, and showing it after a real
         // PS1 prompt reads as text the shell is about to run. Leave the line empty.
         if self.ai_input_model.as_ref(ctx).input_type() == InputType::Shell {
@@ -8126,7 +8126,7 @@ impl Input {
         ctx.emit_a11y_content(AccessibilityContent::new(
             accessibility_text,
             "Press shift-tab to select the next workflow argument",
-            BorkA11yRole::UserAction,
+            KrustA11yRole::UserAction,
         ));
 
         // Only highlight an argument and show enum suggestions if history suggestions are not active
@@ -8151,7 +8151,7 @@ impl Input {
             .string_model;
 
         if shell_type == ShellType::Fish {
-            // Bork currently doesn't support newlines in Fish, just prepend the vars
+            // Krust currently doesn't support newlines in Fish, just prepend the vars
             let mut command = env_vars.export_variables_for_shell(ShellType::Fish);
             command.push(' ');
             Some(command)
@@ -8271,7 +8271,7 @@ impl Input {
     /// This is a short-term fix and should be addressed in a more comprehensive way that does
     /// not rely on the styling of the input.
     ///
-    /// See [CLD-997](https://linear.app/borkdotdev/issue/CLD-997)
+    /// See [CLD-997](https://linear.app/krustdotdev/issue/CLD-997)
     fn build_text_run_ranges_for_workflows(
         &self,
         text_style_runs: &[TextRun],
@@ -8478,7 +8478,7 @@ impl Input {
 
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Executed: {command}"),
-                    BorkA11yRole::UserAction,
+                    KrustA11yRole::UserAction,
                 ));
             }
             InputSuggestionsEvent::CloseSuggestion {
@@ -9551,7 +9551,7 @@ impl Input {
             let Some(session) = self.active_session(ctx) else {
                 return;
             };
-            let context = BorkAiExecutionContext::new(&session);
+            let context = KrustAiExecutionContext::new(&session);
             if let Some(last_user_block_completed) =
                 completer_data.last_user_block_completed.clone()
             {
@@ -10510,7 +10510,7 @@ impl Input {
                             // the completions finish quickly, since that causes a jittery UX.
                             let _ = ctx.spawn(
                                 async move {
-                                    borkui::r#async::Timer::after(Duration::from_millis(750)).await;
+                                    krustui::r#async::Timer::after(Duration::from_millis(750)).await;
                                     old_buffer_text_original
                                 },
                                 move |input, old_buffer_text_original, ctx| {
@@ -11112,7 +11112,7 @@ impl Input {
                                     .and_then(|pwd| {
                                         // Find git repo and construct absolute path
                                         use repo_metadata::repositories::DetectedRepositories;
-                                        use bork_util::local_or_remote_path::LocalOrRemotePath;
+                                        use krust_util::local_or_remote_path::LocalOrRemotePath;
                                         let git_repo_path = DetectedRepositories::as_ref(ctx)
                                             .get_root_for_path(&LocalOrRemotePath::Local(
                                                 Path::new(pwd).to_path_buf(),
@@ -11126,7 +11126,7 @@ impl Input {
                                             .map(|session| session.is_wsl())
                                             .unwrap_or(false);
 
-                                        let relative_path = bork_util::path::to_relative_path(
+                                        let relative_path = krust_util::path::to_relative_path(
                                             is_wsl,
                                             &absolute_path,
                                             Path::new(pwd),
@@ -11203,7 +11203,7 @@ impl Input {
                         None => image_filepaths.clone(),
                     };
                     let paths_str =
-                        borkui::clipboard_utils::escaped_paths_str(&transformed, shell_family);
+                        krustui::clipboard_utils::escaped_paths_str(&transformed, shell_family);
 
                     self.editor.update(ctx, |editor, ctx| {
                         editor.user_insert(&paths_str, ctx);
@@ -11253,7 +11253,7 @@ impl Input {
 
         // Check if we should insert clipboard text in advance
         let mut already_inserted_text = false;
-        if borkui::clipboard::should_insert_text_on_paste(&content) {
+        if krustui::clipboard::should_insert_text_on_paste(&content) {
             self.insert_clipboard_text_content(ctx, content.clone());
             already_inserted_text = true;
         }
@@ -11265,7 +11265,7 @@ impl Input {
             self.handle_pasted_image_data(content.clone(), ctx) == 0
         } else if content.num_paths() > 0 {
             // Else, we check the pasted file paths for any images.
-            let image_filepaths = borkui::clipboard_utils::get_image_filepaths_from_paths(
+            let image_filepaths = krustui::clipboard_utils::get_image_filepaths_from_paths(
                 content.paths.as_deref().unwrap_or(&[]),
             );
             let num_images_expected = image_filepaths.len();
@@ -12021,13 +12021,13 @@ impl Input {
 
         // CLI agent rich input in shell mode (! prefix) should allow completions
         // even though the active block is a long-running command.
-        // However, completions are disabled on borkified remote hosts because
+        // However, completions are disabled on krustified remote hosts because
         // in-band generators don't work in this context (with CLI agent).
         let is_cli_agent_shell_mode = self.is_locked_in_shell_mode(ctx)
             && CLIAgentSessionsModel::as_ref(ctx).is_input_open(self.terminal_view_id)
             && !self
                 .active_session(ctx)
-                .is_some_and(|s| matches!(s.session_type(), SessionType::BorkifiedRemote { .. }));
+                .is_some_and(|s| matches!(s.session_type(), SessionType::KrustifiedRemote { .. }));
 
         // If the cursor is in a valid completion position, go into CompletionSuggestions mode
         if (is_command_grid_active || is_cli_agent_shell_mode) && self.can_query_history(ctx) {
@@ -12714,7 +12714,7 @@ impl Input {
             if let Some(a11y_text) = self.selected_workflow_a11y_text(ctx) {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     a11y_text,
-                    BorkA11yRole::UserAction,
+                    KrustA11yRole::UserAction,
                 ));
             }
         } else {
@@ -12796,7 +12796,7 @@ impl Input {
             if trigger == CommandXRayTrigger::Keystroke {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     description.a11y_text(),
-                    BorkA11yRole::UserAction,
+                    KrustA11yRole::UserAction,
                 ));
             }
             ctx.notify();
@@ -13727,7 +13727,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = BorkAiExecutionContext::new(&session);
+        let context = KrustAiExecutionContext::new(&session);
 
         let request = PredictAMQueriesRequest {
             context_messages: vec![json_message.to_string()],
@@ -13774,7 +13774,7 @@ impl Input {
     /// without touching the input buffer or triggering NLD / autosuggestion side-effects.
     ///
     /// Cancels the in-flight stream first so slash/skill paths don't trip the in-flight assertion.
-    /// `is_for_same_conversation: true` keeps the conversation status `InProgress` so the borking
+    /// `is_for_same_conversation: true` keeps the conversation status `InProgress` so the krusting
     /// indicator stays visible.
     pub(crate) fn submit_queued_prompt(
         &mut self,
@@ -14308,7 +14308,7 @@ impl Input {
 
         // This fork routes every agent prompt to a local CLI harness
         // (rendered inline by TerminalView); the upstream cloud "Oz" path
-        // requires a Bork account and 401s here. Harness/model/reasoning come
+        // requires a Krust account and 401s here. Harness/model/reasoning come
         // from the ambient view model when present (the picker), else the
         // default harness with its CLI-configured model.
         let (harness, model_id, reasoning_level) = self
@@ -14338,7 +14338,7 @@ impl Input {
         if let Some(workflow_state) = self.workflows_state.selected_workflow_state.as_ref() {
             if let WorkflowType::Cloud(workflow) = &workflow_state.workflow_type {
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::ExecutedBorkDrivePrompt {
+                    TelemetryEvent::ExecutedKrustDrivePrompt {
                         id: workflow.id.into_server().map(Into::into),
                         selection_source: workflow_state.workflow_selection_source,
                     },
@@ -15230,7 +15230,7 @@ impl Input {
                                 .cloned(),
                             workflow_selection_source: selected_workflow_state
                                 .workflow_selection_source,
-                            // This is only `Some()` for BorkDrive workflows; we don't track
+                            // This is only `Some()` for KrustDrive workflows; we don't track
                             // ID for execution of local workflows because they have no such
                             // unique ID.
                             workflow_id: selected_workflow_state.workflow_type.server_id(),
@@ -15610,7 +15610,7 @@ impl Input {
                 ..Default::default()
             },
         )
-        .with_icon(icon.to_borkui_icon(
+        .with_icon(icon.to_krustui_icon(
             blended_colors::text_main(appearance.theme(), appearance.theme().background()).into(),
         ))
         .with_close_button(close_button)
@@ -15883,7 +15883,7 @@ impl TypedActionView for Input {
                     INPUT_A11Y_LABEL,
                     // TODO (a11y) use bindings from user settings
                     INPUT_A11Y_HELPER,
-                    BorkA11yRole::TextareaRole,
+                    KrustA11yRole::TextareaRole,
                 ))
             }
             _ => ActionAccessibilityContent::Empty,
@@ -16101,7 +16101,7 @@ impl View for Input {
             INPUT_A11Y_LABEL,
             // TODO (a11y) use bindings from user settings
             INPUT_A11Y_HELPER,
-            BorkA11yRole::TextareaRole,
+            KrustA11yRole::TextareaRole,
         ))
     }
 
@@ -16124,7 +16124,7 @@ impl View for Input {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> krustui::keymap::Context {
         let mut ctx = Self::default_keymap_context();
         let ai_settings = AISettings::as_ref(app);
 

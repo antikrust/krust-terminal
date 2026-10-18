@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
 
 use super::core::subscribe_to_shared_dependencies;
 use super::{

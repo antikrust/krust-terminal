@@ -1,5 +1,5 @@
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use bork_core::define_settings_group;
+use krust_core::define_settings_group;
 
 use crate::banner::BannerState;
 

@@ -12,8 +12,8 @@ use cloud_objects::ids::{
 };
 #[cfg(any(test, feature = "test-util"))]
 use mockall::automock;
-use bork_graphql::mcp_gallery_template::MCPGalleryTemplate;
-use bork_graphql::object_permissions::AccessLevel;
+use krust_graphql::mcp_gallery_template::MCPGalleryTemplate;
+use krust_graphql::object_permissions::AccessLevel;
 
 /// Identifies a guest to remove from an object.
 #[derive(Clone, Debug)]
@@ -274,8 +274,8 @@ pub trait ObjectClient: 'static + Send + Sync {
         notebook_id: cloud_object_models::NotebookId,
     ) -> Result<ServerMetadata>;
 
-    /// Gets updates for all Bork Drive actions.
-    async fn get_bork_drive_updates(
+    /// Gets updates for all Krust Drive actions.
+    async fn get_krust_drive_updates(
         &self,
         message_sender: Sender<ObjectUpdateMessage>,
         stream_ready_sender: Sender<()>,

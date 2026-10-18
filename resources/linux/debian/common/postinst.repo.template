@@ -6,7 +6,7 @@ eval $("$APT_CONFIG" shell APT_TRUSTED_KEYRING_DIR 'Dir::Etc::trustedparts/d')
 eval $("$APT_CONFIG" shell APT_SOURCE_LIST_DIR 'Dir::Etc::sourceparts/d')
 
 # Install/update our package signing key.
-# This is the content of https://releases.bork.baby/linux/keys/bork.asc, but
+# This is the content of https://releases.krust.baby/linux/keys/krust.asc, but
 # dearmored and base64-encoded.
 SIGNING_KEY_PATH="${APT_TRUSTED_KEYRING_DIR}@@REPO_NAME@@.gpg"
 base64 -d - > "$SIGNING_KEY_PATH" <<SIGNINGKEY
@@ -90,7 +90,7 @@ SIGNINGKEY
 #
 # Behavior:
 #   - If neither `.sources` nor `.list` exists, write `.sources` (the modern
-#     format the reporter recommended; supported by every apt version Bork's
+#     format the reporter recommended; supported by every apt version Krust's
 #     packages target).
 #   - If either format already exists, leave it alone. We don't migrate a
 #     legacy `.list` to `.sources` here — that's the user's tooling's job
@@ -107,7 +107,7 @@ if [ -d "$APT_SOURCE_LIST_DIR" ]; then
 # You may comment out this entry, but other modifications to the file may be lost.
 
 Types: deb
-URIs: https://releases.bork.baby/linux/deb
+URIs: https://releases.krust.baby/linux/deb
 Suites: @@CHANNEL@@
 Components: main
 Architectures: @@ARCH@@

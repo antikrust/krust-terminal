@@ -3,8 +3,8 @@ use std::ops::Range;
 use itertools::Itertools;
 use string_offset::CharOffset;
 use vec1::{Vec1, vec1};
-use bork_errors::report_error;
-use borkui_core::{AppContext, Entity, ModelHandle};
+use krust_errors::report_error;
+use krustui_core::{AppContext, Entity, ModelHandle};
 
 use crate::content::anchor::{Anchor, AnchorSide, AnchorUpdate, Anchors};
 use crate::content::buffer::{Buffer, SelectionOffsets, ToBufferPoint};
@@ -310,7 +310,7 @@ impl BufferSelectionModel {
     }
 
     /// Validate the buffer content with this selection model's anchors.
-    pub fn validate_buffer(&self, ctx: &impl borkui_core::ModelAsRef) {
+    pub fn validate_buffer(&self, ctx: &impl krustui_core::ModelAsRef) {
         self.buffer.as_ref(ctx).validate(&self.anchors);
     }
 

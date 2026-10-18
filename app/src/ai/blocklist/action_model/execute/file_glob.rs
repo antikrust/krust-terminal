@@ -5,9 +5,9 @@ use std::time::Duration;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use itertools::Itertools;
-use bork_core::features::FeatureFlag;
-use borkui::r#async::FutureExt as AsyncFutureExt;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krustui::r#async::FutureExt as AsyncFutureExt;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{
@@ -25,7 +25,7 @@ use crate::{send_telemetry_from_app_ctx, TelemetryEvent};
 
 const FILE_GLOB_TIMEOUT: Duration = Duration::from_secs(10);
 
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::{
     get_server_output_id, is_git_repository, ActionExecution, AnyActionExecution,

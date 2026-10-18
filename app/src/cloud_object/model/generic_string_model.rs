@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use cloud_objects::cloud_object::CloudObjectUpsertParams;
 // Re-exported from cloud_objects.
 pub use cloud_objects::cloud_object::{GenericStringModel, Serializer};
-pub use bork_server_client::ids::GenericStringObjectId;
+pub use krust_server_client::ids::GenericStringObjectId;
 
 use crate::appearance::Appearance;
 use crate::cloud_object::{
@@ -14,7 +14,7 @@ use crate::cloud_object::{
     CreateObjectRequest, GenericCloudObject, GenericServerObject, GenericStringObjectFormat,
     GenericStringObjectUniqueKey, ObjectType, Revision, UpdateCloudObjectResult,
 };
-use crate::drive::items::BorkDriveItem;
+use crate::drive::items::KrustDriveItem;
 use crate::drive::CloudObjectTypeAndId;
 use crate::persistence::ModelEvent;
 use crate::server::cloud_objects::update_manager::InitiatedBy;
@@ -71,8 +71,8 @@ pub trait StringModel: Clone + Debug + PartialEq + Send + Sync + 'static {
     /// Returns the display name for this model.
     fn display_name(&self) -> String;
 
-    /// Returns whether to render this model as a BorkDriveItem.
-    fn renders_in_bork_drive(&self) -> bool {
+    /// Returns whether to render this model as a KrustDriveItem.
+    fn renders_in_krust_drive(&self) -> bool {
         false
     }
 
@@ -89,14 +89,14 @@ pub trait StringModel: Clone + Debug + PartialEq + Send + Sync + 'static {
     /// Sets the display name for this model
     fn set_display_name(&mut self, _name: &str) {}
 
-    /// Creates a new bork drive item for this model type. Returns None
-    /// if this object does not render in Bork Drive.
-    fn to_bork_drive_item(
+    /// Creates a new krust drive item for this model type. Returns None
+    /// if this object does not render in Krust Drive.
+    fn to_krust_drive_item(
         &self,
         _id: SyncId,
         _appearance: &Appearance,
         _object: &Self::CloudObjectType,
-    ) -> Option<Box<dyn BorkDriveItem>> {
+    ) -> Option<Box<dyn KrustDriveItem>> {
         None
     }
 
@@ -313,16 +313,16 @@ where
         })
     }
 
-    fn renders_in_bork_drive(&self) -> bool {
-        self.string_model.renders_in_bork_drive()
+    fn renders_in_krust_drive(&self) -> bool {
+        self.string_model.renders_in_krust_drive()
     }
 
-    fn to_bork_drive_item(
+    fn to_krust_drive_item(
         &self,
         id: SyncId,
         appearance: &Appearance,
         object: &GenericCloudObject<GenericStringObjectId, Self>,
-    ) -> Option<Box<dyn BorkDriveItem>> {
-        self.string_model.to_bork_drive_item(id, appearance, object)
+    ) -> Option<Box<dyn KrustDriveItem>> {
+        self.string_model.to_krust_drive_item(id, appearance, object)
     }
 }

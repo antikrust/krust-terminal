@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use bork_core::ui::appearance::Appearance;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{CacheOption, Icon, Image};
-use borkui::Element;
+use krust_core::ui::appearance::Appearance;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{CacheOption, Icon, Image};
+use krustui::Element;
 
 /// Returns a special icon for the given file path, if any.
 pub fn icon_from_file_path(path: &str, appearance: &Appearance) -> Option<Box<dyn Element>> {

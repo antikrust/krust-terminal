@@ -6,10 +6,10 @@ use repo_metadata::repository::{RepositorySubscriber, SubscriberId};
 use repo_metadata::{DirectoryWatcher, Repository, RepositoryUpdate};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use bork_core::safe_warn;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::{ModelContext, ModelHandle, SingletonEntity};
+use krust_core::safe_warn;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::{ModelContext, ModelHandle, SingletonEntity};
 use watcher::{HomeDirectoryWatcher, HomeDirectoryWatcherEvent};
 
 use super::model::{GlobalRulesDelta, ProjectContextModel, ProjectContextModelEvent, ProjectRule};

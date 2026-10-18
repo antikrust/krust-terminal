@@ -4,11 +4,11 @@ use std::time::Duration;
 
 use async_channel::Sender;
 use string_offset::ByteOffset;
-use bork_completer::completer::SuggestionTypeName;
-use bork_completer::signatures::CommandRegistry;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{Entity, ModelContext, SingletonEntity, ViewHandle};
+use krust_completer::completer::SuggestionTypeName;
+use krust_completer::signatures::CommandRegistry;
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{Entity, ModelContext, SingletonEntity, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::completer::SessionAgnosticContext;

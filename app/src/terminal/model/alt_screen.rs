@@ -8,11 +8,11 @@ use num_traits::Float as _;
 use parking_lot::Mutex;
 use pathfinder_color::ColorU;
 use vec1::Vec1;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_errors::report_error;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use borkui::text::SelectionType;
-use borkui::units::Lines;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_errors::report_error;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krustui::text::SelectionType;
+use krustui::units::Lines;
 
 use super::find::RegexDFAs;
 use super::grid::RespectDisplayedOutput;

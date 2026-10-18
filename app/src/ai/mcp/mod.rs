@@ -12,8 +12,8 @@ use strum_macros::EnumIter;
 #[cfg(not(target_family = "wasm"))]
 pub use templatable_manager::McpIntegration;
 pub use templatable_manager::TemplatableMCPServerManager;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::Icon;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::Icon;
 
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::cloud_object::model::json_model::JsonModel;
@@ -21,8 +21,8 @@ use crate::cloud_object::{
     CloudObjectUuid, GenericStringObjectFormat, GenericStringObjectUniqueKey, JsonObjectType,
     Revision,
 };
-use crate::drive::items::mcp_server::BorkDriveMCPServer;
-use crate::drive::items::BorkDriveItem;
+use crate::drive::items::mcp_server::KrustDriveMCPServer;
+use crate::drive::items::KrustDriveItem;
 use crate::drive::CloudObjectTypeAndId;
 #[cfg(not(target_family = "wasm"))]
 use crate::persistence::model::MCPEnvironmentVariables;
@@ -67,7 +67,7 @@ pub mod parsing;
 #[cfg(not(target_family = "wasm"))]
 pub use parsing::ParsedTemplatableMCPServerResult;
 #[cfg(not(target_family = "wasm"))]
-use bork_errors::report_error;
+use krust_errors::report_error;
 #[cfg(not(target_family = "wasm"))]
 pub mod reconnecting_peer;
 #[cfg(not(target_family = "wasm"))]
@@ -122,17 +122,17 @@ impl StringModel for MCPServer {
         None
     }
 
-    fn renders_in_bork_drive(&self) -> bool {
+    fn renders_in_krust_drive(&self) -> bool {
         false
     }
 
-    fn to_bork_drive_item(
+    fn to_krust_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         mcp_server: &CloudMCPServer,
-    ) -> Option<Box<dyn BorkDriveItem>> {
-        Some(Box::new(BorkDriveMCPServer::new(
+    ) -> Option<Box<dyn KrustDriveItem>> {
+        Some(Box::new(KrustDriveMCPServer::new(
             CloudObjectTypeAndId::GenericStringObject {
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::MCPServer),
                 id,
@@ -495,14 +495,14 @@ pub enum MCPServerUpdate {
 
 pub(crate) fn home_config_file_path(provider: MCPProvider) -> Option<PathBuf> {
     match provider {
-        MCPProvider::Bork => bork_core::paths::bork_home_mcp_config_file_path(),
+        MCPProvider::Krust => krust_core::paths::krust_home_mcp_config_file_path(),
         _ => dirs::home_dir().map(|home_dir| home_dir.join(provider.home_config_path())),
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
 pub enum MCPProvider {
-    Bork,
+    Krust,
     Claude,
     Codex,
     Agents,
@@ -511,7 +511,7 @@ pub enum MCPProvider {
 impl MCPProvider {
     pub fn display_name(&self) -> &str {
         match self {
-            MCPProvider::Bork => "Bork",
+            MCPProvider::Krust => "Krust",
             MCPProvider::Claude => "Claude",
             MCPProvider::Codex => "Codex",
             MCPProvider::Agents => "Other Agents",
@@ -520,17 +520,17 @@ impl MCPProvider {
 
     pub fn icon(&self) -> Icon {
         match self {
-            MCPProvider::Bork => Icon::Bork,
+            MCPProvider::Krust => Icon::Krust,
             MCPProvider::Claude => Icon::ClaudeLogo,
             MCPProvider::Codex => Icon::OpenAILogo,
-            MCPProvider::Agents => Icon::Bork,
+            MCPProvider::Agents => Icon::Krust,
         }
     }
 
     /// Returns the path of the provider's config file relative to the home directory.
     pub fn home_config_path(&self) -> &'static Path {
         match self {
-            MCPProvider::Bork => Path::new(".bork/.mcp.json"),
+            MCPProvider::Krust => Path::new(".krust/.mcp.json"),
             MCPProvider::Claude => Path::new(".claude.json"),
             MCPProvider::Codex => Path::new(".codex/config.toml"),
             MCPProvider::Agents => Path::new(".agents/.mcp.json"),
@@ -540,7 +540,7 @@ impl MCPProvider {
     /// Returns the path of the provider's config file relative to a project root.
     pub fn project_config_path(&self) -> &'static Path {
         match self {
-            MCPProvider::Bork => Path::new(".bork/.mcp.json"),
+            MCPProvider::Krust => Path::new(".krust/.mcp.json"),
             MCPProvider::Claude => Path::new(".mcp.json"),
             MCPProvider::Codex => Path::new(".codex/config.toml"),
             MCPProvider::Agents => Path::new(".agents/.mcp.json"),
@@ -564,7 +564,7 @@ pub fn mcp_provider_from_file_path(file_path: &Path) -> Option<MCPProvider> {
     }
     // Fall back to project-config suffix match, preferring the longest
     // (most-specific) suffix.
-    // This avoids `.mcp.json` shadowing `.bork/.mcp.json`, for example.
+    // This avoids `.mcp.json` shadowing `.krust/.mcp.json`, for example.
     let mut best: Option<(MCPProvider, usize)> = None;
     for provider in MCPProvider::iter() {
         let cfg = provider.project_config_path();

@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use repo_metadata::repositories::DetectedRepositories;
 use string_offset::CharOffset;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use borkui::elements::Empty;
-use borkui::platform::WindowStyle;
-use borkui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
+use krust_core::ui::appearance::Appearance;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krustui::elements::Empty;
+use krustui::platform::WindowStyle;
+use krustui::{App, Element as _, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::*;
 use crate::ai::request_usage_model::AIRequestUsageModel;
@@ -36,12 +36,12 @@ use crate::NotebookKeybindings;
 #[derive(Default)]
 struct TestView;
 
-impl borkui::Entity for TestView {
+impl krustui::Entity for TestView {
     type Event = ();
 }
 
-impl borkui::View for TestView {
-    fn render(&self, _: &borkui::AppContext) -> Box<dyn borkui::Element> {
+impl krustui::View for TestView {
+    fn render(&self, _: &krustui::AppContext) -> Box<dyn krustui::Element> {
         Empty::new().finish()
     }
 
@@ -50,7 +50,7 @@ impl borkui::View for TestView {
     }
 }
 
-impl borkui::TypedActionView for TestView {
+impl krustui::TypedActionView for TestView {
     type Action = ();
 }
 

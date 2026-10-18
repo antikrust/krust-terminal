@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{ChildView, Container, Fill};
-use borkui::ui_components::components::{Coords, UiComponentStyles};
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{ChildView, Container, Fill};
+use krustui::ui_components::components::{Coords, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

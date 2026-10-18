@@ -6,13 +6,13 @@
 //! - StaticWorkflowEnumSuggestions
 //! - DynamicWorkflowEnumSuggestions
 
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DragBarSide,
     DropShadow, Element, Empty, Flex, ParentElement, Radius, Resizable, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Text,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 use super::{
     DynamicEnumSuggestionStatus, Input, InputAction, MenuPositioning, DYNAMIC_ENUM_FAILURE_MESSAGE,
@@ -26,7 +26,7 @@ use crate::input_suggestions::{
     DETAILS_PANEL_MARGIN, DETAILS_PANEL_PADDING, HISTORY_DETAILS_PANEL_WIDTH,
     LABEL_PADDING as InputSuggestionsLabelPadding,
 };
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 
 enum SuggestionsResizeConfig {
     WidthAndHeight,
@@ -188,7 +188,7 @@ impl Input {
         &self,
         margin: f32,
         corner_radius: CornerRadius,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         resize_config: SuggestionsResizeConfig,
         menu_positioning: MenuPositioning,
         content: Box<dyn Element>,

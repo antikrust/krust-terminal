@@ -1,4 +1,4 @@
-use bork_completer::completer::{Match, MatchedSuggestion, Suggestion, SuggestionType};
+use krust_completer::completer::{Match, MatchedSuggestion, Suggestion, SuggestionType};
 
 /// The completions data coming from the shell.
 ///

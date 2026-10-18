@@ -1,5 +1,5 @@
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui_core::ModelContext;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui_core::ModelContext;
 
 use super::model::{ProjectContextModel, ProjectRule};
 

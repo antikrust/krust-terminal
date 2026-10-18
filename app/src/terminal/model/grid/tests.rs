@@ -1,7 +1,7 @@
 //! Tests for the Grid.
 
 use grid_handler::GridHandler;
-use bork_terminal::model::grid::cell;
+use krust_terminal::model::grid::cell;
 
 use super::*;
 use crate::features::FeatureFlag;

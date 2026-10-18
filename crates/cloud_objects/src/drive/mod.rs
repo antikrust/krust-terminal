@@ -128,7 +128,7 @@ impl CloudObjectTypeAndId {
     }
 
     pub fn drive_row_position_id(self) -> String {
-        format!("BorkDriveRow_{}", self.uid())
+        format!("KrustDriveRow_{}", self.uid())
     }
 
     pub fn from_generic_string_object(object_type: GenericStringObjectFormat, id: SyncId) -> Self {

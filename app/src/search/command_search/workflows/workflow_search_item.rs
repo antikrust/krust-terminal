@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
-use borkui::elements::{
+use krustui::elements::{
     Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Highlight,
     MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_search::searcher::{AcceptedWorkflow, CommandSearchItemAction};
@@ -115,7 +115,7 @@ impl SearchItem for WorkflowSearchItem {
                 } else {
                     Icon::Workflow
                 }
-                .to_borkui_icon(highlight_state.icon_fill(appearance))
+                .to_krustui_icon(highlight_state.icon_fill(appearance))
                 .finish(),
             )
             .with_width(appearance.monospace_font_size())

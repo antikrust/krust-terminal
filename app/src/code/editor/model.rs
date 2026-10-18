@@ -27,41 +27,41 @@ use vim::{
     vim_a_quote, vim_a_word, vim_find_char_on_line, vim_find_matching_bracket, vim_inner_block,
     vim_inner_paragraph, vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use bork_core::platform::SessionPlatform;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_core::ui::theme::Fill;
-use bork_editor::content::anchor::Anchor;
-use bork_editor::content::buffer::{
+use krust_core::platform::SessionPlatform;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_core::ui::theme::Fill;
+use krust_editor::content::anchor::Anchor;
+use krust_editor::content::buffer::{
     AutoScrollBehavior, Buffer, BufferEditAction, BufferEvent, BufferSelectAction, EditOrigin,
     InitialBufferState, SelectionOffsets, ShouldAutoscroll, ToBufferCharOffset, ToBufferPoint,
     VimInsertPoint,
 };
-use bork_editor::content::edit::EditDelta;
-use bork_editor::content::find::{SearchConfig, SearchResults};
-use bork_editor::content::hidden_lines_model::HiddenLinesModel;
-use bork_editor::content::selection_model::BufferSelectionModel;
-use bork_editor::content::text::{BufferBlockStyle, IndentBehavior, IndentUnit};
-use bork_editor::content::version::BufferVersion;
-use bork_editor::decoration::DecorationLayer;
-use bork_editor::editor::TextDecoration;
-use bork_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use bork_editor::multiline::{AnyMultilineString, MultilineString, LF};
-use bork_editor::render::model::{
+use krust_editor::content::edit::EditDelta;
+use krust_editor::content::find::{SearchConfig, SearchResults};
+use krust_editor::content::hidden_lines_model::HiddenLinesModel;
+use krust_editor::content::selection_model::BufferSelectionModel;
+use krust_editor::content::text::{BufferBlockStyle, IndentBehavior, IndentUnit};
+use krust_editor::content::version::BufferVersion;
+use krust_editor::decoration::DecorationLayer;
+use krust_editor::editor::TextDecoration;
+use krust_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use krust_editor::multiline::{AnyMultilineString, MultilineString, LF};
+use krust_editor::render::model::{
     AutoScrollMode, BlockItem, BlockSpacings, BrokenLinkStyle, CheckBoxStyle, ColumnUnit,
     Decoration, HorizontalRuleStyle, InlineCodeStyle, LineCount, LineDecoration, ParagraphStyles,
     RenderEvent, RenderLineLocation, RenderState, RichTextStyles, StyleUpdateAction, TableStyle,
     UpdateDecorationAfterLayout, WidthSetting,
 };
-use bork_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
-use bork_util::standardized_path::StandardizedPath;
-use borkui::elements::{
+use krust_editor::selection::{SelectionMode, SelectionModel, TextDirection, TextUnit};
+use krust_util::standardized_path::StandardizedPath;
+use krustui::elements::{
     AnchorPair, OffsetPositioning, OffsetType, PositionedElementOffsetBounds, PositioningAxis,
     XAxisAnchor, YAxisAnchor,
 };
-use borkui::text::point::Point;
-use borkui::text::TextBuffer;
-use borkui::units::{IntoPixels, Pixels};
-use borkui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use krustui::text::point::Point;
+use krustui::text::TextBuffer;
+use krustui::units::{IntoPixels, Pixels};
+use krustui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 use super::super::DiffResult;
 use super::comments::{EditorCommentsModel, PendingComment, PendingCommentEvent};
@@ -356,7 +356,7 @@ impl CodeEditorModel {
     /// Identical to `new` but creates the `RenderState` with
     /// [`LayoutMode::CharCell`] so all soft-wrap positions use monospace
     /// character-count arithmetic rather than font-aware pixel layout.
-    /// `TuiEditorModel` (in `bork_tui`) is a type alias for this type;
+    /// `TuiEditorModel` (in `krust_tui`) is a type alias for this type;
     /// constructing via this method is what gives the TUI editor all of
     /// `CodeEditorModel`'s features (vim, syntax, diff, hidden lines) for free
     /// while sharing no GUI-rendering infrastructure.
@@ -479,10 +479,10 @@ impl CodeEditorModel {
     /// lives here (the caller of `RenderState::new_tui`) rather than in the core
     /// editor crate so the editor API doesn't carry a TUI-specific stub.
     fn tui_stub_text_styles() -> RichTextStyles {
-        use borkui::elements::{Border, Fill};
-        use borkui::fonts::{FamilyId, Weight};
+        use krustui::elements::{Border, Fill};
+        use krustui::fonts::{FamilyId, Weight};
 
-        const TRANSPARENT: borkui::color::ColorU = borkui::color::ColorU {
+        const TRANSPARENT: krustui::color::ColorU = krustui::color::ColorU {
             r: 0,
             g: 0,
             b: 0,
@@ -716,7 +716,7 @@ impl CodeEditorModel {
     // Set the following line ranges to be hidden in the editor.
     pub fn set_hidden_lines(
         &mut self,
-        ranges: RangeSet<bork_editor::content::text::LineCount>,
+        ranges: RangeSet<krust_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         self.hidden_lines.update(ctx, |model, ctx| {
@@ -731,7 +731,7 @@ impl CodeEditorModel {
     // Set the following hidden line ranges to be visible. This is no-op if the lines are already visible.
     pub fn set_visible_line_range(
         &mut self,
-        range: Range<bork_editor::content::text::LineCount>,
+        range: Range<krust_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         let version = self.content().as_ref(ctx).buffer_version();
@@ -1465,7 +1465,7 @@ impl CodeEditorModel {
             let line_count = self.line_count(ctx);
 
             // Calculate the visible line ranges (with context)
-            let mut visible_ranges: RangeSet<bork_editor::content::text::LineCount> =
+            let mut visible_ranges: RangeSet<krust_editor::content::text::LineCount> =
                 RangeSet::new();
 
             // Add ranges for diffs. `modified_lines` yields 0-based line
@@ -1480,14 +1480,14 @@ impl CodeEditorModel {
             }
 
             // Calculate hidden ranges as the complement of visible ranges
-            let all_lines: Range<bork_editor::content::text::LineCount> =
-                bork_editor::content::text::LineCount::from(0)
-                    ..bork_editor::content::text::LineCount::from(line_count);
+            let all_lines: Range<krust_editor::content::text::LineCount> =
+                krust_editor::content::text::LineCount::from(0)
+                    ..krust_editor::content::text::LineCount::from(line_count);
 
             // Find gaps in the visible ranges
             let hidden_ranges = visible_ranges
                 .gaps(&all_lines)
-                .collect::<RangeSet<bork_editor::content::text::LineCount>>();
+                .collect::<RangeSet<krust_editor::content::text::LineCount>>();
 
             self.set_hidden_lines(hidden_ranges, ctx);
         }
@@ -2333,10 +2333,10 @@ impl CodeEditorModel {
                 self.update_content(
                     |mut content, ctx| {
                         content.apply_edit(
-                        bork_editor::content::buffer::BufferEditAction::InsertForEachSelection {
+                        krust_editor::content::buffer::BufferEditAction::InsertForEachSelection {
                             texts: &texts,
                         },
-                        bork_editor::content::buffer::EditOrigin::UserTyped,
+                        krust_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -2367,10 +2367,10 @@ impl CodeEditorModel {
             self.update_content(
                 |mut content, ctx| {
                     content.apply_edit(
-                        bork_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
+                        krust_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
                             edits: &edits,
                         },
-                        bork_editor::content::buffer::EditOrigin::UserTyped,
+                        krust_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -3978,10 +3978,10 @@ impl CoreEditorModel for CodeEditorModel {
     }
 
     // TODO(kevin): Add validation to the content model.
-    fn validate(&self, _ctx: &impl borkui::ModelAsRef) {}
+    fn validate(&self, _ctx: &impl krustui::ModelAsRef) {}
 
     // Since this is a plain text editor, there is no text styles.
-    fn active_text_style(&self) -> bork_editor::content::text::TextStyles {
+    fn active_text_style(&self) -> krust_editor::content::text::TextStyles {
         Default::default()
     }
 

@@ -5,19 +5,19 @@ use cynic::QueryBuilder;
 use inquire::error::InquireError;
 use inquire::{Confirm, Select};
 use serde::Serialize;
-use bork_cli::agent::OutputFormat;
-use bork_cli::environment::{EnvironmentCommand, ImageCommand};
-use bork_cli::scope::ObjectScope;
-use bork_cli::GlobalOptions;
-use bork_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use bork_graphql::queries::list_bork_dev_images::{
-    ListBorkDevImages, ListBorkDevImagesResult, ListBorkDevImagesVariables,
+use krust_cli::agent::OutputFormat;
+use krust_cli::environment::{EnvironmentCommand, ImageCommand};
+use krust_cli::scope::ObjectScope;
+use krust_cli::GlobalOptions;
+use krust_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use krust_graphql::queries::list_krust_dev_images::{
+    ListKrustDevImages, ListKrustDevImagesResult, ListKrustDevImagesVariables,
 };
-use bork_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
-use borkui::r#async::FutureExt;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
+use krustui::r#async::FutureExt;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
-use crate::ai::agent_sdk::driver::BORK_DRIVE_SYNC_TIMEOUT;
+use crate::ai::agent_sdk::driver::KRUST_DRIVE_SYNC_TIMEOUT;
 use crate::ai::agent_sdk::oauth_flow::poll_oauth_until_terminal;
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::ai::cloud_environments::{
@@ -36,7 +36,7 @@ use crate::util::time_format::format_approx_duration_from_now_utc;
 use crate::workspaces::user_profiles::UserProfiles;
 use crate::CloudObjectTypeAndId;
 
-const BORK_DEV_ENVIRONMENTS_REPO: &str = "https://github.com/borkdotdev/bork-dev-environments";
+const KRUST_DEV_ENVIRONMENTS_REPO: &str = "https://github.com/krustdotdev/krust-dev-environments";
 
 /// Parse repo strings in the format "owner/repo" into GithubRepo objects.
 fn parse_repos(repo_strings: Vec<String>) -> anyhow::Result<Vec<GithubRepo>> {
@@ -146,12 +146,12 @@ impl EnvironmentCommandRunner {
     fn list_images(&self, global_options: GlobalOptions, ctx: &mut ModelContext<Self>) {
         let server_api = ServerApiProvider::as_ref(ctx).get();
 
-        let operation = ListBorkDevImages::build(ListBorkDevImagesVariables {});
+        let operation = ListKrustDevImages::build(ListKrustDevImagesVariables {});
         let fetch_images = async move { server_api.send_graphql_request(operation, None).await };
 
         ctx.spawn(fetch_images, move |_, result, ctx| match result {
-            Ok(response) => match response.list_bork_dev_images {
-                ListBorkDevImagesResult::ListBorkDevImagesOutput(output) => {
+            Ok(response) => match response.list_krust_dev_images {
+                ListKrustDevImagesResult::ListKrustDevImagesOutput(output) => {
                     let image_infos: Vec<_> = output
                         .images
                         .into_iter()
@@ -167,14 +167,14 @@ impl EnvironmentCommandRunner {
                         OutputFormat::Text | OutputFormat::Pretty
                     ) {
                         println!(
-                            "All Bork dev images contain Python and Node. For more information, see: {}\n",
-                            BORK_DEV_ENVIRONMENTS_REPO
+                            "All Krust dev images contain Python and Node. For more information, see: {}\n",
+                            KRUST_DEV_ENVIRONMENTS_REPO
                         );
                     }
                     output::print_list(image_infos, global_options.output_format);
-                    ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
+                    ctx.terminate_app(krustui::platform::TerminationMode::ForceTerminate, None);
                 }
-                ListBorkDevImagesResult::UserFacingError(_) | ListBorkDevImagesResult::Unknown => {
+                ListKrustDevImagesResult::UserFacingError(_) | ListKrustDevImagesResult::Unknown => {
                     super::report_fatal_error(anyhow::anyhow!("Failed to fetch images"), ctx);
                 }
             },
@@ -187,7 +187,7 @@ impl EnvironmentCommandRunner {
     fn list(&self, global_options: GlobalOptions, ctx: &mut ModelContext<Self>) {
         let initial_sync = UpdateManager::as_ref(ctx)
             .initial_load_complete()
-            .with_timeout(BORK_DRIVE_SYNC_TIMEOUT);
+            .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT);
 
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
@@ -251,14 +251,14 @@ impl EnvironmentCommandRunner {
 
             output::print_list(environment_infos, global_options.output_format);
 
-            ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
+            ctx.terminate_app(krustui::platform::TerminationMode::ForceTerminate, None);
         });
     }
 
     fn get(&mut self, id: String, ctx: &mut ModelContext<Self>) {
         let initial_sync = UpdateManager::as_ref(ctx)
             .initial_load_complete()
-            .with_timeout(BORK_DRIVE_SYNC_TIMEOUT);
+            .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT);
 
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
@@ -274,7 +274,7 @@ impl EnvironmentCommandRunner {
                 Ok(sid) => sid,
                 Err(_) => {
                     ctx.terminate_app(
-                        borkui::platform::TerminationMode::ForceTerminate,
+                        krustui::platform::TerminationMode::ForceTerminate,
                         Some(Err(anyhow::anyhow!("Environment {} not found", id))),
                     );
                     return;
@@ -285,10 +285,10 @@ impl EnvironmentCommandRunner {
 
             if let Some(environment) = environment {
                 Self::print_environment_details(&environment.model().string_model);
-                ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
+                ctx.terminate_app(krustui::platform::TerminationMode::ForceTerminate, None);
             } else {
                 ctx.terminate_app(
-                    borkui::platform::TerminationMode::ForceTerminate,
+                    krustui::platform::TerminationMode::ForceTerminate,
                     Some(Err(anyhow::anyhow!("Environment {} not found", id))),
                 );
             }
@@ -331,7 +331,7 @@ impl EnvironmentCommandRunner {
         match err {
             InquireError::OperationCanceled | InquireError::OperationInterrupted => {
                 eprintln!("Environment creation canceled.");
-                ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
+                ctx.terminate_app(krustui::platform::TerminationMode::ForceTerminate, None);
                 true
             }
             _ => false,
@@ -346,15 +346,15 @@ impl EnvironmentCommandRunner {
         const CUSTOM_IMAGE_OPTION: &str = "Custom Docker image";
 
         let server_api = ServerApiProvider::as_ref(ctx).get();
-        let operation = ListBorkDevImages::build(ListBorkDevImagesVariables {});
+        let operation = ListKrustDevImages::build(ListKrustDevImagesVariables {});
         let fetch_images = async move { server_api.send_graphql_request(operation, None).await };
 
         ctx.spawn(fetch_images, move |_, result, ctx| match result {
-            Ok(response) => match response.list_bork_dev_images {
-                ListBorkDevImagesResult::ListBorkDevImagesOutput(output) => {
+            Ok(response) => match response.list_krust_dev_images {
+                ListKrustDevImagesResult::ListKrustDevImagesOutput(output) => {
                     if output.images.is_empty() {
                         super::report_fatal_error(
-                            anyhow::anyhow!("No Bork dev images available."),
+                            anyhow::anyhow!("No Krust dev images available."),
                             ctx,
                         );
                         return;
@@ -364,8 +364,8 @@ impl EnvironmentCommandRunner {
                         "No docker image provided, please select a base image.\n"
                     );
                     println!(
-                        "All borkdotdev images contain Python and Node, in addition to language-specific tooling. For more info: {}\n",
-                        BORK_DEV_ENVIRONMENTS_REPO
+                        "All krustdotdev images contain Python and Node, in addition to language-specific tooling. For more info: {}\n",
+                        KRUST_DEV_ENVIRONMENTS_REPO
                     );
 
                     let mut image_choices: Vec<String> =
@@ -406,7 +406,7 @@ impl EnvironmentCommandRunner {
 
                     continuation(final_image, ctx);
                 }
-                ListBorkDevImagesResult::UserFacingError(_) | ListBorkDevImagesResult::Unknown => {
+                ListKrustDevImagesResult::UserFacingError(_) | ListKrustDevImagesResult::Unknown => {
                     super::report_fatal_error(
                         anyhow::anyhow!("Failed to fetch list of base images"),
                         ctx,
@@ -427,7 +427,7 @@ impl EnvironmentCommandRunner {
         docker_image: Option<String>,
         github_repos: Vec<GithubRepo>,
         setup_commands: Vec<String>,
-        scope: bork_cli::scope::ObjectScope,
+        scope: krust_cli::scope::ObjectScope,
         ctx: &mut ModelContext<Self>,
     ) {
         if let Some(image) = docker_image {
@@ -465,12 +465,12 @@ impl EnvironmentCommandRunner {
         docker_image: String,
         github_repos: Vec<GithubRepo>,
         setup_commands: Vec<String>,
-        scope: bork_cli::scope::ObjectScope,
+        scope: krust_cli::scope::ObjectScope,
         ctx: &mut ModelContext<Self>,
     ) {
         let initial_sync = UpdateManager::as_ref(ctx)
             .initial_load_complete()
-            .with_timeout(BORK_DRIVE_SYNC_TIMEOUT);
+            .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT);
 
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
@@ -522,7 +522,7 @@ impl EnvironmentCommandRunner {
 
         if attempt > MAX_AUTH_ATTEMPTS {
             ctx.terminate_app(
-                borkui::platform::TerminationMode::ForceTerminate,
+                krustui::platform::TerminationMode::ForceTerminate,
                 Some(Err(anyhow::anyhow!(
                     "Exceeded maximum number of authorization attempts ({}). Please try again later.",
                     MAX_AUTH_ATTEMPTS
@@ -583,7 +583,7 @@ impl EnvironmentCommandRunner {
                     if private_repo_owners.len() > 1 {
                         let owners_str = private_repo_owners.into_iter().collect::<Vec<_>>().join(", ");
                         ctx.terminate_app(
-                            borkui::platform::TerminationMode::ForceTerminate,
+                            krustui::platform::TerminationMode::ForceTerminate,
                             Some(Err(anyhow::anyhow!(
                                 "All private repositories in an environment must belong to the same owner. Found multiple owners: {}.\nIf you need support for private repos from multiple owners, please submit a GitHub issue.",
                                 owners_str
@@ -645,7 +645,7 @@ impl EnvironmentCommandRunner {
                                         }
                                         Ok(OauthConnectTxStatus::Failed) => {
                                             ctx.terminate_app(
-                                                borkui::platform::TerminationMode::ForceTerminate,
+                                                krustui::platform::TerminationMode::ForceTerminate,
                                                 Some(Err(anyhow::anyhow!(
                                                     "GitHub authorization failed. Please try again."
                                                 ))),
@@ -653,7 +653,7 @@ impl EnvironmentCommandRunner {
                                         }
                                         Ok(OauthConnectTxStatus::Expired) => {
                                             ctx.terminate_app(
-                                                borkui::platform::TerminationMode::ForceTerminate,
+                                                krustui::platform::TerminationMode::ForceTerminate,
                                                 Some(Err(anyhow::anyhow!(
                                                     "GitHub authorization expired. Please try again."
                                                 ))),
@@ -663,7 +663,7 @@ impl EnvironmentCommandRunner {
                                         | Ok(OauthConnectTxStatus::InProgress) => {
                                             // Should not be returned by poll_oauth_until_terminal.
                                             ctx.terminate_app(
-                                                borkui::platform::TerminationMode::ForceTerminate,
+                                                krustui::platform::TerminationMode::ForceTerminate,
                                                 Some(Err(anyhow::anyhow!(
                                                     "Unexpected non-terminal OAuth status returned"
                                                 ))),
@@ -671,7 +671,7 @@ impl EnvironmentCommandRunner {
                                         }
                                         Err(err) => {
                                             ctx.terminate_app(
-                                                borkui::platform::TerminationMode::ForceTerminate,
+                                                krustui::platform::TerminationMode::ForceTerminate,
                                                 Some(Err(anyhow::anyhow!(
                                                     "Error polling OAuth status: {err}"
                                                 ))),
@@ -686,14 +686,14 @@ impl EnvironmentCommandRunner {
                             println!("\nAuthorize access here: {auth_url}\n");
                             println!("After authorizing, please re-run this command.");
                             ctx.terminate_app(
-                                borkui::platform::TerminationMode::ForceTerminate,
+                                krustui::platform::TerminationMode::ForceTerminate,
                                 None,
                             );
                         }
                         (None, Some(_)) => {
                             // Server returned txId without authUrl - unexpected.
                             ctx.terminate_app(
-                                borkui::platform::TerminationMode::ForceTerminate,
+                                krustui::platform::TerminationMode::ForceTerminate,
                                 Some(Err(anyhow::anyhow!(
                                     "Server error: did not receive auth URL for OAuth flow"
                                 ))),
@@ -702,7 +702,7 @@ impl EnvironmentCommandRunner {
                         (None, None) => {
                             // No auth URL or txId provided, but we have auth issues.
                             ctx.terminate_app(
-                                borkui::platform::TerminationMode::ForceTerminate,
+                                krustui::platform::TerminationMode::ForceTerminate,
                                 Some(Err(anyhow::anyhow!(
                                     "Cannot {} environment: authorization required but no auth flow provided by server",
                                     operation_name
@@ -713,7 +713,7 @@ impl EnvironmentCommandRunner {
                 }
                 Err(e) => {
                     ctx.terminate_app(
-                        borkui::platform::TerminationMode::ForceTerminate,
+                        krustui::platform::TerminationMode::ForceTerminate,
                         Some(Err(e.context("Failed to check GitHub auth status"))),
                     );
                 }
@@ -765,7 +765,7 @@ impl EnvironmentCommandRunner {
                 {
                     let server_id = result.server_id.unwrap();
                     println!("Environment created successfully with ID: {server_id}");
-                    ctx.terminate_app(borkui::platform::TerminationMode::ForceTerminate, None);
+                    ctx.terminate_app(krustui::platform::TerminationMode::ForceTerminate, None);
                 }
             }
         });
@@ -808,13 +808,13 @@ impl EnvironmentCommandRunner {
                             Ok(false) | Err(InquireError::OperationCanceled | InquireError::OperationInterrupted) => {
                                 println!("Environment {action} canceled.");
                                 ctx.terminate_app(
-                                    borkui::platform::TerminationMode::ForceTerminate,
+                                    krustui::platform::TerminationMode::ForceTerminate,
                                     None,
                                 );
                             }
                             Err(err) => {
                                 ctx.terminate_app(
-                                    borkui::platform::TerminationMode::ForceTerminate,
+                                    krustui::platform::TerminationMode::ForceTerminate,
                                     Some(Err(anyhow::anyhow!("Error prompting for confirmation: {err}"))),
                                 );
                             }
@@ -825,7 +825,7 @@ impl EnvironmentCommandRunner {
                 }
                 Err(_) => {
                     ctx.terminate_app(
-                        borkui::platform::TerminationMode::ForceTerminate,
+                        krustui::platform::TerminationMode::ForceTerminate,
                         Some(Err(anyhow::anyhow!(
                             "Aborting environment {action} because integration usage could not be determined. Re-run with --force to override."
                         ))),
@@ -852,7 +852,7 @@ impl EnvironmentCommandRunner {
     ) {
         let initial_sync = UpdateManager::as_ref(ctx)
             .initial_load_complete()
-            .with_timeout(BORK_DRIVE_SYNC_TIMEOUT);
+            .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT);
 
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
@@ -869,7 +869,7 @@ impl EnvironmentCommandRunner {
                 Err(_) => {
                     let error = anyhow::anyhow!("Environment {} not found", id);
                     ctx.terminate_app(
-                        borkui::platform::TerminationMode::ForceTerminate,
+                        krustui::platform::TerminationMode::ForceTerminate,
                         Some(Err(error)),
                     );
                     return;
@@ -880,7 +880,7 @@ impl EnvironmentCommandRunner {
             let Some(environment) = environment else {
                 let error = anyhow::anyhow!("Environment {} not found", id);
                 ctx.terminate_app(
-                    borkui::platform::TerminationMode::ForceTerminate,
+                    krustui::platform::TerminationMode::ForceTerminate,
                     Some(Err(error)),
                 );
                 return;
@@ -1012,7 +1012,7 @@ impl EnvironmentCommandRunner {
                             println!("Environment updated successfully!\n");
                             Self::print_environment_details(&updated_env);
                             ctx.terminate_app(
-                                borkui::platform::TerminationMode::ForceTerminate,
+                                krustui::platform::TerminationMode::ForceTerminate,
                                 None,
                             );
                         }
@@ -1031,7 +1031,7 @@ impl EnvironmentCommandRunner {
     fn delete(&mut self, id: String, force: bool, ctx: &mut ModelContext<Self>) {
         let initial_sync = UpdateManager::as_ref(ctx)
             .initial_load_complete()
-            .with_timeout(BORK_DRIVE_SYNC_TIMEOUT);
+            .with_timeout(KRUST_DRIVE_SYNC_TIMEOUT);
 
         ctx.spawn(initial_sync, move |_, result, ctx| {
             if result.is_err() {
@@ -1048,7 +1048,7 @@ impl EnvironmentCommandRunner {
                 Err(_) => {
                     let error = anyhow::anyhow!("Environment {} not found", id);
                     ctx.terminate_app(
-                        borkui::platform::TerminationMode::ForceTerminate,
+                        krustui::platform::TerminationMode::ForceTerminate,
                         Some(Err(error)),
                     );
                     return;
@@ -1059,7 +1059,7 @@ impl EnvironmentCommandRunner {
             let Some(environment) = environment else {
                 let error = anyhow::anyhow!("Environment {} not found", id);
                 ctx.terminate_app(
-                    borkui::platform::TerminationMode::ForceTerminate,
+                    krustui::platform::TerminationMode::ForceTerminate,
                     Some(Err(error)),
                 );
                 return;
@@ -1095,7 +1095,7 @@ impl EnvironmentCommandRunner {
                         OperationSuccessType::Success => {
                             println!("Environment deleted successfully");
                             ctx.terminate_app(
-                                borkui::platform::TerminationMode::ForceTerminate,
+                                krustui::platform::TerminationMode::ForceTerminate,
                                 None,
                             );
                         }
@@ -1112,7 +1112,7 @@ impl EnvironmentCommandRunner {
     }
 }
 
-impl borkui::Entity for EnvironmentCommandRunner {
+impl krustui::Entity for EnvironmentCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for EnvironmentCommandRunner {}

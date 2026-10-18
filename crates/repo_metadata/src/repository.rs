@@ -9,11 +9,11 @@ use std::time::Duration;
 use futures::future::ready;
 #[cfg(feature = "local_fs")]
 use ignore::gitignore::Gitignore;
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::r#async::{BoxFuture, SpawnedFutureHandle};
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::r#async::{BoxFuture, SpawnedFutureHandle};
 #[cfg(feature = "local_fs")]
-use borkui_core::SingletonEntity;
-use borkui_core::{Entity, ModelContext, ModelHandle};
+use krustui_core::SingletonEntity;
+use krustui_core::{Entity, ModelContext, ModelHandle};
 
 #[cfg(feature = "local_fs")]
 use crate::watcher::DirectoryWatcher;
@@ -55,7 +55,7 @@ pub struct StartWatching {
     pub registration_future: BoxFuture<'static, Result<(), RepoMetadataError>>,
 }
 
-/// Model for tracking a code repository that Bork is aware of.
+/// Model for tracking a code repository that Krust is aware of.
 pub struct Repository {
     /// The root directory of the repository.
     root_dir: StandardizedPath,
@@ -254,7 +254,7 @@ impl Repository {
 
     #[cfg(feature = "local_fs")]
     pub(crate) async fn resolve_tracked_remote_ref(root_dir: PathBuf) -> Option<TrackedRemoteRef> {
-        let output = bork_util::git::run_git_command(
+        let output = krust_util::git::run_git_command(
             &root_dir,
             &["rev-parse", "--symbolic-full-name", "@{u}"],
         )
@@ -599,7 +599,7 @@ where
                                 let st = state.lock().unwrap();
                                 st.version
                             };
-                            borkui_core::r#async::Timer::after(wait).await;
+                            krustui_core::r#async::Timer::after(wait).await;
 
                             // If version unchanged, we're quiet; flush pending and exit loop.
                             let maybe_merged = {

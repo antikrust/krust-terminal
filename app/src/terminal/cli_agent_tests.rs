@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use chrono::Local;
 use smol_str::SmolStr;
-use bork_editor::render::model::LineCount;
-use bork_util::path::EscapeChar;
-use borkui::App;
+use krust_editor::render::model::LineCount;
+use krust_util::path::EscapeChar;
+use krustui::App;
 
 use super::{
     build_diff_hunk_prompt, build_review_prompt, build_selection_line_range_prompt,

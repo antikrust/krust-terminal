@@ -1,14 +1,14 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, ScrollbarWidth,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -312,7 +312,7 @@ impl RuleEditorView {
                     ScrollbarWidth::Auto,
                     appearance.theme().nonactive_ui_detail().into(),
                     appearance.theme().active_ui_detail().into(),
-                    borkui::elements::Fill::None,
+                    krustui::elements::Fill::None,
                 )
                 .finish(),
             )

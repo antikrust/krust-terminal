@@ -16,9 +16,9 @@ use log::LevelFilter;
 use lsp::supported_servers::LSPServerType;
 use lsp::{spawn_lsp_service, LspServerConfig, LspService, LspServiceInitializationResult};
 use lsp_types::Position;
-use bork_errors::report_error;
-use borkui_core::r#async::executor::Background;
-use borkui_core::r#async::Timer;
+use krust_errors::report_error;
+use krustui_core::r#async::executor::Background;
+use krustui_core::r#async::Timer;
 
 fn init_logging() {
     let mut base_logger = env_logger::builder();
@@ -112,7 +112,7 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    borkui_core::r#async::block_on(task)?;
+    krustui_core::r#async::block_on(task)?;
     Ok(())
 }
 
@@ -123,7 +123,7 @@ async fn async_main(executor: Arc<Background>, workspace_root: PathBuf) -> anyho
         LSPServerType::RustAnalyzer,
         workspace_root,
         None,
-        "bork-dev-example".to_string(),
+        "krust-dev-example".to_string(),
         Arc::new(http_client::Client::new()),
     );
 

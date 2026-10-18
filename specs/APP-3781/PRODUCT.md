@@ -1,6 +1,6 @@
 # APP-3781: Move Plugin Installation Instructions into a Split Pane
 
-Linear: [APP-3781](https://linear.app/borkdotdev/issue/APP-3781/move-plugin-installation-settings-into-a-dedicated-pane)
+Linear: [APP-3781](https://linear.app/krustdotdev/issue/APP-3781/move-plugin-installation-settings-into-a-dedicated-pane)
 
 ## Summary
 
@@ -47,7 +47,7 @@ The entry points remain the same buttons in the CLI agent toolbar:
 ### Instructions block content
 
 The instructions block renders the same information as the current modal:
-- **Title** (e.g., "Install Bork Plugin for Claude Code")
+- **Title** (e.g., "Install Krust Plugin for Claude Code")
 - **Subtitle** (e.g., "Ensure that jq is installed on your machine. Then, run these commands inside your Claude Code session.")
 - **Numbered steps**, each with:
   - A step number in a circular badge

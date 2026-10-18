@@ -9,10 +9,10 @@ use futures::channel::oneshot::channel;
 use futures::future::BoxFuture;
 use tokio::sync::Mutex;
 use vec1::vec1;
-use bork_errors::report_error;
-use bork_managed_secrets::client::IdentityTokenOptions;
-use bork_managed_secrets::ManagedSecretManager;
-use borkui::{ModelContext, ModelHandle, SingletonEntity};
+use krust_errors::report_error;
+use krust_managed_secrets::client::IdentityTokenOptions;
+use krust_managed_secrets::ManagedSecretManager;
+use krustui::{ModelContext, ModelHandle, SingletonEntity};
 
 use crate::settings::{AISettings, AISettingsChangedEvent};
 use crate::terminal::event::{AfterBlockCompletedEvent, BlockType, UserBlockCompleted};
@@ -93,7 +93,7 @@ pub(crate) fn aws_role_session_name(run_id: &str) -> String {
 }
 
 /// Cached STS client for OIDC credential refreshes -- cached on the last region used.
-/// (in practice, there should only ever be 1 region used per bork app lifetime)
+/// (in practice, there should only ever be 1 region used per krust app lifetime)
 ///
 /// `AssumeRoleWithWebIdentity` is unauthenticated (the web identity token is the
 /// credential), so we skip the default credentials chain via `no_credentials()`

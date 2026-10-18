@@ -1,8 +1,8 @@
-//! Public app APIs used by the `bork_tui` frontend.
+//! Public app APIs used by the `krust_tui` frontend.
 
 pub use repo_metadata::repositories::RepoDetectionSource;
-pub use bork_cli::agent::Harness;
-use borkui::SingletonEntity as _;
+pub use krust_cli::agent::Harness;
+use krustui::SingletonEntity as _;
 
 pub use crate::ai::agent::api::ServerConversationToken;
 pub use crate::ai::agent::conversation::{
@@ -136,7 +136,7 @@ pub use crate::util::repo_detection::{detect_possible_git_repo, RepoDetectionSes
 pub use crate::util::time_format::format_elapsed_seconds;
 
 /// Returns whether cloud conversation metadata failed to load.
-pub fn agent_conversations_cloud_metadata_load_failed(app: &borkui::AppContext) -> bool {
+pub fn agent_conversations_cloud_metadata_load_failed(app: &krustui::AppContext) -> bool {
     crate::ai::agent_conversations_model::AgentConversationsModel::as_ref(app)
         .cloud_conversation_metadata_load_failed()
 }

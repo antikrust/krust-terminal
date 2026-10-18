@@ -1,9 +1,9 @@
-pkgname=bork-terminal@@CHANNEL_SUFFIX@@
+pkgname=krust-terminal@@CHANNEL_SUFFIX@@
 pkgver=@@VERSION@@
 pkgrel=@@RELEASE@@
-pkgdesc="Bork, the Rust-based terminal for developers and teams"
+pkgdesc="Krust, the Rust-based terminal for developers and teams"
 arch=('@@ARCH@@')
-url="https://bork.baby"
+url="https://krust.baby"
 license=('custom')
 depends=(
 	'curl'

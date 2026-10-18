@@ -1,6 +1,6 @@
 # Enhance credit usage details in the orchestrator tab
 
-Linear: https://linear.app/borkdotdev/issue/QUALITY-671
+Linear: https://linear.app/krustdotdev/issue/QUALITY-671
 
 ## Summary
 The expanded credit usage footer in agent mode is per-conversation. When the conversation is an orchestrator, the footer hides the real cost of the work it dispatched — credits incurred by child agents are never surfaced on the parent. This feature changes the orchestrator's "Credits spent (total)" row to reflect the *orchestration total* (orchestrator + all locally-known descendants) and adds a click-to-expand per-agent breakdown beneath it.

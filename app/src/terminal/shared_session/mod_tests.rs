@@ -3,10 +3,10 @@ use std::sync::Arc;
 use serde_json::Value;
 use session_sharing_protocol::common::{Scrollback, ScrollbackBlock};
 use url::Url;
-use bork_core::command::ExitCode;
-use bork_core::features::FeatureFlag;
-use borkui::r#async::executor::Background;
-use borkui::units::Lines;
+use krust_core::command::ExitCode;
+use krust_core::features::FeatureFlag;
+use krustui::r#async::executor::Background;
+use krustui::units::Lines;
 
 use super::{decode_scrollback, SharedSessionScrollbackType};
 use crate::assert_lines_approx_eq;

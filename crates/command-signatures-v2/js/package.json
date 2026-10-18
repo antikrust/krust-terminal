@@ -1,14 +1,14 @@
 {
   "name": "js",
   "version": "1.0.0",
-  "description": "Bork Command Signatures",
+  "description": "Krust Command Signatures",
   "main": "build/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "npm run build -- --watch",
     "clean": "rm -r build"
   },
-  "author": "eng@bork.baby",
+  "author": "eng@krust.baby",
   "license": "",
   "devDependencies": {
     "typescript": "^5.2.2"

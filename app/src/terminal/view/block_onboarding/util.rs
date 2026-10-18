@@ -1,15 +1,15 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MouseStateHandle,
     ParentElement, Radius, Shrinkable,
 };
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::text_input::TextInput;
-use borkui::{Action, AppContext, Element, SingletonEntity, ViewHandle};
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::text_input::TextInput;
+use krustui::{Action, AppContext, Element, SingletonEntity, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::EditorView;
@@ -155,7 +155,7 @@ pub fn render_input_row<A: Action + Clone>(
     } else {
         ConstrainedBox::new(
             Icon::Check
-                .to_borkui_icon(Fill::Solid(ColorU::new(11, 142, 71, 255)))
+                .to_krustui_icon(Fill::Solid(ColorU::new(11, 142, 71, 255)))
                 .finish(),
         )
         .with_width(24.)

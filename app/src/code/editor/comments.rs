@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use borkui::{Entity, ModelContext};
+use krustui::{Entity, ModelContext};
 
 use crate::code::editor::line::EditorLineLocation;
 use crate::code_review::comments::{

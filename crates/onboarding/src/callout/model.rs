@@ -1,6 +1,6 @@
-use bork_core::send_telemetry_from_ctx;
-use bork_errors::report_error;
-use borkui_core::{Entity, ModelContext};
+use krust_core::send_telemetry_from_ctx;
+use krust_errors::report_error;
+use krustui_core::{Entity, ModelContext};
 
 use crate::telemetry::OnboardingEvent;
 use crate::OnboardingIntention;

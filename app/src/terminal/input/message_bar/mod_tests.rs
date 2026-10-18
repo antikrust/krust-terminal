@@ -1,6 +1,6 @@
-use bork_core::ui::Icon;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::MouseStateHandle;
+use krust_core::ui::Icon;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::MouseStateHandle;
 
 use super::{ChipHorizontalAlignment, MessageItem};
 

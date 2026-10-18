@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::{Vector2F, vec2f};
-use bork_core::ui::Icon;
-use bork_core::ui::appearance::Appearance;
-use borkui_core::assets::asset_cache::AssetSource;
-use borkui_core::elements::{
+use krust_core::ui::Icon;
+use krust_core::ui::appearance::Appearance;
+use krustui_core::assets::asset_cache::AssetSource;
+use krustui_core::elements::{
     CacheOption, Dismiss, DispatchEventResult, EventHandler, Image, Shrinkable,
 };
-use borkui_core::keymap::Keystroke;
-use borkui_core::prelude::stack::*;
-use borkui_core::prelude::*;
+use krustui_core::keymap::Keystroke;
+use krustui_core::prelude::stack::*;
+use krustui_core::prelude::*;
 
 use crate::{Component, Options as _, button};
 
@@ -308,17 +308,17 @@ impl button::Theme for ButtonTheme {
         &self,
         button_state: button::State,
         _appearance: &Appearance,
-    ) -> Option<bork_core::ui::theme::Fill> {
+    ) -> Option<krust_core::ui::theme::Fill> {
         match button_state {
             button::State::Default => None,
-            button::State::Hovered => Some(bork_core::ui::theme::Fill::white().with_opacity(10)),
-            button::State::Pressed => Some(bork_core::ui::theme::Fill::white().with_opacity(15)),
+            button::State::Hovered => Some(krust_core::ui::theme::Fill::white().with_opacity(10)),
+            button::State::Pressed => Some(krust_core::ui::theme::Fill::white().with_opacity(15)),
         }
     }
 
     fn text_color(
         &self,
-        _background: Option<bork_core::ui::theme::Fill>,
+        _background: Option<krust_core::ui::theme::Fill>,
         _appearance: &Appearance,
     ) -> ColorU {
         ColorU::new(255, 255, 255, 255)

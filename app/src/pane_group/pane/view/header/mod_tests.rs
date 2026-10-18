@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use cloud_object_client::MockObjectClient;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::Empty;
-use borkui::platform::WindowStyle;
-use borkui::{App, AppContext, Element, Entity, TypedActionView, View, ViewContext};
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::Empty;
+use krustui::platform::WindowStyle;
+use krustui::{App, AppContext, Element, Entity, TypedActionView, View, ViewContext};
 
 use super::{Event, OpenOverlay};
 use crate::ai::blocklist::BlocklistAIHistoryModel;

@@ -1,12 +1,12 @@
 //! This module defines CellGlyphCache, a struct which manages the caching of glyph values for cells
-//! when rendering Grids within Bork.
+//! when rendering Grids within Krust.
 use std::collections::HashMap;
 
-use borkui::elements::DEFAULT_LINE_HEIGHT_RATIO;
-use borkui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Properties};
-use borkui::platform::LineStyle;
-use borkui::text_layout::{StyleAndFont, DEFAULT_TOP_BOTTOM_RATIO};
-use borkui::PaintContext;
+use krustui::elements::DEFAULT_LINE_HEIGHT_RATIO;
+use krustui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Properties};
+use krustui::platform::LineStyle;
+use krustui::text_layout::{StyleAndFont, DEFAULT_TOP_BOTTOM_RATIO};
+use krustui::PaintContext;
 
 /// Stores cached glyph values for characters/strings. Note that we normally only need to look up
 /// characters - we only look up strings in the case of zerowidth characters (which act as modifiers

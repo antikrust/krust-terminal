@@ -1,14 +1,14 @@
-use bork_editor::editor::NavigationKey;
-use bork_editor::model::RichTextEditorModel;
-use bork_editor::render::model::RenderState;
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krust_editor::model::RichTextEditorModel;
+use krust_editor::render::model::RenderState;
+use krustui::elements::{
     AnchorPair, Container, Flex, MouseStateHandle, OffsetPositioning, OffsetType, ParentElement,
     PositionedElementOffsetBounds, PositioningAxis, XAxisAnchor, YAxisAnchor,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, BlurContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -198,7 +198,7 @@ impl View for LinkEditor {
         }
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let mut editors = Flex::column();
 

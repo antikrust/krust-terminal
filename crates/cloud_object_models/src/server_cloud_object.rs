@@ -5,7 +5,7 @@ use cloud_objects::cloud_object::{
     GenericServerObject, GenericStringModel, Serializer, ServerMetadata,
 };
 use cloud_objects::ids::{GenericStringObjectId, ObjectUid, ServerId, SyncId};
-use bork_graphql::object::CloudObjectWithDescendants;
+use krust_graphql::object::CloudObjectWithDescendants;
 
 use crate::{
     AIExecutionProfile, AIFact, AmbientAgentEnvironment, CloudFolderModel, CloudNotebookModel,
@@ -151,7 +151,7 @@ where
     T: std::fmt::Debug + Clone + Send + Sync + 'static,
     S: Serializer<T>,
 {
-    type GqlType = bork_graphql::generic_string_object::GenericStringObject;
+    type GqlType = krust_graphql::generic_string_object::GenericStringObject;
 
     fn try_from_gql(value: Self::GqlType) -> Result<Self> {
         let uid = ServerId::from_string_lossy(value.metadata.uid.inner());
@@ -166,13 +166,13 @@ where
 }
 
 impl TryFromGql for ServerFolder {
-    type GqlType = bork_graphql::folder::Folder;
+    type GqlType = krust_graphql::folder::Folder;
 
     fn try_from_gql(value: Self::GqlType) -> Result<Self> {
         let uid = ServerId::from_string_lossy(value.metadata.uid.inner());
         Ok(Self::new(
             SyncId::ServerId(uid),
-            CloudFolderModel::new(&value.name, value.is_bork_pack),
+            CloudFolderModel::new(&value.name, value.is_krust_pack),
             value.metadata.try_into()?,
             value.permissions.try_into()?,
         ))
@@ -180,7 +180,7 @@ impl TryFromGql for ServerFolder {
 }
 
 impl TryFromGql for ServerNotebook {
-    type GqlType = bork_graphql::notebook::Notebook;
+    type GqlType = krust_graphql::notebook::Notebook;
 
     fn try_from_gql(value: Self::GqlType) -> Result<Self> {
         let uid = ServerId::from_string_lossy(value.metadata.uid.inner());
@@ -203,7 +203,7 @@ impl TryFromGql for ServerNotebook {
 }
 
 impl TryFromGql for ServerWorkflow {
-    type GqlType = bork_graphql::workflow::Workflow;
+    type GqlType = krust_graphql::workflow::Workflow;
 
     fn try_from_gql(value: Self::GqlType) -> Result<Self> {
         let uid = ServerId::from_string_lossy(value.metadata.uid.inner());
@@ -217,27 +217,27 @@ impl TryFromGql for ServerWorkflow {
     }
 }
 
-impl TryFrom<bork_graphql::object::CloudObject> for ServerCloudObject {
+impl TryFrom<krust_graphql::object::CloudObject> for ServerCloudObject {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object::CloudObject) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object::CloudObject) -> Result<Self, Self::Error> {
         match value {
-            bork_graphql::object::CloudObject::AIConversation(_) => Err(anyhow::anyhow!(
+            krust_graphql::object::CloudObject::AIConversation(_) => Err(anyhow::anyhow!(
                 "AIConversation is not a supported object type for this operation"
             )),
-            bork_graphql::object::CloudObject::Folder(folder) => Ok(ServerCloudObject::Folder(
+            krust_graphql::object::CloudObject::Folder(folder) => Ok(ServerCloudObject::Folder(
                 ServerFolder::try_from_gql(folder)?,
             )),
-            bork_graphql::object::CloudObject::GenericStringObject(gso) => {
+            krust_graphql::object::CloudObject::GenericStringObject(gso) => {
                 server_gso_to_cloud_object(gso)
             }
-            bork_graphql::object::CloudObject::Notebook(notebook) => Ok(
+            krust_graphql::object::CloudObject::Notebook(notebook) => Ok(
                 ServerCloudObject::Notebook(ServerNotebook::try_from_gql(notebook)?),
             ),
-            bork_graphql::object::CloudObject::Workflow(workflow) => Ok(
+            krust_graphql::object::CloudObject::Workflow(workflow) => Ok(
                 ServerCloudObject::Workflow(Box::new(ServerWorkflow::try_from_gql(workflow)?)),
             ),
-            bork_graphql::object::CloudObject::Unknown => {
+            krust_graphql::object::CloudObject::Unknown => {
                 Err(anyhow::anyhow!("Unable to convert cloud object type"))
             }
         }
@@ -270,57 +270,57 @@ impl TryFrom<CloudObjectWithDescendants> for ServerCloudObject {
 }
 
 fn server_gso_to_cloud_object(
-    gso: bork_graphql::generic_string_object::GenericStringObject,
+    gso: krust_graphql::generic_string_object::GenericStringObject,
 ) -> Result<ServerCloudObject> {
     match gso.format {
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonEnvVarCollection => {
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonEnvVarCollection => {
             Ok(ServerCloudObject::EnvVarCollection(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<EnvVarCollection, JsonSerializer>>::try_from_gql(gso)?,
             ))
         }
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonPreference => Ok(
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonPreference => Ok(
             ServerCloudObject::Preference(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<Preference, JsonSerializer>>::try_from_gql(gso)?,
             ),
         ),
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonWorkflowEnum => Ok(
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonWorkflowEnum => Ok(
             ServerCloudObject::WorkflowEnum(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<WorkflowEnum, JsonSerializer>>::try_from_gql(gso)?,
             ),
         ),
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonAIFact => Ok(
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonAIFact => Ok(
             ServerCloudObject::AIFact(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<AIFact, JsonSerializer>>::try_from_gql(gso)?,
             ),
         ),
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonMCPServer => Ok(
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonMCPServer => Ok(
             ServerCloudObject::MCPServer(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<MCPServer, JsonSerializer>>::try_from_gql(gso)?,
             ),
         ),
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonAIExecutionProfile => {
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonAIExecutionProfile => {
             Ok(ServerCloudObject::AIExecutionProfile(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<AIExecutionProfile, JsonSerializer>>::try_from_gql(gso)?,
             ))
         }
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonTemplatableMCPServer => {
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonTemplatableMCPServer => {
             Ok(ServerCloudObject::TemplatableMCPServer(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<TemplatableMCPServer, JsonSerializer>>::try_from_gql(gso)?,
             ))
         }
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonCloudEnvironment => {
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonCloudEnvironment => {
             Ok(ServerCloudObject::AmbientAgentEnvironment(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<AmbientAgentEnvironment, JsonSerializer>>::try_from_gql(gso)?,
             ))
         }
-        bork_graphql::generic_string_object::GenericStringObjectFormat::JsonScheduledAmbientAgent => {
+        krust_graphql::generic_string_object::GenericStringObjectFormat::JsonScheduledAmbientAgent => {
             Ok(ServerCloudObject::ScheduledAmbientAgent(
                 GenericServerObject::<GenericStringObjectId, GenericStringModel<ScheduledAmbientAgent, JsonSerializer>>::try_from_gql(gso)?,
             ))
         }
         // Formats unknown to this client build (e.g. the server-only `JsonRunner`).
         // Returning an error lets callers skip the object rather than failing.
-        bork_graphql::generic_string_object::GenericStringObjectFormat::Unknown => Err(anyhow::anyhow!(
+        krust_graphql::generic_string_object::GenericStringObjectFormat::Unknown => Err(anyhow::anyhow!(
             "unsupported generic string object format (unknown to this client build)"
         )),
     }

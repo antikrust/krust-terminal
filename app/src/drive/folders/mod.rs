@@ -3,12 +3,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 pub use cloud_object_models::{CloudFolder, CloudFolderModel};
-// Re-exported from bork_server_client.
-pub use bork_server_client::ids::FolderId;
+// Re-exported from krust_server_client.
+pub use krust_server_client::ids::FolderId;
 
-// Re-exported from bork_server_client.
-use super::items::folder::BorkDriveFolder;
-use super::items::BorkDriveItem;
+// Re-exported from krust_server_client.
+use super::items::folder::KrustDriveFolder;
+use super::items::KrustDriveItem;
 use super::CloudObjectTypeAndId;
 use crate::appearance::Appearance;
 use crate::cloud_object::{
@@ -120,17 +120,17 @@ impl CloudModelType for CloudFolderModel {
             .await
     }
 
-    fn renders_in_bork_drive(&self) -> bool {
+    fn renders_in_krust_drive(&self) -> bool {
         true
     }
 
-    fn to_bork_drive_item(
+    fn to_krust_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         folder: &CloudFolder,
-    ) -> Option<Box<dyn BorkDriveItem>> {
-        Some(Box::new(BorkDriveFolder::new(
+    ) -> Option<Box<dyn KrustDriveItem>> {
+        Some(Box::new(KrustDriveFolder::new(
             self.cloud_object_type_and_id(id),
             folder.clone(),
         )))

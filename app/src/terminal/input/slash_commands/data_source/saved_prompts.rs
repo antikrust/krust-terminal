@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use futures_lite::future::yield_now;
 use ordered_float::OrderedFloat;
-use bork_core::ui::appearance::Appearance;
-use borkui::fonts::FamilyId;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krustui::fonts::FamilyId;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::CloudObject;

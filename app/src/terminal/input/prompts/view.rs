@@ -1,5 +1,5 @@
-use borkui::elements::ChildView;
-use borkui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use krustui::elements::ChildView;
+use krustui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::blocklist::agent_view::AgentViewController;
 use crate::search::data_source::Query;
@@ -119,7 +119,7 @@ impl View for InlinePromptsMenuView {
         "InlinePromptsMenuView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

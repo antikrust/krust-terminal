@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use settings::{Setting, ToggleableSetting};
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_errors::report_if_error;
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, MainAxisAlignment, MouseStateHandle, ParentElement, Text,
 };
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -209,7 +209,7 @@ impl View for UndoCloseView {
 impl TypedActionView for UndoCloseView {
     type Action = Action;
 
-    fn handle_action(&mut self, action: &Self::Action, ctx: &mut borkui::ViewContext<Self>) {
+    fn handle_action(&mut self, action: &Self::Action, ctx: &mut krustui::ViewContext<Self>) {
         match action {
             Action::ToggleUndoCloseEnabled => {
                 UndoCloseSettings::handle(ctx).update(ctx, |settings, ctx| {

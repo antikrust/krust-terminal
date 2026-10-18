@@ -1,6 +1,6 @@
 use ai::agent::action_result::StopRecordingResult;
 use computer_use::RecordingHandle;
-use borkui::{App, SingletonEntity};
+use krustui::{App, SingletonEntity};
 
 use super::super::recording_controller::ActiveRecording;
 use super::*;

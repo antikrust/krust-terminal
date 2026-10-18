@@ -1,13 +1,13 @@
-use bork_core::ui::icons::ICON_DIMENSIONS;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::icons::ICON_DIMENSIONS;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Align, Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
     Text,
 };
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::Element;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::Element;
 
 use super::super::header_content::HeaderRenderContext;
 use super::{ActionPayload, PaneHeaderAction};

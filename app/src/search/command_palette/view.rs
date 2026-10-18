@@ -4,18 +4,18 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use bork_core::send_telemetry_from_app_ctx;
-use bork_util::path::LineAndColumnArg;
-use borkui::elements::{
+use krust_core::send_telemetry_from_app_ctx;
+use krust_util::path::LineAndColumnArg;
+use krustui::elements::{
     Align, Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, Dismiss, DispatchEventResult, Empty, EventHandler, Fill, Flex,
     ParentElement, Radius, SavePosition, Shrinkable,
 };
-use borkui::event::KeyState;
-use borkui::keymap::BindingId;
-use borkui::platform::keyboard::KeyCode;
-use borkui::units::{IntoPixels, Pixels};
-use borkui::{
+use krustui::event::KeyState;
+use krustui::keymap::BindingId;
+use krustui::platform::keyboard::KeyCode;
+use krustui::units::{IntoPixels, Pixels};
+use krustui::{
     AppContext, Element, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity,
     TypedActionView, ViewContext, ViewHandle, WindowId,
 };
@@ -44,7 +44,7 @@ use crate::server::telemetry::{LaunchConfigUiLocation, TelemetryEvent};
 use crate::session_management::SessionSource;
 use crate::settings::CtrlTabBehavior;
 use crate::terminal::keys_settings::KeysSettings;
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 use crate::view_components::DismissibleToast;
 use crate::workspace::{active_terminal_in_window, ForkedConversationDestination, WorkspaceAction};
 use crate::{send_telemetry_from_ctx, ToastStack};
@@ -94,8 +94,8 @@ pub enum Event {
     InvokeEnvironmentVariables { id: SyncId },
     /// Open a notebook identified by `id`.
     OpenNotebook { id: SyncId },
-    /// View the relevant object in the Bork Drive sidebar.
-    ViewInBorkDrive { id: CloudObjectTypeAndId },
+    /// View the relevant object in the Krust Drive sidebar.
+    ViewInKrustDrive { id: CloudObjectTypeAndId },
     /// Open a file at the given path.
     OpenFile {
         path: String,
@@ -163,7 +163,7 @@ impl TypedActionView for View {
     }
 }
 
-impl borkui::View for View {
+impl krustui::View for View {
     fn ui_name() -> &'static str {
         "CommandPaletteView"
     }
@@ -381,7 +381,7 @@ impl View {
                 | (PaletteMode::LaunchConfig, QueryFilter::LaunchConfigurations)
                 | (PaletteMode::Files, QueryFilter::Files)
                 | (PaletteMode::Conversations, QueryFilter::Conversations)
-                | (PaletteMode::BorkDrive, QueryFilter::Drive)
+                | (PaletteMode::KrustDrive, QueryFilter::Drive)
         )
     }
 
@@ -674,7 +674,7 @@ impl View {
         })
     }
 
-    fn render_palette_list(&self, theme: &BorkTheme, app: &AppContext) -> Box<dyn Element> {
+    fn render_palette_list(&self, theme: &KrustTheme, app: &AppContext) -> Box<dyn Element> {
         match self.search_bar_state.as_ref(app).query_result_renderers() {
             None => Empty::new().finish(),
             Some(renderers) if renderers.is_empty() => {
@@ -887,8 +887,8 @@ impl View {
                 ctx.emit(Event::InvokeEnvironmentVariables { id })
             }
             CommandPaletteItemAction::OpenNotebook { id } => ctx.emit(Event::OpenNotebook { id }),
-            CommandPaletteItemAction::ViewInBorkDrive { id } => {
-                ctx.emit(Event::ViewInBorkDrive { id })
+            CommandPaletteItemAction::ViewInKrustDrive { id } => {
+                ctx.emit(Event::ViewInKrustDrive { id })
             }
             CommandPaletteItemAction::NewSession { source } => {
                 self.dispatch_typed_action_on_view(source.action().deref(), ctx);
@@ -1001,11 +1001,11 @@ impl View {
         self.close(ctx, Some(result_action.result_type()));
     }
 
-    /// Dispatches `action` to the correct window and [`borkui::View`] by using the current state of
+    /// Dispatches `action` to the correct window and [`krustui::View`] by using the current state of
     /// the [`BindingSource`] model.
     fn dispatch_typed_action_on_view(
         &self,
-        action: &dyn borkui::Action,
+        action: &dyn krustui::Action,
         ctx: &mut ViewContext<Self>,
     ) {
         send_telemetry_from_ctx!(

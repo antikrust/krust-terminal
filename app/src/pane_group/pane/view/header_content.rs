@@ -3,11 +3,11 @@
 //! This module provides the infrastructure for backing views to declaratively
 //! specify their header content without worrying about draggable behavior.
 
-use bork_core::ui::theme::Fill;
-use borkui::elements::{DraggableState, MouseStateHandle};
-use borkui::fonts::Properties;
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element};
+use krust_core::ui::theme::Fill;
+use krustui::elements::{DraggableState, MouseStateHandle};
+use krustui::fonts::Properties;
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element};
 
 /// Closure that renders sharing controls (share button, view-only indicator) for a pane header.
 /// Accepts optional icon color and button size overrides.

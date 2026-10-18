@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, DropShadow, Flex, MainAxisAlignment, MainAxisSize,
     ParentElement, Radius, ScrollbarWidth, Text,
 };
-use borkui::fonts::{FamilyId, Properties};
-use borkui::keymap::FixedBinding;
-use borkui::{
+use krustui::fonts::{FamilyId, Properties};
+use krustui::keymap::FixedBinding;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -57,7 +57,7 @@ struct Styles {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -164,7 +164,7 @@ impl NodeVersionPopupView {
             Container::new(
                 ConstrainedBox::new(
                     icons::Icon::NodeJS
-                        .to_borkui_icon(styles.tertiary_text_color.into())
+                        .to_krustui_icon(styles.tertiary_text_color.into())
                         .finish(),
                 )
                 .with_width(24.)
@@ -224,7 +224,7 @@ impl NodeVersionPopupView {
             Container::new(
                 ConstrainedBox::new(
                     icons::Icon::NodeJS
-                        .to_borkui_icon(styles.tertiary_text_color.into())
+                        .to_krustui_icon(styles.tertiary_text_color.into())
                         .finish(),
                 )
                 .with_width(24.)
@@ -368,7 +368,7 @@ impl View for NodeVersionPopupView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();

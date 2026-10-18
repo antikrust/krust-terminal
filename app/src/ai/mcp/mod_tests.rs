@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde_json;
-use bork_managed_secrets::ManagedSecretValue;
+use krust_managed_secrets::ManagedSecretValue;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::mcp::parsing::normalize_codex_toml_to_json;
@@ -14,12 +14,12 @@ use crate::ai::mcp::{
 };
 
 #[test]
-fn mcp_provider_from_file_path_recognizes_bork_home_path() {
-    if let Some(bork_home_mcp_config_file_path) = bork_core::paths::bork_home_mcp_config_file_path()
+fn mcp_provider_from_file_path_recognizes_krust_home_path() {
+    if let Some(krust_home_mcp_config_file_path) = krust_core::paths::krust_home_mcp_config_file_path()
     {
         assert_eq!(
-            mcp_provider_from_file_path(&bork_home_mcp_config_file_path),
-            Some(MCPProvider::Bork)
+            mcp_provider_from_file_path(&krust_home_mcp_config_file_path),
+            Some(MCPProvider::Krust)
         );
     }
 }

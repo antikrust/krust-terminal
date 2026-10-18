@@ -10,8 +10,8 @@ use repo_metadata::entry::is_file_parsable;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use string_offset::ByteOffset;
-use bork_errors::report_error;
-use bork_util::standardized_path::StandardizedPath;
+use krust_errors::report_error;
+use krust_util::standardized_path::StandardizedPath;
 
 use super::hash::MerkleHash;
 use super::serialized_tree::{SerializedFilesystemInfo, SerializedMerkleNode};

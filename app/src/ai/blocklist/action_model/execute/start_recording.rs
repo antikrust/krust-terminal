@@ -4,8 +4,8 @@ use ai::agent::action_result::{AIAgentActionResultType, RecordingStarted, StartR
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use uuid::Uuid;
-use bork_core::features::FeatureFlag;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessActionInput};
 use crate::ai::agent::AIAgentActionType;

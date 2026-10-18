@@ -1,21 +1,21 @@
 use chrono::Utc;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_server_client::auth::AgentIdentity;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_server_client::auth::AgentIdentity;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, Padding, ParentElement,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack, Text,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::segmented_control::{
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -30,9 +30,9 @@ use crate::view_components::dropdown::{DROPDOWN_PADDING, TOP_MENU_BAR_HEIGHT};
 use crate::view_components::{Dropdown as DropdownView, DropdownItem, FilterableDropdown};
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
-const OZ_AGENTS_URL: &str = "https://oz.bork.baby/agents?new=true";
+const OZ_AGENTS_URL: &str = "https://oz.krust.baby/agents?new=true";
 const API_KEY_DOCS_URL: &str =
-    "https://therob.lol/bork-terminal/help/reference/cli/api-keys/#personal-vs-agent-keys";
+    "https://therob.lol/krust-terminal/help/reference/cli/api-keys/#personal-vs-agent-keys";
 
 const LABEL_FONT_SIZE: f32 = 14.;
 const INPUT_WIDTH: f32 = 428.; // 460px - (2 * 16px) padding
@@ -130,7 +130,7 @@ pub enum CreateApiKeyModalAction {
 pub enum CreateApiKeyModalEvent {
     Close,
     Created {
-        api_key: bork_graphql::queries::api_keys::ApiKeyProperties,
+        api_key: krust_graphql::queries::api_keys::ApiKeyProperties,
     },
     Error {
         message: String,
@@ -352,7 +352,7 @@ impl CreateApiKeyModal {
         let expires_at = match self.expiration.days() {
             Some(days) => {
                 let t = Utc::now() + chrono::Duration::days(days);
-                Some(bork_graphql::scalars::Time::from(t))
+                Some(krust_graphql::scalars::Time::from(t))
             }
             None => None,
         };
@@ -400,20 +400,20 @@ impl CreateApiKeyModal {
             async move { auth_client.create_api_key(final_name, team_id, agent_uid, expires_at).await },
             |me, res, ctx| {
                 match res {
-                    Ok(bork_graphql::mutations::generate_api_key::GenerateApiKeyResult::GenerateApiKeyOutput(output)) => {
+                    Ok(krust_graphql::mutations::generate_api_key::GenerateApiKeyResult::GenerateApiKeyOutput(output)) => {
                         ctx.emit(CreateApiKeyModalEvent::Created { api_key: output.api_key });
                         me.request_state = RequestState::Succeeded;
                         me.raw_key_copied = false;
                         me.raw_key = Some(output.raw_api_key);
                         ctx.notify();
                     }
-                    Ok(bork_graphql::mutations::generate_api_key::GenerateApiKeyResult::UserFacingError(e)) => {
-                        let msg = bork_graphql::client::get_user_facing_error_message(e);
+                    Ok(krust_graphql::mutations::generate_api_key::GenerateApiKeyResult::UserFacingError(e)) => {
+                        let msg = krust_graphql::client::get_user_facing_error_message(e);
                         me.request_state = RequestState::Idle;
                         ctx.emit(CreateApiKeyModalEvent::Error { message: msg });
                         ctx.notify();
                     }
-                    Ok(bork_graphql::mutations::generate_api_key::GenerateApiKeyResult::Unknown) | Err(_) => {
+                    Ok(krust_graphql::mutations::generate_api_key::GenerateApiKeyResult::Unknown) | Err(_) => {
                         me.request_state = RequestState::Idle;
                         ctx.emit(CreateApiKeyModalEvent::Error { message: "Failed to create API key. Please try again.".to_string() });
                         ctx.notify();
@@ -518,10 +518,10 @@ impl CreateApiKeyModal {
             "Copy"
         };
         let copy_icon = if self.raw_key_copied {
-            bork_core::ui::icons::Icon::Check.to_borkui_icon(appearance.theme().background())
+            krust_core::ui::icons::Icon::Check.to_krustui_icon(appearance.theme().background())
         } else {
-            bork_core::ui::icons::Icon::Copy
-                .to_borkui_icon(appearance.theme().active_ui_text_color())
+            krust_core::ui::icons::Icon::Copy
+                .to_krustui_icon(appearance.theme().active_ui_text_color())
         };
         let mut copy_button_builder = appearance
             .ui_builder()
@@ -534,8 +534,8 @@ impl CreateApiKeyModal {
                 self.create_button_mouse_state.clone(),
             )
             .with_text_and_icon_label(
-                borkui::ui_components::button::TextAndIcon::new(
-                    borkui::ui_components::button::TextAndIconAlignment::IconFirst,
+                krustui::ui_components::button::TextAndIcon::new(
+                    krustui::ui_components::button::TextAndIconAlignment::IconFirst,
                     copy_label,
                     copy_icon,
                     MainAxisSize::Min,
@@ -874,7 +874,7 @@ impl TypedActionView for CreateApiKeyModal {
             CreateApiKeyModalAction::CopyRawKey => {
                 let content = self.raw_key.clone().unwrap_or_default();
                 ctx.clipboard()
-                    .write(borkui::clipboard::ClipboardContent::plain_text(content));
+                    .write(krustui::clipboard::ClipboardContent::plain_text(content));
                 self.raw_key_copied = true;
                 // Success toast
                 let window_id = ctx.window_id();

@@ -1,6 +1,6 @@
 //! Skill provider definitions and utilities.
 //!
-//! This module defines the supported skill providers (i.e. Agents, Claude, Codex, Bork) and their
+//! This module defines the supported skill providers (i.e. Agents, Claude, Codex, Krust) and their
 //! associated skills directory paths. It provides utilities for looking up providers
 //! from paths and vice versa.
 use std::path::{Path, PathBuf};
@@ -9,12 +9,12 @@ use std::sync::LazyLock;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString, VariantNames};
-use bork_core::ui::color::CLAUDE_ORANGE;
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::Fill;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_core::ui::color::CLAUDE_ORANGE;
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::Fill;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 
-/// Represents a skill provider/origin (Agents, Claude, Codex, or Bork).
+/// Represents a skill provider/origin (Agents, Claude, Codex, or Krust).
 #[derive(
     Debug,
     Clone,
@@ -29,7 +29,7 @@ use bork_util::local_or_remote_path::LocalOrRemotePath;
     VariantNames,
 )]
 pub enum SkillProvider {
-    Bork,
+    Krust,
     Agents,
     Claude,
     Codex,
@@ -62,7 +62,7 @@ pub enum SkillScope {
     Home,
     /// Skills from a project directory (e.g., `./repo/.agents/skills`).
     Project,
-    /// Bundled skills distributed with Bork.
+    /// Bundled skills distributed with Krust.
     Bundled,
 }
 
@@ -82,11 +82,11 @@ impl SkillProvider {
             SkillProvider::Gemini => Icon::GeminiLogo,
             SkillProvider::Droid => Icon::DroidLogo,
             SkillProvider::OpenCode => Icon::OpenCodeLogo,
-            SkillProvider::Bork
+            SkillProvider::Krust
             | SkillProvider::Agents
             | SkillProvider::Cursor
             | SkillProvider::Copilot
-            | SkillProvider::Github => Icon::BorkLogoLight,
+            | SkillProvider::Github => Icon::KrustLogoLight,
         }
     }
 
@@ -109,8 +109,8 @@ pub static SKILL_PROVIDER_DEFINITIONS: LazyLock<Vec<SkillProviderDefinition>> =
                 skills_path: PathBuf::from(".agents").join("skills"),
             },
             SkillProviderDefinition {
-                provider: SkillProvider::Bork,
-                skills_path: PathBuf::from(".bork").join("skills"),
+                provider: SkillProvider::Krust,
+                skills_path: PathBuf::from(".krust").join("skills"),
             },
             SkillProviderDefinition {
                 provider: SkillProvider::Claude,
@@ -158,8 +158,8 @@ pub fn provider_rank(provider: SkillProvider) -> usize {
 }
 
 pub fn home_skills_path(provider: SkillProvider) -> Option<PathBuf> {
-    if provider == SkillProvider::Bork {
-        return bork_core::paths::bork_home_skills_dir();
+    if provider == SkillProvider::Krust {
+        return krust_core::paths::krust_home_skills_dir();
     }
     let definition = SKILL_PROVIDER_DEFINITIONS
         .iter()

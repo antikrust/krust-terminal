@@ -1,6 +1,6 @@
 use itertools::Itertools as _;
-use borkui::elements::ChildView;
-use borkui::{
+use krustui::elements::ChildView;
+use krustui::{
     Element as _, Entity, SingletonEntity as _, TypedActionView, View, ViewAsRef, ViewContext,
     ViewHandle,
 };
@@ -130,7 +130,7 @@ impl View for EnvVarSelector {
         "EnvVarSelector"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         ChildView::new(&self.dropdown).finish()
     }
 }

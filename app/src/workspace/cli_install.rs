@@ -4,28 +4,28 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use command::blocking::Command;
-use bork_core::channel::ChannelState;
-use bork_util::path::ShellFamily;
+use krust_core::channel::ChannelState;
+use krust_util::path::ShellFamily;
 
 /// Compute the target path where the Oz CLI symlink should be installed, based on channel
 fn oz_install_target_path() -> PathBuf {
     PathBuf::from("/usr/local/bin").join(ChannelState::channel().cli_command_name())
 }
 
-/// Compute the target path where the Bork Control symlink should be installed, based on channel
-fn borkctrl_install_target_path() -> PathBuf {
-    PathBuf::from("/usr/local/bin").join(ChannelState::channel().borkctrl_command_name())
+/// Compute the target path where the Krust Control symlink should be installed, based on channel
+fn krustctrl_install_target_path() -> PathBuf {
+    PathBuf::from("/usr/local/bin").join(ChannelState::channel().krustctrl_command_name())
 }
 
-/// Compute the source path of the borkctrl wrapper inside the current app bundle.
+/// Compute the source path of the krustctrl wrapper inside the current app bundle.
 ///
 /// Oz commands are part of the shared executable's normal argument parser, so
-/// Oz can symlink directly to the current executable. Bork Control has a
-/// separate parser selected by the hidden `--borkctrl` flag, so its installed
+/// Oz can symlink directly to the current executable. Krust Control has a
+/// separate parser selected by the hidden `--krustctrl` flag, so its installed
 /// symlink must target the bundled wrapper that injects that flag. Without it,
-/// Bork Control subcommands such as `tab` would reach the normal parser and be
+/// Krust Control subcommands such as `tab` would reach the normal parser and be
 /// rejected as unknown.
-fn borkctrl_bundle_source_path() -> Result<PathBuf> {
+fn krustctrl_bundle_source_path() -> Result<PathBuf> {
     let current_binary =
         std::env::current_exe().context("Failed to get current executable path")?;
     let bundle_root = current_binary
@@ -35,7 +35,7 @@ fn borkctrl_bundle_source_path() -> Result<PathBuf> {
         .ok_or_else(|| anyhow!("Current executable is not inside a bundled app"))?;
     Ok(bundle_root
         .join("Contents/Resources/bin")
-        .join(ChannelState::channel().borkctrl_command_name()))
+        .join(ChannelState::channel().krustctrl_command_name()))
 }
 fn path_resolves_to(path: &Path, expected_path: &Path) -> bool {
     let Ok(path) = path.canonicalize() else {
@@ -47,12 +47,12 @@ fn path_resolves_to(path: &Path, expected_path: &Path) -> bool {
     path == expected_path
 }
 
-/// Whether the installed Bork Control command resolves to this app bundle's wrapper.
-pub fn is_borkctrl_installed() -> bool {
-    let Ok(source) = borkctrl_bundle_source_path() else {
+/// Whether the installed Krust Control command resolves to this app bundle's wrapper.
+pub fn is_krustctrl_installed() -> bool {
+    let Ok(source) = krustctrl_bundle_source_path() else {
         return false;
     };
-    path_resolves_to(&borkctrl_install_target_path(), &source)
+    path_resolves_to(&krustctrl_install_target_path(), &source)
 }
 
 /// Create a symlink with elevated privileges using osascript
@@ -72,7 +72,7 @@ fn create_symlink_with_admin(source: &Path, target: &Path) -> Result<()> {
 
     // Use osascript to run the ln command with admin privileges, with a custom prompt
     let script = format!(
-        "do shell script \"ln -sf {escaped_source} {escaped_target}\" with prompt \"Bork needs administrator privileges to install the command in /usr/local/bin.\" with administrator privileges"
+        "do shell script \"ln -sf {escaped_source} {escaped_target}\" with prompt \"Krust needs administrator privileges to install the command in /usr/local/bin.\" with administrator privileges"
     );
 
     log::debug!("Creating symlink with admin privileges");
@@ -108,7 +108,7 @@ fn remove_file_with_admin(target: &Path) -> Result<()> {
     let escaped_target = ShellFamily::Posix.shell_escape(target_str);
 
     let script = format!(
-        "do shell script \"rm {escaped_target}\" with prompt \"Bork needs administrator privileges to uninstall the command from /usr/local/bin.\" with administrator privileges"
+        "do shell script \"rm {escaped_target}\" with prompt \"Krust needs administrator privileges to uninstall the command from /usr/local/bin.\" with administrator privileges"
     );
 
     log::debug!("Removing file with admin privileges");
@@ -196,7 +196,7 @@ fn uninstall_symlink(target: &Path, command_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Install the Oz CLI by symlinking the shared Bork executable into /usr/local/bin.
+/// Install the Oz CLI by symlinking the shared Krust executable into /usr/local/bin.
 ///
 /// The normal argument parser dispatches Oz subcommands directly. It also uses
 /// the `oz`-prefixed invocation name to print CLI help rather than launch the
@@ -213,29 +213,29 @@ pub fn uninstall_oz() -> Result<()> {
     uninstall_symlink(&oz_install_target_path(), "Oz command")
 }
 
-/// Install Bork Control by symlinking its bundled wrapper into /usr/local/bin.
+/// Install Krust Control by symlinking its bundled wrapper into /usr/local/bin.
 ///
 /// The wrapper contains no control implementation. It resolves this installed
-/// symlink back into the app bundle, launches the shared Bork executable, and
-/// injects `--borkctrl` so startup selects the separate Bork Control parser
+/// symlink back into the app bundle, launches the shared Krust executable, and
+/// injects `--krustctrl` so startup selects the separate Krust Control parser
 /// before normal parsing or GUI startup.
-pub fn install_borkctrl() -> Result<()> {
-    let borkctrl_path = borkctrl_install_target_path();
-    let borkctrl_source = borkctrl_bundle_source_path()?;
+pub fn install_krustctrl() -> Result<()> {
+    let krustctrl_path = krustctrl_install_target_path();
+    let krustctrl_source = krustctrl_bundle_source_path()?;
 
-    if !borkctrl_source.exists() {
+    if !krustctrl_source.exists() {
         return Err(anyhow!(
-            "Cannot install Bork Control CLI: bundled wrapper not found at {}",
-            borkctrl_source.display()
+            "Cannot install Krust Control CLI: bundled wrapper not found at {}",
+            krustctrl_source.display()
         ));
     }
 
-    install_symlink(&borkctrl_source, &borkctrl_path, "Bork Control CLI")
+    install_symlink(&krustctrl_source, &krustctrl_path, "Krust Control CLI")
 }
 
-/// Uninstall the Bork Control CLI by removing the symlink from /usr/local/bin
-pub fn uninstall_borkctrl() -> Result<()> {
-    uninstall_symlink(&borkctrl_install_target_path(), "Bork Control command")
+/// Uninstall the Krust Control CLI by removing the symlink from /usr/local/bin
+pub fn uninstall_krustctrl() -> Result<()> {
+    uninstall_symlink(&krustctrl_install_target_path(), "Krust Control command")
 }
 
 #[cfg(test)]

@@ -8,8 +8,8 @@ use crate::integration_testing::agent_mode::util::get_base_server_url;
 pub struct LLMGenerateRequest {
     pub prompt: String,
     pub user_messages: Vec<String>,
-    /// These are model IDs internal to bork-server.
-    /// See bork-server/logic/ai/llm/llm.go
+    /// These are model IDs internal to krust-server.
+    /// See krust-server/logic/ai/llm/llm.go
     pub model_id: String,
 }
 

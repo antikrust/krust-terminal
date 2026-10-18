@@ -1,8 +1,8 @@
 use session_sharing_protocol::common::{ParticipantId, Role, RoleRequestId};
-use borkui::elements::Empty;
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, View, ViewContext, ViewHandle};
+use krustui::elements::Empty;
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, View, ViewContext, ViewHandle};
 
 use crate::modal::Modal;
 use crate::pane_group::TerminalPaneId;

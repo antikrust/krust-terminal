@@ -1,7 +1,7 @@
 use std::future::Future;
 
-use bork_util::sync::Condition;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_util::sync::Condition;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 /// Represents whether the client is connected to the network.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]

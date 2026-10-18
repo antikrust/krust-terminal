@@ -2,7 +2,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde_json::Value;
 use std::collections::HashMap;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Suggestion,
 };

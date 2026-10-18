@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashSet;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Importance, Order, Priority, Suggestion,
 };

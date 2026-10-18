@@ -8,14 +8,14 @@
 //! so the user can pick up items captured since the pane was opened. The
 //! pane header also exposes a refresh icon that reloads the snapshot in
 //! place.
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_server_client::network_logging::NetworkLogModel;
-use bork_util::path::LineAndColumnArg;
-use borkui::elements::{ChildView, MouseStateHandle};
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_server_client::network_logging::NetworkLogModel;
+use krust_util::path::LineAndColumnArg;
+use krustui::elements::{ChildView, MouseStateHandle};
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

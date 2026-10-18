@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::workflow_search_item::WorkflowSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;

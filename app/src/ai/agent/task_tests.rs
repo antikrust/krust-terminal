@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use ai::skills::SkillPathOrigin;
 use chrono::Local;
 use prost_types::FieldMask;
-use bork_multi_agent_api as api;
+use krust_multi_agent_api as api;
 
 use super::{ExtractMessagesError, Task, TaskMessageContext};
 use crate::ai::agent::{
@@ -567,11 +567,11 @@ fn test_new_moved_messages_subtask_preserves_messages() {
 }
 
 // =============================================================================
-// Tests for Bork docs subagent classification
+// Tests for Krust docs subagent classification
 // =============================================================================
 
 #[test]
-fn test_is_bork_documentation_search_subagent() {
+fn test_is_krust_documentation_search_subagent() {
     let parent_id = "parent";
     let subtask_id = "subtask";
     let parent_api_task = create_api_task(
@@ -580,12 +580,12 @@ fn test_is_bork_documentation_search_subagent() {
             "docs_call",
             parent_id,
             subtask_id,
-            Some(api::message::tool_call::subagent::Metadata::BorkDocumentationSearch(())),
+            Some(api::message::tool_call::subagent::Metadata::KrustDocumentationSearch(())),
         )],
     );
     let subtask_api_task = create_api_subtask(subtask_id, parent_id, vec![]);
     let subtask = Task::new_restored_subtask(subtask_api_task, &parent_api_task, vec![]);
 
-    assert!(subtask.is_bork_documentation_search_subagent());
+    assert!(subtask.is_krust_documentation_search_subagent());
     assert!(!subtask.is_conversation_search_subagent());
 }

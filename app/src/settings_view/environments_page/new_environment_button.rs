@@ -1,11 +1,11 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, Container, CornerRadius, DispatchEventResult, EventHandler, Flex, MainAxisAlignment,
     MouseStateHandle, ParentElement as _, Radius, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::{
     AppContext, BlurContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -83,7 +83,7 @@ impl View for NewEnvironmentButtonView {
         let is_focused = self.is_focused(app);
 
         let trigger = {
-            borkui::elements::Hoverable::new(self.trigger_mouse_state.clone(), move |s| {
+            krustui::elements::Hoverable::new(self.trigger_mouse_state.clone(), move |s| {
                 let is_hovered = s.is_hovered();
                 let background = if is_hovered || is_focused {
                     Some(theme.surface_3())

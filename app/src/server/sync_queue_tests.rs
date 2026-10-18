@@ -8,8 +8,8 @@ use cloud_object_client::MockObjectClient;
 use cloud_objects::cloud_object::ServerPermissions;
 use firebase::FirebaseError;
 use itertools::Itertools;
-use borkui::r#async::Timer;
-use borkui::{App, Entity, ModelHandle, SingletonEntity};
+use krustui::r#async::Timer;
+use krustui::{App, Entity, ModelHandle, SingletonEntity};
 
 use super::QueueDependency;
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFactModel};
@@ -778,7 +778,7 @@ fn test_create_and_update_notebook() {
     });
 }
 
-// regression test for https://linear.app/borkdotdev/issue/CLD-571
+// regression test for https://linear.app/krustdotdev/issue/CLD-571
 #[test]
 fn test_initial_queue_items_processed_properly() {
     App::test((), |mut app| async move {

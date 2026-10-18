@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use chrono::Utc;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use bork_graphql::billing::{AddonCreditAutoReloadStatus, ServiceAgreement, ServiceAgreementType};
-pub use bork_graphql::billing::{
+use krust_graphql::billing::{AddonCreditAutoReloadStatus, ServiceAgreement, ServiceAgreementType};
+pub use krust_graphql::billing::{
     AiCreditsUsageAndCostSubjectType, AiCreditsUsageAndCostType, AiCreditsUsageBucket,
     AiCreditsUsageSource,
 };
@@ -180,7 +180,7 @@ impl Workspace {
     /// Returns None if auto-reload is not configured or if the denomination can't be found in pricing options.
     pub fn get_auto_reload_price_cents(
         &self,
-        addon_credits_options: &[bork_graphql::billing::AddonCreditsOption],
+        addon_credits_options: &[krust_graphql::billing::AddonCreditsOption],
     ) -> Option<i32> {
         let selected_credits = self
             .settings
@@ -311,7 +311,7 @@ pub enum DelinquencyStatus {
 
 /// Rust representation of feature policies from the GraphQL Schema.
 #[derive(Clone, Debug, Copy, Serialize, Deserialize)]
-pub struct BorkAiPolicy {
+pub struct KrustAiPolicy {
     pub limit: i64,
     pub is_code_suggestions_toggleable: bool,
     pub is_prompt_suggestions_toggleable: bool,
@@ -473,7 +473,7 @@ pub enum HostEnablementSetting {
 pub struct Tier {
     pub name: String,
     pub description: String,
-    pub bork_ai_policy: Option<BorkAiPolicy>,
+    pub krust_ai_policy: Option<KrustAiPolicy>,
     pub workspace_size_policy: Option<WorkspaceSizePolicy>,
     pub shared_notebooks_policy: Option<SharedNotebooksPolicy>,
     pub shared_workflows_policy: Option<SharedWorkflowsPolicy>,
@@ -694,9 +694,9 @@ impl BillingMetadata {
             || self.delinquency_status == DelinquencyStatus::Unpaid
     }
 
-    // Whether the enterprise customer is our Stable Bork Enterprise team (internal team of Borkers).
-    pub fn is_bork_plan(&self) -> bool {
-        self.tier.name == "Bork Plan"
+    // Whether the enterprise customer is our Stable Krust Enterprise team (internal team of Krusters).
+    pub fn is_krust_plan(&self) -> bool {
+        self.tier.name == "Krust Plan"
     }
 
     pub fn has_active_subscription(&self) -> bool {
@@ -772,7 +772,7 @@ pub struct LlmHostSettings {
     pub enabled: bool,
     pub enablement_setting: HostEnablementSetting,
     /// Full resource name of the GCP workload identity provider that Gemini Enterprise
-    /// (GEAP) credential minting exchanges Bork OIDC JWTs against. Only populated on the
+    /// (GEAP) credential minting exchanges Krust OIDC JWTs against. Only populated on the
     /// `GeminiEnterprise` host entry; `None` for other hosts and for workspace caches
     /// written before this field existed.
     #[serde(default)]
@@ -947,7 +947,7 @@ pub struct WorkspaceSettings {
     /// The team-level agent attribution setting. When `Enable` or `Disable`, the
     /// user toggle is locked. When `RespectUserSetting` (or absent), the user can choose.
     #[serde(default)]
-    pub enable_bork_attribution: AdminEnablementSetting,
+    pub enable_krust_attribution: AdminEnablementSetting,
     #[serde(default)]
     pub default_host_slug: Option<String>,
 }

@@ -40,30 +40,30 @@ use repo_metadata::repositories::DetectedRepositories;
 use secret_redaction::*;
 use serde::Serialize;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_editor::content::buffer::InitialBufferState;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_editor::content::buffer::InitialBufferState;
 #[cfg(feature = "local_fs")]
-use bork_editor::content::edit::resolve_asset_source_relative_to_directory;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_errors::{report_error, report_if_error};
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::path::ShellFamily;
-use borkui::assets::asset_cache::AssetCache;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_editor::content::edit::resolve_asset_source_relative_to_directory;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_errors::{report_error, report_if_error};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::path::ShellFamily;
+use krustui::assets::asset_cache::AssetCache;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     get_rich_content_position_id, ClippedScrollStateHandle, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, SecretRange, SelectionBound, SelectionHandle, TableStateHandle,
 };
-use borkui::image_cache::ImageType;
-use borkui::keymap::FixedBinding;
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::text::SelectionType;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::radio_buttons::RadioButtonStateHandle;
-use borkui::{
+use krustui::image_cache::ImageType;
+use krustui::keymap::FixedBinding;
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::text::SelectionType;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::radio_buttons::RadioButtonStateHandle;
+use krustui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle, WindowId,
 };
@@ -305,7 +305,7 @@ fn user_avatar_info_for_ai_block(
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -924,7 +924,7 @@ pub struct AIBlock {
     controller: ModelHandle<BlocklistAIController>,
     active_session: ModelHandle<ActiveSession>,
     terminal_view_id: EntityId,
-    window_id: borkui::WindowId,
+    window_id: krustui::WindowId,
 
     /// The current working directory at the time the AI block was created. Note that this
     /// is different from `directory_context`, which represents the directory-related contexts
@@ -2452,7 +2452,7 @@ impl AIBlock {
                         button = button.with_text_and_icon_label(TextAndIcon::new(
                             TextAndIconAlignment::TextFirst,
                             accept_text.clone(),
-                            Icon::CornerDownLeft.to_borkui_icon(appearance.theme().foreground()),
+                            Icon::CornerDownLeft.to_krustui_icon(appearance.theme().foreground()),
                             MainAxisSize::Max,
                             MainAxisAlignment::SpaceBetween,
                             vec2f(
@@ -2494,7 +2494,7 @@ impl AIBlock {
                         button = button.with_text_and_icon_label(TextAndIcon::new(
                             TextAndIconAlignment::TextFirst,
                             reject_text.clone(),
-                            Icon::CornerDownLeft.to_borkui_icon(appearance.theme().foreground()),
+                            Icon::CornerDownLeft.to_krustui_icon(appearance.theme().foreground()),
                             MainAxisSize::Max,
                             MainAxisAlignment::SpaceBetween,
                             vec2f(
@@ -3389,7 +3389,7 @@ impl AIBlock {
                 CodeDiffViewEvent::OpenSkill { reference, path } => {
                     #[cfg(feature = "local_fs")]
                     {
-                        ctx.emit(AIBlockEvent::OpenCodeInBork {
+                        ctx.emit(AIBlockEvent::OpenCodeInKrust {
                             source: CodeSource::Skill {
                                 reference: reference.clone(),
                                 location: path.clone(),
@@ -3407,7 +3407,7 @@ impl AIBlock {
                 CodeDiffViewEvent::OpenMCPConfig { path, .. } => {
                     #[cfg(feature = "local_fs")]
                     {
-                        ctx.emit(AIBlockEvent::OpenCodeInBork {
+                        ctx.emit(AIBlockEvent::OpenCodeInKrust {
                             source: CodeSource::Link {
                                 path: path.clone(),
                                 range_start: None,
@@ -4167,7 +4167,7 @@ impl AIBlock {
             AwsBedrockCredentialsErrorEvent::ConfigureLoginCommand => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "aws bedrock".to_string(),
-                    section: Some(SettingsSection::BorkAgent),
+                    section: Some(SettingsSection::KrustAgent),
                 });
             }
         });
@@ -6082,7 +6082,7 @@ pub enum AIBlockEvent {
     },
     ToggleCodeDiffVisibility,
 
-    /// Open a Bork Text instance with the requested code diff.
+    /// Open a Krust Text instance with the requested code diff.
     OpenCodeWithDiff {
         view: ViewHandle<CodeDiffView>,
     },
@@ -6090,7 +6090,7 @@ pub enum AIBlockEvent {
     #[cfg(feature = "local_fs")]
     OpenDetectedFilePath {
         absolute_path: PathBuf,
-        line_and_column_num: Option<bork_util::path::LineAndColumnArg>,
+        line_and_column_num: Option<krust_util::path::LineAndColumnArg>,
         target_override: Option<FileTarget>,
     },
     ShowLinkTooltip(RichContentLinkTooltipInfo),
@@ -6144,7 +6144,7 @@ pub enum AIBlockEvent {
     CopiedEmptyText,
     OpenSettings,
     #[cfg(feature = "local_fs")]
-    OpenCodeInBork {
+    OpenCodeInKrust {
         source: CodeSource,
         layout: crate::util::file::external_editor::settings::EditorLayout,
     },
@@ -6267,7 +6267,7 @@ pub enum AIBlockAction {
         is_positive: bool,
     },
     /// Clear the selections of all other views **except** for the source view that dispatched the event.
-    /// The `source_view_id` will be `None` if the event is dispatched by the [`borkui::elements::SelectableArea`]
+    /// The `source_view_id` will be `None` if the event is dispatched by the [`krustui::elements::SelectableArea`]
     /// instead of a nested view (i.e. code block, requested command, etc.), which means all nested views
     /// should have their selections cleared.
     ClearOtherSelections {
@@ -6288,7 +6288,7 @@ pub enum AIBlockAction {
     StoreRightClickedCommand {
         command: String,
     },
-    OpenCodeInBork {
+    OpenCodeInKrust {
         source: CodeSource,
     },
     ToggleTodoListExpanded(MessageId),
@@ -6302,7 +6302,7 @@ pub enum AIBlockAction {
     DisableRuleSuggestions,
     /// Copy the debug ID to clipboard
     CopyDebugId(String),
-    /// Open Bork feedback documentation
+    /// Open Krust feedback documentation
     OpenFeedbackDocs,
     /// Toggle the usage summary footer expansion state
     ToggleIsUsageFooterExpanded,
@@ -6441,7 +6441,7 @@ impl TypedActionView for AIBlock {
                     .write(ClipboardContent::plain_text(debug_id.clone()));
             }
             AIBlockAction::OpenFeedbackDocs => {
-                ctx.open_url("https://therob.lol/bork-terminal/help/support-and-community/troubleshooting-and-support/sending-us-feedback");
+                ctx.open_url("https://therob.lol/krust-terminal/help/support-and-community/troubleshooting-and-support/sending-us-feedback");
             }
             AIBlockAction::CancelRequestedAction { action_id } => {
                 self.cancel_action(action_id, ctx);
@@ -6806,7 +6806,7 @@ impl TypedActionView for AIBlock {
                 // Clear the stored command after copying
                 self.last_right_clicked_command = None;
             }
-            AIBlockAction::OpenCodeInBork {
+            AIBlockAction::OpenCodeInKrust {
                 #[cfg_attr(not(feature = "local_fs"), allow(unused))]
                 source,
             } => {
@@ -6837,7 +6837,7 @@ impl TypedActionView for AIBlock {
 
                 #[cfg(feature = "local_fs")]
                 {
-                    ctx.emit(AIBlockEvent::OpenCodeInBork {
+                    ctx.emit(AIBlockEvent::OpenCodeInKrust {
                         source: source.clone(),
                         layout: *crate::util::file::external_editor::EditorSettings::as_ref(ctx)
                             .open_file_layout
@@ -6876,7 +6876,7 @@ impl TypedActionView for AIBlock {
             AIBlockAction::ConfigureAwsLoginCommand => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "aws bedrock".to_string(),
-                    section: Some(SettingsSection::BorkAgent),
+                    section: Some(SettingsSection::KrustAgent),
                 });
             }
             AIBlockAction::ToggleImportedCommentCollapsed {
@@ -6998,7 +6998,7 @@ impl TypedActionView for AIBlock {
                     });
                     images.push(ui_components::lightbox::LightboxImage {
                         source: ui_components::lightbox::LightboxImageSource::Resolved {
-                            asset_source: borkui::assets::asset_cache::AssetSource::Raw {
+                            asset_source: krustui::assets::asset_cache::AssetSource::Raw {
                                 id: asset_id,
                             },
                         },
@@ -7071,7 +7071,7 @@ impl TypedActionView for AIBlock {
                     }
                     images.push(ui_components::lightbox::LightboxImage {
                         source: ui_components::lightbox::LightboxImageSource::Resolved {
-                            asset_source: borkui::assets::asset_cache::AssetSource::Raw {
+                            asset_source: krustui::assets::asset_cache::AssetSource::Raw {
                                 id: asset_id,
                             },
                         },

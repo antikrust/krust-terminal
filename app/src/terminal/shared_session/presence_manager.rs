@@ -13,10 +13,10 @@ use session_sharing_protocol::common::{
     InputReplicaId, ParticipantId, ParticipantInfo, ParticipantList, ParticipantPresenceUpdate,
     PresenceUpdate, Role, RoleRequestId, Selection,
 };
-use borkui::assets::asset_cache::{AssetCache, AssetState};
-use borkui::image_cache::ImageType;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity};
+use krustui::assets::asset_cache::{AssetCache, AssetState};
+use krustui::image_cache::ImageType;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::auth::UserUid;
 use crate::editor::{CursorColors, PeerSelectionData};

@@ -6,9 +6,9 @@ pub use terminal_model::TerminalModel;
 macro_rules! assert_lines_approx_eq {
     ($actual:expr, $expected:expr) => {{
         float_cmp::assert_approx_eq!(
-            borkui::units::Lines,
+            krustui::units::Lines,
             $actual,
-            borkui::units::IntoLines::into_lines($expected)
+            krustui::units::IntoLines::into_lines($expected)
         )
     }};
 }
@@ -43,5 +43,5 @@ pub use secrets::{
     set_user_and_enterprise_secret_regexes, ObfuscateSecrets, RespectObfuscatedSecrets, Secret,
     SecretHandle,
 };
-pub use bork_terminal::model::grid::cell;
-pub use bork_terminal::model::{char_or_str, escape_sequences, mouse, BlockId};
+pub use krust_terminal::model::grid::cell;
+pub use krust_terminal::model::{char_or_str, escape_sequences, mouse, BlockId};

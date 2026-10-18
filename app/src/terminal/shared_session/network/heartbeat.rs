@@ -6,8 +6,8 @@
 use std::time::Duration;
 
 use futures::stream::AbortHandle;
-use borkui::r#async::Timer;
-use borkui::{Entity, ModelContext};
+use krustui::r#async::Timer;
+use krustui::{Entity, ModelContext};
 
 const DEFAULT_PING_FREQUENCY: Duration = Duration::from_secs(5);
 const DEFAULT_IDLE_TIMEOUT: Duration = Duration::from_secs(30);

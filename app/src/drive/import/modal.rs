@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Flex, Highlight, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, ScrollbarWidth,
     Shrinkable, Stack, Text,
 };
-use borkui::platform::{FilePickerConfiguration, FileType};
-use borkui::presenter::ChildView;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::{FilePickerConfiguration, FileType};
+use krustui::presenter::ChildView;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -20,7 +20,7 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{CloudObject, Owner};
 use crate::server::ids::SyncId;
 use crate::server::sync_queue::SyncQueue;
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 const CLOSE_BUTTON_SIZE: f32 = 24.;
@@ -182,7 +182,7 @@ impl ImportModal {
     fn render_breadcrumbs(
         &self,
         appearance: &Appearance,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let (breadcrumb_text, highlight_indices) = self.breadcrumb(app);
@@ -220,7 +220,7 @@ impl ImportModal {
     fn render_header(
         &self,
         appearance: &Appearance,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let top_row = Flex::row()
@@ -256,7 +256,7 @@ impl ImportModal {
             .finish()
     }
 
-    fn render_body(&self, theme: &BorkTheme) -> Box<dyn Element> {
+    fn render_body(&self, theme: &KrustTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 ClippedScrollable::vertical(

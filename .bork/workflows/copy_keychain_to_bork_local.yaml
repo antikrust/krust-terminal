@@ -1,6 +1,0 @@
----
-name: "Copy BorkDev Keychain to Bork local"
-command: "security add-generic-password -a User -U -s bork -w \"$(security find-generic-password -a User -s bork.baby.Bork-Dev -w)\""
-description: "Copies the refresh token from BorkDev into the local bork app so that it can authenticate."
-author: Bork Team
-shells: []

@@ -4,12 +4,12 @@ use std::path::{Path, PathBuf};
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
-use bork_core::ui::Icon;
-use borkui::elements::{ConstrainedBox, Container, Highlight, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::text_layout::ClipConfig;
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill};
+use krust_core::ui::Icon;
+use krustui::elements::{ConstrainedBox, Container, Highlight, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::text_layout::ClipConfig;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::result_renderer::ItemHighlightState;
@@ -62,7 +62,7 @@ impl SearchItem for RepoSearchItem {
         let icon_size = inline_styles::font_size(appearance);
         let icon_color = inline_styles::icon_color(appearance);
 
-        let icon = ConstrainedBox::new(Icon::Folder.to_borkui_icon(icon_color).finish())
+        let icon = ConstrainedBox::new(Icon::Folder.to_krustui_icon(icon_color).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();

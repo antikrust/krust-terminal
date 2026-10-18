@@ -1,13 +1,13 @@
 use chrono::{DateTime, Local};
 use ordered_float::OrderedFloat;
-use bork_core::ui::builder::MIN_FONT_SIZE;
-use borkui::elements::{
+use krust_core::ui::builder::MIN_FONT_SIZE;
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::blocklist::AIQueryHistoryOutputStatus;
 use crate::appearance::Appearance;

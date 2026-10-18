@@ -4,20 +4,20 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use string_offset::{ByteOffset, CharOffset};
-use bork_completer::signatures::CommandRegistry;
-use bork_editor::content::anchor::Anchor;
-use bork_editor::content::buffer::Buffer;
-use bork_editor::content::selection_model::BufferSelectionModel;
-use bork_editor::editor::EmbeddedItemModel;
-use bork_util::user_input::UserInput;
-use borkui::elements::{
+use krust_completer::signatures::CommandRegistry;
+use krust_editor::content::anchor::Anchor;
+use krust_editor::content::buffer::Buffer;
+use krust_editor::content::selection_model::BufferSelectionModel;
+use krust_editor::editor::EmbeddedItemModel;
+use krust_util::user_input::UserInput;
+use krustui::elements::{
     Align, Border, Container, CrossAxisAlignment, Empty, Flex, MainAxisAlignment, MouseStateHandle,
     ParentElement, Shrinkable,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 use super::embedded_item::EmbeddedWorkflow;
 use super::keys::{custom_action_to_display, NotebookKeybindings};

@@ -17,9 +17,9 @@ use ai::agent::action_result::{
 use ai::skills::{ParsedSkill, SkillPathOrigin};
 use chrono::{DateTime, Local, TimeZone};
 use persistence::model::AgentConversationData;
-use bork_core::command::ExitCode;
-use bork_multi_agent_api as api;
-use bork_multi_agent_api::ask_user_question_result::answer_item::Answer as AskUserQuestionAnswer;
+use krust_core::command::ExitCode;
+use krust_multi_agent_api as api;
+use krust_multi_agent_api::ask_user_question_result::answer_item::Answer as AskUserQuestionAnswer;
 
 use crate::ai::agent::api::convert_from::{
     convert_user_query_mode, ConversionParams, ConvertAPIMessageToClientOutputMessage,
@@ -47,7 +47,7 @@ use crate::ai::agent::{
 use crate::ai::block_context::BlockContext;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
 use crate::ai::llms::LLMId;
-use crate::ai_assistant::execution_context::{BorkAiExecutionContext, BorkAiOsContext};
+use crate::ai_assistant::execution_context::{KrustAiExecutionContext, KrustAiOsContext};
 use crate::terminal::model::block::BlockId;
 use crate::terminal::model::terminal_model::BlockIndex;
 
@@ -195,8 +195,8 @@ pub(crate) fn convert_input_context(context: Option<&api::InputContext>) -> Arc<
     // Convert operating system and shell to execution environment
     if let (Some(os), Some(shell)) = (&context.operating_system, &context.shell) {
         result.push(AIAgentContext::ExecutionEnvironment(
-            BorkAiExecutionContext {
-                os: BorkAiOsContext {
+            KrustAiExecutionContext {
+                os: KrustAiOsContext {
                     category: if os.platform.is_empty() {
                         None
                     } else {
@@ -575,7 +575,7 @@ pub(crate) fn convert_tool_call_result_to_input(
     tool_call_map: &HashMap<String, &api::message::ToolCall>,
     document_versions: &mut HashMap<AIDocumentId, AIDocumentVersion>,
 ) -> Option<AIAgentInput> {
-    use bork_multi_agent_api::message::tool_call_result::Result as ToolCallResultType;
+    use krust_multi_agent_api::message::tool_call_result::Result as ToolCallResultType;
 
     let tool_call_id = tool_call_result.tool_call_id.clone();
     let context = convert_input_context(tool_call_result.context.as_ref());
@@ -1534,7 +1534,7 @@ pub(crate) fn convert_tool_call_result_to_input(
         }
         Some(ToolCallResultType::AskUserQuestion(result)) => {
             let ask_result = match &result.result {
-                Some(bork_multi_agent_api::ask_user_question_result::Result::Success(success)) => {
+                Some(krust_multi_agent_api::ask_user_question_result::Result::Success(success)) => {
                     AskUserQuestionResult::Success {
                         answers: success
                             .answers
@@ -1556,7 +1556,7 @@ pub(crate) fn convert_tool_call_result_to_input(
                             .collect(),
                     }
                 }
-                Some(bork_multi_agent_api::ask_user_question_result::Result::Error(err)) => {
+                Some(krust_multi_agent_api::ask_user_question_result::Result::Error(err)) => {
                     AskUserQuestionResult::Error(err.message.clone())
                 }
                 None => AskUserQuestionResult::Cancelled,

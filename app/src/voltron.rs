@@ -1,4 +1,4 @@
-//! Voltron (https://en.wikipedia.org/wiki/Voltron) in Bork is a code name for the UI element used
+//! Voltron (https://en.wikipedia.org/wiki/Voltron) in Krust is a code name for the UI element used
 //! for workflows, ai commands and history search. As @charlespierce pointed out: it's 3 mini lions
 //! (features) coming together to form one super bot (this view). Hence the name. Don't ask me, I
 //! haven't watched it.
@@ -18,19 +18,19 @@ use std::path::PathBuf;
 use enclose::enclose;
 use pathfinder_geometry::vector::Vector2F;
 use vec1::Vec1;
-use bork_errors::report_error;
-use borkui::accessibility::AccessibilityContent;
-use borkui::elements::{
+use krust_errors::report_error;
+use krustui::accessibility::AccessibilityContent;
+use krustui::elements::{
     resizable_state_handle, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, Element, EventHandler, Flex,
     Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Resizable, ResizableStateHandle, Shrinkable, Stack,
 };
-use borkui::geometry::vector::vec2f;
-use borkui::keymap::{Context, FixedBinding};
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::geometry::vector::vec2f;
+use krustui::keymap::{Context, FixedBinding};
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -56,7 +56,7 @@ const VOLTRON_RIGHT_PADDING: f32 = 15.;
 const EDITOR_PADDING_LEFT: f32 = 14.;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -492,7 +492,7 @@ impl View for Voltron {
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
         let current_feature = self

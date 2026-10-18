@@ -1,6 +1,6 @@
 use pathfinder_color::ColorU;
-use borkui_core::elements::Align;
-use borkui_core::Element;
+use krustui_core::elements::Align;
+use krustui_core::Element;
 
 use super::onboarding_visual::{OnboardingVisual, Pill, RectPct};
 

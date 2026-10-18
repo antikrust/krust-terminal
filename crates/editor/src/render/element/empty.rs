@@ -31,8 +31,8 @@ impl RenderableBlock for Empty {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut borkui_core::LayoutContext,
-        app: &borkui_core::AppContext,
+        ctx: &mut krustui_core::LayoutContext,
+        app: &krustui_core::AppContext,
     ) {
         self.placeholder
             .layout(&self.viewport_item, model, ctx, app, |_| {
@@ -47,7 +47,7 @@ impl RenderableBlock for Empty {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        _app: &borkui_core::AppContext,
+        _app: &krustui_core::AppContext,
     ) {
         let content = model.content();
         let cursor = extract_block!(self.viewport_item, content, (block, BlockItem::TrailingNewLine(cursor)) => block.trailing_newline(cursor));

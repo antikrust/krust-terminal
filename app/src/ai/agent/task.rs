@@ -13,10 +13,10 @@ use itertools::Itertools;
 use prost_types::FieldMask;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use bork_errors::report_error;
-use bork_multi_agent_api::message::tool_call::subagent::Metadata;
-use bork_multi_agent_api::message::Message;
-use bork_multi_agent_api::{self as api};
+use krust_errors::report_error;
+use krust_multi_agent_api::message::tool_call::subagent::Metadata;
+use krust_multi_agent_api::message::Message;
+use krust_multi_agent_api::{self as api};
 
 use super::api::convert_conversation::convert_tool_call_result_to_input;
 use super::api::{
@@ -416,7 +416,7 @@ impl Task {
                     Some(Metadata::ComputerUse(_)) => None,
                     Some(Metadata::Summarization(_)) => None,
                     Some(Metadata::ConversationSearch(_)) => None,
-                    Some(Metadata::BorkDocumentationSearch(_)) => None,
+                    Some(Metadata::KrustDocumentationSearch(_)) => None,
                     None => None,
                 }),
             TaskImpl::Optimistic(optimistic::Task::CLIAgent(subtask)) => {
@@ -525,12 +525,12 @@ impl Task {
         }
     }
 
-    pub fn is_bork_documentation_search_subagent(&self) -> bool {
+    pub fn is_krust_documentation_search_subagent(&self) -> bool {
         match &self.data {
             TaskImpl::Server(server_data) => server_data
                 .subagent_params
                 .as_ref()
-                .is_some_and(|params| params.call.is_bork_documentation_search()),
+                .is_some_and(|params| params.call.is_krust_documentation_search()),
             TaskImpl::Optimistic(_) => false,
         }
     }

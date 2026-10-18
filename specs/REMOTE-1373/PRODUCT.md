@@ -1,5 +1,5 @@
 # Transcript Rehydration + `--conversation` Resume for Claude Code — Product Spec
-Linear: [REMOTE-1373](https://linear.app/borkdotdev/issue/REMOTE-1373)
+Linear: [REMOTE-1373](https://linear.app/krustdotdev/issue/REMOTE-1373)
 ## Summary
 Two capabilities for Claude Code cloud runs that together let a Claude session pick up where it left off:
 1. **Transcript rehydration** (the foundation) — when a fresh Claude sandbox starts against an existing conversation, restore the prior transcript into `~/.claude/` on disk AND make Claude actually use it. The latter requires a Claude-specific server-side system-prompt body plus a user-turn preamble that overrides Claude's baked-in prompt, which previously caused resumed sessions to ignore saved state and effectively start over (including dropping any uncommitted workspace patches from cloud-to-cloud handoff).
@@ -12,8 +12,8 @@ Cloud Claude runs upload their full state to GCS (`claude_code.json` transcript,
 - `--conversation` is Oz-only, so a finished Claude conversation is effectively read-only.
 ## Goals
 - **Transcript rehydration works on Claude** — whenever a Claude sandbox is spun up against an existing conversation (cloud-to-cloud handoff, or explicit `--conversation`), the prior transcript lands in `~/.claude/projects/<encoded_cwd>/<uuid>.jsonl` with subagents, todos, and a `sessions-index.json` entry, AND any workspace patches from the prior sandbox are applied before Claude answers the new user turn. The "AND" is the hard part: it requires server-side prompt changes that survive Claude's own system prompt.
-- **`--conversation <id>` for Claude Code** — `bork agent run-cloud --harness claude --conversation <id> --prompt "..."` spawns a new cloud run that resumes the prior Claude session; `bork agent run --harness claude --conversation <id> --prompt "..."` does the same locally.
-- **Saves continue in place** — follow-up periodic/final saves write to the same server conversation id, same GCS objects, same Bork Drive object, same artifacts list.
+- **`--conversation <id>` for Claude Code** — `krust agent run-cloud --harness claude --conversation <id> --prompt "..."` spawns a new cloud run that resumes the prior Claude session; `krust agent run --harness claude --conversation <id> --prompt "..."` does the same locally.
+- **Saves continue in place** — follow-up periodic/final saves write to the same server conversation id, same GCS objects, same Krust Drive object, same artifacts list.
 ## Non-goals
 - Transcript rehydration or resume support for third-party harnesses other than Claude Code. The abstraction is harness-agnostic (new CLIs add a `ResumePayload` variant + their own fetch override), but no other harness implements it today.
 - Preserving the envelope's original cwd — we rewrite it to the new run's cwd so `claude --resume` finds the jsonl.
@@ -29,8 +29,8 @@ Any Claude cloud run that resumes an existing conversation — whether via cloud
 5. Periodic and final saves overwrite `<id>/claude_code.json` and `<id>/block_snapshot.json` in GCS so the AI Conversation viewer shows the merged state and artifacts stay attached.
 ### `--conversation <id>` invocation
 ```
-bork agent run-cloud --harness claude --conversation <id> --prompt "follow-up"
-bork agent run       --harness claude --conversation <id> --prompt "follow-up"
+krust agent run-cloud --harness claude --conversation <id> --prompt "follow-up"
+krust agent run       --harness claude --conversation <id> --prompt "follow-up"
 ```
 `--harness claude` is required when resuming a Claude conversation; the default `--harness oz` against a Claude id fails fast with an actionable error. The CLI never silently flips harness mid-flight because harness drives pre-load decisions (task config, CLI validation, server task creation).
 The client validates `--harness` against the conversation's stored harness before any task is created, then runs the same rehydration path described above. Local runs skip step 4 (the server's rehydration prompt is a no-op because there's no prior ended execution) but still rehydrate the transcript to disk so Claude's `/resume` picker sees it.
@@ -49,7 +49,7 @@ The client validates `--harness` against the conversation's stored harness befor
 ## Success criteria
 - **Transcript rehydration**: a Claude cloud run whose sandbox is replaced mid-run resumes with its prior transcript visible to Claude AND its uncommitted workspace patches applied before Claude answers the next turn — verified by the next turn's tool calls / git status, not just by the agent's acknowledgement text.
 - **Conversation resuming**: `run-cloud --conversation <id> --prompt "..."` appends to the same AI Conversation in the UI and overwrites `<id>/claude_code.json` / `block_snapshot.json` in place; `agent run --conversation <id>` locally grows `~/.claude/projects/<encoded_cwd>/<uuid>.jsonl` with the prior entries before the new prompt runs.
-- New PR / plan / file artifacts from the resumed run attach to the same Bork Drive conversation object as the original.
+- New PR / plan / file artifacts from the resumed run attach to the same Krust Drive conversation object as the original.
 - Invalid inputs fail cleanly pre-launch with no side effects.
 ## Validation
 - **Transcript rehydration (cloud handoff)**: force a sandbox replacement on a Claude run with uncommitted changes; after handoff, confirm from the next-turn tool calls that `git apply` ran on the expected patches and that the files the patches touched are dirty.

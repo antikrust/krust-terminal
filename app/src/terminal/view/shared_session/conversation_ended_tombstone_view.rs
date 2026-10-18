@@ -1,15 +1,15 @@
 use std::path::Path;
 
-use bork_core::paths::home_relative_path;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
-use borkui::elements::{
+use krust_core::paths::home_relative_path;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill};
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, MainAxisSize, Padding, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -162,7 +162,7 @@ pub struct ConversationEndedTombstoneView {
     #[cfg(not(target_family = "wasm"))]
     continue_locally_button: Option<ViewHandle<ActionButton>>,
     #[cfg(target_family = "wasm")]
-    open_in_bork_button: Option<ViewHandle<ActionButton>>,
+    open_in_krust_button: Option<ViewHandle<ActionButton>>,
 }
 
 impl ConversationEndedTombstoneView {
@@ -228,19 +228,19 @@ impl ConversationEndedTombstoneView {
         };
 
         // In wasm, continuing locally is impossible so we instead
-        // offer to open the conversation in bork (where you can continue locally).
+        // offer to open the conversation in krust (where you can continue locally).
         #[cfg(target_family = "wasm")]
-        let open_in_bork_button =
+        let open_in_krust_button =
             if matches!(tombstone_cta, Some(TombstoneCta::ContinueInCloud { .. })) {
                 None
             } else {
                 conversation_id.map(|conv_id| {
                     ctx.add_typed_action_view(move |_| {
-                        ActionButton::new("Open in Bork", PrimaryTheme)
-                            .with_tooltip("Open this conversation in the Bork desktop app")
+                        ActionButton::new("Open in Krust", PrimaryTheme)
+                            .with_tooltip("Open this conversation in the Krust desktop app")
                             .on_click(move |ctx| {
                                 ctx.dispatch_typed_action(
-                                    ConversationEndedTombstoneAction::OpenInBork(conv_id),
+                                    ConversationEndedTombstoneAction::OpenInKrust(conv_id),
                                 );
                             })
                     })
@@ -254,7 +254,7 @@ impl ConversationEndedTombstoneView {
             #[cfg(not(target_family = "wasm"))]
             continue_locally_button,
             #[cfg(target_family = "wasm")]
-            open_in_bork_button,
+            open_in_krust_button,
         };
 
         ctx.subscribe_to_view(
@@ -279,7 +279,7 @@ impl ConversationEndedTombstoneView {
                         ctx
                     );
                     ctx.clipboard()
-                        .write(borkui::clipboard::ClipboardContent::plain_text(
+                        .write(krustui::clipboard::ClipboardContent::plain_text(
                             branch.clone(),
                         ));
                 }
@@ -364,7 +364,7 @@ impl ConversationEndedTombstoneView {
             Fill::Solid(theme.ansi_fg_green())
         };
         let icon_element = Container::new(
-            ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
+            ConstrainedBox::new(icon.to_krustui_icon(icon_color).finish())
                 .with_height(14.)
                 .with_width(14.)
                 .finish(),
@@ -507,9 +507,9 @@ impl ConversationEndedTombstoneView {
         #[cfg(target_family = "wasm")]
         {
             // Don't show on mobile devices - they can't use the desktop app
-            if !borkui::platform::wasm::is_mobile_device() {
-                if let Some(ref open_in_bork_button) = self.open_in_bork_button {
-                    row.add_child(ChildView::new(open_in_bork_button).finish());
+            if !krustui::platform::wasm::is_mobile_device() {
+                if let Some(ref open_in_krust_button) = self.open_in_krust_button {
+                    row.add_child(ChildView::new(open_in_krust_button).finish());
                     has_button = true;
                 }
             }
@@ -553,7 +553,7 @@ pub enum ConversationEndedTombstoneAction {
     #[cfg(not(target_family = "wasm"))]
     ContinueLocally(AIConversationId),
     #[cfg(target_family = "wasm")]
-    OpenInBork(AIConversationId),
+    OpenInKrust(AIConversationId),
 }
 
 impl View for ConversationEndedTombstoneView {
@@ -653,8 +653,8 @@ impl TypedActionView for ConversationEndedTombstoneView {
                 });
             }
             #[cfg(target_family = "wasm")]
-            ConversationEndedTombstoneAction::OpenInBork(conversation_id) => {
-                send_telemetry_from_ctx!(AgentManagementTelemetryEvent::TombstoneOpenInBork, ctx);
+            ConversationEndedTombstoneAction::OpenInKrust(conversation_id) => {
+                send_telemetry_from_ctx!(AgentManagementTelemetryEvent::TombstoneOpenInKrust, ctx);
                 let conversation = BlocklistAIHistoryModel::handle(ctx)
                     .as_ref(ctx)
                     .conversation(conversation_id);
@@ -665,7 +665,7 @@ impl TypedActionView for ConversationEndedTombstoneView {
                         if let Ok(url) = url::Url::parse(&url_string) {
                             ctx.dispatch_typed_action(&WorkspaceAction::OpenLinkOnDesktop(url));
                         } else {
-                            bork_errors::report_error!(
+                            krust_errors::report_error!(
                                 "Failed to parse conversation URL",
                                 extra: { "url" => %url_string }
                             );
@@ -674,7 +674,7 @@ impl TypedActionView for ConversationEndedTombstoneView {
                         log::warn!("No server conversation token available for conversation");
                     }
                 } else {
-                    bork_errors::report_error!("Conversation not found in history model");
+                    krust_errors::report_error!("Conversation not found in history model");
                 }
             }
         }

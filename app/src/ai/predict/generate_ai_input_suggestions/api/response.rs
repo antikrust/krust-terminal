@@ -1,7 +1,7 @@
 //! Rust version of `GenerateAIInputSuggestionsResponse` and its fields.
 //!
-//! These types correspond to the bork-go types defined in
-//! bork-server/model/types/generate_ai_input_suggestions/response.go.
+//! These types correspond to the krust-go types defined in
+//! krust-server/model/types/generate_ai_input_suggestions/response.go.
 //!
 //! Documentation on the types here is directly borrowed from the documentation on the go schema;
 //! see the go schema for the source-of-truth.

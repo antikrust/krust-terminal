@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::persistence::ModelEvent;
 use crate::GlobalResourceHandlesProvider;

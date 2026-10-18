@@ -1,7 +1,7 @@
-use bork_graphql::billing::{
+use krust_graphql::billing::{
     AddonCreditsOption, OveragesPricing, PlanPricing, PricingInfo, StripeSubscriptionPlan,
 };
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 /// A global model for maintaining pricing information from the server.
 #[derive(Debug)]

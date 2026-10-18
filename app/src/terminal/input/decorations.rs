@@ -1,4 +1,4 @@
-//! Bork input editor logic related to decorating the input's text, such as
+//! Krust input editor logic related to decorating the input's text, such as
 //! applying syntax highlighting and error underlining.
 
 use std::collections::HashMap;
@@ -6,11 +6,11 @@ use std::ops::Range;
 
 use settings::Setting as _;
 use string_offset::{ByteOffset, CharOffset};
-pub use bork_completer::completer::SuggestionTypeName;
-pub use bork_completer::util::parse_current_commands_and_tokens;
-pub use bork_completer::{ParsedTokenData, ParsedTokensSnapshot};
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, SingletonEntity, ViewContext};
+pub use krust_completer::completer::SuggestionTypeName;
+pub use krust_completer::util::parse_current_commands_and_tokens;
+pub use krust_completer::{ParsedTokenData, ParsedTokensSnapshot};
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, SingletonEntity, ViewContext};
 
 use super::Input;
 use crate::appearance::Appearance;

@@ -1,4 +1,4 @@
-//! This crate defines shared SQLite persistence infrastructure for Bork cloud objects.
+//! This crate defines shared SQLite persistence infrastructure for Krust cloud objects.
 //!
 //! It owns model-agnostic persistence helpers for object metadata, permissions, refresh
 //! scheduling, guest and link-sharing encoding, callback-based object upsert and delete

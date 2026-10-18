@@ -24,22 +24,22 @@
         {
             "type": "shell",
             "command": "./script/run --dont-open",
-            "label": "build_borklocal"
+            "label": "build_krustlocal"
         },
         {
             "type": "shell",
             "command": "./script/run --dont-open --features fast_dev",
-            "label": "build_borklocal_fastdev"
+            "label": "build_krustlocal_fastdev"
         },
         {
             "type": "shell",
             "command": "./script/run --dont-open --features fast_dev,with_local_session_sharing_server",
-            "label": "build_borklocal_fastdev_localsessionsharing"
+            "label": "build_krustlocal_fastdev_localsessionsharing"
         },
         {
             "type": "shell",
             "command": "./script/run --dont-open --features with_local_session_sharing_server",
-            "label": "build_borklocal_localsessionsharing"
+            "label": "build_krustlocal_localsessionsharing"
         }
         // TODO: If adding more configs that just add feature flags, consider argument passing from launch.json to tasks.json
     ]

@@ -1,8 +1,8 @@
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use bork_core::features::FeatureFlag;
-use borkui::{Entity, ModelContext};
+use krust_core::features::FeatureFlag;
+use krustui::{Entity, ModelContext};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::{

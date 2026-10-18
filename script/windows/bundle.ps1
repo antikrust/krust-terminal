@@ -16,9 +16,9 @@ Param (
     [String]$RELEASE_TAG = '',
     [String]$FEATURES = 'release_bundle,crash_reporting,gui',
 
-    # Builds only the Bork binary, skips the installer.
+    # Builds only the Krust binary, skips the installer.
     [Switch]$SKIP_BUILD_INSTALLER = $False,
-    # Builds only the installer, skips the Bork binary. Use this if the Bork
+    # Builds only the installer, skips the Krust binary. Use this if the Krust
     # binary has already been built.
     [Switch]$SKIP_BUILD_BINARY = $False,
 
@@ -52,7 +52,7 @@ if ($ARCH -eq 'arm64') {
     $FILE_ENDING = 'Setup-arm64'
     $PLATFORM_TARGET = 'aarch64-pc-windows-msvc'
 } else {
-    # If x64, then we just use the filename "BorkSetup.exe" for example
+    # If x64, then we just use the filename "KrustSetup.exe" for example
     $FILE_ENDING = 'Setup'
     $PLATFORM_TARGET = 'x86_64-pc-windows-msvc'
 }
@@ -84,37 +84,37 @@ if ($CARGO_PROFILE -eq 'dev') {
 } else {
     $CARGO_TARGET_OUTPUT_DIR = "$CARGO_TARGET_DIR" + '\' + $PLATFORM_TARGET + '\' + "$CARGO_PROFILE"
 }
-$BUNDLE_ID = "bork.baby.$app_name"
+$BUNDLE_ID = "krust.baby.$app_name"
 
 # Update parameters based on the target release channel.
 #
 # APP_NAME here must match the value used in Rust as the
 # application name; see app/src/channel.rs.
 #
-# BORK_BIN is the name of the binary produced by cargo;
+# KRUST_BIN is the name of the binary produced by cargo;
 # BINARY_NAME is the desired name of the binary in the final package.
 if ("$CHANNEL" -eq 'local') {
-    $BORK_BIN = 'bork'
-    $BINARY_NAME = 'bork.exe'
-    $APP_NAME = 'BorkLocal'
+    $KRUST_BIN = 'krust'
+    $BINARY_NAME = 'krust.exe'
+    $APP_NAME = 'KrustLocal'
 } elseif ("$CHANNEL" -eq 'dev') {
-    $BORK_BIN = 'dev'
+    $KRUST_BIN = 'dev'
     $BINARY_NAME = 'dev.exe'
-    $APP_NAME = 'BorkDev'
+    $APP_NAME = 'KrustDev'
     $FEATURES = "$FEATURES,agent_mode_debug"
 } elseif ("$CHANNEL" -eq 'preview') {
-    $BORK_BIN = 'preview'
+    $KRUST_BIN = 'preview'
     $BINARY_NAME = 'preview.exe'
-    $APP_NAME = 'BorkPreview'
+    $APP_NAME = 'KrustPreview'
     $FEATURES = "$FEATURES,preview_channel"
 } elseif ("$CHANNEL" -eq 'stable') {
-    $BORK_BIN = 'stable'
-    $BINARY_NAME = 'bork.exe'
-    $APP_NAME = 'Bork'
+    $KRUST_BIN = 'stable'
+    $BINARY_NAME = 'krust.exe'
+    $APP_NAME = 'Krust'
 } elseif ("$CHANNEL" -eq 'oss') {
-    $BORK_BIN = 'bork'
-    $BINARY_NAME = 'bork.exe'
-    $APP_NAME = 'Bork'
+    $KRUST_BIN = 'krust'
+    $BINARY_NAME = 'krust.exe'
+    $APP_NAME = 'Krust'
     # The OSS channel does not ship Sentry, so drop the crash_reporting feature
     # (which would otherwise pull in the Sentry SDK as a dependency).
     $FEATURES = 'release_bundle,gui'
@@ -124,11 +124,11 @@ if ("$CHANNEL" -eq 'local') {
 $FEATURES = "$FEATURES,nld_classifier_v3,nld_heuristic_v2"
 
 $BINARY_PATH = "$CARGO_TARGET_OUTPUT_DIR\$BINARY_NAME"
-$BUNDLE_ID = "bork.baby.$APP_NAME"
+$BUNDLE_ID = "krust.baby.$APP_NAME"
 $INSTALLER_OUTPUT_DIR = "$WINDOWS_INSTALLER_DIR\Output"
 $INSTALLER_NAME = "$($APP_NAME)$($FILE_ENDING)"
 $INSTALLER_PATH = "$($INSTALLER_OUTPUT_DIR)\$($INSTALLER_NAME).exe"
-$PDB_PATH = "$CARGO_TARGET_OUTPUT_DIR\$BORK_BIN.pdb"
+$PDB_PATH = "$CARGO_TARGET_OUTPUT_DIR\$KRUST_BIN.pdb"
 
 # The CARGO_FULL_PROFILE environment variable is read by the `cargo` build
 # script (`app/build.rs`) to determine where to place `conpty.dll`.
@@ -142,28 +142,28 @@ if ($DEBUG_BUILD) {
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if ($CHECK_ONLY) {
-    cargo check -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    cargo check -p krust --profile "$CARGO_PROFILE" --bin "$KRUST_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
-        Write-Error "Failed to verify Bork $BORK_BIN compilation with profile $CARGO_PROFILE"
+        Write-Error "Failed to verify Krust $KRUST_BIN compilation with profile $CARGO_PROFILE"
         exit 1
     }
     exit 0
 }
 
 if (-Not $SKIP_BUILD_BINARY) {
-    Write-Output "Building Bork for channel $CHANNEL and bundle id $BUNDLE_ID"
+    Write-Output "Building Krust for channel $CHANNEL and bundle id $BUNDLE_ID"
     $env:CARGO_BIN_NAME = $CHANNEL
-    $env:BORK_APP_NAME = $APP_NAME
-    cargo build -p bork --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    $env:KRUST_APP_NAME = $APP_NAME
+    cargo build -p krust --profile "$CARGO_PROFILE" --bin "$KRUST_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
-        Write-Error "Failed to build Bork $BORK_BIN binary with profile $CARGO_PROFILE"
+        Write-Error "Failed to build Krust $KRUST_BIN binary with profile $CARGO_PROFILE"
         exit 1
     }
 
     # If we desire an executable name different from the cargo bin, rename it.
-    if ("$BORK_BIN.exe" -ne $BINARY_NAME) {
-        $binarySource = "$CARGO_TARGET_OUTPUT_DIR\$BORK_BIN.exe"
-        Write-Output "Renaming executable $BORK_BIN.exe to $BINARY_NAME"
+    if ("$KRUST_BIN.exe" -ne $BINARY_NAME) {
+        $binarySource = "$CARGO_TARGET_OUTPUT_DIR\$KRUST_BIN.exe"
+        Write-Output "Renaming executable $KRUST_BIN.exe to $BINARY_NAME"
         Move-Item -Path "$binarySource" -Destination "$BINARY_PATH" -Force
     }
 }
@@ -191,7 +191,7 @@ if (-Not $?) {
     exit 1
 }
 
-Write-Output 'Building Bork installer'
+Write-Output 'Building Krust installer'
 $ISCC_ARGS = @(
     "$WINDOWS_INSTALLER_DIR\windows-installer.iss",
     "/DReleaseChannel=$CHANNEL",

@@ -1,10 +1,10 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use super::ConversationContextItem;
 use crate::appearance::Appearance;

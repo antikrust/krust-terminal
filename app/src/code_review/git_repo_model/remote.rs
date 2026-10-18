@@ -1,6 +1,6 @@
 use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
-use bork_util::remote_path::RemotePath;
-use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_util::remote_path::RemotePath;
+use krustui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{GitRepoStatusEvent, GitStatusMetadata};
 use crate::remote_server::proto;
@@ -72,7 +72,7 @@ impl RemoteGitRepoStatusModel {
                 ctx.emit(GitRepoStatusEvent::MetadataChanged);
             }
             Err(error) => {
-                bork_core::safe_error!(
+                krust_core::safe_error!(
                     safe: ("RemoteGitRepoStatusModel: failed to decode git status push"),
                     full: ("RemoteGitRepoStatusModel: failed to decode git status push: {error}")
                 );

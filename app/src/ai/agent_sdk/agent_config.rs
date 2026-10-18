@@ -1,10 +1,10 @@
 //! Commands to interact with available agents via the public API.
 
-use bork_cli::agent::ListAgentSkillsArgs;
-use bork_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
-use bork_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::agent::ListAgentSkillsArgs;
+use krust_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
+use krust_graphql::queries::user_repo_auth_status::UserRepoAuthStatusEnum;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::oauth_flow::poll_oauth_until_terminal;
 use crate::ai::cloud_environments::GithubRepo;
@@ -219,7 +219,7 @@ impl AgentConfigRunner {
         if repo.is_some() {
             println!("Fetching agent skills from the specified repository...");
         } else {
-            println!("Fetching agent skills from your Bork environments...");
+            println!("Fetching agent skills from your Krust environments...");
         }
 
         let list_future = async move { ai_client.list_skills(repo).await };
@@ -306,7 +306,7 @@ impl AgentConfigRunner {
     }
 }
 
-impl borkui::Entity for AgentConfigRunner {
+impl krustui::Entity for AgentConfigRunner {
     type Event = ();
 }
 

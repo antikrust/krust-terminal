@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use borkui::r#async::block_on;
-use borkui::r#async::executor::Background;
+use krustui::r#async::block_on;
+use krustui::r#async::executor::Background;
 
 use crate::plugin::service::{LogService, LogServiceRequest};
 

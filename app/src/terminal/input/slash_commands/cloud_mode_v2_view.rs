@@ -2,17 +2,17 @@ use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ChildAnchor, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, DropShadow, EventHandler,
     Flex, Hoverable, MainAxisSize, MouseInBehavior, MouseStateHandle, OffsetPositioning,
     ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition,
     ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Stack, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -433,7 +433,7 @@ impl CloudModeV2SlashCommandView {
     fn rebuild_from_results(&mut self, ctx: &mut ViewContext<Self>) {
         let on_click_fn = |_idx: usize,
                            item: AcceptSlashCommandOrSavedPrompt,
-                           evt_ctx: &mut borkui::EventContext| {
+                           evt_ctx: &mut krustui::EventContext| {
             evt_ctx.dispatch_typed_action(CloudModeV2SlashCommandAction::Accept {
                 item,
                 cmd_or_ctrl_enter: false,
@@ -1067,7 +1067,7 @@ impl CloudModeV2SlashCommandView {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();
@@ -1221,7 +1221,7 @@ fn render_divider(app: &AppContext) -> Box<dyn Element> {
     let theme = appearance.theme();
     Container::new(
         ConstrainedBox::new(
-            Container::new(borkui::elements::Empty::new().finish())
+            Container::new(krustui::elements::Empty::new().finish())
                 .with_background(theme.surface_overlay_2())
                 .finish(),
         )

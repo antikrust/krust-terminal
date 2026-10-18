@@ -1,14 +1,14 @@
 use std::iter;
 use std::path::Path;
 
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, HighlightedRange, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::ui_components::components::UiComponent;
-use borkui::{AppContext, Element, EventContext, SingletonEntity, ViewHandle};
+use krustui::ui_components::components::UiComponent;
+use krustui::{AppContext, Element, EventContext, SingletonEntity, ViewHandle};
 
 use crate::ai::agent::ProgrammingLanguage;
 use crate::ai::blocklist::inline_action::inline_action_header::{
@@ -101,7 +101,7 @@ pub struct CodeBlockOptions {
     pub file_path: Option<String>,
 }
 
-pub fn render_code_block_with_bork_text(
+pub fn render_code_block_with_krust_text(
     options: CodeBlockOptions,
     view: &ViewHandle<CodeEditorView>,
     app: &AppContext,
@@ -255,7 +255,7 @@ fn render_linked_code_block_internal(
             let open_button = render_button(
                 appearance,
                 Icon::LinkExternal,
-                "Open in Bork",
+                "Open in Krust",
                 mouse_handles.open_button,
                 code_clone.clone(),
                 on_open,

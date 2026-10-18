@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::{App, View};
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::{App, View};
 
 use super::{CompactDropdown, CompactDropdownItem};
 use crate::menu::MenuVariant;

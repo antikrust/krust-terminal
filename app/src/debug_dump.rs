@@ -1,15 +1,15 @@
-//! This module contains the code path for the [`bork_cli::Command::DumpDebugInfo`] subcommand.
+//! This module contains the code path for the [`krust_cli::Command::DumpDebugInfo`] subcommand.
 //!
 //! This is intended to never be used by a vast majority of users. This is only intended for users
-//! who are unable to run Bork and want to provide us, the dev team, with useful debugging
+//! who are unable to run Krust and want to provide us, the dev team, with useful debugging
 //! information.
 #[cfg(not(windows))]
 use command::blocking::Command;
-use bork_core::channel::ChannelState;
-use borkui::windowing;
+use krust_core::channel::ChannelState;
+use krustui::windowing;
 
 pub(crate) fn run() -> anyhow::Result<()> {
-    println!("Bork version: {:?}", ChannelState::app_version());
+    println!("Krust version: {:?}", ChannelState::app_version());
 
     #[cfg(not(windows))]
     {
@@ -31,7 +31,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
     #[cfg(not(target_os = "macos"))]
     {
         if let Ok(event_loop) = winit::event_loop::EventLoop::new() {
-            borkui::rendering::wgpu::init_wgpu_instance(Box::new(
+            krustui::rendering::wgpu::init_wgpu_instance(Box::new(
                 event_loop.owned_display_handle(),
             ));
 
@@ -59,7 +59,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         use std::ops::Deref as _;
 
         use settings::Setting as _;
-        use borkui::rendering::GPUPowerPreference;
+        use krustui::rendering::GPUPowerPreference;
 
         use crate::settings::{
             init_private_user_preferences, PreferLowPowerGPU, PreferredGraphicsBackend,
@@ -84,7 +84,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         println!("##################################################");
         println!("# wgpu Adapters");
         println!("##################################################");
-        borkui::r#async::block_on(borkui::rendering::wgpu::print_wgpu_adapters(
+        krustui::r#async::block_on(krustui::rendering::wgpu::print_wgpu_adapters(
             gpu_power_preference,
             backend_preference,
             windowing_system,

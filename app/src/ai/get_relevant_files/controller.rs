@@ -10,9 +10,9 @@ use ai::index::locations::CodeContextLocation;
 use anyhow::{anyhow, Context as _};
 use futures_util::stream::AbortHandle;
 use instant::Instant;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::agent::SearchCodebaseFailureReason;

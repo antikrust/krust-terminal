@@ -2,7 +2,7 @@
 //! (both are Cobra-based) but uses `oc` commands instead of `kubectl` for proper authentication
 //! context, and adds OpenShift-specific generators for projects and build configs.
 use itertools::Itertools;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Suggestion,
 };

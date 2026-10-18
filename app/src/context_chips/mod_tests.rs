@@ -8,17 +8,17 @@
 //! themes, making labels hard to read. We assert against the *composited* color
 //! (label blended over the chip surface) — what the user actually sees.
 
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::color::contrast::{high_enough_contrast, MinimumAllowedContrast};
-use bork_core::ui::theme::{mock_terminal_colors, Details, Fill, BorkTheme};
-use borkui::color::ColorU;
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::color::contrast::{high_enough_contrast, MinimumAllowedContrast};
+use krust_core::ui::theme::{mock_terminal_colors, Details, Fill, KrustTheme};
+use krustui::color::ColorU;
 
 use super::readable_chip_label_color;
 
 /// Builds a solid-background/foreground theme (colors as `0xRRGGBBAA`). The
 /// terminal palette does not affect text/surface contrast, so a mock is fine.
-fn theme_with(background: u32, foreground: u32, details: Details) -> BorkTheme {
-    BorkTheme::new(
+fn theme_with(background: u32, foreground: u32, details: Details) -> KrustTheme {
+    KrustTheme::new(
         Fill::Solid(ColorU::from_u32(background)),
         ColorU::from_u32(foreground),
         Fill::Solid(ColorU::from_u32(0x2AA198FF)),

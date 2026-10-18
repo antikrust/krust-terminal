@@ -10,21 +10,21 @@ use futures::channel::oneshot;
 use futures::executor::block_on;
 use repo_metadata::{DirectoryWatcher, RepoMetadataEvent, RepoMetadataModel, RepositoryIdentifier};
 use tempfile::TempDir;
-use bork_cli::agent::Harness;
-use bork_cli::mcp::MCPSpec;
-use bork_cli::skill::SkillSpec;
-use bork_cli::{
+use krust_cli::agent::Harness;
+use krust_cli::mcp::MCPSpec;
+use krust_cli::skill::SkillSpec;
+use krust_cli::{
     OZ_CLI_ENV, OZ_HARNESS_ENV, OZ_PARENT_RUN_ID_ENV, OZ_RUN_ID_ENV, SERVER_ROOT_URL_OVERRIDE_ENV,
     SESSION_SHARING_SERVER_URL_OVERRIDE_ENV, WS_SERVER_URL_OVERRIDE_ENV,
 };
-use bork_core::channel::ChannelState;
-use bork_graphql::mutations::create_managed_mcp_client_config::{
+use krust_core::channel::ChannelState;
+use krust_graphql::mutations::create_managed_mcp_client_config::{
     CreateManagedMcpClientConfigOutput, ManagedMcpTransportKind,
 };
-use bork_graphql::response_context::ResponseContext;
-use bork_managed_secrets::ManagedSecretValue;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::{App, SingletonEntity as _};
+use krust_graphql::response_context::ResponseContext;
+use krust_managed_secrets::ManagedSecretValue;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::{App, SingletonEntity as _};
 
 use super::{
     build_secret_env_vars, AgentDriver, AgentDriverError, IdleTimeoutSender,

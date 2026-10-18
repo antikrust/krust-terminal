@@ -1,4 +1,4 @@
-use bork_cli::agent::Harness;
+use krust_cli::agent::Harness;
 
 use crate::features::FeatureFlag;
 #[cfg(not(target_family = "wasm"))]

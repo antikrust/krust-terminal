@@ -24,9 +24,9 @@ use std::sync::Arc;
 use futures::future::{join_all, BoxFuture};
 use futures::FutureExt;
 use itertools::Itertools;
-use bork_editor::multiline::AnyMultilineString;
-use bork_util::file::FileSaveError;
-use borkui::AppContext;
+use krust_editor::multiline::AnyMultilineString;
+use krust_util::file::FileSaveError;
+use krustui::AppContext;
 
 use crate::ai::agent::{
     AnyFileContent, FileContext, FileLocations, RequestFileEditsResult, UpdatedFileContext,

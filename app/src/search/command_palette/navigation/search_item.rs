@@ -1,6 +1,6 @@
 use ordered_float::OrderedFloat;
-use borkui::elements::Container;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::elements::Container;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::pane_group::PaneId;

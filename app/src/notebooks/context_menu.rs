@@ -1,12 +1,12 @@
 //! Shared context menu implementation for notebooks.
 
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::context_flag::ContextFlag;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{ChildAnchor, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack};
-use borkui::keymap::Trigger;
-use borkui::presenter::ChildView;
-use borkui::{Action, Element, EventContext, TypedActionView, View, ViewContext, ViewHandle};
+use krust_core::context_flag::ContextFlag;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{ChildAnchor, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack};
+use krustui::keymap::Trigger;
+use krustui::presenter::ChildView;
+use krustui::{Action, Element, EventContext, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::editor::keys::custom_action_to_display;
 use super::editor::view::RichTextEditorView;
@@ -269,7 +269,7 @@ where
 
     #[cfg(test)]
     /// List out the context menu items by name.
-    pub fn item_names<'a>(&self, ctx: &'a impl borkui::ViewAsRef) -> Vec<&'a str> {
+    pub fn item_names<'a>(&self, ctx: &'a impl krustui::ViewAsRef) -> Vec<&'a str> {
         self.menu
             .as_ref(ctx)
             .items()

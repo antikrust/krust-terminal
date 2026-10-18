@@ -1,6 +1,6 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::features::FeatureFlag;
 

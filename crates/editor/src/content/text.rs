@@ -25,12 +25,12 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use string_offset::{ByteOffset, CharOffset, impl_offset};
 use sum_tree::{Cursor, SeekBias, SumTree};
-use bork_core::features::FeatureFlag;
-use borkui_core::AppContext;
-use borkui_core::elements::ListIndentLevel;
-use borkui_core::fonts::{Properties, Style, Weight};
-use borkui_core::text::BlockHeaderSize as HeaderSize;
-use borkui_core::text::point::Point;
+use krust_core::features::FeatureFlag;
+use krustui_core::AppContext;
+use krustui_core::elements::ListIndentLevel;
+use krustui_core::fonts::{Properties, Style, Weight};
+use krustui_core::text::BlockHeaderSize as HeaderSize;
+use krustui_core::text::point::Point;
 
 use super::buffer::Buffer;
 use super::core::CursorType;

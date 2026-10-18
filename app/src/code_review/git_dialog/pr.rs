@@ -4,13 +4,13 @@
 //! with expandable per-file stats. On confirm, spawns `create_pr` and shows
 //! a toast with a clickable "Open PR" link.
 
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krustui::elements::{
     ClippedScrollStateHandle, Container, Element, Flex, MouseStateHandle, ParentElement, Text,
 };
-use borkui::{SingletonEntity, ViewContext};
+use krustui::{SingletonEntity, ViewContext};
 
 use crate::code_review::git_dialog::{
     render_branch_section, render_file_changes_box, should_send_git_ops_ai_request, show_toast,

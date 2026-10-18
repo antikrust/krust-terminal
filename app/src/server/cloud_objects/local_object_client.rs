@@ -1,5 +1,5 @@
-//! Fork: local-only implementation of [`ObjectClient`] so Bork Drive never
-//! talks to Bork's servers.
+//! Fork: local-only implementation of [`ObjectClient`] so Krust Drive never
+//! talks to Krust's servers.
 //!
 //! Architecture note: every Drive mutation in this codebase is optimistic —
 //! the `UpdateManager` / `SyncQueue` write the change into `CloudModel` and
@@ -23,7 +23,7 @@
 //!   local meaning; those return errors. Their UI entry points are removed
 //!   in this fork (sharing is file export/import instead).
 //!
-//! Objects that already carry real bork.baby server IDs (from before the
+//! Objects that already carry real krust.baby server IDs (from before the
 //! fork) keep working unchanged: this client acknowledges operations on any
 //! ID without caring where it came from.
 
@@ -35,8 +35,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloud_object_client::{GetCloudObjectResponse, ObjectPermissionUpdateResult};
 use uuid::Uuid;
-use bork_graphql::object_permissions::AccessLevel;
-use bork_graphql::scalars::time::ServerTimestamp;
+use krust_graphql::object_permissions::AccessLevel;
+use krust_graphql::scalars::time::ServerTimestamp;
 
 use crate::cloud_object::model::actions::{
     ObjectAction, ObjectActionHistory, ObjectActionSubtype, ObjectActionType,
@@ -71,7 +71,7 @@ struct MetadataRow {
     last_editor_uid: Option<String>,
 }
 
-/// Local stand-in for the Bork cloud-objects server. Stateless other than
+/// Local stand-in for the Krust cloud-objects server. Stateless other than
 /// the path to the app's SQLite database, which it reads (never writes) for
 /// the few answers only the database has.
 #[derive(Default)]
@@ -446,7 +446,7 @@ impl ObjectClient for LocalObjectClient {
         Self::metadata_echo(notebook_id.to_server_id(), None)
     }
 
-    async fn get_bork_drive_updates(
+    async fn get_krust_drive_updates(
         &self,
         message_sender: Sender<ObjectUpdateMessage>,
         stream_ready_sender: Sender<()>,

@@ -1,5 +1,5 @@
 use bounded_vec_deque::BoundedVecDeque;
-use borkui::{Entity, SingletonEntity};
+use krustui::{Entity, SingletonEntity};
 
 use crate::search::command_palette::mixer::ItemSummary;
 

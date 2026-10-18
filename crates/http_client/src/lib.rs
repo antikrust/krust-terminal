@@ -19,39 +19,39 @@ use reqwest::IntoUrl;
 use reqwest_eventsource::RequestBuilderExt;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::execution_mode;
-use bork_core::operating_system_info::OperatingSystemInfo;
-use bork_errors::report_error;
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::execution_mode;
+use krust_core::operating_system_info::OperatingSystemInfo;
+use krust_errors::report_error;
 
 use crate::iap::{IapTokenProvider, proxy_auth_header};
 
 pub mod headers {
-    /// Custom Bork header indicating the version of the Bork app.
-    pub const CLIENT_RELEASE_VERSION_HEADER_KEY: &str = "X-Bork-Client-Version";
+    /// Custom Krust header indicating the version of the Krust app.
+    pub const CLIENT_RELEASE_VERSION_HEADER_KEY: &str = "X-Krust-Client-Version";
 
-    /// Custom Bork header indicating the OS category the request was sent from.
-    pub(crate) const BORK_OS_CATEGORY: &str = "X-Bork-OS-Category";
-    /// Custom Bork header indicating the OS name the request was sent from. On Linux this is the
+    /// Custom Krust header indicating the OS category the request was sent from.
+    pub(crate) const KRUST_OS_CATEGORY: &str = "X-Krust-OS-Category";
+    /// Custom Krust header indicating the OS name the request was sent from. On Linux this is the
     /// name of the distribution. On all other platforms it should be equivalent to
-    /// `BORK_OS_CATEGORY`.
-    pub(crate) const BORK_OS_NAME: &str = "X-Bork-OS-Name";
-    /// Custom Bork header indicating the version of the operating system. On Linux this is the
+    /// `KRUST_OS_CATEGORY`.
+    pub(crate) const KRUST_OS_NAME: &str = "X-Krust-OS-Name";
+    /// Custom Krust header indicating the version of the operating system. On Linux this is the
     /// version of the distribution, not the Linux kernel version.
-    pub(crate) const BORK_OS_VERSION: &str = "X-Bork-OS-Version";
+    pub(crate) const KRUST_OS_VERSION: &str = "X-Krust-OS-Version";
 
-    /// Custom Bork header indicating the linux kernel version. This is only sent from Linux.
-    pub(crate) const BORK_OS_LINUX_KERNEL_VERSION: &str = "X-Bork-OS-Linux-Kernel-Version";
+    /// Custom Krust header indicating the linux kernel version. This is only sent from Linux.
+    pub(crate) const KRUST_OS_LINUX_KERNEL_VERSION: &str = "X-Krust-OS-Linux-Kernel-Version";
 
-    /// Custom Bork header indicating the client role. We don't use the User-Agent header
+    /// Custom Krust header indicating the client role. We don't use the User-Agent header
     /// because it can't be set from WASM.
-    pub(crate) const BORK_CLIENT_ID: &str = "X-Bork-Client-ID";
+    pub(crate) const KRUST_CLIENT_ID: &str = "X-Krust-Client-ID";
 }
 
 /// The environment variable containing extra HTTP headers to attach to requests.
 /// Only read when the channel is `Channel::Integration`. The value is a newline-separated
 /// list of `Name:Value` pairs, where each pair is split on the first colon.
-const EXTRA_HTTP_HEADERS_ENV_VAR: &str = "BORK_EXTRA_HTTP_HEADERS";
+const EXTRA_HTTP_HEADERS_ENV_VAR: &str = "KRUST_EXTRA_HTTP_HEADERS";
 
 /// A wrapper around a `reqwest::Client` to execute requests. Returns a custom `RequestBuilder` type
 /// that ensures any call to the underlying `reqwest::Client` are properly adapted so that they can
@@ -68,7 +68,7 @@ pub struct Client {
     after_response_received: Option<ResponseHookFn>,
 
     /// If set, provides IAP bearer tokens to attach as `Proxy-Authorization`
-    /// headers on outbound requests to the Bork staging server. Wired in by
+    /// headers on outbound requests to the Krust staging server. Wired in by
     /// the app layer on IAP-enabled builds (staging).
     iap_token_provider: Option<Arc<dyn IapTokenProvider>>,
 }
@@ -185,7 +185,7 @@ impl Client {
     fn builder(
         &self,
         wrapped: reqwest::RequestBuilder,
-        include_bork_headers: bool,
+        include_krust_headers: bool,
         iap_token: Option<String>,
     ) -> RequestBuilder<'_> {
         let mut builder = RequestBuilder {
@@ -195,8 +195,8 @@ impl Client {
             prevent_sleep_reason: None,
         };
 
-        if include_bork_headers {
-            builder = Self::add_bork_http_headers(builder);
+        if include_krust_headers {
+            builder = Self::add_krust_http_headers(builder);
         }
 
         if let Some(token) = iap_token {
@@ -208,51 +208,51 @@ impl Client {
     }
 
     pub fn get<U: IntoUrl + Clone>(&self, url: U) -> RequestBuilder<'_> {
-        let include_bork_headers = Self::include_bork_http_headers(url.clone());
+        let include_krust_headers = Self::include_krust_http_headers(url.clone());
         let iap_token = self.iap_token_for(url.clone());
-        self.builder(self.wrapped.get(url), include_bork_headers, iap_token)
+        self.builder(self.wrapped.get(url), include_krust_headers, iap_token)
     }
 
     pub fn post<U: IntoUrl + Clone>(&self, url: U) -> RequestBuilder<'_> {
-        let include_bork_headers = Self::include_bork_http_headers(url.clone());
+        let include_krust_headers = Self::include_krust_http_headers(url.clone());
         let iap_token = self.iap_token_for(url.clone());
-        self.builder(self.wrapped.post(url), include_bork_headers, iap_token)
+        self.builder(self.wrapped.post(url), include_krust_headers, iap_token)
     }
 
     pub fn put<U: IntoUrl + Clone>(&self, url: U) -> RequestBuilder<'_> {
-        let include_bork_headers = Self::include_bork_http_headers(url.clone());
+        let include_krust_headers = Self::include_krust_http_headers(url.clone());
         let iap_token = self.iap_token_for(url.clone());
-        self.builder(self.wrapped.put(url), include_bork_headers, iap_token)
+        self.builder(self.wrapped.put(url), include_krust_headers, iap_token)
     }
 
     pub fn patch<U: IntoUrl + Clone>(&self, url: U) -> RequestBuilder<'_> {
-        let include_bork_headers = Self::include_bork_http_headers(url.clone());
+        let include_krust_headers = Self::include_krust_http_headers(url.clone());
         let iap_token = self.iap_token_for(url.clone());
-        self.builder(self.wrapped.patch(url), include_bork_headers, iap_token)
+        self.builder(self.wrapped.patch(url), include_krust_headers, iap_token)
     }
 
     pub fn delete<U: IntoUrl + Clone>(&self, url: U) -> RequestBuilder<'_> {
-        let include_bork_headers = Self::include_bork_http_headers(url.clone());
+        let include_krust_headers = Self::include_krust_http_headers(url.clone());
         let iap_token = self.iap_token_for(url.clone());
-        self.builder(self.wrapped.delete(url), include_bork_headers, iap_token)
+        self.builder(self.wrapped.delete(url), include_krust_headers, iap_token)
     }
 
     /// Returns the IAP bearer token to attach to a request targeting
-    /// `url`, scoped to the Bork server's origin.
+    /// `url`, scoped to the Krust server's origin.
     fn iap_token_for<U: IntoUrl>(&self, url: U) -> Option<String> {
         let provider = self.iap_token_provider.as_ref()?;
         let url = url.into_url().ok()?;
-        if !is_bork_server_origin(&url) {
+        if !is_krust_server_origin(&url) {
             return None;
         }
         provider.cached_token()
     }
 
-    /// Helper method to determine if the request should include bork-specific headers. The only case
+    /// Helper method to determine if the request should include krust-specific headers. The only case
     /// where we should include custom headers is if the request is same-origin and is targetted to our server.
-    /// For example, app.bork.baby --> app.bork.baby.
+    /// For example, app.krust.baby --> app.krust.baby.
     #[cfg(target_family = "wasm")]
-    fn include_bork_http_headers<U: IntoUrl + Clone>(url: U) -> bool {
+    fn include_krust_http_headers<U: IntoUrl + Clone>(url: U) -> bool {
         url.into_url().is_ok_and(|url| {
             url.host_str().is_some_and(|dest_host| {
                 let window_hostname = gloo::utils::window()
@@ -260,8 +260,8 @@ impl Client {
                     .hostname()
                     .expect("Can't get window hostname");
 
-                // If the request is going to our server, the destination host should be "app.bork.baby" or
-                // "staging.bork.baby". The window hostname should also return the same.
+                // If the request is going to our server, the destination host should be "app.krust.baby" or
+                // "staging.krust.baby". The window hostname should also return the same.
                 // Note that reqwest's host_str() method is described here: https://docs.rs/reqwest/latest/reqwest/struct.Url.html#method.domain and
                 // gloo's hostname() method refers to this mozilla definition: https://developer.mozilla.org/en-US/docs/Web/API/Location/hostname.
                 window_hostname == dest_host
@@ -270,14 +270,14 @@ impl Client {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    fn include_bork_http_headers<U: IntoUrl + Clone>(_url: U) -> bool {
+    fn include_krust_http_headers<U: IntoUrl + Clone>(_url: U) -> bool {
         true
     }
 
-    fn add_bork_http_headers(mut builder: RequestBuilder) -> RequestBuilder {
+    fn add_krust_http_headers(mut builder: RequestBuilder) -> RequestBuilder {
         // Include the client ID header.
         if let Some(client_id) = execution_mode::current_client_id() {
-            builder = builder.header(headers::BORK_CLIENT_ID, client_id);
+            builder = builder.header(headers::KRUST_CLIENT_ID, client_id);
         }
 
         // If there's an app version, include it as an HTTP request header.
@@ -319,12 +319,12 @@ impl Client {
             // Operating system category.
             let category = os_system_info.category().to_string();
             if let Ok(category) = HeaderValue::from_str(&category) {
-                builder = builder.header(headers::BORK_OS_CATEGORY, category);
+                builder = builder.header(headers::KRUST_OS_CATEGORY, category);
             }
 
             // Operating system name.
             builder = builder.header(
-                headers::BORK_OS_NAME,
+                headers::KRUST_OS_NAME,
                 HeaderValue::from_static(os_system_info.name()),
             );
 
@@ -333,7 +333,7 @@ impl Client {
                 .version()
                 .and_then(|version| HeaderValue::from_str(version).ok())
             {
-                builder = builder.header(headers::BORK_OS_VERSION, version);
+                builder = builder.header(headers::KRUST_OS_VERSION, version);
             }
 
             // Linux kernel version.
@@ -342,7 +342,7 @@ impl Client {
                 .and_then(|kernel_version| HeaderValue::from_str(kernel_version).ok())
             {
                 builder =
-                    builder.header(headers::BORK_OS_LINUX_KERNEL_VERSION, linux_kernel_version);
+                    builder.header(headers::KRUST_OS_LINUX_KERNEL_VERSION, linux_kernel_version);
             }
         }
 
@@ -387,7 +387,7 @@ impl Client {
     }
 }
 
-fn is_bork_server_origin(url: &reqwest::Url) -> bool {
+fn is_krust_server_origin(url: &reqwest::Url) -> bool {
     [
         ChannelState::server_root_url(),
         ChannelState::rtc_http_url(),
@@ -617,7 +617,7 @@ impl<'a> RequestBuilder<'a> {
 }
 
 /// An error returned from `Response::error_for_status` that includes response metadata.
-/// This allows callers to inspect headers (like X-Bork-Error-Code) and the response body when
+/// This allows callers to inspect headers (like X-Krust-Error-Code) and the response body when
 /// handling errors.
 #[derive(Debug)]
 pub struct ResponseError {
@@ -740,7 +740,7 @@ impl<'c> oauth2::AsyncHttpClient<'c> for Client {
     fn call(&'c self, request: oauth2::HttpRequest) -> Self::Future {
         Box::pin(async move {
             let uri = request.uri().to_string();
-            let include_bork_headers = Self::include_bork_http_headers(uri.clone());
+            let include_krust_headers = Self::include_krust_http_headers(uri.clone());
             let iap_token = self.iap_token_for(uri);
             let builder = reqwest::RequestBuilder::from_parts(
                 self.wrapped.clone(),
@@ -748,7 +748,7 @@ impl<'c> oauth2::AsyncHttpClient<'c> for Client {
             );
 
             let response = self
-                .builder(builder, include_bork_headers, iap_token)
+                .builder(builder, include_krust_headers, iap_token)
                 .send()
                 .await
                 .map_err(Box::new)?;
@@ -781,10 +781,10 @@ mod origin_tests {
         // Derive the expected origins from `ChannelState` so the assertion holds
         // regardless of which channel config the test build resolves to.
         let server = reqwest::Url::parse(ChannelState::server_root_url().as_ref()).unwrap();
-        assert!(is_bork_server_origin(&server.join("/graphql/v2").unwrap()));
+        assert!(is_krust_server_origin(&server.join("/graphql/v2").unwrap()));
 
         let rtc = reqwest::Url::parse(ChannelState::rtc_http_url().as_ref()).unwrap();
-        assert!(is_bork_server_origin(
+        assert!(is_krust_server_origin(
             &rtc.join("/api/v1/agent/events/stream").unwrap()
         ));
     }
@@ -792,6 +792,6 @@ mod origin_tests {
     #[test]
     fn third_party_origin_does_not_match() {
         let url = reqwest::Url::parse("https://evil.example.com/graphql/v2").unwrap();
-        assert!(!is_bork_server_origin(&url));
+        assert!(!is_krust_server_origin(&url));
     }
 }

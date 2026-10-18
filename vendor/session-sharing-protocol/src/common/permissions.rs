@@ -19,8 +19,8 @@ pub enum AddGuestsResponse {
 pub enum FailedToAddGuestsReason {
     /// Unexpected, something went wrong in the server.
     Invalid,
-    /// One or more of the emails did not correspond with Bork users.
-    NotBorkUsers,
+    /// One or more of the emails did not correspond with Krust users.
+    NotKrustUsers,
     /// One or more of the guests has already been added to the session.
     GuestAlreadyAdded,
 }

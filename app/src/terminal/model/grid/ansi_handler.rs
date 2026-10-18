@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/krust_terminal/src/model/LICENSE-ALACRITTY.
 
 // path attribute needed due to current non-fs-based nesting of ansi_handler
 // under grid_handler.
@@ -18,13 +18,13 @@ use pathfinder_geometry::vector::Vector2F;
 use rand::Rng;
 use tab_stops::TabStops;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_terminal::model::ansi::CharsetIndex;
-use bork_terminal::model::grid::cell;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use borkui::image_cache::{resize_dimensions, FitType};
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_terminal::model::ansi::CharsetIndex;
+use krust_terminal::model::grid::cell;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krustui::image_cache::{resize_dimensions, FitType};
 
 use super::{AbsolutePoint, FullGridClearBehavior, GridHandler, PerformResetGridChecks, TermMode};
 use crate::server::telemetry::ImageProtocol;
@@ -83,7 +83,7 @@ pub(super) struct State {
     pub obfuscate_secrets: ObfuscateSecrets,
 
     /// Whether this Grid is in a shell context which supports handling the emoji presentation selector
-    /// correctly. Notably, Zsh does NOT support this well in bracketed paste mode (which we use for all Bork
+    /// correctly. Notably, Zsh does NOT support this well in bracketed paste mode (which we use for all Krust
     /// commands), which can lead to cursor misalignment issues.
     pub supports_emoji_presentation_selector: bool,
 
@@ -178,8 +178,8 @@ impl ansi::Handler for GridHandler {
     fn input(&mut self, c: char) {
         // We disable Reset Grid checks in tests, as they are not designed to test
         // PTY integration. `not(test)` covers this crate's own unit tests, and
-        // `not(feature = "test-util")` covers other crates (e.g. `bork_tui`) that
-        // build real terminal models against `bork`'s test helpers.
+        // `not(feature = "test-util")` covers other crates (e.g. `krust_tui`) that
+        // build real terminal models against `krust`'s test helpers.
         #[cfg(all(windows, not(test), not(feature = "test-util")))]
         if let ResetGridChecks::Enabled { received_osc } = self.ansi_handler_state.reset_grid_checks
         {
@@ -415,7 +415,7 @@ impl ansi::Handler for GridHandler {
                 // was introduced[2] - version 277.
                 //
                 // Since we didn't want to claim xterm functionalities that we haven't yet implemented in
-                // Bork, rather than passing the higher `Pv` value, we decided to use one of the
+                // Krust, rather than passing the higher `Pv` value, we decided to use one of the
                 // hardcoded ones. `0;95;0` is set what iTerm2 sends.
 
                 // [1] https://github.com/vim/vim/blob/20c370d9f2ee89cb854054edf71f5004f6efff77/src/term.c#L4630
@@ -435,7 +435,7 @@ impl ansi::Handler for GridHandler {
     fn report_xtversion<W: std::io::Write>(&mut self, writer: &mut W) {
         log::trace!("Reporting xtversion");
         let version = ChannelState::app_version().unwrap_or("");
-        let _ = writer.write_all(format!("\x1bP>|Bork({version})\x1b\\").as_bytes());
+        let _ = writer.write_all(format!("\x1bP>|Krust({version})\x1b\\").as_bytes());
     }
 
     fn device_status<W: std::io::Write>(&mut self, writer: &mut W, arg: usize) {
@@ -1145,7 +1145,7 @@ impl ansi::Handler for GridHandler {
         self.grid.cursor.charsets[index] = charset;
     }
 
-    fn set_color(&mut self, _: usize, _: borkui::color::ColorU) {
+    fn set_color(&mut self, _: usize, _: krustui::color::ColorU) {
         report_error!("Handler method GridHandler::set_color should never be called. This should be handled by TerminalModel.");
     }
 

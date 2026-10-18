@@ -1,10 +1,10 @@
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, Icon,
     MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{Element, EventContext};
+use krustui::platform::Cursor;
+use krustui::{Element, EventContext};
 
 use crate::appearance::Appearance;
 use crate::search::QueryFilter;

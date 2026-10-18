@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bork::settings::INPUT_MODE;
-use bork::terminal::block_list_viewport::InputMode;
+use krust::settings::INPUT_MODE;
+use krust::terminal::block_list_viewport::InputMode;
 
 /// Returns a user defaults map with the `InputMode` set to `input_mode`.
 #[allow(dead_code)]

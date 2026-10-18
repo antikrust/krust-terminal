@@ -1,2 +1,2 @@
-pub use bork_core::ui::color::contrast::*;
-pub use bork_core::ui::color::*;
+pub use krust_core::ui::color::contrast::*;
+pub use krust_core::ui::color::*;

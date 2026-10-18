@@ -1,20 +1,20 @@
 use ui_components::{button, keyboard_shortcut, Component as _, Options as _};
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::Icon;
-use borkui_core::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::Icon;
+use krustui_core::elements::{
     Align, ClippedScrollStateHandle, ConstrainedBox, Container, CrossAxisAlignment, Flex,
     MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::keymap::Keystroke;
-use borkui_core::platform::file_picker::{FilePickerConfiguration, FilePickerError};
-use borkui_core::prelude::{MainAxisAlignment, MainAxisSize, Vector2F};
-use borkui_core::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use borkui_core::{
+use krustui_core::fonts::Weight;
+use krustui_core::keymap::Keystroke;
+use krustui_core::platform::file_picker::{FilePickerConfiguration, FilePickerError};
+use krustui_core::prelude::{MainAxisAlignment, MainAxisSize, Vector2F};
+use krustui_core::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };
@@ -135,7 +135,7 @@ impl ProjectSlide {
 
         let subtitle = appearance
             .ui_builder()
-            .paragraph("Set up a project to optimize it for coding in Bork.")
+            .paragraph("Set up a project to optimize it for coding in Krust.")
             .with_style(UiComponentStyles {
                 font_size: Some(20.),
                 font_weight: Some(Weight::Normal),
@@ -175,7 +175,7 @@ impl ProjectSlide {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     selected_local_folder.to_owned(),
-                    Icon::Folder.to_borkui_icon(theme.foreground()),
+                    Icon::Folder.to_krustui_icon(theme.foreground()),
                     MainAxisSize::Max,
                     MainAxisAlignment::Center,
                     Vector2F::new(16., 16.),
@@ -205,7 +205,7 @@ impl ProjectSlide {
                 );
 
                 let folder_icon =
-                    ConstrainedBox::new(Icon::Folder.to_borkui_icon(theme.foreground()).finish())
+                    ConstrainedBox::new(Icon::Folder.to_krustui_icon(theme.foreground()).finish())
                         .with_width(16.)
                         .with_height(16.)
                         .finish();
@@ -292,14 +292,14 @@ impl ProjectSlide {
         );
 
         let theme_picker_last =
-            bork_core::features::FeatureFlag::OpenBorkNewSettingsModes.is_enabled();
+            krust_core::features::FeatureFlag::OpenKrustNewSettingsModes.is_enabled();
 
         let (label, keystroke, action) = match settings {
             ProjectOnboardingSettings::Project { .. } => (
                 if theme_picker_last {
                     "Next"
                 } else {
-                    "Get Borking"
+                    "Get Krusting"
                 },
                 Keystroke::parse("enter").unwrap_or_default(),
                 ProjectSlideAction::NextClicked,
@@ -484,7 +484,7 @@ impl ProjectSlide {
         }
 
         self.onboarding_state.update(ctx, |model, ctx| {
-            if bork_core::features::FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
+            if krust_core::features::FeatureFlag::OpenKrustNewSettingsModes.is_enabled() {
                 model.next(ctx);
             } else {
                 model.complete(ctx);
@@ -495,7 +495,7 @@ impl ProjectSlide {
     fn skip(&mut self, ctx: &mut ViewContext<Self>) {
         self.onboarding_state.update(ctx, |model, ctx| {
             model.set_project_selected_local_folder(None, ctx);
-            if bork_core::features::FeatureFlag::OpenBorkNewSettingsModes.is_enabled() {
+            if krust_core::features::FeatureFlag::OpenKrustNewSettingsModes.is_enabled() {
                 model.next(ctx);
             } else {
                 model.complete(ctx);

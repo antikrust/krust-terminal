@@ -10,7 +10,7 @@
 //!
 //! The declarations file is an append-only UTF-8 JSONL file. The Rust pipeline only ever
 //! *reads* it; the sibling bash generator `snapshot-declarations.sh` (shipped in
-//! `bork-agent-docker`) is the primary writer, and operators may hand-edit entries.
+//! `krust-agent-docker`) is the primary writer, and operators may hand-edit entries.
 //!
 //! Each non-empty line is a JSON object with:
 //! - `version`: `1`,
@@ -37,9 +37,9 @@ use futures::future::join_all;
 use tokio::fs::{self as tokio_fs, OpenOptions};
 use tokio::io::AsyncWriteExt as _;
 use tokio::sync::{mpsc, oneshot};
-use bork_errors::report_error;
-use borkui::r#async::executor::Background;
-use borkui::r#async::FutureExt as _;
+use krust_errors::report_error;
+use krustui::r#async::executor::Background;
+use krustui::r#async::FutureExt as _;
 
 use crate::ai::agent_sdk::retry::with_bounded_retry;
 use crate::ai::ambient_agents::AmbientAgentTaskId;

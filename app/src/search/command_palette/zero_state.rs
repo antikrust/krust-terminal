@@ -2,10 +2,10 @@ mod items;
 use std::collections::HashMap;
 
 pub use items::Items;
-use bork_core::context_flag::ContextFlag;
-use bork_core::features::FeatureFlag;
-use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
-use borkui::{
+use krust_core::context_flag::ContextFlag;
+use krust_core::features::FeatureFlag;
+use krustui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     WindowId,
 };

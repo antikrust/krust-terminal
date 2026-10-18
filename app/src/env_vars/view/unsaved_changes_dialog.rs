@@ -1,10 +1,10 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{Container, MouseStateHandle};
-use borkui::fonts::Weight;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::Element;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{Container, MouseStateHandle};
+use krustui::fonts::Weight;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::Element;
 
 use super::env_var_collection::{EnvVarCollectionAction, EnvVarCollectionView};
 use crate::ui_components::dialog::{dialog_styles, Dialog};

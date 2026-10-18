@@ -5,14 +5,14 @@ use std::sync::Arc;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
 use settings::Setting as _;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::event_listener::ChannelEventListener;
 use super::model::block::BlockSize;
 use super::safe_mode_settings::get_secret_obfuscation_mode;
 use super::session_settings::SessionSettings;
 use super::settings::TerminalSettings;
-use super::view::{create_size_info_for_blocklist, BORK_PROMPT_HEIGHT_LINES};
+use super::view::{create_size_info_for_blocklist, KRUST_PROMPT_HEIGHT_LINES};
 use super::{color, BlockPadding, ShellLaunchState, SizeInfo, TerminalModel};
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::ai::blocklist::SerializedBlockListItem;
@@ -39,12 +39,12 @@ pub trait TerminalManager: Any {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl borkui::Entity for Box<dyn TerminalManager> {
+impl krustui::Entity for Box<dyn TerminalManager> {
     type Event = ();
 }
 
 /// Spacing baked into block heights: the per-block padding, the height
-/// reserved for the rendered Bork prompt (in lines), and whether blocks
+/// reserved for the rendered Krust prompt (in lines), and whether blocks
 /// reserve a footer row for the debug memory-stats overlay.
 ///
 /// [`Self::for_gui`] derives the GUI blocklist's spacing from the user's
@@ -53,13 +53,13 @@ impl borkui::Entity for Box<dyn TerminalManager> {
 /// terminal model.
 pub struct BlockSpacing {
     pub block_padding: BlockPadding,
-    pub bork_prompt_height_lines: f32,
+    pub krust_prompt_height_lines: f32,
     pub show_memory_stats: bool,
 }
 
 impl BlockSpacing {
     /// The GUI blocklist's spacing, derived from the user's settings: padding
-    /// from the terminal-spacing style, the rendered Bork prompt's height, and
+    /// from the terminal-spacing style, the rendered Krust prompt's height, and
     /// the "Add useless information" footer toggle.
     pub(super) fn for_gui(ctx: &AppContext) -> Self {
         let appearance = Appearance::as_ref(ctx);
@@ -67,7 +67,7 @@ impl BlockSpacing {
             TerminalSettings::as_ref(ctx).terminal_spacing(appearance.line_height_ratio(), ctx);
         Self {
             block_padding: terminal_spacing.block_padding,
-            bork_prompt_height_lines: BORK_PROMPT_HEIGHT_LINES,
+            krust_prompt_height_lines: KRUST_PROMPT_HEIGHT_LINES,
             // Fork: gated on the "Add useless information" appearance toggle.
             show_memory_stats: *BlockVisibilitySettings::as_ref(ctx)
                 .should_show_useless_information
@@ -102,7 +102,7 @@ pub(super) fn compute_block_size(
         block_padding: block_spacing.block_padding,
         size: size_info,
         max_block_scroll_limit: maximum_grid_size,
-        bork_prompt_height_lines: block_spacing.bork_prompt_height_lines,
+        krust_prompt_height_lines: block_spacing.krust_prompt_height_lines,
     }
 }
 

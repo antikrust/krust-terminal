@@ -3,38 +3,38 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cynic::{MutationBuilder, QueryBuilder};
-use bork_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
-use bork_graphql::mutations::create_managed_secret::{
+use krust_graphql::managed_secrets::{ManagedSecret, ManagedSecretType};
+use krust_graphql::mutations::create_managed_secret::{
     CreateManagedSecret, CreateManagedSecretInput, CreateManagedSecretResult,
     CreateManagedSecretVariables,
 };
-use bork_graphql::mutations::delete_managed_secret::{
+use krust_graphql::mutations::delete_managed_secret::{
     DeleteManagedSecret, DeleteManagedSecretInput, DeleteManagedSecretResult,
     DeleteManagedSecretVariables,
 };
-use bork_graphql::mutations::issue_task_identity_token::{
+use krust_graphql::mutations::issue_task_identity_token::{
     IssueTaskIdentityToken, IssueTaskIdentityTokenInput, IssueTaskIdentityTokenResult,
     IssueTaskIdentityTokenVariables,
 };
-use bork_graphql::mutations::update_managed_secret::{
+use krust_graphql::mutations::update_managed_secret::{
     UpdateManagedSecret, UpdateManagedSecretInput, UpdateManagedSecretResult,
     UpdateManagedSecretVariables,
 };
-use bork_graphql::object_permissions::{Owner, OwnerType};
-use bork_graphql::queries::list_harness_auth_secrets::{
+use krust_graphql::object_permissions::{Owner, OwnerType};
+use krust_graphql::queries::list_harness_auth_secrets::{
     ListHarnessAuthSecrets, ListHarnessAuthSecretsInput, ListHarnessAuthSecretsVariables,
 };
-use bork_graphql::queries::list_managed_secrets::{
+use krust_graphql::queries::list_managed_secrets::{
     ListManagedSecrets, ListManagedSecretsVariables, ManagedSecretsInput, ManagedSecretsResult,
 };
-use bork_graphql::queries::managed_secret_config::{
+use krust_graphql::queries::managed_secret_config::{
     GetManagedSecretConfig, GetManagedSecretConfigVariables, UserResult,
 };
-use bork_graphql::queries::task_secrets::{
+use krust_graphql::queries::task_secrets::{
     ManagedSecretValue, TaskSecrets, TaskSecretsInput, TaskSecretsResult, TaskSecretsVariables,
 };
-pub use bork_managed_secrets::client::{ManagedSecretConfigs, ManagedSecretsClient};
-use bork_managed_secrets::client::{SecretOwner, TaskIdentityToken};
+pub use krust_managed_secrets::client::{ManagedSecretConfigs, ManagedSecretsClient};
+use krust_managed_secrets::client::{SecretOwner, TaskIdentityToken};
 
 use super::ServerApi;
 use crate::server::graphql::{get_request_context, get_user_facing_error_message};
@@ -201,10 +201,10 @@ impl ManagedSecretsClient for ServerApi {
 
     async fn list_harness_auth_secrets(
         &self,
-        harness: bork_graphql::ai::AgentHarness,
+        harness: krust_graphql::ai::AgentHarness,
     ) -> Result<Vec<ManagedSecret>> {
         let Some(harness_input) = Option::<
-            bork_graphql::queries::list_harness_auth_secrets::AgentHarnessInput,
+            krust_graphql::queries::list_harness_auth_secrets::AgentHarnessInput,
         >::from(harness) else {
             return Ok(vec![]);
         };
@@ -218,13 +218,13 @@ impl ManagedSecretsClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         match response.harness_auth_secrets {
-            bork_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::HarnessAuthSecretsOutput(output) => {
+            krust_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::HarnessAuthSecretsOutput(output) => {
                 Ok(output.managed_secrets)
             }
-            bork_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::UserFacingError(error) => {
+            krust_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::UserFacingError(error) => {
                 Err(anyhow!(get_user_facing_error_message(error)))
             }
-            bork_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::Unknown => {
+            krust_graphql::queries::list_harness_auth_secrets::HarnessAuthSecretsResult::Unknown => {
                 Err(anyhow!("Unknown error while listing harness auth secrets"))
             }
         }
@@ -282,7 +282,7 @@ impl ManagedSecretsClient for ServerApi {
 
     async fn issue_task_identity_token(
         &self,
-        options: bork_managed_secrets::client::IdentityTokenOptions,
+        options: krust_managed_secrets::client::IdentityTokenOptions,
     ) -> Result<TaskIdentityToken> {
         let requested_duration_seconds = options
             .requested_duration

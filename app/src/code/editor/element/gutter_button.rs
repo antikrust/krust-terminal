@@ -1,10 +1,10 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::contrast::MinimumAllowedContrast;
-use bork_core::ui::color::ContrastingColor;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon;
-use borkui::elements::MouseState;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::contrast::MinimumAllowedContrast;
+use krust_core::ui::color::ContrastingColor;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon;
+use krustui::elements::MouseState;
 
 use crate::view_components::action_button::{
     ActionButtonTheme, DisabledSecondaryTheme, SecondaryTheme,

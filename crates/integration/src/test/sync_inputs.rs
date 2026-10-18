@@ -1,15 +1,15 @@
-use bork::cmd_or_ctrl_shift;
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::terminal::util::ExpectedExitStatus;
-use bork::integration_testing::terminal::{
+use krust::cmd_or_ctrl_shift;
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::terminal::util::ExpectedExitStatus;
+use krust::integration_testing::terminal::{
     assert_active_block_output, assert_command_executed, assert_long_running_block_executing,
     assert_no_block_executing, execute_command, run_alt_grid_program, wait_until_bootstrapped_pane,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::view_getters::{terminal_view, workspace_view};
-use bork::workspace::WorkspaceAction;
-use borkui_core::integration::TestStep;
-use borkui_core::{async_assert, async_assert_eq};
+use krust::integration_testing::view_getters::{terminal_view, workspace_view};
+use krust::workspace::WorkspaceAction;
+use krustui_core::integration::TestStep;
+use krustui_core::{async_assert, async_assert_eq};
 
 use super::{new_builder, Builder};
 use crate::util::{get_input_buffer, skip_if_powershell_core_2303};

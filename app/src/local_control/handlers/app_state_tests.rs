@@ -17,7 +17,7 @@ fn staged_input_rejects_line_breaks_and_control_sequences() {
 #[test]
 fn unavailable_surface_open_returns_structured_error() {
     let flag_guard = FeatureFlag::AgentManagementView.override_enabled(false);
-    borkui::App::test((), |mut app| async move {
+    krustui::App::test((), |mut app| async move {
         let error = app
             .update(|ctx| {
                 ensure_surface_available(

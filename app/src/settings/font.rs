@@ -1,10 +1,10 @@
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use bork_core::ui::builder::MIN_FONT_SIZE;
-use borkui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
-use borkui::fonts::Weight;
-use borkui::rendering::ThinStrokes;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::ui::builder::MIN_FONT_SIZE;
+use krustui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
+use krustui::fonts::Weight;
+use krustui::rendering::ThinStrokes;
+use krustui::{AppContext, SingletonEntity};
 
 use super::EnforceMinimumContrast as EnforceMinimumContrastEnum;
 

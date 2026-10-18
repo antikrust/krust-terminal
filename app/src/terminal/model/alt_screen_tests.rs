@@ -1,4 +1,4 @@
-use borkui::units::IntoLines as _;
+use krustui::units::IntoLines as _;
 
 use super::*;
 use crate::terminal::SizeUpdateReason;

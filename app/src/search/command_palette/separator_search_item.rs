@@ -1,6 +1,6 @@
 use ordered_float::OrderedFloat;
-use borkui::elements::{Empty, Text};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::elements::{Empty, Text};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;

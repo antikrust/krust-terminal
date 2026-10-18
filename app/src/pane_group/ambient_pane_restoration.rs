@@ -1,7 +1,7 @@
 use session_sharing_protocol::common::SessionId;
 use uuid::Uuid;
-use bork_errors::report_error;
-use borkui::{SingletonEntity, ViewContext, ViewHandle};
+use krust_errors::report_error;
+use krustui::{SingletonEntity, ViewContext, ViewHandle};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent_conversations_model::{

@@ -1,7 +1,7 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::Icon;
-use borkui_core::elements::Align;
-use borkui_core::Element;
+use krust_core::ui::Icon;
+use krustui_core::elements::Align;
+use krustui_core::Element;
 
 use super::onboarding_visual::{IconPct, OnboardingVisual, Pill, RectPct};
 

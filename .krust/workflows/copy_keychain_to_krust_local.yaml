@@ -1,0 +1,6 @@
+---
+name: "Copy KrustDev Keychain to Krust local"
+command: "security add-generic-password -a User -U -s krust -w \"$(security find-generic-password -a User -s krust.baby.Krust-Dev -w)\""
+description: "Copies the refresh token from KrustDev into the local krust app so that it can authenticate."
+author: Krust Team
+shells: []

@@ -3,16 +3,16 @@ use std::sync::Arc;
 use enclose::enclose;
 use itertools::Itertools as _;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use bork_core::ui::appearance::Appearance;
-use bork_graphql::billing::AddonCreditsOption;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_graphql::billing::AddonCreditsOption;
+use krustui::elements::{
     Border, ChildView, Container, CrossAxisAlignment, Empty, Flex, HighlightedHyperlink,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
+use krustui::fonts::Weight;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent as _, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity as _, View, ViewContext, ViewHandle};
 
 use crate::features::FeatureFlag;
 use crate::menu::MenuItemFields;
@@ -223,10 +223,10 @@ impl EnableAutoReloadModalBody {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://therob.lol/bork-terminal/help/support-and-community/plans-and-billing/add-on-credits#id-2.-enable-auto-reload",
+                "https://therob.lol/krust-terminal/help/support-and-community/plans-and-billing/add-on-credits#id-2.-enable-auto-reload",
             ),
         ];
-        let explanation_text = borkui::elements::FormattedTextElement::new(
+        let explanation_text = krustui::elements::FormattedTextElement::new(
             FormattedText::new([FormattedTextLine::Line(explanation_fragments)]),
             appearance.ui_font_size(),
             appearance.ui_font_family(),
@@ -237,10 +237,10 @@ impl EnableAutoReloadModalBody {
         .with_hyperlink_font_color(theme.accent().into_solid())
         .register_default_click_handlers_with_action_support(|hyperlink_lens, _event, ctx| {
             match hyperlink_lens {
-                borkui::elements::HyperlinkLens::Url(url) => {
+                krustui::elements::HyperlinkLens::Url(url) => {
                     ctx.open_url(url);
                 }
-                borkui::elements::HyperlinkLens::Action(_action_ref) => {}
+                krustui::elements::HyperlinkLens::Action(_action_ref) => {}
             }
         })
         .finish();
@@ -374,7 +374,7 @@ pub enum Action {
     Enable,
 }
 
-impl borkui::TypedActionView for EnableAutoReloadModalBody {
+impl krustui::TypedActionView for EnableAutoReloadModalBody {
     type Action = Action;
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
@@ -494,7 +494,7 @@ impl Entity for EnableAutoReloadModal {
     type Event = EnableAutoReloadModalEvent;
 }
 
-impl borkui::TypedActionView for EnableAutoReloadModal {
+impl krustui::TypedActionView for EnableAutoReloadModal {
     type Action = ();
 }
 

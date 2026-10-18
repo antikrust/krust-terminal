@@ -14,113 +14,113 @@ use cloud_object_client::{
 pub use cloud_object_client::{GuestIdentifier, ObjectClient};
 use cloud_object_models::JsonSerializer;
 use cynic::{MutationBuilder, QueryBuilder, SubscriptionBuilder};
-use bork_errors::report_error;
-use bork_graphql::error::UserFacingErrorInterface;
-use bork_graphql::generic_string_object::GenericStringObjectInput;
-use bork_graphql::mutations::add_object_guests::{
+use krust_errors::report_error;
+use krust_graphql::error::UserFacingErrorInterface;
+use krust_graphql::generic_string_object::GenericStringObjectInput;
+use krust_graphql::mutations::add_object_guests::{
     AddObjectGuests, AddObjectGuestsInput, AddObjectGuestsResult, AddObjectGuestsVariables,
 };
-use bork_graphql::mutations::bulk_create_objects::{
+use krust_graphql::mutations::bulk_create_objects::{
     BulkCreateGenericStringObjectsInput, BulkCreateObjects, BulkCreateObjectsInput,
     BulkCreateObjectsResult, BulkCreateObjectsVariables,
 };
-use bork_graphql::mutations::create_folder::{
+use krust_graphql::mutations::create_folder::{
     CreateFolder, CreateFolderInput, CreateFolderResult, CreateFolderVariables,
 };
-use bork_graphql::mutations::create_generic_string_object::{
+use krust_graphql::mutations::create_generic_string_object::{
     CreateGenericStringObject, CreateGenericStringObjectInput, CreateGenericStringObjectResult,
     CreateGenericStringObjectVariables,
 };
-use bork_graphql::mutations::create_notebook::{
+use krust_graphql::mutations::create_notebook::{
     CreateNotebook, CreateNotebookInput, CreateNotebookResult, CreateNotebookVariables,
 };
-use bork_graphql::mutations::create_workflow::{
+use krust_graphql::mutations::create_workflow::{
     CreateWorkflow, CreateWorkflowInput, CreateWorkflowResult, CreateWorkflowVariables,
 };
-use bork_graphql::mutations::delete_object::{
+use krust_graphql::mutations::delete_object::{
     DeleteObject, DeleteObjectInput, DeleteObjectResult, DeleteObjectVariables,
 };
-use bork_graphql::mutations::empty_trash::{
+use krust_graphql::mutations::empty_trash::{
     EmptyTrash, EmptyTrashInput, EmptyTrashResult, EmptyTrashVariables,
 };
-use bork_graphql::mutations::give_up_notebook_edit_access::{
+use krust_graphql::mutations::give_up_notebook_edit_access::{
     GiveUpNotebookEditAccess, GiveUpNotebookEditAccessVariables,
 };
-use bork_graphql::mutations::grab_notebook_edit_access::{
+use krust_graphql::mutations::grab_notebook_edit_access::{
     GrabNotebookEditAccess, GrabNotebookEditAccessVariables,
 };
-use bork_graphql::mutations::leave_object::{
+use krust_graphql::mutations::leave_object::{
     LeaveObject, LeaveObjectInput, LeaveObjectResult, LeaveObjectVariables,
 };
-use bork_graphql::mutations::move_object::{
+use krust_graphql::mutations::move_object::{
     MoveObject, MoveObjectInput, MoveObjectResult, MoveObjectVariables,
 };
-use bork_graphql::mutations::record_object_action::{
+use krust_graphql::mutations::record_object_action::{
     RecordObjectAction, RecordObjectActionInput, RecordObjectActionResult,
     RecordObjectActionVariables,
 };
-use bork_graphql::mutations::remove_object_guest::{
+use krust_graphql::mutations::remove_object_guest::{
     RemoveObjectGuest, RemoveObjectGuestInput, RemoveObjectGuestResult, RemoveObjectGuestVariables,
 };
-use bork_graphql::mutations::remove_object_link_permissions::{
+use krust_graphql::mutations::remove_object_link_permissions::{
     RemoveObjectLinkPermissions, RemoveObjectLinkPermissionsInput,
     RemoveObjectLinkPermissionsResult, RemoveObjectLinkPermissionsVariables,
 };
-use bork_graphql::mutations::set_object_link_permissions::{
+use krust_graphql::mutations::set_object_link_permissions::{
     SetObjectLinkPermissions, SetObjectLinkPermissionsInput, SetObjectLinkPermissionsResult,
     SetObjectLinkPermissionsVariables,
 };
-use bork_graphql::mutations::transfer_generic_string_object_owner::{
+use krust_graphql::mutations::transfer_generic_string_object_owner::{
     TransferGenericStringObjectOwner, TransferGenericStringObjectOwnerInput,
     TransferGenericStringObjectOwnerResult, TransferGenericStringObjectOwnerVariables,
 };
-use bork_graphql::mutations::transfer_notebook_owner::{
+use krust_graphql::mutations::transfer_notebook_owner::{
     TransferNotebookOwner, TransferNotebookOwnerInput, TransferNotebookOwnerResult,
     TransferNotebookOwnerVariables,
 };
-use bork_graphql::mutations::transfer_workflow_owner::{
+use krust_graphql::mutations::transfer_workflow_owner::{
     TransferWorkflowOwner, TransferWorkflowOwnerInput, TransferWorkflowOwnerResult,
     TransferWorkflowOwnerVariables,
 };
-use bork_graphql::mutations::trash_object::{
+use krust_graphql::mutations::trash_object::{
     TrashObject, TrashObjectInput, TrashObjectResult, TrashObjectVariables,
 };
-use bork_graphql::mutations::untrash_object::{
+use krust_graphql::mutations::untrash_object::{
     UntrashObject, UntrashObjectInput, UntrashObjectVariables,
 };
-use bork_graphql::mutations::update_folder::{
+use krust_graphql::mutations::update_folder::{
     UpdateFolder, UpdateFolderInput, UpdateFolderResult, UpdateFolderVariables,
 };
-use bork_graphql::mutations::update_generic_string_object::{
+use krust_graphql::mutations::update_generic_string_object::{
     UpdateGenericStringObject, UpdateGenericStringObjectInput, UpdateGenericStringObjectVariables,
 };
-use bork_graphql::mutations::update_notebook::{
+use krust_graphql::mutations::update_notebook::{
     NotebookUpdate, UpdateNotebook, UpdateNotebookInput, UpdateNotebookResult,
     UpdateNotebookVariables,
 };
-use bork_graphql::mutations::update_object_guests::{
+use krust_graphql::mutations::update_object_guests::{
     UpdateObjectGuests, UpdateObjectGuestsInput, UpdateObjectGuestsResult,
     UpdateObjectGuestsVariables,
 };
-use bork_graphql::mutations::update_workflow::{
+use krust_graphql::mutations::update_workflow::{
     UpdateWorkflow, UpdateWorkflowInput, UpdateWorkflowResult, UpdateWorkflowVariables,
     WorkflowUpdate,
 };
-use bork_graphql::notebook::{UpdateNotebookEditAccessInput, UpdateNotebookEditAccessResult};
-use bork_graphql::object::CloudObjectWithDescendants;
-use bork_graphql::object_permissions::AccessLevel;
-use bork_graphql::queries::get_cloud_environments::{
+use krust_graphql::notebook::{UpdateNotebookEditAccessInput, UpdateNotebookEditAccessResult};
+use krust_graphql::object::CloudObjectWithDescendants;
+use krust_graphql::object_permissions::AccessLevel;
+use krust_graphql::queries::get_cloud_environments::{
     GetCloudEnvironmentsQuery, GetCloudEnvironmentsQueryVariables, GetCloudEnvironmentsResult,
 };
-use bork_graphql::queries::get_cloud_object::{
+use krust_graphql::queries::get_cloud_object::{
     CloudObjectInput, CloudObjectResult, GetCloudObject, GetCloudObjectVariables,
 };
-use bork_graphql::queries::get_updated_cloud_objects::{
+use krust_graphql::queries::get_updated_cloud_objects::{
     GetUpdatedCloudObjects, GetUpdatedCloudObjectsVariables, UpdatedCloudObjectsInput,
     UpdatedCloudObjectsResult,
 };
-use bork_graphql::subscriptions::get_bork_drive_updates::GetBorkDriveUpdates;
-use bork_graphql::subscriptions::start_graphql_streaming_operation;
+use krust_graphql::subscriptions::get_krust_drive_updates::GetKrustDriveUpdates;
+use krust_graphql::subscriptions::start_graphql_streaming_operation;
 
 use crate::ai::ambient_agents::scheduled::ScheduledAmbientAgent;
 use crate::ai::cloud_environments::AmbientAgentEnvironment;
@@ -656,7 +656,7 @@ impl ObjectClient for ServerApi {
     /// Messages received over the socket are sent over the `message_sender`.
     /// Once the websocket is live, a one-shot message is sent over `stream_ready_sender`
     /// to indicate so. This is because this method only returns once the websocket is closed.
-    async fn get_bork_drive_updates(
+    async fn get_krust_drive_updates(
         &self,
         message_sender: Sender<ObjectUpdateMessage>,
         stream_ready_sender: Sender<()>,
@@ -685,7 +685,7 @@ impl ObjectClient for ServerApi {
             );
         }
 
-        let subscription = GetBorkDriveUpdates::build(());
+        let subscription = GetKrustDriveUpdates::build(());
 
         let result = start_graphql_streaming_operation(
             &ChannelState::ws_server_url(),
@@ -693,9 +693,9 @@ impl ObjectClient for ServerApi {
             subscription,
             |res| {
                 res.ok_or_else(|| {
-                    anyhow!("missing response data for message in get_bork_drive_updates")
+                    anyhow!("missing response data for message in get_krust_drive_updates")
                 })
-                .and_then(|data| object_update_message_from_gql(data.bork_drive_updates))
+                .and_then(|data| object_update_message_from_gql(data.krust_drive_updates))
             },
             message_sender,
             stream_ready_sender,
@@ -769,63 +769,63 @@ impl ObjectClient for ServerApi {
                 if let Some(objects) = output.generic_string_objects {
                     for gso in objects {
                         match gso.format {
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonEnvVarCollection => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonEnvVarCollection => {
                                 parse_server_gso::<EnvVarCollection, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonPreference => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonPreference => {
                                 parse_server_gso::<Preference, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::Preference),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonWorkflowEnum => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonWorkflowEnum => {
                                 parse_server_gso::<WorkflowEnum, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::WorkflowEnum),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonAIFact => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonAIFact => {
                                 parse_server_gso::<AIFact, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::AIFact),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonMCPServer => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonMCPServer => {
                                 parse_server_gso::<MCPServer, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::MCPServer),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonAIExecutionProfile => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonAIExecutionProfile => {
                                 parse_server_gso::<AIExecutionProfile, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::AIExecutionProfile),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonTemplatableMCPServer => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonTemplatableMCPServer => {
                                 parse_server_gso::<TemplatableMCPServer, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::TemplatableMCPServer),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonCloudEnvironment => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonCloudEnvironment => {
                                 parse_server_gso::<AmbientAgentEnvironment, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::CloudEnvironment),
                                     gso,
                                 );
                             }
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::JsonScheduledAmbientAgent => {
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::JsonScheduledAmbientAgent => {
                                 parse_server_gso::<ScheduledAmbientAgent, JsonSerializer>(
                                     &mut updated_generic_string_objects,
                                     GenericStringObjectFormat::Json(JsonObjectType::ScheduledAmbientAgent),
@@ -836,7 +836,7 @@ impl ObjectClient for ServerApi {
                             // server-only `JsonRunner`) are skipped so syncing of
                             // known objects still succeeds instead of failing to
                             // decode the whole response.
-                            bork_graphql::generic_string_object::GenericStringObjectFormat::Unknown => {}
+                            krust_graphql::generic_string_object::GenericStringObjectFormat::Unknown => {}
                         }
                     }
                 }
@@ -1057,7 +1057,7 @@ impl ObjectClient for ServerApi {
         let response = self.send_graphql_request(operation, None).await?;
 
         let result = match response.untrash_object {
-            bork_graphql::mutations::untrash_object::UntrashObjectResult::UntrashObjectOutput(
+            krust_graphql::mutations::untrash_object::UntrashObjectResult::UntrashObjectOutput(
                 output,
             ) => {
                 if output.success {
@@ -1398,7 +1398,7 @@ impl ObjectClient for ServerApi {
 fn parse_server_gso<T, S>(
     map: &mut HashMap<GenericStringObjectFormat, Vec<Box<dyn ServerObject>>>,
     format: GenericStringObjectFormat,
-    gso: bork_graphql::generic_string_object::GenericStringObject,
+    gso: krust_graphql::generic_string_object::GenericStringObject,
 ) where
     T: StringModel<
         CloudObjectType = GenericCloudObject<GenericStringObjectId, GenericStringModel<T, S>>,

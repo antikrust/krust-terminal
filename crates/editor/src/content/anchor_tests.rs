@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use string_offset::CharOffset;
 use sum_tree::SumTree;
-use borkui_core::App;
+use krustui_core::App;
 
 use super::{AnchorSide, Anchors};
 use crate::content::anchor::{Anchor, AnchorUpdate};

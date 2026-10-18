@@ -1,7 +1,7 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::Empty;
-use borkui::platform::WindowStyle;
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::Empty;
+use krustui::platform::WindowStyle;
+use krustui::{
     AddSingletonModel, App, AppContext, Element, Entity, TypedActionView, View, WindowId,
 };
 

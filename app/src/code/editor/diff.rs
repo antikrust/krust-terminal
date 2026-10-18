@@ -12,12 +12,12 @@ use pathfinder_color::ColorU;
 use rangemap::RangeMap;
 use similar::{ChangeTag, DiffOp, TextDiff};
 use string_offset::CharOffset;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
-use bork_editor::content::edit::TemporaryBlock;
-use bork_editor::content::version::BufferVersion;
-use bork_editor::multiline::{AnyMultilineString, MultilineStr, MultilineString, LF};
-use bork_editor::render::model::{Decoration, LineCount, LineDecoration};
-use borkui::{Entity, ModelContext};
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill};
+use krust_editor::content::edit::TemporaryBlock;
+use krust_editor::content::version::BufferVersion;
+use krust_editor::multiline::{AnyMultilineString, MultilineStr, MultilineString, LF};
+use krust_editor::render::model::{Decoration, LineCount, LineDecoration};
+use krustui::{Entity, ModelContext};
 
 use super::super::DiffResult;
 use crate::appearance::Appearance;

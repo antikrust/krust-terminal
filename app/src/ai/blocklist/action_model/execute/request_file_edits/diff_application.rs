@@ -12,7 +12,7 @@ use ai::diff_validation::{
 };
 use itertools::Itertools;
 use vec1::Vec1;
-use borkui::r#async::executor::Background;
+use krustui::r#async::executor::Background;
 
 use super::telemetry::{
     DiffInvalidFileEvent, DiffMatchFailedEvent, MissingLineNumbersEvent,

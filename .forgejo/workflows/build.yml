@@ -1,4 +1,4 @@
-# CI: compile-check Bork per platform on every push.
+# CI: compile-check Krust per platform on every push.
 #
 # Runs on the same self-hosted runners as bob3/snd (user-scope registration):
 #   linux   -> host-mode runner on the PC
@@ -6,7 +6,7 @@
 # macOS is intentionally absent: it's the local main build (no Forgejo mac runner).
 #
 # Checkout is plain git (no JS actions), matching bob3/snd, so the runners need
-# only: git, a Rust toolchain (rustup), and Bork's system build deps
+# only: git, a Rust toolchain (rustup), and Krust's system build deps
 # (see script/{linux,windows}/install_build_deps). Rust is installed on demand
 # below if missing. A full release build + bundling happens in release.yml on tags;
 # here we only `cargo check` so per-push CI stays reasonably quick.
@@ -24,7 +24,7 @@ jobs:
           git checkout -q --force FETCH_HEAD
       - name: install build deps
         run: |
-          export BORK_SKIP_SUDO_PROMPT=1
+          export KRUST_SKIP_SUDO_PROMPT=1
           ./script/linux/install_build_deps
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH" || true
       - name: check
@@ -35,11 +35,11 @@ jobs:
           # has almost no headroom on this runner -- point cargo at the big
           # data disk instead.
           export CARGO_TARGET_DIR=/mnt/terra/forgejo-ci/cargo-target
-          cargo check --bin bork --locked 2>&1 | tee /tmp/bork-check.log
+          cargo check --bin krust --locked 2>&1 | tee /tmp/krust-check.log
       - name: report failure as an issue
         if: failure()
         run: |
-          body=$(tail -c 60000 /tmp/bork-check.log | jq -Rs .)
+          body=$(tail -c 60000 /tmp/krust-check.log | jq -Rs .)
           curl -sf -X POST -H "Authorization: token ${{ github.token }}" -H "Content-Type: application/json" \
             -d "{\"title\": \"CI failure: linux check @ ${{ github.sha }}\", \"body\": $body}" \
             "https://shithub.space/api/v1/repos/${{ github.repository }}/issues" || true
@@ -101,7 +101,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
-          cargo check --bin bork --locked 2>&1 | Tee-Object -FilePath check.log
+          cargo check --bin krust --locked 2>&1 | Tee-Object -FilePath check.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: report failure as an issue
         if: failure()

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use bork_core::ui::appearance::Appearance;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

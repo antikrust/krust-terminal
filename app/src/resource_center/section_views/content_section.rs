@@ -1,9 +1,9 @@
 use pathfinder_color::ColorU;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, Element, Empty, Flex, MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::{
     SectionAction, SectionView, CHEVRON_ICON_SIZE, DESCRIPTION_FONT_SIZE, ICON_PADDING,

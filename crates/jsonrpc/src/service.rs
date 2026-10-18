@@ -8,8 +8,8 @@ use futures::lock::Mutex as AsyncMutex;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use serde_json::Value;
-use bork_errors::report_error;
-use borkui_core::r#async::executor::Background;
+use krust_errors::report_error;
+use krustui_core::r#async::executor::Background;
 
 use crate::transport::Transport;
 

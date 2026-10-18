@@ -7,18 +7,18 @@ use chrono::{DateTime, Utc};
 use derivative::Derivative;
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::Icon;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use bork_graphql::object_permissions::AccessLevel;
-use bork_graphql::scalars::time::ServerTimestamp;
-use borkui_core::Element;
-use borkui_core::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::Icon;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krust_graphql::object_permissions::AccessLevel;
+use krust_graphql::scalars::time::ServerTimestamp;
+use krustui_core::Element;
+use krustui_core::elements::{
     Align, ChildAnchor, ConstrainedBox, Hoverable, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
-use borkui_core::ui_components::components::UiComponent;
+use krustui_core::ui_components::components::UiComponent;
 
 use crate::auth::UserUid;
 use crate::drive::sharing::{SharingAccessLevel, Subject, TeamKind, UserKind};
@@ -229,35 +229,35 @@ impl TryFrom<&str> for JsonObjectType {
     }
 }
 
-impl TryFrom<bork_graphql::object::ObjectType> for ObjectIdType {
+impl TryFrom<krust_graphql::object::ObjectType> for ObjectIdType {
     type Error = anyhow::Error;
-    fn try_from(object_type: bork_graphql::object::ObjectType) -> Result<Self, Self::Error> {
+    fn try_from(object_type: krust_graphql::object::ObjectType) -> Result<Self, Self::Error> {
         match object_type {
-            bork_graphql::object::ObjectType::AIConversation => Err(anyhow!(
+            krust_graphql::object::ObjectType::AIConversation => Err(anyhow!(
                 "AIConversation is not a supported object type for this operation"
             )),
-            bork_graphql::object::ObjectType::Notebook => Ok(ObjectIdType::Notebook),
-            bork_graphql::object::ObjectType::Workflow => Ok(ObjectIdType::Workflow),
-            bork_graphql::object::ObjectType::Folder => Ok(ObjectIdType::Folder),
-            bork_graphql::object::ObjectType::GenericStringObject => {
+            krust_graphql::object::ObjectType::Notebook => Ok(ObjectIdType::Notebook),
+            krust_graphql::object::ObjectType::Workflow => Ok(ObjectIdType::Workflow),
+            krust_graphql::object::ObjectType::Folder => Ok(ObjectIdType::Folder),
+            krust_graphql::object::ObjectType::GenericStringObject => {
                 Ok(ObjectIdType::GenericStringObject)
             }
-            bork_graphql::object::ObjectType::Unknown => {
+            krust_graphql::object::ObjectType::Unknown => {
                 Err(anyhow!("could not convert unknown cloud object type"))
             }
         }
     }
 }
 
-impl From<ObjectType> for bork_graphql::object::ObjectType {
+impl From<ObjectType> for krust_graphql::object::ObjectType {
     fn from(value: ObjectType) -> Self {
         match value {
-            ObjectType::Notebook => bork_graphql::object::ObjectType::Notebook,
-            ObjectType::Workflow => bork_graphql::object::ObjectType::Workflow,
-            ObjectType::Folder => bork_graphql::object::ObjectType::Folder,
+            ObjectType::Notebook => krust_graphql::object::ObjectType::Notebook,
+            ObjectType::Workflow => krust_graphql::object::ObjectType::Workflow,
+            ObjectType::Folder => krust_graphql::object::ObjectType::Folder,
             ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                 JsonObjectType::EnvVarCollection,
-            )) => bork_graphql::object::ObjectType::GenericStringObject,
+            )) => krust_graphql::object::ObjectType::GenericStringObject,
             ObjectType::GenericStringObject(gso) => {
                 todo!("Moving is not implemented for {:?}", gso);
             }
@@ -572,7 +572,7 @@ pub struct CloudObjectMetadata {
     pub trashed_ts: Option<ServerTimestamp>,
     pub folder_id: Option<SyncId>,
     /// Welcome objects are created on the server when a user first receives
-    /// access to Bork Drive as part of onboarding.
+    /// access to Krust Drive as part of onboarding.
     pub is_welcome_object: bool,
     pub last_editor_uid: Option<String>,
     pub creator_uid: Option<String>,
@@ -738,17 +738,17 @@ impl CloudObjectStatuses {
 
         let icon_and_tooltip_text = if should_show_local_only_indicator {
             Some((
-                Icon::Laptop.to_borkui_icon(theme.main_text_color(theme.surface_1())),
+                Icon::Laptop.to_krustui_icon(theme.main_text_color(theme.surface_1())),
                 SYNC_STATUS_TOOLTIP_LOCAL_ONLY,
             ))
         } else if should_show_syncing_indicator {
             Some((
-                Icon::Refresh.to_borkui_icon(theme.sub_text_color(theme.surface_2())),
+                Icon::Refresh.to_krustui_icon(theme.sub_text_color(theme.surface_2())),
                 SYNC_STATUS_TOOLTIP_INFLIGHT,
             ))
         } else if should_show_error_indicator {
             Some((
-                Icon::AlertTriangle.to_borkui_icon(Fill::Solid(theme.ui_error_color())),
+                Icon::AlertTriangle.to_krustui_icon(Fill::Solid(theme.ui_error_color())),
                 SYNC_STATUS_TOOLTIP_ERROR,
             ))
         } else {
@@ -844,10 +844,10 @@ pub struct RevisionAndLastEditor {
 // GraphQL conversion impls.
 
 impl From<GenericStringObjectFormat>
-    for bork_graphql::generic_string_object::GenericStringObjectFormat
+    for krust_graphql::generic_string_object::GenericStringObjectFormat
 {
     fn from(format: GenericStringObjectFormat) -> Self {
-        use bork_graphql::generic_string_object::GenericStringObjectFormat as GraphQLFormat;
+        use krust_graphql::generic_string_object::GenericStringObjectFormat as GraphQLFormat;
         match format {
             GenericStringObjectFormat::Json(JsonObjectType::Preference) => {
                 GraphQLFormat::JsonPreference
@@ -881,9 +881,9 @@ impl From<GenericStringObjectFormat>
     }
 }
 
-impl From<CloudObjectEventEntrypoint> for bork_graphql::object::CloudObjectEventEntrypoint {
+impl From<CloudObjectEventEntrypoint> for krust_graphql::object::CloudObjectEventEntrypoint {
     fn from(entrypoint: CloudObjectEventEntrypoint) -> Self {
-        use bork_graphql::object::CloudObjectEventEntrypoint as GraphQLEntrypoint;
+        use krust_graphql::object::CloudObjectEventEntrypoint as GraphQLEntrypoint;
         match entrypoint {
             CloudObjectEventEntrypoint::TeamSettings => GraphQLEntrypoint::TeamSettings,
             CloudObjectEventEntrypoint::ResourceCenter => GraphQLEntrypoint::ResourceCenter,
@@ -898,10 +898,10 @@ impl From<CloudObjectEventEntrypoint> for bork_graphql::object::CloudObjectEvent
 }
 
 impl From<GenericStringObjectUniqueKey>
-    for bork_graphql::generic_string_object::GenericStringObjectUniqueKey
+    for krust_graphql::generic_string_object::GenericStringObjectUniqueKey
 {
     fn from(key: GenericStringObjectUniqueKey) -> Self {
-        use bork_graphql::generic_string_object::GenericStringObjectUniqueKey as GraphQLKey;
+        use krust_graphql::generic_string_object::GenericStringObjectUniqueKey as GraphQLKey;
         GraphQLKey {
             key: key.key,
             unique_per: key.unique_per.into(),
@@ -909,21 +909,21 @@ impl From<GenericStringObjectUniqueKey>
     }
 }
 
-impl From<UniquePer> for bork_graphql::generic_string_object::UniquePer {
+impl From<UniquePer> for krust_graphql::generic_string_object::UniquePer {
     fn from(unique_per: UniquePer) -> Self {
-        use bork_graphql::generic_string_object::UniquePer as GraphQLUniquePer;
+        use krust_graphql::generic_string_object::UniquePer as GraphQLUniquePer;
         match unique_per {
             UniquePer::User => GraphQLUniquePer::User,
         }
     }
 }
 
-impl TryFrom<bork_graphql::object::ObjectMetadata> for ServerMetadata {
+impl TryFrom<krust_graphql::object::ObjectMetadata> for ServerMetadata {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object::ObjectMetadata) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object::ObjectMetadata) -> Result<Self, Self::Error> {
         let folder_id: Option<FolderId> = match value.parent {
-            bork_graphql::object::Container::FolderContainer(folder_container) => {
+            krust_graphql::object::Container::FolderContainer(folder_container) => {
                 Some(folder_container.folder_uid.into_inner().into())
             }
             _ => None,
@@ -943,11 +943,11 @@ impl TryFrom<bork_graphql::object::ObjectMetadata> for ServerMetadata {
     }
 }
 
-impl TryFrom<bork_graphql::object_permissions::ObjectPermissions> for ServerPermissions {
+impl TryFrom<krust_graphql::object_permissions::ObjectPermissions> for ServerPermissions {
     type Error = anyhow::Error;
 
     fn try_from(
-        value: bork_graphql::object_permissions::ObjectPermissions,
+        value: krust_graphql::object_permissions::ObjectPermissions,
     ) -> Result<Self, Self::Error> {
         let server_object_guests: Result<Vec<ServerObjectGuest>, _> = value
             .guests
@@ -967,10 +967,10 @@ impl TryFrom<bork_graphql::object_permissions::ObjectPermissions> for ServerPerm
     }
 }
 
-impl TryFrom<bork_graphql::object_permissions::ObjectGuest> for ServerObjectGuest {
+impl TryFrom<krust_graphql::object_permissions::ObjectGuest> for ServerObjectGuest {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object_permissions::ObjectGuest) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object_permissions::ObjectGuest) -> Result<Self, Self::Error> {
         let object_guest = ServerObjectGuest {
             subject: value.subject.try_into()?,
             access_level: value.access_level,
@@ -983,38 +983,38 @@ impl TryFrom<bork_graphql::object_permissions::ObjectGuest> for ServerObjectGues
     }
 }
 
-impl TryFrom<bork_graphql::object_permissions::GuestSubject> for ServerGuestSubject {
+impl TryFrom<krust_graphql::object_permissions::GuestSubject> for ServerGuestSubject {
     type Error = anyhow::Error;
 
     fn try_from(
-        value: bork_graphql::object_permissions::GuestSubject,
+        value: krust_graphql::object_permissions::GuestSubject,
     ) -> Result<Self, Self::Error> {
         match value {
-            bork_graphql::object_permissions::GuestSubject::UserGuest(user_guest) => {
+            krust_graphql::object_permissions::GuestSubject::UserGuest(user_guest) => {
                 let guest_subject = ServerGuestSubject::User {
                     firebase_uid: user_guest.firebase_uid.into_inner(),
                 };
                 Ok(guest_subject)
             }
-            bork_graphql::object_permissions::GuestSubject::PendingUserGuest(guest) => {
+            krust_graphql::object_permissions::GuestSubject::PendingUserGuest(guest) => {
                 Ok(ServerGuestSubject::PendingUser { email: guest.email })
             }
-            bork_graphql::object_permissions::GuestSubject::TeamGuest(team_guest) => {
+            krust_graphql::object_permissions::GuestSubject::TeamGuest(team_guest) => {
                 Ok(ServerGuestSubject::Team {
                     team_uid: ServerId::from_string_lossy(team_guest.uid.inner()),
                 })
             }
-            bork_graphql::object_permissions::GuestSubject::Unknown => {
+            krust_graphql::object_permissions::GuestSubject::Unknown => {
                 anyhow::bail!("Unknown GuestSubject type")
             }
         }
     }
 }
 
-impl TryFrom<bork_graphql::object_permissions::LinkSharing> for ServerLinkSharing {
+impl TryFrom<krust_graphql::object_permissions::LinkSharing> for ServerLinkSharing {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object_permissions::LinkSharing) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object_permissions::LinkSharing) -> Result<Self, Self::Error> {
         Ok(ServerLinkSharing {
             access_level: value.access_level,
             source: value.source.map(TryInto::try_into).transpose()?,
@@ -1022,35 +1022,35 @@ impl TryFrom<bork_graphql::object_permissions::LinkSharing> for ServerLinkSharin
     }
 }
 
-impl TryFrom<bork_graphql::object::Container> for ServerObjectContainer {
+impl TryFrom<krust_graphql::object::Container> for ServerObjectContainer {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object::Container) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object::Container) -> Result<Self, Self::Error> {
         match value {
-            bork_graphql::object::Container::FolderContainer(folder) => {
+            krust_graphql::object::Container::FolderContainer(folder) => {
                 Ok(ServerObjectContainer::Folder {
                     folder_uid: ServerId::from_string_lossy(folder.folder_uid.inner()),
                 })
             }
-            bork_graphql::object::Container::Space(space) => Ok(ServerObjectContainer::Drive {
+            krust_graphql::object::Container::Space(space) => Ok(ServerObjectContainer::Drive {
                 owner: space.try_into()?,
             }),
-            bork_graphql::object::Container::Unknown => {
+            krust_graphql::object::Container::Unknown => {
                 anyhow::bail!("Unknown Container type")
             }
         }
     }
 }
 
-impl TryFrom<bork_graphql::object::Space> for Owner {
+impl TryFrom<krust_graphql::object::Space> for Owner {
     type Error = anyhow::Error;
 
-    fn try_from(value: bork_graphql::object::Space) -> Result<Self, Self::Error> {
+    fn try_from(value: krust_graphql::object::Space) -> Result<Self, Self::Error> {
         let owner = match value.type_ {
-            bork_graphql::object::SpaceType::Team => Owner::Team {
+            krust_graphql::object::SpaceType::Team => Owner::Team {
                 team_uid: ServerId::from_string_lossy(value.uid.inner()),
             },
-            bork_graphql::object::SpaceType::User => Owner::User {
+            krust_graphql::object::SpaceType::User => Owner::User {
                 user_uid: UserUid::new(value.uid.inner()),
             },
         };
@@ -1058,9 +1058,9 @@ impl TryFrom<bork_graphql::object::Space> for Owner {
     }
 }
 
-impl From<Owner> for bork_graphql::object_permissions::Owner {
+impl From<Owner> for krust_graphql::object_permissions::Owner {
     fn from(owner: Owner) -> Self {
-        use bork_graphql::object_permissions::{Owner as GraphQLOwner, OwnerType};
+        use krust_graphql::object_permissions::{Owner as GraphQLOwner, OwnerType};
         match owner {
             Owner::User { user_uid } => GraphQLOwner {
                 type_: OwnerType::User,

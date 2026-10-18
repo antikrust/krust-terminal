@@ -1,7 +1,7 @@
 use chrono::{Duration, Local};
 use fuzzy_match::FuzzyMatchResult;
-use bork_core::command::ExitCode;
-use borkui::{App, SingletonEntity};
+use krust_core::command::ExitCode;
+use krustui::{App, SingletonEntity};
 
 use crate::search::ai_context_menu::blocks::data_source::BlockDataSource;
 use crate::search::ai_context_menu::blocks::search_item::BlockSearchItem;

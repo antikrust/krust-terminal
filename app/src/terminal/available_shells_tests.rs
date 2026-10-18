@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use bork_core::features::FeatureFlag;
+use krust_core::features::FeatureFlag;
 
 use super::*;
 use crate::terminal::shell::ShellType;

@@ -4,9 +4,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::channel::oneshot::{self, Receiver};
 use futures::stream::AbortHandle;
-use bork_errors::{report_error, report_if_error};
-use borkui::r#async::Timer;
-use borkui::{
+use krust_errors::{report_error, report_if_error};
+use krustui::r#async::Timer;
+use krustui::{
     duration_with_jitter, Entity, ModelContext, ModelHandle, RequestState, SingletonEntity,
 };
 

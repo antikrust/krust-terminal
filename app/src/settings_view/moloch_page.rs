@@ -13,11 +13,11 @@
 
 use std::cell::RefCell;
 
-use borkui::elements::{
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

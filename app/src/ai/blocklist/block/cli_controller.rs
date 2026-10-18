@@ -4,9 +4,9 @@ use std::sync::Arc;
 use instant::Instant;
 use parking_lot::FairMutex;
 use serde::{Deserialize, Deserializer, Serialize};
-use bork_core::send_telemetry_from_ctx;
-use bork_errors::report_error;
-use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::send_telemetry_from_ctx;
+use krust_errors::report_error;
+use krustui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::task::TaskId;
@@ -444,7 +444,7 @@ impl CLISubagentController {
     /// Force the currently in-flight poll for the given long-running command block to
     /// resolve immediately with a fresh snapshot, bypassing the agent-set timeout.
     /// Backs the `Check now` affordance surfaced next to the `Last seen by agent ...`
-    /// indicator in the borking footer.
+    /// indicator in the krusting footer.
     pub fn request_force_refresh(&self, block_id: &BlockId, ctx: &mut ModelContext<Self>) {
         let executor_handle = self.action_model.as_ref(ctx).shell_command_executor(ctx);
         let block_id = block_id.clone();

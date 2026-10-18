@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use bork_core::channel::ChannelState;
-pub use bork_core::features::*;
+use krust_core::channel::ChannelState;
+pub use krust_core::features::*;
 
 /// Mark all features which should be enabled on the current channel as enabled.
 /// This sets global feature flag state and should never be called in a unit test.
@@ -122,8 +122,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::AutoupdateUIRevamp,
         #[cfg(all(not(windows), feature = "kitty_images"))]
         FeatureFlag::KittyImages,
-        #[cfg(feature = "bork_packs")]
-        FeatureFlag::BorkPacks,
+        #[cfg(feature = "krust_packs")]
+        FeatureFlag::KrustPacks,
         #[cfg(feature = "global_ai_analytics_banner")]
         FeatureFlag::GlobalAIAnalyticsBanner,
         #[cfg(feature = "global_ai_analytics_collection")]
@@ -332,8 +332,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::AgentView,
         #[cfg(feature = "agent_view_block_context")]
         FeatureFlag::AgentViewBlockContext,
-        #[cfg(feature = "bork_managed_secrets")]
-        FeatureFlag::BorkManagedSecrets,
+        #[cfg(feature = "krust_managed_secrets")]
+        FeatureFlag::KrustManagedSecrets,
         #[cfg(feature = "v4a_file_diffs")]
         FeatureFlag::V4AFileDiffs,
         #[cfg(feature = "interactive_conversation_management_view")]
@@ -402,8 +402,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::BundledSkills,
         #[cfg(feature = "oz_launch_modal")]
         FeatureFlag::OzLaunchModal,
-        #[cfg(feature = "open_bork_launch_modal")]
-        FeatureFlag::OpenBorkLaunchModal,
+        #[cfg(feature = "open_krust_launch_modal")]
+        FeatureFlag::OpenKrustLaunchModal,
         #[cfg(feature = "orchestration_launch_modal")]
         FeatureFlag::OrchestrationLaunchModal,
         #[cfg(feature = "new_tab_styling")]
@@ -434,8 +434,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::RestorePromptOnInlineModelSelectorSearch,
         #[cfg(feature = "directory_tab_colors")]
         FeatureFlag::DirectoryTabColors,
-        #[cfg(feature = "open_bork_new_settings_modes")]
-        FeatureFlag::OpenBorkNewSettingsModes,
+        #[cfg(feature = "open_krust_new_settings_modes")]
+        FeatureFlag::OpenKrustNewSettingsModes,
         #[cfg(feature = "hoa_code_review")]
         FeatureFlag::HoaCodeReview,
         #[cfg(feature = "vertical_tabs")]
@@ -448,8 +448,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::GroupedTabs,
         #[cfg(feature = "pinned_tabs")]
         FeatureFlag::PinnedTabs,
-        #[cfg(feature = "bork_control_cli")]
-        FeatureFlag::BorkControlCli,
+        #[cfg(feature = "krust_control_cli")]
+        FeatureFlag::KrustControlCli,
         #[cfg(feature = "agent_harness")]
         FeatureFlag::AgentHarness,
         #[cfg(feature = "oz_handoff")]
@@ -464,8 +464,8 @@ fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::CLIAgentRichInput,
         #[cfg(feature = "transfer_control_tool")]
         FeatureFlag::TransferControlTool,
-        #[cfg(feature = "borkify_footer")]
-        FeatureFlag::BorkifyFooter,
+        #[cfg(feature = "krustify_footer")]
+        FeatureFlag::KrustifyFooter,
         #[cfg(feature = "solo_user_byok")]
         FeatureFlag::SoloUserByok,
         #[cfg(feature = "billing_and_usage_page_v2")]

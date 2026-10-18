@@ -10,20 +10,20 @@ use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use vec1::{Size0Error, Vec1};
-use bork_cli::agent::Harness;
-use bork_core::command::ExitCode;
-use bork_core::execution_mode::AppExecutionMode;
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::BorkTheme;
-use bork_errors::report_error;
-use bork_multi_agent_api::response_event::stream_finished;
-use bork_multi_agent_api::response_event::stream_finished::TokenUsage;
-use bork_multi_agent_api::{self as api};
-use borkui::color::ColorU;
-use borkui::{AppContext, EntityId, ModelContext, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_core::command::ExitCode;
+use krust_core::execution_mode::AppExecutionMode;
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::KrustTheme;
+use krust_errors::report_error;
+use krust_multi_agent_api::response_event::stream_finished;
+use krust_multi_agent_api::response_event::stream_finished::TokenUsage;
+use krust_multi_agent_api::{self as api};
+use krustui::color::ColorU;
+use krustui::{AppContext, EntityId, ModelContext, SingletonEntity};
 
 use super::api::ServerConversationToken;
 use super::task::helper::*;
@@ -109,24 +109,24 @@ fn footer_model_token_usage(
     usage_metadata: &stream_finished::ConversationUsageMetadata,
     llm_preferences: &LLMPreferences,
 ) -> Vec<ModelTokenUsage> {
-    // bork + byok rows merge on their server-known model id. Custom endpoint
+    // krust + byok rows merge on their server-known model id. Custom endpoint
     // rows live in a separate bucket keyed by their upstream `config_key` so
-    // they never collide with a bork/byok row that happens to share the same
+    // they never collide with a krust/byok row that happens to share the same
     // resolved alias. The `config_key` itself is not retained on
     // `ModelTokenUsage`; it is translated to an alias up front and only the
     // alias flows downstream (display + shared-session replay).
     let mut standard_usage: HashMap<String, ModelTokenUsage> = HashMap::new();
-    for (model_id, usage) in &usage_metadata.bork_token_usage {
+    for (model_id, usage) in &usage_metadata.krust_token_usage {
         let entry = standard_usage
             .entry(model_id.clone())
             .or_insert_with(|| ModelTokenUsage {
                 model_id: model_id.clone(),
                 ..Default::default()
             });
-        entry.bork_tokens += usage.total_tokens;
+        entry.krust_tokens += usage.total_tokens;
         for (category, tokens) in &usage.token_usage_by_category {
             *entry
-                .bork_token_usage_by_category
+                .krust_token_usage_by_category
                 .entry(category.clone())
                 .or_default() += *tokens;
         }
@@ -232,7 +232,7 @@ pub struct AIConversation {
     /// Unique ID for this conversation.
     id: AIConversationId,
 
-    /// Whether this conversation is being shared from a different bork instance
+    /// Whether this conversation is being shared from a different krust instance
     /// (i.e. is not a local conversation).
     is_viewing_shared_session: bool,
     task_store: TaskStore,
@@ -1282,11 +1282,11 @@ impl AIConversation {
     ///
     /// This filters the full task list using DFS linearization to determine
     /// which tasks have open subagent tool calls without corresponding results.
-    pub fn compute_active_tasks(&self) -> Vec<bork_multi_agent_api::Task> {
+    pub fn compute_active_tasks(&self) -> Vec<krust_multi_agent_api::Task> {
         use std::collections::HashMap;
 
         let root_task_id = self.get_root_task_id().to_string();
-        let all_tasks: HashMap<&str, &bork_multi_agent_api::Task> = self
+        let all_tasks: HashMap<&str, &krust_multi_agent_api::Task> = self
             .all_tasks()
             .filter_map(|task| {
                 let source = task.source()?;
@@ -1639,7 +1639,7 @@ impl AIConversation {
         });
     }
 
-    /// Updates the notebook_uid for a plan artifact when it's synced to Bork Drive.
+    /// Updates the notebook_uid for a plan artifact when it's synced to Krust Drive.
     pub fn update_plan_notebook_uid(
         &mut self,
         document_uid: AIDocumentId,
@@ -2110,7 +2110,7 @@ impl AIConversation {
     pub fn initialize_output_for_response_stream(
         &mut self,
         stream_id: &ResponseStreamId,
-        init_event: bork_multi_agent_api::response_event::StreamInit,
+        init_event: krust_multi_agent_api::response_event::StreamInit,
         terminal_surface_id: EntityId,
         ctx: &mut ModelContext<BlocklistAIHistoryModel>,
     ) -> Result<(), UpdateConversationError> {
@@ -2612,11 +2612,11 @@ impl AIConversation {
         &mut self,
         response_stream_id: &ResponseStreamId,
         terminal_surface_id: EntityId,
-        action: bork_multi_agent_api::client_action::Action,
+        action: krust_multi_agent_api::client_action::Action,
         skill_path_origin: &SkillPathOrigin,
         ctx: &mut ModelContext<BlocklistAIHistoryModel>,
     ) -> Result<(), UpdateConversationError> {
-        use bork_multi_agent_api::client_action::*;
+        use krust_multi_agent_api::client_action::*;
         match action {
             Action::BeginTransaction(_) => {
                 self.begin_transaction();
@@ -4004,7 +4004,7 @@ impl AIConversation {
     /// Converts the conversation into a vector of serialized command blocks.
     /// When we open a new tab to restore a conversation in, we need to precompute this serialized list of blocks
     /// to pass into the TerminalModel constructor since command blocks must be created
-    /// before the bork input block to not break bootstrapping.
+    /// before the krust input block to not break bootstrapping.
     /// Only the command blocks are actually created in the terminal model. During restoration in the TerminalView,
     /// AI blocks are inserted relative to the command blocks based on timestamp.
     pub fn to_serialized_blocklist_items(&self) -> Vec<SerializedBlockListItem> {
@@ -4470,7 +4470,7 @@ pub enum AIAgentSerializedBlockFormat {
 /// Describes the format capabilities of a conversation.
 #[derive(Debug, Clone)]
 pub struct AIAgentConversationFormat {
-    /// Whether there is a Bork MAA task list available for this conversation.
+    /// Whether there is a Krust MAA task list available for this conversation.
     pub has_task_list: bool,
     /// The format of the TUI serialized block, if available.
     pub block_snapshot: Option<AIAgentSerializedBlockFormat>,
@@ -4646,7 +4646,7 @@ impl std::fmt::Display for ConversationStatus {
 }
 
 impl ConversationStatus {
-    pub fn render_icon(&self, appearance: &Appearance) -> borkui::elements::Icon {
+    pub fn render_icon(&self, appearance: &Appearance) -> krustui::elements::Icon {
         match self {
             ConversationStatus::InProgress => in_progress_icon(appearance),
             ConversationStatus::Success => succeeded_icon(appearance),
@@ -4661,7 +4661,7 @@ impl ConversationStatus {
 
     pub fn status_icon_and_color(
         &self,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
         color_style: StatusColorStyle,
     ) -> (Icon, ColorU) {
         match self {

@@ -1,6 +1,6 @@
 # Product Spec: Double-click the hidden-section bar to fully expand
 
-**Issue:** [borkdotdev/bork#11622](https://github.com/borkdotdev/bork/issues/11622)
+**Issue:** [krustdotdev/krust#11622](https://github.com/krustdotdev/krust/issues/11622)
 **Figma:** none
 
 ## Summary

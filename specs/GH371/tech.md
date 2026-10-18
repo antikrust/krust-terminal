@@ -1,6 +1,6 @@
 # TECH.md — Restore Open Files and Markdown Editors
 
-**GitHub Issue:** [borkdotdev/bork-external#371](https://github.com/borkdotdev/bork-external/issues/371)
+**GitHub Issue:** [krustdotdev/krust-external#371](https://github.com/krustdotdev/krust-external/issues/371)
 **Product Spec:** `specs/GH371/product.md`
 
 ## Problem

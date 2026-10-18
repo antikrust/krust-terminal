@@ -2,16 +2,16 @@ use chrono::{DateTime, Datelike, Local, Utc};
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DropShadow, Empty, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable, HyperlinkLens,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -509,7 +509,7 @@ impl BillingCycleUsageSectionView {
             );
             inner.add_child(
                 Container::new(
-                    ConstrainedBox::new(Icon::ChevronDown.to_borkui_icon(main_text).finish())
+                    ConstrainedBox::new(Icon::ChevronDown.to_krustui_icon(main_text).finish())
                         .with_width(12.)
                         .with_height(12.)
                         .finish(),
@@ -691,7 +691,7 @@ impl BillingCycleUsageSectionView {
         })
         .finish();
 
-        let icon = ConstrainedBox::new(leading_icon.to_borkui_icon(sub_text).finish())
+        let icon = ConstrainedBox::new(leading_icon.to_krustui_icon(sub_text).finish())
             .with_width(14.)
             .with_height(14.)
             .finish();

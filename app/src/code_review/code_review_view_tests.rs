@@ -5,13 +5,13 @@ use ai::agent::action::InsertReviewComment;
 use chrono::Local;
 use lsp::LspManagerModel;
 use repo_metadata::repositories::DetectedRepositories;
-use bork_core::ui::appearance::Appearance;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_editor::render::model::LineCount;
-use borkui::elements::{Empty, MouseStateHandle};
-use borkui::platform::WindowStyle;
-use borkui::{App, ViewHandle};
+use krust_core::ui::appearance::Appearance;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_editor::render::model::LineCount;
+use krustui::elements::{Empty, MouseStateHandle};
+use krustui::platform::WindowStyle;
+use krustui::{App, ViewHandle};
 
 use super::*;
 use crate::ai::persisted_workspace::PersistedWorkspace;
@@ -48,12 +48,12 @@ use crate::NotebookKeybindings;
 #[derive(Default)]
 struct TestView;
 
-impl borkui::Entity for TestView {
+impl krustui::Entity for TestView {
     type Event = ();
 }
 
-impl borkui::View for TestView {
-    fn render(&self, _: &borkui::AppContext) -> Box<dyn borkui::Element> {
+impl krustui::View for TestView {
+    fn render(&self, _: &krustui::AppContext) -> Box<dyn krustui::Element> {
         Empty::new().finish()
     }
 
@@ -62,7 +62,7 @@ impl borkui::View for TestView {
     }
 }
 
-impl borkui::TypedActionView for TestView {
+impl krustui::TypedActionView for TestView {
     type Action = ();
 }
 
@@ -288,7 +288,7 @@ struct TestContext {
     repo_path: PathBuf,
     repo_location: LocalOrRemotePath,
     #[allow(dead_code)]
-    window_id: borkui::WindowId,
+    window_id: krustui::WindowId,
     state: LoadedState,
     code_review_view: ViewHandle<CodeReviewView>,
 }
@@ -338,7 +338,7 @@ impl TestContext {
 /// Must be called within an App context.
 fn create_loaded_state_with_editors(
     app: &mut App,
-    window_id: borkui::WindowId,
+    window_id: krustui::WindowId,
     file_editors: Vec<(String, ViewHandle<LocalCodeEditorView>)>,
 ) -> LoadedState {
     let file_states = file_editors

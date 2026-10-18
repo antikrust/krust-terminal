@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
 use pathfinder_color::ColorU;
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, Flex, ParentElement, Shrinkable,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::text::Span;
-use borkui::{AppContext, Element, SingletonEntity as _};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::text::Span;
+use krustui::{AppContext, Element, SingletonEntity as _};
 
 use crate::appearance::Appearance;
 use crate::modal::MODAL_CORNER_RADIUS;

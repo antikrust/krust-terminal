@@ -1,21 +1,21 @@
 use rquickjs::{Ctx, Function, Object};
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::plugin::PluginHandle;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "completions_v2")] {
         use rquickjs::{prelude::MutFn, Value};
-        use bork_completer::signatures::CommandSignature;
-        use bork_js::FromBorkJs;
+        use krust_completer::signatures::CommandSignature;
+        use krust_js::FromKrustJs;
     }
 }
 
-/// Returns a JS object representing the Bork Plugin API exposed to external JavaScript plugins.
+/// Returns a JS object representing the Krust Plugin API exposed to external JavaScript plugins.
 ///
 /// Currently, the API contains a single "completions" namespace for registering command
 /// signatures.
-pub fn bork(
+pub fn krust(
     #[allow(unused_variables)] plugin: PluginHandle,
     ctx: Ctx<'_>,
 ) -> rquickjs::Result<Object<'_>> {
@@ -44,7 +44,7 @@ pub fn console(ctx: Ctx<'_>) -> rquickjs::Result<Object<'_>> {
     Ok(console)
 }
 
-/// Returns a JS object representing the Completions namespace for the Bork Plugin API.
+/// Returns a JS object representing the Completions namespace for the Krust Plugin API.
 ///
 /// API methods:
 ///
@@ -60,7 +60,7 @@ fn completions<'js>(plugin: PluginHandle, ctx: Ctx<'js>) -> rquickjs::Result<Obj
             MutFn::from(move |val: Value<'js>| {
                 if val.is_array() {
                     let mut plugin = plugin.get_mut();
-                    match Vec::<CommandSignature>::from_bork_js(
+                    match Vec::<CommandSignature>::from_krust_js(
                         ctx,
                         val,
                         plugin.js_function_registry_mut(),
@@ -72,7 +72,7 @@ fn completions<'js>(plugin: PluginHandle, ctx: Ctx<'js>) -> rquickjs::Result<Obj
                     }
                 } else if val.is_object() {
                     let mut plugin = plugin.get_mut();
-                    match CommandSignature::from_bork_js(
+                    match CommandSignature::from_krust_js(
                         ctx,
                         val,
                         plugin.js_function_registry_mut(),

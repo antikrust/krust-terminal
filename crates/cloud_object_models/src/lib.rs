@@ -1,4 +1,4 @@
-//! This crate defines the concrete Bork cloud object models and typed cloud object aliases built
+//! This crate defines the concrete Krust cloud object models and typed cloud object aliases built
 //! on top of `cloud_objects`.
 //!
 //! Each model module should own the model payload for one cloud object family, plus any model-specific

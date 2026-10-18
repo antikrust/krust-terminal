@@ -48,31 +48,31 @@ use vim::{
     vim_a_block, vim_a_paragraph, vim_a_quote, vim_a_word, vim_inner_block, vim_inner_paragraph,
     vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use bork_completer::completer::Description;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_core::{safe_error, send_telemetry_from_ctx};
-use bork_editor::editor::NavigationKey;
-use bork_util::path::ShellFamily;
-use bork_util::user_input::UserInput;
-use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
-use borkui::actions::StandardAction;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_completer::completer::Description;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_core::{safe_error, send_telemetry_from_ctx};
+use krust_editor::editor::NavigationKey;
+use krust_util::path::ShellFamily;
+use krust_util::user_input::UserInput;
+use krustui::accessibility::{AccessibilityContent, ActionAccessibilityContent, KrustA11yRole};
+use krustui::actions::StandardAction;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
-use borkui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
-use borkui::platform::keyboard::KeyCode;
-use borkui::platform::{Cursor, FilePickerConfiguration, OperatingSystem};
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::text::word_boundaries::WordBoundariesPolicy;
-use borkui::text::TextBuffer;
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::button::ButtonTooltipPosition;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::windowing::WindowManager;
-use borkui::{
+use krustui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
+use krustui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
+use krustui::platform::keyboard::KeyCode;
+use krustui::platform::{Cursor, FilePickerConfiguration, OperatingSystem};
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::text::word_boundaries::WordBoundariesPolicy;
+use krustui::text::TextBuffer;
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::button::ButtonTooltipPosition;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::windowing::WindowManager;
+use krustui::{
     elements, windowing, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId,
     FocusContext, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
@@ -141,7 +141,7 @@ pub const VOICE_ERROR_TOAST_TEXT: &str = "An error occurred while processing you
 
 pub const MAX_IMAGES_PER_CONVERSATION: usize = 200;
 
-use borkui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
+use krustui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
 
 #[derive(Clone, Copy)]
 pub enum AutosuggestionLocation {
@@ -183,7 +183,7 @@ pub const SELECT_UP_ACTION_NAME: &str = "editor_view:select_up";
 pub const SELECT_DOWN_ACTION_NAME: &str = "editor_view:select_down";
 
 pub fn init(ctx: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     ctx.register_fixed_bindings(vec![
         // Below are default bindings that are similar to the behavior in all other text editors.
@@ -406,7 +406,7 @@ pub fn init(ctx: &mut AppContext) {
         // This might seem like a no-op since `ctrl-right` changes desktops on Mac by default.
         // However, many Mac users coming from fish shell have asked for this binding.
         // They've already disabled the desktop change shortcut, and are expecting that this
-        // binding also works in Bork. We should not break their workflow.
+        // binding also works in Krust. We should not break their workflow.
         FixedBinding::new(
             "ctrl-right",
             EditorAction::MoveForwardOneWord,
@@ -1397,7 +1397,7 @@ type RenderDecoratorElementsFn = Box<dyn Fn(&AppContext) -> EditorDecoratorEleme
 
 /// Type alias for a closure that allows parent views to add flags to the EditorView's keymap context.
 /// The closure takes the context by mutable reference and can insert additional flags.
-pub type KeymapContextModifierFn = Box<dyn Fn(&mut borkui::keymap::Context, &AppContext)>;
+pub type KeymapContextModifierFn = Box<dyn Fn(&mut krustui::keymap::Context, &AppContext)>;
 
 /// Enum to choose between different methods of computing the baseline offset for text.
 #[derive(Clone, Debug)]
@@ -1411,7 +1411,7 @@ pub enum BaselinePositionComputationMethod {
 }
 
 // Re-export voice transcription types for backwards compatibility
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 pub use crate::voice::transcriber::{Transcriber, VoiceTranscriber};
 
@@ -5725,7 +5725,7 @@ impl EditorView {
     }
 
     pub fn move_to_paragraph_start(&mut self, ctx: &mut ViewContext<Self>) {
-        // bork doesn't wrap the text, so basically each line is a paragraph.
+        // krust doesn't wrap the text, so basically each line is a paragraph.
         // this moves to the start of the paragraph (and the previous one if used multiple times).
         self.change_selections(ctx, |editor_model, ctx| {
             editor_model.move_cursor(
@@ -8000,7 +8000,7 @@ impl EditorView {
         // from the filesystem (the path transformer, if any, only applies to text insertion).
         let paths_as_strings: Vec<String> = paths.iter().map(|path| path.to_string()).collect();
         let image_filepaths =
-            borkui::clipboard_utils::get_image_filepaths_from_paths(&paths_as_strings);
+            krustui::clipboard_utils::get_image_filepaths_from_paths(&paths_as_strings);
 
         // If we have image file paths, emit event for parent to handle terminal-specific processing
         let num_image_files = image_filepaths.len();
@@ -8019,7 +8019,7 @@ impl EditorView {
         };
 
         let input =
-            borkui::clipboard_utils::escaped_paths_str(&transformed_paths, self.shell_family);
+            krustui::clipboard_utils::escaped_paths_str(&transformed_paths, self.shell_family);
 
         self.user_insert(&input, ctx);
     }
@@ -8456,7 +8456,7 @@ impl TypedActionView for EditorView {
     ) -> ActionAccessibilityContent {
         match action {
             EditorAction::UserInsert(text) => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help(text.to_string(), BorkA11yRole::UserAction),
+                AccessibilityContent::new_without_help(text.to_string(), KrustA11yRole::UserAction),
             ),
             EditorAction::SelectLeft
             | EditorAction::SelectToLineEnd
@@ -8491,7 +8491,7 @@ impl TypedActionView for EditorView {
             EditorAction::Paste => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Pasting: {}", self.clipboard_content(ctx)),
-                    BorkA11yRole::UserAction,
+                    KrustA11yRole::UserAction,
                 ))
             }
             _ => ActionAccessibilityContent::from_debug(),
@@ -8599,7 +8599,7 @@ impl TypedActionView for EditorView {
             UnhandledModifierKey(keystroke) => {
                 if self.can_select(ctx) {
                     // This event helps us to keep track of what key bindings users
-                    // try to use in the editor but are currently not available in Bork.
+                    // try to use in the editor but are currently not available in Krust.
                     ctx.emit(Event::UnhandledModifierKeyOnEditor(keystroke.clone()))
                 }
             }
@@ -8755,7 +8755,7 @@ impl View for EditorView {
         }
     }
 
-    fn keymap_context(&self, ctx: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, ctx: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if self.single_cursor_at_buffer_end(false /* respect_line_cap */, ctx) {

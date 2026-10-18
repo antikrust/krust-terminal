@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::keymap::Keystroke;
-use borkui_core::prelude::*;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::keymap::Keystroke;
+use krustui_core::prelude::*;
 
 use crate::{Component, keyboard_shortcut};
 
@@ -41,7 +41,7 @@ impl Component for Tooltip {
         &self,
         appearance: &Appearance,
         params: Self::Params<'a>,
-    ) -> Box<dyn borkui_core::Element> {
+    ) -> Box<dyn krustui_core::Element> {
         let font_family = appearance.ui_font_family();
         let font_size = appearance.ui_font_size() + UI_FONT_SIZE_ADJUSTMENT;
 

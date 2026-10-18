@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use settings::{Setting, ToggleableSetting};
-use bork_core::features::FeatureFlag;
-use bork_errors::report_if_error;
-use borkui::elements::{Flex, MouseStateHandle, ParentElement};
-use borkui::ui_components::components::UiComponent;
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_if_error;
+use krustui::elements::{Flex, MouseStateHandle, ParentElement};
+use krustui::ui_components::components::UiComponent;
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::send_telemetry_from_ctx;
@@ -151,7 +151,7 @@ impl ExternalEditorView {
 
         let mut items = vec![default_app];
 
-        items.push(DropdownItem::new("Bork", make_action(EditorChoice::Bork)));
+        items.push(DropdownItem::new("Krust", make_action(EditorChoice::Krust)));
         if FeatureFlag::AllowOpeningFileLinksUsingEditorEnv.is_enabled() {
             items.push(DropdownItem::new(
                 "$EDITOR",
@@ -173,7 +173,7 @@ impl ExternalEditorView {
             EditorChoice::ExternalEditor(editor) => {
                 dropdown.set_selected_by_name(format!("{editor}"), ctx)
             }
-            EditorChoice::Bork => dropdown.set_selected_by_name("Bork", ctx),
+            EditorChoice::Krust => dropdown.set_selected_by_name("Krust", ctx),
             EditorChoice::EnvEditor => dropdown.set_selected_by_name("$EDITOR", ctx),
             EditorChoice::SystemDefault => dropdown.set_selected_by_name(default_option_text, ctx),
         };
@@ -272,7 +272,7 @@ impl View for ExternalEditorView {
         "ExternalEditorView"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
 
         let default_editor = render_dropdown_item(
@@ -307,7 +307,7 @@ impl View for ExternalEditorView {
 
         let default_layout = render_dropdown_item(
             appearance,
-            "Choose a layout to open files in Bork",
+            "Choose a layout to open files in Krust",
             None,
             None,
             LocalOnlyIconState::for_setting(
@@ -355,11 +355,11 @@ impl View for ExternalEditorView {
         }
 
         column.add_child(render_body_item::<ExternalEditorAction>(
-            "Open Markdown files in Bork's Markdown Viewer by default".to_string(),
+            "Open Markdown files in Krust's Markdown Viewer by default".to_string(),
             Some(AdditionalInfo {
                 mouse_state: self.markdown_viewer_mouse_state.clone(),
                 on_click_action: Some(ExternalEditorAction::OpenUrl(
-                    "https://therob.lol/bork-terminal/help/terminal/more-features/markdown-viewer"
+                    "https://therob.lol/krust-terminal/help/terminal/more-features/markdown-viewer"
                         .to_string(),
                 )),
                 secondary_text: None,

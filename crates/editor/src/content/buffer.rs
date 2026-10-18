@@ -20,14 +20,14 @@ use serde_yaml::Mapping;
 use string_offset::{ByteOffset, CharOffset};
 use sum_tree::{SeekBias, SumTree};
 use vec1::{Vec1, vec1};
-use bork_core::platform::SessionPlatform;
-use bork_core::safe_error;
-use bork_util::content_version::ContentVersion;
-use borkui_core::elements::ListIndentLevel;
-use borkui_core::fonts::Weight;
-use borkui_core::text::point::Point;
-use borkui_core::text::{TextBuffer, char_slice};
-use borkui_core::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
+use krust_core::platform::SessionPlatform;
+use krust_core::safe_error;
+use krust_util::content_version::ContentVersion;
+use krustui_core::elements::ListIndentLevel;
+use krustui_core::fonts::Weight;
+use krustui_core::text::point::Point;
+use krustui_core::text::{TextBuffer, char_slice};
+use krustui_core::{AppContext, Entity, EntityId, ModelContext, ModelHandle};
 
 use super::anchor::{Anchor, AnchorSide, Anchors};
 use super::cursor::BufferCursor;
@@ -847,7 +847,7 @@ impl Buffer {
         selection_model: ModelHandle<BufferSelectionModel>,
         ctx: &mut ModelContext<Self>,
     ) -> Self {
-        let parse_fn = if bork_core::features::FeatureFlag::MarkdownTables.is_enabled() {
+        let parse_fn = if krust_core::features::FeatureFlag::MarkdownTables.is_enabled() {
             parse_markdown_with_gfm_tables
         } else {
             parse_markdown
@@ -887,7 +887,7 @@ impl Buffer {
         selection_model: ModelHandle<BufferSelectionModel>,
         ctx: &mut ModelContext<Self>,
     ) -> Result<Self, ipynb_parser::IpynbError> {
-        let gfm_tables = bork_core::features::FeatureFlag::MarkdownTables.is_enabled();
+        let gfm_tables = krust_core::features::FeatureFlag::MarkdownTables.is_enabled();
         let formatted_text = ipynb_parser::ipynb_to_formatted_text(ipynb, gfm_tables)?;
         Ok(Self::from_formatted_text(
             formatted_text,

@@ -1,5 +1,5 @@
 use anyhow::Context;
-use borkui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use krustui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use super::view::PaneView;
 use super::{
@@ -7,7 +7,7 @@ use super::{
     ShareableLinkError,
 };
 use crate::app_state::{EnvVarCollectionPaneSnapshot, LeafContents};
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::env_vars::manager::{EnvVarCollectionManager, EnvVarCollectionSource};
 use crate::env_vars::view::env_var_collection::{EnvVarCollectionEvent, EnvVarCollectionView};
 use crate::env_vars::EnvVarCollectionType;
@@ -169,7 +169,7 @@ fn handle_env_var_collection_event(
         EnvVarCollectionEvent::Pane(pane_event) => {
             group.handle_pane_event(pane_id, pane_event, ctx)
         }
-        EnvVarCollectionEvent::ViewInBorkDrive(id) => view_in_bork_drive(*id, ctx),
+        EnvVarCollectionEvent::ViewInKrustDrive(id) => view_in_krust_drive(*id, ctx),
         EnvVarCollectionEvent::Invoke(env_var_collection) => {
             invoke_env_var_collection(env_var_collection.clone(), ctx)
         }
@@ -189,6 +189,6 @@ fn invoke_env_var_collection(
     })
 }
 
-fn view_in_bork_drive(id: BorkDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
-    ctx.emit(crate::pane_group::Event::ViewInBorkDrive(id))
+fn view_in_krust_drive(id: KrustDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
+    ctx.emit(crate::pane_group::Event::ViewInKrustDrive(id))
 }

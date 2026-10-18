@@ -41,9 +41,9 @@ pub use model_selector::{
 pub use progress::{render_progress, ProgressProps, ProgressStep, ProgressStepState};
 pub use progress_ui_state::AmbientAgentProgressUIState;
 pub use tips::{get_cloud_mode_tips, CloudModeTip};
-use bork_core::features::FeatureFlag;
-use borkui::geometry::vector::Vector2F;
-use borkui::{AppContext, ModelHandle, ViewHandle, WindowId};
+use krust_core::features::FeatureFlag;
+use krustui::geometry::vector::Vector2F;
+use krustui::{AppContext, ModelHandle, ViewHandle, WindowId};
 
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewState};
 use crate::pane_group::TerminalViewResources;

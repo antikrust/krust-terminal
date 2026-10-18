@@ -15,7 +15,7 @@ pub(in crate::terminal) use transition::{
     CommandStartKind, IgnoreReason, LifecycleAction, LifecycleInput, LifecyclePhase,
     LifecycleSnapshot, LifecycleTransition, NextBlockIdDisposition, PreexecObservation,
 };
-use bork_core::features::FeatureFlag;
+use krust_core::features::FeatureFlag;
 
 use super::block::BlockState;
 

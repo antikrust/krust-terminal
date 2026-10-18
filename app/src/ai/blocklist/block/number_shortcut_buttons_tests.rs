@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::new_scrollable::SingleAxisConfig;
-use borkui::elements::{ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Fill};
-use borkui::platform::WindowStyle;
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::new_scrollable::SingleAxisConfig;
+use krustui::elements::{ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Fill};
+use krustui::platform::WindowStyle;
+use krustui::{
     App, Entity, Event, Presenter, TypedActionView, View, ViewContext, ViewHandle, WindowId,
     WindowInvalidation,
 };
@@ -71,8 +71,8 @@ impl View for TestView {
         "NumberShortcutButtonsTestView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
-        let scrollable = borkui::elements::NewScrollable::vertical(
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn krustui::Element> {
+        let scrollable = krustui::elements::NewScrollable::vertical(
             SingleAxisConfig::Clipped {
                 handle: self.scroll_state.clone(),
                 child: ChildView::new(&self.buttons).finish(),

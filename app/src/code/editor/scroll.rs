@@ -1,5 +1,5 @@
-use bork_editor::content::version::BufferVersion;
-use bork_util::path::LineAndColumnArg;
+use krust_editor::content::version::BufferVersion;
+use krust_util::path::LineAndColumnArg;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScrollWheelBehavior {

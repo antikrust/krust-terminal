@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
+use krust_core::ui::appearance::Appearance;
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
 
 pub const ICON_MARGIN: f32 = 8.;
 pub const HEADER_FONT_SIZE: f32 = 18.;

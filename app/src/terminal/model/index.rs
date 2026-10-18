@@ -1,6 +1,6 @@
 //! Indexing-related newtypes for strongly typed tty/grid/terminal APIs.
 
-pub use bork_terminal::model::{Index, IndexRange, Point, VisiblePoint, VisibleRow};
+pub use krust_terminal::model::{Index, IndexRange, Point, VisiblePoint, VisibleRow};
 
 /// The side of a cell.
 pub type Side = Direction;

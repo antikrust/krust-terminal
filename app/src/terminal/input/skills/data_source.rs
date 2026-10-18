@@ -1,17 +1,17 @@
 use ai::skills::{SkillProvider, SkillReference, SkillScope};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::Fill;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::elements::{
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::Fill;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::scene::{CornerRadius, Radius};
-use borkui::text_layout::ClipConfig;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::scene::{CornerRadius, Radius};
+use krustui::text_layout::ClipConfig;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _,
 };
 
@@ -217,11 +217,11 @@ impl SearchItem for SkillSearchItem {
 
         // Use icon_override if set (e.g. Figma skills), otherwise derive from provider.
         let icon = if let Some(override_icon) = self.icon_override {
-            override_icon.to_borkui_icon(icon_color).finish()
+            override_icon.to_krustui_icon(icon_color).finish()
         } else {
             self.provider
                 .icon()
-                .to_borkui_icon(self.provider.icon_fill(icon_color))
+                .to_krustui_icon(self.provider.icon_fill(icon_color))
                 .finish()
         };
 

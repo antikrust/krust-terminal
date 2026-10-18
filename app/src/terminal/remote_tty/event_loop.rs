@@ -5,8 +5,8 @@ use async_channel::Receiver;
 use futures_util::SinkExt;
 use parking_lot::FairMutex;
 use serde::Serialize;
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 use websocket::{Message, Sink, Stream, WebSocket, WebsocketMessage as _};
 
 use crate::terminal::bootstrap::init_shell_script_for_shell;
@@ -23,7 +23,7 @@ const CREATE_SESSION_ENDPOINT: &str = "ws://127.0.0.1:3030/create";
 /// sent over the websocket as text.
 ///
 /// The field names need to be kept the same as the `WindowSizeChange` struct in
-/// https://github.com/borkdotdev/ssh-proxy-server/blob/main/src/ssh/session.rs.
+/// https://github.com/krustdotdev/ssh-proxy-server/blob/main/src/ssh/session.rs.
 #[derive(Serialize, Debug)]
 struct WindowSizeChange {
     width: u32,
@@ -162,7 +162,7 @@ impl EventLoop {
 
     /// Writes the ZSH init shell script to the "PTY", mimicking how we send the init shell script
     /// when there is a local pty:
-    /// <https://github.com/borkdotdev/bork-internal/blob/747da2df83f2caa97e781ce284ceb226fb97a66c/app/src/terminal/local_tty/unix.rs#L338-L347>.
+    /// <https://github.com/krustdotdev/krust-internal/blob/747da2df83f2caa97e781ce284ceb226fb97a66c/app/src/terminal/local_tty/unix.rs#L338-L347>.
     async fn write_zsh_init_shell_script(
         sink: &mut impl Sink,
         terminal_model: &parking_lot::FairMutex<crate::terminal::TerminalModel>,
@@ -187,12 +187,12 @@ impl EventLoop {
     /// Writes environment variables that should be defined in the session
     /// before bootstrapping. This is a subset of the environment variables
     /// defined in `app/src/terminal/local_tty/unix.rs` that are necessary in
-    /// order to dogfood Bork on Web over the remote tty.
+    /// order to dogfood Krust on Web over the remote tty.
     async fn write_env_vars(
         sink: &mut impl Sink,
         is_honor_ps1_enabled: bool,
     ) -> anyhow::Result<()> {
-        let honor_ps1_env_var = format!(r#"BORK_HONOR_PS1="{}";"#, is_honor_ps1_enabled as u8);
+        let honor_ps1_env_var = format!(r#"KRUST_HONOR_PS1="{}";"#, is_honor_ps1_enabled as u8);
         sink.send(Message::new_binary(honor_ps1_env_var.as_bytes().to_vec()))
             .await?;
 

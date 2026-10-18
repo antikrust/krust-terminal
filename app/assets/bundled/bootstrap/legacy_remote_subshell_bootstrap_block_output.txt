@@ -1,1 +1,1 @@
-In remote subshells, Bork runs commands in the background to power completions, syntax highlighting, and other features.
+In remote subshells, Krust runs commands in the background to power completions, syntax highlighting, and other features.

@@ -9,8 +9,8 @@ use futures::TryStreamExt as _;
 use mime_guess::from_path;
 use tokio::fs;
 use tokio_util::io::StreamReader;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
 
 use crate::ai::agent_sdk::retry::with_bounded_retry;
 use crate::ai::ambient_agents::task::{AttachmentInput, TaskAttachment};

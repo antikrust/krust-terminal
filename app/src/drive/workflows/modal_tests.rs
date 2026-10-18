@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::{App, SingletonEntity, ViewHandle};
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::{App, SingletonEntity, ViewHandle};
 
 use super::WorkflowModal;
 use crate::auth::AuthStateProvider;

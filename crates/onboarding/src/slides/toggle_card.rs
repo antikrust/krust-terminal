@@ -1,18 +1,18 @@
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable, Text, Wrap,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::platform::Cursor;
-use borkui_core::prelude::Align;
-use borkui_core::presenter::EventContext;
-use borkui_core::text_layout::TextAlignment;
-use borkui_core::{AppContext, Element};
+use krustui_core::fonts::Weight;
+use krustui_core::platform::Cursor;
+use krustui_core::prelude::Align;
+use krustui_core::presenter::EventContext;
+use krustui_core::text_layout::TextAlignment;
+use krustui_core::{AppContext, Element};
 
 pub(super) type ClickCallback = Box<dyn FnMut(&mut EventContext, &AppContext, Vector2F) + 'static>;
 pub(super) type HoverCallback =

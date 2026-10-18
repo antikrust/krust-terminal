@@ -1,26 +1,26 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Bork GitHub Search
-    url: https://github.com/borkdotdev/bork/issues?q=is%3Aissue+is%3Aopen+a+sort%3Areactions-%2B1-desc
-    about: Search Bork's open bugs and enhancements.
-  - name: Bork Documentation
-    url: https://docs.bork.baby/support-and-billing/known-issues?q=
+  - name: Krust GitHub Search
+    url: https://github.com/krustdotdev/krust/issues?q=is%3Aissue+is%3Aopen+a+sort%3Areactions-%2B1-desc
+    about: Search Krust's open bugs and enhancements.
+  - name: Krust Documentation
+    url: https://docs.krust.baby/support-and-billing/known-issues?q=
     about: Documentation for features, known issues, troubleshooting, keyboard shortcuts, telemetry table, and more!
-  - name: Bork Changelog
-    url: https://docs.bork.baby/changelog
+  - name: Krust Changelog
+    url: https://docs.krust.baby/changelog
     about: See our changelog to learn about new features, improvements, bug fixes, and Oz updates.
   - name: Contact Us
-    url: https://docs.bork.baby/support-and-community/troubleshooting-and-support/sending-us-feedback
-    about: Submit feedback and contact the Bork support team for things like Billing, Enterprise, and other issues.
-  - name: Bork Preview Slack Community
-    url: https://go.bork.baby/join-preview
-    about: Discuss give feedback on the new features with other Bork Preview users.
-  - name: Bork Discord Community
-    url: https://discord.com/invite/borkdotdev
-    about: Discuss what you want to see in a Modern ADE with a community of other Bork users.
-  - name: Bork Homepage
-    url: https://www.bork.baby/
-    about: Homepage for all things Bork.
-  - name: Bork Licenses
-    url: https://docs.bork.baby/support-and-community/privacy-security-and-licensing/open-source-licenses
-    about: See the open source projects Bork depends on and their licenses.
+    url: https://docs.krust.baby/support-and-community/troubleshooting-and-support/sending-us-feedback
+    about: Submit feedback and contact the Krust support team for things like Billing, Enterprise, and other issues.
+  - name: Krust Preview Slack Community
+    url: https://go.krust.baby/join-preview
+    about: Discuss give feedback on the new features with other Krust Preview users.
+  - name: Krust Discord Community
+    url: https://discord.com/invite/krustdotdev
+    about: Discuss what you want to see in a Modern ADE with a community of other Krust users.
+  - name: Krust Homepage
+    url: https://www.krust.baby/
+    about: Homepage for all things Krust.
+  - name: Krust Licenses
+    url: https://docs.krust.baby/support-and-community/privacy-security-and-licensing/open-source-licenses
+    about: See the open source projects Krust depends on and their licenses.

@@ -3,17 +3,17 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use bork_cli::agent::Harness;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_errors::report_if_error;
-use bork_managed_secrets::client::SecretOwner;
-use borkui::elements::{
+use krust_cli::agent::Harness;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_errors::report_if_error;
+use krust_managed_secrets::client::SecretOwner;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -530,8 +530,8 @@ impl AuthSecretSelector {
         OffsetPositioning::offset_from_save_position_element(
             MAIN_MENU_SAVE_POSITION_ID.to_string(),
             vec2f(offset_x, 0.),
-            borkui::elements::PositionedElementOffsetBounds::WindowByPosition,
-            borkui::elements::PositionedElementAnchor::BottomLeft,
+            krustui::elements::PositionedElementOffsetBounds::WindowByPosition,
+            krustui::elements::PositionedElementAnchor::BottomLeft,
             ChildAnchor::BottomLeft,
         )
     }
@@ -768,7 +768,7 @@ impl View for AuthSecretSelector {
         stack.add_child(ChildView::new(&self.button).finish());
 
         if self.is_menu_open {
-            let main_menu = borkui::elements::SavePosition::new(
+            let main_menu = krustui::elements::SavePosition::new(
                 ChildView::new(&self.menu).finish(),
                 MAIN_MENU_SAVE_POSITION_ID,
             )

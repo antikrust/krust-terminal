@@ -1,15 +1,15 @@
 use std::net::SocketAddr;
 
 use tower_http::trace::TraceLayer;
-use bork_core::channel::{Channel, ChannelState};
-use bork_errors::report_error;
-use borkui_core::{Entity, ModelContext, SingletonEntity};
+use krust_core::channel::{Channel, ChannelState};
+use krust_errors::report_error;
+use krustui_core::{Entity, ModelContext, SingletonEntity};
 
-// Spells "Bork" - should hopefully not conflict with other ports.
+// Spells "Krust" - should hopefully not conflict with other ports.
 // Does not conflict with known ports on https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
 const PORT_BASE: u16 = 9277;
 
-/// A singleton model for the small HTTP server that is run by the Bork client.
+/// A singleton model for the small HTTP server that is run by the Krust client.
 pub struct HttpServer {
     /// The tokio runtime that the HTTP server runs on.
     ///

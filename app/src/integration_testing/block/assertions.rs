@@ -1,7 +1,7 @@
 use settings::Setting as _;
-use borkui::integration::{AssertionCallback, AssertionOutcome};
-use borkui::units::{IntoPixels, Lines};
-use borkui::{async_assert, async_assert_eq, AppContext, SingletonEntity, WindowId};
+use krustui::integration::{AssertionCallback, AssertionOutcome};
+use krustui::units::{IntoPixels, Lines};
+use krustui::{async_assert, async_assert_eq, AppContext, SingletonEntity, WindowId};
 
 use crate::integration_testing::terminal::util::ExpectedOutput;
 use crate::integration_testing::view_getters::{

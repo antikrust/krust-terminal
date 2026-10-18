@@ -14,11 +14,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'bork'",
+      "name": "Debug executable 'krust'",
       "cargo": {
-        "args": ["build", "--bin=bork"],
+        "args": ["build", "--bin=krust"],
         "filter": {
-          "name": "bork",
+          "name": "krust",
           "kind": "bin"
         }
       },
@@ -30,8 +30,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable",
-      "preLaunchTask": "build_borklocal",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
+      "preLaunchTask": "build_krustlocal",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/KrustLocal.app/Contents/MacOS/krust",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -39,11 +39,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'bork' with fast_dev",
+      "name": "Debug executable 'krust' with fast_dev",
       "cargo": {
-        "args": ["build", "--bin=bork", "--features=fast_dev"],
+        "args": ["build", "--bin=krust", "--features=fast_dev"],
         "filter": {
-          "name": "bork",
+          "name": "krust",
           "kind": "bin"
         }
       },
@@ -54,11 +54,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'bork' with with_local_server",
+      "name": "Debug executable 'krust' with with_local_server",
       "cargo": {
-        "args": ["build", "--bin=bork", "--features=with_local_server"],
+        "args": ["build", "--bin=krust", "--features=with_local_server"],
         "filter": {
-          "name": "bork",
+          "name": "krust",
           "kind": "bin"
         }
       },
@@ -70,8 +70,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable local session sharing server",
-      "preLaunchTask": "build_borklocal_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
+      "preLaunchTask": "build_krustlocal_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/KrustLocal.app/Contents/MacOS/krust",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -83,8 +83,8 @@
       "env": {
         "RUST_BACKTRACE": "1"
       },
-      "preLaunchTask": "build_borklocal_fastdev",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
+      "preLaunchTask": "build_krustlocal_fastdev",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/KrustLocal.app/Contents/MacOS/krust",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -93,8 +93,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug MacOS executable with fast_dev + local session sharing server",
-      "preLaunchTask": "build_borklocal_fastdev_localsessionsharing",
-      "program": "${workspaceFolder}/target/debug/bundle/osx/BorkLocal.app/Contents/MacOS/bork",
+      "preLaunchTask": "build_krustlocal_fastdev_localsessionsharing",
+      "program": "${workspaceFolder}/target/debug/bundle/osx/KrustLocal.app/Contents/MacOS/krust",
       "args": [],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": ["rust"]
@@ -102,11 +102,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'bork'",
+      "name": "Debug unit tests in executable 'krust'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=bork", "--package=bork"],
+        "args": ["test", "--no-run", "--bin=krust", "--package=krust"],
         "filter": {
-          "name": "bork",
+          "name": "krust",
           "kind": "bin"
         }
       },
@@ -119,9 +119,9 @@
       "request": "launch",
       "name": "Debug integration tests in executable 'integration'",
       "cargo": {
-        "args": ["build", "--bin=integration", "--package=bork"],
+        "args": ["build", "--bin=integration", "--package=krust"],
         "env": {
-          "BORKUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
+          "KRUSTUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS": "1"
         },
         "filter": {
           "name": "integration",
@@ -135,11 +135,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in library 'borkui'",
+      "name": "Debug unit tests in library 'krustui'",
       "cargo": {
-        "args": ["test", "--no-run", "--lib", "--package=borkui"],
+        "args": ["test", "--no-run", "--lib", "--package=krustui"],
         "filter": {
-          "name": "borkui",
+          "name": "krustui",
           "kind": "lib"
         }
       },

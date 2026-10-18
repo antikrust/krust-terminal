@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::nodes::{self, FileId};
 use crate::cloud_object::model::persistence::CloudModel;

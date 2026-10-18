@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bork_errors::report_error;
-use bork_graphql::scalars::Time;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krust_graphql::scalars::Time;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 use crate::server::server_api::ai::AIClient;
@@ -12,7 +12,7 @@ const PAGE_SIZE: i32 = 20;
 
 pub struct UsageHistoryModel {
     ai_client: Arc<dyn AIClient>,
-    entries: Vec<bork_graphql::queries::get_conversation_usage::ConversationUsage>,
+    entries: Vec<krust_graphql::queries::get_conversation_usage::ConversationUsage>,
     is_loading: bool,
     // Whether the server indicated that there may be more entries to load.
     has_more_entries: bool,
@@ -35,7 +35,7 @@ impl UsageHistoryModel {
         }
     }
 
-    pub fn entries(&self) -> &[bork_graphql::queries::get_conversation_usage::ConversationUsage] {
+    pub fn entries(&self) -> &[krust_graphql::queries::get_conversation_usage::ConversationUsage] {
         &self.entries
     }
 

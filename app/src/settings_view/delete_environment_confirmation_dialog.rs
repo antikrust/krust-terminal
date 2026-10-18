@@ -1,6 +1,6 @@
-use borkui::elements::{ChildView, Container, Dismiss, Empty};
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::elements::{ChildView, Container, Dismiss, Empty};
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

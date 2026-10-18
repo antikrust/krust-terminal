@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Deserializer, Serialize};
-use bork_multi_agent_api::response_event::stream_finished;
-use bork_multi_agent_api::{self as api};
+use krust_multi_agent_api::response_event::stream_finished;
+use krust_multi_agent_api::{self as api};
 
 use super::schema::{
     active_mcp_servers, agent_conversations, agent_tasks, ai_document_panes, ai_memory_panes,
@@ -36,9 +36,9 @@ pub struct Window {
     pub origin_y: Option<f32>,
     pub quake_mode: bool,
     pub universal_search_width: Option<f32>,
-    pub bork_ai_width: Option<f32>,
+    pub krust_ai_width: Option<f32>,
     pub voltron_width: Option<f32>,
-    pub bork_drive_index_width: Option<f32>,
+    pub krust_drive_index_width: Option<f32>,
     pub fullscreen_state: i32,
     pub agent_management_filters: Option<String>,
     pub left_panel_open: Option<bool>,
@@ -92,7 +92,7 @@ pub struct Folder {
     pub id: i32,
     pub name: String,
     pub is_open: bool,
-    pub is_bork_pack: bool,
+    pub is_krust_pack: bool,
 }
 
 #[derive(Insertable)]
@@ -100,7 +100,7 @@ pub struct Folder {
 pub struct NewFolder {
     pub name: String,
     pub is_open: bool,
-    pub is_bork_pack: bool,
+    pub is_krust_pack: bool,
 }
 
 #[derive(Identifiable, Insertable, Queryable)]
@@ -333,9 +333,9 @@ pub struct NewWindow {
     pub origin_y: Option<f32>,
     pub quake_mode: bool,
     pub universal_search_width: Option<f32>,
-    pub bork_ai_width: Option<f32>,
+    pub krust_ai_width: Option<f32>,
     pub voltron_width: Option<f32>,
-    pub bork_drive_index_width: Option<f32>,
+    pub krust_drive_index_width: Option<f32>,
     pub fullscreen_state: i32,
     pub agent_management_filters: Option<String>,
     pub left_panel_open: Option<bool>,
@@ -762,7 +762,7 @@ pub struct Block {
     pub host: Option<String>,
     pub is_background: bool,
     pub rprompt: Option<String>,
-    /// JSON-serialized representation of the Bork prompt snapshot (Context Chips). Note that this
+    /// JSON-serialized representation of the Krust prompt snapshot (Context Chips). Note that this
     /// is different from PS1 and RPROMPT1
     pub prompt_snapshot: Option<String>,
     pub block_id: String,
@@ -1245,20 +1245,20 @@ pub fn token_usage_category_display_name(category: &str) -> String {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ModelTokenUsage {
-    /// Identifier used for both display and replay. For bork/byok rows this is the
+    /// Identifier used for both display and replay. For krust/byok rows this is the
     /// server-known model id; for custom endpoint rows this is the resolved alias
     /// (or fallback label) — the upstream `config_key` is translated into this
     /// label once at ingestion time and is not retained separately.
     pub model_id: String,
-    /// Alias for backward compat: old persisted data used `total_tokens` for bork usage.
+    /// Alias for backward compat: old persisted data used `total_tokens` for krust usage.
     #[serde(default, alias = "total_tokens")]
-    pub bork_tokens: u32,
+    pub krust_tokens: u32,
     #[serde(default)]
     pub byok_tokens: u32,
     #[serde(default)]
     pub custom_endpoint_tokens: u32,
     #[serde(default)]
-    pub bork_token_usage_by_category: HashMap<TokenUsageCategory, u32>,
+    pub krust_token_usage_by_category: HashMap<TokenUsageCategory, u32>,
     #[serde(default)]
     pub byok_token_usage_by_category: HashMap<TokenUsageCategory, u32>,
     #[serde(default)]
@@ -1288,8 +1288,8 @@ impl ModelTokenUsage {
         ))
     }
 
-    pub fn to_proto_bork_usage(&self) -> Option<(String, stream_finished::ModelTokenUsage)> {
-        self.to_proto_usage(self.bork_tokens, &self.bork_token_usage_by_category)
+    pub fn to_proto_krust_usage(&self) -> Option<(String, stream_finished::ModelTokenUsage)> {
+        self.to_proto_usage(self.krust_tokens, &self.krust_token_usage_by_category)
     }
 
     pub fn to_proto_byok_usage(&self) -> Option<(String, stream_finished::ModelTokenUsage)> {
@@ -1320,9 +1320,9 @@ impl ModelTokenUsage {
     pub fn to_proto_combined(&self) -> stream_finished::ModelTokenUsage {
         stream_finished::ModelTokenUsage {
             model_id: self.model_id.clone(),
-            total_tokens: self.bork_tokens + self.byok_tokens + self.custom_endpoint_tokens,
+            total_tokens: self.krust_tokens + self.byok_tokens + self.custom_endpoint_tokens,
             token_usage_by_category: self
-                .bork_token_usage_by_category
+                .krust_token_usage_by_category
                 .iter()
                 .chain(self.byok_token_usage_by_category.iter())
                 .chain(self.custom_endpoint_token_usage_by_category.iter())

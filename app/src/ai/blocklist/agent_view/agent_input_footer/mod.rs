@@ -25,24 +25,24 @@ use tokio::fs;
 use toolbar_item::AgentToolbarItemKind;
 #[cfg(feature = "voice_input")]
 use voice_input::{StartListeningError, VoiceSessionResult};
-use bork_cli::agent::Harness;
-use bork_core::context_flag::ContextFlag;
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::color::contrast::MinimumAllowedContrast;
-use bork_core::ui::color::ContrastingColor;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
+use krust_cli::agent::Harness;
+use krust_core::context_flag::ContextFlag;
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::color::contrast::MinimumAllowedContrast;
+use krust_core::ui::color::ContrastingColor;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill};
 #[cfg(any(not(target_family = "wasm"), feature = "voice_input"))]
-use bork_errors::report_error;
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_errors::report_error;
+use krust_errors::report_if_error;
+use krustui::elements::{
     ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, Empty, EventHandler, Flex, MainAxisAlignment, MainAxisSize,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Wrap, WrapFill, WrapFillEntireRun,
 };
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::{
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -514,7 +514,7 @@ impl AgentInputFooter {
             ActionButton::new("Enable notifications", InstallPluginButtonTheme)
                 .with_icon(Icon::Download)
                 .with_tooltip(
-                    "Install the Bork plugin to enable rich agent notifications within Bork",
+                    "Install the Krust plugin to enable rich agent notifications within Krust",
                 )
                 .with_size(cli_button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
@@ -527,7 +527,7 @@ impl AgentInputFooter {
         let plugin_instructions_button = ctx.add_typed_action_view(|_ctx| {
             ActionButton::new("Notifications setup instructions", InstallPluginButtonTheme)
                 .with_icon(Icon::Info)
-                .with_tooltip("View instructions to install the Bork plugin")
+                .with_tooltip("View instructions to install the Krust plugin")
                 .with_size(cli_button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
                 .with_adjoined_side(AdjoinedSide::Right)
@@ -539,9 +539,9 @@ impl AgentInputFooter {
         });
 
         let update_plugin_button = ctx.add_typed_action_view(|_ctx| {
-            ActionButton::new("Update Bork plugin", InstallPluginButtonTheme)
+            ActionButton::new("Update Krust plugin", InstallPluginButtonTheme)
                 .with_icon(Icon::Download)
-                .with_tooltip("A new version of the Bork plugin is available")
+                .with_tooltip("A new version of the Krust plugin is available")
                 .with_size(cli_button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
                 .with_adjoined_side(AdjoinedSide::Right)
@@ -553,7 +553,7 @@ impl AgentInputFooter {
         let update_instructions_button = ctx.add_typed_action_view(|_ctx| {
             ActionButton::new("Plugin update instructions", InstallPluginButtonTheme)
                 .with_icon(Icon::Info)
-                .with_tooltip("View instructions to update the Bork plugin")
+                .with_tooltip("View instructions to update the Krust plugin")
                 .with_size(cli_button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
                 .with_adjoined_side(AdjoinedSide::Right)
@@ -1117,7 +1117,7 @@ impl AgentInputFooter {
     fn select_cli_file(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let view_id = ctx.view_id();
-        let file_picker_config = borkui::platform::FilePickerConfiguration::new();
+        let file_picker_config = krustui::platform::FilePickerConfiguration::new();
 
         ctx.open_file_picker(
             move |result, ctx| match result {
@@ -1346,7 +1346,7 @@ impl AgentInputFooter {
             // executor so it runs inside the container and targets the
             // container's shell / package layout. A common use case will be
             // running a 3p harness (e.g. Claude Code) inside a sandbox and
-            // needing the Bork plugin to integrate with it.
+            // needing the Krust plugin to integrate with it.
             Some(ShellLaunchData::DockerSandbox { .. }) => return false,
         };
 
@@ -1465,10 +1465,10 @@ impl AgentInputFooter {
             .cli_agent(ctx)
             .and_then(plugin_manager_for)
             .map(|m| m.install_success_message())
-            .unwrap_or("Bork plugin installed. Please restart the session to activate.");
+            .unwrap_or("Krust plugin installed. Please restart the session to activate.");
         self.handle_plugin_operation(
-            "Installing Bork plugin...",
-            "Failed to install Bork plugin",
+            "Installing Krust plugin...",
+            "Failed to install Krust plugin",
             success_msg,
             PluginChipTelemetryKind::Install,
             |manager| async move { manager.install().await },
@@ -1482,10 +1482,10 @@ impl AgentInputFooter {
             .cli_agent(ctx)
             .and_then(plugin_manager_for)
             .map(|m| m.update_success_message())
-            .unwrap_or("Bork plugin updated. Please restart the session to activate.");
+            .unwrap_or("Krust plugin updated. Please restart the session to activate.");
         self.handle_plugin_operation(
-            "Updating Bork plugin...",
-            "Failed to update Bork plugin",
+            "Updating Krust plugin...",
+            "Failed to update Krust plugin",
             success_msg,
             PluginChipTelemetryKind::Update,
             |manager| async move { manager.update().await },
@@ -1628,7 +1628,7 @@ impl AgentInputFooter {
                     .unwrap_or_else(|| appearance.theme().foreground().into_solid());
                 left_buttons.add_child(
                     Container::new(
-                        ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(icon_color)).finish())
+                        ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(icon_color)).finish())
                             .with_width(cli_icon_size)
                             .with_height(cli_icon_size)
                             .finish(),
@@ -1827,8 +1827,8 @@ impl AgentInputFooter {
         // For key-based toggling, validate the key state against current voice state.
         if let voice_input::VoiceInputToggledFrom::Key { state } = source {
             match (&self.cli_voice_input_state, state) {
-                (CLIVoiceInputState::Stopped, borkui::event::KeyState::Released) => return,
-                (CLIVoiceInputState::Listening, borkui::event::KeyState::Pressed) => return,
+                (CLIVoiceInputState::Stopped, krustui::event::KeyState::Released) => return,
+                (CLIVoiceInputState::Listening, krustui::event::KeyState::Pressed) => return,
                 _ => {}
             }
         }
@@ -2032,7 +2032,7 @@ impl AgentInputFooter {
         let is_force_enabled = is_in_cloud_context(&terminal_model);
         drop(terminal_model);
 
-        // Read directly from the conversation, same data source as the borking
+        // Read directly from the conversation, same data source as the krusting
         // indicator footer's auto-approve chip.
         let is_active = BlocklistAIHistoryModel::as_ref(ctx)
             .active_conversation(self.terminal_view_id)
@@ -2312,7 +2312,7 @@ impl View for AgentInputFooter {
         "AgentViewFooter"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         if self.should_render_cloud_mode_v2(app) {
             return self.render_cloud_mode_v2_footer(app);
         }
@@ -2482,7 +2482,7 @@ pub enum AgentInputFooterAction {
 impl TypedActionView for AgentInputFooter {
     type Action = AgentInputFooterAction;
 
-    fn handle_action(&mut self, action: &Self::Action, ctx: &mut borkui::ViewContext<Self>) {
+    fn handle_action(&mut self, action: &Self::Action, ctx: &mut krustui::ViewContext<Self>) {
         match action {
             #[cfg(feature = "voice_input")]
             AgentInputFooterAction::ToggleVoiceInput => {
@@ -2772,10 +2772,10 @@ impl ActionButtonTheme for AgentInputButtonTheme {
         true
     }
 
-    fn font_properties(&self) -> Option<borkui::fonts::Properties> {
+    fn font_properties(&self) -> Option<krustui::fonts::Properties> {
         if crate::features::FeatureFlag::CloudModeInputV2.is_enabled() {
-            Some(borkui::fonts::Properties {
-                weight: borkui::fonts::Weight::Semibold,
+            Some(krustui::fonts::Properties {
+                weight: krustui::fonts::Weight::Semibold,
                 ..Default::default()
             })
         } else {
@@ -2842,12 +2842,12 @@ impl ActionButtonTheme for ActiveMicButtonTheme {
         true
     }
 
-    fn font_properties(&self) -> Option<borkui::fonts::Properties> {
+    fn font_properties(&self) -> Option<krustui::fonts::Properties> {
         AgentInputButtonTheme.font_properties()
     }
 }
 
-/// Green-accented theme for the "Install Bork plugin" chip.
+/// Green-accented theme for the "Install Krust plugin" chip.
 struct InstallPluginButtonTheme;
 
 impl ActionButtonTheme for InstallPluginButtonTheme {
@@ -2884,10 +2884,10 @@ impl ActionButtonTheme for InstallPluginButtonTheme {
 /// Returns the log file path on success, or `None` if writing failed.
 #[cfg(not(target_family = "wasm"))]
 async fn write_install_log(agent: CLIAgent, err: &PluginInstallError) -> Option<PathBuf> {
-    let log_path = env::temp_dir().join("bork-plugin-install.log");
+    let log_path = env::temp_dir().join("krust-plugin-install.log");
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
     let contents = format!(
-        "Bork plugin installation — {agent:?}\n\
+        "Krust plugin installation — {agent:?}\n\
          {now}\n\
          \n\
          {log}",

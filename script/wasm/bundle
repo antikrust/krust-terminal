@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds a Bork binary and bundles it up for distribution.
+# Builds a Krust binary and bundles it up for distribution.
 
 set -e
 
@@ -21,7 +21,7 @@ CARGO_TARGET_DIR="$WORKSPACE_ROOT_DIR/target/wasm32-unknown-unknown"
 # By default we build dev bundles.
 RELEASE_CHANNEL="dev"
 # TODO: We should enable crash_reporting and before enabling for trusted testers.
-# https://linear.app/borkdotdev/issue/PLAT-428/crash-reporting-on-web
+# https://linear.app/krustdotdev/issue/PLAT-428/crash-reporting-on-web
 FEATURES="release_bundle,gui"
 DEBUG=false
 
@@ -114,20 +114,20 @@ mkdir -p "$EXTRAS_DIR"
 
 # Update parameters based on the target release channel.
 #
-# BORK_BIN is the name of the binary produced by cargo.
-# N.B. The bundled outputs will always be bork.js and bork_bg.wasm.
+# KRUST_BIN is the name of the binary produced by cargo.
+# N.B. The bundled outputs will always be krust.js and krust_bg.wasm.
 if [[ $RELEASE_CHANNEL = "local" ]]; then
-  BORK_BIN="bork"
+  KRUST_BIN="krust"
   FEATURES="$FEATURES,remote_tty"
 elif [[ $RELEASE_CHANNEL = "dev" ]]; then
-  BORK_BIN="dev"
+  KRUST_BIN="dev"
 elif [[ $RELEASE_CHANNEL = "preview" ]]; then
-  BORK_BIN="preview"
+  KRUST_BIN="preview"
   FEATURES="$FEATURES,preview_channel"
 elif [[ $RELEASE_CHANNEL = "stable" ]]; then
-  BORK_BIN="stable"
+  KRUST_BIN="stable"
 elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-  BORK_BIN="bork"
+  KRUST_BIN="krust"
 fi
 
 if [ -n "${FEATURES_OVERRIDE+x}" ]; then
@@ -138,20 +138,20 @@ fi
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if [[ "$CHECK_ONLY" == "true" ]]; then
-  ASSET_TARGET_DIR="$ASSET_TARGET_DIR" cargo check --target wasm32-unknown-unknown --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES"
+  ASSET_TARGET_DIR="$ASSET_TARGET_DIR" cargo check --target wasm32-unknown-unknown --profile "$CARGO_PROFILE" --bin "$KRUST_BIN" --features "$FEATURES"
   exit 0
 fi
 
 # Build the wasm binary.
-echo "Building and bundling Bork for channel $RELEASE_CHANNEL"
-ASSET_TARGET_DIR="$ASSET_TARGET_DIR" cargo build --target wasm32-unknown-unknown --profile "$CARGO_PROFILE" --bin "$BORK_BIN" --features "$FEATURES"
+echo "Building and bundling Krust for channel $RELEASE_CHANNEL"
+ASSET_TARGET_DIR="$ASSET_TARGET_DIR" cargo build --target wasm32-unknown-unknown --profile "$CARGO_PROFILE" --bin "$KRUST_BIN" --features "$FEATURES"
 
 # Generate linked JS and wasm files that can be run in the browser.
-echo "Running wasm-bindgen on $CARGO_TARGET_OUTPUT_DIR/$BORK_BIN.wasm"
-wasm-bindgen --target web --out-dir "$OUT_DIR" --out-name "bork" --keep-debug --no-typescript "$CARGO_TARGET_OUTPUT_DIR/$BORK_BIN.wasm"
+echo "Running wasm-bindgen on $CARGO_TARGET_OUTPUT_DIR/$KRUST_BIN.wasm"
+wasm-bindgen --target web --out-dir "$OUT_DIR" --out-name "krust" --keep-debug --no-typescript "$CARGO_TARGET_OUTPUT_DIR/$KRUST_BIN.wasm"
 
-WASM_BINARY_OUT="${OUT_DIR}/bork_bg.wasm"
-WASM_BINARY_DEBUG="${EXTRAS_DIR}/bork_bg.debug.wasm"
+WASM_BINARY_OUT="${OUT_DIR}/krust_bg.wasm"
+WASM_BINARY_DEBUG="${EXTRAS_DIR}/krust_bg.debug.wasm"
 
 if [[ "$NO_SPLIT" != "true" ]]; then
   # Run Sentry's wasm-split binary to separate out debug information from the

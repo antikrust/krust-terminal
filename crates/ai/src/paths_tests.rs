@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 
 #[cfg(windows)]
-use bork_terminal::shell::{ShellLaunchData, ShellType};
+use krust_terminal::shell::{ShellLaunchData, ShellType};
 
 use super::*;
 

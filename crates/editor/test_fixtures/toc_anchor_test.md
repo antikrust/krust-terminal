@@ -1,6 +1,6 @@
 # Markdown ToC Manual Test
 
-Use this file in a Bork notebook to verify fragment link navigation.
+Use this file in a Krust notebook to verify fragment link navigation.
 
 ## Table of contents
 

@@ -1,10 +1,10 @@
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Align, ConstrainedBox, Container, Flex, ParentElement, SavePosition, Shrinkable, Stack,
 };
-use borkui::fonts::FamilyId;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, ViewContext, ViewHandle};
+use krustui::fonts::FamilyId;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, ViewContext, ViewHandle};
 
 use crate::editor::{
     EditOrigin, EditorOptions, EditorView, Event as EditorEvent, InteractionState,

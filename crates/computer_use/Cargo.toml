@@ -15,7 +15,7 @@ test-util = []
 
 [dependencies]
 anyhow.workspace = true
-bork_errors.workspace = true
+krust_errors.workspace = true
 async-trait.workspace = true
 cfg-if.workspace = true
 clap.workspace = true
@@ -45,7 +45,7 @@ objc2-core-foundation.workspace = true
 # specific process without moving the global cursor.
 objc2-core-graphics = { workspace = true, features = ["libc"] }
 tempfile.workspace = true
-borkui_core.workspace = true
+krustui_core.workspace = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 ashpd.workspace = true
@@ -55,7 +55,7 @@ nix = { workspace = true, features = ["signal"] }
 tokio = { workspace = true, features = ["process", "time"] }
 url.workspace = true
 uuid.workspace = true
-borkui_core.workspace = true
+krustui_core.workspace = true
 # `xinput` provides the XI2 (MPX) device hierarchy used for background per-window control,
 # `composite` provides off-screen window capture for background window screenshots.
 x11rb = { workspace = true, features = ["composite", "xinput", "xtest"] }
@@ -63,7 +63,7 @@ zbus.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 image.workspace = true
-borkui_core.workspace = true
+krustui_core.workspace = true
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",

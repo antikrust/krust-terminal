@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use borkui::{AppContext, ModelContext, ModelHandle, SingletonEntity};
+use krustui::{AppContext, ModelContext, ModelHandle, SingletonEntity};
 
 use super::response_stream::{ResponseStream, ResponseStreamId};
 use super::BlocklistAIController;

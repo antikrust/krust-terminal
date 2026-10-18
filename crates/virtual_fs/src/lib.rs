@@ -22,7 +22,7 @@ pub struct Dirs {
 impl Dirs {
     #[allow(dead_code)]
     pub fn git_repository_fixture(&self) -> PathBuf {
-        Bork::fixtures().join("git_repository")
+        Krust::fixtures().join("git_repository")
     }
 }
 
@@ -39,18 +39,18 @@ impl VirtualFS {
     pub fn test(tag: &str, test_callback: impl FnOnce(Dirs, VirtualFS)) {
         let root = tempdir().expect("failed create root directory.");
 
-        let borkbox_dir = root.path().join(tag);
+        let krustbox_dir = root.path().join(tag);
 
-        if PathBuf::from(&borkbox_dir).exists() {
-            std::fs::remove_dir_all(PathBuf::from(&borkbox_dir)).expect("can not remove directory");
+        if PathBuf::from(&krustbox_dir).exists() {
+            std::fs::remove_dir_all(PathBuf::from(&krustbox_dir)).expect("can not remove directory");
         }
 
-        std::fs::create_dir(PathBuf::from(&borkbox_dir)).expect("can not create directory");
+        std::fs::create_dir(PathBuf::from(&krustbox_dir)).expect("can not create directory");
 
-        let tests = dunce::canonicalize(&borkbox_dir).unwrap_or_else(|e| {
+        let tests = dunce::canonicalize(&krustbox_dir).unwrap_or_else(|e| {
             panic!(
                 "Couldn't canonicalize test path {}: {:?}",
-                borkbox_dir.display(),
+                krustbox_dir.display(),
                 e
             )
         });
@@ -60,13 +60,13 @@ impl VirtualFS {
             tests,
         };
 
-        let borkbox = VirtualFS {
+        let krustbox = VirtualFS {
             root,
-            cwd: borkbox_dir,
+            cwd: krustbox_dir,
             tests: tag.to_string(),
         };
 
-        test_callback(directories, borkbox);
+        test_callback(directories, krustbox);
     }
 
     pub fn back_to_root(&mut self) -> &mut Self {
@@ -157,9 +157,9 @@ impl VirtualFS {
     }
 }
 
-pub struct Bork;
+pub struct Krust;
 
-impl Bork {
+impl Krust {
     #[allow(dead_code)]
     pub fn executable() -> PathBuf {
         let mut path = {
@@ -175,7 +175,7 @@ impl Bork {
                 .unwrap_or_else(|| Self::root().join(format!("target/{}", &build)))
         };
 
-        path.push("bork");
+        path.push("krust");
         path
     }
 

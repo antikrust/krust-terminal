@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
 use pathfinder_geometry::rect::RectF;
-use borkui::elements::DraggableState;
-use borkui::geometry::vector::{vec2f, Vector2F};
-use borkui::platform::TerminationMode;
-use borkui::windowing::WindowManager;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use krustui::elements::DraggableState;
+use krustui::geometry::vector::{vec2f, Vector2F};
+use krustui::platform::TerminationMode;
+use krustui::windowing::WindowManager;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 /// Singleton model that owns all cross-window tab drag state.
 ///
@@ -251,7 +251,7 @@ enum DragPhase {
     /// A reverse-handoff is in progress: the tab is being moved back out of a
     /// target window and into the preview window. Set by `on_drag_while_inserted`
     /// immediately before the view-tree transfer to block re-entrant `on_drag`
-    /// processing (the BorkUI framework does not support view transfers within a
+    /// processing (the KrustUI framework does not support view transfers within a
     /// single event cycle). In the primary flow `InsertedInTarget` is held only
     /// briefly between `perform_handoff` and `finalize`, so this state is rarely
     /// reached.

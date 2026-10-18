@@ -1,7 +1,7 @@
 use ai::LLMId;
-use bork_core::features::FeatureFlag;
-use bork_core::telemetry::testing::MockTelemetryContextProvider;
-use borkui_core::{App, ModelHandle};
+use krust_core::features::FeatureFlag;
+use krust_core::telemetry::testing::MockTelemetryContextProvider;
+use krustui_core::{App, ModelHandle};
 
 use crate::model::{
     AiSetupChoice, NoAiConfirmationSource, OnboardingAuthState, OnboardingStateModel,
@@ -28,7 +28,7 @@ fn step(app: &App, model: &ModelHandle<OnboardingStateModel>) -> OnboardingStep 
 
 #[test]
 fn agent_path_routes_through_ai_setup() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -38,7 +38,7 @@ fn agent_path_routes_through_ai_setup() {
         model.update(&mut app, |model, ctx| model.next(ctx));
         assert_eq!(step(&app, &model), OnboardingStep::AiSetup);
 
-        // The default AI setup choice is the Bork agent.
+        // The default AI setup choice is the Krust agent.
         model.update(&mut app, |model, ctx| model.next(ctx));
         assert_eq!(step(&app, &model), OnboardingStep::Agent);
         model.update(&mut app, |model, ctx| model.next(ctx));
@@ -64,7 +64,7 @@ fn agent_path_routes_through_ai_setup() {
 
 #[test]
 fn third_party_choice_routes_to_third_party_slide() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -89,7 +89,7 @@ fn third_party_choice_routes_to_third_party_slide() {
 
 #[test]
 fn confirm_no_ai_switches_to_terminal_path() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -125,7 +125,7 @@ fn confirm_no_ai_switches_to_terminal_path() {
 
 #[test]
 fn confirm_no_ai_from_intention_then_back_returns_to_intention() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -149,7 +149,7 @@ fn confirm_no_ai_from_intention_then_back_returns_to_intention() {
 
 #[test]
 fn cancel_no_ai_from_intention_routes_to_ai_setup() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -174,7 +174,7 @@ fn cancel_no_ai_from_intention_routes_to_ai_setup() {
 
 #[test]
 fn dismiss_no_ai_closes_without_changing_path() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
@@ -195,7 +195,7 @@ fn dismiss_no_ai_closes_without_changing_path() {
 
 #[test]
 fn terminal_settings_disable_ai() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
         model.update(&mut app, |model, ctx| model.set_intention_terminal(ctx));
@@ -211,11 +211,11 @@ fn terminal_settings_disable_ai() {
 
 #[test]
 fn agent_intent_keeps_ai_enabled_for_any_setup_choice() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
-        // Default agent intention + "Use Bork Agent" enables AI.
+        // Default agent intention + "Use Krust Agent" enables AI.
         model.read(&app, |model, _| assert!(model.settings().is_ai_enabled()));
 
         // "Use third party agents" still keeps AI enabled: agent intent always
@@ -225,9 +225,9 @@ fn agent_intent_keeps_ai_enabled_for_any_setup_choice() {
         });
         model.read(&app, |model, _| assert!(model.settings().is_ai_enabled()));
 
-        // Switching back to Bork Agent also keeps AI enabled.
+        // Switching back to Krust Agent also keeps AI enabled.
         model.update(&mut app, |model, ctx| {
-            model.set_ai_setup_choice(AiSetupChoice::BorkAgent, ctx)
+            model.set_ai_setup_choice(AiSetupChoice::KrustAgent, ctx)
         });
         model.read(&app, |model, _| assert!(model.settings().is_ai_enabled()));
     });
@@ -235,7 +235,7 @@ fn agent_intent_keeps_ai_enabled_for_any_setup_choice() {
 
 #[test]
 fn terminal_path_skips_third_party() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
         model.update(&mut app, |model, ctx| model.set_intention_terminal(ctx));
@@ -261,11 +261,11 @@ fn terminal_path_skips_third_party() {
 
 #[test]
 fn progress_reports_v3_positions_for_agent_path() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
 
-        // Bork Agent path: Intention → AiSetup → Agent → AiAccess → Customize → ThemePicker.
+        // Krust Agent path: Intention → AiSetup → Agent → AiAccess → Customize → ThemePicker.
         let cases = [
             (OnboardingStep::Intention, (0, 6)),
             (OnboardingStep::AiSetup, (1, 6)),
@@ -284,7 +284,7 @@ fn progress_reports_v3_positions_for_agent_path() {
 
 #[test]
 fn progress_reports_v3_positions_for_third_party_path() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
         model.update(&mut app, |model, ctx| {
@@ -292,7 +292,7 @@ fn progress_reports_v3_positions_for_third_party_path() {
         });
 
         // Third-party path has no "Choose how to access AI" step, so it is one
-        // dot shorter than the Bork Agent path.
+        // dot shorter than the Krust Agent path.
         let cases = [
             (OnboardingStep::Intention, (0, 5)),
             (OnboardingStep::AiSetup, (1, 5)),
@@ -310,7 +310,7 @@ fn progress_reports_v3_positions_for_third_party_path() {
 
 #[test]
 fn progress_reports_terminal_path_uses_three_dot_variant() {
-    let _flag = FeatureFlag::OpenBorkNewSettingsModes.override_enabled(true);
+    let _flag = FeatureFlag::OpenKrustNewSettingsModes.override_enabled(true);
     App::test((), |mut app| async move {
         let model = add_test_model(&mut app);
         model.update(&mut app, |model, ctx| model.set_intention_terminal(ctx));

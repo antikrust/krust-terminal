@@ -3,14 +3,14 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use bork_completer::parsers::simple::{command_without_leading_env_vars, decompose_command};
-use bork_core::execution_mode::AppExecutionMode;
-use bork_core::features::FeatureFlag;
-use bork_core::settings::Setting;
-use bork_core::user_preferences::GetUserPreferences;
-use bork_errors::{report_error, report_if_error};
-use bork_util::path::EscapeChar;
-use borkui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use krust_completer::parsers::simple::{command_without_leading_env_vars, decompose_command};
+use krust_core::execution_mode::AppExecutionMode;
+use krust_core::features::FeatureFlag;
+use krust_core::settings::Setting;
+use krust_core::user_preferences::GetUserPreferences;
+use krust_errors::{report_error, report_if_error};
+use krust_util::path::EscapeChar;
+use krustui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::BlocklistAIHistoryModel;
 use crate::ai::agent::conversation::AIConversationId;
@@ -205,7 +205,7 @@ impl BlocklistAIPermissions {
             cli_agent_model: profile_data.cli_agent_model.clone(),
             computer_use_model: profile_data.computer_use_model.clone(),
             context_window_limit: profile_data.context_window_limit,
-            autosync_plans_to_bork_drive: profile_data.autosync_plans_to_bork_drive,
+            autosync_plans_to_krust_drive: profile_data.autosync_plans_to_krust_drive,
             web_search_enabled: profile_data.web_search_enabled,
         }
     }
@@ -675,7 +675,7 @@ impl BlocklistAIPermissions {
         self.can_read_files(Some(conversation_id), paths, terminal_view_id, ctx)
     }
 
-    /// Returns whether or not Bork can auto-read the given files (e.g. for codebase indexing).
+    /// Returns whether or not Krust can auto-read the given files (e.g. for codebase indexing).
     pub fn can_read_files(
         &self,
         conversation_id: Option<&AIConversationId>,

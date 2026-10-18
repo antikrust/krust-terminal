@@ -4,9 +4,9 @@
 
 use anyhow::anyhow;
 use string_offset::CharOffset;
-use borkui_core::text::TextBuffer;
-use borkui_core::text::point::Point;
-use borkui_core::text::word_boundaries::WordBoundariesPolicy;
+use krustui_core::text::TextBuffer;
+use krustui_core::text::point::Point;
+use krustui_core::text::word_boundaries::WordBoundariesPolicy;
 
 use super::buffer::{Buffer, ToBufferCharOffset, ToBufferPoint};
 use super::cursor::BufferCursor;

@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use string_offset::CharOffset;
-use bork_editor::model::CoreEditorModel;
-use borkui::integration::TestStep;
-use borkui::windowing::WindowManager;
-use borkui::{async_assert, App, SingletonEntity, ViewHandle, WindowId};
+use krust_editor::model::CoreEditorModel;
+use krustui::integration::TestStep;
+use krustui::windowing::WindowManager;
+use krustui::{async_assert, App, SingletonEntity, ViewHandle, WindowId};
 
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::cloud_object::{CloudObjectEventEntrypoint, Space};
-use crate::drive::OpenBorkDriveObjectSettings;
+use crate::drive::OpenKrustDriveObjectSettings;
 use crate::integration_testing::view_getters::{notebook_view, workspace_view};
 use crate::notebooks::manager::NotebookSource;
 use crate::server::cloud_objects::update_manager::UpdateManager;
@@ -79,7 +79,7 @@ pub fn open_notebook(window_key: impl Into<String>, notebook_key: impl Into<Stri
             WindowManager::as_ref(ctx).show_window_and_focus_app(*window_id);
             workspace.open_notebook(
                 &NotebookSource::Existing(*notebook_id),
-                &OpenBorkDriveObjectSettings::default(),
+                &OpenKrustDriveObjectSettings::default(),
                 ctx,
                 true,
             );

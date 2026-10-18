@@ -1,25 +1,25 @@
 //! Banner shown when the remote-server binary check, installation, or connection fails on the remote host.
-//! We fall back to the existing Borkification behavior and display this banner so the user knows why advanced features are unavailable.
+//! We fall back to the existing Krustification behavior and display this banner so the user knows why advanced features are unavailable.
 
 use remote_server::transport::UserFacingError;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::terminal::model::session::SessionId;
 use crate::ui_components::icons::Icon;
 use crate::Appearance;
 
-const BANNER_TITLE: &str = "Couldn't connect to the Bork SSH extension";
+const BANNER_TITLE: &str = "Couldn't connect to the Krust SSH extension";
 
 const BANNER_BODY: &str =
     "While advanced features like file browsing and code review are currently \
-    disabled, the rest of your Borkified experience is fully available.";
+    disabled, the rest of your Krustified experience is fully available.";
 
 #[derive(Clone, Debug)]
 pub enum SshRemoteServerFailedBannerAction {
@@ -70,7 +70,7 @@ impl View for SshRemoteServerFailedBanner {
 
         // Alert-circle icon
         let icon = Container::new(
-            ConstrainedBox::new(Icon::AlertCircle.to_borkui_icon(fg_color.into()).finish())
+            ConstrainedBox::new(Icon::AlertCircle.to_krustui_icon(fg_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish(),
@@ -130,7 +130,7 @@ impl View for SshRemoteServerFailedBanner {
         // Close (X) button
         let close_icon_color = muted_color;
         let close = Hoverable::new(self.close_mouse_state.clone(), move |_| {
-            ConstrainedBox::new(Icon::X.to_borkui_icon(close_icon_color.into()).finish())
+            ConstrainedBox::new(Icon::X.to_krustui_icon(close_icon_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish()

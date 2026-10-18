@@ -10,7 +10,7 @@ pub mod login_slide;
 pub mod needs_sso_link_view;
 pub mod paste_auth_token_modal;
 mod user_properties;
-pub use bork_server_auth::{auth_state, credentials, user, user_uid};
+pub use krust_server_auth::{auth_state, credentials, user, user_uid};
 #[cfg(target_family = "wasm")]
 pub mod web_handoff;
 
@@ -21,10 +21,10 @@ pub use auth_state::AuthStateProvider;
 use itertools::Itertools;
 pub use login_failure_notification::LoginFailureReason;
 pub use user_uid::UserUid;
-use bork_core::user_preferences::GetUserPreferences as _;
-use bork_errors::{report_error, report_if_error};
-use borkui::modals::{AlertDialogWithCallbacks, ModalButton};
-use borkui::{AppContext, SingletonEntity};
+use krust_core::user_preferences::GetUserPreferences as _;
+use krust_errors::{report_error, report_if_error};
+use krustui::modals::{AlertDialogWithCallbacks, ModalButton};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::ai::agent_conversations_model::AgentConversationsModel;
 use crate::ai::blocklist::agent_view::orchestration_pill_bar_model::OrchestrationPillBarModel;
@@ -188,7 +188,7 @@ pub fn maybe_log_out(app: &mut AppContext) {
         );
 
         // On mac, we show the native platform modal. On platforms that don't support a native modal,
-        // we show the custom bork modal.
+        // we show the custom krust modal.
         if cfg!(all(not(target_family = "wasm"), target_os = "macos")) {
             app.show_native_platform_modal(alert_data);
         } else {
@@ -283,7 +283,7 @@ pub fn log_out(app: &mut AppContext) {
     }
 
     #[cfg(target_family = "wasm")]
-    crate::platform::wasm::emit_event(crate::platform::wasm::BorkEvent::LoggedOut);
+    crate::platform::wasm::emit_event(crate::platform::wasm::KrustEvent::LoggedOut);
 }
 
 // Remove the cloud persisted settings from user defaults.

@@ -2,7 +2,7 @@
 /// notification structs, but with the data parsed to our liking.
 /// The similar structs at the UI framework layer are lower-level (mostly strings).
 use serde::{Deserialize, Serialize};
-use borkui::{EntityId, WindowId};
+use krustui::{EntityId, WindowId};
 
 use crate::pane_group::PaneId;
 

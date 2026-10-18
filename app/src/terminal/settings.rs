@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use settings::macros::define_settings_group;
 use settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use bork_core::features::FeatureFlag;
-use borkui::units::Pixels;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krustui::units::Pixels;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::settings::{AISettings, InputSettings, TerminalSpacing};
 

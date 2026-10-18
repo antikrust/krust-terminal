@@ -1,10 +1,10 @@
 use pathfinder_color::ColorU;
-use borkui::elements::{
+use krustui::elements::{
     Border, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Shrinkable,
 };
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

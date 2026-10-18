@@ -5,10 +5,10 @@ use std::sync::MutexGuard;
 use pathfinder_geometry::vector::Vector2F;
 use serde::{Deserialize, Serialize};
 use sum_tree::{Cursor, SeekBias};
-use bork_core::features::FeatureFlag;
-use borkui::elements::ClippedScrollStateHandle;
-use borkui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use borkui::{AppContext, ModelHandle};
+use krust_core::features::FeatureFlag;
+use krustui::elements::ClippedScrollStateHandle;
+use krustui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use krustui::{AppContext, ModelHandle};
 
 use super::block_list_element::{
     GridType, SnackbarHeader, SnackbarHeaderState, SnackbarPoint, VisibleItem,

@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ipc::ServiceCaller;
-use bork_completer::completer::{JsExecutionContext, JsExecutionError};
-use bork_js::{JsFunctionId, SerializedJsValue};
+use krust_completer::completer::{JsExecutionContext, JsExecutionError};
+use krust_js::{JsFunctionId, SerializedJsValue};
 
 use crate::plugin::service::{
     CallJsFunctionRequest, CallJsFunctionResponse, CallJsFunctionService,

@@ -1,6 +1,6 @@
 # Queue terminal commands alongside prompts
 
-GitHub: [borkdotdev/bork#11912](https://github.com/borkdotdev/bork/issues/11912). Builds on the v2 queued-prompts panel from [`specs/REMOTE-1543/PRODUCT.md`](../REMOTE-1543/PRODUCT.md) and [`specs/APP-4562/PRODUCT.md`](../APP-4562/PRODUCT.md).
+GitHub: [krustdotdev/krust#11912](https://github.com/krustdotdev/krust/issues/11912). Builds on the v2 queued-prompts panel from [`specs/REMOTE-1543/PRODUCT.md`](../REMOTE-1543/PRODUCT.md) and [`specs/APP-4562/PRODUCT.md`](../APP-4562/PRODUCT.md).
 
 Figma: none provided (the only new visual is a shell-mode `!` prefix on command rows).
 

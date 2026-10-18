@@ -7,17 +7,17 @@ use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
 use repo_metadata::repositories::DetectedRepositories;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krustui::elements::{
     AnchorPair, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Dismiss, Empty, Fill, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning, OffsetType,
     ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius, SavePosition,
     ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text,
     UniformList, UniformListState, XAxisAnchor, YAxisAnchor,
 };
-use borkui::platform::Cursor;
-use borkui::windowing::WindowManager;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::windowing::WindowManager;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };

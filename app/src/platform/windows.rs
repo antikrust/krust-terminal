@@ -10,7 +10,7 @@ struct RedirectionTrustPolicy {
 /// active, symlink and junction traversal to paths created by non-admin users fails with
 /// ERROR_UNTRUSTED_MOUNT_POINT (448).
 ///
-/// See https://github.com/borkdotdev/bork/issues/9044
+/// See https://github.com/krustdotdev/krust/issues/9044
 pub fn check_redirection_guard() {
     let mut policy = RedirectionTrustPolicy::default();
     let ok = unsafe {

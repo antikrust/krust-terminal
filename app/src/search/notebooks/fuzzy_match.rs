@@ -1,8 +1,8 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_errors::report_error;
-use borkui::elements::{Highlight, Text};
-use borkui::{AppContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::elements::{Highlight, Text};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObject;

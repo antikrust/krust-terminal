@@ -1,13 +1,13 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::Element;
+use krustui::fonts::{Properties, Weight};
+use krustui::Element;
 
 use crate::settings_view::billing_and_usage::billing_cycle_usage_common::{
     aggregate_segments, cost_type_color, format_cost_cents, format_credits,

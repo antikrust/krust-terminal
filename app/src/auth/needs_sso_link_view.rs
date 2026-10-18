@@ -1,7 +1,7 @@
-use borkui::elements::{Align, MouseStateHandle, Shrinkable};
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::elements::{Align, MouseStateHandle, Shrinkable};
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::auth_manager::AuthManager;
 use crate::appearance::Appearance;
@@ -78,7 +78,7 @@ impl View for NeedsSsoLinkView {
 
         LoginErrorModal::new(app)
             .with_header("Your organization has enabled SSO for your account")
-            .with_detail("Click the button below to link your Bork account to your SSO provider.")
+            .with_detail("Click the button below to link your Krust account to your SSO provider.")
             .with_action(link_sso_button)
             .build()
             .finish()

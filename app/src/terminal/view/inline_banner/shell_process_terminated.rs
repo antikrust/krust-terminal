@@ -1,5 +1,5 @@
-use borkui::elements::Text;
-use borkui::Element;
+use krustui::elements::Text;
+use krustui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerContent, InlineBannerIcon, InlineBannerStyle,
@@ -22,7 +22,7 @@ pub fn render_shell_process_terminated_banner(
                     color_override: Some(appearance.theme().foreground().into_solid()),
                 }),
                 content: Some(vec![Text::new(
-                    "The output from Bork's initialization script is visible above to assist with debugging.",
+                    "The output from Krust's initialization script is visible above to assist with debugging.",
                     appearance.ui_font_family(),
                     appearance.ui_font_size(),
                 )]),

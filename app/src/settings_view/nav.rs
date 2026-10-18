@@ -1,7 +1,7 @@
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle};
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::elements::{Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle};
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 use super::settings_page::{MatchData, NAV_ITEM_LEFT_MARGIN};
 use super::SettingsSection;
@@ -74,7 +74,7 @@ impl SettingsUmbrella {
             .with_text_and_icon_label(TextAndIcon::new(
                 TextAndIconAlignment::TextFirst,
                 self.label.to_string(),
-                chevron_icon.to_borkui_icon(text_color),
+                chevron_icon.to_krustui_icon(text_color),
                 MainAxisSize::Max,
                 MainAxisAlignment::SpaceBetween,
                 vec2f(16., 16.),

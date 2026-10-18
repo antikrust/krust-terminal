@@ -8,9 +8,9 @@
 #[cfg(feature = "local_fs")]
 use std::path::Path;
 
-use bork_core::HostId;
-use bork_util::standardized_path::StandardizedPath;
-use borkui_core::{AppContext, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::HostId;
+use krust_util::standardized_path::StandardizedPath;
+use krustui_core::{AppContext, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::file_tree_store::FileTreeState;
 use crate::file_tree_update::{MetadataUpdateType, RepoMetadataUpdate};
@@ -467,7 +467,7 @@ impl RepoMetadataModel {
     }
 }
 
-impl borkui_core::Entity for RepoMetadataModel {
+impl krustui_core::Entity for RepoMetadataModel {
     type Event = RepoMetadataEvent;
 }
 

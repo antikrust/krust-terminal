@@ -1,21 +1,21 @@
-use bork_errors::report_error;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::current_prompt::CurrentPrompt;
 use super::prompt_snapshot::PromptSnapshot;
 use super::{ChipResult, ChipValue, ContextChipKind};
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::settings::BorkPromptSeparator;
+use crate::settings::KrustPromptSeparator;
 use crate::terminal::model::session::Sessions;
 use crate::terminal::session_settings::{SessionSettings, ToolbarChipSelection};
 use crate::terminal::view::{ContextMenuAction, PromptPart, PromptPosition, TerminalAction};
 
-/// The type of bork prompt being used
+/// The type of krust prompt being used
 #[derive(Clone)]
 pub enum PromptType {
-    /// A bork prompt that refreshes chip values on its own. Typical for local sessions.
+    /// A krust prompt that refreshes chip values on its own. Typical for local sessions.
     Dynamic { prompt: ModelHandle<CurrentPrompt> },
-    /// A bork prompt that does not change unless explicitly overwritten. Used for viewers of shared sessions.
+    /// A krust prompt that does not change unless explicitly overwritten. Used for viewers of shared sessions.
     Static { snapshot: PromptSnapshot },
 }
 
@@ -41,7 +41,7 @@ impl PromptType {
     pub fn new_static(
         chips: Vec<ChipResult>,
         same_line_prompt_enabled: bool,
-        separator: BorkPromptSeparator,
+        separator: KrustPromptSeparator,
     ) -> Self {
         PromptType::Static {
             snapshot: PromptSnapshot::from_chips(chips, same_line_prompt_enabled, separator),
@@ -160,7 +160,7 @@ impl PromptType {
             .collect()
     }
 
-    /// Whether same line prompt is enabled for the Bork Prompt.
+    /// Whether same line prompt is enabled for the Krust Prompt.
     pub fn same_line_prompt_enabled(&self, ctx: &AppContext) -> bool {
         match self {
             Self::Dynamic { prompt } => prompt.as_ref(ctx).same_line_prompt_enabled(),
@@ -168,8 +168,8 @@ impl PromptType {
         }
     }
 
-    /// The separator for the Bork prompt.
-    pub fn separator(&self, ctx: &AppContext) -> BorkPromptSeparator {
+    /// The separator for the Krust prompt.
+    pub fn separator(&self, ctx: &AppContext) -> KrustPromptSeparator {
         match self {
             Self::Dynamic { prompt } => prompt.as_ref(ctx).separator(),
             Self::Static { snapshot } => snapshot.separator(),

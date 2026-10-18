@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use settings::Setting as _;
 /// TODO: move alias_expansion setting into this group.
 use settings::{define_settings_group, RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use crate::terminal::input::inline_menu::InlineMenuType;
 use crate::terminal::session_settings::SessionSettings;
@@ -35,7 +35,7 @@ pub enum InputBoxType {
 
 /// How the prompt to the left of the terminal input reads.
 ///
-/// This is Bork's own prompt, not the shell's `PS1`: it always ends in `$`, or `#` when you
+/// This is Krust's own prompt, not the shell's `PS1`: it always ends in `$`, or `#` when you
 /// are root, so the privilege you are typing with is visible at a glance. The variants differ
 /// only in how much location they put in front of that sigil.
 #[derive(
@@ -221,7 +221,7 @@ define_settings_group!(InputSettings,
             sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
             surface: settings::SettingSurfaces::GUI,
             private: false,
-            toml_path: "agents.bork_agent.input.show_agent_tips",
+            toml_path: "agents.krust_agent.input.show_agent_tips",
             description: "Whether agent tips are displayed in the input.",
         },
         // Whether to show the terminal input message bar (contextual hints at the bottom of terminal input).
@@ -273,7 +273,7 @@ impl InputSettings {
         };
 
         // PS1 input is only valid when honor_ps1 is active. If the user has PS1 selected
-        // but the shell has not signalled PS1 support, fall back to Bork input.
+        // but the shell has not signalled PS1 support, fall back to Krust input.
         let is_ps1_enabled = *SessionSettings::as_ref(app).honor_ps1
             && computed_input_type_value == InputBoxType::Classic;
         if is_ps1_enabled {

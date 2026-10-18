@@ -9,7 +9,7 @@ license.workspace = true
 test-util = []
 
 [dependencies]
-bork_errors.workspace = true
+krust_errors.workspace = true
 log.workspace = true
 
 [dev-dependencies]

@@ -1,7 +1,7 @@
-//! Shared protocol, discovery, authentication, and client types for local Bork control.
+//! Shared protocol, discovery, authentication, and client types for local Krust control.
 //!
-//! The `local_control` crate is intentionally UI-agnostic so the Bork app and
-//! `borkctrl` CLI can share the same wire envelopes, action catalog, discovery
+//! The `local_control` crate is intentionally UI-agnostic so the Krust app and
+//! `krustctrl` CLI can share the same wire envelopes, action catalog, discovery
 //! records, selectors, and credential validation rules.
 pub mod auth;
 pub mod catalog;

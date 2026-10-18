@@ -1,8 +1,8 @@
 //! Action buttons row for conversation details panel.
 
-use bork_core::ui::theme::AnsiColorIdentifier;
-use borkui::elements::{ChildView, CrossAxisAlignment, Empty, Flex, ParentElement};
-use borkui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krustui::elements::{ChildView, CrossAxisAlignment, Empty, Flex, ParentElement};
+use krustui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::{AgentConversationEntryId, AgentRunDisplayStatus};
@@ -270,7 +270,7 @@ impl TypedActionView for ConversationActionButtonsRow {
                     let duration = COPY_FEEDBACK_DURATION;
                     ctx.spawn(
                         async move {
-                            borkui::r#async::Timer::after(duration).await;
+                            krustui::r#async::Timer::after(duration).await;
                         },
                         |me, _, ctx| {
                             me.copy_link_button.update(ctx, |button, ctx| {

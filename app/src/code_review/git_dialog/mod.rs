@@ -10,19 +10,19 @@
 //! outcome variant, and wire up dispatch.
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Flex, Hoverable,
     Icon as IconElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Radius, ScrollbarWidth, Stack, Text,
 };
-use borkui::keymap::{self, FixedBinding};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::{self, FixedBinding};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -66,7 +66,7 @@ pub fn init(ctx: &mut AppContext) {
     ctx.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
         GitDialogAction::Cancel,
-        borkui::id!("GitDialog"),
+        krustui::id!("GitDialog"),
     )]);
 }
 
@@ -356,7 +356,7 @@ fn render_file_changes_box(
                 ScrollbarWidth::Auto,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                borkui::elements::Fill::None,
+                krustui::elements::Fill::None,
             )
             .finish(),
         )

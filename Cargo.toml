@@ -21,14 +21,14 @@ default-members = [
   "crates/graphql",
   "crates/markdown_parser",
   "crates/sum_tree",
-  "crates/borkui",
-  "crates/bork_completer",
-  "crates/bork_terminal",
-  "crates/bork_util",
+  "crates/krustui",
+  "crates/krust_completer",
+  "crates/krust_terminal",
+  "crates/krust_util",
 ]
 
 [workspace.package]
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 license = "AGPL-3.0-only"
 publish = false
 
@@ -81,33 +81,33 @@ ui_components = { path = "crates/ui_components" }
 vim = { path = "crates/vim" }
 virtual-fs = { path = "crates/virtual_fs" }
 voice_input = { path = "crates/voice_input" }
-bork = { path = "app" }
-bork_assets = { path = "crates/bork_assets" }
-bork_channel_config = { path = "crates/bork_channel_config" }
-bork_cli = { path = "crates/bork_cli" }
-bork_completer = { path = "crates/bork_completer" }
-bork_core = { path = "crates/bork_core" }
-bork_editor = { path = "crates/editor" }
-bork_errors = { path = "crates/bork_errors" }
-bork_features = { path = "crates/bork_features" }
-bork_files = { path = "crates/bork_files" }
-bork_graphql = { path = "crates/graphql" }
-bork_graphql_schema = { path = "crates/bork_graphql_schema" }
-bork_isolation_platform = { path = "crates/isolation_platform" }
-bork_js = { path = "crates/bork_js" }
-bork_logging = { path = "crates/bork_logging" }
-bork_managed_secrets = { path = "crates/managed_secrets" }
-bork_multi_agent_client = { path = "crates/bork_multi_agent_client" }
-bork_ripgrep = { path = "crates/bork_ripgrep" }
-bork_search_core = { path = "crates/bork_search_core" }
-bork_server_auth = { path = "crates/bork_server_auth" }
-bork_server_client = { path = "crates/bork_server_client" }
-bork_terminal = { path = "crates/bork_terminal" }
-bork_util = { path = "crates/bork_util" }
-bork_web_event_bus = { path = "crates/bork_web_event_bus" }
-borkui = { path = "crates/borkui" }
-borkui_core = { path = "crates/borkui_core" }
-borkui_extras = { path = "crates/borkui_extras", default-features = false }
+krust = { path = "app" }
+krust_assets = { path = "crates/krust_assets" }
+krust_channel_config = { path = "crates/krust_channel_config" }
+krust_cli = { path = "crates/krust_cli" }
+krust_completer = { path = "crates/krust_completer" }
+krust_core = { path = "crates/krust_core" }
+krust_editor = { path = "crates/editor" }
+krust_errors = { path = "crates/krust_errors" }
+krust_features = { path = "crates/krust_features" }
+krust_files = { path = "crates/krust_files" }
+krust_graphql = { path = "crates/graphql" }
+krust_graphql_schema = { path = "crates/krust_graphql_schema" }
+krust_isolation_platform = { path = "crates/isolation_platform" }
+krust_js = { path = "crates/krust_js" }
+krust_logging = { path = "crates/krust_logging" }
+krust_managed_secrets = { path = "crates/managed_secrets" }
+krust_multi_agent_client = { path = "crates/krust_multi_agent_client" }
+krust_ripgrep = { path = "crates/krust_ripgrep" }
+krust_search_core = { path = "crates/krust_search_core" }
+krust_server_auth = { path = "crates/krust_server_auth" }
+krust_server_client = { path = "crates/krust_server_client" }
+krust_terminal = { path = "crates/krust_terminal" }
+krust_util = { path = "crates/krust_util" }
+krust_web_event_bus = { path = "crates/krust_web_event_bus" }
+krustui = { path = "crates/krustui" }
+krustui_core = { path = "crates/krustui_core" }
+krustui_extras = { path = "crates/krustui_extras", default-features = false }
 watcher = { path = "crates/watcher" }
 websocket = { path = "crates/websocket" }
 
@@ -347,8 +347,8 @@ vec1 = { version = "1.8.0", features = ["serde"] }
 version-compare = "0.1"
 vte = { path = "vendor/vte", default-features = false }
 walkdir = "2"
-bork-workflows = { path = "vendor/workflows/workflows" }
-bork_multi_agent_api = { path = "vendor/bork-proto-apis/apis/multi_agent/v1/gen/rust" }
+krust-workflows = { path = "vendor/workflows/workflows" }
+krust_multi_agent_api = { path = "vendor/krust-proto-apis/apis/multi_agent/v1/gen/rust" }
 wasm-bindgen = "0.2.89"
 wasm-bindgen-futures = "0.4.42"
 web-sys = { version = "0.3.69", features = [
@@ -392,7 +392,7 @@ dirs = "6.0.0"
 rayon = "1.10.0"
 sha2 = "0.10"
 shellexpand = "3.1.1"
-bork-command-signatures = { path = "vendor/command-signatures/command-signatures", default-features = false }
+krust-command-signatures = { path = "vendor/command-signatures/command-signatures", default-features = false }
 winit = { path = "vendor/winit" }
 x11rb = "0.13.0"
 mockito = "1.7.0"
@@ -448,7 +448,7 @@ split-debuginfo = "unpacked"
 
 [profile.dev.package]
 # Improve the performance of core terminal logic.
-bork_terminal.opt-level = 3
+krust_terminal.opt-level = 3
 # Minimize the runtime overhead of CPU profiling at the cost of a small
 # increase in compile time for this crate.
 backtrace.opt-level = 3

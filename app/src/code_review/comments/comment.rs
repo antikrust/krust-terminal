@@ -1,8 +1,8 @@
 use std::fmt::{Display, Formatter};
 
 use chrono::{DateTime, Local};
-use bork_editor::render::model::LineCount;
-use bork_multi_agent_api::{self as api};
+use krust_editor::render::model::LineCount;
+use krust_multi_agent_api::{self as api};
 
 use crate::ai::agent::{CurrentHead, DiffBase};
 use crate::code::buffer_location::LocalOrRemotePath;
@@ -11,7 +11,7 @@ use crate::code::editor::EditorReviewComment;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum CommentOrigin {
-    /// Comments originally created in the Bork UI.
+    /// Comments originally created in the Krust UI.
     #[default]
     Native,
     /// Comments imported from a GitHub pull request.

@@ -1,4 +1,4 @@
-use borkui::AppContext;
+use krustui::AppContext;
 
 use super::{CloudObject, GenericStringObjectFormat, JsonObjectType, ObjectType};
 use crate::server::cloud_objects::update_manager::{

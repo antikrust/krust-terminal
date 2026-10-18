@@ -1,6 +1,6 @@
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::*;
 
@@ -14,7 +14,7 @@ fn bundled_skill(content: &str) -> BundledSkill {
             path: LocalOrRemotePath::Local("/bundled/skills/test-skill/SKILL.md".into()),
             content: content.to_string(),
             line_range: None,
-            provider: SkillProvider::Bork,
+            provider: SkillProvider::Krust,
             scope: SkillScope::Bundled,
         },
         BundledSkillActivation::Always,

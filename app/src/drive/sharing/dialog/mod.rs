@@ -6,24 +6,24 @@ use itertools::Itertools;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use session_sharing_protocol::common::{Guest, PendingGuest, SessionId, TeamAclData};
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_editor::editor::NavigationKey;
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_editor::editor::NavigationKey;
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, Empty, Fill, Flex, Highlight, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, ScrollbarWidth, Shrinkable, Stack, UniformList, UniformListState,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::platform::{Cursor, SaveFilePickerConfiguration};
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::platform::{Cursor, SaveFilePickerConfiguration};
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };
@@ -216,7 +216,7 @@ pub enum SharingDialogAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -421,11 +421,11 @@ impl SharingDialog {
         }
     }
 
-    /// The Bork Drive server ID for the target object. `None` if the target is not a Bork Drive
+    /// The Krust Drive server ID for the target object. `None` if the target is not a Krust Drive
     /// object or AI conversation.
     fn target_cloud_object_id(&self, app: &AppContext) -> Option<ServerId> {
         match self.target.as_ref() {
-            Some(ShareableObject::BorkDriveObject(id)) => Some(*id),
+            Some(ShareableObject::KrustDriveObject(id)) => Some(*id),
             Some(ShareableObject::AIConversation(id)) => BlocklistAIHistoryModel::as_ref(app)
                 .get_server_conversation_metadata(id)
                 .map(|m| ServerId::from_string_lossy(m.metadata.uid.uid())),
@@ -433,7 +433,7 @@ impl SharingDialog {
         }
     }
 
-    /// The targeted Bork Drive object, or `None` if the target is not a known Bork Drive object.
+    /// The targeted Krust Drive object, or `None` if the target is not a known Krust Drive object.
     fn target_cloud_object<'a>(&self, app: &'a AppContext) -> Option<&'a dyn CloudObject> {
         self.target_cloud_object_id(app)
             .and_then(|id| CloudModel::as_ref(app).get_by_uid(&id.uid()))
@@ -444,7 +444,7 @@ impl SharingDialog {
         self.target
             .as_ref()
             .and_then(|target| match target {
-                ShareableObject::BorkDriveObject(server_id) => CloudModel::as_ref(app)
+                ShareableObject::KrustDriveObject(server_id) => CloudModel::as_ref(app)
                     .get_by_uid(&server_id.uid())
                     .map(|object| object.display_name()),
                 ShareableObject::Session { .. } => Some("session".to_string()),
@@ -474,7 +474,7 @@ impl SharingDialog {
         match self.target.as_ref() {
             // Always treat session contents as "editable," so that the sharing dialog is shown.
             Some(ShareableObject::Session { .. }) => ContentEditability::Editable,
-            Some(ShareableObject::BorkDriveObject(id)) => {
+            Some(ShareableObject::KrustDriveObject(id)) => {
                 CloudViewModel::as_ref(app).object_editability(&id.uid(), app)
             }
             // Always treat AI conversations as "editable," so that the sharing dialog is shown.
@@ -486,7 +486,7 @@ impl SharingDialog {
     /// The current user's access level on the shared object.
     fn access_level(&self, app: &AppContext) -> SharingAccessLevel {
         match self.target.as_ref() {
-            Some(ShareableObject::BorkDriveObject(id)) => {
+            Some(ShareableObject::KrustDriveObject(id)) => {
                 CloudViewModel::as_ref(app).access_level(&id.uid(), app)
             }
             Some(ShareableObject::AIConversation(id)) => {
@@ -607,10 +607,10 @@ impl SharingDialog {
     /// Report a telemetry event for opening this sharing dialog.
     ///
     /// This should be called by views that contain a sharing dialog whenever they open it (i.e.
-    /// panes and the Bork Drive index).
+    /// panes and the Krust Drive index).
     pub fn report_open(&self, source: SharingDialogSource, ctx: &mut ViewContext<Self>) {
         let event = match self.target.as_ref() {
-            Some(ShareableObject::BorkDriveObject(id)) => {
+            Some(ShareableObject::KrustDriveObject(id)) => {
                 match CloudModel::as_ref(ctx).get_by_uid(&id.uid()) {
                     Some(object) => TelemetryEvent::OpenedSharingDialog(OpenedSharingDialogEvent {
                         source,
@@ -651,7 +651,7 @@ impl SharingDialog {
 
     fn owner(&self, app: &AppContext) -> Option<Subject> {
         match self.target.as_ref()? {
-            ShareableObject::BorkDriveObject(id) => {
+            ShareableObject::KrustDriveObject(id) => {
                 let owner = CloudModel::as_ref(app)
                     .get_by_uid(&id.uid())?
                     .permissions()
@@ -940,7 +940,7 @@ impl SharingDialog {
                         source: SharedSessionActionSource::SharingDialog,
                     })
                 }
-                Some(ShareableObject::BorkDriveObject(_))
+                Some(ShareableObject::KrustDriveObject(_))
                 | Some(ShareableObject::AIConversation(_)) => {
                     Some(TelemetryEvent::ObjectLinkCopied { link: url.clone() })
                 }
@@ -1011,7 +1011,7 @@ impl SharingDialog {
                 }
 
                 // Add Remove option for non-team guests, or for team guests in non-session contexts
-                // (team removal is supported for BorkDrive objects and AI conversations, but not sessions)
+                // (team removal is supported for KrustDrive objects and AI conversations, but not sessions)
                 if !is_team_guest || !is_session {
                     items.push(MenuItem::Separator);
                     items.push(
@@ -1057,7 +1057,7 @@ impl SharingDialog {
         }
 
         match &self.target {
-            Some(ShareableObject::BorkDriveObject(object_id)) => {
+            Some(ShareableObject::KrustDriveObject(object_id)) => {
                 let guest_identifier = guest.subject.to_guest_identifier(ctx);
                 if let Some(guest_identifier) = guest_identifier {
                     let object_id = *object_id;
@@ -1126,7 +1126,7 @@ impl SharingDialog {
         ctx.notify();
 
         match &self.target {
-            Some(ShareableObject::BorkDriveObject(object_id)) => {
+            Some(ShareableObject::KrustDriveObject(object_id)) => {
                 self.set_targeted_guest_access_for_object(idx, access_level, *object_id, ctx);
             }
             Some(ShareableObject::Session { handle, .. }) => {
@@ -1463,7 +1463,7 @@ impl SharingDialog {
             invite_button = invite_button.disabled();
         }
 
-        // For Bork Drive targets, we can't update permissions while there's a pending change.
+        // For Krust Drive targets, we can't update permissions while there's a pending change.
         if self
             .target_cloud_object(app)
             .is_some_and(|object| object.metadata().has_pending_online_only_change())
@@ -1610,7 +1610,7 @@ impl SharingDialog {
         }
 
         match &self.target {
-            Some(ShareableObject::BorkDriveObject(object_id)) => {
+            Some(ShareableObject::KrustDriveObject(object_id)) => {
                 UpdateManager::handle(ctx).update(ctx, |update_manager, ctx| {
                     update_manager.add_object_guests(
                         *object_id,
@@ -2429,8 +2429,8 @@ impl SharingDialog {
 
     fn qr_filename(&self) -> String {
         match self.target_session_id() {
-            Some(session_id) => format!("bork-session-qr-code-{session_id}.png"),
-            None => "bork-session-qr-code.png".to_string(),
+            Some(session_id) => format!("krust-session-qr-code-{session_id}.png"),
+            None => "krust-session-qr-code.png".to_string(),
         }
     }
 
@@ -2759,7 +2759,7 @@ impl SharingDialog {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     "Copy link",
-                    Icon::Link.to_borkui_icon(copy_button_foreground),
+                    Icon::Link.to_krustui_icon(copy_button_foreground),
                     MainAxisSize::Min,
                     MainAxisAlignment::SpaceBetween,
                     vec2f(12., 12.),
@@ -2917,7 +2917,7 @@ impl TypedActionView for SharingDialog {
             }
             SharingDialogAction::SetLinkPermissions(access_level) => {
                 self.set_open_menu(OpenMenuState::None, ctx);
-                if let Some(ShareableObject::BorkDriveObject(id)) = self.target.as_ref() {
+                if let Some(ShareableObject::KrustDriveObject(id)) = self.target.as_ref() {
                     UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
                         update_manager.set_object_link_permissions(*id, *access_level, ctx);
                     });

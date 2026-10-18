@@ -1,10 +1,10 @@
 use ordered_float::OrderedFloat;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
-use borkui::fonts::{Properties, Weight};
-use borkui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
+use krustui::fonts::{Properties, Weight};
+use krustui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use super::{AcceptSlashCommandOrSavedPrompt, InlineItem};
 use crate::ai::blocklist::agent_view::shortcuts::render_keystroke_with_color_overrides;

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use bork_core::ui::appearance::Appearance;
-use bork_terminal::model::BlockId;
-use borkui::prelude::{Container, Empty, MouseStateHandle};
-use borkui::scene::{CornerRadius, Radius};
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krust_terminal::model::BlockId;
+use krustui::prelude::{Container, Empty, MouseStateHandle};
+use krustui::scene::{CornerRadius, Radius};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 

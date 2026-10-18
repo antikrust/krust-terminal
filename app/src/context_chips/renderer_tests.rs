@@ -1,5 +1,5 @@
 use pathfinder_color::ColorU;
-use borkui::fonts::Properties;
+use krustui::fonts::Properties;
 
 use super::{Renderer, RendererStyles};
 use crate::context_chips::{ChipAvailability, ChipDisabledReason, ContextChipKind};

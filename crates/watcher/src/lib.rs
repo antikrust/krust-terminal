@@ -17,8 +17,8 @@ use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventHandler, DebounceEventResult, DebouncedEvent, Debouncer,
     NoCache,
 };
-use bork_errors::report_error;
-use borkui_core::{Entity, ModelContext};
+use krust_errors::report_error;
+use krustui_core::{Entity, ModelContext};
 
 #[derive(Debug)]
 enum BackgroundFileWatcherCommand {

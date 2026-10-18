@@ -15,13 +15,13 @@
 use std::path::Path;
 
 use fuzzy_match::FuzzyMatchResult;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Container, CrossAxisAlignment, Flex, Highlight, MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::text_layout::{ClipConfig, ClipDirection, ClipStyle};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::text_layout::{ClipConfig, ClipDirection, ClipStyle};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::safe_truncate;

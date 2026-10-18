@@ -4,20 +4,20 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::button::Button as ButtonComponent;
 use ui_components::{button, Component, MouseEventHandler, Options as _};
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::coloru_with_opacity;
-use bork_core::ui::color::contrast::relative_luminance;
-use bork_core::ui::theme::phenomenon::PhenomenonStyle;
-use bork_core::ui::theme::Fill;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::coloru_with_opacity;
+use krust_core::ui::color::contrast::relative_luminance;
+use krust_core::ui::theme::phenomenon::PhenomenonStyle;
+use krust_core::ui::theme::Fill;
+use krustui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::keymap::Keystroke;
-use borkui_core::prelude::*;
-use borkui_core::ui_components::checkbox::Checkbox as BorkCheckbox;
-use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui_core::fonts::Weight;
+use krustui_core::keymap::Keystroke;
+use krustui_core::prelude::*;
+use krustui_core::ui_components::checkbox::Checkbox as KrustCheckbox;
+use krustui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
 
 const CALLOUT_WIDTH: f32 = 480.;
 const CALLOUT_BORDER_WIDTH: f32 = 1.;
@@ -248,7 +248,7 @@ impl OnboardingCallout {
         let foreground_color = PhenomenonStyle::foreground();
         let subtle_border = Fill::Solid(PhenomenonStyle::subtle_border());
 
-        let checkbox_element = BorkCheckbox::new(
+        let checkbox_element = KrustCheckbox::new(
             self.checkbox_mouse_state.clone(),
             UiComponentStyles {
                 font_size: checkbox_size,

@@ -1,11 +1,11 @@
 use serde_json::json;
-use bork_cli::agent::Harness;
-use bork_cli::artifact::{
+use krust_cli::agent::Harness;
+use krust_cli::artifact::{
     ArtifactCommand, DownloadArtifactArgs, GetArtifactArgs, UploadArtifactArgs,
 };
-use bork_cli::task::{MessageCommand, MessageSendArgs, MessageWatchArgs, TaskCommand};
-use bork_cli::CliCommand;
-use bork_core::telemetry::TelemetryEvent;
+use krust_cli::task::{MessageCommand, MessageSendArgs, MessageWatchArgs, TaskCommand};
+use krust_cli::CliCommand;
+use krust_core::telemetry::TelemetryEvent;
 
 use super::{command_requires_auth, command_to_telemetry_event, reconcile_task_harness};
 

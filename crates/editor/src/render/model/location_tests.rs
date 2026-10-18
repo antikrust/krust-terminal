@@ -4,10 +4,10 @@ use std::sync::Arc;
 use pathfinder_color::ColorU;
 use string_offset::CharOffset;
 use sum_tree::SumTree;
-use borkui_core::assets::asset_cache::AssetSource;
-use borkui_core::fonts::FamilyId;
-use borkui_core::text_layout::{CaretPosition, TextFrame};
-use borkui_core::units::IntoPixels;
+use krustui_core::assets::asset_cache::AssetSource;
+use krustui_core::fonts::FamilyId;
+use krustui_core::text_layout::{CaretPosition, TextFrame};
+use krustui_core::units::IntoPixels;
 
 use crate::content::text::{
     BufferBlockStyle, CodeBlockType, FormattedTable, table_cell_offset_maps,

@@ -3,18 +3,18 @@ use markdown_parser::{
 };
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
-use bork_core::paths::home_relative_path;
-use bork_core::ui::theme::Fill;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_core::paths::home_relative_path;
+use krust_core::ui::theme::Fill;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     Element, Empty, Flex, FormattedTextElement, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, SavePosition, Shrinkable, Stack, Text,
 };
-use borkui::keymap::FixedBinding;
-use borkui::ui_components::button::{Button, ButtonVariant};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::FixedBinding;
+use krustui::ui_components::button::{Button, ButtonVariant};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -29,7 +29,7 @@ use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::user_config::launch_configs_dir;
 #[cfg(feature = "local_fs")]
-use crate::user_config::{util::file_name_to_human_readable_name, BorkConfig};
+use crate::user_config::{util::file_name_to_human_readable_name, KrustConfig};
 use crate::util::bindings::keybinding_name_to_display_string;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
@@ -42,7 +42,7 @@ const SAVE_CONFIG_BUTTON_LABEL: &str = "Save Configuration";
 const OPEN_FILE_BUTTON_LABEL: &str = "Open YAML File";
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -154,14 +154,14 @@ pub enum LaunchConfigModalEvent {
     /// It's called when the new config was just saved. Note that when we save the configuration,
     /// it take a moment for the file system to register the change, and us to receive it (as there
     /// is a delay in our watcher). But because we actually have the LaunchConfig in our hands
-    /// already, we may as well save it "manually" to the BorkConfig, while waiting for the update
+    /// already, we may as well save it "manually" to the KrustConfig, while waiting for the update
     /// from the file system. This event passes a saved config to the handler to let us do that.
     SuccessfullySavedConfig(LaunchConfig),
     #[cfg(feature = "local_fs")]
     OpenFileWithTarget {
         path: std::path::PathBuf,
         target: FileTarget,
-        line_col: Option<bork_util::path::LineAndColumnArg>,
+        line_col: Option<krust_util::path::LineAndColumnArg>,
     },
     Close,
 }
@@ -264,7 +264,7 @@ impl LaunchConfigSaveModal {
         let launch_config_name = file_name_to_human_readable_name(&file_name_candidate);
         if let Some(app_state) = &self.current_app_state {
             let launch_config = LaunchConfig::from_snapshot(launch_config_name, app_state);
-            match BorkConfig::save_new_launch_config(file_name_candidate, launch_config.clone()) {
+            match KrustConfig::save_new_launch_config(file_name_candidate, launch_config.clone()) {
                 Ok(file_name) => {
                     self.saved_successfully(file_name, ctx);
                     ctx.emit(LaunchConfigModalEvent::SuccessfullySavedConfig(
@@ -531,7 +531,7 @@ impl LaunchConfigSaveModal {
                     .link(
                         "Link to Documentation".to_string(),
                         Some(
-                            "https://therob.lol/bork-terminal/help/terminal/sessions/launch-configurations"
+                            "https://therob.lol/krust-terminal/help/terminal/sessions/launch-configurations"
                                 .to_string(),
                         ),
                         None,
@@ -662,7 +662,7 @@ impl View for LaunchConfigSaveModal {
             "Type the name of the file to which you want to save your
             current configuration of windows, tabs, and panes. Use enter to save the
             launch configuration, esc to quit the save configuration modal.",
-            BorkA11yRole::PopoverRole,
+            KrustA11yRole::PopoverRole,
         ))
     }
 }
@@ -674,7 +674,7 @@ impl TypedActionView for LaunchConfigSaveModal {
         // TODO(vorporeal): We should figure out a better way to handle the
         // interactions with the filesystem here, whether it's compiling out
         // the save modal more completely or doing something else.  Perhaps
-        // this will become moot when we put launch configs in Bork Drive.
+        // this will become moot when we put launch configs in Krust Drive.
         let action = match action {
             ActionRequest::Action(action) => action.clone(),
             ActionRequest::Enter => LaunchConfigSaveAction::from_state(&self.save_state),

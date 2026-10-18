@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use rangemap::RangeMap;
 use unindent::Unindent as _;
-use bork_editor::multiline::{MultilineStr, MultilineString};
+use krust_editor::multiline::{MultilineStr, MultilineString};
 
 use super::{compute_unified_diff, DiffModel};
 use crate::code::editor::diff::ChangeType;
 
 #[test]
 fn test_diff_generation() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let (change_mapping, deletion_mapping) = DiffModel::compute_diff_internal(
             MultilineStr::try_new("Hello World\nThis is the second line.\nThis is the third.")
@@ -75,7 +75,7 @@ fn test_diff_generation() {
 
 #[test]
 fn test_reverse_action() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         diff_model.set_base(MultilineString::apply(
@@ -108,7 +108,7 @@ fn test_reverse_action() {
 
 #[test]
 fn test_reverse_action_replaced_newlines() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         let base_text = r"
@@ -191,7 +191,7 @@ fn test_reverse_action_replaced_newlines() {
 
 #[test]
 fn test_reverse_action_replaced_text() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         let base_text = r"
@@ -268,7 +268,7 @@ fn test_reverse_action_replaced_text() {
 
 #[test]
 fn test_reverse_action_deleted_lines() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         let base_text = r"
@@ -352,7 +352,7 @@ fn test_reverse_action_deleted_lines() {
 
 #[test]
 fn test_diff_count_before_line() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         diff_model.set_base(
@@ -372,7 +372,7 @@ fn test_diff_count_before_line() {
 
 #[test]
 fn test_unified_diff() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let diff = compute_unified_diff(
             MultilineStr::try_new("Hello World\nThis is the second line.\nThis is the third.")
@@ -394,7 +394,7 @@ fn test_unified_diff() {
 /// to produce duplicate deletion and insertion hunks for what is logically a replacement.
 #[test]
 fn test_coalesce_replacements() {
-    use borkui::App;
+    use krustui::App;
     App::test((), |_| async move {
         let mut diff_model = DiffModel::new();
         let base_text = r"

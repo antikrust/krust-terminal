@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use thiserror::Error;
-use bork_multi_agent_api as api;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
+use krust_multi_agent_api as api;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
 
 use crate::agent::action_result::{AnyFileContent, FileContext};
 use crate::skills::{ParsedSkill, SkillProvider, SkillReference, SkillScope};
@@ -181,7 +181,7 @@ impl From<SkillScope> for api::skill_descriptor::Scope {
 impl From<SkillProvider> for api::skill_descriptor::Provider {
     fn from(scope: SkillProvider) -> Self {
         let provider_type: api::skill_descriptor::provider::Type = match scope {
-            SkillProvider::Bork => api::skill_descriptor::provider::Type::Bork(()),
+            SkillProvider::Krust => api::skill_descriptor::provider::Type::Krust(()),
             SkillProvider::Agents => api::skill_descriptor::provider::Type::Agents(()),
             SkillProvider::Claude => api::skill_descriptor::provider::Type::Claude(()),
             SkillProvider::Codex => api::skill_descriptor::provider::Type::Codex(()),
@@ -275,7 +275,7 @@ fn convert_provider(
     };
 
     match provider_type {
-        api::skill_descriptor::provider::Type::Bork(_) => Ok(SkillProvider::Bork),
+        api::skill_descriptor::provider::Type::Krust(_) => Ok(SkillProvider::Krust),
         api::skill_descriptor::provider::Type::Agents(_) => Ok(SkillProvider::Agents),
         api::skill_descriptor::provider::Type::Claude(_) => Ok(SkillProvider::Claude),
         api::skill_descriptor::provider::Type::Codex(_) => Ok(SkillProvider::Codex),

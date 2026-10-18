@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/krust_terminal/src/model/LICENSE-ALACRITTY.
 
 //! The main event loop which performs I/O on the pseudoterminal.
 
@@ -14,7 +14,7 @@ use std::thread::{self, JoinHandle};
 use log::error;
 use mio::{self, Events, Interest};
 use parking_lot::{FairMutex, FairMutexGuard};
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::mio_channel::Receiver;
 use crate::terminal::event_listener::ChannelEventListener;
@@ -323,7 +323,7 @@ where
 
     pub fn spawn(mut self) -> JoinHandle<()> {
         #[cfg(test)]
-        let feature_flag_overrides = bork_core::features::get_overrides();
+        let feature_flag_overrides = krust_core::features::get_overrides();
 
         thread::Builder::new()
             .name("PTY reader".into())
@@ -331,7 +331,7 @@ where
                 // Make sure any overridden feature flags are also overridden
                 // in the PTY reader thread.
                 #[cfg(test)]
-                bork_core::features::set_overrides(feature_flag_overrides);
+                krust_core::features::set_overrides(feature_flag_overrides);
 
                 let mut state = State::default();
                 let mut buf = [0u8; READ_BUFFER_SIZE];

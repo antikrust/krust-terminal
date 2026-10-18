@@ -1,10 +1,10 @@
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,
     MainAxisAlignment, MouseStateHandle, ParentElement, Wrap,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, View, ViewContext, ViewHandle};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, View, ViewContext, ViewHandle};
 
 use super::settings_page::{
     MatchData, PageType, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
@@ -50,7 +50,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about bork bork version"
+        "about krust krust version"
     }
 
     fn render(
@@ -61,10 +61,10 @@ impl SettingsWidget for AboutPageWidget {
     ) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
 
-        // The bork wordmark is white-filled with a heavy black outline, so a
+        // The krust wordmark is white-filled with a heavy black outline, so a
         // single asset reads correctly on both light and dark backgrounds —
-        // unlike the old Bork logo, which needed a per-scheme variant.
-        let image_path = "bundled/png/bork-logo.png";
+        // unlike the old Krust logo, which needed a per-scheme variant.
+        let image_path = "bundled/png/krust-logo.png";
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
 
@@ -112,12 +112,12 @@ impl SettingsWidget for AboutPageWidget {
                 .with_child(version_row.finish())
                 .with_child(
                     ui_builder
-                        .span("Copyright 2026 Bork")
+                        .span("Copyright 2026 Krust")
                         .build()
                         .with_margin_top(16.)
                         .finish(),
                 )
-                // Preserved upstream attribution: Bork is a rebranded fork and
+                // Preserved upstream attribution: Krust is a rebranded fork and
                 // must keep the original copyright notice.
                 .with_child(
                     ui_builder

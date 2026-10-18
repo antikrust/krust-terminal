@@ -13,19 +13,19 @@ use ai::agent::orchestration_config::{OrchestrationConfig, OrchestrationExecutio
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use settings::Setting;
-use bork_cli::agent::Harness;
-use bork_core::ui::theme::Fill;
-use bork_errors::report_if_error;
-use borkui::elements::{
+use krust_cli::agent::Harness;
+use krust_core::ui::theme::Fill;
+use krust_errors::report_if_error;
+use krustui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
     Point, Radius, Text,
 };
-use borkui::event::DispatchedEvent;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
-use borkui::{
+use krustui::event::DispatchedEvent;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
+use krustui::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,
     SingletonEntity, SizeConstraint, View, ViewContext, ViewHandle,
 };
@@ -34,7 +34,7 @@ use crate::ai::auth_secret_types::auth_secret_types_for_harness;
 use crate::ai::blocklist::inline_action::host_picker::HostPicker;
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::cloud_environments::CloudAmbientAgentEnvironment;
-use crate::ai::connected_self_hosted_workers::{ConnectedSelfHostedWorkersModel, BORK_WORKER_HOST};
+use crate::ai::connected_self_hosted_workers::{ConnectedSelfHostedWorkersModel, KRUST_WORKER_HOST};
 use crate::ai::execution_profiles::model_menu_items::available_model_menu_items;
 use crate::ai::harness_availability::{AuthSecretFetchState, HarnessAvailabilityModel};
 use crate::ai::harness_display;
@@ -57,11 +57,11 @@ use crate::LLMPreferences;
 
 /// Env var override for the workspace default host (developer testing).
 /// Mirrors the single-agent ambient flow.
-const DEFAULT_HOST_ENV_VAR: &str = "BORK_CLOUD_MODE_DEFAULT_HOST";
+const DEFAULT_HOST_ENV_VAR: &str = "KRUST_CLOUD_MODE_DEFAULT_HOST";
 
 // ── Shared constants ────────────────────────────────────────────────
 
-pub const ORCHESTRATION_BORK_WORKER_HOST: &str = BORK_WORKER_HOST;
+pub const ORCHESTRATION_KRUST_WORKER_HOST: &str = KRUST_WORKER_HOST;
 pub const ORCHESTRATION_ENV_NONE_LABEL: &str = "Empty environment";
 
 pub const ORCHESTRATION_PICKER_HEIGHT: f32 = 36.;
@@ -223,7 +223,7 @@ impl OrchestrationEditState {
             if !self.execution_mode.is_remote() {
                 self.execution_mode = RunAgentsExecutionMode::Remote {
                     environment_id: String::new(),
-                    worker_host: ORCHESTRATION_BORK_WORKER_HOST.to_string(),
+                    worker_host: ORCHESTRATION_KRUST_WORKER_HOST.to_string(),
                     computer_use_enabled: false,
                 };
             }
@@ -395,7 +395,7 @@ pub fn picker_styles(appearance: &Appearance) -> (UiComponentStyles, PickerColor
     // card background in the config block shows through, and so that
     // gradient-background themes render correctly.
     let background_fill: Fill = theme.surface_overlay_1();
-    let background: borkui::elements::Fill = background_fill.into();
+    let background: krustui::elements::Fill = background_fill.into();
     // Border and font colors are intentionally left to the dropdown's
     // default ButtonVariant::Secondary styling, which uses
     // theme.outline() and theme.main_text_color() — both are
@@ -422,7 +422,7 @@ pub fn picker_styles(appearance: &Appearance) -> (UiComponentStyles, PickerColor
 pub struct PickerColors {
     pub padding: Coords,
     pub corner_radius: CornerRadius,
-    pub background: borkui::elements::Fill,
+    pub background: krustui::elements::Fill,
 }
 
 // ── Picker creation (generic over action type) ──────────────────────
@@ -473,7 +473,7 @@ pub fn new_standard_filterable_picker_dropdown<A: OrchestrationControlAction, V:
     })
 }
 
-/// Returns Bork base-model choices for orchestration.
+/// Returns Krust base-model choices for orchestration.
 fn get_base_model_choices<'a>(
     llm_prefs: &'a LLMPreferences,
     app: &'a AppContext,
@@ -485,7 +485,7 @@ fn get_base_model_choices<'a>(
 }
 /// Populates the model picker based on the active harness.
 ///
-/// - **Oz / empty**: shows the Bork LLM catalog (existing behavior).
+/// - **Oz / empty**: shows the Krust LLM catalog (existing behavior).
 /// - **Local Codex**: shows only a "Default model" entry (no model delivery
 ///   possible for local Codex children).
 /// - **Other non-Oz harnesses**: shows "Default model" at the top, followed
@@ -504,7 +504,7 @@ pub fn populate_model_picker_for_harness<A: OrchestrationControlAction, V: View>
         let harness = Harness::parse_orchestration_harness(&harness_type);
         match harness {
             Some(Harness::Oz) | None => {
-                // Oz / unset: Bork LLM catalog. Custom models excluded for
+                // Oz / unset: Krust LLM catalog. Custom models excluded for
                 // cloud runs (not supported by remote workers).
                 // Order: auto models first, then custom models, then other models.
                 let llm_prefs = LLMPreferences::as_ref(ctx_dropdown);
@@ -626,7 +626,7 @@ pub fn is_model_in_filtered_choices<V: View>(
 
 /// Returns the default model_id for the given harness.
 ///
-/// For Oz this is the first Bork LLM; for non-Oz harnesses it is an empty
+/// For Oz this is the first Krust LLM; for non-Oz harnesses it is an empty
 /// string (the "Default model" entry).
 pub fn first_filtered_model_id<V: View>(
     harness_type: &str,
@@ -888,7 +888,7 @@ fn render_new_environment_footer<A: OrchestrationControlAction>(
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_spacing(8.)
                 .with_child(
-                    ConstrainedBox::new(Icon::Plus.to_borkui_icon(text_color).finish())
+                    ConstrainedBox::new(Icon::Plus.to_krustui_icon(text_color).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),
@@ -923,7 +923,7 @@ pub fn populate_host_picker<V: View>(
     let default_host = resolve_default_host_slug(ctx);
     let recent_host = resolve_recent_host_slug(ctx);
     let initial = if initial_host.trim().is_empty() {
-        ORCHESTRATION_BORK_WORKER_HOST.to_string()
+        ORCHESTRATION_KRUST_WORKER_HOST.to_string()
     } else {
         initial_host.to_string()
     };
@@ -938,7 +938,7 @@ pub fn populate_host_picker<V: View>(
 }
 
 /// Resolves the workspace-configured default host slug, honoring the
-/// `BORK_CLOUD_MODE_DEFAULT_HOST` env var override for developer
+/// `KRUST_CLOUD_MODE_DEFAULT_HOST` env var override for developer
 /// testing. Mirrors the single-agent ambient flow.
 pub fn resolve_default_host_slug(ctx: &AppContext) -> Option<String> {
     if let Ok(slug) = std::env::var(DEFAULT_HOST_ENV_VAR) {
@@ -954,7 +954,7 @@ pub fn resolve_default_host_slug(ctx: &AppContext) -> Option<String> {
 }
 
 /// Returns the user's last-selected custom host slug from
-/// `CloudAgentSettings.last_selected_host`, excluding `"bork"` and the
+/// `CloudAgentSettings.last_selected_host`, excluding `"krust"` and the
 /// workspace default (those are surfaced as separate menu rows).
 pub fn resolve_recent_host_slug(ctx: &AppContext) -> Option<String> {
     let last = CloudAgentSettings::as_ref(ctx)
@@ -962,7 +962,7 @@ pub fn resolve_recent_host_slug(ctx: &AppContext) -> Option<String> {
         .value()
         .clone()
         .filter(|s| !s.trim().is_empty())?;
-    if last.eq_ignore_ascii_case(ORCHESTRATION_BORK_WORKER_HOST) {
+    if last.eq_ignore_ascii_case(ORCHESTRATION_KRUST_WORKER_HOST) {
         return None;
     }
     if resolve_default_host_slug(ctx).as_deref() == Some(last.as_str()) {
@@ -972,11 +972,11 @@ pub fn resolve_recent_host_slug(ctx: &AppContext) -> Option<String> {
 }
 
 /// Persists the user's most-recent host selection to
-/// `CloudAgentSettings.last_selected_host`. Skipped for `"bork"` and
+/// `CloudAgentSettings.last_selected_host`. Skipped for `"krust"` and
 /// empty values (those don't represent a custom slug worth remembering).
 pub fn persist_host_selection<V: View>(worker_host: &str, ctx: &mut ViewContext<V>) {
     let trimmed = worker_host.trim();
-    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case(ORCHESTRATION_BORK_WORKER_HOST) {
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case(ORCHESTRATION_KRUST_WORKER_HOST) {
         return;
     }
     let value = trimmed.to_string();
@@ -1277,7 +1277,7 @@ pub fn populate_auth_secret_picker_for_harness<A: OrchestrationControlAction, V:
 ///
 /// Does NOT repopulate the picker — doing so from inside the action the
 /// picker just dispatched would re-enter the dropdown's view and trip
-/// borkui's circular-update guard. The dropdown already reflects the
+/// krustui's circular-update guard. The dropdown already reflects the
 /// chosen value.
 pub fn apply_auth_secret_change<A: OrchestrationControlAction, V: View>(
     state: &mut OrchestrationEditState,
@@ -1478,7 +1478,7 @@ pub fn apply_execution_mode_change<A: OrchestrationControlAction, V: View>(
     if let Some(handle) = &handles.host_picker {
         let initial_host = match &state.execution_mode {
             RunAgentsExecutionMode::Remote { worker_host, .. } => worker_host.as_str(),
-            RunAgentsExecutionMode::Local => ORCHESTRATION_BORK_WORKER_HOST,
+            RunAgentsExecutionMode::Local => ORCHESTRATION_KRUST_WORKER_HOST,
         };
         populate_host_picker(handle, initial_host, ctx);
     }
@@ -1552,7 +1552,7 @@ pub fn repopulate_all_pickers<A: OrchestrationControlAction, V: View>(
     if let Some(handle) = &handles.host_picker {
         let initial_host = match &state.execution_mode {
             RunAgentsExecutionMode::Remote { worker_host, .. } => worker_host.as_str(),
-            RunAgentsExecutionMode::Local => ORCHESTRATION_BORK_WORKER_HOST,
+            RunAgentsExecutionMode::Local => ORCHESTRATION_KRUST_WORKER_HOST,
         };
         populate_host_picker(handle, initial_host, ctx);
     }
@@ -1633,7 +1633,7 @@ pub fn sync_picker_selections<A: OrchestrationControlAction, V: View>(
     if let Some(host_picker) = handles.host_picker.clone() {
         let worker_host = match &state.execution_mode {
             RunAgentsExecutionMode::Remote { worker_host, .. } => worker_host.clone(),
-            RunAgentsExecutionMode::Local => ORCHESTRATION_BORK_WORKER_HOST.to_string(),
+            RunAgentsExecutionMode::Local => ORCHESTRATION_KRUST_WORKER_HOST.to_string(),
         };
         host_picker.update(ctx, |picker, picker_ctx| {
             picker.set_selected(&worker_host, picker_ctx);
@@ -1838,7 +1838,7 @@ pub fn render_mode_toggle<A: OrchestrationControlAction>(
         active_segment_bg,
     );
 
-    let segment_outer_bg = bork_core::ui::theme::color::internal_colors::fg_overlay_2(theme);
+    let segment_outer_bg = krust_core::ui::theme::color::internal_colors::fg_overlay_2(theme);
     let segments_row = Flex::row()
         .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_main_axis_alignment(MainAxisAlignment::Start)
@@ -1891,7 +1891,7 @@ fn render_segment_button<A: OrchestrationControlAction>(
     let active_text_color = blended_colors::text_main(theme, theme.surface_1());
     let inactive_text_color = blended_colors::text_disabled(theme, theme.surface_1());
     let segment_active_bg = active_bg_override
-        .unwrap_or_else(|| bork_core::ui::theme::color::internal_colors::fg_overlay_4(theme));
+        .unwrap_or_else(|| krust_core::ui::theme::color::internal_colors::fg_overlay_4(theme));
     Hoverable::new(mouse_state, move |_| {
         let text = Text::new(label_owned.clone(), font_family, font_size)
             .with_color(if is_active {
@@ -1900,7 +1900,7 @@ fn render_segment_button<A: OrchestrationControlAction>(
                 inactive_text_color
             })
             .finish();
-        let centered = borkui::elements::Align::new(text).finish();
+        let centered = krustui::elements::Align::new(text).finish();
         let mut container = Container::new(centered)
             .with_vertical_padding(ORCHESTRATION_SEGMENT_VERTICAL_PADDING)
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
@@ -2115,7 +2115,7 @@ pub fn empty_env_recommendation_message(
     if !environment_id.trim().is_empty() {
         return None;
     }
-    if !worker_host.eq_ignore_ascii_case(ORCHESTRATION_BORK_WORKER_HOST) {
+    if !worker_host.eq_ignore_ascii_case(ORCHESTRATION_KRUST_WORKER_HOST) {
         return None;
     }
     let env_count = CloudAmbientAgentEnvironment::get_all(app).len();

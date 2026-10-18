@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::blend::Blend as _;
-use bork_core::ui::{self};
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::blend::Blend as _;
+use krust_core::ui::{self};
+use krustui::elements::{
     Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _, Radius,
 };
-use borkui::keymap::EditableBinding;
-use borkui::platform::Cursor;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::EditableBinding;
+use krustui::platform::Cursor;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -29,7 +29,7 @@ use crate::workspace::{ToastStack, Workspace, WorkspaceAction};
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_editable_bindings([EditableBinding::new(
         "workspace:new_tab",
@@ -213,7 +213,7 @@ impl GetStartedView {
         let (welcome_title, welcome_subtitle) = if swear_mode {
             ("right, let's fucking go", "The Agentic Dev Environment — now shut up and type")
         } else {
-            ("Welcome to Bork", "The Agentic Development Environment")
+            ("Welcome to Krust", "The Agentic Development Environment")
         };
 
         Flex::column()
@@ -221,7 +221,7 @@ impl GetStartedView {
             .with_children([
                 Container::new(
                     ConstrainedBox::new(
-                        Icon::new("bundled/svg/bork-logo-neutral.svg", theme.foreground()).finish(),
+                        Icon::new("bundled/svg/krust-logo-neutral.svg", theme.foreground()).finish(),
                     )
                     .with_height(40.)
                     .with_width(40.)
@@ -288,7 +288,7 @@ impl GetStartedView {
                             keybinding_name_to_display_string("workspace:new_tab", app)
                                 .unwrap_or_default()
                         ),
-                        ui::Icon::Terminal.to_borkui_icon(theme.foreground()),
+                        ui::Icon::Terminal.to_krustui_icon(theme.foreground()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(16., 16.),

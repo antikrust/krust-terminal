@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use borkui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use krustui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use super::SettingsView;
 use crate::pane_group::{PaneContent, PaneId, SettingsPane};

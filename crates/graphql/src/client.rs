@@ -6,8 +6,8 @@ use instant::Duration;
 use reqwest::header::CONTENT_TYPE;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use bork_core::channel::ChannelState;
-use bork_core::operating_system_info::OperatingSystemInfo;
+use krust_core::channel::ChannelState;
+use krust_core::operating_system_info::OperatingSystemInfo;
 
 use crate::error::{UserFacingError, UserFacingErrorInterface};
 use crate::request_context::{ClientContext, OsContext, RequestContext};
@@ -36,7 +36,7 @@ pub trait Operation<QF> {
 }
 
 /// The various errors we could encounter when making a GraphQL request to
-/// bork-server.
+/// krust-server.
 #[derive(Debug, thiserror::Error)]
 pub enum GraphQLError {
     /// Encountered an error while sending the request.

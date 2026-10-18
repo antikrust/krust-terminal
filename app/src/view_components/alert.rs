@@ -1,11 +1,11 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon, MainAxisSize,
     ParentElement, Radius, Shrinkable,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::Element;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::themes::theme::Fill;

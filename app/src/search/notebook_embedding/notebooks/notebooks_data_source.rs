@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::notebook_search_item::NotebookSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;

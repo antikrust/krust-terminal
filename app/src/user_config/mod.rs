@@ -13,18 +13,18 @@ pub(crate) use imp::load_tab_configs;
 pub use imp::load_workflows;
 pub use imp::{load_launch_configs, load_theme_configs};
 use lazy_static::lazy_static;
-use bork_core::ui::theme::BorkTheme;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_core::ui::theme::KrustTheme;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::ai::custom_model_routers::{CustomModelRouter, ModelConfigError};
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::tab_configs::{TabConfig, TabConfigError};
-use crate::themes::theme::{ThemeKind, BorkThemeConfig};
+use crate::themes::theme::{ThemeKind, KrustThemeConfig};
 use crate::workflows::workflow::Workflow;
 
 lazy_static! {
     pub static ref LAUNCH_CONFIG_COMMENT: String = format!(
-        "# Bork Launch Configuration
+        "# Krust Launch Configuration
 #
 #
 # Use this to start a certain configuration of windows, tabs, and panes.
@@ -32,7 +32,7 @@ lazy_static! {
 #
 # This file defines your launch configuration.
 # More on how to do so here:
-# https://therob.lol/bork-terminal/help/terminal/sessions/launch-configurations
+# https://therob.lol/krust-terminal/help/terminal/sessions/launch-configurations
 #
 # All launch configurations are stored under {}.
 # Edit them anytime!
@@ -43,16 +43,16 @@ lazy_static! {
 # windows:
 #  - tabs:
 #      - layout:
-#          cwd: /Users/bork-user/project
+#          cwd: /Users/krust-user/project
 #          commands:
 #            - exec: code .
 ",
-        bork_core::paths::home_relative_path(&crate::user_config::launch_configs_dir())
+        krust_core::paths::home_relative_path(&crate::user_config::launch_configs_dir())
     );
 }
 
 #[derive(Clone)]
-pub enum BorkConfigUpdateEvent {
+pub enum KrustConfigUpdateEvent {
     Themes,
     #[cfg_attr(not(feature = "local_fs"), expect(dead_code))]
     LocalUserWorkflows,
@@ -87,14 +87,14 @@ pub enum BorkConfigUpdateEvent {
 /// tab configs, etc.) and, on platforms where it differs, `config_local_dir()`
 /// (`settings.toml`, `keybindings.yaml`, `user_preferences.json`).
 #[derive(Default)]
-pub struct BorkConfig {
+pub struct KrustConfig {
     launch_configs: Vec<LaunchConfig>,
     tab_configs: Vec<TabConfig>,
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
     tab_config_errors: Vec<TabConfigError>,
-    theme_config: BorkThemeConfig,
+    theme_config: KrustThemeConfig,
     local_user_workflows: Vec<Workflow>,
-    /// User-defined custom model routers loaded from `~/.bork/custom_model_routers/`.
+    /// User-defined custom model routers loaded from `~/.krust/custom_model_routers/`.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
     custom_model_routers: Vec<CustomModelRouter>,
     /// Errors for `custom_model_routers/` files that failed to parse.
@@ -102,15 +102,15 @@ pub struct BorkConfig {
     custom_model_router_errors: Vec<ModelConfigError>,
 }
 
-/// Platform-independent parts of BorkConfig.
+/// Platform-independent parts of KrustConfig.
 ///
 /// Additional platform-dependent functionality can be found in impl blocks
 /// in native.rs and wasm.rs.
-impl BorkConfig {
+impl KrustConfig {
     #[cfg(test)]
     pub fn mock(_ctx: &mut ModelContext<Self>) -> Self {
         Self {
-            theme_config: BorkThemeConfig::new(),
+            theme_config: KrustThemeConfig::new(),
             ..Default::default()
         }
     }
@@ -123,7 +123,7 @@ impl BorkConfig {
         &self.tab_configs
     }
 
-    pub fn theme_config(&self) -> &BorkThemeConfig {
+    pub fn theme_config(&self) -> &KrustThemeConfig {
         &self.theme_config
     }
 
@@ -143,7 +143,7 @@ impl BorkConfig {
         &self.custom_model_router_errors
     }
 
-    /// Saving the newly created launch configuration to the BorkConfig that we currently
+    /// Saving the newly created launch configuration to the KrustConfig that we currently
     /// have.
     pub fn append_launch_config(
         &mut self,
@@ -152,27 +152,27 @@ impl BorkConfig {
     ) {
         if !self.launch_configs.contains(launch_config) {
             self.launch_configs.push(launch_config.to_owned());
-            ctx.emit(BorkConfigUpdateEvent::LaunchConfigs);
+            ctx.emit(KrustConfigUpdateEvent::LaunchConfigs);
         }
     }
 
     pub fn update_theme_config(
         &mut self,
-        theme_config: BorkThemeConfig,
+        theme_config: KrustThemeConfig,
         ctx: &mut ModelContext<Self>,
     ) {
         self.theme_config = theme_config;
-        ctx.emit(BorkConfigUpdateEvent::Themes);
+        ctx.emit(KrustConfigUpdateEvent::Themes);
     }
 
     pub fn add_new_theme_to_config(
         &mut self,
         theme_name: ThemeKind,
-        theme: BorkTheme,
+        theme: KrustTheme,
         ctx: &mut ModelContext<Self>,
     ) {
         self.theme_config.add_new_theme(theme_name, theme);
-        ctx.emit(BorkConfigUpdateEvent::Themes);
+        ctx.emit(KrustConfigUpdateEvent::Themes);
     }
 
     /// Eagerly removes a tab config by its source path and emits a `TabConfigs` event.
@@ -184,19 +184,19 @@ impl BorkConfig {
         self.tab_configs
             .retain(|c| c.source_path.as_deref() != Some(path));
         if self.tab_configs.len() != before {
-            ctx.emit(BorkConfigUpdateEvent::TabConfigs);
+            ctx.emit(KrustConfigUpdateEvent::TabConfigs);
         }
     }
 }
 
 /// Returns the base directory in which all of the user's data is stored.
 fn base_dir() -> PathBuf {
-    bork_core::paths::data_dir()
+    krust_core::paths::data_dir()
 }
 
 /// Returns the path to the directory containing the user's custom themes.
 pub fn themes_dir() -> PathBuf {
-    bork_core::paths::themes_dir()
+    krust_core::paths::themes_dir()
 }
 
 /// Returns the path to the directory containing the user's custom workflows.
@@ -217,20 +217,20 @@ pub fn tab_configs_dir() -> PathBuf {
 }
 
 /// Returns the path to the directory containing the user's custom model router
-/// configs (`~/.bork/custom_model_routers/`). Each file defines a single router.
+/// configs (`~/.krust/custom_model_routers/`). Each file defines a single router.
 #[cfg_attr(target_family = "wasm", expect(dead_code))]
 pub fn custom_model_routers_dir() -> PathBuf {
     base_dir().join("custom_model_routers")
 }
 
 /// Returns the path to the directory containing the built-in default tab configs.
-/// These are shipped with Bork and user-editable (Bork does not overwrite modifications).
+/// These are shipped with Krust and user-editable (Krust does not overwrite modifications).
 #[cfg_attr(target_family = "wasm", expect(dead_code))]
 pub fn default_tab_configs_dir() -> PathBuf {
     base_dir().join("default_tab_configs")
 }
 
-/// Returns whether the path points to a tab config TOML file under one of Bork's
+/// Returns whether the path points to a tab config TOML file under one of Krust's
 /// tab config directories.
 #[cfg(feature = "local_fs")]
 pub fn is_tab_config_toml(path: &Path) -> bool {
@@ -247,7 +247,7 @@ pub fn is_tab_config_toml(path: &Path) -> bool {
         .any(|dir| path.starts_with(dir))
 }
 
-/// Ensures `~/.bork/default_tab_configs/worktree.toml` exists, creating it
+/// Ensures `~/.krust/default_tab_configs/worktree.toml` exists, creating it
 /// from the embedded template if missing. Returns the path to the file.
 #[cfg(feature = "local_fs")]
 pub(crate) fn ensure_default_worktree_config() -> PathBuf {
@@ -422,11 +422,11 @@ pub(crate) fn find_unused_worktree_config_path(dir: &Path, branch_name: &str) ->
     }
 }
 
-impl Entity for BorkConfig {
-    type Event = BorkConfigUpdateEvent;
+impl Entity for KrustConfig {
+    type Event = KrustConfigUpdateEvent;
 }
 
-impl SingletonEntity for BorkConfig {}
+impl SingletonEntity for KrustConfig {}
 
 #[cfg(test)]
 #[path = "mod_tests.rs"]

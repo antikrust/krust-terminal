@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{
+use krustui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex,
     FormattedTextElement, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::macros::id;
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::platform::file_picker::FilePickerConfiguration;
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::macros::id;
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::platform::file_picker::FilePickerConfiguration;
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -23,7 +23,7 @@ use crate::view_components::action_button::{
     ActionButton, ButtonSize, KeystrokeSource, NakedTheme, PrimaryTheme,
 };
 
-pub fn init(app: &mut borkui::AppContext) {
+pub fn init(app: &mut krustui::AppContext) {
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
         SessionConfigModalAction::Submit,
@@ -37,7 +37,7 @@ const SECTION_GAP: f32 = 16.;
 pub enum SessionConfigModalAction {
     SelectSessionType(usize),
     OpenDirectoryPicker,
-    DirectorySelected(Result<String, borkui::platform::file_picker::FilePickerError>),
+    DirectorySelected(Result<String, krustui::platform::file_picker::FilePickerError>),
     ToggleWorktree,
     ToggleAutogenerateWorktreeBranchName,
     Submit,
@@ -86,7 +86,7 @@ impl SessionConfigModal {
         });
 
         let submit_button = ctx.add_view(|ctx| {
-            ActionButton::new("Get Borking", PrimaryTheme)
+            ActionButton::new("Get Krusting", PrimaryTheme)
                 .with_full_width(true)
                 .with_keybinding(
                     KeystrokeSource::Fixed(Keystroke::parse("enter").unwrap_or_default()),

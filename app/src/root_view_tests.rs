@@ -1,5 +1,5 @@
-use bork_core::user_preferences::GetUserPreferences as _;
-use borkui::{App, SingletonEntity};
+use krust_core::user_preferences::GetUserPreferences as _;
+use krustui::{App, SingletonEntity};
 
 use super::{has_completed_local_onboarding, RootView, HAS_COMPLETED_ONBOARDING_KEY};
 use crate::auth::auth_manager::AuthManager;

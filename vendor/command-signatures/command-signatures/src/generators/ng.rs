@@ -1,6 +1,6 @@
 use serde_json::Result;
 use std::collections::HashMap;
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandBuilder, CommandSignatureGenerators, Generator, GeneratorResults,
     GeneratorResultsCollector, Suggestion,
 };

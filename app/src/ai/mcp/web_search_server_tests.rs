@@ -4,12 +4,12 @@ const SAMPLE_HTML: &str = r#"
 <div class="results_links results_links_deep web-result">
     <div class="links_main links_deep result__body">
         <h2 class="result__title">
-            <a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs%2Ebork%2Edev%2Fguides%2Follama&amp;rut=abc">
-                Set up <b>Ollama</b> | Bork
+            <a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs%2Ekrust%2Edev%2Fguides%2Follama&amp;rut=abc">
+                Set up <b>Ollama</b> | Krust
             </a>
         </h2>
-        <a class="result__snippet" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs%2Ebork%2Edev%2Fguides%2Follama">
-            Install <b>Ollama</b>, run LLMs locally, and integrate them into Bork.
+        <a class="result__snippet" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs%2Ekrust%2Edev%2Fguides%2Follama">
+            Install <b>Ollama</b>, run LLMs locally, and integrate them into Krust.
         </a>
     </div>
 </div>
@@ -60,14 +60,14 @@ fn parses_titles_snippets_and_unwraps_ddg_redirect_urls() {
     let results = parse_duckduckgo_html(SAMPLE_HTML, 5);
     assert_eq!(results.len(), 2);
 
-    assert_eq!(results[0].title, "Set up Ollama | Bork");
+    assert_eq!(results[0].title, "Set up Ollama | Krust");
     assert_eq!(
         results[0].url,
-        "https://therob.lol/bork-terminal/help/guides/ollama"
+        "https://therob.lol/krust-terminal/help/guides/ollama"
     );
     assert_eq!(
         results[0].snippet,
-        "Install Ollama, run LLMs locally, and integrate them into Bork."
+        "Install Ollama, run LLMs locally, and integrate them into Krust."
     );
 
     assert_eq!(results[1].title, "Direct link, no redirect");

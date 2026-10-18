@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use bork_core::register_telemetry_event;
-use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use krust_core::register_telemetry_event;
+use krust_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 #[derive(Clone, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
@@ -37,7 +37,7 @@ impl TelemetryEvent for RepoMetadataTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        bork_core::telemetry::enum_events::<Self>()
+        krust_core::telemetry::enum_events::<Self>()
     }
 }
 

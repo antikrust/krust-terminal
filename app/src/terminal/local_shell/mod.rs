@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use command::r#async::Command;
 #[cfg(feature = "local_tty")]
 use futures::future::{BoxFuture, FutureExt};
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::local_tty::shell::ShellStarter;
 #[cfg(feature = "local_tty")]
@@ -211,7 +211,7 @@ pub async fn execute_command(
 
     // Build environment variables map.
     // Always include HOME to ensure the shell can expand ~ in rc files - this is critical
-    // when Bork is launched via launchd (Finder, Dock) with a minimal environment.
+    // when Krust is launched via launchd (Finder, Dock) with a minimal environment.
     let mut env_vars = HashMap::new();
     if let Some(home) = dirs::home_dir().and_then(|h| h.to_str().map(|s| s.to_string())) {
         env_vars.insert("HOME".to_owned(), home);
@@ -244,9 +244,9 @@ pub async fn execute_command(
 // PATH is emitted between these sentinels so startup stdout from rc files
 // (fastfetch, MOTD banners, etc.) can't be mistaken for PATH content.
 #[cfg(feature = "local_tty")]
-const PATH_CAPTURE_START: &str = "__BORK_PATH_CAPTURE_START__";
+const PATH_CAPTURE_START: &str = "__KRUST_PATH_CAPTURE_START__";
 #[cfg(feature = "local_tty")]
-const PATH_CAPTURE_END: &str = "__BORK_PATH_CAPTURE_END__";
+const PATH_CAPTURE_END: &str = "__KRUST_PATH_CAPTURE_END__";
 
 /// Returns the text between the capture sentinels, or `None` if absent.
 #[cfg(feature = "local_tty")]
@@ -278,7 +278,7 @@ async fn capture_interactive_shell_env(
     };
 
     // With the `-i` flag, shells may try to set themselves as the foreground process for their
-    // controlling terminal with `tcsetpgrp` [1]. If the Bork process itself tries to read from
+    // controlling terminal with `tcsetpgrp` [1]. If the Krust process itself tries to read from
     // stdin (for example, some Oz CLI commands have interactive inputs), it may get suspended with
     // a `SIGTTIN` or `SIGTTOU` signal.
     //

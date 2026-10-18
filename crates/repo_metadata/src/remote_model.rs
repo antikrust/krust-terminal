@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use futures::future::{self, BoxFuture, FutureExt as _};
-use bork_core::HostId;
-use borkui_core::ModelContext;
+use krust_core::HostId;
+use krustui_core::ModelContext;
 
 use super::local_model::collect_contents_recursive;
 use crate::file_tree_store::{FileTreeEntry, FileTreeState};
@@ -269,7 +269,7 @@ impl RemoteRepoMetadataModel {
     }
 }
 
-impl borkui_core::Entity for RemoteRepoMetadataModel {
+impl krustui_core::Entity for RemoteRepoMetadataModel {
     type Event = RemoteRepositoryMetadataEvent;
 }
 

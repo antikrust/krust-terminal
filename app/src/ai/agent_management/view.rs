@@ -8,28 +8,28 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
 use siphasher::sip::SipHasher;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::icons::Icon;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::new_scrollable::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::icons::Icon;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::new_scrollable::{
     NewScrollableElement, ScrollableAppearance, SingleAxisConfig,
 };
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, List, ListState, MainAxisSize,
     MouseStateHandle, NewScrollable, OffsetPositioning, Padding, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, Rect, ScrollStateHandle, ScrollbarWidth, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text, Wrap,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::scene::DropShadow;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::scene::DropShadow;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -121,7 +121,7 @@ pub fn init(app: &mut AppContext) {
     app.register_fixed_bindings([FixedBinding::new(
         cmd_or_ctrl_shift("f"),
         AgentManagementViewAction::FocusSearch,
-        borkui::keymap::macros::id!(AgentManagementView::ui_name()),
+        krustui::keymap::macros::id!(AgentManagementView::ui_name()),
     )]);
 }
 
@@ -1999,7 +1999,7 @@ impl AgentManagementView {
 
         let loading_icon = ConstrainedBox::new(
             Icon::Refresh
-                .to_borkui_icon(theme.sub_text_color(theme.surface_1()))
+                .to_krustui_icon(theme.sub_text_color(theme.surface_1()))
                 .finish(),
         )
         .with_height(icon_size)
@@ -2043,7 +2043,7 @@ impl AgentManagementView {
 
         let loading_icon = ConstrainedBox::new(
             Icon::Loading
-                .to_borkui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
+                .to_krustui_icon(Fill::Solid(internal_colors::neutral_6(theme)))
                 .finish(),
         )
         .with_height(appearance.ui_font_size() + 2.)
@@ -2103,7 +2103,7 @@ impl AgentManagementView {
         let appearance = Appearance::as_ref(app);
         let icon = ConstrainedBox::new(
             Icon::FilterOff
-                .to_borkui_icon(appearance.theme().nonactive_ui_text_color())
+                .to_krustui_icon(appearance.theme().nonactive_ui_text_color())
                 .finish(),
         )
         .with_width(24.)
@@ -2142,7 +2142,7 @@ impl AgentManagementView {
             axis_config,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::None, false))
         .with_always_handle_events_first(false)

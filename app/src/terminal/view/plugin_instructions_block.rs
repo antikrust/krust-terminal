@@ -2,14 +2,14 @@ use std::iter;
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_geometry::vector::vec2f;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::{
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Empty, Expanded, Flex, FormattedTextElement, HyperlinkLens, MainAxisAlignment, MainAxisSize,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

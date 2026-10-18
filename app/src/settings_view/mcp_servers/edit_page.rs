@@ -11,20 +11,20 @@ use parking_lot::Mutex;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
 use uuid::Uuid;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_errors::report_error;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -169,8 +169,8 @@ impl MCPServersEditPageView {
                 ctx,
             )
             .with_horizontal_scrollbar_appearance(
-                borkui::elements::new_scrollable::ScrollableAppearance::new(
-                    borkui::elements::ScrollbarWidth::Auto,
+                krustui::elements::new_scrollable::ScrollableAppearance::new(
+                    krustui::elements::ScrollbarWidth::Auto,
                     true,
                 ),
             );

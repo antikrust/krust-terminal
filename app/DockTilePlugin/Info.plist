@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>bork.baby.BorkDockTilePlugin</string>
+    <string>krust.baby.KrustDockTilePlugin</string>
     <key>CFBundleExecutable</key>
-    <string>BorkDockTilePlugin</string>
+    <string>KrustDockTilePlugin</string>
     <key>CFBundleName</key>
-    <string>BorkDockTilePlugin</string>
+    <string>KrustDockTilePlugin</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>
@@ -15,7 +15,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>NSPrincipalClass</key>
-    <string>BorkDockTilePlugin</string>
+    <string>KrustDockTilePlugin</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
 </dict>

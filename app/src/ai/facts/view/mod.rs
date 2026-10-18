@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 
-use bork_core::ui::appearance::Appearance;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::elements::{
     Align, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CrossAxisAlignment, Expanded, Flex, MainAxisAlignment, MainAxisSize, ParentElement,
     ScrollbarWidth,
 };
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -193,7 +193,7 @@ impl AIFactView {
                 .with_child(
                     ConstrainedBox::new(
                         Icon::CloudOffline
-                            .to_borkui_icon(
+                            .to_krustui_icon(
                                 appearance
                                     .theme()
                                     .sub_text_color(appearance.theme().surface_2()),
@@ -278,7 +278,7 @@ impl View for AIFactView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .finish()
     }
@@ -308,16 +308,16 @@ impl BackingView for AIFactView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         _action: &Self::PaneHeaderOverflowMenuAction,
-        _ctx: &mut borkui::ViewContext<Self>,
+        _ctx: &mut krustui::ViewContext<Self>,
     ) {
         self.handle_action(_action, _ctx)
     }
 
-    fn close(&mut self, ctx: &mut borkui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut krustui::ViewContext<Self>) {
         ctx.emit(AIFactViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut borkui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut krustui::ViewContext<Self>) {
         self.focus(ctx);
     }
 

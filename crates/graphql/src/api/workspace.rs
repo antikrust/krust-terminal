@@ -131,7 +131,7 @@ pub struct CodebaseContextSettings {
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct AmbientAgentSettings {
-    pub enable_bork_attribution: AdminEnablementSetting,
+    pub enable_krust_attribution: AdminEnablementSetting,
     pub default_host_slug: Option<String>,
 }
 

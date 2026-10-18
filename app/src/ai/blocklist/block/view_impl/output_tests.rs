@@ -5,11 +5,11 @@ use ai::skills::{ParsedSkill, SkillProvider, SkillReference, SkillScope};
 use computer_use::{Action, ScreenshotParams, Target, TargetedAction};
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::{DirectoryWatcher, RepoMetadataModel};
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::App;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::App;
 use watcher::HomeDirectoryWatcher;
 
 use super::{
@@ -23,7 +23,7 @@ use crate::ai::agent::{
 };
 use crate::ai::skills::SkillManager;
 use crate::settings::AISettings;
-use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
+use crate::krust_managed_paths_watcher::KrustManagedPathsWatcher;
 
 #[test]
 fn format_upload_artifact_text_includes_request_details() {
@@ -218,7 +218,7 @@ fn read_skill_display_text_no_double_slash_when_skill_not_found_with_path_refere
     // which for a path reference is an absolute path starting with '/'.  The display
     // text must NOT prepend an extra '/' — doing so would produce '//home/…'.
     let path = LocalOrRemotePath::Local(std::path::PathBuf::from(
-        "/home/devbox/.bork-local/skills/hello-world/SKILL.md",
+        "/home/devbox/.krust-local/skills/hello-world/SKILL.md",
     ));
     let reference = SkillReference::Path(path);
     let display = read_skill_display_text(None, &reference);
@@ -235,7 +235,7 @@ fn read_skill_display_text_no_double_slash_when_skill_not_found_with_path_refere
 #[test]
 fn read_skill_display_text_bundled_id_fallback_when_skill_not_found() {
     // The fallback uses the user-facing label (the bare id), not the canonical
-    // `@bork-skill:<id>` reference form, so bundled-skill copy reads the same
+    // `@krust-skill:<id>` reference form, so bundled-skill copy reads the same
     // way as path-based skill copy.
     let reference = SkillReference::BundledSkillId("create-pr".to_string());
     let display = read_skill_display_text(None, &reference);
@@ -272,7 +272,7 @@ fn parsed_skill_for_common_locations_resolves_cached_remote_skill() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(KrustManagedPathsWatcher::new_for_testing);
         let manager = app.add_singleton_model(SkillManager::new);
         manager.update(&mut app, |manager, _| {
             manager.add_skill_for_testing(skill.clone());
@@ -309,7 +309,7 @@ fn parsed_skill_for_common_locations_does_not_mix_remote_hosts() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(KrustManagedPathsWatcher::new_for_testing);
         let manager = app.add_singleton_model(SkillManager::new);
         manager.update(&mut app, |manager, _| {
             manager.add_skill_for_testing(skill);

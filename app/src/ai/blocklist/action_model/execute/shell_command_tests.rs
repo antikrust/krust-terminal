@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_channel::unbounded;
 use futures::channel::oneshot;
 use parking_lot::FairMutex;
-use borkui::{App, EntityId};
+use krustui::{App, EntityId};
 
 use super::{BlockSelector, ShellCommandExecutor};
 use crate::terminal::event::{BlockMetadataReceivedEvent, BlockWorkingDirectoryUpdatedEvent};

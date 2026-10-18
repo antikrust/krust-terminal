@@ -2,7 +2,7 @@
 
 ## Context
 
-Bork's remote server daemon (`remote-server-daemon`) is a long-lived headless process on the SSH host that serves remote terminal sessions. Previously it bypassed `run_internal` and `initialize_app` entirely, instead calling a separate `init_common` → `run_daemon_app` path that stood up a minimal headless `AppBuilder` with hand-picked singletons. This meant the daemon missed all initialization that `initialize_app` performs — most critically Sentry crash reporting, but also feature flags, profiling, resource limits, and any future singletons added to `initialize_app`.
+Krust's remote server daemon (`remote-server-daemon`) is a long-lived headless process on the SSH host that serves remote terminal sessions. Previously it bypassed `run_internal` and `initialize_app` entirely, instead calling a separate `init_common` → `run_daemon_app` path that stood up a minimal headless `AppBuilder` with hand-picked singletons. This meant the daemon missed all initialization that `initialize_app` performs — most critically Sentry crash reporting, but also feature flags, profiling, resource limits, and any future singletons added to `initialize_app`.
 
 The proxy (`remote-server-proxy`) is a thin stdio↔Unix-socket byte bridge. It only needs logging to stderr; it does not need `initialize_app` or crash reporting.
 
@@ -79,7 +79,7 @@ Extend the protocol so the client sends user identity and crash-reporting prefer
 
 ```mermaid
 sequenceDiagram
-    participant Client as Bork Client
+    participant Client as Krust Client
     participant Manager as RemoteServerManager
     participant Daemon as ServerModel (daemon)
     participant Sentry
@@ -107,11 +107,11 @@ sequenceDiagram
 
 ### E2E validation (manual, completed)
 1. Deployed daemon with a temporary `panic!("TEST DAEMON CRASH")` in `handle_initialize` after Sentry setup.
-2. Connected from Bork client → daemon crashed → verified event appeared in Sentry (`bork-client-local` project) within seconds.
+2. Connected from Krust client → daemon crashed → verified event appeared in Sentry (`krust-client-local` project) within seconds.
 3. Confirmed Sentry event contains:
    - Correct user ID (`evlWdsVMvZYciWUIi6ZkKwVBrEH2`) piped from the client.
    - `mechanism: panic`, `level: fatal`.
-   - `bork.client_type: bork-cli` tag.
+   - `krust.client_type: krust-cli` tag.
    - Host/OS metadata (`Linux`, `x86_64`).
 4. Removed test panic before merging.
 

@@ -8,19 +8,19 @@ use std::ops::Range;
 use lazy_static::lazy_static;
 use rangemap::RangeSet;
 use string_offset::CharOffset;
-use bork_editor::content::version::BufferVersion;
-use bork_editor::editor::{EmbeddedItemModel, RunnableCommandModel, TextDecoration};
-use bork_editor::model::{CoreEditorModel, PlainTextEditorModel};
-use bork_editor::render::element::RichTextAction;
-use bork_editor::render::model::{ExpansionType, LineCount, Location};
-use bork_editor::selection::{TextDirection, TextUnit};
-use bork_util::user_input::UserInput;
-use borkui::actions::StandardAction;
-use borkui::elements::Axis;
-use borkui::event::ModifiersState;
-use borkui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
-use borkui::units::Pixels;
-use borkui::{AppContext, TypedActionView, ViewContext, WeakViewHandle};
+use krust_editor::content::version::BufferVersion;
+use krust_editor::editor::{EmbeddedItemModel, RunnableCommandModel, TextDecoration};
+use krust_editor::model::{CoreEditorModel, PlainTextEditorModel};
+use krust_editor::render::element::RichTextAction;
+use krust_editor::render::model::{ExpansionType, LineCount, Location};
+use krust_editor::selection::{TextDirection, TextUnit};
+use krust_util::user_input::UserInput;
+use krustui::actions::StandardAction;
+use krustui::elements::Axis;
+use krustui::event::ModifiersState;
+use krustui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
+use krustui::units::Pixels;
+use krustui::{AppContext, TypedActionView, ViewContext, WeakViewHandle};
 
 use crate::cmd_or_ctrl_shift;
 use crate::code::editor::line::EditorLineLocation;
@@ -42,7 +42,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     let text_entry = id!("CodeEditorView") & !id!("IMEOpen");
     // We use this to disable some keybindings that would conflict with the Agent Mode embedded editor.
@@ -1128,7 +1128,7 @@ impl TypedActionView for CodeEditorView {
     }
 }
 
-impl bork_editor::editor::EditorView for CodeEditorView {
+impl krust_editor::editor::EditorView for CodeEditorView {
     type RichTextAction = CodeEditorViewAction;
 
     fn runnable_command_at<'a>(
@@ -1205,7 +1205,7 @@ impl RichTextAction<CodeEditorView> for CodeEditorViewAction {
             modifiers.shift
         );
 
-        // The first mouse down to bring focus to a Bork window will not have a corresponding mouse up.
+        // The first mouse down to bring focus to a Krust window will not have a corresponding mouse up.
         // We ignore it, and they can click again.
         if is_first_mouse {
             return None;

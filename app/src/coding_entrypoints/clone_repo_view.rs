@@ -1,6 +1,6 @@
-use bork_core::send_telemetry_from_ctx;
-use borkui::elements::{ChildView, Flex, ParentElement as _};
-use borkui::{
+use krust_core::send_telemetry_from_ctx;
+use krustui::elements::{ChildView, Flex, ParentElement as _};
+use krustui::{
     AppContext, Element, Entity, FocusContext, TypedActionView, View, ViewContext, ViewHandle,
 };
 

@@ -1,16 +1,16 @@
 use regex::Regex;
-use bork::integration_testing::goto_line::{
+use krust::integration_testing::goto_line::{
     assert_code_editor_line_numbers, assert_cursor_at_line, assert_cursor_at_line_and_column,
     assert_goto_line_dialog_is_open, goto_line_confirm, open_goto_line_dialog,
     set_code_editor_line_number_mode,
 };
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::tab::assert_pane_title;
-use bork::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use bork::integration_testing::view_getters::{pane_group_view, workspace_view};
-use bork::settings::CodeEditorLineNumberMode;
-use bork::workspace::WorkspaceAction;
-use borkui_core::{async_assert_eq, App};
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::tab::assert_pane_title;
+use krust::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use krust::integration_testing::view_getters::{pane_group_view, workspace_view};
+use krust::settings::CodeEditorLineNumberMode;
+use krust::workspace::WorkspaceAction;
+use krustui_core::{async_assert_eq, App};
 
 use super::{new_builder, Builder};
 use crate::util::write_all_rc_files_for_test;

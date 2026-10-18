@@ -1,10 +1,10 @@
-use borkui::elements::{CornerRadius, Fill as UiFill, Radius};
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::ui_components::segmented_control::{
+use krustui::elements::{CornerRadius, Fill as UiFill, Radius};
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl, SegmentedControlEvent,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -114,8 +114,8 @@ fn markdown_toggle_styles(app: &AppContext) -> UiComponentStyles {
         border_color: Some(UiFill::Solid(theme.surface_3().into())),
         background: Some(UiFill::Solid(theme.background().into())),
         height: Some(20.0),
-        padding: Some(borkui::ui_components::components::Coords::uniform(0.0)),
-        margin: Some(borkui::ui_components::components::Coords {
+        padding: Some(krustui::ui_components::components::Coords::uniform(0.0)),
+        margin: Some(krustui::ui_components::components::Coords {
             top: 0.0,
             bottom: 0.0,
             left: 0.0,

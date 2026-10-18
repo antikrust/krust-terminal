@@ -1,8 +1,8 @@
-use borkui::elements::{
+use krustui::elements::{
     ChildView, Container, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Text,
 };
-use borkui::{
+use krustui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
     WeakViewHandle,
 };

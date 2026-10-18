@@ -1,5 +1,5 @@
-use bork_errors::report_error;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_errors::report_error;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
 use crate::auth::AuthStateProvider;
@@ -7,7 +7,7 @@ use crate::network::{NetworkStatus, NetworkStatusEvent, NetworkStatusKind};
 use crate::server::server_api::ai::ConnectedSelfHostedWorker;
 use crate::server::server_api::ServerApiProvider;
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
-pub const BORK_WORKER_HOST: &str = "bork";
+pub const KRUST_WORKER_HOST: &str = "krust";
 
 pub enum ConnectedSelfHostedWorkersEvent {
     Changed,
@@ -63,7 +63,7 @@ impl ConnectedSelfHostedWorkersModel {
             .iter()
             .map(|worker| worker.worker_host.clone())
             .filter(|host| !host.trim().is_empty())
-            .filter(|host| !host.eq_ignore_ascii_case(BORK_WORKER_HOST))
+            .filter(|host| !host.eq_ignore_ascii_case(KRUST_WORKER_HOST))
             .filter(|host| match excluded {
                 Some(excluded) => !host.eq_ignore_ascii_case(excluded),
                 None => true,

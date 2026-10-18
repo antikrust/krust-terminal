@@ -1,9 +1,9 @@
 //! One-time migration that gives the Preview channel its own config
-//! directory (`~/.bork-preview`) on macOS.
+//! directory (`~/.krust-preview`) on macOS.
 //!
-//! Historically, Stable and Preview shared `~/.bork` on macOS. To give
+//! Historically, Stable and Preview shared `~/.krust` on macOS. To give
 //! Preview its own directory without breaking existing users, this migration
-//! symlinks each top-level entry from `~/.bork` into `~/.bork-preview` on
+//! symlinks each top-level entry from `~/.krust` into `~/.krust-preview` on
 //! first launch, so existing configuration (keybindings, themes, workflows,
 //! etc.) remains available to Preview.
 //!
@@ -11,23 +11,23 @@
 
 use std::path::Path;
 
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::paths::{data_dir, BORK_CONFIG_DIR};
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::paths::{data_dir, KRUST_CONFIG_DIR};
 
 /// Files that should not be symlinked during the Preview config directory
 /// migration. These are intentionally kept separate between Stable and
 /// Preview so each channel has independent settings.
 const MIGRATION_EXCLUDED_FILES: &[&str] = &["settings.toml"];
 
-/// Migrates Preview's config directory from the shared `.bork` location to
-/// `.bork-preview` by creating symlinks from each top-level entry in `.bork`
+/// Migrates Preview's config directory from the shared `.krust` location to
+/// `.krust-preview` by creating symlinks from each top-level entry in `.krust`
 /// into the new directory.
 ///
 /// This runs once — on the first launch after the Preview channel is given
 /// its own config directory. It is a no-op if:
 /// - The channel is not Preview.
-/// - `~/.bork-preview` already exists.
-/// - `~/.bork` does not exist.
+/// - `~/.krust-preview` already exists.
+/// - `~/.krust` does not exist.
 pub(crate) fn migrate_preview_config_dir_if_needed() {
     if ChannelState::channel() != Channel::Preview {
         return;
@@ -37,9 +37,9 @@ pub(crate) fn migrate_preview_config_dir_if_needed() {
         return;
     };
 
-    let old_dir = home.join(BORK_CONFIG_DIR);
+    let old_dir = home.join(KRUST_CONFIG_DIR);
     // `data_dir()` is already channel-aware; for Preview it resolves to
-    // `~/.bork-preview`.
+    // `~/.krust-preview`.
     let new_dir = data_dir();
 
     migrate_config_dir_via_symlinks(&old_dir, &new_dir);
@@ -56,7 +56,7 @@ pub(crate) fn migrate_config_dir_via_symlinks(old_dir: &Path, new_dir: &Path) {
 
     // The existence of new_dir is the migration marker — no separate marker
     // file is needed. Once this directory exists (whether created by the
-    // migration itself or by ensure_bork_watch_roots_exist on a subsequent
+    // migration itself or by ensure_krust_watch_roots_exist on a subsequent
     // launch), this function is a no-op.
     if new_dir.exists() || !old_dir.exists() {
         return;

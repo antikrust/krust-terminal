@@ -3,17 +3,17 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors::neutral_4;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors::neutral_4;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseState, MouseStateHandle, ParentElement, Radius,
 };
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity as _, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -468,7 +468,7 @@ impl View for AliasBar {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     "Add alias",
-                    Icon::Plus.to_borkui_icon(
+                    Icon::Plus.to_krustui_icon(
                         appearance
                             .theme()
                             .main_text_color(appearance.theme().background()),

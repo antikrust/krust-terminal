@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use borkui::{Entity, EntityId, WindowId};
+use krustui::{Entity, EntityId, WindowId};
 
 use crate::util::bindings::CommandBinding;
 

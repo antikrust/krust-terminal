@@ -3,32 +3,32 @@ use async_trait::async_trait;
 use cynic::{MutationBuilder, QueryBuilder};
 #[cfg(test)]
 use mockall::automock;
-use bork_graphql::mutations::create_simple_integration::{
+use krust_graphql::mutations::create_simple_integration::{
     CreateSimpleIntegration, CreateSimpleIntegrationOutput, CreateSimpleIntegrationResult,
     CreateSimpleIntegrationVariables, SimpleIntegrationConfig,
 };
-use bork_graphql::queries::get_integrations_using_environment::{
+use krust_graphql::queries::get_integrations_using_environment::{
     GetIntegrationsUsingEnvironment, GetIntegrationsUsingEnvironmentInput,
     GetIntegrationsUsingEnvironmentOutput, GetIntegrationsUsingEnvironmentResult,
     GetIntegrationsUsingEnvironmentVariables,
 };
-use bork_graphql::queries::get_oauth_connect_tx_status::{
+use krust_graphql::queries::get_oauth_connect_tx_status::{
     GetOAuthConnectTxStatus, GetOAuthConnectTxStatusInput, GetOAuthConnectTxStatusResult,
     GetOAuthConnectTxStatusVariables, OauthConnectTxStatus,
 };
-use bork_graphql::queries::get_simple_integrations::{
+use krust_graphql::queries::get_simple_integrations::{
     SimpleIntegrations, SimpleIntegrationsInput, SimpleIntegrationsOutput,
     SimpleIntegrationsResult, SimpleIntegrationsVariables,
 };
-use bork_graphql::queries::suggest_cloud_environment_image::{
+use krust_graphql::queries::suggest_cloud_environment_image::{
     RepoInput as SuggestCloudEnvironmentImageRepoInput, SuggestCloudEnvironmentImage,
     SuggestCloudEnvironmentImageInput, SuggestCloudEnvironmentImageResult,
     SuggestCloudEnvironmentImageVariables,
 };
-use bork_graphql::queries::user_github_info::{
+use krust_graphql::queries::user_github_info::{
     GithubAuthRequiredOutput, UserGithubInfo, UserGithubInfoResult, UserGithubInfoVariables,
 };
-use bork_graphql::queries::user_repo_auth_status::{
+use krust_graphql::queries::user_repo_auth_status::{
     RepoInput as UserRepoAuthStatusRepoInput, UserRepoAuthStatus, UserRepoAuthStatusInput,
     UserRepoAuthStatusOutput, UserRepoAuthStatusResult, UserRepoAuthStatusVariables,
 };

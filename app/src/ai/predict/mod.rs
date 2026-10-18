@@ -1,6 +1,6 @@
-//! This module contains all code relevant to Agent Predict within Bork.
+//! This module contains all code relevant to Agent Predict within Krust.
 //!
-//! Agent Predict attempts to predict the next action the user will take in Bork.
+//! Agent Predict attempts to predict the next action the user will take in Krust.
 
 pub(crate) mod generate_ai_input_suggestions;
 pub(crate) mod generate_am_query_suggestions;

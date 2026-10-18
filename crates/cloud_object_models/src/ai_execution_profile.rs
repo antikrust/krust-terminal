@@ -8,8 +8,8 @@ use cloud_objects::ids::GenericStringObjectId;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
 
 use crate::{JsonModel, JsonSerializer};
 
@@ -384,8 +384,8 @@ pub struct AIExecutionProfile {
 
     pub context_window_limit: Option<u32>,
 
-    /// Whether plans created by the agent should be automatically synced to Bork Drive
-    pub autosync_plans_to_bork_drive: bool,
+    /// Whether plans created by the agent should be automatically synced to Krust Drive
+    pub autosync_plans_to_krust_drive: bool,
 
     /// Whether the agent may use web search when helpful for completing tasks
     pub web_search_enabled: bool,
@@ -414,7 +414,7 @@ impl Default for AIExecutionProfile {
             cli_agent_model: None,
             computer_use_model: None,
             context_window_limit: None,
-            autosync_plans_to_bork_drive: true,
+            autosync_plans_to_krust_drive: true,
             web_search_enabled: true,
         }
     }
@@ -444,7 +444,7 @@ impl AIExecutionProfile {
             cli_agent_model: None,
             computer_use_model: None,
             context_window_limit: None,
-            autosync_plans_to_bork_drive: false,
+            autosync_plans_to_krust_drive: false,
             web_search_enabled: true,
         }
     }
@@ -500,7 +500,7 @@ impl AIExecutionProfile {
             cli_agent_model: None,
             computer_use_model: None,
             context_window_limit: None,
-            autosync_plans_to_bork_drive: FeatureFlag::SyncAmbientPlans.is_enabled(),
+            autosync_plans_to_krust_drive: FeatureFlag::SyncAmbientPlans.is_enabled(),
             web_search_enabled: true,
         }
     }

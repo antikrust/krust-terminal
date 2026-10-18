@@ -1,9 +1,9 @@
 use itertools::Itertools;
-use bork_errors::report_if_error;
-use borkui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable};
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krust_errors::report_if_error;
+use krustui::elements::{Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable};
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, Event as EditorEvent, SingleLineEditorOptions, TextOptions};
@@ -124,7 +124,7 @@ impl View for WorkingDirectoryView {
         "WorkingDirectoryView"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let ui_builder = appearance.ui_builder();
 

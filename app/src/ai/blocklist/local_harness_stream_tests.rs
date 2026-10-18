@@ -10,8 +10,8 @@
 //! `TaskNotFound`.
 
 use ai::agent::{TurnEvent, TurnUsage};
-use bork_multi_agent_api as api;
-use borkui::{App, EntityId};
+use krust_multi_agent_api as api;
+use krustui::{App, EntityId};
 
 use super::LocalHarnessStream;
 use crate::ai::agent::conversation::ConversationStatus;

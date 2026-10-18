@@ -26,7 +26,7 @@ warnings. Lines render in the terminal on command submit and completion.
 | `view.rs` | 63 | `MiseryLineView` — renders one line |
 | `*_tests.rs` | 730 | 56 tests + a manual sampler |
 
-Settings: `AISettings.misery_mode` (`agents.bork_agent.other.misery_mode`),
+Settings: `AISettings.misery_mode` (`agents.krust_agent.other.misery_mode`),
 default off, never synced to cloud.
 
 ---
@@ -118,7 +118,7 @@ contempt. `Build` is lowest because it's the one thing that looks like work.
 
 ### Hooking the real parser
 
-`crates/bork_completer/src/parsers/hir` already produces
+`crates/krust_completer/src/parsers/hir` already produces
 `Command::{Classified(ShellCommand), Unclassified(ExternalCommand)}` with a
 proper `command_name_span()`. `classify::parse` accepts a raw string so the
 engine stays unit-testable without a live shell, but a caller holding a real

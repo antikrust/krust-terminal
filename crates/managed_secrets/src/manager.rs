@@ -4,10 +4,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use vec1::vec1;
-use bork_core::features::FeatureFlag;
-use bork_graphql::managed_secrets::ManagedSecret;
-use bork_graphql::queries::task_secrets::ManagedSecretValue as GqlManagedSecretValue;
-use borkui_core::{Entity, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_graphql::managed_secrets::ManagedSecret;
+use krust_graphql::queries::task_secrets::ManagedSecretValue as GqlManagedSecretValue;
+use krustui_core::{Entity, SingletonEntity};
 
 use crate::ManagedSecretValue;
 use crate::client::{
@@ -17,7 +17,7 @@ use crate::client::{
 use crate::envelope::UploadKey;
 use crate::gcp::{self, GcpWorkloadIdentityFederationError, GcpWorkloadIdentityFederationToken};
 
-/// Singleton model for working with Bork-managed secrets.
+/// Singleton model for working with Krust-managed secrets.
 pub struct ManagedSecretManager {
     client: Arc<dyn ManagedSecretsClient>,
     actor_provider: Arc<dyn ActorProvider>,
@@ -49,7 +49,7 @@ impl ManagedSecretManager {
         let client = self.client.clone();
         let actor_provider = self.actor_provider.clone();
         async move {
-            if !FeatureFlag::BorkManagedSecrets.is_enabled() {
+            if !FeatureFlag::KrustManagedSecrets.is_enabled() {
                 return Err(anyhow::anyhow!("This feature is not enabled"));
             }
             // We retrieve all upload keys on demand. These should potentially be fetched and stored
@@ -91,7 +91,7 @@ impl ManagedSecretManager {
     ) -> impl Future<Output = anyhow::Result<()>> + use<> {
         let client = self.client.clone();
         async move {
-            if !FeatureFlag::BorkManagedSecrets.is_enabled() {
+            if !FeatureFlag::KrustManagedSecrets.is_enabled() {
                 return Err(anyhow::anyhow!("This feature is not enabled"));
             }
 
@@ -110,7 +110,7 @@ impl ManagedSecretManager {
         let client = self.client.clone();
         let actor_provider = self.actor_provider.clone();
         async move {
-            if !FeatureFlag::BorkManagedSecrets.is_enabled() {
+            if !FeatureFlag::KrustManagedSecrets.is_enabled() {
                 return Err(anyhow::anyhow!("This feature is not enabled"));
             }
 
@@ -154,7 +154,7 @@ impl ManagedSecretManager {
         }
     }
 
-    /// Get Bork-managed secrets scoped to the currently-executing task.
+    /// Get Krust-managed secrets scoped to the currently-executing task.
     ///
     /// This will fail if not in an ambient agent.
     pub fn get_task_secrets(
@@ -169,7 +169,7 @@ impl ManagedSecretManager {
         ) -> anyhow::Result<HashMap<String, ManagedSecretValue>> {
             // We only need the workload token for the duration of the request.
             let workload_token =
-                bork_isolation_platform::issue_workload_token(Some(Duration::from_mins(5))).await?;
+                krust_isolation_platform::issue_workload_token(Some(Duration::from_mins(5))).await?;
             let gql_secrets = client
                 .get_task_secrets(task_id, workload_token.token)
                 .await?;

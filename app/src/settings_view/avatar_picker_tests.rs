@@ -3,9 +3,9 @@
 //! `MainAxisSize::Max` flex meeting the wrap-grid's infinite measuring
 //! constraint — fail here as the debug-build panic they cause in the app.
 
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::{App, TypedActionView as _};
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::{App, TypedActionView as _};
 
 use super::{AvatarPickerAction, AvatarPickerModal};
 use crate::settings::identity::IdentitySettings;

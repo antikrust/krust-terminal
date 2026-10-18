@@ -2,15 +2,15 @@
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, DraggableState, Flex, Hoverable,
     MouseStateHandle, OffsetPositioning, ParentElement, ParentOffsetBounds, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{Action, Element};
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{Action, Element};
 
 use super::context_chip::ContextChip;
 use super::display_chip::{chip_container, udi_font_size};
@@ -128,7 +128,7 @@ impl Renderer {
         let button = Hoverable::new(self.remove_button_state_handle.clone(), |_| {
             ConstrainedBox::new(
                 icons::Icon::X
-                    .to_borkui_icon(appearance.theme().ui_error_color().into())
+                    .to_krustui_icon(appearance.theme().ui_error_color().into())
                     .finish(),
             )
             .with_height(icon_size)
@@ -158,7 +158,7 @@ impl Renderer {
         if let Some(icon) = self.kind.udi_icon() {
             content.add_child(
                 Container::new(
-                    ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(color)).finish())
+                    ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(color)).finish())
                         .with_height(font_size)
                         .with_width(font_size)
                         .finish(),
@@ -208,8 +208,8 @@ impl Renderer {
                 OffsetPositioning::offset_from_parent(
                     vec2f(0., -2.5 * font_size),
                     ParentOffsetBounds::Unbounded,
-                    borkui::elements::ParentAnchor::Center,
-                    borkui::elements::ChildAnchor::Center,
+                    krustui::elements::ParentAnchor::Center,
+                    krustui::elements::ChildAnchor::Center,
                 ),
             );
             stack.finish()

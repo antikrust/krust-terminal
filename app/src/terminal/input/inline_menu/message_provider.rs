@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 use std::sync::LazyLock;
 
-use borkui::keymap::Keystroke;
-use borkui::AppContext;
+use krustui::keymap::Keystroke;
+use krustui::AppContext;
 
 use crate::editor::{SELECT_DOWN_ACTION_NAME, SELECT_UP_ACTION_NAME};
 use crate::terminal::input::inline_menu::{

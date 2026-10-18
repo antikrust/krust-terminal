@@ -38,17 +38,17 @@ impl FromStr for NodeHash {
     }
 }
 
-impl From<NodeHash> for bork_graphql::full_source_code_embedding::NodeHash {
+impl From<NodeHash> for krust_graphql::full_source_code_embedding::NodeHash {
     fn from(value: NodeHash) -> Self {
-        bork_graphql::full_source_code_embedding::NodeHash(value.0.to_string())
+        krust_graphql::full_source_code_embedding::NodeHash(value.0.to_string())
     }
 }
 
-impl TryFrom<bork_graphql::full_source_code_embedding::NodeHash> for NodeHash {
+impl TryFrom<krust_graphql::full_source_code_embedding::NodeHash> for NodeHash {
     type Error = Error;
 
     fn try_from(
-        value: bork_graphql::full_source_code_embedding::NodeHash,
+        value: krust_graphql::full_source_code_embedding::NodeHash,
     ) -> Result<Self, Self::Error> {
         Ok(Self(MerkleHash::from_str(&value.0)?))
     }
@@ -102,17 +102,17 @@ impl FromStr for ContentHash {
     }
 }
 
-impl From<ContentHash> for bork_graphql::full_source_code_embedding::ContentHash {
+impl From<ContentHash> for krust_graphql::full_source_code_embedding::ContentHash {
     fn from(value: ContentHash) -> Self {
-        bork_graphql::full_source_code_embedding::ContentHash(value.0.to_string())
+        krust_graphql::full_source_code_embedding::ContentHash(value.0.to_string())
     }
 }
 
-impl TryFrom<bork_graphql::full_source_code_embedding::ContentHash> for ContentHash {
+impl TryFrom<krust_graphql::full_source_code_embedding::ContentHash> for ContentHash {
     type Error = Error;
 
     fn try_from(
-        value: bork_graphql::full_source_code_embedding::ContentHash,
+        value: krust_graphql::full_source_code_embedding::ContentHash,
     ) -> Result<Self, Self::Error> {
         Ok(Self(MerkleHash::from_str(&value.0)?))
     }

@@ -5,7 +5,7 @@ mod telemetry;
 #[cfg(windows)]
 mod windows;
 
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 /// Singleton model that reports the currently running antivirus software.
 #[derive(Debug, Clone)]

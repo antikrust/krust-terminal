@@ -10,8 +10,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use settings::EditorChoice;
-use bork_util::path::LineAndColumnArg;
-use borkui::{AppContext, SingletonEntity};
+use krust_util::path::LineAndColumnArg;
+use krustui::{AppContext, SingletonEntity};
 
 pub use self::settings::{EditorLayout, EditorSettings};
 

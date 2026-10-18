@@ -1,14 +1,14 @@
 use instant::Instant;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use bork_core::features::FeatureFlag;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krustui::elements::{
     Border, CacheOption, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element,
     Flex, FormattedTextElement, HighlightedHyperlink, Icon, Image, MouseStateHandle, ParentElement,
     Radius,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Entity, ModelAsRef, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -367,7 +367,7 @@ impl SectionView for ChangelogSectionView {
                 .ui_builder()
                 .link(
                     "Read all changelogs".into(),
-                    Some("https://therob.lol/bork-terminal/help/changelog".into()),
+                    Some("https://therob.lol/krust-terminal/help/changelog".into()),
                     None,
                     self.changelog_button_mouse_states
                         .view_changelogs_mouse_state

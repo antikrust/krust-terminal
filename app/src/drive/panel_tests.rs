@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krust_core::ui::appearance::Appearance;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::DrivePanel;
 use crate::ai::blocklist::BlocklistAIHistoryModel;
@@ -48,7 +48,7 @@ fn initialize_app(app: &mut App) {
 }
 
 #[test]
-fn test_bork_drive_sections_with_no_team() {
+fn test_krust_drive_sections_with_no_team() {
     App::test(ASSETS, |mut app| async move {
         initialize_app(&mut app);
 

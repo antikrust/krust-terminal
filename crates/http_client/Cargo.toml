@@ -25,8 +25,8 @@ reqwest-eventsource.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
-bork_core.workspace = true
-bork_errors.workspace = true
+krust_core.workspace = true
+krust_errors.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 gloo.workspace = true

@@ -1,6 +1,6 @@
-use borkui_core::elements::{CacheOption, Image};
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::{Element, SizeConstraint};
+use krustui_core::elements::{CacheOption, Image};
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::{Element, SizeConstraint};
 
 use super::{RenderContext, RenderableBlock};
 use crate::extract_block;
@@ -33,8 +33,8 @@ impl RenderableBlock for RenderableImage {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut borkui_core::LayoutContext,
-        app: &borkui_core::AppContext,
+        ctx: &mut krustui_core::LayoutContext,
+        app: &krustui_core::AppContext,
     ) {
         let content = model.content();
         let (asset_source, config) = extract_block!(
@@ -58,7 +58,7 @@ impl RenderableBlock for RenderableImage {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        app: &borkui_core::AppContext,
+        app: &krustui_core::AppContext,
     ) {
         let content = model.content();
         let positioned_image = extract_block!(
@@ -82,7 +82,7 @@ impl RenderableBlock for RenderableImage {
         }
 
         if selected {
-            let rect_bounds = borkui_core::geometry::rect::RectF::new(screen_position, size);
+            let rect_bounds = krustui_core::geometry::rect::RectF::new(screen_position, size);
             ctx.paint
                 .scene
                 .draw_rect_with_hit_recording(rect_bounds)

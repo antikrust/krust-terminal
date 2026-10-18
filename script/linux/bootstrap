@@ -2,13 +2,13 @@
 
 set -e
 
-. "$PWD/script/bork_sudo"
+. "$PWD/script/krust_sudo"
 
 # Update the apt cache before installing dependencies.  It can be slow, so the install scripts
 # don't do it (to avoid doing it more than once).
-bork_sudo apt update -y
+krust_sudo apt update -y
 
-# Install all dependencies needed to build, run, and test Bork.
+# Install all dependencies needed to build, run, and test Krust.
 "$PWD"/script/linux/install_test_deps
 
 # Install linuxdeploy.
@@ -16,7 +16,7 @@ bork_sudo apt update -y
 
 # Make sure we're authenticated with the gcloud CLI, otherwise SSH integration
 # tests won't work.
-if [[ "${BORK_SKIP_GCLOUD_AUTH:-0}" != "1" ]] && [[ -z "$(gcloud auth print-identity-token)" ]]; then
+if [[ "${KRUST_SKIP_GCLOUD_AUTH:-0}" != "1" ]] && [[ -z "$(gcloud auth print-identity-token)" ]]; then
     echo "gcloud CLI authentication missing.  Press enter to continue..."
     read var
     gcloud auth login

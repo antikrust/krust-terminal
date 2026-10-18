@@ -3,7 +3,7 @@ use std::{fs, path, process};
 use itertools::Itertools;
 use rayon::prelude::*;
 
-use bork_command_signatures::{
+use krust_command_signatures::{
     fig_types::Command,
     overrides::apply_overrides,
     powershell_autogenerator::{CmdletHelp, CmdletMetadataParameter},

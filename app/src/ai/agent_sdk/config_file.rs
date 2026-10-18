@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Context as _;
 use serde_json::{Map, Value};
-use bork_cli::mcp::MCPSpec;
+use krust_cli::mcp::MCPSpec;
 
 use crate::ai::ambient_agents::AgentConfigSnapshot;
 
@@ -101,7 +101,7 @@ fn supported_keys_context() -> String {
 /// Convert an unwrapped `mcp_servers` map into runtime MCP specs for AgentDriver.
 ///
 /// Behavior:
-/// - Entries with `bork_id` become `MCPSpec::Uuid`.
+/// - Entries with `krust_id` become `MCPSpec::Uuid`.
 /// - Entries with `command`/`url` remain as inline JSON (`MCPSpec::Json`) containing the unwrapped server map.
 pub fn mcp_specs_from_mcp_servers(
     mcp_servers: &Map<String, Value>,
@@ -114,9 +114,9 @@ pub fn mcp_specs_from_mcp_servers(
             .as_object()
             .ok_or_else(|| anyhow::anyhow!("MCP server '{name}' config must be a JSON object"))?;
 
-        if let Some(bork_id) = obj.get("bork_id").and_then(Value::as_str) {
-            let uuid = uuid::Uuid::parse_str(bork_id).map_err(|_| {
-                anyhow::anyhow!("MCP server '{name}' field 'bork_id' must be a UUID")
+        if let Some(krust_id) = obj.get("krust_id").and_then(Value::as_str) {
+            let uuid = uuid::Uuid::parse_str(krust_id).map_err(|_| {
+                anyhow::anyhow!("MCP server '{name}' field 'krust_id' must be a UUID")
             })?;
             uuids.push(uuid);
         } else {

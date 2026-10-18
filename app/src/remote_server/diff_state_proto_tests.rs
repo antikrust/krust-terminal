@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::standardized_path::StandardizedPath;
 
 use super::super::proto;
 use crate::code_review::diff_size_limits::{DiffSize, UnrenderableReason, MAX_DIFF_SIZE};
@@ -97,7 +97,7 @@ fn diff_metadata_against_base_requires_stats() {
 fn pr_info_round_trips_through_proto() {
     let pr_info = PrInfo {
         number: 42,
-        url: "https://github.com/borkdotdev/Bork/pull/42".into(),
+        url: "https://github.com/krustdotdev/Krust/pull/42".into(),
         state: "OPEN".into(),
         draft: true,
         base_branch: "develop".into(),

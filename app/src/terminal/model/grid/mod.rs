@@ -14,7 +14,7 @@ pub use grid_storage::*;
 pub(super) use indexing::ConvertToAbsolute;
 pub use indexing::IndexRegion;
 pub use selection_cursor::SelectionCursor;
-pub use bork_terminal::model::grid::row;
+pub use krust_terminal::model::grid::row;
 
 enum CursorDirection {
     Up,

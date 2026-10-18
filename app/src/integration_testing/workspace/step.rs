@@ -1,11 +1,11 @@
-use borkui::integration::TestStep;
-use borkui::{async_assert, SingletonEntity};
+use krustui::integration::TestStep;
+use krustui::{async_assert, SingletonEntity};
 
 use crate::integration_testing::view_getters::workspace_view;
 use crate::undo_close::UndoCloseStack;
 use crate::workspace::Workspace;
 
-/// Mock pressing a button on the Bork-native quit modal. Note that this modal is currently only
+/// Mock pressing a button on the Krust-native quit modal. Note that this modal is currently only
 /// used on Linux, not macOS.
 pub fn press_native_modal_button(button_index: usize) -> TestStep {
     TestStep::new("Press a native modal button")

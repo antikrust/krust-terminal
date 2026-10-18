@@ -1,5 +1,5 @@
 use sum_tree::SumTree;
-use borkui_core::elements::ListIndentLevel;
+use krustui_core::elements::ListIndentLevel;
 
 use crate::content::cursor::BufferSumTree;
 use crate::content::text::{

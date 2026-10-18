@@ -1,5 +1,5 @@
-use borkui::platform::WindowStyle;
-use borkui::App;
+use krustui::platform::WindowStyle;
+use krustui::App;
 
 use super::*;
 use crate::cloud_object::model::persistence::CloudModel;

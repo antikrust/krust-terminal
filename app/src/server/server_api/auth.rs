@@ -1,7 +1,7 @@
 use thiserror::Error;
 #[cfg(test)]
-pub use bork_server_client::auth::MockAuthClient;
-pub use bork_server_client::auth::{
+pub use krust_server_client::auth::MockAuthClient;
+pub use krust_server_client::auth::{
     AuthClient, FetchUserResult, MintCustomTokenError, SyncedUserSettings, UserAuthenticationError,
 };
 

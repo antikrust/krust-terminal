@@ -1,19 +1,19 @@
 //! Trigger button + [`CodeReviewDiffMenu`] overlay for picking the diff
 //! target in the code review header.
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element,
     Flex, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
     Radius, Stack, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     id, AppContext, Entity, FocusContext, SingletonEntity as _, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -173,7 +173,7 @@ impl View for DiffSelector {
         // for short labels.
         let icon = ConstrainedBox::new(
             Icon::SwitchHorizontal01
-                .to_borkui_icon(Fill::Solid(text_color))
+                .to_krustui_icon(Fill::Solid(text_color))
                 .finish(),
         )
         .with_width(15.)

@@ -4,17 +4,17 @@ use anyhow::{anyhow, Result};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use url::Url;
-use bork_core::features::FeatureFlag;
-use bork_core::{safe_anyhow, safe_error};
-use bork_errors::{report_error, ErrorExt};
-use borkui::actions::StandardAction;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::{safe_anyhow, safe_error};
+use krust_errors::{report_error, ErrorExt};
+use krustui::actions::StandardAction;
+use krustui::elements::{
     ChildAnchor, ChildView, Container, Fill, HighlightedHyperlink, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
-use borkui::keymap::FixedBinding;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
-use borkui::{
+use krustui::keymap::FixedBinding;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -32,7 +32,7 @@ use crate::server::server_api::auth::UserAuthenticationError;
 use crate::util::bindings::CustomAction;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         // Bindings for paste require the StandardAction and CustomAction binding to work on all platforms.
@@ -97,7 +97,7 @@ pub struct AuthRedirectPayload {
 }
 
 impl AuthRedirectPayload {
-    /// Attempts to parse the `AuthRedirectPayload` from URL sent to Bork. To parse successfully, the URL
+    /// Attempts to parse the `AuthRedirectPayload` from URL sent to Krust. To parse successfully, the URL
     /// must be of format {scheme}://auth/desktop_redirect?refresh_token={token}.
     pub fn from_url(url: Url) -> Result<Self> {
         if url.host_str() != Some(AUTH_URL_HOST) {
@@ -237,7 +237,7 @@ impl AuthView {
     }
 
     /// Parses the given 'clipboard_content' string into a URL which is assumed to represent the
-    /// OAuth redirect URL containing the user's refresh token after the user authenticated Bork.
+    /// OAuth redirect URL containing the user's refresh token after the user authenticated Krust.
     fn handle_pasted_auth_url(&mut self, pasted_url: String, ctx: &mut ViewContext<Self>) {
         self.set_auth_token_input_editable(false, ctx);
         match AuthRedirectPayload::from_raw_url(pasted_url) {

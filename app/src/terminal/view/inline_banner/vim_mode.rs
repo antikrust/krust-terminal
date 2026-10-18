@@ -1,5 +1,5 @@
-use borkui::elements::MouseStateHandle;
-use borkui::Element;
+use krustui::elements::MouseStateHandle;
+use krustui::Element;
 
 use super::{
     render_inline_block_list_banner, InlineBannerButtonState, InlineBannerCloseButton,
@@ -47,7 +47,7 @@ pub fn render_vim_mode_banner(
         InlineBannerStyle::LowPriority,
         appearance,
         InlineBannerContent {
-            title: "Enable Bork's Vim keybindings?".to_string(),
+            title: "Enable Krust's Vim keybindings?".to_string(),
             buttons,
             close_button: Some(close_button),
             ..Default::default()

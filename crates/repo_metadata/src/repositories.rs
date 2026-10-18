@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use futures::future::{ready, Either};
 #[cfg(test)]
 use virtual_fs::{Stub, VirtualFS};
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::{RemoteNavigationResult, RemotePath};
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::{RemoteNavigationResult, RemotePath};
+use krust_util::standardized_path::StandardizedPath;
 #[cfg(test)]
-use borkui_core::r#async::FutureId;
-use borkui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krustui_core::r#async::FutureId;
+use krustui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{DirectoryWatcher, Repository};
 

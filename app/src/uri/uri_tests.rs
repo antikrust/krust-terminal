@@ -1,4 +1,4 @@
-use self::parse_url_paths::{get_item_data_from_bork_link, BorkWebLink};
+use self::parse_url_paths::{get_item_data_from_krust_link, KrustWebLink};
 use super::*;
 use crate::launch_configs::launch_config::make_mock_single_window_launch_config;
 use crate::linear::{LinearAction, LinearIssueWork};
@@ -201,19 +201,19 @@ fn test_remove_extension() {
 }
 
 #[test]
-fn test_bork_web_link_notebook() {
+fn test_krust_web_link_notebook() {
     assert_eq!(
-        get_item_data_from_bork_link(
+        get_item_data_from_krust_link(
             &Url::parse(&format!(
                 "{}/drive/notebook/Performance-Analysis-LkDlnAe34vfYD2JXsAkssc?focused_folder_id=test_uid00000000000123&invitee_email=test@example.com",
                 ChannelState::server_root_url()
             ))
             .unwrap()
         ),
-        Some(BorkWebLink::DriveObject(Box::new(OpenBorkDriveObjectArgs {
+        Some(KrustWebLink::DriveObject(Box::new(OpenKrustDriveObjectArgs {
             object_type: ObjectType::Notebook,
 server_id: ServerId::from_string_lossy("LkDlnAe34vfYD2JXsAkssc"),
-            settings: OpenBorkDriveObjectSettings {
+            settings: OpenKrustDriveObjectSettings {
                 focused_folder_id: Some(ServerId::from(123)),
                 invitee_email: Some(String::from("test@example.com")),
             },
@@ -222,9 +222,9 @@ server_id: ServerId::from_string_lossy("LkDlnAe34vfYD2JXsAkssc"),
 }
 
 #[test]
-fn test_bork_web_link_session() {
+fn test_krust_web_link_session() {
     assert_eq!(
-        get_item_data_from_bork_link(
+        get_item_data_from_krust_link(
             &Url::parse(&format!(
                 "{}/session/317d0686-7a0b-4b67-806b-aaa3e9df501b?
                 pwd=6f727249-af9f-4025-a240-59df40a4c64b",
@@ -232,32 +232,32 @@ fn test_bork_web_link_session() {
             ))
             .unwrap()
         ),
-        Some(BorkWebLink::Session)
+        Some(KrustWebLink::Session)
     );
 }
 
 #[test]
-fn test_bork_web_link_workflow() {
+fn test_krust_web_link_workflow() {
     assert_eq!(
-        get_item_data_from_bork_link(
+        get_item_data_from_krust_link(
             &Url::parse(&format!(
                 "{}/drive/workflow/Remove-all-stopped-docker-container-image-and-volumes-ZCJSkai2gpwTqpBFs5HOfZ",
                 ChannelState::server_root_url()
             ))
             .unwrap()
         ),
-        Some(BorkWebLink::DriveObject(Box::new(OpenBorkDriveObjectArgs {
+        Some(KrustWebLink::DriveObject(Box::new(OpenKrustDriveObjectArgs {
             object_type: ObjectType::Workflow,
 server_id: ServerId::from_string_lossy("ZCJSkai2gpwTqpBFs5HOfZ"),
-            settings: OpenBorkDriveObjectSettings::default(),
+            settings: OpenKrustDriveObjectSettings::default(),
         })))
     );
 }
 
 #[test]
-fn test_bork_web_link_failure() {
+fn test_krust_web_link_failure() {
     assert_eq!(
-        get_item_data_from_bork_link(&Url::parse("https://google.com").unwrap()),
+        get_item_data_from_krust_link(&Url::parse("https://google.com").unwrap()),
         None
     );
 }
@@ -693,7 +693,7 @@ fn validate_custom_uri_errors_do_not_leak_query_string() {
 
 #[test]
 fn test_parse_tab_path_expands_tilde() {
-    let url = Url::parse("bork://action/new_tab?path=~/Projects").unwrap();
+    let url = Url::parse("krust://action/new_tab?path=~/Projects").unwrap();
     let home = dirs::home_dir().expect("HOME must be set for this test");
     assert_eq!(parse_tab_path(&url), Some(home.join("Projects")));
 }
@@ -701,37 +701,37 @@ fn test_parse_tab_path_expands_tilde() {
 #[test]
 fn test_parse_tab_path_expands_url_encoded_tilde() {
     // `%7E` and `%2F` are URL-encoded `~` and `/`.
-    let url = Url::parse("bork://action/new_tab?path=%7E%2FProjects").unwrap();
+    let url = Url::parse("krust://action/new_tab?path=%7E%2FProjects").unwrap();
     let home = dirs::home_dir().expect("HOME must be set for this test");
     assert_eq!(parse_tab_path(&url), Some(home.join("Projects")));
 }
 
 #[test]
 fn test_parse_tab_path_absolute_path_unchanged() {
-    let url = Url::parse("bork://action/new_tab?path=/tmp/foo").unwrap();
+    let url = Url::parse("krust://action/new_tab?path=/tmp/foo").unwrap();
     assert_eq!(parse_tab_path(&url), Some(PathBuf::from("/tmp/foo")));
 }
 
 #[test]
 fn test_parse_tab_path_relative_path_unchanged() {
-    let url = Url::parse("bork://action/new_tab?path=relative/dir").unwrap();
+    let url = Url::parse("krust://action/new_tab?path=relative/dir").unwrap();
     assert_eq!(parse_tab_path(&url), Some(PathBuf::from("relative/dir")));
 }
 
 #[test]
 fn test_parse_tab_path_missing_returns_none() {
-    let url = Url::parse("bork://action/new_tab").unwrap();
+    let url = Url::parse("krust://action/new_tab").unwrap();
     assert_eq!(parse_tab_path(&url), None);
 }
 
 #[test]
 fn test_parse_tab_path_bare_tilde() {
-    let url = Url::parse("bork://action/new_tab?path=~").unwrap();
+    let url = Url::parse("krust://action/new_tab?path=~").unwrap();
     let home = dirs::home_dir().expect("HOME must be set for this test");
     assert_eq!(parse_tab_path(&url), Some(home));
 }
 
-// -- bork://settings deeplink parsing ----------------------------------------
+// -- krust://settings deeplink parsing ----------------------------------------
 
 #[test]
 fn test_settings_widget_deeplink_target() {
@@ -741,7 +741,7 @@ fn test_settings_widget_deeplink_target() {
     );
     assert_eq!(
         settings_widget_deeplink_target("custom_router").map(|(section, _)| section),
-        Some(SettingsSection::BorkAgent),
+        Some(SettingsSection::KrustAgent),
     );
     #[cfg(not(target_family = "wasm"))]
     assert_eq!(
@@ -768,8 +768,8 @@ fn test_settings_section_for_simple_subpage() {
         Some(SettingsSection::OzCloudAPIKeys),
     );
     assert_eq!(
-        settings_section_for_simple_subpage("bork_agent"),
-        Some(SettingsSection::BorkAgent),
+        settings_section_for_simple_subpage("krust_agent"),
+        Some(SettingsSection::KrustAgent),
     );
     assert!(settings_section_for_simple_subpage("not_a_subpage").is_none());
 }
@@ -839,7 +839,7 @@ fn test_open_file_markdown_routes_to_editor_when_viewer_disabled() {
 
 #[test]
 fn test_open_file_ipynb_routes_to_notebook_when_enabled() {
-    // A `.ipynb` opened via `file://` (e.g. "Open with Bork" from Finder) opens
+    // A `.ipynb` opened via `file://` (e.g. "Open with Krust" from Finder) opens
     // in the notebook viewer, not the raw-JSON code editor.
     let _flag = crate::features::FeatureFlag::JupyterNotebookRendering.override_enabled(true);
     let dir = tempfile::tempdir().unwrap();

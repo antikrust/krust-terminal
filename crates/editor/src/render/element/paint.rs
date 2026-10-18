@@ -4,12 +4,12 @@ use std::ops::Range;
 
 use string_offset::CharOffset;
 use vim::vim::VimMode;
-use bork_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
-use borkui_core::PaintContext;
-use borkui_core::elements::{CornerRadius, Point, Radius};
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::{Vector2F, vec2f};
-use borkui_core::text_layout::{Line, PaintStyleOverride, TextFrame};
+use krust_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
+use krustui_core::PaintContext;
+use krustui_core::elements::{CornerRadius, Point, Radius};
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::{Vector2F, vec2f};
+use krustui_core::text_layout::{Line, PaintStyleOverride, TextFrame};
 
 use crate::editor::TextDecoration;
 use crate::render::layout::line_height;

@@ -1,6 +1,6 @@
 use serde_json::Value;
 use strum_macros::{EnumDiscriminants, EnumIter};
-use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use krust_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
@@ -32,7 +32,7 @@ impl TelemetryEvent for SettingsTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        bork_core::telemetry::enum_events::<Self>()
+        krust_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -60,4 +60,4 @@ impl TelemetryEventDesc for SettingsTelemetryEventDiscriminants {
     }
 }
 
-bork_core::register_telemetry_event!(SettingsTelemetryEvent);
+krust_core::register_telemetry_event!(SettingsTelemetryEvent);

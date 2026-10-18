@@ -20,12 +20,12 @@ use settings::{
 };
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use bork_core::execution_mode::AppExecutionMode;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_if_error;
-use borkui::platform::keyboard::KeyCode;
-use borkui::platform::OperatingSystem;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
+use krust_core::execution_mode::AppExecutionMode;
+use krust_core::features::FeatureFlag;
+use krust_errors::report_if_error;
+use krustui::platform::keyboard::KeyCode;
+use krustui::platform::OperatingSystem;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
 
 use crate::ai::request_usage_model::RequestLimitInfo;
 use crate::settings::PrivacySettings;
@@ -216,8 +216,8 @@ impl VoiceInputToggleKey {
     /// Converts the voice input toggle key to a Keystroke representation.
     /// Since these are standalone modifier keys, we construct the Keystroke directly
     /// rather than using `parse()` (which always requires a non-modifier key to be included).
-    pub fn keystroke(&self) -> Option<borkui::keymap::Keystroke> {
-        use borkui::keymap::Keystroke;
+    pub fn keystroke(&self) -> Option<krustui::keymap::Keystroke> {
+        use krustui::keymap::Keystroke;
 
         let keystroke = match self {
             VoiceInputToggleKey::None => return None,
@@ -366,7 +366,7 @@ settings::macros::implement_setting_for_enum!(
     SyncToCloud::Globally(RespectUserSyncSetting::Yes),
     surface: settings::SettingSurfaces::GUI,
     private: false,
-    toml_path: "agents.bork_agent.other.thinking_display_mode",
+    toml_path: "agents.krust_agent.other.thinking_display_mode",
     description: "Controls how agent thinking traces are displayed after streaming.",
 );
 
@@ -431,7 +431,7 @@ settings::macros::implement_setting_for_enum!(
     SyncToCloud::Globally(RespectUserSyncSetting::Yes),
     surface: settings::SettingSurfaces::GUI,
     private: false,
-    toml_path: "agents.bork_agent.other.orchestration_message_display_mode",
+    toml_path: "agents.krust_agent.other.orchestration_message_display_mode",
     description: "Controls how child-agent messages are displayed.",
 );
 
@@ -558,7 +558,7 @@ settings::macros::implement_setting_for_enum!(
     SyncToCloud::Globally(RespectUserSyncSetting::Yes),
     surface: settings::SettingSurfaces::GUI,
     private: false,
-    toml_path: "agents.bork_agent.other.default_prompt_submission_mode",
+    toml_path: "agents.krust_agent.other.default_prompt_submission_mode",
     description: "Default behavior when submitting a new prompt while the agent is still responding.",
     feature_flag: FeatureFlag::QueueSlashCommand,
 );
@@ -620,7 +620,7 @@ settings::macros::implement_setting_for_enum!(
     SyncToCloud::Globally(RespectUserSyncSetting::Yes),
     surface: settings::SettingSurfaces::GUI,
     private: false,
-    toml_path: "agents.bork_agent.other.long_running_command_submission_mode",
+    toml_path: "agents.krust_agent.other.long_running_command_submission_mode",
     description: "What happens when a prompt is submitted while an agent controls an agent-requested long-running command.",
     feature_flag: FeatureFlag::QueueSlashCommand,
 );
@@ -828,7 +828,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::No),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.is_any_ai_enabled",
+        toml_path: "agents.krust_agent.is_any_ai_enabled",
         description: "Controls whether all AI features are enabled.",
     },
     // This field should not be referenced directly to lookup active AI enablement -- use the
@@ -840,7 +840,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::No),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.enabled",
+        toml_path: "agents.krust_agent.active_ai.enabled",
         description: "Controls whether proactive AI features like suggestions are enabled.",
     },
     // This field should not be referenced directly to lookup autodetection enablement -- use the
@@ -852,7 +852,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.input.ai_auto_detection_enabled",
+        toml_path: "agents.krust_agent.input.ai_auto_detection_enabled",
         description: "Controls whether AI automatically detects natural language input.",
     },
     // This field should not be referenced directly -- use the
@@ -867,7 +867,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.input.nld_in_terminal_enabled",
+        toml_path: "agents.krust_agent.input.nld_in_terminal_enabled",
         description: "Controls whether natural language detection is enabled in the terminal input.",
     },
     autodetection_command_denylist: AICommandDenylist {
@@ -877,7 +877,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.input.ai_command_denylist",
+        toml_path: "agents.krust_agent.input.ai_command_denylist",
         description: "Commands to exclude from AI natural language autodetection.",
     },
     // This field should not be referenced directly to lookup intelligent autosuggestion enablement
@@ -889,7 +889,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.intelligent_autosuggestions_enabled",
+        toml_path: "agents.krust_agent.active_ai.intelligent_autosuggestions_enabled",
         description: "Controls whether AI-powered intelligent autosuggestions are enabled.",
     }
     // This field should not be referenced directly to lookup Prompt Suggestions
@@ -904,7 +904,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.agent_mode_query_suggestions_enabled",
+        toml_path: "agents.krust_agent.active_ai.agent_mode_query_suggestions_enabled",
         description: "Controls whether prompt suggestions are shown in agent mode.",
     }
 
@@ -917,7 +917,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.code_suggestions_enabled",
+        toml_path: "agents.krust_agent.active_ai.code_suggestions_enabled",
         description: "Controls whether AI code suggestions are enabled.",
     }
     // This field should not be referenced directly to lookup natural language autosuggestions
@@ -930,7 +930,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.natural_language_autosuggestions_enabled",
+        toml_path: "agents.krust_agent.active_ai.natural_language_autosuggestions_enabled",
         description: "Controls whether ghosted text autosuggestions are shown for AI input queries.",
         feature_flag: FeatureFlag::PredictAMQueries,
     }
@@ -943,7 +943,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.git_operations_autogen_enabled",
+        toml_path: "agents.krust_agent.active_ai.git_operations_autogen_enabled",
         description: "Controls whether AI auto-generates commit messages and PR title/body in the code review dialogs.",
     }
     // This field should not be referenced directly to lookup Rule Suggestions
@@ -955,7 +955,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.active_ai.rule_suggestions_enabled",
+        toml_path: "agents.krust_agent.active_ai.rule_suggestions_enabled",
         description: "Controls whether the agent suggests rules to save after responses.",
         feature_flag: FeatureFlag::SuggestedRules,
     }
@@ -1087,7 +1087,7 @@ define_settings_group!(AISettings, settings: [
     //
     // TUI-only (`surface: Tui`): the GUI selects its model via execution
     // profiles, so this key only appears in (and is read from) the TUI's
-    // settings file. `"auto"` defers to Bork's automatic model selection.
+    // settings file. `"auto"` defers to Krust's automatic model selection.
     agent_model: TuiAgentModel {
         type: String,
         default: "auto".to_string(),
@@ -1175,7 +1175,7 @@ define_settings_group!(AISettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "cloud_platform.third_party_api_keys.aws_bedrock_credentials_enabled",
-        description: "Whether Bork should use your local AWS credentials for Bedrock-enabled requests.",
+        description: "Whether Krust should use your local AWS credentials for Bedrock-enabled requests.",
     }
     // Whether to automatically run the AWS login command when Bedrock credentials are expired.
     //
@@ -1237,7 +1237,7 @@ define_settings_group!(AISettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "cloud_platform.third_party_api_keys.gemini_enterprise_credentials_enabled",
-        description: "Whether Bork should route eligible requests through your workspace's Gemini Enterprise Google Cloud project.",
+        description: "Whether Krust should route eligible requests through your workspace's Gemini Enterprise Google Cloud project.",
     }
     // Whether or not the user wants agent mode requests to use their saved rules.
     memory_enabled: MemoryEnabled {
@@ -1250,15 +1250,15 @@ define_settings_group!(AISettings, settings: [
         toml_path: "agents.knowledge.rules_enabled",
         description: "Whether the agent uses your saved rules during requests.",
     }
-    // Whether bork drive context should be included in AI requests
-    bork_drive_context_enabled: BorkDriveContextEnabled {
+    // Whether krust drive context should be included in AI requests
+    krust_drive_context_enabled: KrustDriveContextEnabled {
         type: bool,
         default: true,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.knowledge.bork_drive_context_enabled",
+        toml_path: "agents.knowledge.krust_drive_context_enabled",
         description: "Whether Library context is included in AI requests.",
     }
 
@@ -1407,21 +1407,21 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.should_show_oz_updates_in_zero_state",
+        toml_path: "agents.krust_agent.other.should_show_oz_updates_in_zero_state",
         description: "Whether the \"What's new\" section is shown in the agent view.",
     }
 
-    // Whether or not the user has enabled fallback to Bork credits for user-provided models.
-    can_use_bork_credits_for_fallback: CanUseBorkCreditsForFallback {
+    // Whether or not the user has enabled fallback to Krust credits for user-provided models.
+    can_use_krust_credits_for_fallback: CanUseKrustCreditsForFallback {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        storage_key: "CanUseBorkCreditsWithByok",
-        toml_path: "cloud_platform.third_party_api_keys.can_use_bork_credits_with_byok",
-        description: "Whether Bork credits can be used as a fallback for user-provided models.",
+        storage_key: "CanUseKrustCreditsWithByok",
+        toml_path: "cloud_platform.third_party_api_keys.can_use_krust_credits_with_byok",
+        description: "Whether Krust credits can be used as a fallback for user-provided models.",
     }
 
     should_render_use_agent_footer_for_user_commands: ShouldRenderUseAgentToolbarForUserCommands {
@@ -1431,7 +1431,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.should_render_use_agent_toolbar_for_user_commands",
+        toml_path: "agents.krust_agent.other.should_render_use_agent_toolbar_for_user_commands",
         description: "Whether to show the \"Use Agent\" footer for terminal commands.",
     }
 
@@ -1562,22 +1562,22 @@ define_settings_group!(AISettings, settings: [
         toml_path: "general.default_tab_config_path",
     }
 
-    // Whether computer use is enabled for cloud agent conversations started from the Bork app.
+    // Whether computer use is enabled for cloud agent conversations started from the Krust app.
     // This setting is only used when the AI autonomy setting is AlwaysAsk or not set.
     cloud_agent_computer_use_enabled: CloudAgentComputerUseEnabled {
         type: bool,
-        default: bork_core::channel::ChannelState::channel().is_dogfood(),
+        default: krust_core::channel::ChannelState::channel().is_dogfood(),
         supported_platforms: SupportedPlatforms::DESKTOP,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.cloud_agent_computer_use_enabled",
+        toml_path: "agents.krust_agent.other.cloud_agent_computer_use_enabled",
         description: "Whether computer use is enabled for cloud agent conversations.",
     }
 
 
     // Whether file-based MCP servers from third-party AI tools (e.g. Claude, Codex) should
-    // be automatically detected and spawned. Bork-native config files (.bork/.mcp.json) are
+    // be automatically detected and spawned. Krust-native config files (.krust/.mcp.json) are
     // always detected and spawned, regardless of this setting.
     file_based_mcp_enabled: FileBasedMcpEnabled {
         type: bool,
@@ -1616,7 +1616,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.input.include_agent_commands_in_history",
+        toml_path: "agents.krust_agent.input.include_agent_commands_in_history",
         description: "Whether agent-executed commands are included in command history.",
     }
 
@@ -1628,7 +1628,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.show_conversation_history",
+        toml_path: "agents.krust_agent.other.show_conversation_history",
         description: "Whether conversation history appears in the tools panel.",
     }
 
@@ -1641,7 +1641,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.show_agent_notifications",
+        toml_path: "agents.krust_agent.other.show_agent_notifications",
         description: "Whether agent notifications are shown.",
     }
 
@@ -1672,7 +1672,7 @@ define_settings_group!(AISettings, settings: [
 
     // Whether Oz should add attribution (co-author line) to commit messages and PRs.
     // This is the user-level preference; it may be overridden by the team-level
-    // `enable_bork_attribution` AdminEnablementSetting (see
+    // `enable_krust_attribution` AdminEnablementSetting (see
     // `UserWorkspaces::get_agent_attribution_setting`).
     agent_attribution_enabled: AgentAttributionEnabled {
         type: bool,
@@ -1681,8 +1681,8 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::No),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.agent_attribution_enabled",
-        description: "Whether the Bork Agent adds an attribution co-author line to commit messages and pull requests it creates.",
+        toml_path: "agents.krust_agent.other.agent_attribution_enabled",
+        description: "Whether the Krust Agent adds an attribution co-author line to commit messages and pull requests it creates.",
     }
 
     should_force_disable_cloud_handoff: ShouldForceDisableCloudHandoff {
@@ -1692,7 +1692,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.should_force_disable_cloud_handoff",
+        toml_path: "agents.krust_agent.other.should_force_disable_cloud_handoff",
         description: "Whether to force-disable local-to-cloud handoff.",
     }
 
@@ -1703,7 +1703,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.should_force_disable_ampersand_handoff",
+        toml_path: "agents.krust_agent.other.should_force_disable_ampersand_handoff",
         description: "Whether to force-disable the & prefix for cloud handoff compose mode.",
     }
 
@@ -1714,8 +1714,8 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.auto_handoff_on_sleep_enabled",
-        description: "Whether Bork automatically hands off local agent conversations to cloud when the computer is about to sleep.",
+        toml_path: "agents.krust_agent.other.auto_handoff_on_sleep_enabled",
+        description: "Whether Krust automatically hands off local agent conversations to cloud when the computer is about to sleep.",
     }
 
     // This is not a user-visible setting - it's merely a one-time flag to track if the
@@ -1728,7 +1728,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.swear_mode",
+        toml_path: "agents.krust_agent.other.swear_mode",
         description: "Controls whether agent status text uses sweary variants.",
     },
 
@@ -1742,7 +1742,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_enabled",
+        toml_path: "agents.krust_agent.other.ollama_enabled",
         description: "Controls whether local models served by Ollama are offered.",
     },
 
@@ -1758,7 +1758,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_models_dir_override",
+        toml_path: "agents.krust_agent.other.ollama_models_dir_override",
         description: "Custom folder where Ollama stores downloaded models, overriding the default ~/.ollama/models.",
     },
 
@@ -1776,7 +1776,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_model_mode_overrides",
+        toml_path: "agents.krust_agent.other.ollama_model_mode_overrides",
         description: "Per-model agent/chat overrides for Ollama, as a JSON map of model tag to \"agent\" or \"chat\".",
     },
 
@@ -1793,12 +1793,12 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_disabled_models",
+        toml_path: "agents.krust_agent.other.ollama_disabled_models",
         description: "Ollama models switched off on this machine, as a JSON array of model tags.",
     },
 
     // Fork: MCP server templates the user opted in to exposing to local
-    // (Ollama) models, as a JSON array of template UUIDs. Bork's built-in
+    // (Ollama) models, as a JSON array of template UUIDs. Krust's built-in
     // Ollama-safe servers are always exposed; everything else is hidden
     // from local models unless listed here — weak local models misuse
     // general-purpose or stateful tools. Toggled per card on the MCP
@@ -1811,7 +1811,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.mcp_local_model_exposed_templates",
+        toml_path: "agents.krust_agent.other.mcp_local_model_exposed_templates",
         description: "MCP server templates exposed to local models, as a JSON array of template UUIDs.",
     },
 
@@ -1830,7 +1830,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_committee_config",
+        toml_path: "agents.krust_agent.other.ollama_committee_config",
         description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts and a \"panel_plan\" round list.",
     },
 
@@ -1845,7 +1845,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.ollama_remote_hosts",
+        toml_path: "agents.krust_agent.other.ollama_remote_hosts",
         description: "Ollama servers on other machines, as a JSON array of objects with a \"url\", an optional \"label\", and the \"models\" found there when last checked.",
     },
 
@@ -1859,7 +1859,7 @@ define_settings_group!(AISettings, settings: [
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        toml_path: "agents.bork_agent.other.misery_mode",
+        toml_path: "agents.krust_agent.other.misery_mode",
         description: "Controls whether the terminal insults you about the commands you run.",
     },
 
@@ -2013,44 +2013,44 @@ impl AISettings {
             return None;
         }
         let path = std::path::Path::new(path_str);
-        crate::user_config::BorkConfig::as_ref(app)
+        crate::user_config::KrustConfig::as_ref(app)
             .tab_configs()
             .iter()
             .find(|config| config.source_path.as_deref().is_some_and(|p| p == path))
             .cloned()
     }
 
-    pub fn is_active_ai_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_active_ai_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_any_ai_enabled(app)
             && *self.is_active_ai_enabled_internal
             && AppExecutionMode::as_ref(app).allows_active_ai()
     }
 
-    pub fn is_prompt_suggestions_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_prompt_suggestions_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.prompt_suggestions_enabled_internal
     }
 
-    pub fn is_rule_suggestions_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_rule_suggestions_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.rule_suggestions_enabled_internal
     }
 
-    pub fn is_code_suggestions_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_code_suggestions_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.code_suggestions_enabled_internal
     }
 
-    pub fn is_natural_language_autosuggestions_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_natural_language_autosuggestions_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.natural_language_autosuggestions_enabled_internal
     }
 
-    pub fn is_git_operations_autogen_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_git_operations_autogen_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.git_operations_autogen_enabled_internal
     }
 
-    pub fn is_intelligent_autosuggestions_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_intelligent_autosuggestions_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.intelligent_autosuggestions_enabled_internal
     }
 
-    pub fn is_voice_input_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_voice_input_enabled(&self, app: &krustui::AppContext) -> bool {
         // Voice input is conditionally-compiled because it requires additional dependencies on some platforms.
         cfg!(feature = "voice_input")
             && self.is_any_ai_enabled(app)
@@ -2061,7 +2061,7 @@ impl AISettings {
     ///
     /// If `FeatureFlag::AgentView` is enabled, this specifically gates NLD enablement in the agent
     /// view only.
-    pub fn is_ai_autodetection_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_ai_autodetection_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.ai_autodetection_enabled_internal
     }
 
@@ -2070,19 +2070,19 @@ impl AISettings {
     /// This is only used when `FeatureFlag::AgentView` is enabled.
     /// If the user has not explicitly set this setting, it defaults to the value of
     /// `ai_autodetection_enabled_internal`.
-    pub fn is_nld_in_terminal_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_nld_in_terminal_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.nld_in_terminal_enabled_internal
     }
 
-    pub fn is_memory_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_memory_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.memory_enabled
     }
 
-    pub fn is_bork_drive_context_enabled(&self, app: &borkui::AppContext) -> bool {
-        self.is_any_ai_enabled(app) && *self.bork_drive_context_enabled
+    pub fn is_krust_drive_context_enabled(&self, app: &krustui::AppContext) -> bool {
+        self.is_any_ai_enabled(app) && *self.krust_drive_context_enabled
     }
 
-    pub fn is_file_based_mcp_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_file_based_mcp_enabled(&self, app: &krustui::AppContext) -> bool {
         if !FeatureFlag::FileBasedMcp.is_enabled() || !self.is_any_ai_enabled(app) {
             return false;
         }
@@ -2097,14 +2097,14 @@ impl AISettings {
         *self.file_based_mcp_enabled
     }
 
-    pub fn is_orchestration_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_orchestration_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_any_ai_enabled(app)
     }
 
     /// Returns true when local-to-cloud handoff is effectively enabled.
     /// False when the user/org has disabled it, cloud conversations are off,
     /// or AI is globally off.
-    pub fn is_cloud_handoff_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_cloud_handoff_enabled(&self, app: &krustui::AppContext) -> bool {
         if !self.is_any_ai_enabled(app) || *self.should_force_disable_cloud_handoff {
             return false;
         }
@@ -2123,11 +2123,11 @@ impl AISettings {
             crate::workspaces::workspace::AdminEnablementSetting::Disable
         )
     }
-    pub fn is_ampersand_handoff_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_ampersand_handoff_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_cloud_handoff_enabled(app) && !*self.should_force_disable_ampersand_handoff
     }
 
-    pub fn is_auto_handoff_on_sleep_enabled(&self, app: &borkui::AppContext) -> bool {
+    pub fn is_auto_handoff_on_sleep_enabled(&self, app: &krustui::AppContext) -> bool {
         self.is_cloud_handoff_enabled(app)
             && self
                 .auto_handoff_on_sleep_enabled

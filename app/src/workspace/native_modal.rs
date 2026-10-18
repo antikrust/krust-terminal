@@ -1,14 +1,14 @@
 use settings::Setting as _;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{Align, Container, Empty, Flex, MouseStateHandle, ParentElement};
-use borkui::fonts::Weight;
-use borkui::keymap::FixedBinding;
-use borkui::modals::{AlertDialogWithCallbacks, AppModalCallback};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::text::Span;
-use borkui::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{Align, Container, Empty, Flex, MouseStateHandle, ParentElement};
+use krustui::fonts::Weight;
+use krustui::keymap::FixedBinding;
+use krustui::modals::{AlertDialogWithCallbacks, AppModalCallback};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::text::Span;
+use krustui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
 };
 
@@ -17,7 +17,7 @@ use crate::terminal::general_settings::{GeneralSettings, GeneralSettingsChangedE
 use crate::ui_components::dialog::{dialog_styles, Dialog};
 
 pub(super) fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("escape", NativeModalAction::Close, id!("NativeModal")),
@@ -25,7 +25,7 @@ pub(super) fn init(app: &mut AppContext) {
     ]);
 }
 
-/// Used to show a Bork-native modal dialog above a [`super::Workspace`]. The first button is [`ButtonVariant::Accent`].
+/// Used to show a Krust-native modal dialog above a [`super::Workspace`]. The first button is [`ButtonVariant::Accent`].
 pub struct NativeModal {
     alert_dialog: Option<AlertDialogWithCallbacks<AppModalCallback>>,
     dont_show_again: bool,
@@ -120,7 +120,7 @@ impl View for NativeModal {
         "NativeModal"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let Some(alert_dialog) = self.alert_dialog.as_ref() else {
             log::warn!("No alert dialog was set for the native modal");
             return Empty::new().finish();

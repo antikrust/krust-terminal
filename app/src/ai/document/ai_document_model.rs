@@ -12,12 +12,12 @@ pub use ai::document::{AIDocumentId, AIDocumentVersion};
 use chrono::{DateTime, Local, Utc};
 use itertools::Itertools;
 use uuid::Uuid;
-use bork_editor::model::RichTextEditorModel;
-use bork_editor::render::model::RichTextStyles;
-use bork_errors::report_error;
-use bork_multi_agent_api as maa_api;
-use borkui::color::ColorU;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WindowId};
+use krust_editor::model::RichTextEditorModel;
+use krust_editor::render::model::RichTextStyles;
+use krust_errors::report_error;
+use krust_multi_agent_api as maa_api;
+use krustui::color::ColorU;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentActionId;
@@ -57,13 +57,13 @@ struct AIDocumentSaveRequest {
     document_id: AIDocumentId,
 }
 
-/// The status of saving an AI Document to Bork Drive
+/// The status of saving an AI Document to Krust Drive
 pub enum AIDocumentSaveStatus {
-    /// Not being synced with Bork Drive at all
+    /// Not being synced with Krust Drive at all
     NotSaved,
-    /// Is being saved to Bork Drive, but has not finished yet
+    /// Is being saved to Krust Drive, but has not finished yet
     Saving,
-    /// Has been saved to Bork Drive
+    /// Has been saved to Krust Drive
     Saved,
 }
 
@@ -91,7 +91,7 @@ impl AIDocumentUserEditStatus {
 
 const PLAN_FOLDER_NAME: &str = "Plans";
 
-/// Represents a document queued for creation in Bork Drive.
+/// Represents a document queued for creation in Krust Drive.
 #[derive(Debug, Clone)]
 struct PendingDocument {
     id: AIDocumentId,
@@ -111,7 +111,7 @@ pub struct AIDocumentEarlierVersion {
 #[derive(Debug, Clone)]
 pub struct AIDocument {
     /// ID to sync with a cloud model with the server.
-    /// Set when a document is saved to Bork Drive.
+    /// Set when a document is saved to Krust Drive.
     pub sync_id: Option<SyncId>,
     pub title: String,
     pub version: AIDocumentVersion,
@@ -246,7 +246,7 @@ impl AIDocumentModel {
     /// Sends a request to create a new cloud notebook with the document's contents.
     /// Returns true if the create document request was sent successfully (or if there was already a notebook entry).
     /// Actually creating the notebook is done asynchronously in the background.
-    pub fn sync_to_bork_drive(&mut self, id: AIDocumentId, ctx: &mut ModelContext<Self>) -> bool {
+    pub fn sync_to_krust_drive(&mut self, id: AIDocumentId, ctx: &mut ModelContext<Self>) -> bool {
         if self.reconcile_document_server_backing(&id, ctx) {
             return true;
         }
@@ -323,7 +323,7 @@ impl AIDocumentModel {
                     awaiting_server_backing.push(document_id);
                 }
                 AIDocumentSaveStatus::NotSaved => {
-                    if !self.sync_to_bork_drive(document_id, ctx) {
+                    if !self.sync_to_krust_drive(document_id, ctx) {
                         report_error!(
                             "Failed to publish plan document to the Library before child-agent launch.",
                             extra: { "document_id" => %document_id }
@@ -338,7 +338,7 @@ impl AIDocumentModel {
         awaiting_server_backing
     }
 
-    /// Reconciles a document with an existing server-backed Bork Drive notebook.
+    /// Reconciles a document with an existing server-backed Krust Drive notebook.
     fn reconcile_document_server_backing(
         &mut self,
         document_id: &AIDocumentId,
@@ -358,7 +358,7 @@ impl AIDocumentModel {
         true
     }
 
-    /// Reconciles all loaded documents with server-backed Bork Drive notebooks.
+    /// Reconciles all loaded documents with server-backed Krust Drive notebooks.
     fn reconcile_all_document_server_backing(&mut self, ctx: &mut ModelContext<Self>) {
         let document_ids = self.documents.keys().copied().collect::<Vec<_>>();
         for document_id in document_ids {
@@ -366,7 +366,7 @@ impl AIDocumentModel {
         }
     }
 
-    /// Refreshes the latest content for a plan whose Bork Drive creation is in progress.
+    /// Refreshes the latest content for a plan whose Krust Drive creation is in progress.
     fn refresh_saving_document_content(
         &mut self,
         document_id: &AIDocumentId,
@@ -488,7 +488,7 @@ impl AIDocumentModel {
         // If we're waiting on a Plans folder to complete creation, ensure the Plans folder exists
         // (creating it if needed) and if it has a ServerId, process the pending document queue.
         //
-        // NOTE: this handler runs for *all* Bork Drive object creations, so we must only create the
+        // NOTE: this handler runs for *all* Krust Drive object creations, so we must only create the
         // Plans folder when we actually have a plan notebook waiting to be created.
         if !self.pending_document_queue.is_empty() {
             if let Some(owner) = Self::get_plan_owner(ctx) {
@@ -534,7 +534,7 @@ impl AIDocumentModel {
         id
     }
 
-    /// Create a document from an existing Bork Drive notebook.
+    /// Create a document from an existing Krust Drive notebook.
     pub fn create_document_from_notebook(
         &mut self,
         ai_document_id: AIDocumentId,
@@ -565,7 +565,7 @@ impl AIDocumentModel {
     }
 
     /// Hydrates a saved plan notebook into the target conversation.
-    pub(in crate::ai) fn hydrate_saved_plan_from_bork_drive(
+    pub(in crate::ai) fn hydrate_saved_plan_from_krust_drive(
         &mut self,
         ai_document_id: AIDocumentId,
         conversation_id: AIConversationId,
@@ -898,7 +898,7 @@ impl AIDocumentModel {
         }
     }
 
-    pub fn get_document_bork_drive_object_link(
+    pub fn get_document_krust_drive_object_link(
         &self,
         id: &AIDocumentId,
         ctx: &AppContext,
@@ -916,7 +916,7 @@ impl AIDocumentModel {
     pub fn get_document_content(
         &self,
         id: &AIDocumentId,
-        ctx: &borkui::AppContext,
+        ctx: &krustui::AppContext,
     ) -> Option<String> {
         let doc = self.documents.get(id)?;
         Some(doc.editor.as_ref(ctx).markdown_unescaped(ctx))
@@ -1549,7 +1549,7 @@ impl AIDocumentModel {
 }
 
 impl AIDocumentEarlierVersion {
-    pub fn get_content(&self, ctx: &borkui::AppContext) -> String {
+    pub fn get_content(&self, ctx: &krustui::AppContext) -> String {
         self.editor.as_ref(ctx).markdown_unescaped(ctx)
     }
 }

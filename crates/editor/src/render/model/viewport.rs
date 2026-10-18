@@ -1,10 +1,10 @@
 use float_cmp::ApproxEq;
 use string_offset::CharOffset;
 use sum_tree::{SeekBias, SumTree};
-use borkui_core::SizeConstraint;
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::{Vector2F, vec2f};
-use borkui_core::units::{IntoPixels, Pixels};
+use krustui_core::SizeConstraint;
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::{Vector2F, vec2f};
+use krustui_core::units::{IntoPixels, Pixels};
 
 use super::positioned::PositionedCursor;
 use super::{

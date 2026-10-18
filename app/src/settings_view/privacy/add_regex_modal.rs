@@ -1,12 +1,12 @@
 use regex::Regex;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     ChildView, Container, CrossAxisAlignment, Empty, Expanded, Flex, MainAxisSize,
     MouseStateHandle, ParentElement, Text,
 };
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

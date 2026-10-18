@@ -3,11 +3,11 @@
 `CloudModeSetupV2` currently works end-to-end only for the Oz harness. For non-oz harnesses (claude, gemini, any future third-party harness) the same UI surfaces, but because the viewer has no Oz `AppendedExchange` to transition out of the setup phase, the harness command itself (e.g. `claude --session-id … < /tmp/oz_prompt`) is permanently classified as an environment setup command.
 This spec defines the Cloud Mode setup UX for non-oz harnesses so the experience feels consistent with Oz: the user's prompt is clearly preserved as a queued user query, real environment startup commands are grouped under a collapsible setup summary, and the harness CLI itself renders as a normal long-running CLI-agent session.
 ## Problem
-For non-oz cloud runs today (with `CloudModeSetupV2` enabled), the run is dispatched from Bork and the remote sandbox runs `oz agent run --harness=claude …`, which in turn launches `claude …` as a shell command in the shared session. The viewer sees:
+For non-oz cloud runs today (with `CloudModeSetupV2` enabled), the run is dispatched from Krust and the remote sandbox runs `oz agent run --harness=claude …`, which in turn launches `claude …` as a shell command in the shared session. The viewer sees:
 - The user's prompt shown at the top of the agent conversation as `CloudModeInitialUserQuery` (like an Oz query).
 - Environment setup commands hidden behind the setup-commands summary ("Running setup commands…").
 - The `claude …` block also hidden behind the setup-commands summary, because `is_executing_oz_environment_startup_commands` only flips off when an Oz exchange is appended and no such exchange arrives for claude-code runs.
-- The CLI agent detection (Bork's `CLIAgent::Claude`) fires but the block remains flagged as a setup command, so the familiar CLI-agent UI (native TUI, CLI-agent footer, rich input) is not surfaced correctly.
+- The CLI agent detection (Krust's `CLIAgent::Claude`) fires but the block remains flagged as a setup command, so the familiar CLI-agent UI (native TUI, CLI-agent footer, rich input) is not surfaced correctly.
 The net effect: the run looks visually like Oz setup forever and the harness's real work is buried under a "setup" row.
 ## Goals
 - Preserve the user's submitted prompt while the run is still before the harness command starts, but communicate that it is waiting to be picked up rather than already being answered by an agent.
@@ -22,7 +22,7 @@ The net effect: the run looks visually like Oz setup forever and the harness's r
 - Redesigning the CLI-agent session rendering itself; we rely on the existing CLI-agent UX once the harness block is running.
 ## Figma / design references
 Figma: none provided.
-Reference issue: https://linear.app/borkdotdev/issue/REMOTE-1454/fix-cloud-mode-setup-v2-ui-for-other-harnesses
+Reference issue: https://linear.app/krustdotdev/issue/REMOTE-1454/fix-cloud-mode-setup-v2-ui-for-other-harnesses
 ## Gating
 - Applies when all of the following are true:
   - `CloudModeSetupV2` is enabled.
@@ -52,7 +52,7 @@ Reference issue: https://linear.app/borkdotdev/issue/REMOTE-1454/fix-cloud-mode-
   - New blocks are no longer classified as Oz environment setup commands.
   - The setup-commands summary auto-collapses to "Ran setup commands", remains expandable by the user, and its previously-inserted per-command rows remain accessible.
   - The viewer forces a fresh terminal-size report to the sharer so the harness CLI (e.g. claude's native TUI) lays out using the viewer's current dimensions rather than whatever size the sandbox PTY happened to be during environment setup. Without this, the harness TUI can start at a stale size and misrender until the user manually nudges the pane.
-- The harness command block itself is NOT classified as a setup command. It appears as a normal long-running CLI-agent session: native CLI TUI visible in the block, `CLIAgentSession` set for the view, and the CLI-agent footer / rich input behave as they do when a user runs `claude` in any other Bork terminal.
+- The harness command block itself is NOT classified as a setup command. It appears as a normal long-running CLI-agent session: native CLI TUI visible in the block, `CLIAgentSession` set for the view, and the CLI-agent footer / rich input behave as they do when a user runs `claude` in any other Krust terminal.
 - Subsequent blocks (anything the harness runs, any follow-ups, etc.) also render normally — not under the setup summary.
 ### Failure / cancellation / GitHub auth (pre-harness)
 - If the run fails, is cancelled, or requires GitHub auth before the harness command starts:
@@ -61,7 +61,7 @@ Reference issue: https://linear.app/borkdotdev/issue/REMOTE-1454/fix-cloud-mode-
 - If any of these states occur after the harness command has already started, behavior is whatever the existing CLI-agent / ambient-agent flow does today (out of scope for this spec).
 ### Input handling during setup
 - Just like Oz setup-v2, remote setup-command input from the shared session must not overwrite the visible local input, and remote input-mode changes caused by environment setup must not flip the visible input mode (see existing handling in `app/src/terminal/shared_session/viewer/terminal_manager.rs`).
-- Submitting input in the local Bork prompt while the run is still pre-harness is disallowed (same as `should_block_cloud_mode_setup_submission` logic today); once the harness command is running, input routes to the harness TUI as usual.
+- Submitting input in the local Krust prompt while the run is still pre-harness is disallowed (same as `should_block_cloud_mode_setup_submission` logic today); once the harness command is running, input routes to the harness TUI as usual.
 ### Shared ambient-session viewers and historical replay
 - Late joiners who were not the original spawner, and users replaying a completed non-oz cloud run, do NOT see a pending user-query indicator; there is no live prompt to queue.
 - Setup commands that already ran before the join still render under a collapsed setup-commands summary.

@@ -1,17 +1,17 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use regex_automata::hybrid::BuildError;
-use bork_editor::editor::NavigationKey;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::elements::{
+use krust_editor::editor::NavigationKey;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dash, Dismiss, DropShadow, Empty, Flex, Hoverable, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect, Shrinkable,
     Stack, Text,
 };
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -473,7 +473,7 @@ impl BlockFilterEditor {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_borkui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_krustui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -639,7 +639,7 @@ impl View for BlockFilterEditor {
             |state| {
                 let context_line_icon = ConstrainedBox::new(
                     Icon::DistributeSpacingVertical
-                        .to_borkui_icon(
+                        .to_krustui_icon(
                             blended_colors::text_main(
                                 appearance.theme(),
                                 appearance.theme().background(),
@@ -753,7 +753,7 @@ impl View for BlockFilterEditor {
         Some(AccessibilityContent::new(
             "Type searched phrase.",
             "Press escape to quit",
-            BorkA11yRole::TextareaRole,
+            KrustA11yRole::TextareaRole,
         ))
     }
 }

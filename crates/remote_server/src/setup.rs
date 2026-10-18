@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 pub use glibc::{GlibcVersion, RemoteLibc};
-use bork_core::channel::{Channel, ChannelState};
+use krust_core::channel::{Channel, ChannelState};
 pub const REMOTE_SERVER_ARTIFACT_VERSION_UNPINNED: &str = "unversioned";
 
 /// State machine for the remote server install → launch → initialize flow.
@@ -334,25 +334,25 @@ pub fn parse_uname_output(
 
 /// Returns the remote directory where the binary is installed, keyed by channel.
 ///
-/// - stable:      `~/.bork/remote-server`
-/// - preview:     `~/.bork-preview/remote-server`
-/// - dev:         `~/.bork-dev/remote-server`
-/// - local:       `~/.bork-local/remote-server`
-/// - integration: `~/.bork-dev/remote-server`
-/// - bork:    `~/.bork/remote-server`
+/// - stable:      `~/.krust/remote-server`
+/// - preview:     `~/.krust-preview/remote-server`
+/// - dev:         `~/.krust-dev/remote-server`
+/// - local:       `~/.krust-local/remote-server`
+/// - integration: `~/.krust-dev/remote-server`
+/// - krust:    `~/.krust/remote-server`
 pub fn remote_server_dir() -> String {
-    let bork_dir = match ChannelState::channel() {
-        Channel::Stable => ".bork",
-        Channel::Preview => ".bork-preview",
-        Channel::Dev | Channel::Integration => ".bork-dev",
-        Channel::Local => ".bork-local",
+    let krust_dir = match ChannelState::channel() {
+        Channel::Stable => ".krust",
+        Channel::Preview => ".krust-preview",
+        Channel::Dev | Channel::Integration => ".krust-dev",
+        Channel::Local => ".krust-local",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with bork
+            // TODO(alokedesai): need to figure out how remote server works with krust
             // For now, return what Dev returns.
-            ".bork-dev"
+            ".krust-dev"
         }
     };
-    format!("~/{bork_dir}/remote-server")
+    format!("~/{krust_dir}/remote-server")
 }
 
 /// Returns a short, deterministic directory name for a remote-server
@@ -600,8 +600,8 @@ pub fn install_script(staging_tarball_path: Option<&str>) -> String {
 
 /// Construct the download URL from the server root URL.
 ///
-/// For example, given `https://app.bork.baby`, returns
-/// `https://app.bork.baby/download/cli`.
+/// For example, given `https://app.krust.baby`, returns
+/// `https://app.krust.baby/download/cli`.
 fn download_url() -> String {
     let base = ChannelState::server_root_url();
     let base = base.trim_end_matches('/');
@@ -618,7 +618,7 @@ fn download_channel() -> &'static str {
         Channel::Preview => "preview",
         Channel::Dev | Channel::Local | Channel::Integration => "dev",
         Channel::Oss => {
-            // TODO(alokedesai): need to figure out how remote server works with bork
+            // TODO(alokedesai): need to figure out how remote server works with krust
             // For now, return what Dev returns.
             "dev"
         }

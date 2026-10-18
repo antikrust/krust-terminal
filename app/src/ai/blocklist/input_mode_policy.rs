@@ -11,11 +11,11 @@
 //!
 //! The GUI implementation lives in
 //! `super::agent_view::GuiInputModePolicy`; the TUI implementation lives in
-//! `crates/bork_tui/src/input_mode_policy.rs`.
+//! `crates/krust_tui/src/input_mode_policy.rs`.
 
 use std::rc::Rc;
 
-use borkui::AppContext;
+use krustui::AppContext;
 
 use super::conversation_selection::ConversationSelectionEvent;
 use super::input_model::{InputConfig, InputTypeAutoDetectionSource};

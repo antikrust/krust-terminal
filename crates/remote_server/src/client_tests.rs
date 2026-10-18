@@ -1,7 +1,7 @@
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
-use bork_core::SessionId;
-use borkui_core::r#async::executor;
+use krust_core::SessionId;
+use krustui_core::r#async::executor;
 
 use super::*;
 use crate::proto::{

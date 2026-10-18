@@ -1,6 +1,6 @@
 //! Compact free-form text input used by inline AI block actions.
-use borkui::presenter::ChildView;
-use borkui::{
+use krustui::presenter::ChildView;
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, View, ViewContext, ViewHandle,
 };
 

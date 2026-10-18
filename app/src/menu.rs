@@ -6,10 +6,10 @@ use chrono::{DateTime, Local};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::ui::color::blend::Blend;
-use borkui::accessibility::{AccessibilityContent, ActionAccessibilityContent, BorkA11yRole};
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krust_core::ui::color::blend::Blend;
+use krustui::accessibility::{AccessibilityContent, ActionAccessibilityContent, KrustA11yRole};
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     Align, Border, CacheOption, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult,
     DropShadow, Element, EventHandler, Flex, Hoverable, Icon, Image, MainAxisAlignment,
@@ -18,12 +18,12 @@ use borkui::elements::{
     Radius, Rect, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable,
     Stack, Text,
 };
-use borkui::fonts::{FamilyId, Properties};
-use borkui::keymap::FixedBinding;
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::fonts::{FamilyId, Properties};
+use krustui::keymap::FixedBinding;
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     Action, AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WindowId,
 };
 
@@ -986,7 +986,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
                 Shrinkable::new(
                     1.,
                     Container::new(
-                        ConstrainedBox::new(icon.to_borkui_icon(icon_color).finish())
+                        ConstrainedBox::new(icon.to_krustui_icon(icon_color).finish())
                             .with_width(icon_size)
                             .with_height(icon_size)
                             .finish(),
@@ -1102,7 +1102,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
                 .finish();
             return Some(Shrinkable::new(1., Align::new(element).right().finish()).finish());
         }
-        let icon_element = ConstrainedBox::new(config.icon.to_borkui_icon(icon_color).finish())
+        let icon_element = ConstrainedBox::new(config.icon.to_krustui_icon(icon_color).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();
@@ -1743,7 +1743,7 @@ pub enum MenuAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -2223,7 +2223,7 @@ impl<A: Action + Clone> SubMenu<A> {
                         ScrollbarWidth::Auto,
                         appearance.theme().nonactive_ui_detail().into(),
                         appearance.theme().active_ui_detail().into(),
-                        borkui::elements::Fill::None,
+                        krustui::elements::Fill::None,
                     )
                     .with_overlayed_scrollbar()
                     .finish(),
@@ -2576,28 +2576,28 @@ impl<A: Action + Clone> SubMenu<A> {
                 Custom(AccessibilityContent::new(
                     menu_item,
                     instructions,
-                    BorkA11yRole::TextRole,
+                    KrustA11yRole::TextRole,
                 ))
             }
             OpenSubmenu => Custom(AccessibilityContent::new(
                 String::from("Submenu Expanded"),
                 "Press the right key to open the selected submenu",
-                BorkA11yRole::TextRole,
+                KrustA11yRole::TextRole,
             )),
             CloseSubmenu(_) => Custom(AccessibilityContent::new(
                 String::from("Submenu Closed"),
                 "Removing focus from a submenu will close the submenu",
-                BorkA11yRole::TextRole,
+                KrustA11yRole::TextRole,
             )),
             Close(_) => Custom(AccessibilityContent::new(
                 String::from("Menu Closed"),
                 "Press the escape key to close the menu",
-                BorkA11yRole::TextRole,
+                KrustA11yRole::TextRole,
             )),
             Enter => Custom(AccessibilityContent::new(
                 String::from("Action Selected"),
                 "Press the enter key to execute the selected menu item action",
-                BorkA11yRole::TextRole,
+                KrustA11yRole::TextRole,
             )),
             HoverSubmenuLeafNode { .. }
             | UnhoverSubmenuParent(_)

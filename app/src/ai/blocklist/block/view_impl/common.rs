@@ -17,35 +17,35 @@ use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextInline, FormattedTextLine, TableAlignment};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::blend::Blend;
-use bork_core::ui::theme::color::internal_colors;
-use bork_editor::content::edit::resolve_asset_source_relative_to_directory;
-use bork_editor::content::mermaid_diagram::mermaid_asset_source;
-use bork_util::path::to_relative_path;
-use borkui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use borkui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
-use borkui::elements::shimmering_text::ShimmeringTextStateHandle;
-use borkui::elements::{
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::blend::Blend;
+use krust_core::ui::theme::color::internal_colors;
+use krust_editor::content::edit::resolve_asset_source_relative_to_directory;
+use krust_editor::content::mermaid_diagram::mermaid_asset_source;
+use krust_util::path::to_relative_path;
+use krustui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use krustui::elements::new_scrollable::{ScrollableAppearance, SingleAxisConfig};
+use krustui::elements::shimmering_text::ShimmeringTextStateHandle;
+use krustui::elements::{
     Align, Axis, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler,
     Expanded, Fill, Flex, FormattedTextElement, HeadingFontSizeMultipliers, Highlight,
-    HighlightedRange, Hoverable, Image as BorkImage, MainAxisAlignment, MainAxisSize,
+    HighlightedRange, Hoverable, Image as KrustImage, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth,
     Shrinkable, Stack, Table, TableColumnWidth, TableConfig, TableHeader, TableVerticalSizing,
     Text, Wrap,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::image_cache::{CacheOption, ImageType};
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::text_layout::{ClipConfig, TextAlignment, TextStyle};
-use borkui::ui_components::button::Button;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{Action, AppContext, Element, EventContext, SingletonEntity, View, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::image_cache::{CacheOption, ImageType};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::text_layout::{ClipConfig, TextAlignment, TextStyle};
+use krustui::ui_components::button::Button;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{Action, AppContext, Element, EventContext, SingletonEntity, View, ViewHandle};
 
 use super::output::LinkActionConstructors;
 use super::{add_highlights_to_rich_text, add_highlights_to_text};
@@ -65,7 +65,7 @@ use crate::ai::blocklist::block::{
     TableSectionHandles,
 };
 use crate::ai::blocklist::code_block::{
-    render_code_block_plain, render_code_block_with_bork_text, CodeBlockOptions,
+    render_code_block_plain, render_code_block_with_krust_text, CodeBlockOptions,
     CodeSnippetButtonHandles,
 };
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
@@ -79,7 +79,7 @@ use crate::ai::blocklist::model::{AIBlockModel, AIBlockModelHelper};
 use crate::ai::blocklist::secret_redaction::{redact_secrets_in_element, SecretRedactionState};
 use crate::ai::blocklist::view_util::error_color;
 use crate::ai::blocklist::{BlocklistAIActionModel, ShellCommandExecutor, TextLocation};
-use crate::ai::loading::shimmering_bork_loading_text;
+use crate::ai::loading::shimmering_krust_loading_text;
 use crate::ai::AIRequestUsageModel;
 use crate::code::editor::view::CodeEditorView;
 use crate::code::editor_management::CodeSource;
@@ -114,7 +114,7 @@ pub const WAITING_FOR_USER_INPUT_MESSAGE: &str = "Agent waiting for instructions
 const IMAGE_SOURCE_LINK_LINE_INDEX: usize = 1;
 
 const ERROR_APOLOGY_TEXT: &str = "I'm sorry, I couldn't complete that request.";
-const INTERNAL_BORK_ERROR: &str = "Internal Bork error.";
+const INTERNAL_KRUST_ERROR: &str = "Internal Krust error.";
 
 pub const LOAD_OUTPUT_MESSAGE: &str = "Sending...";
 /// Swear-mode variant of [`LOAD_OUTPUT_MESSAGE`].
@@ -169,7 +169,7 @@ const VISUAL_CARD_HEADER_VERTICAL_PADDING: f32 = 8.;
 const VISUAL_CARD_HEADER_HORIZONTAL_PADDING: f32 = 16.;
 const MERMAID_CANVAS_PADDING: f32 = 32.;
 
-pub struct BorkingProps<'a, V> {
+pub struct KrustingProps<'a, V> {
     pub model: &'a dyn AIBlockModel<View = V>,
     pub shimmering_text_handle: &'a ShimmeringTextStateHandle,
     pub summarization_start_time: Option<instant::Instant>,
@@ -179,12 +179,12 @@ pub struct BorkingProps<'a, V> {
     pub queue_next_prompt_button: Option<ButtonProps<'a>>,
     pub stop_button: Option<ButtonProps<'a>>,
     /// Inline `Check now` affordance displayed alongside `Last seen by agent ...`
-    /// in the borking indicator. When set, the agent's pending poll future is
+    /// in the krusting indicator. When set, the agent's pending poll future is
     /// short-circuited on click and a fresh snapshot is returned immediately.
     pub force_refresh_button: Option<ForceRefreshButtonProps<'a>>,
     pub action_model: &'a BlocklistAIActionModel,
     pub terminal_model: &'a TerminalModel,
-    pub default_borking_text: String,
+    pub default_krusting_text: String,
     pub secondary_element: Option<Box<dyn Element>>,
     /// When an LRC subagent has sent at least one snapshot, the timestamp of the most recent snapshot.
     pub last_snapshot_at: Option<instant::Instant>,
@@ -196,7 +196,7 @@ pub struct ButtonProps<'a> {
     pub is_active: bool,
 }
 
-/// Props for the auto-approve / fast-forward button in the borking indicator.
+/// Props for the auto-approve / fast-forward button in the krusting indicator.
 ///
 /// When `is_locked` is set, the button is rendered in its always-on state and
 /// the click handler (plus the action dispatched by the keybinding) are no-ops.
@@ -214,8 +214,8 @@ pub struct ForceRefreshButtonProps<'a> {
     pub block_id: crate::terminal::model::block::BlockId,
 }
 
-pub fn render_borking_indicator<V: View>(
-    props: BorkingProps<'_, V>,
+pub fn render_krusting_indicator<V: View>(
+    props: KrustingProps<'_, V>,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let output_status = props.model.status(app);
@@ -422,7 +422,7 @@ pub fn render_borking_indicator<V: View>(
                         }
                     }
                 } else {
-                    props.default_borking_text.clone()
+                    props.default_krusting_text.clone()
                 }
             }
         }
@@ -475,7 +475,7 @@ pub fn render_borking_indicator<V: View>(
             .with_spacing(4.);
     }
 
-    let borking_indicator_text = if !should_render_waiting_icon {
+    let krusting_indicator_text = if !should_render_waiting_icon {
         MaybeShimmeringText::Shimmering {
             text: message.into(),
             shimmering_text_handle: props.shimmering_text_handle.clone(),
@@ -495,10 +495,10 @@ pub fn render_borking_indicator<V: View>(
         _ => None,
     };
 
-    render_borking_indicator_base(
-        BorkingIndicatorProps {
+    render_krusting_indicator_base(
+        KrustingIndicatorProps {
             icon: should_render_waiting_icon.then(|| icons::gray_clock_icon(appearance).finish()),
-            borking_indicator_text,
+            krusting_indicator_text,
             non_shimmering_text,
             non_shimmering_suffix,
             buttons: if has_buttons {
@@ -521,9 +521,9 @@ pub enum MaybeShimmeringText {
     },
 }
 
-pub struct BorkingIndicatorProps {
+pub struct KrustingIndicatorProps {
     pub icon: Option<Box<dyn Element>>,
-    pub borking_indicator_text: MaybeShimmeringText,
+    pub krusting_indicator_text: MaybeShimmeringText,
     pub non_shimmering_text: Option<String>,
     /// Optional element rendered inline to the right of `non_shimmering_text`. Used
     /// today for the `Check now` affordance next to `Last seen by agent ...`.
@@ -533,16 +533,16 @@ pub struct BorkingIndicatorProps {
     pub secondary_element: Option<Box<dyn Element>>,
 }
 
-/// Computes the fixed height of the borking-indicator footer.
+/// Computes the fixed height of the krusting-indicator footer.
 ///
-/// The borking text occupies a single line. When a secondary element (an agent
+/// The krusting text occupies a single line. When a secondary element (an agent
 /// tip or fallback-model explanation) is present, it renders on a second line
-/// below the borking text, so the footer must reserve room for that extra line;
+/// below the krusting text, so the footer must reserve room for that extra line;
 /// otherwise the `Clipped` wrapper — which keeps action chips from overflowing
 /// narrow panes — also clips the secondary line. The extra line accounts for the
 /// secondary element's font size (`monospace_font_size - 3`, see
 /// `render_agent_tip` / `render_fallback_explanation`) plus its 1px top margin.
-fn borking_footer_height(monospace_font_size: f32, has_secondary_element: bool) -> f32 {
+fn krusting_footer_height(monospace_font_size: f32, has_secondary_element: bool) -> f32 {
     let mut height = STATUS_FOOTER_VERTICAL_PADDING * 2. + monospace_font_size;
     if has_secondary_element {
         height += (monospace_font_size - 3.) + 1.;
@@ -550,17 +550,17 @@ fn borking_footer_height(monospace_font_size: f32, has_secondary_element: bool) 
     height
 }
 
-/// Helper function to render text in the "borking..." footer.
+/// Helper function to render text in the "krusting..." footer.
 /// Additional text that does not use the shimmering text animation can be passed in via
 /// `non_shimmering_text` which is useful if you want some part of the text to constantly update
 /// without the animation resetting.
-pub fn render_borking_indicator_base(
-    props: BorkingIndicatorProps,
+pub fn render_krusting_indicator_base(
+    props: KrustingIndicatorProps,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    let BorkingIndicatorProps {
+    let KrustingIndicatorProps {
         icon,
-        borking_indicator_text,
+        krusting_indicator_text,
         non_shimmering_text,
         non_shimmering_suffix,
         buttons,
@@ -568,22 +568,22 @@ pub fn render_borking_indicator_base(
         secondary_element,
     } = props;
     // Whether a secondary element (an agent tip or fallback-model explanation)
-    // will be rendered on a second line below the borking text. Captured before
+    // will be rendered on a second line below the krusting text. Captured before
     // `secondary_element` is consumed so the container can reserve room for it.
     let has_secondary_element = secondary_element.is_some();
-    // Unicode code point for the Bork glyph that is embedded in the version of Roboto we bundle
+    // Unicode code point for the Krust glyph that is embedded in the version of Roboto we bundle
     // into the app. This code point MUST be rendered using Roboto (the default ui font) or else the
     // glyph may not be rendered.
-    const BORK_GLYPH: &str = "\u{E500}";
+    const KRUST_GLYPH: &str = "\u{E500}";
 
     let appearance = Appearance::as_ref(app);
 
-    let should_indent_tip_for_bork_glyph = matches!(
-        borking_indicator_text,
+    let should_indent_tip_for_krust_glyph = matches!(
+        krusting_indicator_text,
         MaybeShimmeringText::Shimmering { .. }
     );
 
-    let text = render_output_status_text(borking_indicator_text, appearance, app);
+    let text = render_output_status_text(krusting_indicator_text, appearance, app);
 
     let text_content = {
         let mut row = Flex::row().with_child(Shrinkable::new(1., text).finish());
@@ -606,13 +606,13 @@ pub fn render_borking_indicator_base(
 
     let mut text_col = Flex::column();
     if let Some(sub_element) = secondary_element {
-        // Our borking indicator text prepends the Bork glyph (and a space) to the label.
+        // Our krusting indicator text prepends the Krust glyph (and a space) to the label.
         // If we render the tip directly underneath, it will align to the glyph instead of
-        // the start of the actual borking text.
-        let sub_element = if should_indent_tip_for_bork_glyph {
+        // the start of the actual krusting text.
+        let sub_element = if should_indent_tip_for_krust_glyph {
             let font_size = appearance.monospace_font_size() - 3.;
             let glyph_indent = Text::new_inline(
-                format!("{BORK_GLYPH} "),
+                format!("{KRUST_GLYPH} "),
                 appearance.ui_font_family(),
                 font_size,
             )
@@ -674,7 +674,7 @@ pub fn render_borking_indicator_base(
     } else {
         let mut container = Container::new(
             ConstrainedBox::new(content)
-                .with_height(borking_footer_height(
+                .with_height(krusting_footer_height(
                     appearance.monospace_font_size(),
                     has_secondary_element,
                 ))
@@ -718,7 +718,7 @@ pub fn render_output_status_text(
         MaybeShimmeringText::Shimmering {
             text,
             shimmering_text_handle,
-        } => shimmering_bork_loading_text(
+        } => shimmering_krust_loading_text(
             text.to_string(),
             appearance.monospace_font_size() - 2.,
             shimmering_text_handle,
@@ -792,7 +792,7 @@ fn render_hide_responses_button(
         "Hide agent responses"
     };
 
-    render_borking_indicator_button(
+    render_krusting_indicator_button(
         props.button_handle.clone(),
         appearance,
         text,
@@ -824,7 +824,7 @@ pub fn render_switch_control_to_user_button(
     )
     .finish();
 
-    render_borking_indicator_button(
+    render_krusting_indicator_button(
         props.button_handle.clone(),
         appearance,
         text,
@@ -848,7 +848,7 @@ fn render_stop_button(props: ButtonProps, appearance: &Appearance) -> Box<dyn El
     )
     .finish();
 
-    render_borking_indicator_button(
+    render_krusting_indicator_button(
         props.button_handle.clone(),
         appearance,
         stop_icon,
@@ -873,7 +873,7 @@ fn render_queue_next_prompt_button(
     };
     let icon_size = get_icon_size(appearance);
     let icon = Container::new(
-        ConstrainedBox::new(Icon::ClockPlus.to_borkui_icon(icon_color).finish())
+        ConstrainedBox::new(Icon::ClockPlus.to_krustui_icon(icon_color).finish())
             .with_height(icon_size)
             .with_width(icon_size)
             .finish(),
@@ -886,7 +886,7 @@ fn render_queue_next_prompt_button(
         "Auto-queue next prompt while agent is responding"
     };
 
-    render_borking_indicator_button(
+    render_krusting_indicator_button(
         props.button_handle.clone(),
         appearance,
         icon,
@@ -915,7 +915,7 @@ fn render_auto_approve_button(
     let icon_size = get_icon_size(appearance);
     let icon = Container::new(
         ConstrainedBox::new(
-            icon.to_borkui_icon(appearance.theme().active_ui_text_color())
+            icon.to_krustui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_height(icon_size)
@@ -932,7 +932,7 @@ fn render_auto_approve_button(
         "Auto-approve all agent actions for this task"
     };
 
-    render_borking_indicator_button(
+    render_krusting_indicator_button(
         props.button_handle.clone(),
         appearance,
         icon,
@@ -958,7 +958,7 @@ fn get_icon_size(appearance: &Appearance) -> f32 {
 }
 
 /// Renders the inline `Check now` affordance displayed alongside
-/// `Last seen by agent ...` in the borking indicator. On click, short-circuits the
+/// `Last seen by agent ...` in the krusting indicator. On click, short-circuits the
 /// agent's pending poll timer for the given block and delivers a fresh snapshot.
 fn render_force_refresh_inline(
     props: ForceRefreshButtonProps<'_>,
@@ -1022,7 +1022,7 @@ fn render_force_refresh_inline(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_borking_indicator_button<F>(
+fn render_krusting_indicator_button<F>(
     mouse_state: MouseStateHandle,
     appearance: &Appearance,
     content: Box<dyn Element>,
@@ -1043,7 +1043,7 @@ where
         .with_child(content)
         .with_spacing(4.0);
 
-    if !borkui::platform::is_mobile_device() {
+    if !krustui::platform::is_mobile_device() {
         let keybinding_string = keybinding.map(|k| k.displayed()).unwrap_or_default();
         let keybinding_label = Text::new_inline(
             keybinding_string,
@@ -2081,7 +2081,7 @@ struct VisualMarkdownBlockOptions<A: 'static> {
     alignment: VisualMarkdownAlignment,
     lightbox_trigger: Option<VisualMarkdownLightboxTrigger>,
     /// When `Some(non_empty)`, the rendered image is wrapped in the standard
-    /// Bork tooltip primitive so hovering surfaces the CommonMark image title.
+    /// Krust tooltip primitive so hovering surfaces the CommonMark image title.
     /// Mermaid diagrams pass `None` here because CommonMark titles do not
     /// apply to them.
     tooltip: Option<String>,
@@ -2522,7 +2522,7 @@ fn render_visual_markdown_block<A: Action>(
     .with_color(blended_colors::text_sub(theme, theme.surface_2()))
     .finish();
 
-    let image = BorkImage::new(asset_source, CacheOption::BySize)
+    let image = KrustImage::new(asset_source, CacheOption::BySize)
         .contain()
         .before_load(placeholder)
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)));
@@ -2555,7 +2555,7 @@ fn render_visual_markdown_block<A: Action>(
         VisualMarkdownAlignment::Center => Align::new(content).finish(),
     };
 
-    // Wrap the rendered image in the standard Bork tooltip when the source
+    // Wrap the rendered image in the standard Krust tooltip when the source
     // carried a CommonMark `title`. Branching on `Some(non_empty)` here means
     // untitled images remain un-wrapped, matching `specs/GH849/product.md`
     // invariant 6 (no tooltip for empty or absent titles). The tooltip's
@@ -2572,8 +2572,8 @@ fn render_visual_markdown_block<A: Action>(
             tooltip,
             mouse_state,
             content,
-            borkui::elements::ParentAnchor::TopMiddle,
-            borkui::elements::ChildAnchor::BottomMiddle,
+            krustui::elements::ParentAnchor::TopMiddle,
+            krustui::elements::ChildAnchor::BottomMiddle,
             // Small negative Y offset keeps a hairline gap between the
             // tooltip's bottom edge and the image's top edge without
             // floating noticeably above the image.
@@ -2621,7 +2621,7 @@ fn render_visual_card(
     let theme = appearance.theme();
     let header_background = theme.surface_2();
     let header_text_color = blended_colors::text_main(theme, header_background);
-    let header_icon = ConstrainedBox::new(icon.to_borkui_icon(header_text_color.into()).finish())
+    let header_icon = ConstrainedBox::new(icon.to_krustui_icon(header_text_color.into()).finish())
         .with_width(16.)
         .with_height(16.)
         .finish();
@@ -2840,7 +2840,7 @@ fn render_table_section(
             row_dividers: table_appearance.row_dividers,
             cell_padding,
             header_background: table_appearance.header_background,
-            row_background: borkui::elements::RowBackground {
+            row_background: krustui::elements::RowBackground {
                 primary: table_appearance.cell_background,
                 alternating: table_appearance.alternate_row_background,
             },
@@ -2944,7 +2944,7 @@ fn render_table_cell(props: TableCellProps, app: &AppContext) -> Box<dyn Element
 struct TableCellProps {
     cell: FormattedTextInline,
     alignment: TableAlignment,
-    font_family: borkui::fonts::FamilyId,
+    font_family: krustui::fonts::FamilyId,
     font_size: f32,
     font_weight: Weight,
     text_color: ColorU,
@@ -3131,7 +3131,7 @@ pub fn render_code_output_section<A: Action>(
     let allow_execution = props.language.is_none_or(|lang| lang.is_shell());
 
     match props.editor_view {
-        Some(view) => render_code_block_with_bork_text(
+        Some(view) => render_code_block_with_krust_text(
             CodeBlockOptions {
                 on_open: match (props.open_code_block_action_factory, open_source.clone()) {
                     #[allow(unused)]
@@ -3302,7 +3302,7 @@ pub(crate) fn resolve_absolute_file_path(
     shell_launch_data: Option<&ShellLaunchData>,
     home_dir: PathBuf,
 ) -> Option<PathBuf> {
-    use bork_util::path::CleanPathResult;
+    use krust_util::path::CleanPathResult;
 
     use crate::util::file::{absolute_path_if_valid, ShellPathType};
 
@@ -3343,7 +3343,7 @@ pub fn render_failed_output(props: FailedOutputProps, app: &AppContext) -> Box<d
 
     // While an automatic retry/resume is still in flight, don't surface the underlying
     // transport failure at all. These are typically transient and recover on their own,
-    // so showing the alarming "Bork lost connection" banner (plus debug info) for every
+    // so showing the alarming "Krust lost connection" banner (plus debug info) for every
     // blip is noisy and misleading. Render nothing during in-flight recovery; the full
     // error banner is only shown once recovery has actually failed. Dogfood builds
     // (Local/Dev) opt out so developers still see every transport failure aggressively.
@@ -3379,10 +3379,10 @@ pub fn render_failed_output(props: FailedOutputProps, app: &AppContext) -> Box<d
             }
         }
         RenderableAIError::ServerOverloaded => {
-            "Bork is currently overloaded. Please try again later.".to_string()
+            "Krust is currently overloaded. Please try again later.".to_string()
         }
-        RenderableAIError::InternalBorkError => {
-            format!("{ERROR_APOLOGY_TEXT}\n\n{INTERNAL_BORK_ERROR}")
+        RenderableAIError::InternalKrustError => {
+            format!("{ERROR_APOLOGY_TEXT}\n\n{INTERNAL_KRUST_ERROR}")
         }
         RenderableAIError::Other { error_message, .. } => {
             // A still-recovering `Other` error is handled by the early return above; once we
@@ -3433,7 +3433,7 @@ pub fn render_failed_output(props: FailedOutputProps, app: &AppContext) -> Box<d
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    borkui::elements::Icon::new(
+                    krustui::elements::Icon::new(
                         Icon::AlertTriangle.into(),
                         error_color(appearance.theme()),
                     )
@@ -3493,7 +3493,7 @@ fn out_of_credits_cta_button(
     appearance
         .ui_builder()
         .button(
-            borkui::ui_components::button::ButtonVariant::Outlined,
+            krustui::ui_components::button::ButtonVariant::Outlined,
             state_handle.clone(),
         )
         .with_style(UiComponentStyles {
@@ -3525,7 +3525,7 @@ fn render_out_of_credits_error(
 
     let icon = Container::new(
         ConstrainedBox::new(
-            borkui::elements::Icon::new(
+            krustui::elements::Icon::new(
                 Icon::AlertTriangle.into(),
                 error_color(appearance.theme()),
             )
@@ -3598,7 +3598,7 @@ fn render_invalid_api_key_error(
 
     let alert_icon = ConstrainedBox::new(
         Icon::AlertTriangle
-            .to_borkui_icon(error_color(appearance.theme()).into())
+            .to_krustui_icon(error_color(appearance.theme()).into())
             .finish(),
     )
     .with_width(icon_size(app))
@@ -3632,7 +3632,7 @@ fn render_invalid_api_key_error(
     let settings_button = appearance
         .ui_builder()
         .button(
-            borkui::ui_components::button::ButtonVariant::Outlined,
+            krustui::ui_components::button::ButtonVariant::Outlined,
             state_handle.clone(),
         )
         .with_style(UiComponentStyles {
@@ -3653,7 +3653,7 @@ fn render_invalid_api_key_error(
         .on_click(move |ctx, _, _| {
             ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                 search_query: "api keys".to_string(),
-                section: Some(SettingsSection::BorkAgent),
+                section: Some(SettingsSection::KrustAgent),
             });
         })
         .finish();
@@ -3777,7 +3777,7 @@ pub(crate) fn render_debug_footer<V: View>(
             appearance
                 .ui_builder()
                 .button(
-                    borkui::ui_components::button::ButtonVariant::Text,
+                    krustui::ui_components::button::ButtonVariant::Text,
                     props.submit_issue_button_handle,
                 )
                 .with_centered_text_label("Send Feedback".to_string())
@@ -3843,8 +3843,8 @@ pub(crate) fn render_debug_footer<V: View>(
         "Copy debug ID".to_string(),
         props.debug_copy_button_handle,
         copy_button,
-        borkui::elements::ParentAnchor::TopRight,
-        borkui::elements::ChildAnchor::BottomRight,
+        krustui::elements::ParentAnchor::TopRight,
+        krustui::elements::ChildAnchor::BottomRight,
         vec2f(0., -8.),
     );
 

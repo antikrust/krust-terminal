@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Error;
-use borkui::ModelSpawner;
+use krustui::ModelSpawner;
 
 use super::terminal::TerminalDriver;
 use crate::ai::cloud_environments::ProvidersConfig;

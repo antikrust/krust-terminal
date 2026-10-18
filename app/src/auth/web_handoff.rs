@@ -1,7 +1,7 @@
 use anyhow::anyhow;
-use bork_errors::report_error;
-use borkui::ui_components::components::UiComponent as _;
-use borkui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
+use krust_errors::report_error;
+use krustui::ui_components::components::UiComponent as _;
+use krustui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
 use wasm_bindgen::prelude::*;
 
 use super::auth_manager::{AuthManager, AuthManagerEvent};

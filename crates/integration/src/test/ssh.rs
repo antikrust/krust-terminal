@@ -2,25 +2,25 @@ use std::collections::HashMap;
 
 use regex::Regex;
 use settings::Setting as _;
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::subshell::{
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::subshell::{
     enter_ssh_command, enter_ssh_password, setup_gcloud_sdk, wait_for_password_prompt,
 };
-use bork::integration_testing::terminal::util::{
+use krust::integration_testing::terminal::util::{
     current_shell_starter_and_version, nonce, ExactLine, ExpectedExitStatus,
 };
-use bork::integration_testing::terminal::{
+use krust::integration_testing::terminal::{
     assert_active_block_output_for_single_terminal_in_tab,
     assert_long_running_block_executing_for_single_terminal_in_tab,
     execute_command_for_single_terminal_in_tab, validate_block_output,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::view_getters::{single_terminal_view, single_terminal_view_for_tab};
-use bork::terminal::model::bootstrap::BootstrapStage;
-use bork::terminal::session_settings::{StartupShell, StartupShellOverride};
-use bork::terminal::shell::ShellType;
-use borkui_core::integration::{AssertionCallback, AssertionOutcome, TestStep};
-use borkui_core::{async_assert, async_assert_eq};
+use krust::integration_testing::view_getters::{single_terminal_view, single_terminal_view_for_tab};
+use krust::terminal::model::bootstrap::BootstrapStage;
+use krust::terminal::session_settings::{StartupShell, StartupShellOverride};
+use krust::terminal::shell::ShellType;
+use krustui_core::integration::{AssertionCallback, AssertionOutcome, TestStep};
+use krustui_core::{async_assert, async_assert_eq};
 
 use super::new_builder;
 use crate::Builder;
@@ -116,7 +116,7 @@ fn verify_login_shell(shell: &str) -> TestStep {
         "zsh" => "[[ -o login ]]",
         "fish" => "status --is-login",
         // For other shells, we don't actually start a login shell but do source /etc/profile.
-        _ => "test \"$BORK_PROFILE_LOADED\" = true",
+        _ => "test \"$KRUST_PROFILE_LOADED\" = true",
     };
 
     match shell {

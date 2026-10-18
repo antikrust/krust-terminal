@@ -1,4 +1,4 @@
-use bork_completion_metadata::fig_types::{Arg, CommandOption, NameOrSuggestion};
+use krust_completion_metadata::fig_types::{Arg, CommandOption, NameOrSuggestion};
 
 /// These were transcribed from this page for PowerShell version 7.4
 /// https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_commonparameters

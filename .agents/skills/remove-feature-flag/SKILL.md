@@ -1,11 +1,11 @@
 ---
 name: remove-feature-flag
-description: Remove a feature flag after it has been rolled out and stabilized in the Bork codebase.
+description: Remove a feature flag after it has been rolled out and stabilized in the Krust codebase.
 ---
 
 # remove-feature-flag
 
-Remove a feature flag after it has been rolled out and stabilized in the Bork codebase.
+Remove a feature flag after it has been rolled out and stabilized in the Krust codebase.
 
 ## Overview
 
@@ -35,7 +35,7 @@ default = [
 ```
 
 ### 2. Remove from FeatureFlag enum
-Remove the variant from the `FeatureFlag` enum in `bork_core/src/features.rs`:
+Remove the variant from the `FeatureFlag` enum in `krust_core/src/features.rs`:
 
 ```rust
 #[derive(Sequence)]
@@ -79,9 +79,9 @@ if FeatureFlag::YourFeatureName.is_enabled() {
 // new behavior (unconditionally enabled)
 ```
 
-Use ripgrep to find all occurrences. The shared `FeatureFlag` may be used from the headless TUI, so search `crates/bork_tui/` (and other non-`app/` crates), not just `app/` and `bork_core/`:
+Use ripgrep to find all occurrences. The shared `FeatureFlag` may be used from the headless TUI, so search `crates/krust_tui/` (and other non-`app/` crates), not just `app/` and `krust_core/`:
 ```bash
-rg "YourFeatureName" app/ bork_core/ crates/bork_tui/
+rg "YourFeatureName" app/ krust_core/ crates/krust_tui/
 ```
 
 ### 6. Remove keybinding predicates
@@ -141,10 +141,10 @@ cargo run
 
 ```bash
 # Find all occurrences of the flag name (include the TUI and other non-app crates)
-rg "YourFeatureName" app/ bork_core/ crates/bork_tui/
+rg "YourFeatureName" app/ krust_core/ crates/krust_tui/
 
 # Find feature flag checks
-rg "FeatureFlag::YourFeatureName" app/ crates/bork_tui/
+rg "FeatureFlag::YourFeatureName" app/ crates/krust_tui/
 
 # Find cfg attributes
 rg 'cfg\(feature = "your_feature_name"\)' app/

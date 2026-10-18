@@ -1,8 +1,8 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{Flex, ParentElement};
-use borkui::platform::WindowStyle;
-use borkui::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{Flex, ParentElement};
+use krustui::platform::WindowStyle;
+use krustui::{
     App, Element, Entity, Presenter, SingletonEntity, TypedActionView, View, WindowInvalidation,
 };
 
@@ -25,7 +25,7 @@ impl View for ErrorCardTestView {
         "CustomRouterErrorCardTestView"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         Flex::column()
             .with_child(render_router_error_card(

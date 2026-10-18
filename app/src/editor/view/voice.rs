@@ -1,15 +1,15 @@
 use settings::Setting as _;
 use voice_input::{StartListeningError, VoiceInput, VoiceSessionResult};
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::AnsiColorIdentifier;
-use bork_errors::report_error;
-use borkui::elements::{Container, CornerRadius, Icon, Radius};
-use borkui::platform::Cursor;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::ui_components::button::ButtonTooltipPosition;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{elements, AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::AnsiColorIdentifier;
+use krust_errors::report_error;
+use krustui::elements::{Container, CornerRadius, Icon, Radius};
+use krustui::platform::Cursor;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::ui_components::button::ButtonTooltipPosition;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{elements, AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
 
 use super::{EditorAction, EditorView, VoiceTranscriber, VoiceTranscriptionOptions};
 use crate::ai::blocklist::InputType;
@@ -80,7 +80,7 @@ impl EditorView {
                 crate::view_components::NewFeaturePopupEvent::Dismissed
             ) {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
-                    bork_errors::report_if_error!(settings
+                    krust_errors::report_if_error!(settings
                         .dismissed_voice_input_new_feature_popup
                         .set_value(true, ctx));
                 });
@@ -234,18 +234,18 @@ impl EditorView {
                 // If the keypress is not valid in the current state, we ignore it.
                 match &self.voice_input_state {
                     // For example, the user could press Fn in a different app, then switch focus
-                    // to Bork and let it go - we should NOT activate voice input in this case.
+                    // to Krust and let it go - we should NOT activate voice input in this case.
                     VoiceInputState::Stopped => {
-                        if matches!(state, borkui::event::KeyState::Released) {
+                        if matches!(state, krustui::event::KeyState::Released) {
                             return false;
                         }
                     }
                     // Note that in reality, this case is unreachable because we stop voice input
-                    // if the user is not focused on Bork (since we lose the ability to listen to modifier
+                    // if the user is not focused on Krust (since we lose the ability to listen to modifier
                     // key events). Thus, the user cannot enter a state where we're listening for voice input
                     // but the key is not held already.
                     VoiceInputState::Listening => {
-                        if matches!(state, borkui::event::KeyState::Pressed) {
+                        if matches!(state, krustui::event::KeyState::Pressed) {
                             return false;
                         }
                     }
@@ -525,8 +525,8 @@ impl EditorView {
         let microphone_access_state = app.microphone_access_state();
         let mic_access_denied = matches!(
             microphone_access_state,
-            borkui::platform::MicrophoneAccessState::Restricted
-                | borkui::platform::MicrophoneAccessState::Denied
+            krustui::platform::MicrophoneAccessState::Restricted
+                | krustui::platform::MicrophoneAccessState::Denied
         );
 
         let modifier_key = AISettings::handle(app).as_ref(app).voice_input_toggle_key;
@@ -605,7 +605,7 @@ impl EditorView {
             button = button.disabled();
         }
 
-        borkui::elements::SavePosition::new(
+        krustui::elements::SavePosition::new(
             button
                 .build()
                 .on_click(move |ctx, _, _| {

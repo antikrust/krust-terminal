@@ -5,7 +5,7 @@ use cloud_objects::cloud_object::{
 };
 use cloud_objects::ids::GenericStringObjectId;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use bork_cli::agent::Harness;
+use krust_cli::agent::Harness;
 
 use crate::{JsonModel, JsonSerializer};
 
@@ -38,7 +38,7 @@ pub struct AgentConfigSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile_id: Option<String>,
     /// Self-hosted worker ID that should execute this task.
-    /// If None or Some("bork"), the task will be dispatched to Bork-hosted (Namespace) workers.
+    /// If None or Some("krust"), the task will be dispatched to Krust-hosted (Namespace) workers.
     /// Otherwise, the task will only be assigned to a connected self-hosted worker with matching ID.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worker_host: Option<String>,
@@ -52,7 +52,7 @@ pub struct AgentConfigSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub computer_use_enabled: Option<bool>,
     /// Execution harness for the agent run.
-    /// If None, we use Bork's default ("oz").
+    /// If None, we use Krust's default ("oz").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub harness: Option<HarnessConfig>,
     /// Authentication secrets for third-party harnesses.

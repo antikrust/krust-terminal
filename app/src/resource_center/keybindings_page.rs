@@ -1,15 +1,15 @@
 use enum_iterator::{all, Sequence};
 use itertools::{Either, Itertools};
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Element, Fill, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Shrinkable,
 };
-use borkui::keymap::{DescriptionContext, Keystroke};
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::Pixels;
-use borkui::{
+use krustui::keymap::{DescriptionContext, Keystroke};
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::Pixels;
+use krustui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -56,7 +56,7 @@ pub struct KeybindingsView {
 
 /// Keybindings are sorted into these sections,
 /// where "Fundamentals" is the default for any remaining non-categorized ones.
-/// This should always align with documentation: https://therob.lol/bork-terminal/help/getting-started/keyboard-shortcuts
+/// This should always align with documentation: https://therob.lol/krust-terminal/help/getting-started/keyboard-shortcuts
 #[derive(Clone, Eq, PartialEq, Sequence)]
 pub enum KeybindingSection {
     Essentials,

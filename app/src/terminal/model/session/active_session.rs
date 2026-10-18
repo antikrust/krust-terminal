@@ -1,13 +1,13 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::{Session, SessionType, Sessions};
-use crate::ai_assistant::execution_context::BorkAiExecutionContext;
+use crate::ai_assistant::execution_context::KrustAiExecutionContext;
 use crate::terminal::model::session::SessionsEvent;
 use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
 use crate::terminal::shell::ShellType;
@@ -100,12 +100,12 @@ impl ActiveSession {
     /// the connected host ID.
     pub fn location_for_path(&self, path: &str, app: &AppContext) -> Option<LocalOrRemotePath> {
         match self.session_type(app) {
-            Some(SessionType::BorkifiedRemote {
+            Some(SessionType::KrustifiedRemote {
                 host_id: Some(host_id),
             }) => StandardizedPath::try_new(path)
                 .ok()
                 .map(|path| LocalOrRemotePath::Remote(RemotePath::new(host_id, path))),
-            Some(SessionType::BorkifiedRemote { host_id: None }) => None,
+            Some(SessionType::KrustifiedRemote { host_id: None }) => None,
             Some(SessionType::Local) | None => {
                 let path =
                     dunce::canonicalize(Path::new(path)).unwrap_or_else(|_| PathBuf::from(path));
@@ -122,9 +122,9 @@ impl ActiveSession {
         self.location_for_path(cwd.as_str(), app)
     }
 
-    /// Returns the `BorkAiExecutionContext` for the active session.
-    pub fn ai_execution_environment(&self, app: &AppContext) -> Option<BorkAiExecutionContext> {
-        self.session(app).as_ref().map(BorkAiExecutionContext::new)
+    /// Returns the `KrustAiExecutionContext` for the active session.
+    pub fn ai_execution_environment(&self, app: &AppContext) -> Option<KrustAiExecutionContext> {
+        self.session(app).as_ref().map(KrustAiExecutionContext::new)
     }
 }
 

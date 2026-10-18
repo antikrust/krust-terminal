@@ -1,7 +1,7 @@
-use borkui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use borkui_core::image_cache::ImageType;
-use borkui_core::text_layout::LayoutCache;
-use borkui_core::{App, SingletonEntity};
+use krustui_core::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use krustui_core::image_cache::ImageType;
+use krustui_core::text_layout::LayoutCache;
+use krustui_core::{App, SingletonEntity};
 
 use super::*;
 use crate::render::layout::TextLayout;

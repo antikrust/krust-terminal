@@ -1,4 +1,4 @@
-use borkui::text::point::Point;
+use krustui::text::point::Point;
 
 use super::super::Buffer;
 

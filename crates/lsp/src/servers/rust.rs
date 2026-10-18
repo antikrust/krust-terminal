@@ -71,7 +71,7 @@ impl RustAnalyzerCandidate {
     pub async fn find_installed_binary_in_data_dir() -> Option<std::path::PathBuf> {
         use tokio::process::Command;
 
-        let install_dir = bork_core::paths::data_dir().join(SERVER_NAME);
+        let install_dir = krust_core::paths::data_dir().join(SERVER_NAME);
         if !install_dir.exists() {
             return None;
         }
@@ -142,7 +142,7 @@ impl LanguageServerCandidate for RustAnalyzerCandidate {
             "rust-analyzer is not auto-installable on FreeBSD: upstream \
              GitHub releases publish no FreeBSD asset. Install it via \
              `rustup component add rust-analyzer` or `pkg install \
-             rust-analyzer` and bork will pick it up off PATH."
+             rust-analyzer` and krust will pick it up off PATH."
         );
         let asset_kind = AssetKind::from_filename(asset_name()).ok_or_else(|| {
             anyhow::anyhow!("Unsupported archive format for asset: {}", asset_name())

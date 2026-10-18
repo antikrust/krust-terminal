@@ -14,20 +14,20 @@ cfg_if::cfg_if! {
         use crate::index::{is_git_internal_path, matches_gitignores};
         use ignore::gitignore::Gitignore;
         use notify_debouncer_full::notify::{RecursiveMode, WatchFilter};
-        use bork_core::features::FeatureFlag;
+        use krust_core::features::FeatureFlag;
         use watcher::{BulkFilesystemWatcher, BulkFilesystemWatcherEvent};
-        use borkui_core::r#async::Timer;
-        use bork_core::send_telemetry_from_ctx;
-        use bork_errors::report_if_error;
+        use krustui_core::r#async::Timer;
+        use krust_core::send_telemetry_from_ctx;
+        use krust_errors::report_if_error;
         use crate::telemetry::AITelemetryEvent;
         use instant::Instant;
-        use bork_core::channel::ChannelState;
-        use bork_core::safe_warn;
+        use krust_core::channel::ChannelState;
+        use krust_core::safe_warn;
     }
 }
-use bork_core::safe_anyhow;
-use bork_errors::report_error;
-use borkui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::safe_anyhow;
+use krust_errors::report_error;
+use krustui_core::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::codebase_index::{CodebaseIndexEvent, RetrievalID, SyncProgress};
 use super::fragment_metadata::FragmentMetadata;
@@ -909,7 +909,7 @@ impl CodebaseIndexManager {
         };
 
         let standardized_path =
-            match bork_util::standardized_path::StandardizedPath::from_local_canonicalized(
+            match krust_util::standardized_path::StandardizedPath::from_local_canonicalized(
                 repo_path,
             ) {
                 Ok(path) => path,

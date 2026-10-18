@@ -6,17 +6,17 @@ use instant::Instant;
 use markdown_parser::FormattedTextFragment;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use bork_core::ui::Icon as CoreIcon;
-use bork_multi_agent_api as api;
-use borkui::elements::shimmering_text::ShimmeringTextStateHandle;
-use borkui::elements::{Border, Container, Empty, Flex, MouseStateHandle, ParentElement, Text};
-use borkui::keymap::Keystroke;
-use borkui::presenter::ChildView;
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::{
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krust_core::ui::Icon as CoreIcon;
+use krust_multi_agent_api as api;
+use krustui::elements::shimmering_text::ShimmeringTextStateHandle;
+use krustui::elements::{Border, Container, Empty, Flex, MouseStateHandle, ParentElement, Text};
+use krustui::keymap::Keystroke;
+use krustui::presenter::ChildView;
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -24,9 +24,9 @@ use borkui::{
 use super::cli_controller::{CLISubagentController, CLISubagentEvent, UserTakeOverReason};
 use super::model::{AIBlockModel, AIBlockModelImpl, AIBlockOutputStatus};
 use super::view_impl::common::{
-    render_switch_control_to_user_button, render_borking_indicator, render_borking_indicator_base,
+    render_switch_control_to_user_button, render_krusting_indicator, render_krusting_indicator_base,
     AutoExecuteButtonProps, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
-    BorkingIndicatorProps, BorkingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
+    KrustingIndicatorProps, KrustingProps, LOAD_OUTPUT_MESSAGE, SWEAR_LOAD_OUTPUT_MESSAGE,
     SWEAR_THINKING_MESSAGE, THINKING_MESSAGE, WAITING_FOR_USER_INPUT_MESSAGE,
 };
 use crate::ai::agent::conversation::AIConversationId;
@@ -64,7 +64,7 @@ use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
 use crate::terminal::view::ambient_agent::{
     is_cloud_agent_pre_first_exchange, AmbientAgentViewModel, AmbientAgentViewModelEvent,
 };
-use crate::terminal::borkify::render::LEFT_STRIPE_WIDTH;
+use crate::terminal::krustify::render::LEFT_STRIPE_WIDTH;
 use crate::terminal::{
     TerminalModel, CANCEL_COMMAND_KEYBINDING, TOGGLE_AUTOEXECUTE_MODE_KEYBINDING,
     TOGGLE_HIDE_CLI_RESPONSES_KEYBINDING, TOGGLE_QUEUE_NEXT_PROMPT_KEYBINDING,
@@ -116,17 +116,17 @@ pub struct BlocklistAIStatusBar {
     summarization_start_time: Option<Instant>,
     /// When the in-flight run's shimmer line started, and the periodic timer
     /// that re-renders it so its rotating message advances (see
-    /// `rotating_borking_text`) — a buffered local Ollama turn produces no
+    /// `rotating_krusting_text`) — a buffered local Ollama turn produces no
     /// mid-stream updates of its own, so nothing else would refresh the line.
-    borking_rotation_started_at: Option<Instant>,
-    borking_rotation_timer_handle: Option<SpawnedFutureHandle>,
+    krusting_rotation_started_at: Option<Instant>,
+    krusting_rotation_timer_handle: Option<SpawnedFutureHandle>,
     /// Handle for the 1-second periodic timer that refreshes the "Last read …" suffix in
-    /// the borking indicator while the active block has a recorded LRC snapshot.
+    /// the krusting indicator while the active block has a recorded LRC snapshot.
     last_read_refresh_handle: Option<SpawnedFutureHandle>,
 
     latest_response_stream_id: Option<ResponseStreamId>,
 
-    /// Agent tip to display below the borking indicator.
+    /// Agent tip to display below the krusting indicator.
     current_tip: Option<AgentTip>,
 
     ephemeral_message_model: ModelHandle<EphemeralMessageModel>,
@@ -377,8 +377,8 @@ impl BlocklistAIStatusBar {
             is_summarization_cancel_dialog_open: false,
             summarization_timer_handle: None,
             summarization_start_time: None,
-            borking_rotation_started_at: None,
-            borking_rotation_timer_handle: None,
+            krusting_rotation_started_at: None,
+            krusting_rotation_timer_handle: None,
             last_read_refresh_handle: None,
             ambient_agent_view_model: None,
             current_tip: None,
@@ -543,9 +543,9 @@ impl BlocklistAIStatusBar {
         // Keep the shimmer line's rotating message advancing while the run is
         // in flight; stop (and reset the rotation clock) once it settles.
         if is_run_in_flight {
-            self.start_borking_rotation(ctx);
+            self.start_krusting_rotation(ctx);
         } else {
-            self.stop_borking_rotation();
+            self.stop_krusting_rotation();
         }
 
         match status {
@@ -709,11 +709,11 @@ impl BlocklistAIStatusBar {
     /// Starts (or keeps) the periodic re-render that advances the shimmer
     /// line's rotating message while a run is in flight. Mirrors
     /// [`Self::start_summarization_timer`]'s self-rescheduling shape.
-    fn start_borking_rotation(&mut self, ctx: &mut ViewContext<Self>) {
-        if self.borking_rotation_started_at.is_none() {
-            self.borking_rotation_started_at = Some(Instant::now());
+    fn start_krusting_rotation(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.krusting_rotation_started_at.is_none() {
+            self.krusting_rotation_started_at = Some(Instant::now());
         }
-        if self.borking_rotation_timer_handle.is_some() {
+        if self.krusting_rotation_timer_handle.is_some() {
             return;
         }
         let handle = ctx.spawn(
@@ -721,19 +721,19 @@ impl BlocklistAIStatusBar {
                 Timer::after(Duration::from_millis(2500)).await;
             },
             |me, _unit, ctx| {
-                me.borking_rotation_timer_handle = None;
-                if me.borking_rotation_started_at.is_some() {
+                me.krusting_rotation_timer_handle = None;
+                if me.krusting_rotation_started_at.is_some() {
                     ctx.notify();
-                    me.start_borking_rotation(ctx);
+                    me.start_krusting_rotation(ctx);
                 }
             },
         );
-        self.borking_rotation_timer_handle = Some(handle);
+        self.krusting_rotation_timer_handle = Some(handle);
     }
 
-    fn stop_borking_rotation(&mut self) {
-        self.borking_rotation_started_at = None;
-        if let Some(handle) = self.borking_rotation_timer_handle.take() {
+    fn stop_krusting_rotation(&mut self) {
+        self.krusting_rotation_started_at = None;
+        if let Some(handle) = self.krusting_rotation_timer_handle.take() {
             handle.abort();
         }
     }
@@ -742,7 +742,7 @@ impl BlocklistAIStatusBar {
     /// messages — one line, updating in place — because a buffered local turn
     /// otherwise sits on a single static label for its entire generation.
     /// Other harnesses keep the plain Sending/Thinking split.
-    fn rotating_borking_text(
+    fn rotating_krusting_text(
         &self,
         has_output: bool,
         swear_mode: bool,
@@ -784,7 +784,7 @@ impl BlocklistAIStatusBar {
             ]
         };
         let index = self
-            .borking_rotation_started_at
+            .krusting_rotation_started_at
             .map(|start| (start.elapsed().as_secs() / 3) as usize)
             .unwrap_or(0)
             % messages.len();
@@ -873,7 +873,7 @@ impl BlocklistAIStatusBar {
         }
     }
 
-    fn render_borking_indicator_for_latest_exchange(
+    fn render_krusting_indicator_for_latest_exchange(
         &self,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
@@ -888,12 +888,12 @@ impl BlocklistAIStatusBar {
                 .is_some_and(|metadata| {
                     !metadata.should_hide_block() && metadata.long_running_control_state().is_none()
                 });
-        let should_render_borking = !model.request_type(app).is_passive()
+        let should_render_krusting = !model.request_type(app).is_passive()
             && !has_expanded_requested_command_with_no_subagent
             && (conversation.status().is_in_progress()
                 || (active_block.is_agent_in_control() && !active_block.is_agent_blocked()));
 
-        if !should_render_borking {
+        if !should_render_krusting {
             return None;
         }
 
@@ -928,7 +928,7 @@ impl BlocklistAIStatusBar {
             })
             .unwrap_or((None, None));
 
-        let fallback_borking_text = resolve_fallback_borking_message(
+        let fallback_krusting_text = resolve_fallback_krusting_message(
             current_is_fallback,
             current_display_name,
             model.as_ref(),
@@ -940,19 +940,19 @@ impl BlocklistAIStatusBar {
             .as_ref()
             .is_some_and(|output| !output.get().messages.is_empty());
         let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
-        let default_borking_text = fallback_borking_text
+        let default_krusting_text = fallback_krusting_text
             .as_deref()
             .map(str::to_owned)
-            .unwrap_or_else(|| self.rotating_borking_text(has_output, swear_mode, app));
-        let secondary_element = if fallback_borking_text.is_some() {
+            .unwrap_or_else(|| self.rotating_krusting_text(has_output, swear_mode, app));
+        let secondary_element = if fallback_krusting_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
             // Fork: no rotating tips under the "Sending..." shimmer.
             None
         };
 
-        Some(render_borking_indicator(
-            BorkingProps {
+        Some(render_krusting_indicator(
+            KrustingProps {
                 model: model.as_ref(),
                 terminal_model: &terminal_model,
                 action_model: self.action_model.as_ref(app),
@@ -999,7 +999,7 @@ impl BlocklistAIStatusBar {
                     should_hide_responses,
                 )),
                 force_refresh_button,
-                default_borking_text,
+                default_krusting_text,
                 secondary_element,
                 last_snapshot_at,
             },
@@ -1027,10 +1027,10 @@ impl BlocklistAIStatusBar {
 
         let progress = ambient_agent_model.agent_progress()?;
         let progress_text = progress.setup_status_text();
-        Some(render_borking_indicator_base(
-            BorkingIndicatorProps {
+        Some(render_krusting_indicator_base(
+            KrustingIndicatorProps {
                 icon: None,
-                borking_indicator_text: MaybeShimmeringText::Shimmering {
+                krusting_indicator_text: MaybeShimmeringText::Shimmering {
                     text: progress_text.into(),
                     shimmering_text_handle: self.shimmering_text_handle.clone(),
                 },
@@ -1128,7 +1128,7 @@ fn latest_model_used_before_exchange<V: View>(
 
 fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     use markdown_parser::{FormattedTextFragment, FormattedTextLine};
-    use borkui::text_layout::ClipConfig;
+    use krustui::text_layout::ClipConfig;
 
     use crate::ai::agent_tips::AITip;
 
@@ -1150,7 +1150,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
 
     let formatted_text =
         markdown_parser::FormattedText::new(vec![FormattedTextLine::Line(fragments)]);
-    borkui::elements::FormattedTextElement::new(
+    krustui::elements::FormattedTextElement::new(
         formatted_text,
         appearance.monospace_font_size() - 3.,
         appearance.ui_font_family(),
@@ -1162,7 +1162,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     .set_selectable(true)
     .with_clip(ClipConfig::ellipsis())
     .register_default_click_handlers_with_action_support(move |link, evt, app| {
-        use borkui::elements::HyperlinkLens;
+        use krustui::elements::HyperlinkLens;
         match link {
             HyperlinkLens::Url(url) => {
                 send_telemetry_from_app_ctx!(
@@ -1221,16 +1221,16 @@ fn render_fallback_explanation<V: View>(
     .finish()
 }
 
-/// If the current exchange is using a fallback model, returns the borking message to display
-/// (e.g. "Borking with Claude 3.5 Haiku."). When the current exchange's output doesn't have
+/// If the current exchange is using a fallback model, returns the krusting message to display
+/// (e.g. "Krusting with Claude 3.5 Haiku."). When the current exchange's output doesn't have
 /// model info yet (the ModelUsed message hasn't arrived), we check the most recent previous
 /// exchange as a best guess — if the conversation already fell back, the next exchange likely
-/// will too. This avoids a flicker from "Borking..." to "Borking with {name}." on follow-ups.
+/// will too. This avoids a flicker from "Krusting..." to "Krusting with {name}." on follow-ups.
 ///
 /// We skip the lookback for new user queries because the underlying model may have recovered
 /// since the previous exchange. For agent-initiated follow-up exchanges (action results, etc.)
 /// the lookback is still applied.
-fn resolve_fallback_borking_message<V: View>(
+fn resolve_fallback_krusting_message<V: View>(
     current_is_fallback: Option<bool>,
     current_display_name: Option<String>,
     model: &dyn AIBlockModel<View = V>,
@@ -1260,8 +1260,8 @@ fn resolve_fallback_borking_message<V: View>(
         return None;
     }
     Some(match display_name.as_deref() {
-        Some(name) => format!("Borking with {name}."),
-        None => "Borking with another model.".to_owned(),
+        Some(name) => format!("Krusting with {name}."),
+        None => "Krusting with another model.".to_owned(),
     })
 }
 
@@ -1270,7 +1270,7 @@ impl View for BlocklistAIStatusBar {
         "BlocklistAIStatusBar"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn krustui::Element> {
         let appearance = Appearance::as_ref(app);
         let agent_view_controller = self.agent_view_controller.as_ref(app);
         if let Some(cloud_mode_setup_terminal_message) =
@@ -1295,10 +1295,10 @@ impl View for BlocklistAIStatusBar {
                         )
                     })
             {
-                render_borking_indicator_base(
-                    BorkingIndicatorProps {
+                render_krusting_indicator_base(
+                    KrustingIndicatorProps {
                         icon: None,
-                        borking_indicator_text: MaybeShimmeringText::Shimmering {
+                        krusting_indicator_text: MaybeShimmeringText::Shimmering {
                             text: "Setting up environment".into(),
                             shimmering_text_handle: self.shimmering_text_handle.clone(),
                         },
@@ -1322,10 +1322,10 @@ impl View for BlocklistAIStatusBar {
                     .current_message()
                     .is_none()
             {
-                render_borking_indicator_base(
-                    BorkingIndicatorProps {
+                render_krusting_indicator_base(
+                    KrustingIndicatorProps {
                         icon: Some(icons::gray_clock_icon(appearance).finish()),
-                        borking_indicator_text: MaybeShimmeringText::Static(
+                        krusting_indicator_text: MaybeShimmeringText::Static(
                             WAITING_FOR_USER_INPUT_MESSAGE.into(),
                         ),
                         non_shimmering_text: None,
@@ -1345,14 +1345,14 @@ impl View for BlocklistAIStatusBar {
                     },
                     app,
                 )
-            } else if let (Some(borking_indicator), true) = (
-                self.render_borking_indicator_for_latest_exchange(app),
+            } else if let (Some(krusting_indicator), true) = (
+                self.render_krusting_indicator_for_latest_exchange(app),
                 self.ephemeral_message_model
                     .as_ref(app)
                     .current_message()
                     .is_none(),
             ) {
-                borking_indicator
+                krusting_indicator
             } else if self.ambient_agent_view_model.as_ref().is_some_and(
                 |ambient_agent_view_model| {
                     ambient_agent_view_model
@@ -1360,7 +1360,7 @@ impl View for BlocklistAIStatusBar {
                         .is_waiting_for_session()
                 },
             ) {
-                // Don't render borking indicator - the loading screen is shown in the main view
+                // Don't render krusting indicator - the loading screen is shown in the main view
                 return Empty::new().finish();
             } else if agent_view_controller.is_active() {
                 // The orchestration pill bar in the agent view header
@@ -1451,7 +1451,7 @@ pub enum BlocklistAIStatusBarAction {
     Stop,
     /// Force the agent's pending poll for a long-running command to resolve
     /// immediately with a fresh snapshot, bypassing its agent-set timer. Dispatched
-    /// by the inline `Check now` affordance in the borking indicator.
+    /// by the inline `Check now` affordance in the krusting indicator.
     ForceRefreshAgentView {
         block_id: crate::terminal::model::block::BlockId,
     },

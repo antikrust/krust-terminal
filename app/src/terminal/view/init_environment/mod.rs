@@ -1,10 +1,10 @@
 pub mod mode_selector;
 
-use borkui::elements::{
+use krustui::elements::{
     ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement,
     Radius, Text,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

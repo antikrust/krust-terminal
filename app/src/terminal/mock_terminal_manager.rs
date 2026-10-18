@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
-use borkui::{AppContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
+use krustui::{AppContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
 
 use super::event_listener::ChannelEventListener;
 use super::model::session::Sessions;
@@ -139,8 +139,8 @@ impl TerminalManager for MockTerminalManager {
 
 #[cfg(test)]
 mod testing {
-    use borkui::platform::WindowStyle;
-    use borkui::{App, Element, SingletonEntity};
+    use krustui::platform::WindowStyle;
+    use krustui::{App, Element, SingletonEntity};
 
     use super::*;
     use crate::server::server_api::ServerApiProvider;
@@ -151,21 +151,21 @@ mod testing {
         terminal_view: ViewHandle<TerminalView>,
     }
 
-    impl borkui::Entity for TerminalRootView {
+    impl krustui::Entity for TerminalRootView {
         type Event = ();
     }
 
-    impl borkui::View for TerminalRootView {
+    impl krustui::View for TerminalRootView {
         fn ui_name() -> &'static str {
             "TerminalRootView"
         }
 
-        fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
-            borkui::elements::ChildView::new(&self.terminal_view).finish()
+        fn render(&self, _app: &krustui::AppContext) -> Box<dyn krustui::Element> {
+            krustui::elements::ChildView::new(&self.terminal_view).finish()
         }
     }
 
-    impl borkui::TypedActionView for TerminalRootView {
+    impl krustui::TypedActionView for TerminalRootView {
         type Action = ();
     }
 

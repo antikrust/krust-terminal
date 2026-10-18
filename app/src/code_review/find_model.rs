@@ -3,17 +3,17 @@ use std::ops::Range;
 
 use string_offset::CharOffset;
 #[cfg(not(target_family = "wasm"))]
-use bork_core::channel::ChannelState;
-use bork_core::send_telemetry_from_ctx;
+use krust_core::channel::ChannelState;
+use krust_core::send_telemetry_from_ctx;
 #[cfg(not(target_family = "wasm"))]
-use bork_editor::content::find::SearchConfig;
+use krust_editor::content::find::SearchConfig;
 #[cfg(not(target_family = "wasm"))]
-use bork_editor::search::Searcher;
-use bork_editor::search::{RestorableSearchResults, SelectedResult};
+use krust_editor::search::Searcher;
+use krust_editor::search::{RestorableSearchResults, SelectedResult};
 #[cfg(not(target_family = "wasm"))]
-use bork_errors::report_error;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ViewHandle, WeakViewHandle};
+use krust_errors::report_error;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ViewHandle, WeakViewHandle};
 
 use crate::code::local_code_editor::LocalCodeEditorView;
 use crate::code_review::code_review_view::CodeReviewView;
@@ -238,7 +238,7 @@ impl CodeReviewFindModel {
         &self,
         editor_id: EntityId,
         ctx: &AppContext,
-    ) -> Option<borkui::ModelHandle<Searcher>> {
+    ) -> Option<krustui::ModelHandle<Searcher>> {
         let view = self.weak_view_handle.upgrade(ctx);
         if view.is_none() {
             if ChannelState::enable_debug_features() {

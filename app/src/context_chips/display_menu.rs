@@ -7,14 +7,14 @@ use std::sync::Arc;
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use instant::Instant;
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::builder::MIN_FONT_SIZE;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_editor::editor::NavigationKey;
-use borkui::clipboard::ClipboardContent;
-use borkui::color::ColorU;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::builder::MIN_FONT_SIZE;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_editor::editor::NavigationKey;
+use krustui::clipboard::ClipboardContent;
+use krustui::color::ColorU;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty,
     EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior,
@@ -22,12 +22,12 @@ use borkui::elements::{
     PositionedElementOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable,
     ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::FixedBinding;
-use borkui::r#async::Timer;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::Pixels;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::FixedBinding;
+use krustui::r#async::Timer;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::Pixels;
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity as _, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -127,7 +127,7 @@ const ENV_SIDE_CAR_OUTER_RADIUS: f32 = 6.;
 const ENV_SIDE_CAR_INNER_RADIUS: f32 = 4.;
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -786,7 +786,7 @@ impl DisplayChipMenu {
         let image_key = format!("env-sidecar:{}:image", data.id);
 
         let icon = |icon: Icon| {
-            ConstrainedBox::new(icon.to_borkui_icon(Fill::Solid(label_text_color)).finish())
+            ConstrainedBox::new(icon.to_krustui_icon(Fill::Solid(label_text_color)).finish())
                 .with_width(ENV_SIDE_CAR_ICON_SIZE)
                 .with_height(ENV_SIDE_CAR_ICON_SIZE)
                 .finish()
@@ -909,7 +909,7 @@ impl DisplayChipMenu {
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
             // Leave the scrollbar gutter background transparent.
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_padding_start(0.)
         .with_padding_end(0.)
@@ -1008,7 +1008,7 @@ impl DisplayChipMenu {
                     updated_text.add_child(
                         Container::new(
                             ConstrainedBox::new(
-                                icon.to_borkui_icon(Fill::Solid(text_color)).finish(),
+                                icon.to_krustui_icon(Fill::Solid(text_color)).finish(),
                             )
                             .with_height(icon_size)
                             .with_width(icon_size)
@@ -1181,7 +1181,7 @@ impl DisplayChipMenu {
                                 let glyph_size = ENV_MENU_ICON_SIZE;
 
                                 let icon_glyph = ConstrainedBox::new(
-                                    icon.to_borkui_icon(Fill::Solid(main_text)).finish(),
+                                    icon.to_krustui_icon(Fill::Solid(main_text)).finish(),
                                 )
                                 .with_width(glyph_size)
                                 .with_height(glyph_size)
@@ -1208,7 +1208,7 @@ impl DisplayChipMenu {
                             left_side.add_child(
                                 Container::new(
                                     ConstrainedBox::new(
-                                        icon.to_borkui_icon(Fill::Solid(main_text)).finish(),
+                                        icon.to_krustui_icon(Fill::Solid(main_text)).finish(),
                                     )
                                     .with_height(icon_size)
                                     .with_width(icon_size)
@@ -1326,7 +1326,7 @@ impl DisplayChipMenu {
             scrollbar_width,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_padding_end(0.)
         .with_padding_start(0.);

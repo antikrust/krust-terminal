@@ -2,8 +2,8 @@ use std::future::Future;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
-use borkui::r#async::Timer;
-use borkui::{duration_with_jitter, RetryOption};
+use krustui::r#async::Timer;
+use krustui::{duration_with_jitter, RetryOption};
 
 use crate::server::graphql::GraphQLError;
 use crate::server::server_api::presigned_upload::HttpStatusError;
@@ -13,7 +13,7 @@ use crate::server::server_api::presigned_upload::HttpStatusError;
 /// - Out-of-band queries based on user actions (i.e. fetch team info when user opens the settings page, user
 /// starts the app)
 /// However, we also periodically poll for updates in case RTC is down, the user's websocket
-/// is borked, etc.
+/// is krusted, etc.
 /// For team memberships, we also don't yet process messages for joining or leaving a team, so the user would see these
 /// updates only after a periodic poll.
 pub const PERIODIC_POLL: Duration = Duration::from_secs(60 * 10);

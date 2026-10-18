@@ -1,8 +1,8 @@
-use bork_multi_agent_api as api;
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
+use krust_multi_agent_api as api;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
 
 use super::{
     skill_reference_from_api_skill_ref, skill_reference_from_read_skill_ref, SkillConversionError,

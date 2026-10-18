@@ -7,12 +7,12 @@
             "is_prerelease": true,
             "is_autopush": true,
             "release_base_name": "Dev Release",
-            "release_body_text": "Nightly Bork Dev release",
-            "sentry_project": "bork-client-dev",
+            "release_body_text": "Nightly Krust Dev release",
+            "sentry_project": "krust-client-dev",
             "sentry_environment": "dev_release",
             "changelog_slack_channel": "#dev-beta-changelogs",
             "gcs_cache_control_value": "private, max-age=604800, immutable",
-            "web_gcs_bucket_prefix": "bork-server-staging"
+            "web_gcs_bucket_prefix": "krust-server-staging"
         },
         {
             "channel": "preview",
@@ -20,12 +20,12 @@
             "is_prerelease": false,
             "is_autopush": false,
             "release_base_name": "Preview Release",
-            "release_body_text": "Bork Preview release",
-            "sentry_project": "bork-client-beta-stable",
+            "release_body_text": "Krust Preview release",
+            "sentry_project": "krust-client-beta-stable",
             "sentry_environment": "preview_release",
             "changelog_slack_channel": "#dev-beta-changelogs",
             "gcs_cache_control_value": "public, max-age=604800, immutable",
-            "web_gcs_bucket_prefix": "bork"
+            "web_gcs_bucket_prefix": "krust"
         },
         {
             "channel": "stable",
@@ -33,12 +33,12 @@
             "is_prerelease": false,
             "is_autopush": false,
             "release_base_name": "Stable Release",
-            "release_body_text": "Bork Stable release",
-            "sentry_project": "bork-client-beta-stable",
+            "release_body_text": "Krust Stable release",
+            "sentry_project": "krust-client-beta-stable",
             "sentry_environment": "stable_release",
             "changelog_slack_channel": "#release",
             "gcs_cache_control_value": "public, max-age=604800, immutable",
-            "web_gcs_bucket_prefix": "bork"
+            "web_gcs_bucket_prefix": "krust"
         }
     ]
 }

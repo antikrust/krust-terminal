@@ -1,6 +1,6 @@
-use bork_completer::completer::SuggestionTypeName;
-use borkui::text_layout::TextStyle;
-use borkui::App;
+use krust_completer::completer::SuggestionTypeName;
+use krustui::text_layout::TextStyle;
+use krustui::App;
 
 use crate::appearance::Appearance;
 use crate::terminal::input::decorations::InputBackgroundJobOptions;
@@ -39,7 +39,7 @@ fn test_decorations_with_multibyte_chars() {
                 .update(ctx, |sessions, _ctx| {
                     // Wait until external commands have been loaded.
                     let session = sessions.get(session_id).expect("session should exist");
-                    borkui::r#async::block_on(session.load_external_commands());
+                    krustui::r#async::block_on(session.load_external_commands());
                 });
             session_id
         });

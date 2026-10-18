@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use chrono::Utc;
 use tempfile::tempdir;
-use bork_cli::artifact::UploadArtifactArgs;
+use krust_cli::artifact::UploadArtifactArgs;
 
 use super::*;
 use crate::ai::agent::api::ServerConversationToken;

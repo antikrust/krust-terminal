@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use url::Url;
-use borkui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use krustui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use super::super::{DefaultSessionModeBehavior, Direction};
 use super::view::PaneView;
@@ -12,8 +12,8 @@ use super::{
 };
 use crate::app_state::{LeafContents, NotebookPaneSnapshot};
 use crate::cloud_object::Space;
-use crate::drive::items::BorkDriveItemId;
-use crate::drive::{CloudObjectTypeAndId, OpenBorkDriveObjectSettings};
+use crate::drive::items::KrustDriveItemId;
+use crate::drive::{CloudObjectTypeAndId, OpenKrustDriveObjectSettings};
 use crate::notebooks::link::{LinkEvent, NotebookLinks};
 use crate::notebooks::manager::{NotebookManager, NotebookSource};
 use crate::notebooks::notebook::{NotebookEvent, NotebookView};
@@ -43,7 +43,7 @@ impl NotebookPane {
     /// Restore a notebook pane given its cloud notebook ID.
     pub fn restore(
         notebook_id: Option<SyncId>,
-        settings: &OpenBorkDriveObjectSettings,
+        settings: &OpenKrustDriveObjectSettings,
         ctx: &mut ViewContext<PaneGroup>,
     ) -> anyhow::Result<Self> {
         let window_id = ctx.window_id();
@@ -77,7 +77,7 @@ impl PaneContent for NotebookPane {
         let notebook_id = self.notebook_view(app).as_ref(app).notebook_id(app);
         LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
             notebook_id,
-            settings: OpenBorkDriveObjectSettings::default(),
+            settings: OpenKrustDriveObjectSettings::default(),
         })
     }
 
@@ -174,15 +174,15 @@ pub(super) fn subscribe_to_link_model(
     ctx.subscribe_to_model(handle, move |pane_group, _, event, ctx| match event {
         LinkEvent::OpenFileNotebook { path, session } => {
             // Opening local files is delegated to the parent workspace.
-            ctx.emit(crate::pane_group::Event::OpenFileInBork {
+            ctx.emit(crate::pane_group::Event::OpenFileInKrust {
                 path: crate::code::buffer_location::LocalOrRemotePath::Local(path.clone()),
                 session: session.clone(),
             })
         }
-        LinkEvent::OpenBorkDriveLink {
-            open_bork_drive_args,
-        } => ctx.emit(crate::pane_group::Event::OpenBorkDriveLink {
-            open_bork_drive_args: open_bork_drive_args.clone(),
+        LinkEvent::OpenKrustDriveLink {
+            open_krust_drive_args,
+        } => ctx.emit(crate::pane_group::Event::OpenKrustDriveLink {
+            open_krust_drive_args: open_krust_drive_args.clone(),
         }),
         LinkEvent::StartLocalSession { path } => {
             pane_group.add_session_in_directory(
@@ -201,7 +201,7 @@ pub(super) fn subscribe_to_link_model(
             target,
             line_col,
         } => {
-            // Emit event to workspace to handle opening in Bork
+            // Emit event to workspace to handle opening in Krust
             ctx.emit(crate::pane_group::Event::OpenFileWithTarget {
                 path: path.clone(),
                 target: target.clone(),
@@ -226,7 +226,7 @@ fn handle_notebook_event(
         NotebookEvent::EditWorkflow(id) => {
             ctx.emit(crate::pane_group::Event::OpenCloudWorkflowForEdit(*id))
         }
-        NotebookEvent::ViewInBorkDrive(id) => view_in_bork_drive(*id, ctx),
+        NotebookEvent::ViewInKrustDrive(id) => view_in_krust_drive(*id, ctx),
         NotebookEvent::MoveToSpace {
             cloud_object_type_and_id,
             new_space,
@@ -266,8 +266,8 @@ fn run_notebook_workflow(
     });
 }
 
-fn view_in_bork_drive(id: BorkDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
-    ctx.emit(crate::pane_group::Event::ViewInBorkDrive(id))
+fn view_in_krust_drive(id: KrustDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
+    ctx.emit(crate::pane_group::Event::ViewInKrustDrive(id))
 }
 
 fn move_to_space(

@@ -2,15 +2,15 @@
 name = "syntax_tree"
 version = "0.1.0"
 edition = "2021"
-authors = ["Bork Team <dev@bork.baby>"]
+authors = ["Krust Team <dev@krust.baby>"]
 publish.workspace = true
 license.workspace = true
 
 [dependencies]
 rangemap.workspace = true
 arborium.workspace = true
-borkui_core.workspace = true
-bork_editor.workspace = true
+krustui_core.workspace = true
+krust_editor.workspace = true
 languages.workspace = true
 futures.workspace = true
 futures-lite.workspace = true
@@ -18,8 +18,8 @@ parking_lot.workspace = true
 log.workspace = true
 string-offset.workspace = true
 streaming-iterator = "0.1.9"
-bork_util.workspace = true
+krust_util.workspace = true
 
 [dev-dependencies]
-bork_editor = { workspace = true, features = ["test-util"] }
-borkui = { workspace = true, features = ["test-util"] }
+krust_editor = { workspace = true, features = ["test-util"] }
+krustui = { workspace = true, features = ["test-util"] }

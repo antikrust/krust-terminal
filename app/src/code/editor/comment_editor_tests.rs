@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::RepoMetadataModel;
-use borkui::platform::WindowStyle;
-use borkui::presenter::ChildView;
-use borkui::{App, Element, Entity, TypedActionView, View, ViewHandle, WindowId};
+use krustui::platform::WindowStyle;
+use krustui::presenter::ChildView;
+use krustui::{App, Element, Entity, TypedActionView, View, ViewHandle, WindowId};
 
 use super::{create_editable_comment_markdown_editor, create_readonly_comment_markdown_editor};
 use crate::appearance::Appearance;
@@ -40,7 +40,7 @@ impl View for TestView {
         "CommentEditorTestView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         ChildView::new(&self.editor).finish()
     }
 }

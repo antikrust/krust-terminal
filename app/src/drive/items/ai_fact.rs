@@ -1,9 +1,9 @@
-use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement};
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element};
+use krustui::elements::{Container, Flex, MouseStateHandle, ParentElement};
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element};
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::ai::facts::{AIFact, AIMemory, CloudAIFact};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
@@ -12,18 +12,18 @@ use crate::drive::{CloudObjectTypeAndId, DriveObjectType};
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct BorkDriveAIFact {
+pub struct KrustDriveAIFact {
     id: CloudObjectTypeAndId,
     ai_fact: CloudAIFact,
 }
 
-impl BorkDriveAIFact {
+impl KrustDriveAIFact {
     pub fn new(id: CloudObjectTypeAndId, ai_fact: CloudAIFact) -> Self {
         Self { id, ai_fact }
     }
 }
 
-impl BorkDriveItem for BorkDriveAIFact {
+impl KrustDriveItem for KrustDriveAIFact {
     fn display_name(&self) -> Option<String> {
         match &self.ai_fact.model().string_model {
             AIFact::Memory(AIMemory { content, name, .. }) => {
@@ -84,8 +84,8 @@ impl BorkDriveItem for BorkDriveAIFact {
         )
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::Object(self.id)
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -105,7 +105,7 @@ impl BorkDriveItem for BorkDriveAIFact {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 }

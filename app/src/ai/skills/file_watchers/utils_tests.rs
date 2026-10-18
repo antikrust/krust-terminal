@@ -9,11 +9,11 @@ use repo_metadata::{
     StandingQueryContent, StandingQueryResults, StandingQueryResultsDelta,
 };
 use virtual_fs::{Stub, VirtualFS};
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::App;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::App;
 
 use super::{
     extract_skill_parent_directory, find_project_skill_files_in_tree, is_home_provider_path,
@@ -220,7 +220,7 @@ fn extract_skill_parent_directory_different_providers() {
         return;
     };
     let repo = home_dir.join("repo");
-    let providers = [".bork", ".claude", ".codex", ".cursor", ".gemini"];
+    let providers = [".krust", ".claude", ".codex", ".cursor", ".gemini"];
     for provider in providers {
         let path = repo
             .join(provider)
@@ -362,7 +362,7 @@ fn is_home_provider_path_true_for_known_providers() {
     let path = home_dir.join(".agents").join("skills");
     assert!(is_home_provider_path(&path));
 
-    if let Some(path) = bork_core::paths::bork_home_skills_dir() {
+    if let Some(path) = krust_core::paths::krust_home_skills_dir() {
         assert!(is_home_provider_path(&path));
     }
 
@@ -380,17 +380,17 @@ fn is_home_provider_path_true_for_known_providers() {
 }
 
 #[test]
-fn extract_skill_parent_directory_returns_home_dir_for_bork_home_skill() {
+fn extract_skill_parent_directory_returns_home_dir_for_krust_home_skill() {
     let Some(home_dir) = dirs::home_dir() else {
         eprintln!("Skipping test: home directory not available");
         return;
     };
-    let Some(bork_home_skills_dir) = bork_core::paths::bork_home_skills_dir() else {
-        eprintln!("Skipping test: Bork home skills directory not available");
+    let Some(krust_home_skills_dir) = krust_core::paths::krust_home_skills_dir() else {
+        eprintln!("Skipping test: Krust home skills directory not available");
         return;
     };
 
-    let skill_path = bork_home_skills_dir.join("test-skill").join("SKILL.md");
+    let skill_path = krust_home_skills_dir.join("test-skill").join("SKILL.md");
     let result = extract_skill_parent_directory(&LocalOrRemotePath::Local(skill_path));
     assert_eq!(result.ok(), Some(LocalOrRemotePath::Local(home_dir)));
 }
@@ -464,7 +464,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             false,
         ));
         let skill1_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents/skills/root-skill-1"),
             )
             .unwrap(),
@@ -472,8 +472,8 @@ fn find_skill_files_in_tree_finds_root_skills() {
             ignored: false,
             loaded: true,
         });
-        let bork_skills = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let krust_skills = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents/skills"),
             )
             .unwrap(),
@@ -481,12 +481,12 @@ fn find_skill_files_in_tree_finds_root_skills() {
             ignored: false,
             loaded: true,
         });
-        let bork_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let krust_dir = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents"),
             )
             .unwrap(),
-            children: vec![bork_skills],
+            children: vec![krust_skills],
             ignored: false,
             loaded: true,
         });
@@ -496,7 +496,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             false,
         ));
         let skill2_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".claude/skills/root-skill-2"),
             )
             .unwrap(),
@@ -505,7 +505,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             loaded: true,
         });
         let claude_skills = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".claude/skills"),
             )
             .unwrap(),
@@ -514,7 +514,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             loaded: true,
         });
         let claude_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".claude"),
             )
             .unwrap(),
@@ -524,8 +524,8 @@ fn find_skill_files_in_tree_finds_root_skills() {
         });
 
         let root = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
-            children: vec![bork_dir, claude_dir],
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
+            children: vec![krust_dir, claude_dir],
             ignored: false,
             loaded: true,
         });
@@ -535,7 +535,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             app.add_singleton_model(|_| DetectedRepositories::default());
             let repo_handle = watcher.update(&mut app, |w, ctx| {
                 w.add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap(),
                     ctx,
                 )
@@ -546,7 +546,7 @@ fn find_skill_files_in_tree_finds_root_skills() {
             let model_handle = app.add_singleton_model(RepoMetadataModel::new);
             model_handle.update(&mut app, |model, ctx| {
                 let key =
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap();
                 model.insert_test_state(key.clone(), state, ctx);
                 model.insert_test_standing_results(
@@ -613,7 +613,7 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             false,
         ));
         let root_skill_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents/skills/root-skill"),
             )
             .unwrap(),
@@ -621,8 +621,8 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             ignored: false,
             loaded: true,
         });
-        let root_bork_skills = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let root_krust_skills = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents/skills"),
             )
             .unwrap(),
@@ -630,12 +630,12 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             ignored: false,
             loaded: true,
         });
-        let root_bork = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let root_krust = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join(".agents"),
             )
             .unwrap(),
-            children: vec![root_bork_skills],
+            children: vec![root_krust_skills],
             ignored: false,
             loaded: true,
         });
@@ -645,7 +645,7 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             false,
         ));
         let frontend_skill_dir = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join("packages/frontend/.agents/skills/frontend-skill"),
             )
             .unwrap(),
@@ -653,8 +653,8 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             ignored: false,
             loaded: true,
         });
-        let frontend_bork_skills = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let frontend_krust_skills = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join("packages/frontend/.agents/skills"),
             )
             .unwrap(),
@@ -662,26 +662,26 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             ignored: false,
             loaded: true,
         });
-        let frontend_bork = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+        let frontend_krust = Entry::Directory(DirectoryEntry {
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join("packages/frontend/.agents"),
             )
             .unwrap(),
-            children: vec![frontend_bork_skills],
+            children: vec![frontend_krust_skills],
             ignored: false,
             loaded: true,
         });
         let frontend = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join("packages/frontend"),
             )
             .unwrap(),
-            children: vec![frontend_bork],
+            children: vec![frontend_krust],
             ignored: false,
             loaded: true,
         });
         let packages = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(
                 &repo.join("packages"),
             )
             .unwrap(),
@@ -691,8 +691,8 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
         });
 
         let root = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
-            children: vec![root_bork, packages],
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
+            children: vec![root_krust, packages],
             ignored: false,
             loaded: true,
         });
@@ -702,7 +702,7 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             app.add_singleton_model(|_| DetectedRepositories::default());
             let repo_handle = watcher.update(&mut app, |w, ctx| {
                 w.add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap(),
                     ctx,
                 )
@@ -713,7 +713,7 @@ fn find_skill_files_in_tree_finds_subdirectory_skills() {
             let model_handle = app.add_singleton_model(RepoMetadataModel::new);
             model_handle.update(&mut app, |model, ctx| {
                 let key =
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap();
                 model.insert_test_state(key.clone(), state, ctx);
                 model.insert_test_standing_results(
@@ -942,14 +942,14 @@ fn find_skill_files_in_tree_empty_repo() {
         vfs.mkdir("repo/src");
 
         let src = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(&repo.join("src"))
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(&repo.join("src"))
                 .unwrap(),
             children: vec![],
             ignored: false,
             loaded: true,
         });
         let root = Entry::Directory(DirectoryEntry {
-            path: bork_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
+            path: krust_util::standardized_path::StandardizedPath::try_from_local(&repo).unwrap(),
             children: vec![src],
             ignored: false,
             loaded: true,
@@ -960,7 +960,7 @@ fn find_skill_files_in_tree_empty_repo() {
             app.add_singleton_model(|_| DetectedRepositories::default());
             let repo_handle = watcher.update(&mut app, |w, ctx| {
                 w.add_directory(
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap(),
                     ctx,
                 )
@@ -971,7 +971,7 @@ fn find_skill_files_in_tree_empty_repo() {
             let model_handle = app.add_singleton_model(RepoMetadataModel::new);
             model_handle.update(&mut app, |model, ctx| {
                 let key =
-                    bork_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+                    krust_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                         .unwrap();
                 model.insert_test_state(key, state, ctx);
             });

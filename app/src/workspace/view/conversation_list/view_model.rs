@@ -1,5 +1,5 @@
 use fuzzy_match::match_indices_case_insensitive;
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent_conversations_model::{
     AgentConversationEntry, AgentConversationEntryId, AgentConversationsModel,

@@ -2,17 +2,17 @@ use std::cell::RefCell;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krustui::elements::{
     Border, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::keymap::Keystroke;
-use borkui::text_layout::ClipConfig;
-use borkui::units::Pixels;
-use borkui::{
+use krustui::keymap::Keystroke;
+use krustui::text_layout::ClipConfig;
+use krustui::units::Pixels;
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -330,7 +330,7 @@ impl CommentEditor {
         let theme = appearance.theme();
         let sub_text_color = theme.sub_text_color(Fill::Solid(background)).into_solid();
         let icon = Icon::Github
-            .to_borkui_icon(Fill::Solid(sub_text_color))
+            .to_krustui_icon(Fill::Solid(sub_text_color))
             .finish();
 
         let label = Text::new(

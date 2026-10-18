@@ -1,5 +1,5 @@
 use fuzzy_match::match_indices_case_insensitive;
-use borkui::AppContext;
+use krustui::AppContext;
 
 use crate::ai::conversation_navigation::ConversationNavigationData;
 use crate::search::command_palette::conversations::search_item::{

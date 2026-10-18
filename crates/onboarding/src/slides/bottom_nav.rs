@@ -1,8 +1,8 @@
-use bork_core::ui::appearance::Appearance;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui_core::elements::{
     Align, CrossAxisAlignment, Empty, Flex, MainAxisSize, ParentElement, Shrinkable,
 };
-use borkui_core::Element;
+use krustui_core::Element;
 
 use crate::slides::progress_dots;
 

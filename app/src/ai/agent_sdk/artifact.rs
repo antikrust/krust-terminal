@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use bork_cli::agent::OutputFormat;
-use bork_cli::artifact::{
+use krust_cli::agent::OutputFormat;
+use krust_cli::artifact::{
     ArtifactCommand, DownloadArtifactArgs, GetArtifactArgs, UploadArtifactArgs,
 };
-use bork_cli::GlobalOptions;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::GlobalOptions;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::artifact_upload::{
     CompletedFileArtifactUpload, FileArtifactUploadRequest, FileArtifactUploader,
@@ -130,7 +130,7 @@ impl ArtifactCommandRunner {
     }
 }
 
-impl borkui::Entity for ArtifactCommandRunner {
+impl krustui::Entity for ArtifactCommandRunner {
     type Event = ();
 }
 

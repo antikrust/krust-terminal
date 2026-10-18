@@ -14,11 +14,11 @@
 
 use std::collections::HashMap;
 
-use borkui::elements::{
+use krustui::elements::{
     ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Stack,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };

@@ -3,10 +3,10 @@
 //! We should migrate to these view getters because to make it easier to work
 //! with tabs and panes. The old view getters use `tab_idx` without considering
 //! how many panes are in each tab.
-//! See https://github.com/borkdotdev/bork-internal/pull/4785#issue-1634862270
+//! See https://github.com/krustdotdev/krust-internal/pull/4785#issue-1634862270
 
-use borkui::integration::AssertionCallback;
-use borkui::{async_assert, App, Entity, View, ViewHandle, WindowId};
+use krustui::integration::AssertionCallback;
+use krustui::{async_assert, App, Entity, View, ViewHandle, WindowId};
 
 use crate::ai_assistant::panel::AIAssistantPanelView;
 use crate::input_suggestions::InputSuggestions;

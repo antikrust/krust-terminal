@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use bork_multi_agent_api as api;
-use borkui::{Entity, ModelContext, SingletonEntity};
+use krust_multi_agent_api as api;
+use krustui::{Entity, ModelContext, SingletonEntity};
 
 use super::history_model::{
     BlocklistAIHistoryEvent, BlocklistAIHistoryModel, ConversationStatusUpdate,

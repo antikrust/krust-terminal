@@ -1,5 +1,5 @@
 // The code in this file is adapted from the alacritty_terminal crate under the
-// Apache license; see: crates/bork_terminal/src/model/LICENSE-ALACRITTY.
+// Apache license; see: crates/krust_terminal/src/model/LICENSE-ALACRITTY.
 
 //! A specialized 2D grid implementation optimized for use in a terminal.
 
@@ -9,8 +9,8 @@ use std::cmp::min;
 use std::ops::{Index, IndexMut, Range};
 
 use serde::{Deserialize, Serialize};
-use bork_errors::report_error;
-pub use bork_terminal::model::grid::Dimensions;
+use krust_errors::report_error;
+pub use krust_terminal::model::grid::Dimensions;
 
 use crate::features::FeatureFlag;
 use crate::terminal::model::ansi::{CharsetIndex, StandardCharset};

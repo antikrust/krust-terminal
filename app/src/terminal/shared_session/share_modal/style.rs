@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{Coords, UiComponentStyles};
+use krust_core::ui::appearance::Appearance;
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{Coords, UiComponentStyles};
 
 pub const MODAL_WIDTH: f32 = 460.;
 pub const MODAL_HEIGHT: f32 = 300.;

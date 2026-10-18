@@ -3,10 +3,10 @@
 //! This module provides common styling functions used across all inline menu
 //! implementations (models, slash commands, conversations) to ensure consistent
 //! visual design matching the Figma specifications.
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::{Fill, BorkTheme};
-use borkui::color::ColorU;
-use borkui::{AppContext, SingletonEntity};
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::{Fill, KrustTheme};
+use krustui::color::ColorU;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::search::result_renderer::ItemHighlightState;
 
@@ -44,15 +44,15 @@ pub fn item_background(
     }
 }
 
-pub fn primary_text_color(theme: &BorkTheme, background: Fill) -> Fill {
+pub fn primary_text_color(theme: &KrustTheme, background: Fill) -> Fill {
     theme.main_text_color(background)
 }
 
-pub fn secondary_text_color(theme: &BorkTheme, background: Fill) -> Fill {
+pub fn secondary_text_color(theme: &KrustTheme, background: Fill) -> Fill {
     theme.sub_text_color(background)
 }
 
-pub fn disabled_text_color(theme: &BorkTheme, background: Fill) -> Fill {
+pub fn disabled_text_color(theme: &KrustTheme, background: Fill) -> Fill {
     theme.disabled_text_color(background)
 }
 

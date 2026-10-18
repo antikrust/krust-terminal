@@ -1,10 +1,10 @@
-use bork_core::settings::Setting;
-use borkui::elements::{
+use krust_core::settings::Setting;
+use krustui::elements::{
     Border, Container, CrossAxisAlignment, DropTarget, Element, Empty, Expanded, Flex, Hoverable,
     ParentElement, SavePosition, Stack,
 };
-use borkui::presenter::ChildView;
-use borkui::{AppContext, SingletonEntity};
+use krustui::presenter::ChildView;
+use krustui::{AppContext, SingletonEntity};
 
 use super::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay,
@@ -348,14 +348,14 @@ impl Input {
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use bork_core::ui::theme::BorkTheme;
+    use krust_core::ui::theme::KrustTheme;
 
     use crate::ui_components::blended_colors;
 
     /// The rule between the blocks above and the input below. `outline()` is a UI-chrome
     /// weight that reads as a hard edge across the full width of a terminal; a 5% blend of
     /// the foreground into the background separates the two areas without drawing the eye.
-    pub fn default_border_color(theme: &BorkTheme) -> ColorU {
+    pub fn default_border_color(theme: &KrustTheme) -> ColorU {
         blended_colors::neutral_1(theme)
     }
 }

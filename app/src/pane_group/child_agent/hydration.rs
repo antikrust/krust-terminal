@@ -1,5 +1,5 @@
-use bork_errors::report_error;
-use borkui::{SingletonEntity, ViewContext};
+use krust_errors::report_error;
+use krustui::{SingletonEntity, ViewContext};
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
@@ -290,7 +290,7 @@ impl PaneGroup {
 
             match conversation {
                 Some(CloudConversationData::Oz(cloud)) => {
-                    let tasks: Vec<bork_multi_agent_api::Task> = cloud
+                    let tasks: Vec<krust_multi_agent_api::Task> = cloud
                         .all_tasks()
                         .filter_map(|task| task.source().cloned())
                         .collect();

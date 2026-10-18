@@ -4,13 +4,13 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use memo_map::MemoMap;
 use rand::Rng;
-use bork_core::session_id::SessionId;
-use borkui::{AppContext, AssetProvider, SingletonEntity};
+use krust_core::session_id::SessionId;
+use krustui::{AppContext, AssetProvider, SingletonEntity};
 
 #[cfg(feature = "local_fs")]
 use super::{
     model::session::{BootstrapSessionType, SessionInfo},
-    borkify::settings::{PIPENV_SUBSHELL_COMMAND_REGEX, POETRY_SUBSHELL_COMMAND_REGEX},
+    krustify::settings::{PIPENV_SUBSHELL_COMMAND_REGEX, POETRY_SUBSHELL_COMMAND_REGEX},
 };
 use crate::env_vars::{EnvVar, EnvVarExt};
 use crate::terminal::session_settings::SessionSettings;
@@ -39,7 +39,7 @@ pub fn is_container_subshell(session_info: &SessionInfo) -> bool {
     })
 }
 
-/// Returns `true` if Bork should use an RC-file based bootstrap (e.g. dump the bootstrap script to
+/// Returns `true` if Krust should use an RC-file based bootstrap (e.g. dump the bootstrap script to
 /// a temp file and `source` it) for a newly spawned session with the given `shell_type`, and
 /// associated `session_type` and `subshell_initialization_info`.
 ///
@@ -99,7 +99,7 @@ pub fn should_use_rc_file_bootstrap_method(
                     && shell_type == ShellType::Zsh)
                 || is_msys2
         }
-        BootstrapSessionType::BorkifiedRemote => false,
+        BootstrapSessionType::KrustifiedRemote => false,
     }
 }
 
@@ -218,7 +218,7 @@ pub fn generate_session_id() -> SessionId {
 }
 
 /// Placeholder in init shell scripts that gets replaced with the client-generated session ID.
-pub(crate) const SESSION_ID_PLACEHOLDER: &str = "@@BORK_SESSION_ID@@";
+pub(crate) const SESSION_ID_PLACEHOLDER: &str = "@@KRUST_SESSION_ID@@";
 
 /// Returns the init shell script for the given `shell_type` (e.g. the script that emits the
 /// InitShell DCS hook).
@@ -254,7 +254,7 @@ pub fn init_subshell_command(
         Some(shell_type) => {
             let subshell_script =
                 init_subshell_script_for_shell(shell_type, &crate::ASSETS, vars, session_id, ctx);
-            format!(r#" [ -z $BORK_BOOTSTRAPPED ] && eval '{subshell_script}'"#)
+            format!(r#" [ -z $KRUST_BOOTSTRAPPED ] && eval '{subshell_script}'"#)
         }
         None => init_subshell_script_for_unknown_shell(&crate::ASSETS, session_id),
     }
@@ -277,7 +277,7 @@ fn init_subshell_script_for_shell(
 
     // Prepend environment variable settings to the script
     let env_setup_script = format!(
-        "export BORK_HONOR_PS1={}; {}",
+        "export KRUST_HONOR_PS1={}; {}",
         honor_ps1_env_var_value,
         env_vars
             .iter()

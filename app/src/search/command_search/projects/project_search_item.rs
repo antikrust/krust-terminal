@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use chrono::NaiveDateTime;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text};
-use borkui::fonts::{Properties, Weight};
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::ui::theme::Fill;
+use krustui::elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text};
+use krustui::fonts::{Properties, Weight};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::action::search_item::styles;

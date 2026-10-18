@@ -1,13 +1,13 @@
 use serde_json::{json, Value};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use bork_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
+use krust_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 use crate::features::FeatureFlag;
 
 #[derive(Debug, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
 pub(super) enum CliTelemetryEvent {
-    /// Executing `bork agent run`
+    /// Executing `krust agent run`
     AgentRun {
         gui: bool,
         requested_mcp_servers: usize,
@@ -17,137 +17,137 @@ pub(super) enum CliTelemetryEvent {
         /// Which execution harness was selected (e.g. "oz", "claude").
         harness: String,
     },
-    /// Executing `bork agent run-ambient`
+    /// Executing `krust agent run-ambient`
     AgentRunAmbient,
-    /// Executing `bork agent profile list`
+    /// Executing `krust agent profile list`
     AgentProfileList,
-    /// Executing `bork agent list`
+    /// Executing `krust agent list`
     AgentList,
-    /// Executing `bork agent get`
+    /// Executing `krust agent get`
     AgentGet,
-    /// Executing `bork agent create`
+    /// Executing `krust agent create`
     AgentCreate,
-    /// Executing `bork agent update`
+    /// Executing `krust agent update`
     AgentUpdate,
-    /// Executing `bork agent delete`
+    /// Executing `krust agent delete`
     AgentDelete,
-    /// Executing `bork agent skills`
+    /// Executing `krust agent skills`
     AgentSkills,
-    /// Executing `bork environment list`
+    /// Executing `krust environment list`
     EnvironmentList,
-    /// Executing `bork environment create`
+    /// Executing `krust environment create`
     EnvironmentCreate,
-    /// Executing `bork environment delete`
+    /// Executing `krust environment delete`
     EnvironmentDelete,
-    /// Executing `bork environment update`
+    /// Executing `krust environment update`
     EnvironmentUpdate,
-    /// Executing `bork environment get`
+    /// Executing `krust environment get`
     EnvironmentGet,
-    /// Executing `bork environment image list`
+    /// Executing `krust environment image list`
     EnvironmentImageList,
-    /// Executing `bork mcp list`
+    /// Executing `krust mcp list`
     MCPList,
-    /// Executing `bork model list`
+    /// Executing `krust model list`
     ModelList,
-    /// Executing `bork memory-store list`
+    /// Executing `krust memory-store list`
     MemoryStoreList,
-    /// Executing `bork memory list`
+    /// Executing `krust memory list`
     MemoryStoreListMemories,
-    /// Executing `bork memory create`
+    /// Executing `krust memory create`
     MemoryStoreCreateMemory,
-    /// Executing `bork memory update`
+    /// Executing `krust memory update`
     MemoryStoreUpdateMemory,
-    /// Executing `bork memory delete`
+    /// Executing `krust memory delete`
     MemoryStoreDeleteMemory,
-    /// Executing `bork memory-store get`
+    /// Executing `krust memory-store get`
     MemoryStoreGetStore,
-    /// Executing `bork memory-store update`
+    /// Executing `krust memory-store update`
     MemoryStoreUpdateStore,
-    /// Executing `bork memory-store list-store-agents`
+    /// Executing `krust memory-store list-store-agents`
     MemoryStoreListStoreAgents,
-    /// Executing `bork memory versions`
+    /// Executing `krust memory versions`
     MemoryStoreListVersions,
-    /// Executing `bork task list`
+    /// Executing `krust task list`
     TaskList,
-    /// Executing `bork task get`
+    /// Executing `krust task get`
     TaskGet,
-    /// Executing `bork run conversation get`
+    /// Executing `krust run conversation get`
     ConversationGet,
-    /// Executing `bork run get <id> --conversation`
+    /// Executing `krust run get <id> --conversation`
     RunConversationGet,
-    /// Executing `bork run message watch`
+    /// Executing `krust run message watch`
     RunMessageWatch { harness: &'static str },
-    /// Executing `bork run message send`
+    /// Executing `krust run message send`
     RunMessageSend { harness: &'static str },
-    /// Executing `bork run message list`
+    /// Executing `krust run message list`
     RunMessageList { harness: &'static str },
-    /// Executing `bork run message read`
+    /// Executing `krust run message read`
     RunMessageRead { harness: &'static str },
-    /// Executing `bork run message mark-delivered`
+    /// Executing `krust run message mark-delivered`
     RunMessageMarkDelivered { harness: &'static str },
-    /// Executing `bork login`
+    /// Executing `krust login`
     Login,
-    /// Executing `bork logout`
+    /// Executing `krust logout`
     Logout,
-    /// Executing `bork whoami`
+    /// Executing `krust whoami`
     Whoami,
-    /// Executing `bork provider setup`
+    /// Executing `krust provider setup`
     ProviderSetup,
-    /// Executing `bork provider list`
+    /// Executing `krust provider list`
     ProviderList,
-    /// Executing `bork integration create`
+    /// Executing `krust integration create`
     IntegrationCreate,
-    /// Executing `bork integration update`
+    /// Executing `krust integration update`
     IntegrationUpdate,
-    /// Executing `bork integration list`
+    /// Executing `krust integration list`
     IntegrationList,
-    /// Executing `bork artifact upload`
+    /// Executing `krust artifact upload`
     ArtifactUpload,
-    /// Executing `bork artifact get`
+    /// Executing `krust artifact get`
     ArtifactGet,
-    /// Executing `bork artifact download`
+    /// Executing `krust artifact download`
     ArtifactDownload,
-    /// Executing `bork api-key list`
+    /// Executing `krust api-key list`
     ApiKeyList,
-    /// Executing `bork api-key create`
+    /// Executing `krust api-key create`
     ApiKeyCreate,
-    /// Executing `bork api-key expire`
+    /// Executing `krust api-key expire`
     ApiKeyExpire,
-    /// Executing `bork schedule create`
+    /// Executing `krust schedule create`
     ScheduleCreate,
-    /// Executing `bork schedule list`
+    /// Executing `krust schedule list`
     ScheduleList,
-    /// Executing `bork schedule get`
+    /// Executing `krust schedule get`
     ScheduleGet,
-    /// Executing `bork schedule pause`
+    /// Executing `krust schedule pause`
     SchedulePause,
-    /// Executing `bork schedule unpause`
+    /// Executing `krust schedule unpause`
     ScheduleUnpause,
-    /// Executing `bork schedule update`
+    /// Executing `krust schedule update`
     ScheduleUpdate,
-    /// Executing `bork schedule delete`
+    /// Executing `krust schedule delete`
     ScheduleDelete,
-    /// Executing `bork secret create`
+    /// Executing `krust secret create`
     SecretCreate,
-    /// Executing `bork secret delete`
+    /// Executing `krust secret delete`
     SecretDelete,
-    /// Executing `bork secret update`
+    /// Executing `krust secret update`
     SecretUpdate,
-    /// Executing `bork secret list`
+    /// Executing `krust secret list`
     SecretList,
-    /// Executing `bork federate issue-token`
+    /// Executing `krust federate issue-token`
     FederateIssueToken,
-    /// Executing `bork federate issue-gcp-token`
+    /// Executing `krust federate issue-gcp-token`
     FederateIssueGcpToken,
-    /// Executing `bork harness-support ping`
+    /// Executing `krust harness-support ping`
     HarnessSupportPing,
-    /// Executing `bork harness-support report-artifact`
+    /// Executing `krust harness-support report-artifact`
     HarnessSupportReportArtifact { artifact_type: &'static str },
-    /// Executing `bork harness-support notify-user`
+    /// Executing `krust harness-support notify-user`
     HarnessSupportNotifyUser,
-    /// Executing `bork harness-support finish-task`
+    /// Executing `krust harness-support finish-task`
     HarnessSupportFinishTask { success: bool },
-    /// Executing `bork harness-support report-shutdown`
+    /// Executing `krust harness-support report-shutdown`
     HarnessSupportReportShutdown,
 }
 
@@ -259,7 +259,7 @@ impl TelemetryEvent for CliTelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        bork_core::telemetry::enum_events::<Self>()
+        krust_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -370,160 +370,160 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
 
     fn description(&self) -> &'static str {
         match self {
-            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Krust CLI",
             CliTelemetryEventDiscriminants::AgentRunAmbient => {
-                "Ran an ambient agent from the Bork CLI"
+                "Ran an ambient agent from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::AgentProfileList => {
-                "Listed agent profiles from the Bork CLI"
+                "Listed agent profiles from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Bork CLI",
-            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Bork CLI",
-            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Bork CLI",
-            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Bork CLI",
-            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Bork CLI",
-            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Bork CLI",
+            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Krust CLI",
+            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Krust CLI",
+            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Krust CLI",
+            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Krust CLI",
+            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Krust CLI",
+            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Krust CLI",
             CliTelemetryEventDiscriminants::EnvironmentList => {
-                "Listed cloud environments from the Bork CLI"
+                "Listed cloud environments from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentCreate => {
-                "Created a cloud environment from the Bork CLI"
+                "Created a cloud environment from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentDelete => {
-                "Deleted a cloud environment from the Bork CLI"
+                "Deleted a cloud environment from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentUpdate => {
-                "Updated a cloud environment from the Bork CLI"
+                "Updated a cloud environment from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentGet => {
-                "Got cloud environment details from the Bork CLI"
+                "Got cloud environment details from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentImageList => {
-                "Listed available base images from the Bork CLI"
+                "Listed available base images from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Bork CLI",
-            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Bork CLI",
+            CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Krust CLI",
+            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Krust CLI",
             CliTelemetryEventDiscriminants::MemoryStoreList => {
-                "Listed memory stores from the Bork CLI"
+                "Listed memory stores from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListMemories => {
-                "Listed memories in a memory store from the Bork CLI"
+                "Listed memories in a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreCreateMemory => {
-                "Created a manual memory in a memory store from the Bork CLI"
+                "Created a manual memory in a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateMemory => {
-                "Updated a memory in a memory store from the Bork CLI"
+                "Updated a memory in a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreDeleteMemory => {
-                "Deleted a memory from a memory store from the Bork CLI"
+                "Deleted a memory from a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreGetStore => {
-                "Got a memory store from the Bork CLI"
+                "Got a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateStore => {
-                "Updated a memory store from the Bork CLI"
+                "Updated a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListStoreAgents => {
-                "Listed agents attached to a memory store from the Bork CLI"
+                "Listed agents attached to a memory store from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListVersions => {
-                "Listed version history of a memory from the Bork CLI"
+                "Listed version history of a memory from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Bork CLI",
-            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Bork CLI",
+            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Krust CLI",
+            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Krust CLI",
             CliTelemetryEventDiscriminants::ConversationGet => {
-                "Got conversation by ID from the Bork CLI"
+                "Got conversation by ID from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunConversationGet => {
-                "Got run conversation from the Bork CLI"
+                "Got run conversation from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageWatch => {
-                "Watched run messages from the Bork CLI"
+                "Watched run messages from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageSend => {
-                "Sent a run message from the Bork CLI"
+                "Sent a run message from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageList => {
-                "Listed run messages from the Bork CLI"
+                "Listed run messages from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageRead => {
-                "Read a run message from the Bork CLI"
+                "Read a run message from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageMarkDelivered => {
-                "Marked a run message as delivered from the Bork CLI"
+                "Marked a run message as delivered from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::Login => "Logged in via the Bork CLI",
-            CliTelemetryEventDiscriminants::Logout => "Logged out via the Bork CLI",
-            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Bork CLI",
-            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Bork CLI",
-            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Bork CLI",
+            CliTelemetryEventDiscriminants::Login => "Logged in via the Krust CLI",
+            CliTelemetryEventDiscriminants::Logout => "Logged out via the Krust CLI",
+            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Krust CLI",
+            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Krust CLI",
+            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Krust CLI",
             CliTelemetryEventDiscriminants::IntegrationCreate => {
-                "Created an integration from the Bork CLI"
+                "Created an integration from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationUpdate => {
-                "Updated an integration from the Bork CLI"
+                "Updated an integration from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationList => {
-                "Listed integrations from the Bork CLI"
+                "Listed integrations from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactUpload => {
-                "Uploaded an artifact from the Bork CLI"
+                "Uploaded an artifact from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactGet => {
-                "Got artifact metadata from the Bork CLI"
+                "Got artifact metadata from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactDownload => {
-                "Downloaded an artifact from the Bork CLI"
+                "Downloaded an artifact from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Bork CLI",
-            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Bork CLI",
-            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Bork CLI",
+            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Krust CLI",
+            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Krust CLI",
+            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Krust CLI",
             CliTelemetryEventDiscriminants::ScheduleCreate => {
-                "Created a scheduled agent from the Bork CLI"
+                "Created a scheduled agent from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleList => {
-                "Listed scheduled agents from the Bork CLI"
+                "Listed scheduled agents from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleGet => {
-                "Got scheduled agent configuration from the Bork CLI"
+                "Got scheduled agent configuration from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::SchedulePause => {
-                "Paused a scheduled agent from the Bork CLI"
+                "Paused a scheduled agent from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUnpause => {
-                "Unpaused a scheduled agent from the Bork CLI"
+                "Unpaused a scheduled agent from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUpdate => {
-                "Updated a scheduled agent from the Bork CLI"
+                "Updated a scheduled agent from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleDelete => {
-                "Deleted a scheduled agent from the Bork CLI"
+                "Deleted a scheduled agent from the Krust CLI"
             }
-            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Bork CLI",
-            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Bork CLI",
-            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Bork CLI",
-            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Bork CLI",
+            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Krust CLI",
+            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Krust CLI",
+            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Krust CLI",
+            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Krust CLI",
             CliTelemetryEventDiscriminants::FederateIssueToken => {
-                "Issued a federated identity token from the Bork CLI"
+                "Issued a federated identity token from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::FederateIssueGcpToken => {
-                "Issued a GCP federated identity token from the Bork CLI"
+                "Issued a GCP federated identity token from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportPing => {
-                "Pinged harness-support from the Bork CLI"
+                "Pinged harness-support from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportArtifact => {
-                "Reported an artifact via harness-support from the Bork CLI"
+                "Reported an artifact via harness-support from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportNotifyUser => {
-                "Sent a user notification via harness-support from the Bork CLI"
+                "Sent a user notification via harness-support from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportFinishTask => {
-                "Reported task completion via harness-support from the Bork CLI"
+                "Reported task completion via harness-support from the Krust CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportShutdown => {
-                "Reported agent shutdown via harness-support from the Bork CLI"
+                "Reported agent shutdown via harness-support from the Krust CLI"
             }
         }
     }
@@ -553,4 +553,4 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
     }
 }
 
-bork_core::register_telemetry_event!(CliTelemetryEvent);
+krust_core::register_telemetry_event!(CliTelemetryEvent);

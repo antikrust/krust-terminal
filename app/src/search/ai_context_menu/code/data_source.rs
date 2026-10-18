@@ -16,12 +16,12 @@ use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
 use repo_metadata::repositories::DetectedRepositories;
 #[cfg(not(target_family = "wasm"))]
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::AppContext;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::AppContext;
 #[cfg(not(target_family = "wasm"))]
-use borkui::ModelSpawner;
+use krustui::ModelSpawner;
 #[cfg(not(target_family = "wasm"))]
-use borkui::SingletonEntity;
+use krustui::SingletonEntity;
 
 #[cfg(not(target_family = "wasm"))]
 use super::search_item::CodeSearchItem;
@@ -73,13 +73,13 @@ pub struct CodeSymbolCache {
     spawner: ModelSpawner<Self>,
 }
 
-impl borkui::Entity for CodeSymbolCache {
+impl krustui::Entity for CodeSymbolCache {
     type Event = ();
 }
 
 impl CodeSymbolCache {
     #[cfg(not(target_family = "wasm"))]
-    pub fn new(ctx: &mut borkui::ModelContext<Self>) -> Self {
+    pub fn new(ctx: &mut krustui::ModelContext<Self>) -> Self {
         let spawner = ctx.spawner();
         let cache = Self {
             symbol_cache: RefCell::new(HashMap::new()),

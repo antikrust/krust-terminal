@@ -2,7 +2,7 @@
 // it's used in the implementation of `infer_line_ending`.
 #![allow(clippy::disallowed_methods)]
 
-use bork_core::platform::SessionPlatform;
+use krust_core::platform::SessionPlatform;
 
 use super::*;
 

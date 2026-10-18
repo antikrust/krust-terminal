@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use bork_core::ui::theme::color::internal_colors;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krust_errors::report_error;
+use krustui::elements::{
     Align, Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Fill, Flex,
     Hoverable, MouseState, MouseStateHandle, ParentElement, Radius, SavePosition, ScrollbarWidth,
     Shrinkable, Text, Wrap,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::{DescriptionContext, Keystroke, Trigger};
-use borkui::presenter::ChildView;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::Pixels;
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::{DescriptionContext, Keystroke, Trigger};
+use krustui::presenter::ChildView;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::Pixels;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -364,7 +364,7 @@ impl KeybindingRow {
                                 .with_margin_right(CLEAR_CANCEL_BUTTONS_SPACING)
                                 .finish(),
                         )
-                        .with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Center)
+                        .with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Center)
                         .finish(),
                 )
                 .finish(),
@@ -596,7 +596,7 @@ impl KeybindingsView {
 
             self.conflict_map.update(&row.binding.trigger, None);
 
-            // Persist the keybinding into the `.bork` directory so that it will last beyond
+            // Persist the keybinding into the `.krust` directory so that it will last beyond
             // this session
             write_custom_keybinding(row.binding.name.clone(), UserDefinedKeybinding::Removed);
             update_binding_list(&row.binding.name, None, &mut self.bindings);

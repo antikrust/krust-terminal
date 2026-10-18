@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use borkui::units::{IntoPixels, Pixels};
-use borkui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, WindowId};
+use krust_core::features::FeatureFlag;
+use krustui::units::{IntoPixels, Pixels};
+use krustui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
 use super::styles::{HEADER_BORDER, HEADER_ROW_HEIGHT};
 use crate::ai::blocklist::agent_view::AgentViewController;

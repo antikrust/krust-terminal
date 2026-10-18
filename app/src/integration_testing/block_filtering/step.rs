@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use borkui::integration::{AssertionCallback, TestStep};
-use borkui::{async_assert, async_assert_eq};
+use krustui::integration::{AssertionCallback, TestStep};
+use krustui::{async_assert, async_assert_eq};
 
 use crate::integration_testing::step::new_step_with_default_assertions;
 use crate::integration_testing::terminal::util::ExpectedExitStatus;

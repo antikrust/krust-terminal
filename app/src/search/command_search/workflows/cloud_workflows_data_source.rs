@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use futures_lite::future::yield_now;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::WorkflowSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -29,7 +29,7 @@ pub(crate) struct CloudWorkflowsSnapshot {
     filter_to_command_workflows: bool,
 }
 
-/// Creates an async data source for cloud workflows (i.e. those that exist in Bork Drive).
+/// Creates an async data source for cloud workflows (i.e. those that exist in Krust Drive).
 pub fn cloud_workflows_data_source(
 ) -> AsyncSnapshotDataSource<CloudWorkflowsSnapshot, CommandSearchItemAction> {
     AsyncSnapshotDataSource::new(

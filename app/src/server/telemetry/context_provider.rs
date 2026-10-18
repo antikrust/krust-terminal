@@ -1,5 +1,5 @@
-use bork_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 

@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use mockall::Sequence;
 use rand::Rng;
 use settings::{RespectUserSyncSetting, SyncToCloud};
-use borkui::{App, ModelHandle};
+use krustui::{App, ModelHandle};
 
 use super::*;
 use crate::auth::auth_manager::AuthManager;
@@ -245,7 +245,7 @@ fn mock_cloud_folder(id: SyncId, name: String, folder_id: Option<SyncId>) -> Clo
         CloudFolderModel {
             name,
             is_open: true,
-            is_bork_pack: false,
+            is_krust_pack: false,
         },
         CloudObjectMetadata {
             pending_changes_statuses: CloudObjectStatuses {
@@ -739,7 +739,7 @@ fn test_load_cloud_objects_on_initial_load_with_empty_cache() {
         initialize_app(&mut app, Vec::new(), Arc::new(cloud_object_server_api_mock));
 
         // Spend time waiting for the initial load to finish etc.
-        borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+        krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // TODO: @ianhodge - update tests once cloud model APIs are added
         // Now CloudModel should include all objects that were fetched via initial load
@@ -809,7 +809,7 @@ fn test_network_transitions_do_not_refetch_local_objects() {
         check_cloud_folders(&mut app, 0);
 
         // Spend time waiting for the initial load to finish etc.
-        borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+        krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // Now CloudModel should include all objects that were fetched via initial load (in this
         // case: personal only)
@@ -828,7 +828,7 @@ fn test_network_transitions_do_not_refetch_local_objects() {
         });
 
         // Give any (erroneous) refetch a chance to run.
-        borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+        krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // The local drive is unchanged by network transitions.
         check_cloud_workflows(&mut app, personal_workflows_len);
@@ -877,7 +877,7 @@ fn test_force_refresh_only_happens_once() {
         initialize_app(&mut app, Vec::new(), Arc::new(cloud_object_server_api_mock));
 
         // Spend time waiting for the initial load to finish etc.
-        borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+        krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // Check that pending refresh is now false on CloudModel
         CloudModel::handle(&app).read(&app, |model, _ctx| {
@@ -926,7 +926,7 @@ fn test_force_refresh_correctly_resets_timestamp() {
         initialize_app(&mut app, Vec::new(), Arc::new(cloud_object_server_api_mock));
 
         // Spend time waiting for the initial load to finish etc.
-        borkui::r#async::Timer::after(Duration::from_secs(1)).await;
+        krustui::r#async::Timer::after(Duration::from_secs(1)).await;
 
         // Check that pending refresh is within the acceptable hour range.
         CloudModel::handle(&app).read(&app, |model, _ctx| {
@@ -1149,7 +1149,7 @@ fn test_object_editor_timeout() {
                 .expect("notebook should exist");
 
             // Set the editor to be somebody else.
-            notebook.metadata.current_editor_uid = Some("ian@bork.baby".to_string());
+            notebook.metadata.current_editor_uid = Some("ian@krust.baby".to_string());
         });
 
         let current_editor = CloudViewModel::handle(&app).read(&app, |view_model, ctx| {
@@ -1233,7 +1233,7 @@ fn assert_sorting_timestamp(id: ServerId, expected_ts: impl Into<ServerTimestamp
 }
 
 /// Test that, if an object is updated, we recalculate its ancestors' sorting timestamps too. This
-/// way, the folders containing the updated object move to the top of the Bork Drive index if it's
+/// way, the folders containing the updated object move to the top of the Krust Drive index if it's
 /// sorted by last updated.
 #[test]
 fn test_update_folder_timestamp_from_child_update() {

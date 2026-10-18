@@ -1,13 +1,13 @@
 use chrono::Local;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use bork_graphql::queries::get_conversation_usage::ConversationUsage;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krust_graphql::queries::get_conversation_usage::ConversationUsage;
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, View};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, View};
 
 use crate::ai::blocklist::format_credits;
 use crate::ai::blocklist::usage::conversation_usage_view::{
@@ -129,7 +129,7 @@ impl UsageHistoryEntry {
         };
         let chevron = ConstrainedBox::new(
             chevron_icon
-                .to_borkui_icon(appearance.theme().foreground())
+                .to_krustui_icon(appearance.theme().foreground())
                 .finish(),
         )
         .with_width(16.)

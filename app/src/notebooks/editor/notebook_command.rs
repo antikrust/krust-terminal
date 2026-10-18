@@ -14,28 +14,28 @@ use syntect::highlighting::{self, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 use ui_components::lightbox::{LightboxImage, LightboxImageSource};
-use bork_completer::signatures::CommandRegistry;
-use bork_core::r#async::debounce;
-use bork_editor::content::anchor::Anchor;
-use bork_editor::content::buffer::{Buffer, BufferEvent, EditOrigin};
-use bork_editor::content::mermaid_diagram::mermaid_asset_source;
-use bork_editor::content::selection_model::BufferSelectionModel;
-use bork_editor::content::text::{
+use krust_completer::signatures::CommandRegistry;
+use krust_core::r#async::debounce;
+use krust_editor::content::anchor::Anchor;
+use krust_editor::content::buffer::{Buffer, BufferEvent, EditOrigin};
+use krust_editor::content::mermaid_diagram::mermaid_asset_source;
+use krust_editor::content::selection_model::BufferSelectionModel;
+use krust_editor::content::text::{
     BlockType, BufferBlockStyle, CodeBlockType, CODE_BLOCK_DEFAULT_DISPLAY_LANG,
     CODE_BLOCK_SHELL_DISPLAY_LANG,
 };
-use bork_editor::editor::RunnableCommandModel;
-use bork_util::user_input::UserInput;
-use borkui::elements::{
+use krust_editor::editor::RunnableCommandModel;
+use krust_util::user_input::UserInput;
+use krustui::elements::{
     Align, Border, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, MainAxisAlignment,
     MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::fonts::Properties;
-use borkui::platform::Cursor;
-use borkui::presenter::ChildView;
-use borkui::r#async::SpawnedFutureHandle;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Properties;
+use krustui::platform::Cursor;
+use krustui::presenter::ChildView;
+use krustui::r#async::SpawnedFutureHandle;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, AssetProvider as _, Element, Entity, ModelAsRef, ModelContext, ModelHandle,
     SingletonEntity, ViewHandle, WeakModelHandle, WindowId,
 };
@@ -638,7 +638,7 @@ impl RunnableCommandModel for NotebookCommand {
                         appearance.ui_font_size(),
                     )
                     .with_style(Properties {
-                        weight: borkui::fonts::Weight::Light,
+                        weight: krustui::fonts::Weight::Light,
                         ..Default::default()
                     })
                     .with_color(

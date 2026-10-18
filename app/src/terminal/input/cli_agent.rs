@@ -1,12 +1,12 @@
-use bork_core::ui::color::contrast::MinimumAllowedContrast;
-use bork_core::ui::color::ContrastingColor;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_core::ui::color::contrast::MinimumAllowedContrast;
+use krust_core::ui::color::ContrastingColor;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Border, Clipped, ConstrainedBox, Container, DispatchEventResult, DropTarget, Element,
     EventHandler, Flex, Hoverable, ParentElement, SavePosition, Stack,
 };
-use borkui::presenter::ChildView;
-use borkui::{AppContext, SingletonEntity as _, ViewContext};
+use krustui::presenter::ChildView;
+use krustui::{AppContext, SingletonEntity as _, ViewContext};
 
 use super::common::{
     add_input_suggestions_overlays, wrap_input_with_terminal_padding_and_focus_handler,
@@ -147,7 +147,7 @@ impl Input {
 
     /// Keep the rich input editor's text colors legible when it's rendered on
     /// top of an alt-screen CLI agent's inferred background (e.g. OpenCode),
-    /// which does not respect the Bork theme. When no alt-screen-backed CLI
+    /// which does not respect the Krust theme. When no alt-screen-backed CLI
     /// agent rich input is active, restores the theme default text colors.
     ///
     /// This mirrors the contrast-adjustment pattern used for the use-agent

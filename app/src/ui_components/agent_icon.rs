@@ -8,8 +8,8 @@
 //! whichever source they hold and feed the resulting variant into
 //! [`render_icon_with_status`]. The pure inner functions in this module are exercised
 //! directly by the cross-surface consistency tests in `agent_icon_tests.rs`.
-use bork_cli::agent::Harness;
-use borkui::{AppContext, SingletonEntity};
+use krust_cli::agent::Harness;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::ai::agent::conversation::ConversationStatus;
 use crate::ai::agent_conversations_model::{

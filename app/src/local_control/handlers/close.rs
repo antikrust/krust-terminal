@@ -1,8 +1,8 @@
 //! Close handlers for local-control window, tab, and pane actions.
 use ::local_control::protocol::{TabCloseMode, TabCloseParams, TabTarget};
 use ::local_control::{Action, ActionKind, ControlError, ErrorCode, InstanceId, RequestEnvelope};
-use borkui::platform::TerminationMode;
-use borkui::ModelContext;
+use krustui::platform::TerminationMode;
+use krustui::ModelContext;
 
 use crate::local_control::handlers::ack;
 use crate::local_control::resolver::{

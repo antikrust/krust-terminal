@@ -2,13 +2,13 @@
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_errors::report_error;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, FormattedTextElement,
     Hoverable, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use super::common::render_scrollable_collapsible_content;
 use super::output::{action_icon, Props};
@@ -234,7 +234,7 @@ fn render_transcript_row(
                 .with_child(Shrinkable::new(1., header).finish())
                 .with_child(
                     Container::new(
-                        ConstrainedBox::new(chevron_icon.to_borkui_icon(text_color).finish())
+                        ConstrainedBox::new(chevron_icon.to_krustui_icon(text_color).finish())
                             .with_width(icon_sz)
                             .with_height(icon_sz)
                             .finish(),
@@ -858,7 +858,7 @@ fn render_collapse_chevron(
 
     Some(
         Hoverable::new(toggle_mouse_state, move |_| {
-            ConstrainedBox::new(chevron_icon.to_borkui_icon(text_color).finish())
+            ConstrainedBox::new(chevron_icon.to_krustui_icon(text_color).finish())
                 .with_width(icon_sz)
                 .with_height(icon_sz)
                 .finish()

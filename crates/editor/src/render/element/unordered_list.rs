@@ -1,6 +1,6 @@
-use borkui_core::elements::{Border, CornerRadius, ListIndentLevel, Radius, Rect};
-use borkui_core::geometry::vector::vec2f;
-use borkui_core::{Element, SizeConstraint};
+use krustui_core::elements::{Border, CornerRadius, ListIndentLevel, Radius, Rect};
+use krustui_core::geometry::vector::vec2f;
+use krustui_core::{Element, SizeConstraint};
 
 use super::RenderableBlock;
 use super::paint::RenderContext;
@@ -61,8 +61,8 @@ impl RenderableBlock for RenderableBulletList {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut borkui_core::LayoutContext,
-        app: &borkui_core::AppContext,
+        ctx: &mut krustui_core::LayoutContext,
+        app: &krustui_core::AppContext,
     ) {
         self.bullet_point.layout(
             SizeConstraint::strict(vec2f(self.bullet_size, self.bullet_size)),
@@ -86,7 +86,7 @@ impl RenderableBlock for RenderableBulletList {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        app: &borkui_core::AppContext,
+        app: &krustui_core::AppContext,
     ) {
         let content = model.content();
         let unordered_list = extract_block!(self.viewport_item, content, (block, BlockItem::UnorderedList{ paragraph: inner, ..}) => block.unordered_list(inner));

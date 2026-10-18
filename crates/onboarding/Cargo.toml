@@ -12,7 +12,7 @@ path = "src/bin/main.rs"
 required-features = ["bin"]
 
 [features]
-bin = ["borkui_core/log_named_telemetry_events"]
+bin = ["krustui_core/log_named_telemetry_events"]
 
 [dependencies]
 ai.workspace = true
@@ -29,11 +29,11 @@ serde_json.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
 uuid.workspace = true
-bork_core = { workspace = true }
-bork_errors.workspace = true
-borkui.workspace = true
-borkui_core.workspace = true
-bork_logging.workspace = true
+krust_core = { workspace = true }
+krust_errors.workspace = true
+krustui.workspace = true
+krustui_core.workspace = true
+krust_logging.workspace = true
 
 [dev-dependencies]
-bork_core = { workspace = true, features = ["test-util"] }
+krust_core = { workspace = true, features = ["test-util"] }

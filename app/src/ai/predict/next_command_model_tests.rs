@@ -1,8 +1,8 @@
 use typed_path::TypedPathBuf;
-use bork_completer::meta::SpannedItem;
-use bork_completer::parsers::ParsedToken;
-use bork_completer::signatures::CommandRegistry;
-use borkui::App;
+use krust_completer::meta::SpannedItem;
+use krust_completer::parsers::ParsedToken;
+use krust_completer::signatures::CommandRegistry;
+use krustui::App;
 
 use super::*;
 use crate::completer::SessionContext;

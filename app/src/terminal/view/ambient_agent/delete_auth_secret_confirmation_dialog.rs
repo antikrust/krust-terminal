@@ -1,10 +1,10 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use bork_cli::agent::Harness;
-use bork_managed_secrets::client::SecretOwner;
-use borkui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krust_cli::agent::Harness;
+use krust_managed_secrets::client::SecretOwner;
+use krustui::elements::{Align, ChildView, Container, Dismiss, DropShadow, Empty};
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

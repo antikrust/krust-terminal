@@ -10,19 +10,19 @@ use parking_lot::Mutex;
 use string_offset::CharOffset;
 use temporary_block::RenderableTemporaryBlock;
 use vim::vim::VimMode;
-use bork_core::ui::theme::Fill as ThemeFill;
-use bork_errors::report_error;
-use borkui_core::color::ColorU;
-use borkui_core::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use borkui_core::elements::{
+use krust_core::ui::theme::Fill as ThemeFill;
+use krust_errors::report_error;
+use krustui_core::color::ColorU;
+use krustui_core::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use krustui_core::elements::{
     Axis, Border, Dash, Point, ScrollData, ScrollableElement, Vector2FExt, ZIndex,
 };
-use borkui_core::event::{DispatchedEvent, ModifiersState};
-use borkui_core::geometry::rect::RectF;
-use borkui_core::geometry::vector::{Vector2F, vec2f};
-use borkui_core::platform::Cursor;
-use borkui_core::units::{IntoPixels, Pixels};
-use borkui_core::{
+use krustui_core::event::{DispatchedEvent, ModifiersState};
+use krustui_core::geometry::rect::RectF;
+use krustui_core::geometry::vector::{Vector2F, vec2f};
+use krustui_core::platform::Cursor;
+use krustui_core::units::{IntoPixels, Pixels};
+use krustui_core::{
     AfterLayoutContext, AppContext, Element, Event, EventContext, LayoutContext, ModelHandle,
     PaintContext, SizeConstraint, WeakViewHandle,
 };
@@ -87,7 +87,7 @@ pub enum VerticalExpansionBehavior {
 /// An element that renders rich text, with no additional UI or decorations.
 ///
 /// This element caches the positions listed in [`super::model::saved_positions::SavedPositions`],
-/// and the parent view can overlay UI controls on top of them using a [`borkui_core::elements::Stack`].
+/// and the parent view can overlay UI controls on top of them using a [`krustui_core::elements::Stack`].
 ///
 /// It additionally reserves horizontal gutters, which are considered in-bounds for content hit
 /// testing.
@@ -1111,7 +1111,7 @@ impl<V: EditorView> Element for RichTextElement<V> {
             return;
         };
         ctx.scene
-            .start_layer(borkui_core::ClipBounds::BoundedBy(clip_bounds));
+            .start_layer(krustui_core::ClipBounds::BoundedBy(clip_bounds));
         // Save the clipped content layer z-index for hover detection.
         self.content_z_index = Some(ctx.scene.z_index());
 
@@ -1270,7 +1270,7 @@ impl<V: EditorView> NewScrollableElement for RichTextElement<V> {
         })
     }
 
-    fn scroll(&mut self, delta: borkui_core::units::Pixels, axis: Axis, ctx: &mut EventContext) {
+    fn scroll(&mut self, delta: krustui_core::units::Pixels, axis: Axis, ctx: &mut EventContext) {
         if let Some(action) = V::Action::scroll(delta, axis) {
             ctx.dispatch_typed_action(action);
         }
@@ -1291,7 +1291,7 @@ impl<V: EditorView> ScrollableElement for RichTextElement<V> {
         Some(self.vertical_scroll_data(app))
     }
 
-    fn scroll(&mut self, delta: borkui_core::units::Pixels, ctx: &mut EventContext) {
+    fn scroll(&mut self, delta: krustui_core::units::Pixels, ctx: &mut EventContext) {
         if let Some(action) = V::Action::scroll(delta, Axis::Vertical) {
             ctx.dispatch_typed_action(action);
         }

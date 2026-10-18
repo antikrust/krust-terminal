@@ -22,23 +22,23 @@ use tree::DEFAULT_FLEX_VALUE;
 use typed_path::TypedPath;
 use url::Url;
 use uuid::Uuid;
-use bork_cli::agent::Harness;
-use bork_core::command::ExitCode;
-use bork_core::context_flag::ContextFlag;
-use bork_errors::report_if_error;
-use bork_terminal::shell::{ShellName, ShellType};
-use bork_util::path::convert_wsl_to_windows_host_path;
+use krust_cli::agent::Harness;
+use krust_core::command::ExitCode;
+use krust_core::context_flag::ContextFlag;
+use krust_errors::report_if_error;
+use krust_terminal::shell::{ShellName, ShellType};
+use krust_util::path::convert_wsl_to_windows_host_path;
 #[cfg(feature = "local_fs")]
-use bork_util::path::LineAndColumnArg;
-use bork_util::remote_path::RemotePath;
-use borkui::elements::{
+use krust_util::path::LineAndColumnArg;
+use krust_util::remote_path::RemotePath;
+use krustui::elements::{
     ChildView, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex, MainAxisSize,
     ParentElement, Shrinkable, Stack,
 };
-use borkui::keymap::{Context, EditableBinding, FixedBinding};
-use borkui::notification::NotificationSendError;
-use borkui::windowing::WindowManager;
-use borkui::{
+use krustui::keymap::{Context, EditableBinding, FixedBinding};
+use krustui::notification::NotificationSendError;
+use krustui::windowing::WindowManager;
+use krustui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle, WindowId,
 };
@@ -85,8 +85,8 @@ use crate::code::editor_management::CodeSource;
 use crate::code::view::{CodeView, CodeViewAction};
 use crate::code_review::comments::{AttachedReviewComment, PendingImportedReviewComment};
 use crate::code_review::diff_state::DiffMode;
-use crate::drive::items::BorkDriveItemId;
-use crate::drive::{CloudObjectTypeAndId, OpenBorkDriveObjectArgs};
+use crate::drive::items::KrustDriveItemId;
+use crate::drive::{CloudObjectTypeAndId, OpenKrustDriveObjectArgs};
 use crate::env_vars::EnvVarCollectionType;
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::{self, PaneMode, PaneTemplateType};
@@ -204,7 +204,7 @@ pub use pane::{
     PaneHeaderAction, PaneHeaderCustomAction, PaneId, PaneView, TerminalPaneId,
 };
 pub use tree::{Direction, PaneData, PaneFlex, PaneNode, SplitDirection};
-use bork_errors::report_error;
+use krust_errors::report_error;
 pub use working_directories::{WorkingDirectoriesEvent, WorkingDirectoriesModel};
 
 use self::pane::{DetachType, PaneViewEvent};
@@ -261,7 +261,7 @@ fn get_minimum_pane_size(app: &AppContext) -> f32 {
 /// 2. Otherwise look up by command name in the already-discovered
 ///    [`AvailableShells`]. Its shell discovery supplements the process `PATH`
 ///    with well-known install locations (e.g. `/opt/homebrew/bin` on macOS,
-///    MSYS2/WSL on Windows) that a raw `PATH` lookup would miss when Bork is
+///    MSYS2/WSL on Windows) that a raw `PATH` lookup would miss when Krust is
 ///    launched outside an interactive shell.
 /// 3. As a final fallback, perform a plain `PATH` lookup via
 ///    [`AvailableShell::try_from`] in case the user put something exotic in
@@ -278,8 +278,8 @@ fn resolve_tab_config_shell(name: &str, ctx: &AppContext) -> Option<AvailableShe
 
     AvailableShell::try_from(name).ok()
 }
-const BORK_SHELL_COMPATIBILITY_DOCS: &str =
-    "https://therob.lol/bork-terminal/help/getting-started/supported-shells";
+const KRUST_SHELL_COMPATIBILITY_DOCS: &str =
+    "https://therob.lol/krust-terminal/help/getting-started/supported-shells";
 // Default minimum width for a newly created Agent Mode pane so that it is legible. Called "default"
 // because this value may be too large for small windows. In that case, we fall back to 50% of the
 // window width.
@@ -329,7 +329,7 @@ enum PaneRemovalReason {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
     app.register_binding_validator::<PaneGroup>(is_binding_pty_compliant);
 
     self::pane::init(app);
@@ -547,24 +547,24 @@ pub enum Event {
     OpenPromptEditor,
     OpenAgentToolbarEditor,
     OpenCLIAgentToolbarEditor,
-    /// tell the workspace to open a file within Bork.
-    OpenFileInBork {
+    /// tell the workspace to open a file within Krust.
+    OpenFileInKrust {
         /// The file path to open.
         path: LocalOrRemotePath,
         /// The session that the path was opened from.
         session: Arc<Session>,
     },
-    OpenBorkDriveLink {
-        open_bork_drive_args: OpenBorkDriveObjectArgs,
+    OpenKrustDriveLink {
+        open_krust_drive_args: OpenKrustDriveObjectArgs,
     },
     #[cfg(feature = "local_fs")]
-    OpenCodeInBork {
+    OpenCodeInKrust {
         source: CodeSource,
         layout: crate::util::file::external_editor::settings::EditorLayout,
         line_col: Option<LineAndColumnArg>,
     },
     #[cfg(feature = "local_fs")]
-    PreviewCodeInBork {
+    PreviewCodeInKrust {
         source: CodeSource,
     },
     OpenCodeDiff {
@@ -602,7 +602,7 @@ pub enum Event {
     FocusPaneInWorkspace {
         locator: PaneViewLocator,
     },
-    ViewInBorkDrive(BorkDriveItemId),
+    ViewInKrustDrive(KrustDriveItemId),
     MoveToSpace {
         cloud_object_type_and_id: CloudObjectTypeAndId,
         space: Space,
@@ -632,7 +632,7 @@ pub enum Event {
     },
     /// Clears the hovered tab index so it no longer appears as highlighted drop target
     ClearHoveredTabIndex,
-    OpenBorkDriveObjectInPane(ObjectUid),
+    OpenKrustDriveObjectInPane(ObjectUid),
     /// Tell the workspace to open the given child agent conversation in a
     /// fresh tab. Bubbled up by `TerminalView::Event::OpenChildAgentInNewTab`
     /// from the orchestration pill bar's 3-dot menu.
@@ -2513,7 +2513,7 @@ impl PaneGroup {
     }
 
     /// Send prompt change bindkey events to all terminal sessions in this pane group. This
-    /// is used for intra-session prompt switching between Bork prompt and PS1.
+    /// is used for intra-session prompt switching between Krust prompt and PS1.
     #[cfg_attr(not(feature = "local_tty"), allow(unused_variables))]
     pub fn send_prompt_change_bindkey_to_all_sessions(
         &self,
@@ -2534,7 +2534,7 @@ impl PaneGroup {
                                 if honor_ps1 {
                                     manager.send_switch_to_ps1_bindkey(ctx);
                                 } else {
-                                    manager.send_switch_to_bork_prompt_bindkey(ctx);
+                                    manager.send_switch_to_krust_prompt_bindkey(ctx);
                                 }
                             }
                         });
@@ -3060,9 +3060,9 @@ impl PaneGroup {
             Banner::<PaneGroupAction>::new_permanently_dismissible(
                 BannerTextContent::formatted_text(vec![
                     FormattedTextFragment::plain_text(
-                        "Bork doesn't currently support your default shell, falling back to zsh.  ",
+                        "Krust doesn't currently support your default shell, falling back to zsh.  ",
                     ),
-                    FormattedTextFragment::hyperlink("Learn more", BORK_SHELL_COMPATIBILITY_DOCS),
+                    FormattedTextFragment::hyperlink("Learn more", KRUST_SHELL_COMPATIBILITY_DOCS),
                 ]),
             )
         });
@@ -3807,7 +3807,7 @@ impl PaneGroup {
             });
         }
 
-        // Insert the conversation ended tombstone (includes Open in Bork button on WASM).
+        // Insert the conversation ended tombstone (includes Open in Krust button on WASM).
         if terminal_manager.is_some() {
             terminal_view.update(ctx, |view, ctx| {
                 view.insert_conversation_ended_tombstone_with_resolved_cta(ctx);
@@ -5307,7 +5307,7 @@ impl PaneGroup {
         task_id: AmbientAgentTaskId,
         ctx: &mut ViewContext<Self>,
     ) {
-        // URL-loaded conversation transcripts (e.g. Bork-on-Web deep links)
+        // URL-loaded conversation transcripts (e.g. Krust-on-Web deep links)
         // restore from conversation data before the ambient task cache is
         // guaranteed to contain this task. Native continuation usually reaches
         // this path after task-backed navigation, but the restored cloud-mode
@@ -6159,7 +6159,7 @@ impl PaneGroup {
                 .set_conversation_transcript_viewer_status(Some(viewer_status.clone()));
         });
 
-        // Insert the conversation ended tombstone (includes Open in Bork button on WASM)
+        // Insert the conversation ended tombstone (includes Open in Krust button on WASM)
         terminal_view.update(ctx, |view, ctx| {
             view.insert_conversation_ended_tombstone_with_resolved_cta(ctx);
         });

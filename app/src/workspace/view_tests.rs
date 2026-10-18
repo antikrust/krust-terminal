@@ -14,11 +14,11 @@ use session_sharing_protocol::common::SessionId;
 use tempfile::TempDir;
 use terminal::shared_session::permissions_manager::SessionPermissionsManager;
 use terminal::view::ActiveSessionState;
-use bork_editor::editor::NavigationKey;
+use krust_editor::editor::NavigationKey;
 #[cfg(feature = "local_fs")]
-use bork_files::FileModel;
-use borkui::platform::WindowStyle;
-use borkui::{AddSingletonModel, App, ViewHandle};
+use krust_files::FileModel;
+use krustui::platform::WindowStyle;
+use krustui::{AddSingletonModel, App, ViewHandle};
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
@@ -80,7 +80,7 @@ use crate::undo_close::UndoCloseSettings;
 use crate::user_config::tab_configs_dir;
 #[cfg(windows)]
 use crate::util::traffic_lights::windows::RendererState;
-use crate::bork_managed_paths_watcher::BorkManagedPathsWatcher;
+use crate::krust_managed_paths_watcher::KrustManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspaces::team_tester::TeamTesterStatus;
 use crate::workspaces::update_manager::TeamUpdateManager;
@@ -168,7 +168,7 @@ pub(crate) fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
     app.add_singleton_model(DirectoryWatcher::new);
-    app.add_singleton_model(BorkManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(KrustManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(FileMCPWatcher::new);
     app.add_singleton_model(|_| FileBasedMCPManager::default());
 
@@ -187,7 +187,7 @@ pub(crate) fn initialize_app(app: &mut App) {
     // page's `IapManager::as_ref(ctx).is_enabled()` check panics if the
     // singleton isn't registered, even though it's a no-op on production.
     app.add_singleton_model(|ctx| {
-        bork_server_client::iap::IapManager::new(
+        krust_server_client::iap::IapManager::new(
             None,
             Box::new(|_| futures::FutureExt::boxed(futures::future::ready(None::<String>))),
             ctx,
@@ -240,7 +240,7 @@ pub(crate) fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| History::new(vec![]));
 
     // SkillManager is registered after `HomeDirectoryWatcher`, `DirectoryWatcher`,
-    // `BorkManagedPathsWatcher`, `DetectedRepositories`, and `RepoMetadataModel`
+    // `KrustManagedPathsWatcher`, `DetectedRepositories`, and `RepoMetadataModel`
     // because `SkillWatcher::new` subscribes to all of them.
     app.add_singleton_model(SkillManager::new);
 
@@ -421,7 +421,7 @@ fn test_tools_panel_does_not_suppress_vertical_tab_bar_traffic_light_padding() {
 /// would drop the override and let the source profile's default D win.
 #[test]
 fn copy_model_and_profile_preserves_explicit_model_over_source_profile_default() {
-    use borkui::EntityId;
+    use krustui::EntityId;
 
     use crate::ai::llms::{AvailableLLMs, LLMId, LLMInfo, ModelsByFeature};
 
@@ -794,9 +794,9 @@ fn test_worktree_sidecar_search_editor_enter_executes_selection() {
 }
 
 /// RAII guard that removes tab config TOML files whose name starts with
-/// `prefix` from `~/.bork/tab_configs/` on drop. Because `Drop` runs even
+/// `prefix` from `~/.krust/tab_configs/` on drop. Because `Drop` runs even
 /// when a test panics, this prevents stale worktree configs from leaking
-/// into Bork dev.
+/// into Krust dev.
 #[cfg(feature = "local_fs")]
 struct TabConfigCleanupGuard {
     prefix: &'static str,
@@ -1802,7 +1802,7 @@ fn test_notebook_pane_tracking() {
                     owner: Owner::mock_current_user(),
                     initial_folder_id: None,
                 },
-                &OpenBorkDriveObjectSettings::default(),
+                &OpenKrustDriveObjectSettings::default(),
                 ctx,
                 true,
             );
@@ -1842,7 +1842,7 @@ fn test_notebook_pane_tracking() {
             // Re-opening the notebook should not create a new view.
             workspace.open_notebook(
                 &NotebookSource::Existing(notebook_id),
-                &OpenBorkDriveObjectSettings::default(),
+                &OpenKrustDriveObjectSettings::default(),
                 ctx,
                 true,
             );
@@ -1953,20 +1953,20 @@ fn test_terminal_model_isnt_leaked() {
 }
 
 #[test]
-fn test_open_or_toggle_bork_drive() {
+fn test_open_or_toggle_krust_drive() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
 
         let workspace = mock_workspace(&mut app);
         workspace.update(&mut app, |workspace, ctx| {
-            // First, unconditionally open Bork Drive as a system action. WD should be open and welcome tips should not have opening bork drive.
-            workspace.open_or_toggle_bork_drive(
+            // First, unconditionally open Krust Drive as a system action. WD should be open and welcome tips should not have opening krust drive.
+            workspace.open_or_toggle_krust_drive(
                 false, /* toggle */
                 false, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                workspace.current_workspace_state.is_bork_drive_open,
+                workspace.current_workspace_state.is_krust_drive_open,
                 "Library should be open"
             );
             assert!(
@@ -1974,18 +1974,18 @@ fn test_open_or_toggle_bork_drive() {
                     .tips_completed
                     .as_ref(ctx)
                     .features_used
-                    .contains(&Tip::Action(TipAction::OpenBorkDrive)),
-                "Bork drive welcome tip should not be completed"
+                    .contains(&Tip::Action(TipAction::OpenKrustDrive)),
+                "Krust drive welcome tip should not be completed"
             );
 
-            // Next, toggle bork drive as a user action. WD should be closed and tip should not be filled out.
-            workspace.open_or_toggle_bork_drive(
+            // Next, toggle krust drive as a user action. WD should be closed and tip should not be filled out.
+            workspace.open_or_toggle_krust_drive(
                 true, /* toggle */
                 true, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                !workspace.current_workspace_state.is_bork_drive_open,
+                !workspace.current_workspace_state.is_krust_drive_open,
                 "Library should be closed"
             );
             assert!(
@@ -1993,18 +1993,18 @@ fn test_open_or_toggle_bork_drive() {
                     .tips_completed
                     .as_ref(ctx)
                     .features_used
-                    .contains(&Tip::Action(TipAction::OpenBorkDrive)),
-                "Bork drive welcome tip should not be completed"
+                    .contains(&Tip::Action(TipAction::OpenKrustDrive)),
+                "Krust drive welcome tip should not be completed"
             );
 
-            // Finally, toggle bork drive again as a user action. WD should be open and tip filled out.
-            workspace.open_or_toggle_bork_drive(
+            // Finally, toggle krust drive again as a user action. WD should be open and tip filled out.
+            workspace.open_or_toggle_krust_drive(
                 true, /* toggle */
                 true, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                workspace.current_workspace_state.is_bork_drive_open,
+                workspace.current_workspace_state.is_krust_drive_open,
                 "Library should be open"
             );
             assert!(
@@ -2012,8 +2012,8 @@ fn test_open_or_toggle_bork_drive() {
                     .tips_completed
                     .as_ref(ctx)
                     .features_used
-                    .contains(&Tip::Action(TipAction::OpenBorkDrive)),
-                "Bork drive welcome tip should not be completed"
+                    .contains(&Tip::Action(TipAction::OpenKrustDrive)),
+                "Krust drive welcome tip should not be completed"
             );
         });
     });
@@ -2243,7 +2243,7 @@ fn test_switch_focus_panels() {
 
         // Shift focus from terminal to left panel when WD is open
         workspace.update(&mut app, |view, ctx| {
-            view.current_workspace_state.is_bork_drive_open = true;
+            view.current_workspace_state.is_krust_drive_open = true;
             view.focus_left_panel(ctx);
         });
         workspace.update(&mut app, |view, ctx| {
@@ -3363,11 +3363,11 @@ fn test_worktree_sidecar_hides_linked_worktrees_from_repo_list() {
             let external_git_dir_canon = CanonicalizedPath::try_from(external_git_dir.as_path())
                 .expect("canonical external git dir");
 
-            let main_repo_std: bork_util::standardized_path::StandardizedPath =
+            let main_repo_std: krust_util::standardized_path::StandardizedPath =
                 main_repo_canon.into();
-            let linked_worktree_std: bork_util::standardized_path::StandardizedPath =
+            let linked_worktree_std: krust_util::standardized_path::StandardizedPath =
                 linked_worktree_canon.into();
-            let external_git_dir_std: bork_util::standardized_path::StandardizedPath =
+            let external_git_dir_std: krust_util::standardized_path::StandardizedPath =
                 external_git_dir_canon.into();
 
             DetectedRepositories::handle(ctx).update(ctx, |repos, _ctx| {
@@ -3431,7 +3431,7 @@ fn test_vertical_tabs_context_menu_does_not_show_hover_only_tab_bar() {
             });
             workspace.should_show_ai_assistant_warm_welcome = false;
             workspace.vertical_tabs_panel_open = true;
-            // Fork: Bork Drive is always in the tools panel now, so Tabs is
+            // Fork: Krust Drive is always in the tools panel now, so Tabs is
             // no longer the default active view — activate it explicitly.
             workspace.open_left_panel_view(&LeftPanelAction::Tabs, ctx);
 
@@ -4290,10 +4290,10 @@ fn test_pin_tab_on_grouped_tab_extracts_then_pins() {
     });
 }
 
-/// Fork: Bork Drive has no enable setting — it is a permanent tools-panel
+/// Fork: Krust Drive has no enable setting — it is a permanent tools-panel
 /// tab and must always be selectable.
 #[test]
-fn test_tools_panel_bork_drive_always_available() {
+fn test_tools_panel_krust_drive_always_available() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
         let workspace = mock_workspace(&mut app);
@@ -4302,15 +4302,15 @@ fn test_tools_panel_bork_drive_always_available() {
             assert!(
                 workspace
                     .left_panel_views
-                    .contains(&ToolPanelView::BorkDrive),
+                    .contains(&ToolPanelView::KrustDrive),
                 "Library should always be an available tools-panel tab"
             );
             workspace.left_panel_view.update(ctx, |lp, ctx| {
-                lp.handle_action_with_force_open(&LeftPanelAction::BorkDrive, false, ctx);
+                lp.handle_action_with_force_open(&LeftPanelAction::KrustDrive, false, ctx);
             });
             assert_eq!(
                 workspace.left_panel_view.as_ref(ctx).active_view(),
-                ToolPanelView::BorkDrive,
+                ToolPanelView::KrustDrive,
                 "Library should be selectable as the active view"
             );
         });

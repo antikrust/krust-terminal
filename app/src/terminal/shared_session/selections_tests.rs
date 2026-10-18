@@ -1,6 +1,6 @@
-use bork_core::semantic_selection::SemanticSelection;
-use borkui::text::SelectionType;
-use borkui::App;
+use krust_core::semantic_selection::SemanticSelection;
+use krustui::text::SelectionType;
+use krustui::App;
 
 use crate::terminal::block_filter::BlockFilterQuery;
 use crate::terminal::event_listener::ChannelEventListener;

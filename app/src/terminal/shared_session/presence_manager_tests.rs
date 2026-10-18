@@ -5,8 +5,8 @@ use itertools::Itertools;
 use session_sharing_protocol::common::{
     ParticipantId, ParticipantInfo, ParticipantList, ProfileData, Role, Selection, Sharer, Viewer,
 };
-use bork_core::command::ExitCode;
-use borkui::App;
+use krust_core::command::ExitCode;
+use krustui::App;
 
 use crate::auth::UserUid;
 use crate::terminal::model::ansi::{

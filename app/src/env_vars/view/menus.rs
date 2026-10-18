@@ -1,7 +1,7 @@
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::context_flag::ContextFlag;
-use borkui::keymap::Trigger;
-use borkui::{SingletonEntity, ViewContext, ViewHandle};
+use krust_core::context_flag::ContextFlag;
+use krustui::keymap::Trigger;
+use krustui::{SingletonEntity, ViewContext, ViewHandle};
 
 use super::env_var_collection::{EnvVarCollectionAction, EnvVarCollectionView, VariableRowIndex};
 use crate::cloud_object::{GenericStringObjectFormat, Space};
@@ -370,7 +370,7 @@ impl EnvVarCollectionView {
         }
 
         // Fork: no "Copy link" — Drive objects are local-only, and object
-        // links point at Bork's servers. Sharing is file export.
+        // links point at Krust's servers. Sharing is file export.
 
         // Add "Duplicate" to menu
         if space != Some(Space::Shared) {

@@ -6,13 +6,13 @@ use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 #[cfg(not(target_family = "wasm"))]
 use repo_metadata::repositories::DetectedRepositories;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::Icon as BorkIcon;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::Icon as KrustIcon;
 #[cfg(not(target_family = "wasm"))]
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use borkui::fonts::FamilyId;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krustui::fonts::FamilyId;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent_conversations_model::{AgentConversationsModel, AgentConversationsModelEvent};
 use crate::ai::blocklist::block::cli_controller::{CLISubagentController, CLISubagentEvent};
@@ -411,7 +411,7 @@ pub trait SlashCommandDataSource {
     fn common_command_gates(&self, ctx: &AppContext) -> CommonCommandGates {
         let ai_settings = AISettings::as_ref(ctx);
         // Hide /host when no default host is configured (env var or workspace setting).
-        let has_default_host = std::env::var("BORK_CLOUD_MODE_DEFAULT_HOST")
+        let has_default_host = std::env::var("KRUST_CLOUD_MODE_DEFAULT_HOST")
             .ok()
             .filter(|s| !s.is_empty())
             .is_some()
@@ -674,13 +674,13 @@ impl InlineItem {
             override_icon
         } else {
             match skill.provider {
-                SkillProvider::Bork => BorkIcon::Bork,
-                SkillProvider::Claude => BorkIcon::ClaudeLogo,
-                SkillProvider::Codex => BorkIcon::OpenAILogo,
-                SkillProvider::Gemini => BorkIcon::GeminiLogo,
-                SkillProvider::Droid => BorkIcon::DroidLogo,
-                SkillProvider::OpenCode => BorkIcon::OpenCodeLogo,
-                _ => BorkIcon::Bork,
+                SkillProvider::Krust => KrustIcon::Krust,
+                SkillProvider::Claude => KrustIcon::ClaudeLogo,
+                SkillProvider::Codex => KrustIcon::OpenAILogo,
+                SkillProvider::Gemini => KrustIcon::GeminiLogo,
+                SkillProvider::Droid => KrustIcon::DroidLogo,
+                SkillProvider::OpenCode => KrustIcon::OpenCodeLogo,
+                _ => KrustIcon::Krust,
             }
         };
 

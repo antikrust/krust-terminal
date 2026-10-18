@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::AIQuerySearchResultItem;
 use crate::ai::blocklist::BlocklistAIHistoryModel;

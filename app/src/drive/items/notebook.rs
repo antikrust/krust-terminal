@@ -1,9 +1,9 @@
-use borkui::elements::{Flex, MouseStateHandle, ParentElement};
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element};
+use krustui::elements::{Flex, MouseStateHandle, ParentElement};
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element};
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
 use crate::drive::index::DriveIndexAction;
@@ -12,13 +12,13 @@ use crate::notebooks::CloudNotebook;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct BorkDriveNotebook {
+pub struct KrustDriveNotebook {
     id: CloudObjectTypeAndId,
     notebook: CloudNotebook,
     is_ai_document: bool,
 }
 
-impl BorkDriveNotebook {
+impl KrustDriveNotebook {
     pub fn new(id: CloudObjectTypeAndId, notebook: CloudNotebook, is_ai_document: bool) -> Self {
         Self {
             id,
@@ -28,7 +28,7 @@ impl BorkDriveNotebook {
     }
 }
 
-impl BorkDriveItem for BorkDriveNotebook {
+impl KrustDriveItem for KrustDriveNotebook {
     fn display_name(&self) -> Option<String> {
         if self.notebook.model().title.is_empty() {
             None
@@ -82,8 +82,8 @@ impl BorkDriveItem for BorkDriveNotebook {
         Some(Flex::column().with_child(title).finish())
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::Object(self.id)
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -103,7 +103,7 @@ impl BorkDriveItem for BorkDriveNotebook {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 }

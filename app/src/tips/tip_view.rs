@@ -1,16 +1,16 @@
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex,
     Hoverable, Icon, MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, ScrollbarWidth, Shrinkable, Stack,
 };
-use borkui::fonts::Weight;
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     Action, AppContext, BlurContext, Entity, EntityId, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, WindowId,
 };
@@ -90,7 +90,7 @@ pub enum TipsAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
@@ -126,7 +126,7 @@ impl TipsView {
         let tip_items = vec![
             TipItem::new(
                 "Command Palette".to_string(),
-                "Easily discover everything you can do in Bork without your hands leaving the keyboard.".to_string(),
+                "Easily discover everything you can do in Krust without your hands leaving the keyboard.".to_string(),
                 TipAction::CommandPalette,
                 ctx,
             ),
@@ -151,7 +151,7 @@ impl TipsView {
             ),
             TipItem::new(
                 "Theme Picker".to_string(),
-                "Make Bork your own by choosing a built-in theme. Or create your own.".to_string(),
+                "Make Krust your own by choosing a built-in theme. Or create your own.".to_string(),
                 TipAction::ThemePicker,
                 ctx,
             ),

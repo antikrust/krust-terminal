@@ -2,10 +2,10 @@ use std::collections::BTreeSet;
 
 use comfy_table::Cell;
 use serde::Serialize;
-use bork_cli::model::ModelCommand;
-use bork_cli::GlobalOptions;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::model::ModelCommand;
+use krust_cli::GlobalOptions;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::ai::llms::LLMPreferences;
@@ -62,7 +62,7 @@ impl ModelCommandRunner {
     }
 }
 
-impl borkui::Entity for ModelCommandRunner {
+impl krustui::Entity for ModelCommandRunner {
     type Event = ();
 }
 

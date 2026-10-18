@@ -2,16 +2,16 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use bork_cli::agent::Harness;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
-use bork_editor::editor::NavigationKey;
-use borkui::elements::{
+use krust_cli::agent::Harness;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
+use krust_editor::editor::NavigationKey;
+use krustui::elements::{
     Border, ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentElement as _,
     ParentOffsetBounds, Stack,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };

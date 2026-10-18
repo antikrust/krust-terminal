@@ -25,8 +25,8 @@ use command::r#async::Command;
 use command::Stdio;
 use futures::future::join_all;
 use tokio::fs as tokio_fs;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::r#async::FutureExt as _;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::r#async::FutureExt as _;
 
 use crate::ai::agent::conversation::AIConversation;
 use crate::ai::agent::{AIAgentAction, AIAgentActionType, AIAgentOutputMessageType};

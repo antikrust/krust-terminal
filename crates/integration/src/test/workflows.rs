@@ -1,24 +1,24 @@
 use std::time::Duration;
 
-use bork::integration_testing::assertions::{go_offline, go_online, join_a_workspace};
-use bork::integration_testing::command_palette::{
+use krust::integration_testing::assertions::{go_offline, go_online, join_a_workspace};
+use krust::integration_testing::command_palette::{
     open_command_palette_and_run_action, TestStepsExt,
 };
-use bork::integration_testing::step::new_step_with_default_assertions;
-use bork::integration_testing::terminal::util::ExpectedExitStatus;
-use bork::integration_testing::terminal::{
+use krust::integration_testing::step::new_step_with_default_assertions;
+use krust::integration_testing::terminal::util::ExpectedExitStatus;
+use krust::integration_testing::terminal::{
     execute_command_for_single_terminal_in_tab, wait_until_bootstrapped_single_pane_for_tab,
 };
-use bork::integration_testing::window::save_active_window_id;
-use bork::integration_testing::workflow::{
+use krust::integration_testing::window::save_active_window_id;
+use krust::integration_testing::workflow::{
     assert_no_team_workflow_pane_open, assert_no_workflow_pane_open,
     assert_open_team_workflow_pane_count_equals, assert_open_workflow_pane_count_equals,
     assert_workflow_id, create_a_personal_workflow, open_workflow,
 };
-use bork::integration_testing::{self, view_of_type};
-use bork::workflows::CategoriesView;
-use borkui_core::integration::TestStep;
-use borkui_core::{async_assert_eq, ViewHandle};
+use krust::integration_testing::{self, view_of_type};
+use krust::workflows::CategoriesView;
+use krustui_core::integration::TestStep;
+use krustui_core::{async_assert_eq, ViewHandle};
 
 use super::{new_builder, TEST_ONLY_ASSETS};
 use crate::Builder;
@@ -83,13 +83,13 @@ pub fn test_create_team_workflow_pane_from_command_palette() -> Builder {
         )
 }
 
-/// Adds a workflow file, containing two workflows, to a `.bork/workflows`
+/// Adds a workflow file, containing two workflows, to a `.krust/workflows`
 /// directory under a git repository and verifies that the workflows appear
 /// in the workflow menu.
 pub fn test_loading_project_workflows() -> Builder {
     new_builder()
         .with_setup(move |utils| {
-            utils.set_env("BORK_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
+            utils.set_env("KRUST_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
         })
         .with_step(wait_until_bootstrapped_single_pane_for_tab(0))
         .with_step(
@@ -100,7 +100,7 @@ pub fn test_loading_project_workflows() -> Builder {
 
                     workflows.read(app, |workflows, _| {
                         // Note that this can be a synchronous assertion because unlike the next assertion,
-                        // we don't have concurrency with a BorkConfig watcher thread
+                        // we don't have concurrency with a KrustConfig watcher thread
                         async_assert_eq!(
                             workflows.project_workflows().count(),
                             0,
@@ -124,7 +124,7 @@ pub fn test_loading_project_workflows() -> Builder {
                     "test_workflow.yaml",
                     &utils
                         .test_dir()
-                        .join("repo/.bork/workflows/test_workflow.yaml"),
+                        .join("repo/.krust/workflows/test_workflow.yaml"),
                 );
             }),
         )

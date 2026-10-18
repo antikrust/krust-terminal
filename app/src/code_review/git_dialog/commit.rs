@@ -4,16 +4,16 @@
 
 use std::path::Path;
 
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krustui::elements::{
     ChildView, ClippedScrollStateHandle, Container, CornerRadius, CrossAxisAlignment, Element,
     Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{AppContext, SingletonEntity, ViewContext, ViewHandle};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{AppContext, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::code_review::diff_state::CommitChainMode;
 use crate::code_review::git_dialog::pr::show_pr_created_toast;

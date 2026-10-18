@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::Icon;
-use borkui::Element;
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::Icon;
+use krustui::Element;
 
 use crate::search::result_renderer::ItemHighlightState;
 

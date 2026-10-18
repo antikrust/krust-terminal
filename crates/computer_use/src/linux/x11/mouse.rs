@@ -39,7 +39,7 @@ impl<'a> Mouse<'a> {
                 target.x() as i16,
                 target.y() as i16,
             )
-            .map_err(|e| format!("Failed to bork pointer: {e}"))?;
+            .map_err(|e| format!("Failed to krust pointer: {e}"))?;
 
         self.conn
             .flush()

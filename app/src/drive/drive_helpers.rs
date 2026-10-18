@@ -1,7 +1,7 @@
-use bork_server_auth::auth_state::AuthState;
-use bork_server_auth::user::PersonalObjectLimits;
-use bork_server_auth::AuthStateProvider;
-use borkui::{AppContext, SingletonEntity};
+use krust_server_auth::auth_state::AuthState;
+use krust_server_auth::user::PersonalObjectLimits;
+use krust_server_auth::AuthStateProvider;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::auth::auth_manager::AuthManager;
 use crate::cloud_object::model::persistence::CloudModel;

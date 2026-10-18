@@ -1,7 +1,7 @@
 use async_io::block_on;
 use virtual_fs::{Stub, VirtualFS};
-use bork_core::ui::color::hex_color::coloru_from_hex_string;
-use bork_core::ui::theme::AnsiColor;
+use krust_core::ui::color::hex_color::coloru_from_hex_string;
+use krust_core::ui::theme::AnsiColor;
 
 use super::{
     AlacrittyColors, AlacrittyConfig, AlacrittyTheme, PrimaryAlacrittyColors, RecursivelyParseable,

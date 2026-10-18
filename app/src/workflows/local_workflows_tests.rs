@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use borkui::App;
+use krustui::App;
 
 use super::*;
 
 fn initialize_app(app: &App) {
-    app.add_singleton_model(BorkConfig::mock);
+    app.add_singleton_model(KrustConfig::mock);
 }
 
 #[test]

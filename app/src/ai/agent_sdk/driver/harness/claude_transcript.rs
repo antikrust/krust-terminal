@@ -5,7 +5,7 @@
 //!   (main jsonl entries + subagent jsonl files + per-agent todo JSONs), plus reader/writer
 //!   functions that interoperate with Claude's own `~/.claude` layout.
 //! - [`ClaudeResumeInfo`] — everything the harness runner needs to resume an existing
-//!   Claude conversation: the Bork server conversation id to reuse, the Claude session uuid
+//!   Claude conversation: the Krust server conversation id to reuse, the Claude session uuid
 //!   to pass to `claude --resume`, and the decoded envelope to rehydrate onto disk.
 //! - [`write_session_index_entry`] — best-effort update of `~/.claude/sessions-index.json`
 //!   so Claude's `--resume <uuid>` lookup can find the freshly-rehydrated jsonl. Upstream
@@ -23,7 +23,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
-use bork_core::safe_warn;
+use krust_core::safe_warn;
 
 use super::json_utils::entries_to_jsonl;
 use crate::ai::agent::conversation::AIConversationId;
@@ -56,7 +56,7 @@ pub(crate) struct ClaudeTranscriptEnvelope {
 /// session and server conversation ids instead of minting fresh ones.
 #[derive(Debug)]
 pub(crate) struct ClaudeResumeInfo {
-    /// The Bork server-side conversation id. The runner stores this instead of calling
+    /// The Krust server-side conversation id. The runner stores this instead of calling
     /// `create_external_conversation` so subsequent transcript/block-snapshot uploads overwrite
     /// the same GCS objects.
     pub(crate) conversation_id: AIConversationId,

@@ -32,11 +32,11 @@ const HORIZONTALRULE_TAG_MIN_COUNT: usize = 3;
 pub const INDENT_MAX_LEVEL: usize = 5;
 pub const NUM_SPACE_PER_INDENT_LEVEL: usize = 4;
 
-pub const EMBED_BLOCK_MARKDOWN_LANG: &str = "bork-embedded-object";
+pub const EMBED_BLOCK_MARKDOWN_LANG: &str = "krust-embedded-object";
 
-pub const RUNNABLE_BLOCK_MARKDOWN_LANG: &str = "bork-runnable-command";
+pub const RUNNABLE_BLOCK_MARKDOWN_LANG: &str = "krust-runnable-command";
 pub const CODE_BLOCK_DEFAULT_MARKDOWN_LANG: &str = "text";
-pub const TABLE_BLOCK_MARKDOWN_LANG: &str = "bork-markdown-table";
+pub const TABLE_BLOCK_MARKDOWN_LANG: &str = "krust-markdown-table";
 
 const INDENT_TAG_MIN_COUNT: usize = 0;
 const INDENT_TAG_MAX_COUNT: usize = INDENT_MAX_LEVEL * NUM_SPACE_PER_INDENT_LEVEL;

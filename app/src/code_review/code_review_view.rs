@@ -16,24 +16,24 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use string_offset::CharOffset;
 use vec1::Vec1;
-use bork_core::channel::{Channel, ChannelState};
-use bork_core::features::FeatureFlag;
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::{safe_error, safe_info, SessionId};
-use bork_editor::content::buffer::{AutoScrollBehavior, InitialBufferState, SelectionOffsets};
-use bork_editor::model::CoreEditorModel;
-use bork_editor::render::element::VerticalExpansionBehavior;
+use krust_core::channel::{Channel, ChannelState};
+use krust_core::features::FeatureFlag;
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::{safe_error, safe_info, SessionId};
+use krust_editor::content::buffer::{AutoScrollBehavior, InitialBufferState, SelectionOffsets};
+use krust_editor::model::CoreEditorModel;
+use krust_editor::render::element::VerticalExpansionBehavior;
 #[cfg(not(target_family = "wasm"))]
-use bork_editor::render::model::AutoScrollMode;
-use bork_editor::render::model::LineCount;
-use bork_util::content_version::ContentVersion;
-use bork_util::path::LineAndColumnArg;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::new_scrollable::{
+use krust_editor::render::model::AutoScrollMode;
+use krust_editor::render::model::LineCount;
+use krust_util::content_version::ContentVersion;
+use krust_util::path::LineAndColumnArg;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::new_scrollable::{
     NewScrollable, NewScrollableElement, ScrollableAppearance, SingleAxisConfig,
 };
-use borkui::elements::{
+use krustui::elements::{
     resizable_state_handle, Align, Border, ChildAnchor, ChildView, Clipped,
     ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, DragBarSide, Element, Empty, EventHandler, Flex, Hoverable, List,
@@ -43,14 +43,14 @@ use borkui::elements::{
     ScrollOffset, ScrollStateHandle, ScrollbarWidth, Shrinkable, Stack, Text,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::text_layout::{default_compute_baseline_position, ClipConfig};
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::units::Pixels;
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::text_layout::{default_compute_baseline_position, ClipConfig};
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::units::Pixels;
+use krustui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WeakViewHandle, WindowId,
 };
@@ -126,7 +126,7 @@ use crate::terminal::cli_agent::{
 };
 use crate::terminal::input::MenuPositioning;
 use crate::terminal::view::{CliAgentRouting, InitProjectModel, TerminalAction, TerminalView};
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 use crate::ui_components::blended_colors::{neutral_2, neutral_3};
 use crate::ui_components::buttons::icon_button_with_color;
 use crate::ui_components::dialog::{dialog_styles, Dialog};
@@ -185,7 +185,7 @@ pub fn render_file_navigation_button<F>(
     on_click: F,
 ) -> Box<dyn Element>
 where
-    F: Fn(&mut borkui::EventContext<'_>) + 'static,
+    F: Fn(&mut krustui::EventContext<'_>) + 'static,
 {
     let ui_builder = appearance.ui_builder().clone();
     let icon_color = appearance
@@ -212,9 +212,9 @@ where
             .build()
             .finish()
     })
-    .with_tooltip_position(borkui::ui_components::button::ButtonTooltipPosition::BelowLeft)
+    .with_tooltip_position(krustui::ui_components::button::ButtonTooltipPosition::BelowLeft)
     .build()
-    .on_click(move |ctx: &mut borkui::EventContext<'_>, _, _| {
+    .on_click(move |ctx: &mut krustui::EventContext<'_>, _, _| {
         on_click(ctx);
     });
 
@@ -889,7 +889,7 @@ impl CodeReviewView {
             .map(|p| p.to_path_buf())
             .or_else(|| {
                 repo_metadata::repositories::DetectedRepositories::as_ref(ctx)
-                    .get_root_for_path(&bork_util::local_or_remote_path::LocalOrRemotePath::Local(
+                    .get_root_for_path(&krust_util::local_or_remote_path::LocalOrRemotePath::Local(
                         path.to_path_buf(),
                     ))
                     .and_then(|r| r.to_local_path().map(std::path::Path::to_path_buf))
@@ -934,7 +934,7 @@ impl CodeReviewView {
             .map(|p| p.to_path_buf())
             .or_else(|| {
                 repo_metadata::repositories::DetectedRepositories::as_ref(ctx)
-                    .get_root_for_path(&bork_util::local_or_remote_path::LocalOrRemotePath::Local(
+                    .get_root_for_path(&krust_util::local_or_remote_path::LocalOrRemotePath::Local(
                         path.to_path_buf(),
                     ))
                     .and_then(|r| r.to_local_path().map(std::path::Path::to_path_buf))
@@ -1299,7 +1299,7 @@ impl CodeReviewView {
         let init_project_button = ctx.add_typed_action_view(|_ctx| {
             ActionButton::new("Initialize codebase", NakedTheme)
                 .with_size(ButtonSize::Small)
-                .with_tooltip("Enables codebase indexing and BORK.md")
+                .with_tooltip("Enables codebase indexing and KRUST.md")
                 .with_tooltip_alignment(TooltipAlignment::Center)
                 .on_click(|ctx| {
                     ctx.dispatch_typed_action(CodeReviewAction::InitProjectForCurrentDirectory)
@@ -3693,7 +3693,7 @@ impl CodeReviewView {
 
         let header_text = "Loading open changes...";
         let loading_icon = Icon::Loading
-            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -3831,7 +3831,7 @@ impl CodeReviewView {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::AlertTriangle
-                            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+                            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                                 internal_colors::neutral_6(theme),
                             ))
                             .finish(),
@@ -3889,7 +3889,7 @@ impl CodeReviewView {
                         .with_text_and_icon_label(TextAndIcon::new(
                             TextAndIconAlignment::IconFirst,
                             " Retry".to_string(),
-                            Icon::Refresh.to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+                            Icon::Refresh.to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                                 theme.main_text_color(theme.background()).into(),
                             )),
                             MainAxisSize::Min,
@@ -3939,7 +3939,7 @@ impl CodeReviewView {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::FolderClosed
-                            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+                            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                                 internal_colors::neutral_6(theme),
                             ))
                             .finish(),
@@ -4016,7 +4016,7 @@ impl CodeReviewView {
         state: &LoadedState,
         appearance: &Appearance,
         is_in_split_pane: bool,
-        app: &borkui::AppContext,
+        app: &krustui::AppContext,
     ) -> Box<dyn Element> {
         let top_section = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
@@ -4081,7 +4081,7 @@ impl CodeReviewView {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::Diff
-                            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+                            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                                 internal_colors::neutral_6(theme),
                             ))
                             .finish(),
@@ -4418,7 +4418,7 @@ impl CodeReviewView {
 
         // Add file icon
         let file_icon = Icon::File
-            .to_borkui_icon(bork_core::ui::theme::Fill::Solid(
+            .to_krustui_icon(krust_core::ui::theme::Fill::Solid(
                 internal_colors::neutral_6(theme),
             ))
             .finish();
@@ -4442,7 +4442,7 @@ impl CodeReviewView {
                     appearance.ui_font_size(),
                 )
                 .with_color(
-                    bork_core::ui::theme::Fill::Solid(internal_colors::neutral_6(theme)).into(),
+                    krust_core::ui::theme::Fill::Solid(internal_colors::neutral_6(theme)).into(),
                 )
                 .with_line_height_ratio(appearance.line_height_ratio())
                 .with_style(Properties::default().weight(Weight::Semibold))
@@ -4466,7 +4466,7 @@ impl CodeReviewView {
                 )
                 .with_style(Properties::default().weight(Weight::Bold))
                 .with_color(
-                    bork_core::ui::theme::Fill::Solid(internal_colors::neutral_6(theme)).into(),
+                    krust_core::ui::theme::Fill::Solid(internal_colors::neutral_6(theme)).into(),
                 )
                 .finish(),
             )
@@ -4521,7 +4521,7 @@ impl CodeReviewView {
             axis_config,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
         .with_propagate_mousewheel_if_not_handled(true)
@@ -4580,7 +4580,7 @@ impl CodeReviewView {
                         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
 
                     if mouse_state.is_hovered() {
-                        container = container.with_background(bork_core::ui::theme::Fill::Solid(
+                        container = container.with_background(krust_core::ui::theme::Fill::Solid(
                             internal_colors::neutral_3(appearance.theme()),
                         ))
                     }
@@ -4601,7 +4601,7 @@ impl CodeReviewView {
             },
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
         .finish();
@@ -4858,9 +4858,9 @@ impl CodeReviewView {
                     // We effectively make this an absolutely positioned header.
                     OffsetPositioning::offset_from_parent(
                         vec2f(0., scroll_offset_from_top.offset_from_start().as_f32()),
-                        borkui::elements::ParentOffsetBounds::ParentByPosition,
-                        borkui::elements::ParentAnchor::TopMiddle,
-                        borkui::elements::ChildAnchor::TopMiddle,
+                        krustui::elements::ParentOffsetBounds::ParentByPosition,
+                        krustui::elements::ParentAnchor::TopMiddle,
+                        krustui::elements::ChildAnchor::TopMiddle,
                     ),
                 );
             }
@@ -5152,7 +5152,7 @@ impl CodeReviewView {
                     Text::new("•", appearance.ui_font_family(), appearance.ui_font_size())
                         .with_style(Properties::default().weight(Weight::Bold))
                         .with_color(
-                            bork_core::ui::theme::Fill::Solid(internal_colors::neutral_6(
+                            krust_core::ui::theme::Fill::Solid(internal_colors::neutral_6(
                                 appearance.theme(),
                             ))
                             .into(),
@@ -5180,7 +5180,7 @@ impl CodeReviewView {
             .with_horizontal_padding(8.)
             .with_vertical_padding(4.)
             .with_border(
-                Border::all(1.).with_border_fill(bork_core::ui::theme::Fill::Solid(
+                Border::all(1.).with_border_fill(krust_core::ui::theme::Fill::Solid(
                     internal_colors::neutral_4(appearance.theme()),
                 )),
             )
@@ -5189,7 +5189,7 @@ impl CodeReviewView {
 
     fn styled_file_content_container(
         content: Box<dyn Element>,
-        theme: &BorkTheme,
+        theme: &KrustTheme,
     ) -> Box<dyn Element> {
         Container::new(
             Flex::row()
@@ -5477,7 +5477,7 @@ impl CodeReviewView {
             },
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
         .finish();
@@ -6026,7 +6026,7 @@ impl CodeReviewView {
     fn insert_diff_hunk_as_context(
         &mut self,
         file_path: String,
-        line_range: Range<bork_editor::render::model::LineCount>,
+        line_range: Range<krust_editor::render::model::LineCount>,
         ctx: &mut ViewContext<Self>,
     ) {
         let Some(repo_path) = self.repo_path().map(LocalOrRemotePath::path_component) else {
@@ -6192,7 +6192,7 @@ impl CodeReviewView {
     fn extract_diff_hunk_data(
         &self,
         repo_relative_path: &str,
-        line_range: &Range<bork_editor::render::model::LineCount>,
+        line_range: &Range<krust_editor::render::model::LineCount>,
     ) -> Option<(DiffHunk, u32, u32)> {
         if let CodeReviewViewState::Loaded(state) = self.state() {
             // Find the file state that matches the given file path
@@ -6321,7 +6321,7 @@ impl CodeReviewView {
     fn restore_cursor_position(
         editor: &CodeEditorView,
         selections: Vec<SelectionOffsets>,
-        ctx: &mut borkui::ViewContext<CodeEditorView>,
+        ctx: &mut krustui::ViewContext<CodeEditorView>,
     ) {
         if let Ok(selections_vec1) = Vec1::try_from_vec(selections) {
             editor.model.update(ctx, |model, ctx| {
@@ -7134,7 +7134,7 @@ impl View for CodeReviewView {
         "CodeReviewView"
     }
 
-    fn keymap_context(&self, ctx: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, ctx: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         // Suppress pane-level shortcuts (e.g. `F`) when a descendant text editor
@@ -7655,7 +7655,7 @@ impl BackingView for CodeReviewView {
                     target_os = "windows"
                 )
             )) {
-                // Find the workspace to show the Bork-native modal
+                // Find the workspace to show the Krust-native modal
                 if let Some(workspace) = ctx
                     .views_of_type::<Workspace>(ctx.window_id())
                     .and_then(|workspaces| workspaces.first().cloned())
@@ -7727,7 +7727,7 @@ mod code_review_view_integration;
 
 #[cfg(feature = "integration_tests")]
 pub use code_review_view_integration::CodeReviewVisibleAnchorForTest;
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 #[cfg(test)]
 #[path = "code_review_view_tests.rs"]

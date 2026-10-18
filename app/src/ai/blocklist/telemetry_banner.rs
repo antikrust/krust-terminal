@@ -1,11 +1,11 @@
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
 
 use crate::settings_view::SettingsSection;
 use crate::terminal::view::TerminalAction;
@@ -16,9 +16,9 @@ use crate::workspaces::workspace::UgcCollectionEnablementSetting;
 use crate::{Appearance, FeatureFlag, WorkspaceAction};
 
 const TITLE_EXISTING_USERS: &str = "We've updated our telemetry policy.";
-const TITLE_NEW_USERS: &str = "Help improve Bork.";
-const DESCRIPTION: &str = "We may collect certain console interactions to improve Bork's AI capabilities. You can opt out any time.";
-const PRIVACY_URL: &str = "https://bork.baby/privacy";
+const TITLE_NEW_USERS: &str = "Help improve Krust.";
+const DESCRIPTION: &str = "We may collect certain console interactions to improve Krust's AI capabilities. You can opt out any time.";
+const PRIVACY_URL: &str = "https://krust.baby/privacy";
 
 #[derive(Default, Debug, Clone)]
 pub struct TelemetryBanner {
@@ -61,7 +61,7 @@ impl View for TelemetryBanner {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::Info
-                            .to_borkui_icon(theme.active_ui_text_color())
+                            .to_krustui_icon(theme.active_ui_text_color())
                             .finish(),
                     )
                     .with_height(20.)

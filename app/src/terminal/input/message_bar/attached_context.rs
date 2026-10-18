@@ -1,7 +1,7 @@
 //! Shared message producers for displaying attached blocks/text context.
 
-use bork_core::features::FeatureFlag;
-use borkui::keymap::Keystroke;
+use krust_core::features::FeatureFlag;
+use krustui::keymap::Keystroke;
 
 use crate::ai::blocklist::agent_view::{AgentMessageBarMouseStates, AgentViewController};
 use crate::ai::blocklist::{BlocklistAIContextModel, BlocklistAIInputModel};

@@ -5,15 +5,15 @@ use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextInline, FormattedTextLine,
 };
 use pathfinder_geometry::vector::Vector2F;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     HighlightedHyperlink, HyperlinkLens, HyperlinkUrl, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Shrinkable,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::Weight;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     Action, AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -32,7 +32,7 @@ pub enum DismissalType {
     Temporary,
 
     /// The banner should not be shown again to the user, whether in a new or existing session.
-    /// Dismissal state should also persist across app sessions (e.g. when Bork is restarted).
+    /// Dismissal state should also persist across app sessions (e.g. when Krust is restarted).
     Permanent,
 }
 
@@ -225,7 +225,7 @@ impl<T: Action + Clone> Banner<T> {
 
     fn render_icon(appearance: &Appearance, icon: &Icon) -> Box<dyn Element> {
         let icon_size = font_size(appearance);
-        ConstrainedBox::new(icon.to_borkui_icon(appearance.theme().accent()).finish())
+        ConstrainedBox::new(icon.to_krustui_icon(appearance.theme().accent()).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish()

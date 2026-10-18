@@ -6,10 +6,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use settings::macros::{define_settings_group, maybe_define_setting, register_settings_events};
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
-use bork_core::features::FeatureFlag;
-use bork_errors::{report_error, report_if_error};
-use bork_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
+use krust_core::features::FeatureFlag;
+use krust_errors::{report_error, report_if_error};
+use krust_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
 
 use super::cloud_preferences_syncer::CloudPreferencesSyncer;
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
@@ -87,7 +87,7 @@ impl PartialEq for CustomSecretRegex {
 
 impl settings_value::SettingsValue for CustomSecretRegex {}
 
-define_settings_group!(BorkDrivePrivacySettings, settings: [
+define_settings_group!(KrustDrivePrivacySettings, settings: [
     is_telemetry_enabled: IsTelemetryEnabled {
         type: bool,
         default: true,
@@ -247,34 +247,34 @@ impl PrivacySettings {
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
         let auth_client = ServerApiProvider::as_ref(ctx).get_auth_client();
 
-        // Initialize from `BorkDrivePrivacySettings`, which is the source of truth for these
+        // Initialize from `KrustDrivePrivacySettings`, which is the source of truth for these
         // booleans.
-        let bork_drive_privacy = BorkDrivePrivacySettings::as_ref(ctx);
-        let is_telemetry_enabled = *bork_drive_privacy.is_telemetry_enabled.value();
-        let is_crash_reporting_enabled = *bork_drive_privacy.is_crash_reporting_enabled.value();
-        let is_cloud_conversation_storage_enabled = *bork_drive_privacy
+        let krust_drive_privacy = KrustDrivePrivacySettings::as_ref(ctx);
+        let is_telemetry_enabled = *krust_drive_privacy.is_telemetry_enabled.value();
+        let is_crash_reporting_enabled = *krust_drive_privacy.is_crash_reporting_enabled.value();
+        let is_cloud_conversation_storage_enabled = *krust_drive_privacy
             .is_cloud_conversation_storage_enabled
             .value();
 
         // Listen for changes to the cloud model and update ourselves when they happen.
         ctx.subscribe_to_model(
-            &BorkDrivePrivacySettings::handle(ctx),
+            &KrustDrivePrivacySettings::handle(ctx),
             |me, _, event, ctx| {
-                let privacy_settings = BorkDrivePrivacySettings::as_ref(ctx);
+                let privacy_settings = KrustDrivePrivacySettings::as_ref(ctx);
                 match event {
-                    BorkDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
+                    KrustDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
                         me.set_is_telemetry_enabled(
                             *privacy_settings.is_telemetry_enabled.value(),
                             ctx,
                         );
                     }
-                    BorkDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
+                    KrustDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
                         me.set_is_crash_reporting_enabled(
                             *privacy_settings.is_crash_reporting_enabled.value(),
                             ctx,
                         );
                     }
-                    BorkDrivePrivacySettingsChangedEvent::IsCloudConversationStorageEnabled {
+                    KrustDrivePrivacySettingsChangedEvent::IsCloudConversationStorageEnabled {
                         ..
                     } => {
                         me.set_is_cloud_conversation_storage_enabled(
@@ -414,7 +414,7 @@ impl PrivacySettings {
             }
         }
 
-        self.maybe_sync_with_bork_drive_prefs(ctx);
+        self.maybe_sync_with_krust_drive_prefs(ctx);
     }
 
     fn overwrite_local_settings_if_cloud_disabled(
@@ -501,7 +501,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_crash_reporting_enabled = new_value;
 
-            BorkDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            KrustDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_crash_reporting_enabled to {new_value}");
                 let _ = settings
                     .is_crash_reporting_enabled
@@ -537,7 +537,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_telemetry_enabled = new_value;
 
-            BorkDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            KrustDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_telemetry_enabled to {new_value}");
                 let _ = settings.is_telemetry_enabled.set_value(new_value, ctx);
             });
@@ -569,7 +569,7 @@ impl PrivacySettings {
 
         self.is_cloud_conversation_storage_enabled = new_value;
 
-        BorkDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+        KrustDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
             log::info!("Setting is_cloud_conversation_storage_enabled to {new_value}");
             let _ = settings
                 .is_cloud_conversation_storage_enabled
@@ -704,26 +704,26 @@ impl PrivacySettings {
         }
     }
 
-    /// We wait until bork drive prefs have loaded and then either
+    /// We wait until krust drive prefs have loaded and then either
     /// 1) use them as the data store for is_telemetry_enabled and is_crash_reporting_enabled, if those
-    ///    values are set in bork drive, or
-    /// 2) update the bork drive prefs to match the values from the legacy user_settings endpoint so
-    ///    that we can use bork drive prefs going forward.
-    pub fn maybe_sync_with_bork_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
-        // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to bork drive
-        // initialize from the bork drive values.
+    ///    values are set in krust drive, or
+    /// 2) update the krust drive prefs to match the values from the legacy user_settings endpoint so
+    ///    that we can use krust drive prefs going forward.
+    pub fn maybe_sync_with_krust_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
+        // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to krust drive
+        // initialize from the krust drive values.
         let update_manager = UpdateManager::as_ref(ctx);
         ctx.spawn(
             update_manager.initial_load_complete(),
-            Self::handle_bork_drive_objects_loaded,
+            Self::handle_krust_drive_objects_loaded,
         );
     }
 
-    fn handle_bork_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
+    fn handle_krust_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
         self.initialize_default_regexes_once(ctx);
-        // Check if the bork drive preferences are set. If they are, and telemetry and crash reporting
-        // are set as bork drive prefs, then use those.  Otherwise, update the bork drive prefs to match
-        // the values from the legacy user_settings endpoint so that we can use bork drive prefs going forward.
+        // Check if the krust drive preferences are set. If they are, and telemetry and crash reporting
+        // are set as krust drive prefs, then use those.  Otherwise, update the krust drive prefs to match
+        // the values from the legacy user_settings endpoint so that we can use krust drive prefs going forward.
         let cloud_model = CloudModel::as_ref(ctx);
         let cloud_prefs = cloud_model.get_all_cloud_preferences_by_storage_key();
         let cloud_telemetry_value =
@@ -779,19 +779,19 @@ impl PrivacySettings {
             _ => {
                 log::info!(
                     "Library privacy preferences are not set, syncing local PrivacySettings values to \
-                    BorkDrivePrivacySettings and cloud. telemetry={}, crash_reporting={}, \
+                    KrustDrivePrivacySettings and cloud. telemetry={}, crash_reporting={}, \
                     cloud_conversation_storage={}",
                     self.is_telemetry_enabled,
                     self.is_crash_reporting_enabled,
                     self.is_cloud_conversation_storage_enabled
                 );
-                // First, ensure BorkDrivePrivacySettings (the define_settings_group model)
+                // First, ensure KrustDrivePrivacySettings (the define_settings_group model)
                 // reflects the actual PrivacySettings in-memory values. These may differ
-                // because BorkDrivePrivacySettings defaults to `true` for all three settings,
+                // because KrustDrivePrivacySettings defaults to `true` for all three settings,
                 // while the user may have changed them to `false` via PrivacySettings before
                 // signing up. Without this step, maybe_sync_local_prefs_to_cloud would read
-                // the stale BorkDrivePrivacySettings defaults and push those to the cloud.
-                BorkDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+                // the stale KrustDrivePrivacySettings defaults and push those to the cloud.
+                KrustDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings
                         .is_telemetry_enabled
                         .set_value(self.is_telemetry_enabled, ctx));

@@ -1,9 +1,9 @@
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::elements::{
     ConstrainedBox, Container, CornerRadius, Empty, Flex, MainAxisSize, ParentElement, Radius,
 };
-use borkui_core::Element;
+use krustui_core::Element;
 
 /// Render `n` dots with 4px radius and 8px spacing. `k` is the 0-based active dot index.
 pub(crate) fn progress_dots(n: usize, k: usize, appearance: &Appearance) -> Box<dyn Element> {

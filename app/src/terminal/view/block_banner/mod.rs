@@ -6,16 +6,16 @@
 //! without a LayoutContext. Use the exported BLOCK_BANNER_HEIGHT const when the banner height
 //! needs to be taken into account.
 
-mod borkify;
+mod krustify;
 
-pub use borkify::*;
-use borkui::elements::{
+pub use krustify::*;
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, Hoverable, MouseState, MouseStateHandle,
     ParentElement, Radius, Stack,
 };
-use borkui::Element;
+use krustui::Element;
 
-use crate::themes::theme::BorkTheme;
+use crate::themes::theme::KrustTheme;
 
 const CONSTRAINED_BANNER_HEIGHT: f32 = 48.;
 const BANNER_TOP_MARGIN: f32 = 16.;
@@ -25,13 +25,13 @@ const BANNER_H_PADDING: f32 = 8.;
 pub const BLOCK_BANNER_HEIGHT: f32 = CONSTRAINED_BANNER_HEIGHT + BANNER_TOP_MARGIN;
 
 pub enum WithinBlockBanner {
-    BorkifyBanner(BorkifyBannerState),
+    KrustifyBanner(KrustifyBannerState),
 }
 
 impl WithinBlockBanner {
     pub fn banner_height(&self) -> f32 {
         match self {
-            WithinBlockBanner::BorkifyBanner(_) => BLOCK_BANNER_HEIGHT,
+            WithinBlockBanner::KrustifyBanner(_) => BLOCK_BANNER_HEIGHT,
         }
     }
 }
@@ -41,7 +41,7 @@ impl WithinBlockBanner {
 fn render_block_banner(
     build_child: impl FnOnce(&MouseState) -> Box<dyn Element>,
     hover_state: MouseStateHandle,
-    theme: &BorkTheme,
+    theme: &KrustTheme,
 ) -> Box<dyn Element> {
     Stack::new()
         .with_child(

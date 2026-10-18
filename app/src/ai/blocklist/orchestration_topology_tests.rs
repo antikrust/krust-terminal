@@ -1,4 +1,4 @@
-use borkui::{App, EntityId, ModelHandle};
+use krustui::{App, EntityId, ModelHandle};
 
 use super::*;
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};

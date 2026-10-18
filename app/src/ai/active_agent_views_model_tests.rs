@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use borkui::{App, EntityId, WindowId};
+use krustui::{App, EntityId, WindowId};
 
 use super::*;
 

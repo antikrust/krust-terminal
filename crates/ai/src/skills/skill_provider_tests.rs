@@ -1,7 +1,7 @@
-use bork_util::host_id::HostId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
+use krust_util::host_id::HostId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
 
 use super::{
     get_provider_for_path, get_scope_for_path, home_skills_path,
@@ -9,24 +9,24 @@ use super::{
 };
 
 #[test]
-fn bork_home_skills_path_uses_bork_home_path() {
+fn krust_home_skills_path_uses_krust_home_path() {
     assert_eq!(
-        home_skills_path(SkillProvider::Bork),
-        bork_core::paths::bork_home_skills_dir()
+        home_skills_path(SkillProvider::Krust),
+        krust_core::paths::krust_home_skills_dir()
     );
 }
 
 #[test]
-fn bork_home_skill_path_is_home_bork_skill() {
-    let Some(bork_home_skills_dir) = bork_core::paths::bork_home_skills_dir() else {
+fn krust_home_skill_path_is_home_krust_skill() {
+    let Some(krust_home_skills_dir) = krust_core::paths::krust_home_skills_dir() else {
         eprintln!("Skipping test: home directory not available");
         return;
     };
-    let path = bork_home_skills_dir.join("my-skill").join("SKILL.md");
+    let path = krust_home_skills_dir.join("my-skill").join("SKILL.md");
 
     assert_eq!(
         get_provider_for_path(&LocalOrRemotePath::Local(path.clone())),
-        Some(SkillProvider::Bork)
+        Some(SkillProvider::Krust)
     );
     assert_eq!(get_scope_for_path(&path), SkillScope::Home);
 }

@@ -11,10 +11,10 @@ use std::time::Duration;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use bork_core::SessionId;
-use bork_util::remote_path::RemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::{AppContext, ModelContext, ModelHandle};
+use krust_core::SessionId;
+use krust_util::remote_path::RemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::{AppContext, ModelContext, ModelHandle};
 
 use crate::code_review::diff_size_limits::DiffSize;
 use crate::util::git::{BranchEntry, Commit, FileChangeEntry, PrInfo};
@@ -441,7 +441,7 @@ pub enum DiffStateModel {
     Remote(ModelHandle<RemoteDiffStateModel>),
 }
 
-impl borkui::Entity for DiffStateModel {
+impl krustui::Entity for DiffStateModel {
     type Event = DiffStateModelEvent;
 }
 

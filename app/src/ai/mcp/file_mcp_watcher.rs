@@ -13,14 +13,14 @@ use repo_metadata::repositories::{
 use repo_metadata::repository::{Repository, RepositorySubscriber, SubscriberId};
 use repo_metadata::watcher::{DirectoryWatcher, RepositoryUpdate};
 use strum::IntoEnumIterator;
-use bork_core::safe_warn;
-use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::safe_warn;
+use krustui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 use watcher::HomeDirectoryWatcherEvent;
 
 use crate::ai::mcp::parsing::normalize_codex_toml_to_json;
 use crate::ai::mcp::{home_config_file_path, MCPProvider, ParsedTemplatableMCPServerResult};
-use crate::bork_managed_paths_watcher::{
-    bork_managed_mcp_config_path, BorkManagedPathsWatcher, BorkManagedPathsWatcherEvent,
+use crate::krust_managed_paths_watcher::{
+    krust_managed_mcp_config_path, KrustManagedPathsWatcher, KrustManagedPathsWatcherEvent,
 };
 use crate::HomeDirectoryWatcher;
 
@@ -28,13 +28,13 @@ static ENV_VAR_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\$\{([^}]+)\}").expect("Regex is valid"));
 
 /// Matches home config paths that are exactly one directory deep (e.g. `.codex/config.toml`,
-/// `.bork/.mcp.json`), capturing the parent directory component.
+/// `.krust/.mcp.json`), capturing the parent directory component.
 static HOME_SUBDIR_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([^/]+)/[^/]+$").expect("Regex is valid"));
 
 /// Returns the subdirectory under the home directory that needs its own [`DirectoryWatcher`],
 /// inferred from the provider's home config path. Matches paths that are exactly one directory
-/// deep (e.g. `.codex/config.toml` → `.codex`, `.bork/.mcp.json` → `.bork`). Returns `None`
+/// deep (e.g. `.codex/config.toml` → `.codex`, `.krust/.mcp.json` → `.krust`). Returns `None`
 /// when the config file lives directly in the home dir (e.g. `.claude.json`) and is already
 /// covered by `HomeDirectoryWatcher`.
 fn home_subdir_to_watch(provider: MCPProvider) -> Option<PathBuf> {
@@ -173,25 +173,25 @@ impl FileMCPWatcher {
             me.handle_home_directory_watcher_event(event, ctx);
         });
         ctx.subscribe_to_model(
-            &BorkManagedPathsWatcher::handle(ctx),
+            &KrustManagedPathsWatcher::handle(ctx),
             |me, _, event, ctx| {
-                me.handle_bork_managed_paths_event(event, ctx);
+                me.handle_krust_managed_paths_event(event, ctx);
             },
         );
 
         let mut home_provider_watchers = HashMap::new();
-        if let Some(mcp_config_path) = bork_managed_mcp_config_path() {
+        if let Some(mcp_config_path) = krust_managed_mcp_config_path() {
             Self::spawn_config_parse(
                 mcp_config_path.config_path,
                 mcp_config_path.root_path,
-                MCPProvider::Bork,
+                MCPProvider::Krust,
                 ctx,
             );
         }
 
         if let Some(home_dir) = dirs::home_dir() {
             for provider in MCPProvider::iter() {
-                if provider == MCPProvider::Bork {
+                if provider == MCPProvider::Krust {
                     continue;
                 }
                 match home_subdir_to_watch(provider) {
@@ -288,7 +288,7 @@ impl FileMCPWatcher {
         }
 
         let Ok(std_path) =
-            bork_util::standardized_path::StandardizedPath::from_local_canonicalized(subdir_path)
+            krust_util::standardized_path::StandardizedPath::from_local_canonicalized(subdir_path)
         else {
             return;
         };
@@ -349,7 +349,7 @@ impl FileMCPWatcher {
         };
 
         for provider in MCPProvider::iter() {
-            if provider == MCPProvider::Bork {
+            if provider == MCPProvider::Krust {
                 continue;
             }
             match home_subdir_to_watch(provider) {
@@ -418,13 +418,13 @@ impl FileMCPWatcher {
         }
     }
 
-    fn handle_bork_managed_paths_event(
+    fn handle_krust_managed_paths_event(
         &mut self,
-        event: &BorkManagedPathsWatcherEvent,
+        event: &KrustManagedPathsWatcherEvent,
         ctx: &mut ModelContext<Self>,
     ) {
-        let BorkManagedPathsWatcherEvent::FilesChanged(update) = event;
-        let Some(mcp_config_path) = bork_managed_mcp_config_path() else {
+        let KrustManagedPathsWatcherEvent::FilesChanged(update) = event;
+        let Some(mcp_config_path) = krust_managed_mcp_config_path() else {
             return;
         };
         let config_path = mcp_config_path.config_path;
@@ -442,7 +442,7 @@ impl FileMCPWatcher {
             || update.moved.keys().any(|target| target.path == config_path);
         self.handle_single_config_update(
             mcp_config_path.root_path,
-            MCPProvider::Bork,
+            MCPProvider::Krust,
             config_path,
             was_deleted,
             was_added,
@@ -681,7 +681,7 @@ async fn parse_mcp_config_file(
                 return vec![];
             }
         },
-        MCPProvider::Claude | MCPProvider::Bork | MCPProvider::Agents => file_contents,
+        MCPProvider::Claude | MCPProvider::Krust | MCPProvider::Agents => file_contents,
     };
 
     let resolved_contents = match substitute_env_vars(&json) {

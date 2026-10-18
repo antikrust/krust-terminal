@@ -6,6 +6,6 @@ pub mod projects;
 pub mod searcher;
 pub mod settings;
 pub mod view;
-mod bork_ai;
+mod krust_ai;
 mod workflows;
 mod zero_state;

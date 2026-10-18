@@ -15,14 +15,14 @@ use ::channel_versions::{ParsedVersion, VersionInfo};
 use anyhow::{anyhow, Context as _, Result};
 use chrono::{DateTime, FixedOffset, NaiveDate};
 use rand::Rng as _;
-use bork_core::execution_mode::AppExecutionMode;
-use bork_errors::report_if_error;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::platform::TerminationMode;
-use borkui::r#async::Timer;
-use borkui::windowing::state::ApplicationStage;
-use borkui::windowing::{self, WindowManager};
-use borkui::{AppContext, Entity, ModelContext, SingletonEntity, ViewContext};
+use krust_core::execution_mode::AppExecutionMode;
+use krust_errors::report_if_error;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::platform::TerminationMode;
+use krustui::r#async::Timer;
+use krustui::windowing::state::ApplicationStage;
+use krustui::windowing::{self, WindowManager};
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity, ViewContext};
 
 pub use self::changelog::get_current_changelog;
 use self::channel_versions::fetch_channel_versions;
@@ -63,7 +63,7 @@ pub enum AutoupdateStage {
     },
     /// A relaunch was initiated to use the new version, but failed.
     UnableToLaunchNewVersion { new_version: VersionInfo },
-    /// A new version was installed, but Bork hasn't restarted yet.
+    /// A new version was installed, but Krust hasn't restarted yet.
     ///
     /// This state is only used on macOS, where the update isn't fully applied until right before
     /// restarting.
@@ -735,13 +735,13 @@ pub fn accessibility_content(
         // Found autoupdate
         (RequestType::ManualCheck, Ok(UpdateReady::Yes { .. })) => Some(AccessibilityContent::new(
             "Update available.",
-            "Use the command palette to install and relaunch Bork",
-            BorkA11yRole::HelpRole,
+            "Use the command palette to install and relaunch Krust",
+            KrustA11yRole::HelpRole,
         )),
         // Any non-successful autoupdate check
         (RequestType::ManualCheck, _) => Some(AccessibilityContent::new_without_help(
             "No updates available",
-            BorkA11yRole::HelpRole,
+            KrustA11yRole::HelpRole,
         )),
         _ => None,
     }
@@ -855,7 +855,7 @@ pub fn apply_update(
     }
 }
 
-/// Relaunch Bork to apply an update.
+/// Relaunch Krust to apply an update.
 ///
 /// This will:
 /// 1. Perform any last update steps.
@@ -981,7 +981,7 @@ where
                         autoupdate_state.relaunch_failed(ctx);
 
                         let err = anyhow!(err).context("Error applying installed update");
-                        bork_errors::report_error!(&err);
+                        krust_errors::report_error!(&err);
                         callback(Err(err), ctx);
                     }
                 }

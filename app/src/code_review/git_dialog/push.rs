@@ -8,16 +8,16 @@
 
 use std::collections::HashMap;
 
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_errors::report_error;
+use krustui::elements::{
     Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, ScrollbarWidth, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ViewContext;
+use krustui::platform::Cursor;
+use krustui::ViewContext;
 
 use crate::code::editor::{add_color, remove_color};
 use crate::code_review::git_dialog::{
@@ -326,7 +326,7 @@ fn render_commits_section(state: &PushState, appearance: &Appearance) -> Box<dyn
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .finish(),
     )

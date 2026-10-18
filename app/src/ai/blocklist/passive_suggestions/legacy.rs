@@ -9,10 +9,10 @@ use chrono::Utc;
 use command::r#async::Command;
 use parking_lot::FairMutex;
 use serde_json::json;
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use borkui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
-use borkui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krustui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
+use krustui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::static_prompt_suggestions::static_suggested_query;
 #[cfg(not(target_family = "wasm"))]
@@ -27,7 +27,7 @@ use crate::ai::paths::host_native_absolute_path;
 use crate::ai::predict::generate_am_query_suggestions::{
     GenerateAMQuerySuggestionsRequest, GenerateAMQuerySuggestionsResponse, Suggestion,
 };
-use crate::ai_assistant::execution_context::BorkAiExecutionContext;
+use crate::ai_assistant::execution_context::KrustAiExecutionContext;
 use crate::network::NetworkStatus;
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::PromptSuggestionFallbackReason;
@@ -408,7 +408,7 @@ impl PassiveSuggestionsModel {
             .active_session
             .as_ref(ctx)
             .session_type(ctx)
-            .map(|session_type| matches!(session_type, SessionType::BorkifiedRemote { .. }))
+            .map(|session_type| matches!(session_type, SessionType::KrustifiedRemote { .. }))
             .unwrap_or(true);
         if !can_read_file || should_skip_for_remote {
             let reason = if !can_read_file {
@@ -609,7 +609,7 @@ fn fetch_static_prompt_suggestion(block: &UserBlockCompleted) -> Option<AgentMod
 
 fn build_prompt_suggestions_request(
     block: &UserBlockCompleted,
-    execution_context: BorkAiExecutionContext,
+    execution_context: KrustAiExecutionContext,
     terminal_model: &Arc<FairMutex<TerminalModel>>,
 ) -> Option<GenerateAMQuerySuggestionsRequest> {
     let exit_code = block.serialized_block.exit_code;

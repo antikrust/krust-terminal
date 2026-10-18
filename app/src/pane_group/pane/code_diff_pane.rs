@@ -1,4 +1,4 @@
-use borkui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use krustui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use super::code_diff_pane_model::CodeDiffPaneModel;
 use super::{

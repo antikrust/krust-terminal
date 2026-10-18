@@ -7,8 +7,8 @@ use std::collections::HashMap;
 
 use settings::macros::define_settings_group;
 use settings::{Setting as _, SupportedPlatforms, SyncToCloud};
-use bork_cli::agent::Harness;
-use bork_errors::report_if_error;
+use krust_cli::agent::Harness;
+use krust_errors::report_if_error;
 
 use crate::server::ids::SyncId;
 
@@ -103,7 +103,7 @@ impl CloudAgentSettings {
     pub fn mark_harness_auth_ftux_completed(
         &mut self,
         harness: Harness,
-        ctx: &mut borkui::ModelContext<Self>,
+        ctx: &mut krustui::ModelContext<Self>,
     ) {
         let mut map = self.harness_auth_ftux_completed.value().clone();
         map.insert(harness.config_name().to_string(), true);
@@ -116,7 +116,7 @@ impl CloudAgentSettings {
         harness: Harness,
         model_id: &str,
         reasoning_level: Option<String>,
-        ctx: &mut borkui::ModelContext<Self>,
+        ctx: &mut krustui::ModelContext<Self>,
     ) {
         self.persist_harness_model_selection_for_key(
             harness.config_name(),
@@ -126,7 +126,7 @@ impl CloudAgentSettings {
         );
     }
 
-    /// Persists a local provider that shares a Bork harness transport but
+    /// Persists a local provider that shares a Krust harness transport but
     /// needs its own picker state (for example Ollama using the Codex-shaped
     /// terminal conversation path).
     pub fn persist_harness_model_selection_for_key(
@@ -134,7 +134,7 @@ impl CloudAgentSettings {
         key: &str,
         model_id: &str,
         reasoning_level: Option<String>,
-        ctx: &mut borkui::ModelContext<Self>,
+        ctx: &mut krustui::ModelContext<Self>,
     ) {
         let mut map = self.last_selected_harness_model.value().clone();
         if model_id.is_empty() && reasoning_level.is_none() {

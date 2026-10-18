@@ -1,12 +1,12 @@
 use chrono::{DateTime, Local};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use bork_core::command::ExitCode;
-use borkui::elements::{
+use krust_core::command::ExitCode;
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::mixer::AIContextMenuSearchableAction;

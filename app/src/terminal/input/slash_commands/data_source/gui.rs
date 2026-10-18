@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(not(target_family = "wasm"))]
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::core::subscribe_to_shared_dependencies;
 use super::{
@@ -269,7 +269,7 @@ impl GuiSlashCommandDataSource {
 
     /// Returns true when the active conversation is associated with a cloud Oz
     /// `AmbientAgentTask`. Used to gate `/continue-locally` to runs that can
-    /// actually be forked into a local Bork conversation.
+    /// actually be forked into a local Krust conversation.
     ///
     /// Permissive when the harness is not yet known: we consider an absent task or
     /// missing `agent_config_snapshot.harness` to be Oz, matching the existing

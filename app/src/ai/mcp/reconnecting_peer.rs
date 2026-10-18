@@ -3,7 +3,7 @@
 use std::future::Future;
 
 use uuid::Uuid;
-use borkui::ModelSpawner;
+use krustui::ModelSpawner;
 
 use super::TemplatableMCPServerManager;
 

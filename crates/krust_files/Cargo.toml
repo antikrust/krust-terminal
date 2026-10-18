@@ -1,0 +1,29 @@
+[package]
+name = "krust_files"
+version = "0.1.0"
+edition = "2021"
+authors = ["Krust Team <dev@krust.baby>"]
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0"
+async-channel.workspace = true
+async-fs.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+krustui_core.workspace = true
+remote_server.workspace = true
+krust_core.workspace = true
+krust_util.workspace = true
+watcher.workspace = true
+notify-debouncer-full.workspace = true
+repo_metadata.workspace = true
+log.workspace = true
+
+[features]
+test-util = []
+
+[dev-dependencies]
+async-channel.workspace = true
+tempfile.workspace = true

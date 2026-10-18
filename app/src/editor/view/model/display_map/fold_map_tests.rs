@@ -1,5 +1,5 @@
 use tests::buffer::RangesWhenEditing;
-use borkui::App;
+use krustui::App;
 
 use super::*;
 use crate::editor::tests::{sample_text, RandomCharIter};

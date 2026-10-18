@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Not};
 
 use itertools::Itertools;
-use bork_completion_metadata::fig_types::{ParserDirectives, StringOrNumber, Suggestion};
+use krust_completion_metadata::fig_types::{ParserDirectives, StringOrNumber, Suggestion};
 
 use crate::powershell_autogenerator::{
     common_parameters::cmdlet_common_parameters, CmdletHelp, CmdletMetadataParameter,

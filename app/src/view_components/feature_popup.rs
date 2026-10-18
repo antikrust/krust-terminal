@@ -1,9 +1,9 @@
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable, MouseStateHandle,
     ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -75,7 +75,7 @@ impl FeaturePopup {
             FeaturePopupBadge::AlertIcon => Container::new(
                 ConstrainedBox::new(
                     Icon::AlertCircle
-                        .to_borkui_icon(appearance.theme().main_text_color(
+                        .to_krustui_icon(appearance.theme().main_text_color(
                             appearance.theme().terminal_colors().normal.green.into(),
                         ))
                         .finish(),
@@ -125,7 +125,7 @@ impl View for FeaturePopup {
                         Hoverable::new(self.dismiss_mouse_state.clone(), |_| {
                             ConstrainedBox::new(
                                 Icon::X
-                                    .to_borkui_icon(appearance.theme().sub_text_color(
+                                    .to_krustui_icon(appearance.theme().sub_text_color(
                                         appearance.theme().main_text_color(background),
                                     ))
                                     .finish(),

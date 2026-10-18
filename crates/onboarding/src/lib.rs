@@ -28,7 +28,7 @@ pub use callout::{OnboardingCalloutView, OnboardingKeybindings};
 /// Shared by the intention slide's agent card checklist and the login slide's
 /// skip-login confirmation dialog so the two always stay in sync.
 pub const AI_FEATURES: &[&str] = &[
-    "Use frontier and open-weight models with Bork Agent",
+    "Use frontier and open-weight models with Krust Agent",
     "Hand off agent work to cloud agents",
     "Automatically diagnose and fix terminal errors",
     "Agentic control of long-running commands and TUIs",
@@ -36,11 +36,11 @@ pub const AI_FEATURES: &[&str] = &[
     "Remote control for Claude Code, Codex, and other agents",
 ];
 
-/// User-facing names of the Bork Drive features enabled when the terminal
-/// intention is selected with Bork Drive turned on. Shared by the login slide's
+/// User-facing names of the Krust Drive features enabled when the terminal
+/// intention is selected with Krust Drive turned on. Shared by the login slide's
 /// skip-login confirmation dialog so the list stays in sync with any future
 /// surfaces that need it.
-pub const BORK_DRIVE_FEATURES: &[&str] = &["Bork Drive", "Session Sharing"];
+pub const KRUST_DRIVE_FEATURES: &[&str] = &["Krust Drive", "Session Sharing"];
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "bin")] {
@@ -75,7 +75,7 @@ pub use model::{OnboardingAuthState, SelectedSettings, UICustomizationSettings};
 pub use slides::ProjectOnboardingSettings;
 pub use telemetry::OnboardingEvent;
 
-pub fn init(app: &mut borkui_core::AppContext) {
+pub fn init(app: &mut krustui_core::AppContext) {
     agent_onboarding_view::init(app);
     callout::init(app);
 }

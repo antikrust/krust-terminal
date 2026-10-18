@@ -10,16 +10,16 @@ use parking_lot::{FairMutex, RwLock};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting as _;
-use bork_core::features::FeatureFlag;
-use bork_core::semantic_selection::SemanticSelection;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use bork_editor::content::buffer::InitialBufferState;
-use bork_editor::render::element::VerticalExpansionBehavior;
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::new_scrollable::SingleAxisConfig;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::semantic_selection::SemanticSelection;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krust_editor::content::buffer::InitialBufferState;
+use krust_editor::render::element::VerticalExpansionBehavior;
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::new_scrollable::SingleAxisConfig;
+use krustui::elements::{
     resizable_state_handle, Border, ChildAnchor, ChildView, ClippedScrollStateHandle,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DragBarSide, DropShadow, Empty,
     Expanded, Fill, Flex, FormattedTextElement, Highlight, HighlightedHyperlink, Hoverable,
@@ -28,12 +28,12 @@ use borkui::elements::{
     ResizableStateHandle, SavePosition, SelectableArea, SelectionHandle, Shrinkable,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
 };
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::keymap::{EditableBinding, Keystroke};
-use borkui::platform::{Cursor, OperatingSystem};
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::keymap::{EditableBinding, Keystroke};
+use krustui::platform::{Cursor, OperatingSystem};
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -130,8 +130,8 @@ const HAS_PENDING_NON_TRANSFER_CONTROL_ACTION_CONTEXT_KEY: &str =
 const BLOCKED_ACTION_MESSAGE_FOR_TRANSFER_CONTROL: &str = "Agent is asking you to take control.";
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
-    use borkui::keymap::FixedBinding;
+    use krustui::keymap::macros::*;
+    use krustui::keymap::FixedBinding;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -954,7 +954,7 @@ impl View for CLISubagentView {
         "CLISubagentView"
     }
 
-    fn render(&self, app: &borkui::AppContext) -> Box<dyn borkui::Element> {
+    fn render(&self, app: &krustui::AppContext) -> Box<dyn krustui::Element> {
         let terminal_model = self.terminal_model.lock();
         let Some(block) = terminal_model.block_list().block_with_id(&self.block_id) else {
             return Empty::new().finish();
@@ -1425,7 +1425,7 @@ impl View for CLISubagentView {
             .finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> borkui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> krustui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         let terminal_model = self.terminal_model.lock();
@@ -1549,7 +1549,7 @@ impl TypedActionView for CLISubagentView {
             }
             CLISubagentAction::OpenFeedbackDocs => {
                 ctx.open_url(
-                    "https://therob.lol/bork-terminal/help/support-and-billing/sending-us-feedback",
+                    "https://therob.lol/krust-terminal/help/support-and-billing/sending-us-feedback",
                 );
             }
         }
@@ -1597,7 +1597,7 @@ fn render_action(action: AIAgentActionType, app: &AppContext) -> Option<Box<dyn 
 
     let icon = Container::new(
         ConstrainedBox::new(
-            borkui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
+            krustui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
         )
         .with_width(icon_size(app))
         .with_height(icon_size(app))
@@ -1639,7 +1639,7 @@ fn render_web_search(query: Option<String>, app: &AppContext) -> Box<dyn Element
 
     let icon = Container::new(
         ConstrainedBox::new(
-            borkui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
+            krustui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
                 .finish(),
         )
         .with_width(icon_size(app))
@@ -1872,7 +1872,7 @@ fn render_permissions_speedbump(
     .with_hyperlink_font_color(blended_colors::accent_fg_strong(theme).into())
     .register_default_click_handlers(|_, ctx, _| {
         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPage(
-            SettingsSection::BorkAgent,
+            SettingsSection::KrustAgent,
         ));
     })
     .finish();

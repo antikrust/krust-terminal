@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
-use bork_core::ui::builder;
-use borkui::elements::{
+use krust_core::ui::builder;
+use krustui::elements::{
     Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::command_search::searcher::{AcceptedHistoryItem, CommandSearchItemAction};

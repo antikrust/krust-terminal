@@ -1,7 +1,7 @@
 use settings::Setting;
-use borkui::integration::TestStep;
-use borkui::windowing::WindowManager;
-use borkui::{async_assert, SingletonEntity};
+use krustui::integration::TestStep;
+use krustui::windowing::WindowManager;
+use krustui::{async_assert, SingletonEntity};
 
 use crate::integration_testing::step::new_step_with_default_assertions;
 use crate::integration_testing::view_getters::theme_chooser_view;

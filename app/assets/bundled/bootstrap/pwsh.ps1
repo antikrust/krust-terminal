@@ -1,12 +1,12 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Scope = 'Function', Target = 'Bork-*', Justification = 'Bork-* functions are ours')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Scope = 'Function', Target = 'Krust-*', Justification = 'Krust-* functions are ours')]
 param()
 
 # Wrap things in a module to avoid cluttering the global scope. We assign it to '$null' to suppress
 # the console output from creating the module.
 # NOTE: If you do need a function to be global and also have access to variables in this scope, add
 # the function name to the 'Export-ModuleMember' call at the end.
-$null = New-Module -Name Bork-Module -ScriptBlock {
-    # Byte sequence used to signal the start of an OSC for Bork JSON messages.
+$null = New-Module -Name Krust-Module -ScriptBlock {
+    # Byte sequence used to signal the start of an OSC for Krust JSON messages.
     $oscStart = "$([char]0x1b)]9278;"
 
     # Appended to $oscStart to signal that the following message is JSON-encoded.
@@ -14,24 +14,24 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
     $oscParamSeparator = ';'
 
-    # Byte used to signal the end of an OSC for Bork JSON messages.
+    # Byte used to signal the end of an OSC for Krust JSON messages.
     $oscEnd = "$([char]0x07)"
 
     # Writes a hex-encoded JSON message to the PTY.
-    function Bork-Send-JsonMessage([System.Collections.Hashtable]$table) {
+    function Krust-Send-JsonMessage([System.Collections.Hashtable]$table) {
         $json = ConvertTo-Json -InputObject $table -Compress
         # Sends a message to the controlling terminal as an OSC control sequence.
         # TODO(CORE-2718): Determine if we need to hex encode the payload.
         # Note that because the JSON string may contain characters that we don't control (including
         # unicode), we encode it as hexadecimal string to avoid prematurely calling unhook if
         # one of the bytes in JSON is 9c (ST) or other (CAN, SUB, ESC).
-        $encodedMessage = Bork-Encode-HexString $json
+        $encodedMessage = Krust-Encode-HexString $json
         Write-Host -NoNewline "$oscStart$oscJsonMarker$oscParamSeparator$encodedMessage$oscEnd"
     }
 
     # This script block contains commands and constants that are needed in background threads.
     # If you want to be able to use it in a background thread, stick it in this block
-    $borkCommon = {
+    $krustCommon = {
         # OSC used to mark the start of in-band command output.
         #
         # Printable characters received this OSC and oscEndGeneratorOutput are parsed and handled as
@@ -46,13 +46,13 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
         $oscResetGrid = "$([char]0x1b)]9279$oscEnd"
 
-        function Bork-Send-ResetGridOSC() {
+        function Krust-Send-ResetGridOSC() {
             Write-Host -NoNewline $oscResetGrid
         }
 
         # Safely attempt to get Node.js version if available. Avoid literal 'node' invocation
         # to satisfy PSUseCompatibleCommands across target platforms.
-        function Bork-TryGet-NodeVersion {
+        function Krust-TryGet-NodeVersion {
             try {
                 $cmd = Get-Command -CommandType Application node 2>$null
                 if ($null -eq $cmd) { return '' }
@@ -68,7 +68,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
 
         # Encode a string as hex-encoded UTF-8.
-        function Bork-Encode-HexString([string]$str) {
+        function Krust-Encode-HexString([string]$str) {
             [BitConverter]::ToString([System.Text.Encoding]::UTF8.GetBytes($str)).Replace('-', '')
         }
 
@@ -76,18 +76,18 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         # sequences for generator output.
         #
         # The payload of the OSC is "<content_length>;<hex-encoded content>".
-        function Bork-Send-GeneratorOutputOsc {
+        function Krust-Send-GeneratorOutputOsc {
             param([string]$message)
 
-            $hexEncodedMessage = Bork-Encode-HexString $message
+            $hexEncodedMessage = Krust-Encode-HexString $message
             $byteCount = [System.Text.Encoding]::ASCII.GetByteCount($hexEncodedMessage)
 
             Write-Host -NoNewline "$oscStartGeneratorOutput$byteCount;$hexEncodedMessage$oscEndGeneratorOutput"
-            Bork-Send-ResetGridOSC
+            Krust-Send-ResetGridOSC
         }
 
         # Do not run this in the main thread. It mucks around with some env vars
-        function Bork-Run-InBandGenerator {
+        function Krust-Run-InBandGenerator {
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '', Justification = 'We actually need it')]
             param([string]$commandId, [string]$command)
 
@@ -111,11 +111,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
                 # If the generator command returns multi-line output,
                 # we make sure to join the lines together with a newline, so
-                # they are properly parsed by bork
+                # they are properly parsed by krust
                 $stringifiedOutput = $rawOutput -join "$([char]0x0a)"
 
                 # This is a best-effort attempt to get an error code.
-                # We cannot duplicate our error code logic from Bork-Precmd
+                # We cannot duplicate our error code logic from Krust-Precmd
                 # b/c Invoke-Expression will swallow the value of $? and always
                 # return true. So we do our best to return a legit error code
                 Write-Output "$commandId;$stringifiedOutput;$exitCode"
@@ -127,15 +127,15 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
     }
 
-    # Load the Bork Common functions in the current session
-    . $borkCommon
+    # Load the Krust Common functions in the current session
+    . $krustCommon
 
     function Get-EpochTime {
         [decimal]([DateTime]::UtcNow - [DateTime]::new(1970, 1, 1, 0, 0, 0, 0)).Ticks / 1e7
     }
 
-    function Bork-Bootstrapped {
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'BORK_BOOTSTRAPPED', Justification = 'False positive as we are assigning to global')]
+    function Krust-Bootstrapped {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'KRUST_BOOTSTRAPPED', Justification = 'False positive as we are assigning to global')]
         param([decimal]$rcStartTime, [decimal]$rcEndTime)
 
         $envVarNames = (Get-ChildItem env: | Select-Object -ExpandProperty Name | ForEach-Object { 'env:' + $_ }) + `
@@ -159,7 +159,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
             'PSWorkflowUtility'        # Legacy workflow utility (Windows PS 5)
         )
         $functionNamesRaw = Get-Command -CommandType Function -Module $corePsModules |
-            Where-Object { -not $_.Name.StartsWith('Bork') } |
+            Where-Object { -not $_.Name.StartsWith('Krust') } |
             Select-Object -ExpandProperty Name
         $functionNames = $functionNamesRaw -join [Environment]::NewLine
         $builtinsRaw = Get-Command -CommandType Cmdlet -Module $corePsModules | Select-Object -ExpandProperty Name
@@ -218,7 +218,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         $bootstrappedMsg = @{
             hook = 'Bootstrapped'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
                 histfile = $(Get-PSReadLineOption).HistorySavePath
                 shell = 'pwsh'
                 home_dir = "$HOME"
@@ -240,48 +240,48 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                 shell_path = (Get-Process -Id $PID).Path
             }
         }
-        Bork-Send-JsonMessage $bootstrappedMsg
-        $global:BORK_BOOTSTRAPPED = 1
+        Krust-Send-JsonMessage $bootstrappedMsg
+        $global:KRUST_BOOTSTRAPPED = 1
     }
 
-    function Bork-Preexec([string]$command) {
+    function Krust-Preexec([string]$command) {
         $HOST.UI.RawUI.WindowTitle = $command
         $preexecMsg = @{
             hook = 'Preexec'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
                 command = $command
             }
         }
-        Bork-Send-JsonMessage $preexecMsg
-        Bork-Send-ResetGridOSC
+        Krust-Send-JsonMessage $preexecMsg
+        Krust-Send-ResetGridOSC
 
         # If this preexec is called for user command, kill ongoing generator command jobs and clean
         # up the bookkeeping temp files used to bookkeep.
-        if (-not "$command" -match '^Bork-Run-GeneratorCommand') {
-            Bork-Stop-ActiveThread
+        if (-not "$command" -match '^Krust-Run-GeneratorCommand') {
+            Krust-Stop-ActiveThread
         }
 
-        # Clean up any completed bork jobs so they do not show up on the user's 'get-job'
+        # Clean up any completed krust jobs so they do not show up on the user's 'get-job'
         # commands
-        Bork-Clean-CompletedThread
+        Krust-Clean-CompletedThread
 
-        # Remove any instance of the 'Bork-Run-GeneratorCommand' call from the user's history
-        Clear-History -CommandLine 'Bork-Run-GeneratorCommand*'
+        # Remove any instance of the 'Krust-Run-GeneratorCommand' call from the user's history
+        Clear-History -CommandLine 'Krust-Run-GeneratorCommand*'
     }
 
-    function Bork-Finish-Update([string]$updateId) {
+    function Krust-Finish-Update([string]$updateId) {
         $updateMsg = @{
             hook = 'FinishUpdate'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
                 update_id = $updateId
             }
         }
-        Bork-Send-JsonMessage $updateMsg
+        Krust-Send-JsonMessage $updateMsg
     }
 
-    function Bork-Handle-DistUpgrade {
+    function Krust-Handle-DistUpgrade {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '', Justification = 'We actually need it')]
         param([string]$sourceFileName)
 
@@ -313,7 +313,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
     #    an escape sequence '^[i'. Since it made it more convenient to have a wrapper
     #    function anyway, I have not investigated this, but in case someone is working
     #    on this in the future, beware attempting to inline this function.
-    function Bork-Git {
+    function Krust-Git {
         $GIT_OPTIONAL_LOCKS = $env:GIT_OPTIONAL_LOCKS
         $env:GIT_OPTIONAL_LOCKS = 0
         try {
@@ -329,7 +329,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
     #
     # Make sure when you call this you call it with -ErrorAction SilentlyContinue
     # or it will print out error information when it is invoked.
-    function Bork-Restore-ErrorStatus {
+    function Krust-Restore-ErrorStatus {
         [CmdletBinding()]
         param([boolean]$status, [int]$code)
 
@@ -337,7 +337,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         if ($status -eq $false) {
             $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]::new(
                     [Exception]::new("$([char]0x00)"),
-                    'bork-reset-error',
+                    'krust-reset-error',
                     [System.Management.Automation.ErrorCategory]::NotSpecified,
                     $null
                 ))
@@ -346,11 +346,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
     # Tracks whether or not powershell is unable to find a command.
     # See the $ExecutionContext.InvokeCommand.CommandNotFoundAction where it is set to $true,
-    # and both $ExecutionContext.InvokeCommand.PostCommandLookupAction and Bork-Precmd where
+    # and both $ExecutionContext.InvokeCommand.PostCommandLookupAction and Krust-Precmd where
     # it is set to $false.
     $script:commandNotFound = $false
 
-    function Bork-Configure-PSReadLine {
+    function Krust-Configure-PSReadLine {
         # Set-PSReadLineKeyHandler is the PowerShell equivalent of zsh's bindkey.
         Set-PSReadLineKeyHandler -Chord 'Alt+2' -Function BackwardDeleteLine
 
@@ -365,11 +365,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
             $inputBufferMsg = @{
                 hook = 'InputBuffer'
                 value = @{
-                    session_id = $global:_borkSessionId
+                    session_id = $global:_krustSessionId
                     buffer = $inputBuffer
                 }
             }
-            Bork-Send-JsonMessage $inputBufferMsg
+            Krust-Send-JsonMessage $inputBufferMsg
             [Microsoft.PowerShell.PSConsoleReadLine]::BackwardDeleteLine()
             # This is triggered after precmd, so output here goes to the "early output" handler,
             # i.e. the background block. This clears the line the cursor is on. We clear it out b/c
@@ -383,35 +383,35 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
 
         # Sets the prompt mode to custom prompt (PS1)
-        # Is the equivalent of bork_change_prompt_modes_to_ps1 in other shells
+        # Is the equivalent of krust_change_prompt_modes_to_ps1 in other shells
         Set-PSReadLineKeyHandler -Chord 'Alt+p' -ScriptBlock {
-            $env:BORK_HONOR_PS1 = '1'
-            Bork-Redraw-Prompt
+            $env:KRUST_HONOR_PS1 = '1'
+            Krust-Redraw-Prompt
         }
 
-        # Sets the prompt mode to bork prompt
-        # Is the equivalent of bork_change_prompt_modes_to_bork_prompt in other shells
+        # Sets the prompt mode to krust prompt
+        # Is the equivalent of krust_change_prompt_modes_to_krust_prompt in other shells
         Set-PSReadLineKeyHandler -Chord 'Alt+w' -ScriptBlock {
-            $env:BORK_HONOR_PS1 = '0'
-            Bork-Redraw-Prompt
+            $env:KRUST_HONOR_PS1 = '0'
+            Krust-Redraw-Prompt
         }
 
         Set-PSReadLineOption -AddToHistoryHandler {
             param([string]$line)
 
-            if ($line -match '^Bork-Run-GeneratorCommand') {
+            if ($line -match '^Krust-Run-GeneratorCommand') {
                 return $false
             }
             return $true
         }
 
-        Bork-Disable-PSPrediction
+        Krust-Disable-PSPrediction
     }
 
     # Force use of the Inline PredictionViewStyle. The ListView style can occasionally cause some
-    # flickering when using Bork and it doesn't matter what the value of this setting is because
-    # Bork has its own input editor.
-    function Bork-Disable-PSPrediction {
+    # flickering when using Krust and it doesn't matter what the value of this setting is because
+    # Krust has its own input editor.
+    function Krust-Disable-PSPrediction {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseCompatibleCommands', '', Justification = 'Errors are ignored')]
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingEmptyCatchBlock', '', Justification = 'Errors expected')]
         param()
@@ -422,8 +422,8 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
     }
 
-    function Bork-Precmd {
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '', Justification = 'Bork-Git should use positionals')]
+    function Krust-Precmd {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '', Justification = 'Krust-Git should use positionals')]
         param([bool]$status, [int]$code)
         # Our logic here is:
         #
@@ -435,12 +435,12 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         #
         # Note that this is not going to be 100% accurate, as some cmdlets will fail
         # without setting a $LASTEXITCODE, meaning the $LASTEXITCODE will be stale.
-        $borkCommandNotFound = $script:commandNotFound
+        $krustCommandNotFound = $script:commandNotFound
         $script:commandNotFound = $false
 
         $exitCode = if ($status) {
             0
-        } elseif ($borkCommandNotFound) {
+        } elseif ($krustCommandNotFound) {
             127
         } elseif ($code -eq 0) {
             1
@@ -456,19 +456,19 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         $HOST.UI.RawUI.WindowTitle = $newTitle
 
         $blockId = $script:nextBlockId++
-        $nextBlockId = "precmd-${global:_borkSessionId}-$blockId"
+        $nextBlockId = "precmd-${global:_krustSessionId}-$blockId"
         $commandFinishedMsg = @{
             hook = 'CommandFinished'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
                 exit_code = $exitCode
                 next_block_id = $nextBlockId
             }
         }
-        Bork-Send-JsonMessage $commandFinishedMsg
-        Bork-Send-ResetGridOSC
+        Krust-Send-JsonMessage $commandFinishedMsg
+        Krust-Send-ResetGridOSC
 
-        Bork-Configure-PSReadLine
+        Krust-Configure-PSReadLine
 
         # If this is being called for a generator command, short circuit and send an unpopulated
         # precmd payload (except for pwd), since we don't re-render the prompt after generator commands
@@ -489,11 +489,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                     git_branch = ''
                     virtual_env = ''
                     conda_env = ''
-                    session_id = $global:_borkSessionId
+                    session_id = $global:_krustSessionId
                     is_after_in_band_command = $true
                 }
             }
-            Bork-Send-JsonMessage $precmdMsg
+            Krust-Send-JsonMessage $precmdMsg
         } else {
             # TODO(CORE-2678): Figure out resetting bindkeys here
 
@@ -508,7 +508,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
             # blocks created during the bootstrap process don't have visible
             # prompts, and we don't want to invoke 'git' before we've sourced the
             # user's rcfiles and have a fully-populated PATH.
-            if ($global:BORK_BOOTSTRAPPED -eq 1) {
+            if ($global:KRUST_BOOTSTRAPPED -eq 1) {
                 if (Test-Path env:VIRTUAL_ENV) {
                     $virtualEnv = $env:VIRTUAL_ENV
                 }
@@ -520,17 +520,17 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                 }
 
                 # Compute the Node.js version only when the Node.js Version chip is enabled
-                # (BORK_PROMPT_NODE_VERSION_ENABLED is '0' when the chip is not shown; default
+                # (KRUST_PROMPT_NODE_VERSION_ENABLED is '0' when the chip is not shown; default
                 # enabled when unset) and node is available. Cache the result keyed on the
                 # current location + PATH so we only spawn node when the directory or PATH
                 # changes (PATH changes on version-manager switches like `nvm use`).
-                $nodeChipEnabled = "$env:BORK_PROMPT_NODE_VERSION_ENABLED" -ne '0'
+                $nodeChipEnabled = "$env:KRUST_PROMPT_NODE_VERSION_ENABLED" -ne '0'
                 $hasNodeCommand = if ($nodeChipEnabled) { Get-Command -CommandType Application node 2>$null } else { $null }
                 if ($hasNodeCommand) {
                     try {
                         $nodeCacheKey = "$((Get-Location).Path)|$env:PATH"
-                        if ($nodeCacheKey -eq $script:borkNodeVersionCacheKey) {
-                            $nodeVersion = $script:borkNodeVersionCacheValue
+                        if ($nodeCacheKey -eq $script:krustNodeVersionCacheKey) {
+                            $nodeVersion = $script:krustNodeVersionCacheValue
                         } else {
                             # Walk up from the current directory to find a package.json
                             $dir = Get-Item -LiteralPath (Get-Location).Path
@@ -559,12 +559,12 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                                 }
 
                                 if ($inGitRepo) {
-                                    $nodeVersion = Bork-TryGet-NodeVersion
+                                    $nodeVersion = Krust-TryGet-NodeVersion
                                 }
                             }
 
-                            $script:borkNodeVersionCacheKey = $nodeCacheKey
-                            $script:borkNodeVersionCacheValue = $nodeVersion
+                            $script:krustNodeVersionCacheKey = $nodeCacheKey
+                            $script:krustNodeVersionCacheValue = $nodeVersion
                         }
                     } catch {
                         # Log at verbose level so the catch block is not empty and diagnostics are available when needed.
@@ -579,12 +579,12 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                 $hasGitCommand = Get-Command -CommandType Application git 2>$null
                 if ($hasGitCommand) {
                     # This is deliberately not using || b/c || only works in Powershell >=7
-                    $gitBranchTmp = Bork-Git symbolic-ref --short HEAD 2>$null
+                    $gitBranchTmp = Krust-Git symbolic-ref --short HEAD 2>$null
                     if ($null -ne $gitBranchTmp) {
                         $gitBranch = $gitBranchTmp
                         $gitHead = $gitBranchTmp
                     } else {
-                        $gitHeadTmp = Bork-Git rev-parse --short HEAD 2>$null
+                        $gitHeadTmp = Krust-Git rev-parse --short HEAD 2>$null
                         if ($null -ne $gitHeadTmp) {
                             $gitHead = $gitHeadTmp
                         }
@@ -592,7 +592,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                 }
             }
 
-            $honor_ps1 = "$env:BORK_HONOR_PS1" -eq '1'
+            $honor_ps1 = "$env:KRUST_HONOR_PS1" -eq '1'
 
             $precmdMsg = @{
                 hook = 'Precmd'
@@ -612,11 +612,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                     virtual_env = $virtualEnv
                     conda_env = $condaEnv
                     node_version = $nodeVersion
-                    session_id = $global:_borkSessionId
+                    session_id = $global:_krustSessionId
                     kube_config = $kubeConfig
                 }
             }
-            Bork-Send-JsonMessage $precmdMsg
+            Krust-Send-JsonMessage $precmdMsg
         }
     }
 
@@ -646,14 +646,14 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
     $script:outerRunspacePool.ThreadOptions = 'ReuseThread'
     $script:outerRunspacePool.Open() | Out-Null
 
-    class BorkGeneratorCommand {
+    class KrustGeneratorCommand {
         [string]$CommandId
         [string]$Command
     }
 
-    function Bork-Run-GeneratorCommandImpl {
+    function Krust-Run-GeneratorCommandImpl {
         param(
-            [BorkGeneratorCommand[]]$commands
+            [KrustGeneratorCommand[]]$commands
         )
 
         $jobNumber = $script:inBandCommandCount++
@@ -664,18 +664,18 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
             $command = $_.Command
 
             # Creates a powershell instance on one of our inner runspaces
-            # that first loads all the bork common functions, and then
+            # that first loads all the krust common functions, and then
             # executes the in-band generator in the current directory
             $ps = [powershell]::Create()
             $ps.RunspacePool = $script:innerRunspacePool
-            $ps.AddScript($borkCommon) | Out-Null
+            $ps.AddScript($krustCommon) | Out-Null
             $ps.AddScript({
                     param([string]$loc, [string]$commandId, [string]$command)
                     Set-Location $loc
-                    Bork-Run-InBandGenerator -commandId $commandId -command "$command"
+                    Krust-Run-InBandGenerator -commandId $commandId -command "$command"
                 }).AddParameters(@($PWD.Path, $commandId, "$command")) | Out-Null
 
-            $script:threadInner["Bork-Inner-$jobNumber-$batchNumber"] = $psInner
+            $script:threadInner["Krust-Inner-$jobNumber-$batchNumber"] = $psInner
             $batchNumber++
 
             @{
@@ -685,10 +685,10 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
 
         # Creates the outer job, which waits on all the inner jobs
-        # and then sends the results back to Bork via OSC
+        # and then sends the results back to Krust via OSC
         $psOuter = [powershell]::Create()
         $psOuter.RunspacePool = $script:outerRunspacePool
-        $psOuter.AddScript($borkCommon) | Out-Null
+        $psOuter.AddScript($krustCommon) | Out-Null
         $psOuter.AddScript({
                 param([object[]]$jobs)
 
@@ -712,7 +712,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
                     } catch {
                         $output = "$commandId;1;"
                     }
-                    Bork-Send-GeneratorOutputOsc $output
+                    Krust-Send-GeneratorOutputOsc $output
                 }
             }).AddParameters(@($jobs)) | Out-Null
 
@@ -720,16 +720,16 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         # not stopping it as we do not want to block the main thread.
         $async = $psOuter.BeginInvoke()
 
-        $script:threadOuter["Bork-Outer-$jobNumber"] = $psOuter
+        $script:threadOuter["Krust-Outer-$jobNumber"] = $psOuter
     }
 
-    function Bork-Stop-ActiveThread {
+    function Krust-Stop-ActiveThread {
         $script:threadInner.values | ForEach-Object {
             $_.Stop()
         }
     }
 
-    function Bork-Clean-CompletedThread {
+    function Krust-Clean-CompletedThread {
         # Powershell instances states > 2 are terminal.
         # See https://learn.microsoft.com/en-us/dotnet/api/system.management.automation.psinvocationstate
         if ($script:threadInner.Count -gt 0) {
@@ -754,7 +754,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
     }
 
-    function Bork-Run-GeneratorCommand {
+    function Krust-Run-GeneratorCommand {
         [CmdletBinding()]
         param(
             [parameter(ValueFromRemainingArguments = $true)][string[]]$passedArgs
@@ -763,7 +763,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         $status = $?
         $code = $global:LASTEXITCODE
 
-        # Setting this environment variable prevents bork_precmd from emitting the
+        # Setting this environment variable prevents krust_precmd from emitting the
         # 'Block started' hook to the Rust app.
         $script:generatorCommand = $true
 
@@ -771,15 +771,15 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         # (which doesn't really exist in powershell, but :shrug:), we need
         # to properly handle them here like we do in bashzshfish
 
-        # Converts the passed in args to BorkGeneratorCommand objects to group them together
+        # Converts the passed in args to KrustGeneratorCommand objects to group them together
         # note that if an odd number of arguments is passed in, the last arg will be silently ignored
-        [BorkGeneratorCommand[]] $jobs = @()
+        [KrustGeneratorCommand[]] $jobs = @()
         for ($i = 0; $i -lt $passedArgs.Length; $i += 2) {
             $commandId = $passedArgs[$i]
             $command = $passedArgs[$i + 1]
 
             if ($null -ne $command) {
-                $jobs += [BorkGeneratorCommand]@{
+                $jobs += [KrustGeneratorCommand]@{
                     commandId = $commandId
                     command = $command
                 }
@@ -787,15 +787,15 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
 
         try {
-            Bork-Run-GeneratorCommandImpl -commands $jobs
+            Krust-Run-GeneratorCommandImpl -commands $jobs
         } finally {
-            # NOTE: for some reason the Bork-Restore-ErrorStatus does not work
+            # NOTE: for some reason the Krust-Restore-ErrorStatus does not work
             # for this function, so we are inlining it in here.
             $global:LASTEXITCODE = $code
             if ($status -eq $false) {
                 $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]::new(
                         [Exception]::new("$([char]0x00)"),
-                        'bork-reset-error',
+                        'krust-reset-error',
                         [System.Management.Automation.ErrorCategory]::NotSpecified,
                         $null
                     ))
@@ -804,7 +804,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
     }
 
-    function Bork-Render-Prompt {
+    function Krust-Render-Prompt {
         param([bool]$status, [int]$code, [bool]$isGeneratorCommand)
 
         # If this is a generator command, we do not want to recompute
@@ -822,13 +822,13 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
 
         # Compute prompt and cache it as the last rendered prompt
-        $basePrompt = & $global:_borkOriginalPrompt
+        $basePrompt = & $global:_krustOriginalPrompt
         $script:lastRenderedPrompt = $basePrompt
 
         return $basePrompt
     }
 
-    function Bork-Decorate-Prompt {
+    function Krust-Decorate-Prompt {
         param([string]$basePrompt)
 
         $e = "$([char]0x1b)"
@@ -836,7 +836,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         # Wrap prompt in Prompt Marker OSCs
         $startPromptMarker = "$e]133;A$oscEnd"
         $startRPromptMarker = "$e]133;P;k=r$oscEnd"
-        if ("$env:BORK_HONOR_PS1" -eq '0') {
+        if ("$env:KRUST_HONOR_PS1" -eq '0') {
             $endPromptMarker = "$e]133;B$oscEnd$oscResetGrid"
         } else {
             $endPromptMarker = "$e]133;B$oscEnd"
@@ -861,7 +861,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
     $script:dontRunPrecmdForPrompt = $false
     # Redraws the prompt. Since our prompt also triggers the precmd hook
     # we need to signal that we do not want that to happen
-    function Bork-Redraw-Prompt {
+    function Krust-Redraw-Prompt {
         param()
 
         $y = $Host.UI.RawUI.CursorPosition.Y
@@ -873,27 +873,27 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
     }
 
-    function Bork-Prompt {
+    function Krust-Prompt {
         param()
 
         # We need to capture all the data related to exit codes and such
         # as soon as possible for a few reasons
         # 1. We need to make sure that these values are as fresh as possible
-        #    and are not impacted by our Bork- functions
-        # 2. After we finish running Bork-Precmd and Bork-Render-Prompt, we want to set these values
+        #    and are not impacted by our Krust- functions
+        # 2. After we finish running Krust-Precmd and Krust-Render-Prompt, we want to set these values
         #    back to what they were originally
         $status = $?
         $code = $LASTEXITCODE
         $isGeneratorCommand = [bool]($script:generatorCommand -eq $true)
 
         if ($script:dontRunPrecmdForPrompt -ne $true) {
-            Bork-Precmd -status $status -code $code
+            Krust-Precmd -status $status -code $code
         }
 
         $script:preexecHandled = $false
 
-        $renderedPrompt = Bork-Render-Prompt -status $status -code $code -isGeneratorCommand $isGeneratorCommand
-        $decoratedPrompt = Bork-Decorate-Prompt -basePrompt $renderedPrompt
+        $renderedPrompt = Krust-Render-Prompt -status $status -code $code -isGeneratorCommand $isGeneratorCommand
+        $decoratedPrompt = Krust-Decorate-Prompt -basePrompt $renderedPrompt
         $extraLines = ($decoratedPrompt -split "$([char]0x0a)").Length - 1
         Set-PSReadLineOption -ExtraPromptLineCount $extraLines
 
@@ -906,31 +906,31 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         return $decoratedPrompt
     }
 
-    if ((Test-Path env:BORK_INITIAL_WORKING_DIR) -and -not [String]::IsNullOrEmpty($env:BORK_INITIAL_WORKING_DIR)) {
-        Set-Location $env:BORK_INITIAL_WORKING_DIR 2> $null
-        Remove-Item -Path env:BORK_INITIAL_WORKING_DIR
+    if ((Test-Path env:KRUST_INITIAL_WORKING_DIR) -and -not [String]::IsNullOrEmpty($env:KRUST_INITIAL_WORKING_DIR)) {
+        Set-Location $env:KRUST_INITIAL_WORKING_DIR 2> $null
+        Remove-Item -Path env:KRUST_INITIAL_WORKING_DIR
     }
 
     # In some cases, the Clear-Host command will not interface properly with the blocklist.
     # Clear-Host defers to whatever the 'clear' command is defined, and if that command
-    # is not set up to work with Bork (or has funky other behaviors) it can cause problems.
+    # is not set up to work with Krust (or has funky other behaviors) it can cause problems.
     #
     # Specific examples:
     # - The default /usr/bin/clear on mac creates a giant, empty block to clear content
     #   off of the screen.
     # - if miniconda is installed on an osx system, the miniconda 'clear' command will be
-    #   invoked for 'Clear-Host', which does not play with Bork and winds up doing nothing.
+    #   invoked for 'Clear-Host', which does not play with Krust and winds up doing nothing.
 
     # Because of the above, we explicitly override both 'Clear-Host' and 'clear' to
-    # instead send a DCS command to Bork instructing it to clear the blocklist.
+    # instead send a DCS command to Krust instructing it to clear the blocklist.
     # We are explicitly NOT calling the underlying clear implementation:
     # 1. B/c traditional clear sends an escape sequence that ends up creating an
     #    empty block that is the full height of the screen.
     # 1. B/c our other bootstrap scripts (bash, zsh, fish) do not.
 
     # If we ever want to call the underlying clear command, we could do so by:
-    # 1. Capturing it with '$_bork_original_clear = (Get-Command Clear-Host).Definition'
-    # 2. Invoking it with 'Invoke-Expression $_bork_original_clear'
+    # 1. Capturing it with '$_krust_original_clear = (Get-Command Clear-Host).Definition'
+    # 2. Invoking it with 'Invoke-Expression $_krust_original_clear'
 
     # TODO(PLAT-781): On windows, these two functions should both clear the visible screen
     # AND the scrollback
@@ -938,23 +938,23 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         $inputBufferMsg = @{
             hook = 'Clear'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
             }
         }
-        Bork-Send-JsonMessage $inputBufferMsg
+        Krust-Send-JsonMessage $inputBufferMsg
     }
 
     function clear() {
         $inputBufferMsg = @{
             hook = 'Clear'
             value = @{
-                session_id = $global:_borkSessionId
+                session_id = $global:_krustSessionId
             }
         }
-        Bork-Send-JsonMessage $inputBufferMsg
+        Krust-Send-JsonMessage $inputBufferMsg
     }
 
-    function Bork-Finish-Bootstrap {
+    function Krust-Finish-Bootstrap {
         param([decimal]$rcStartTime, [decimal]$rcEndTime)
         # This is the closest we can get in PowerShell to a proper preexec hook. We wrap the
         # invocation of PSConsoleHostReadline, and call our preexec hook before returning the
@@ -964,7 +964,7 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         $function:global:PSConsoleHostReadLine = {
             $line = & $script:oldPSConsoleHostReadLine
 
-            Bork-Preexec "$line"
+            Krust-Preexec "$line"
 
             $line
         }
@@ -979,9 +979,9 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
             # automatically by PowerShell internals. Runspace is for user-submitted/configured stuff.
             # However, Runspace still includes stuff like the prompt function, PostCommandLookupAction,
             # and the stuff we set during this bootstrap. So, add a condition to prevent preexec from
-            # triggering in those cases. Note that we prefix our own functions with the "Bork-" prefix
+            # triggering in those cases. Note that we prefix our own functions with the "Krust-" prefix
             # so that we can ignore them here.
-            if ($EventArgs.CommandOrigin -ne 'Runspace' -or ($commandLine -match '^prompt$|^Bork-')) {
+            if ($EventArgs.CommandOrigin -ne 'Runspace' -or ($commandLine -match '^prompt$|^Krust-')) {
                 return
             }
             $script:commandNotFound = $true
@@ -989,23 +989,23 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
         # This sets up our wrapper around $function:prompt, which runs the precmd hook
         # and computes the user's custom prompt.
-        $function:global:prompt = (Get-Command Bork-Prompt).ScriptBlock
-        Bork-Bootstrapped -rcStartTime $rcStartTime -rcEndTime $rcEndTime
+        $function:global:prompt = (Get-Command Krust-Prompt).ScriptBlock
+        Krust-Bootstrapped -rcStartTime $rcStartTime -rcEndTime $rcEndTime
     }
 
     ###########################################################
     # NOTE: NO non-bootstrap / non-user calls below this line #
     ###########################################################
 
-    # Send a precmd message to the terminal to differentiate between the bork
+    # Send a precmd message to the terminal to differentiate between the krust
     # bootstrap logic pasted into the PTY and the output of shell startup files.
-    Bork-Precmd -status $global:? -code $global:LASTEXITCODE
+    Krust-Precmd -status $global:? -code $global:LASTEXITCODE
 
-    Export-ModuleMember -Function clear, Clear-Host, Get-EpochTime, Bork-Finish-Update, Bork-Handle-DistUpgrade, Bork-Run-GeneratorCommand, Bork-Finish-Bootstrap
+    Export-ModuleMember -Function clear, Clear-Host, Get-EpochTime, Krust-Finish-Update, Krust-Handle-DistUpgrade, Krust-Run-GeneratorCommand, Krust-Finish-Bootstrap
 }
 
 # Finally, get ready to source the user's RC files. This must be done in the global scope (not
-# inside Bork-Module) in order to obey the expected scoping in PowerShell's typical startup process.
+# inside Krust-Module) in order to obey the expected scoping in PowerShell's typical startup process.
 . {
     $rcStartTime = Get-EpochTime
     # Source the user's RC files
@@ -1022,11 +1022,11 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
         }
     }
 
-    # Append additional PATH entries if provided via BORK_PATH_APPEND.
+    # Append additional PATH entries if provided via KRUST_PATH_APPEND.
     # This happens after we source RC files in case they reset PATH.
-    if (-not [String]::IsNullOrEmpty($env:BORK_PATH_APPEND)) {
-        $env:PATH = '{0}{1}{2}' -f $env:PATH, [IO.Path]::PathSeparator, $env:BORK_PATH_APPEND
-        Remove-Item -Path env:BORK_PATH_APPEND
+    if (-not [String]::IsNullOrEmpty($env:KRUST_PATH_APPEND)) {
+        $env:PATH = '{0}{1}{2}' -f $env:PATH, [IO.Path]::PathSeparator, $env:KRUST_PATH_APPEND
+        Remove-Item -Path env:KRUST_PATH_APPEND
     }
 
     # This is a workaround for oh-my-posh's "transient prompt" feature. When enabled, it causes the
@@ -1046,13 +1046,13 @@ $null = New-Module -Name Bork-Module -ScriptBlock {
 
     # Capture the current prompt (potentially modified by a profile),
     # and then reset the prompt to our current noop prompt.
-    $global:_borkOriginalPrompt = $function:global:prompt
+    $global:_krustOriginalPrompt = $function:global:prompt
 
-    Bork-Finish-Bootstrap -rcStartTime $rcStartTime -rcEndTime $rcEndTime
+    Krust-Finish-Bootstrap -rcStartTime $rcStartTime -rcEndTime $rcEndTime
     Remove-Variable -Name enterHandler, ctrlcHandler, rcStartTime, rcEndTime -Scope global -ErrorAction Ignore
 
     # Restore the process's original execution policy now that the user's RC files have been loaded.
-    if ($global:_bork_PSProcessExecPolicy -ne $null) {
-        Set-ExecutionPolicy -Scope Process -ExecutionPolicy $global:_bork_PSProcessExecPolicy
+    if ($global:_krust_PSProcessExecPolicy -ne $null) {
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy $global:_krust_PSProcessExecPolicy
     }
 }

@@ -1,5 +1,5 @@
-use borkui::integration::{AssertionCallback, AssertionOutcome};
-use borkui::{async_assert, App, ViewHandle, WindowId};
+use krustui::integration::{AssertionCallback, AssertionOutcome};
+use krustui::{async_assert, App, ViewHandle, WindowId};
 
 use crate::integration_testing::view_getters::{command_palette_view, workspace_view};
 use crate::palette::PaletteMode;

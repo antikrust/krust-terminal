@@ -1,5 +1,5 @@
 use anyhow::Error;
-use borkui::App;
+use krustui::App;
 
 use super::*;
 use crate::editor::tests::sample_text;

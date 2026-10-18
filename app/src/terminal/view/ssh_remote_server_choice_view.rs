@@ -1,14 +1,14 @@
 //! Inline block view that asks the user whether they want to install
-//! Bork's SSH extension on the remote host the shell just connected to,
+//! Krust's SSH extension on the remote host the shell just connected to,
 //! or continue without installing (falling back to the existing
-//! ControlMaster borkification path).
+//! ControlMaster krustification path).
 //!
 //! Designed from frame 6050:2448 of the Figma file
 //! [Remote session initialization](https://www.figma.com/design/r0BO9cTZCK6pDE6qerg2K0/Remote-session-initialization).
 //!
 //! The view owns:
 //! - a child [`KeyboardNavigableButtons`] handle for the two selectable
-//!   cards ("Install Bork's SSH extension" / "Continue without installing"),
+//!   cards ("Install Krust's SSH extension" / "Continue without installing"),
 //! - the [`SessionId`] this prompt is scoped to (used for event forwarding),
 //! - the current "Don't ask me this again" checked state (purely local to
 //!   this prompt instance; persisted to `ssh_extension_install_mode` only
@@ -17,15 +17,15 @@
 //! Dismissing the block (on click of either option, or when the session is
 //! deregistered) is the parent's responsibility.
 use settings::Setting;
-use bork_core::ui::theme::color::internal_colors;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::ui::theme::color::internal_colors;
+use krust_errors::report_error;
+use krustui::elements::{
     Border, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, FocusContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -38,7 +38,7 @@ use crate::ai::blocklist::inline_action::inline_action_header::{
 };
 use crate::server::telemetry::TelemetryEvent;
 use crate::terminal::model::session::SessionId;
-use crate::terminal::borkify::settings::{SshExtensionInstallMode, BorkifySettings};
+use crate::terminal::krustify::settings::{SshExtensionInstallMode, KrustifySettings};
 use crate::ui_components::blended_colors;
 use crate::{send_telemetry_from_ctx, Appearance};
 
@@ -49,14 +49,14 @@ pub enum SshRemoteServerChoiceViewAction {
     Install,
     Skip,
     ToggleDoNotAskAgain,
-    OpenBorkifySettings,
+    OpenKrustifySettings,
 }
 
 #[derive(Clone, Debug)]
 pub enum SshRemoteServerChoiceViewEvent {
     Install,
     Skip,
-    OpenBorkifySettings,
+    OpenKrustifySettings,
 }
 
 /// Choice block prompting the user to install the remote-server binary on the remote host or skip.
@@ -75,9 +75,9 @@ impl SshRemoteServerChoiceView {
         let buttons = ctx.add_typed_action_view(|_| {
             KeyboardNavigableButtons::new(vec![
                 rich_navigation_button(
-                    "Install Bork's SSH extension".to_string(),
+                    "Install Krust's SSH extension".to_string(),
                     Some(
-                        "Install Bork's extension to enable agent features like file browsing, \
+                        "Install Krust's extension to enable agent features like file browsing, \
                          code review, and intelligent command completions in this session."
                             .to_string(),
                     ),
@@ -88,7 +88,7 @@ impl SshRemoteServerChoiceView {
                 rich_navigation_button(
                     "Continue without installing".to_string(),
                     Some(
-                        "You'll still get a Borkified experience just without the coding \
+                        "You'll still get a Krustified experience just without the coding \
                          features."
                             .to_string(),
                     ),
@@ -172,14 +172,14 @@ impl SshRemoteServerChoiceView {
             .with_child(Container::new(checkbox_label).with_margin_left(4.).finish())
             .finish();
 
-        // Right: "Manage Borkify settings" link.
+        // Right: "Manage Krustify settings" link.
         let manage_settings_link = appearance
             .ui_builder()
             .link(
-                "Manage Borkify settings".into(),
+                "Manage Krustify settings".into(),
                 None,
                 Some(Box::new(|ctx| {
-                    ctx.dispatch_typed_action(SshRemoteServerChoiceViewAction::OpenBorkifySettings);
+                    ctx.dispatch_typed_action(SshRemoteServerChoiceViewAction::OpenKrustifySettings);
                 })),
                 self.manage_settings_mouse_state.clone(),
             )
@@ -265,7 +265,7 @@ impl TypedActionView for SshRemoteServerChoiceView {
             SshRemoteServerChoiceViewAction::Install => {
                 if self.do_not_ask_again {
                     let mode = SshExtensionInstallMode::AlwaysInstall;
-                    BorkifySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    KrustifySettings::handle(ctx).update(ctx, |settings, ctx| {
                         if let Err(e) = settings.ssh_extension_install_mode.set_value(mode, ctx) {
                             report_error!(
                                 e.context("Failed to persist ssh_extension_install_mode")
@@ -284,7 +284,7 @@ impl TypedActionView for SshRemoteServerChoiceView {
             SshRemoteServerChoiceViewAction::Skip => {
                 if self.do_not_ask_again {
                     let mode = SshExtensionInstallMode::NeverInstall;
-                    BorkifySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    KrustifySettings::handle(ctx).update(ctx, |settings, ctx| {
                         if let Err(e) = settings.ssh_extension_install_mode.set_value(mode, ctx) {
                             report_error!(
                                 e.context("Failed to persist ssh_extension_install_mode")
@@ -310,8 +310,8 @@ impl TypedActionView for SshRemoteServerChoiceView {
                 );
                 ctx.notify();
             }
-            SshRemoteServerChoiceViewAction::OpenBorkifySettings => {
-                ctx.emit(SshRemoteServerChoiceViewEvent::OpenBorkifySettings);
+            SshRemoteServerChoiceViewAction::OpenKrustifySettings => {
+                ctx.emit(SshRemoteServerChoiceViewEvent::OpenKrustifySettings);
             }
         }
     }

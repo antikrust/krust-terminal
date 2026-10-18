@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use borkui::{Action, AppContext};
+use krustui::{Action, AppContext};
 
 use crate::search::data_source::{Query, QueryResult};
 use crate::search::mixer::{AsyncDataSource, BoxFuture, DataSourceRunErrorWrapper};

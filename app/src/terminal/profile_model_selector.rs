@@ -6,17 +6,17 @@ use instant::{Duration, Instant};
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{
+use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DropShadow, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement as _, ParentOffsetBounds,
     Percentage, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect, SavePosition,
     Stack, Text, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponent;
-use borkui::{
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponent;
+use krustui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity as _, TypedActionView,
     View, ViewContext, ViewHandle,
 };
@@ -30,11 +30,11 @@ const SIDECAR_HORIZONTAL_GAP: f32 = 8.;
 const SIDECAR_POSITION_ID: &str = "model_sidecar_panel";
 
 use settings::Setting as _;
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::color::{coloru_with_opacity, Opacity};
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::Fill;
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::color::{coloru_with_opacity, Opacity};
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::Fill;
 
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME,
@@ -109,7 +109,7 @@ const HARNESS_REASONING_LEVELS: [(Option<&str>, &str); 4] = [
     (Some("high"), "High"),
 ];
 
-pub fn calculate_scaled_font_size(appearance: &bork_core::ui::appearance::Appearance) -> f32 {
+pub fn calculate_scaled_font_size(appearance: &krust_core::ui::appearance::Appearance) -> f32 {
     if FeatureFlag::AgentView.is_enabled() {
         udi_font_size(appearance)
     } else {
@@ -118,7 +118,7 @@ pub fn calculate_scaled_font_size(appearance: &bork_core::ui::appearance::Appear
 }
 
 /// Calculate the maximum width for profile name text (we will clip to this width)
-pub fn calculate_max_profile_name_width(appearance: &bork_core::ui::appearance::Appearance) -> f32 {
+pub fn calculate_max_profile_name_width(appearance: &krust_core::ui::appearance::Appearance) -> f32 {
     let scaled_font_size = calculate_scaled_font_size(appearance);
     scaled_font_size * MAX_PROFILE_NAME_WIDTH_SCALE_FACTOR
 }
@@ -167,10 +167,10 @@ impl ActionButtonTheme for SelectorChipTheme {
         }
     }
 
-    fn font_properties(&self) -> Option<borkui::fonts::Properties> {
+    fn font_properties(&self) -> Option<krustui::fonts::Properties> {
         if FeatureFlag::CloudModeInputV2.is_enabled() {
-            Some(borkui::fonts::Properties {
-                weight: borkui::fonts::Weight::Semibold,
+            Some(krustui::fonts::Properties {
+                weight: krustui::fonts::Weight::Semibold,
                 ..Default::default()
             })
         } else {
@@ -469,7 +469,7 @@ impl ProfileModelSelector {
                     llm_preferences.hide_llm_popup(terminal_view_id);
                 } else if config.input_type.is_ai() {
                     ctx.spawn(
-                        borkui::r#async::Timer::after(NEW_MODEL_CHOICES_POPUP_DELAY),
+                        krustui::r#async::Timer::after(NEW_MODEL_CHOICES_POPUP_DELAY),
                         |_, _, ctx| {
                             ctx.notify();
                         },
@@ -567,7 +567,7 @@ impl ProfileModelSelector {
                 .on_click(|ctx| {
                     ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: "api".to_string(),
-                        section: Some(SettingsSection::BorkAgent),
+                        section: Some(SettingsSection::KrustAgent),
                     });
                 })
         });
@@ -715,7 +715,7 @@ impl ProfileModelSelector {
     /// True when a non-Oz harness is selected. Panes without an ambient
     /// (cloud composer) model count too: in this fork every plain terminal
     /// pane runs a local CLI harness, so the picker always shows the harness
-    /// menu rather than Bork's cloud model list.
+    /// menu rather than Krust's cloud model list.
     fn is_third_party_harness(&self, app: &AppContext) -> bool {
         self.ambient_agent_view_model.as_ref().is_none_or(|m| {
             let model = m.as_ref(app);
@@ -1838,7 +1838,7 @@ impl ProfileModelSelector {
         let (vertical_padding, horizontal_padding) = self.get_padding_values(scaled_font_size);
 
         let profile_icon = Icon::Psychology
-            .to_borkui_icon(Fill::Solid(text_color))
+            .to_krustui_icon(Fill::Solid(text_color))
             .finish();
 
         let max_label_width = calculate_max_profile_name_width(appearance);
@@ -1975,7 +1975,7 @@ impl ProfileModelSelector {
         let mut content = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
         if is_lrc {
             let terminal_icon = Icon::Terminal
-                .to_borkui_icon(Fill::Solid(text_color))
+                .to_krustui_icon(Fill::Solid(text_color))
                 .finish();
             content = content.with_child(
                 Container::new(
@@ -1996,7 +1996,7 @@ impl ProfileModelSelector {
         // (when enabled, clicking opens the inline model selector instead of a dropdown).
         if has_edit_access && !FeatureFlag::InlineMenuHeaders.is_enabled() {
             let chevron_icon = Icon::ChevronDown
-                .to_borkui_icon(Fill::Solid(text_color))
+                .to_krustui_icon(Fill::Solid(text_color))
                 .finish();
 
             content = content.with_child(
@@ -2301,7 +2301,7 @@ impl ProfileModelSelector {
         let theme = appearance.theme();
         let header = self.render_model_spec_header(
             "Model Specs".to_string(),
-            "Bork’s benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.".to_string(),
+            "Krust’s benchmarks for how well a model performs in our harness, the rate at which it consumes credits, and task speed.".to_string(),
             app,
         );
         let spec = self.render_all_model_spec_values(
@@ -2626,7 +2626,7 @@ impl View for ProfileModelSelector {
             crate::settings::InputSettings::as_ref(app).is_universal_developer_input_enabled(app);
 
         // The popup overflows the viewport on wasm mobile.
-        let is_wasm_mobile = borkui::platform::is_mobile_device();
+        let is_wasm_mobile = krustui::platform::is_mobile_device();
 
         if !is_wasm_mobile
             && (is_udi_enabled

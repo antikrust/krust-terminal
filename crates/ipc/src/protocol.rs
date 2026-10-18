@@ -22,7 +22,7 @@ pub struct ConnectionAddress(pub(super) String);
 impl ConnectionAddress {
     /// Returns a `ConnectionAddress` containing a path for a socket address.
     pub(super) fn new() -> Self {
-        Self(format!("/tmp/bork-ipc-{}.sock", rand::random::<i64>()))
+        Self(format!("/tmp/krust-ipc-{}.sock", rand::random::<i64>()))
     }
 }
 

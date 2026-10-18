@@ -1,14 +1,14 @@
 //! This module contains the code for the ignore button shown inline next to autosuggestions.
 
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, Element, Hoverable, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::UiComponent;
-use borkui::{Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::platform::Cursor;
+use krustui::ui_components::components::UiComponent;
+use krustui::{Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::EditorElement;
 use crate::appearance::Appearance;
@@ -76,7 +76,7 @@ impl View for AutosuggestionIgnore {
         "AutosuggestionIgnore"
     }
 
-    fn render(&self, ctx: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, ctx: &krustui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(ctx);
         // Because the icon's origin is NOT the top of the line but the top of the cursor,
         // we should render it with line height ratio no larger than DEFAULT_UI_LINE_HEIGHT_RATIO.
@@ -84,7 +84,7 @@ impl View for AutosuggestionIgnore {
         // But we do need to account for smaller line height ratios so the text can be rendered in the smaller space.
         let line_height_ratio = appearance
             .line_height_ratio()
-            .min(borkui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO);
+            .min(krustui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO);
         // We want the ignore icon to be the same height as the cursor in the input.
         let height =
             EditorElement::cursor_height(appearance.monospace_font_size(), line_height_ratio)
@@ -111,7 +111,7 @@ impl View for AutosuggestionIgnore {
 
             let height_without_border = height - border_width * 2.;
             let close_icon = Container::new(
-                ConstrainedBox::new(Icon::X.to_borkui_icon(Fill::Solid(icon_color)).finish())
+                ConstrainedBox::new(Icon::X.to_krustui_icon(Fill::Solid(icon_color)).finish())
                     .with_height(height_without_border)
                     .with_width(height_without_border)
                     .finish(),
@@ -121,7 +121,7 @@ impl View for AutosuggestionIgnore {
             let mut ignore_button = Container::new(close_icon)
                 .with_uniform_padding(2.)
                 .with_border(
-                    borkui::elements::Border::all(border_width).with_border_color(disabled_color),
+                    krustui::elements::Border::all(border_width).with_border_color(disabled_color),
                 )
                 .with_corner_radius(CornerRadius::with_all(Radius::Percentage(25.)));
 

@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use bork_core::features::FeatureFlag;
-use bork_core::semantic_selection::SemanticSelection;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_core::semantic_selection::SemanticSelection;
+use krustui::elements::{
     get_rich_content_position_id, ChildView, Container, CrossAxisAlignment, Expanded, Flex,
     ParentElement, SavePosition, SelectableArea, SelectionHandle, Text,
 };
-use borkui::fonts::{Properties, Style, Weight};
-use borkui::{
+use krustui::fonts::{Properties, Style, Weight};
+use krustui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };

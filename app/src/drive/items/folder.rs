@@ -1,11 +1,11 @@
-use bork_core::features::FeatureFlag;
-use borkui::elements::MouseStateHandle;
-use borkui::{AppContext, Element};
+use krust_core::features::FeatureFlag;
+use krustui::elements::MouseStateHandle;
+use krustui::{AppContext, Element};
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectMetadata;
-use crate::drive::cloud_object_styling::bork_drive_icon_color;
+use crate::drive::cloud_object_styling::krust_drive_icon_color;
 use crate::drive::folders::CloudFolder;
 use crate::drive::index::DriveIndexAction;
 use crate::drive::{CloudObjectTypeAndId, DriveObjectType};
@@ -13,18 +13,18 @@ use crate::themes::theme::Fill;
 use crate::ui_components::icons::Icon;
 
 #[derive(Clone)]
-pub struct BorkDriveFolder {
+pub struct KrustDriveFolder {
     id: CloudObjectTypeAndId,
     folder: CloudFolder,
 }
 
-impl BorkDriveFolder {
+impl KrustDriveFolder {
     pub fn new(id: CloudObjectTypeAndId, folder: CloudFolder) -> Self {
         Self { id, folder }
     }
 }
 
-impl BorkDriveItem for BorkDriveFolder {
+impl KrustDriveItem for KrustDriveFolder {
     fn display_name(&self) -> Option<String> {
         if self.folder.model().name.is_empty() {
             None
@@ -43,14 +43,14 @@ impl BorkDriveItem for BorkDriveFolder {
 
     fn icon(&self, appearance: &Appearance, color: Option<Fill>) -> Option<Box<dyn Element>> {
         let icon_fill =
-            color.unwrap_or(bork_drive_icon_color(appearance, DriveObjectType::Folder).into());
-        let icon = if FeatureFlag::BorkPacks.is_enabled() && self.folder.model().is_bork_pack {
+            color.unwrap_or(krust_drive_icon_color(appearance, DriveObjectType::Folder).into());
+        let icon = if FeatureFlag::KrustPacks.is_enabled() && self.folder.model().is_krust_pack {
             Icon::PackageCheck
         } else {
             Icon::from(DriveObjectType::Folder)
         };
 
-        Some(icon.to_borkui_icon(icon_fill).finish())
+        Some(icon.to_krustui_icon(icon_fill).finish())
     }
 
     fn secondary_icon(&self, _color: Option<Fill>) -> Option<Box<dyn Element>> {
@@ -69,8 +69,8 @@ impl BorkDriveItem for BorkDriveFolder {
         None
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::Object(self.id)
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -90,7 +90,7 @@ impl BorkDriveItem for BorkDriveFolder {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 }

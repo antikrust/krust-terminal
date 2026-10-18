@@ -13,9 +13,9 @@ use std::{
 use chrono::{Local, SecondsFormat};
 #[cfg(test)]
 use parking_lot::Mutex;
-use bork_completer::completer::{CommandExitStatus, CommandOutput};
+use krust_completer::completer::{CommandExitStatus, CommandOutput};
 #[cfg(not(target_family = "wasm"))]
-use bork_errors::report_error;
+use krust_errors::report_error;
 
 use super::ContextChipKind;
 use crate::terminal::shell::ShellType;
@@ -101,7 +101,7 @@ impl PromptChipLogger {
 
     #[cfg(not(target_family = "wasm"))]
     fn init_runtime() -> Self {
-        if !bork_core::channel::ChannelState::enable_debug_features() {
+        if !krust_core::channel::ChannelState::enable_debug_features() {
             return Self::Disabled;
         }
 
@@ -133,8 +133,8 @@ impl PromptChipLogger {
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) fn log_file_path() -> anyhow::Result<PathBuf> {
-    let log_directory = bork_logging::log_directory()?;
-    let channel_logfile_name = bork_core::channel::ChannelState::logfile_name();
+    let log_directory = krust_logging::log_directory()?;
+    let channel_logfile_name = krust_core::channel::ChannelState::logfile_name();
     Ok(log_directory.join(prompt_chip_log_filename(&channel_logfile_name)))
 }
 

@@ -1,16 +1,16 @@
 use ui_components::{button, Component as _, Options as _};
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::elements::{
     ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     MainAxisSize, MouseStateHandle, ParentElement,
 };
-use borkui_core::fonts::Weight;
-use borkui_core::keymap::Keystroke;
-use borkui_core::prelude::Align;
-use borkui_core::text_layout::TextAlignment;
-use borkui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
-use borkui_core::{
+use krustui_core::fonts::Weight;
+use krustui_core::keymap::Keystroke;
+use krustui_core::prelude::Align;
+use krustui_core::text_layout::TextAlignment;
+use krustui_core::ui_components::components::{UiComponent as _, UiComponentStyles};
+use krustui_core::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity as _, TypedActionView, View,
     ViewContext,
 };

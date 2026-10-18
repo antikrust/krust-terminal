@@ -1,14 +1,14 @@
-Package: bork-terminal@@CHANNEL_SUFFIX@@
+Package: krust-terminal@@CHANNEL_SUFFIX@@
 Version: @@VERSION@@
 Section: devel
 Depends: fontconfig, libegl1, libwayland-client0, libwayland-egl1, libx11-6, libxcb1, libxcursor1, libxi6, libxkbcommon-x11-0, zlib1g
 Recommends: libgl1-mesa-dri, yaru-icon-theme | adwaita-icon-theme-full
 Priority: optional
 Architecture: @@ARCH@@
-Maintainer: Bork Linux Maintainers <linux-maintainers@bork.baby>
-Homepage: https://bork.baby/
-Description: Bork, the Rust-based terminal for developers and teams
- Bork is a modern, Rust-based terminal with AI built in so teams can
+Maintainer: Krust Linux Maintainers <linux-maintainers@krust.baby>
+Homepage: https://krust.baby/
+Description: Krust, the Rust-based terminal for developers and teams
+ Krust is a modern, Rust-based terminal with AI built in so teams can
  build great software, faster. Bringing collaboration to the command line,
- Bork lets teams save and share commands for streamlined onboarding and
+ Krust lets teams save and share commands for streamlined onboarding and
  incident response.

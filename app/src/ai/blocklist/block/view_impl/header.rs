@@ -1,14 +1,14 @@
 //! Renders the AI block "header", which includes a version of the AI "prompt" as it was rendered
 //! when the query was submitted.
-use bork_core::features::FeatureFlag;
-use bork_util::path::user_friendly_path;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krust_util::path::user_friendly_path;
+use krustui::elements::{
     ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     Icon as ElementIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
     SavePosition, Text,
 };
-use borkui::platform::Cursor;
-use borkui::{AppContext, Element, EntityId, SingletonEntity, ViewHandle};
+use krustui::platform::Cursor;
+use krustui::{AppContext, Element, EntityId, SingletonEntity, ViewHandle};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentExchangeId;
@@ -18,7 +18,7 @@ use crate::ai::blocklist::{
 };
 use crate::appearance::Appearance;
 use crate::terminal::block_list_element::render_hoverable_block_button;
-use crate::terminal::view::{TerminalAction, BORK_PROMPT_HEIGHT_LINES};
+use crate::terminal::view::{TerminalAction, KRUST_PROMPT_HEIGHT_LINES};
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::ActionButton;
@@ -158,7 +158,7 @@ fn render_attached_context_chip(
                         Container::new(
                             ConstrainedBox::new(
                                 Icon::Paperclip
-                                    .to_borkui_icon(block_count_color.into())
+                                    .to_krustui_icon(block_count_color.into())
                                     .finish(),
                             )
                             .with_height(font_size)
@@ -251,7 +251,7 @@ pub(super) fn render_overflow_menu_button(
 
 /// Returns the font size to be used to render text in the AI block "prompt" line.
 ///
-/// This matches the font size used for the bork prompt in completed command blocks.
+/// This matches the font size used for the krust prompt in completed command blocks.
 fn prompt_font_size(appearance: &Appearance) -> f32 {
-    appearance.monospace_font_size() * BORK_PROMPT_HEIGHT_LINES
+    appearance.monospace_font_size() * KRUST_PROMPT_HEIGHT_LINES
 }

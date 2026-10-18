@@ -1,5 +1,5 @@
 use serde_json::{json, Map, Value};
-use bork_cli::mcp::MCPSpec;
+use krust_cli::mcp::MCPSpec;
 
 use super::build_mcp_servers_from_specs;
 
@@ -15,13 +15,13 @@ fn empty_specs_returns_none() {
 }
 
 #[test]
-fn uuid_spec_is_coerced_to_bork_id() {
+fn uuid_spec_is_coerced_to_krust_id() {
     let uuid = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
     let servers = build(vec![MCPSpec::Uuid(uuid)]);
 
     let entry = servers.get(&uuid.to_string()).unwrap();
     assert_eq!(
-        entry["bork_id"].as_str(),
+        entry["krust_id"].as_str(),
         Some("550e8400-e29b-41d4-a716-446655440000")
     );
 }
@@ -219,12 +219,12 @@ fn validation_rejects_invalid_entries() {
     let err = build_mcp_servers_from_specs(&[MCPSpec::Json(spec)]).unwrap_err();
     assert!(err
         .to_string()
-        .contains("must have exactly one of: 'bork_id', 'command', or 'url'"));
+        .contains("must have exactly one of: 'krust_id', 'command', or 'url'"));
 
-    // bork_id must be a UUID string.
-    let spec = json!({ "mcpServers": { "bad": { "bork_id": "not-a-uuid" } } }).to_string();
+    // krust_id must be a UUID string.
+    let spec = json!({ "mcpServers": { "bad": { "krust_id": "not-a-uuid" } } }).to_string();
     let err = build_mcp_servers_from_specs(&[MCPSpec::Json(spec)]).unwrap_err();
-    assert!(err.to_string().contains("field 'bork_id' must be a UUID"));
+    assert!(err.to_string().contains("field 'krust_id' must be a UUID"));
 
     // args must be array.
     let spec = json!({ "mcpServers": { "bad": { "command": "npx", "args": "nope" } } }).to_string();
@@ -301,7 +301,7 @@ fn serializes_mcp_servers_as_object_not_string() {
 
     let server = mcp_servers.get(uuid.to_string()).unwrap();
     assert_eq!(
-        server.get("bork_id").unwrap(),
+        server.get("krust_id").unwrap(),
         &Value::String(uuid.to_string())
     );
 }

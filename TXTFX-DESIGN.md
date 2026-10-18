@@ -88,7 +88,7 @@ These are useful safeguards, but they do not currently apply consistently to the
 
 ## Current audit — 2026-07-21
 
-The focused suite passes: `cargo test -p bork text_effects` ran 24 tests successfully. It covers the effect samplers, Matrix stream continuity, terminal cell snapshotting, colour persistence, automatic spinners, OSC spinner parsing/lifecycle, and a basic Agent suffix case.
+The focused suite passes: `cargo test -p krust text_effects` ran 24 tests successfully. It covers the effect samplers, Matrix stream continuity, terminal cell snapshotting, colour persistence, automatic spinners, OSC spinner parsing/lifecycle, and a basic Agent suffix case.
 
 The audit did not find an uncontrolled direct panic from terminal input. The `expect` calls in the timeline are guarded by non-empty batch checks or fixed non-empty spinner-frame tables; explicit spinner IDs and FPS values are bounded before being stored.
 
@@ -145,7 +145,7 @@ No code change is made by this audit. These would be behavioural/performance cha
 - Use one timestamp per terminal paint so cells agree on the same frame.
 - Request a repaint only until the visual result can change. Never sleep on the UI thread or repaint at maximum rate.
 - Handle normal output, commands, alternate screen, ligatures on/off, and Agent rich text deliberately; they are separate render paths.
-- Local harness messages remain provider-neutral and use Bork's normal conversation machinery. txtFX must not introduce provider-specific renderer branches.
+- Local harness messages remain provider-neutral and use Krust's normal conversation machinery. txtFX must not introduce provider-specific renderer branches.
 
 ## Where to make a change
 
@@ -164,8 +164,8 @@ No code change is made by this audit. These would be behavioural/performance cha
 Start with:
 
 ```sh
-cargo test -p bork text_effects
-cargo build --bin bork
+cargo test -p krust text_effects
+cargo build --bin krust
 ```
 
 For a code change that will be pushed, also run the repository's required formatting and Clippy checks. Visual validation, when explicitly authorized, must cover ligatures on and off, normal and alternate terminal screens, output split across multiple reads, large output, secrets, Unicode/wide glyphs, Agent streaming, restored Agent messages, selection/copy, and the disabled state.

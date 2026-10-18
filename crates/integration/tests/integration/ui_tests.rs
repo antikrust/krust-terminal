@@ -96,15 +96,15 @@ integration_tests! {
     #[ignore = "Affected by agent_view feature flag UI changes"]
     test_accepting_completion_inserts_space,
     test_palette_opens_when_theme_chooser_is_open,
-    test_launch_bork_with_theme_in_bork_config,
+    test_launch_krust_with_theme_in_krust_config,
     #[cfg(target_os="macos")]
     test_preview_config_dir_migration,
     #[ignore = "Flakes in CI"]
-    test_add_launch_config_to_bork_config,
+    test_add_launch_config_to_krust_config,
     #[ignore = "Flakes in CI"]
-    test_add_workflows_to_bork_config,
+    test_add_workflows_to_krust_config,
     #[ignore = "Flakes in CI"]
-    test_add_theme_to_bork_config,
+    test_add_theme_to_krust_config,
     test_loading_project_workflows,
     test_completions_as_you_type,
     test_completions_as_you_type_one_matching_entry_tab,
@@ -187,7 +187,7 @@ integration_tests! {
     // For some reason, disabling the `AgentMode` flag does not actually disable Agent Mode in the test
     // run. Ignore for now.
     #[ignore]
-    test_ask_bork_ai_keybinding_for_selected_block,
+    test_ask_krust_ai_keybinding_for_selected_block,
 
     test_create_folder_from_command_palette,
 
@@ -233,7 +233,7 @@ integration_tests! {
 
     test_notebook_pane_tracking,
     test_close_notebook_tab,
-    test_open_in_bork_banner,
+    test_open_in_krust_banner,
     test_close_notebook_window,
     test_backspace_inside_raw_mermaid_block_edits_text_without_removing_block,
 
@@ -317,7 +317,7 @@ integration_tests! {
     test_rule_pane_opening,
     test_undo_close_stack_timeout_cleanup,
 
-    test_file_tree_opens_files_in_bork,
+    test_file_tree_opens_files_in_krust,
     test_file_tree_open_in_new_pane,
     test_file_tree_open_in_new_tab,
     test_file_tree_keyboard_navigation,

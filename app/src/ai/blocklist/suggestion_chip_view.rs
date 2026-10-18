@@ -1,9 +1,9 @@
 use pathfinder_color::ColorU;
-use bork_core::send_telemetry_from_ctx;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{Align, ChildView, Container, ParentElement, SavePosition, Stack};
-use borkui::{
+use krust_core::send_telemetry_from_ctx;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{Align, ChildView, Container, ParentElement, SavePosition, Stack};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -191,7 +191,7 @@ pub struct SuggestionChipView {
 
 impl SuggestionChipView {
     pub fn new_rule_chip(rule: SuggestedRule, ctx: &mut ViewContext<Self>) -> Self {
-        Self::listen_for_bork_drive_events(ctx);
+        Self::listen_for_krust_drive_events(ctx);
 
         let chip = ctx.add_typed_action_view(|_| {
             ActionButton::new(rule.content.clone(), SecondaryTheme)
@@ -223,7 +223,7 @@ impl SuggestionChipView {
             ctx
         );
 
-        Self::listen_for_bork_drive_events(ctx);
+        Self::listen_for_krust_drive_events(ctx);
         let sync_id = SyncId::ClientId(ClientId::default());
 
         let chip = ctx.add_typed_action_view(|_| {
@@ -252,7 +252,7 @@ impl SuggestionChipView {
         }
     }
 
-    fn listen_for_bork_drive_events(ctx: &mut ViewContext<Self>) {
+    fn listen_for_krust_drive_events(ctx: &mut ViewContext<Self>) {
         let update_manager = UpdateManager::handle(ctx);
         ctx.subscribe_to_model(&update_manager, |me, _, event, ctx| {
             me.handle_update_manager_event(event, ctx);

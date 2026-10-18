@@ -3,7 +3,7 @@ use std::ops::Range;
 
 use rangemap::RangeSet;
 use string_offset::CharOffset;
-use borkui_core::{AppContext, Entity, ModelContext, ModelHandle};
+use krustui_core::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::anchor::{Anchor, AnchorSide};
 use crate::content::buffer::Buffer;

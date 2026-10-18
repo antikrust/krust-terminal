@@ -5,15 +5,15 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use markdown_parser::FormattedTextInline;
-use borkui_core::color::ColorU;
-use borkui_core::fonts::TextLayoutSystem;
+use krustui_core::color::ColorU;
+use krustui_core::fonts::TextLayoutSystem;
 #[cfg(test)]
-use borkui_core::fonts::{Style, Weight};
-use borkui_core::text_layout::{
+use krustui_core::fonts::{Style, Weight};
+use krustui_core::text_layout::{
     ClipConfig, LayoutCache, Line, StyleAndFont, TextAlignment, TextBorder, TextFrame, TextStyle,
 };
-use borkui_core::units::{IntoPixels, Pixels};
-use borkui_core::{AppContext, LayoutContext};
+use krustui_core::units::{IntoPixels, Pixels};
+use krustui_core::{AppContext, LayoutContext};
 
 use super::model::{BlockSpacing, ParagraphStyles, RenderState, RichTextStyles};
 use crate::content::text::{BufferBlockStyle, TextStylesWithMetadata};

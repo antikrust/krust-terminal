@@ -1,6 +1,6 @@
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{Container, CrossAxisAlignment, Element, Flex, ParentElement, Text};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{Container, CrossAxisAlignment, Element, Flex, ParentElement, Text};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::search_results_common::{
     render_collapsible_search_results, CollapsibleSearchResultsState,

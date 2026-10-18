@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use super::{
     add_pending_file_attachments, input_context_for_request, parse_context_attachments,

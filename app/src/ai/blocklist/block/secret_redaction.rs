@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use similar::DiffableStr;
-use bork_errors::report_error;
-use borkui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
-use borkui::platform::Cursor;
+use krust_errors::report_error;
+use krustui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
+use krustui::platform::Cursor;
 
 use super::{AIBlockAction, TextLocation};
 use crate::ai::agent::{AIAgentOutput, AIAgentTextSection, AgentOutputText};

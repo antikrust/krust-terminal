@@ -1,4 +1,4 @@
-use bork_graphql::ai::{AgentTaskState, PlatformErrorCode};
+use krust_graphql::ai::{AgentTaskState, PlatformErrorCode};
 
 use super::classify_driver_error;
 use crate::ai::agent_sdk::driver::terminal::{BootstrapError, ShareSessionError};
@@ -90,16 +90,16 @@ fn not_logged_in_is_error_with_auth_required() {
         Some(PlatformErrorCode::AuthenticationRequired)
     );
     assert!(
-        update.message.contains("BORK_API_KEY"),
-        "message should mention BORK_API_KEY: {:?}",
+        update.message.contains("KRUST_API_KEY"),
+        "message should mention KRUST_API_KEY: {:?}",
         update.message
     );
 }
 
 #[test]
-fn bork_drive_sync_failed_is_error() {
+fn krust_drive_sync_failed_is_error() {
     assert_state_and_code(
-        AgentDriverError::BorkDriveSyncFailed,
+        AgentDriverError::KrustDriveSyncFailed,
         AgentTaskState::Error,
         Some(PlatformErrorCode::InternalError),
     );

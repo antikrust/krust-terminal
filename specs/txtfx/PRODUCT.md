@@ -25,7 +25,7 @@ The feature is opt-in and local-only. It does not require an account, cloud serv
 Suggested scope choices:
 
 - **Off** — render output immediately.
-- **Command output** — animate fresh output in Bork blocks, excluding the prompt and command text.
+- **Command output** — animate fresh output in Krust blocks, excluding the prompt and command text.
 - **Output and commands** — include prompt and command grids.
 - **All terminal screens** — also animate alternate-screen applications.
 

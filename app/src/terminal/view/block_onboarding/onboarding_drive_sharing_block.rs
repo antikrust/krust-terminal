@@ -1,13 +1,13 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{
     Border, Container, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::platform::Cursor;
-use borkui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
+use krustui::fonts::{Properties, Weight};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, Entity, SingletonEntity, View, ViewContext};
 
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
 use crate::drive::CloudObjectTypeAndId;
@@ -15,7 +15,7 @@ use crate::terminal::view::telemetry::SharingDialogSource;
 use crate::ui_components::icons::Icon;
 use crate::workspace::WorkspaceAction;
 
-/// A rich onboarding block that prompts the user to share a newly-created personal Bork Drive
+/// A rich onboarding block that prompts the user to share a newly-created personal Krust Drive
 /// object.
 pub struct OnboardingDriveSharingBlock {
     object_id: CloudObjectTypeAndId,
@@ -46,7 +46,7 @@ impl Entity for OnboardingDriveSharingBlock {
 
 const TITLE_TEXT: &str = "Sharing in the Library";
 const BODY_TEXT: &[&str] = &[
-    "You can now share drive objects, in Bork or on the web, with anyone - Bork user or not. Click Share in the Library menu or the pane header to share via link or email.",
+    "You can now share drive objects, in Krust or on the web, with anyone - Krust user or not. Click Share in the Library menu or the pane header to share via link or email.",
     "You’ll be able to modify the access permissions any time.",
 ];
 
@@ -111,7 +111,7 @@ impl View for OnboardingDriveSharingBlock {
                 TextAndIcon::new(
                     TextAndIconAlignment::IconFirst,
                     button_label,
-                    Icon::Share.to_borkui_icon(appearance.theme().background()),
+                    Icon::Share.to_krustui_icon(appearance.theme().background()),
                     MainAxisSize::Min,
                     MainAxisAlignment::SpaceEvenly,
                     vec2f(BUTTON_FONT_SIZE, BUTTON_FONT_SIZE),

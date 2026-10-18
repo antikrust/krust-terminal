@@ -2,23 +2,23 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 use string_offset::CharCounter;
-use bork_completer::signatures::CommandRegistry;
-use bork_completer::util::parse_current_commands_and_tokens;
-use bork_completer::ParsedTokensSnapshot;
-use bork_core::ui::theme::{AnsiColorIdentifier, AnsiColors};
-use bork_errors::report_error;
-use borkui::clipboard::ClipboardContent;
-use borkui::elements::new_scrollable::{ClippedAxisConfiguration, DualAxisConfig, NewScrollable};
-use borkui::elements::{
+use krust_completer::signatures::CommandRegistry;
+use krust_completer::util::parse_current_commands_and_tokens;
+use krust_completer::ParsedTokensSnapshot;
+use krust_core::ui::theme::{AnsiColorIdentifier, AnsiColors};
+use krust_errors::report_error;
+use krustui::clipboard::ClipboardContent;
+use krustui::elements::new_scrollable::{ClippedAxisConfiguration, DualAxisConfig, NewScrollable};
+use krustui::elements::{
     Align, Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Empty, Expanded, Flex, Highlight, HighlightedRange,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::prelude::ChildView;
-use borkui::text_layout::TextStyle;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
+use krustui::fonts::{Properties, Weight};
+use krustui::prelude::ChildView;
+use krustui::text_layout::TextStyle;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::ai::agent_management::telemetry::{AgentManagementTelemetryEvent, SetupGuideStep};
 use crate::ai::blocklist::code_block::{
@@ -31,10 +31,10 @@ use crate::view_components::action_button::{ActionButton, SecondaryTheme};
 use crate::workflows::workflow::{Argument, ArgumentType, Workflow};
 use crate::workflows::WorkflowType;
 
-const DOCS_URL: &str = "https://therob.lol/bork-terminal/help/agent-platform/cloud-agents/overview";
+const DOCS_URL: &str = "https://therob.lol/krust-terminal/help/agent-platform/cloud-agents/overview";
 const ENV_DOCS_URL: &str =
-    "https://therob.lol/bork-terminal/help/reference/cli/integration-setup#creating-an-environment";
-const OZ_URL: &str = "https://oz.bork.baby";
+    "https://therob.lol/krust-terminal/help/reference/cli/integration-setup#creating-an-environment";
+const OZ_URL: &str = "https://oz.krust.baby";
 
 const CONTENT_MAX_WIDTH: f32 = 720.;
 
@@ -156,7 +156,7 @@ impl CloudSetupGuideView {
         header_container.add_child(title);
 
         let subtitle = Text::new(
-            "Start Oz cloud agents directly in Bork from an integration (Linear, Slack), with an event (GitHub, built-in schedule), or programmatically with the Oz SDK or CLI.",
+            "Start Oz cloud agents directly in Krust from an integration (Linear, Slack), with an event (GitHub, built-in schedule), or programmatically with the Oz SDK or CLI.",
             appearance.ui_font_family(),
             subtitle_font_size,
         )
@@ -209,13 +209,13 @@ impl CloudSetupGuideView {
         header_container.finish()
     }
 
-    /// Render the quick start banner with link to oz.bork.baby.
+    /// Render the quick start banner with link to oz.krust.baby.
     fn render_quick_start_banner(&self, appearance: &Appearance) -> Box<dyn Element> {
         let theme = appearance.theme();
         let font_size = 16.;
 
         let text = Text::new_inline(
-            "Quick start: Visit oz.bork.baby for a UI-based setup experience.",
+            "Quick start: Visit oz.krust.baby for a UI-based setup experience.",
             appearance.ui_font_family(),
             font_size,
         )
@@ -291,7 +291,7 @@ impl CloudSetupGuideView {
     }
 
     /// Render a description that includes a link at the end
-    /// (e.g. "Use bork's environment setup command to have an agent help you through it. LINK[Visit docs]")
+    /// (e.g. "Use krust's environment setup command to have an agent help you through it. LINK[Visit docs]")
     fn render_description_with_link(
         prefix: &'static str,
         link_text: &'static str,
@@ -455,7 +455,7 @@ impl CloudSetupGuideView {
         .finish();
 
         let sub_description = Container::new(Self::render_description_with_link(
-            "Use Bork's environment setup command to have an agent help you through it. ",
+            "Use Krust's environment setup command to have an agent help you through it. ",
             "Visit docs",
             self.env_docs_link_mouse_state.clone(),
             SetupGuideDocs::Environment,
@@ -528,7 +528,7 @@ impl CloudSetupGuideView {
             .finish();
 
         let sub_description = Container::new(Self::render_description_with_link(
-            "Integrate Slack or Linear to assign Bork's Agent tasks with @Bork. ",
+            "Integrate Slack or Linear to assign Krust's Agent tasks with @Krust. ",
             "Visit docs",
             self.integration_docs_link_mouse_state.clone(),
             SetupGuideDocs::Integration,
@@ -620,7 +620,7 @@ impl View for CloudSetupGuideView {
             },
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .finish();
 

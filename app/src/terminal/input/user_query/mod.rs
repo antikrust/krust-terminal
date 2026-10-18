@@ -7,8 +7,8 @@ mod view;
 
 pub use data_source::SelectUserQuery;
 pub use view::{UserQueryMenuEvent, UserQueryMenuView};
-use borkui::keymap::Keystroke;
-use borkui::platform::OperatingSystem;
+use krustui::keymap::Keystroke;
+use krustui::platform::OperatingSystem;
 
 use crate::terminal::input::inline_menu::{
     default_navigation_message_items, InlineMenuAction, InlineMenuMessageArgs, InlineMenuRowAction,

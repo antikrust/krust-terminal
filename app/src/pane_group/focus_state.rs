@@ -1,4 +1,4 @@
-use borkui::{AppContext, Entity, ModelContext, ModelHandle};
+use krustui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::pane::{PaneId, TerminalPaneId};
 use super::{PaneState, SplitPaneState};

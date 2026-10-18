@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use bork_util::path::user_friendly_path;
-use borkui::elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text};
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::{
+use krust_util::path::user_friendly_path;
+use krustui::elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text};
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

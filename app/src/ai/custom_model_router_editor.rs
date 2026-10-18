@@ -1,23 +1,23 @@
 //! Editor view for creating and editing local custom model routers.
 //!
-//! Opened as a side-pane from the Bork Agent settings page when the user clicks
+//! Opened as a side-pane from the Krust Agent settings page when the user clicks
 //! "Add router" or "Edit" on an existing router card. Writes changes to
-//! `~/.bork/custom_model_routers/` via [`BorkConfig::save_custom_model_router`].
+//! `~/.krust/custom_model_routers/` via [`KrustConfig::save_custom_model_router`].
 
 use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use borkui::elements::{
+use krustui::elements::{
     ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Empty, Expanded, Fill as UiFill, Flex, FormattedTextElement,
     HighlightedHyperlink, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, ScrollbarWidth, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::segmented_control::{
+use krustui::platform::Cursor;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl, SegmentedControlEvent,
 };
-use borkui::{
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -38,7 +38,7 @@ use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
 #[cfg(feature = "local_fs")]
-use crate::user_config::BorkConfig;
+use crate::user_config::KrustConfig;
 use crate::view_components::action_button::{
     ActionButton, ButtonSize, PrimaryTheme, SecondaryTheme,
 };
@@ -109,7 +109,7 @@ struct PromptRuleRow {
 
 pub struct CustomRouterEditorView {
     existing: Option<CustomModelRouter>,
-    pane_configuration: borkui::ModelHandle<PaneConfiguration>,
+    pane_configuration: krustui::ModelHandle<PaneConfiguration>,
     focus_handle: Option<PaneFocusHandle>,
     scroll_state: ClippedScrollStateHandle,
 
@@ -373,7 +373,7 @@ impl CustomRouterEditorView {
         view
     }
 
-    pub fn pane_configuration(&self) -> borkui::ModelHandle<PaneConfiguration> {
+    pub fn pane_configuration(&self) -> krustui::ModelHandle<PaneConfiguration> {
         self.pane_configuration.clone()
     }
 
@@ -537,7 +537,7 @@ impl CustomRouterEditorView {
                 }
             };
             let ep = self.existing.as_ref().and_then(|r| r.source_path.clone());
-            if let Err(e) = BorkConfig::save_custom_model_router(&name, &yaml, ep.as_deref()) {
+            if let Err(e) = KrustConfig::save_custom_model_router(&name, &yaml, ep.as_deref()) {
                 self.save_error = Some(format!("Write error: {e}"));
                 ctx.notify();
                 return;
@@ -689,7 +689,7 @@ impl CustomRouterEditorView {
             );
             let rules_copy = FormattedText::new([
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
-                    "Rules are custom prompts that describe when to use a specific model. Bork intelligently matches your tasks against these rules.",
+                    "Rules are custom prompts that describe when to use a specific model. Krust intelligently matches your tasks against these rules.",
                 )]),
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
                     "Rules are matched top to bottom — rules higher in the list take precedence over those below.",
@@ -752,7 +752,7 @@ impl CustomRouterEditorView {
             FormattedTextLine::Line(vec![
                 FormattedTextFragment::bold("Complexity-based"),
                 FormattedTextFragment::plain_text(
-                    " routing chooses a model based on Bork's classification of the task's difficulty.",
+                    " routing chooses a model based on Krust's classification of the task's difficulty.",
                 ),
             ]),
             FormattedTextLine::Line(vec![
@@ -830,7 +830,7 @@ impl CustomRouterEditorView {
 
         // Error
         if let Some(msg) = &self.save_error {
-            let err_color = bork_core::ui::theme::Fill::Solid(appearance.theme().ui_error_color());
+            let err_color = krust_core::ui::theme::Fill::Solid(appearance.theme().ui_error_color());
             col.add_child(
                 Container::new(
                     Text::new(msg.clone(), appearance.ui_font_family(), 12.)
@@ -873,7 +873,7 @@ impl View for CustomRouterEditorView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            borkui::elements::Fill::None,
+            krustui::elements::Fill::None,
         )
         .finish()
     }
@@ -952,7 +952,7 @@ impl BackingView for CustomRouterEditorView {
             title: HEADER_TEXT.into(),
             title_secondary: None,
             title_style: None,
-            title_clip_config: borkui::text_layout::ClipConfig::start(),
+            title_clip_config: krustui::text_layout::ClipConfig::start(),
             title_max_width: None,
             left_of_title: None,
             right_of_title: None,
@@ -1038,7 +1038,7 @@ fn repopulate_filterable<F>(
 
 /// Inner helper: fills a [`FilterableDropdown`] with rich model items.
 fn fill_filterable_dropdown<F>(
-    ctx: &mut borkui::ViewContext<FilterableDropdown<CustomRouterEditorAction>>,
+    ctx: &mut krustui::ViewContext<FilterableDropdown<CustomRouterEditorAction>>,
     dropdown: &mut FilterableDropdown<CustomRouterEditorAction>,
     selected_id: &str,
     make_action: F,
@@ -1288,7 +1288,7 @@ fn rule_icon_button(
     // Inline the builder closure (rather than binding it to a `let`) so the
     // compiler infers the higher-ranked closure lifetime `Hoverable` requires.
     let hoverable = Hoverable::new(mouse_state, move |_| {
-        ConstrainedBox::new(icon.to_borkui_icon(color).finish())
+        ConstrainedBox::new(icon.to_krustui_icon(color).finish())
             .with_width(RULE_ICON_BUTTON_SIZE)
             .with_height(RULE_ICON_BUTTON_SIZE)
             .finish()

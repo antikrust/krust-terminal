@@ -46,7 +46,7 @@ impl std::fmt::Debug for Scrollback {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ScrollbackBlock {
     /// The raw contents of the block. Clients are expected to be able to
-    /// serialize and deserialize from [`SerializedBlock`] in the Bork client.
+    /// serialize and deserialize from [`SerializedBlock`] in the Krust client.
     pub raw: Vec<u8>,
 }
 

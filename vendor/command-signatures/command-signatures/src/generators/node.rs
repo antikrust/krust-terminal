@@ -1,4 +1,4 @@
-use bork_completion_metadata::{
+use krust_completion_metadata::{
     CommandSignatureGenerators, Importance, Order, Priority, TemplateFilter,
 };
 

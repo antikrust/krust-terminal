@@ -1,12 +1,12 @@
-use bork_util::path::user_friendly_path;
-use borkui::elements::{
+use krust_util::path::user_friendly_path;
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::{ButtonTooltipPosition, ButtonVariant};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::platform::Cursor;
+use krustui::ui_components::button::{ButtonTooltipPosition, ButtonVariant};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::settings::ai::DefaultSessionMode;
@@ -92,9 +92,9 @@ pub(crate) fn render_action_sidecar(
     let primary_text_color = theme.main_text_color(theme.surface_2());
     let button_style = UiComponentStyles {
         font_size: Some(12.),
-        font_weight: Some(borkui::fonts::Weight::Bold),
+        font_weight: Some(krustui::fonts::Weight::Bold),
         font_color: Some(primary_text_color.into()),
-        padding: Some(borkui::ui_components::components::Coords {
+        padding: Some(krustui::ui_components::components::Coords {
             top: 4.,
             bottom: 4.,
             left: 8.,
@@ -153,7 +153,7 @@ pub(crate) fn render_action_sidecar(
             .with_style(button_style)
             .build()
             .with_cursor(Cursor::PointingHand)
-            .on_click(move |ctx: &mut borkui::elements::EventContext, _, _| {
+            .on_click(move |ctx: &mut krustui::elements::EventContext, _, _| {
                 ctx.dispatch_typed_action(make_default_action.clone())
             })
             .finish()
@@ -175,7 +175,7 @@ pub(crate) fn render_action_sidecar(
                 .with_style(button_style)
                 .build()
                 .with_cursor(Cursor::PointingHand)
-                .on_click(move |ctx: &mut borkui::elements::EventContext, _, _| {
+                .on_click(move |ctx: &mut krustui::elements::EventContext, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::TabConfigSidecarEditConfig {
                         path: edit_path.clone(),
                     })
@@ -210,7 +210,7 @@ pub(crate) fn render_action_sidecar(
                 })
                 .build()
                 .with_cursor(Cursor::PointingHand)
-                .on_click(move |ctx: &mut borkui::elements::EventContext, _, _| {
+                .on_click(move |ctx: &mut krustui::elements::EventContext, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::TabConfigSidecarRemoveConfig {
                         name: remove_name.clone(),
                         path: remove_path.clone(),

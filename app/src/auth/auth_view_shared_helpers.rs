@@ -1,25 +1,25 @@
 use pathfinder_color::ColorU;
-use bork_core::channel::ChannelState;
-use bork_core::features::FeatureFlag;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::builder::UiBuilder;
-use bork_core::ui::color::{darken, lighten};
-use bork_core::ui::theme::ColorScheme;
-use borkui::assets::asset_cache::AssetSource;
-use borkui::elements::{
+use krust_core::channel::ChannelState;
+use krust_core::features::FeatureFlag;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::builder::UiBuilder;
+use krust_core::ui::color::{darken, lighten};
+use krust_core::ui::theme::ColorScheme;
+use krustui::assets::asset_cache::AssetSource;
+use krustui::elements::{
     Border, CacheOption, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Fill, Flex,
     Image, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable,
 };
-use borkui::fonts::Weight;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::ui_components::switch::SwitchStateHandle;
-use borkui::{Action, AppContext, Element, SingletonEntity as _};
+use krustui::fonts::Weight;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
+use krustui::{Action, AppContext, Element, SingletonEntity as _};
 
 use crate::settings::PrivacySettings;
 use crate::themes::theme::ThemeKind;
 
-const PRIVACY_URL: &str = "https://bork.baby/privacy";
+const PRIVACY_URL: &str = "https://krust.baby/privacy";
 
 pub const AUTH_MODAL_GAP: f32 = 16.;
 const MODAL_CORNER_RADIUS: Radius = Radius::Pixels(8.);
@@ -54,7 +54,7 @@ where
         ..Default::default()
     };
 
-    let text = "You are currently offline. An internet connection is required to use Bork for the first time.";
+    let text = "You are currently offline. An internet connection is required to use Krust for the first time.";
 
     let (button_color, button_variant) = action_button_color_and_variant(appearance);
     let button_styles = UiComponentStyles {
@@ -119,9 +119,9 @@ where
 
 pub fn render_square_logo(appearance: &Appearance) -> Box<dyn Element> {
     let image_path = if appearance.theme().inferred_color_scheme() == ColorScheme::LightOnDark {
-        "bundled/svg/bork-logo-light.svg"
+        "bundled/svg/krust-logo-light.svg"
     } else {
-        "bundled/svg/bork-logo-dark.svg"
+        "bundled/svg/krust-logo-dark.svg"
     };
 
     ConstrainedBox::new(
@@ -168,9 +168,9 @@ where
         ..Default::default()
     };
 
-    let paragraph_1 = "All of Bork’s non-cloud features work offline.";
-    let paragraph_2 = "However, we require users to be online when using Bork for the first time in order to enable Bork's AI and cloud features.";
-    let paragraph_3 = "We offer cloud features to all users, and so we need an internet connection to meter AI usage, prevent abuse, and associate cloud objects with users. If you opt to use Bork logged-out, a unique ID will be attached to an anonymous user account in order to support these features.";
+    let paragraph_1 = "All of Krust’s non-cloud features work offline.";
+    let paragraph_2 = "However, we require users to be online when using Krust for the first time in order to enable Krust's AI and cloud features.";
+    let paragraph_3 = "We offer cloud features to all users, and so we need an internet connection to meter AI usage, prevent abuse, and associate cloud objects with users. If you opt to use Krust logged-out, a unique ID will be attached to an anonymous user account in order to support these features.";
 
     Container::new(
         Flex::column()
@@ -184,7 +184,7 @@ where
                 Container::new(
                     appearance
                         .ui_builder()
-                        .span("Using Bork Offline")
+                        .span("Using Krust Offline")
                         .with_style(header_styles)
                         .build()
                         .finish(),
@@ -449,7 +449,7 @@ pub fn render_privacy_settings_toggles<A: Action + Clone + 'static>(
         .with_child(
             Shrinkable::new(
                 1.,
-                render_privacy_settings_section_header("Help improve Bork", appearance).finish(),
+                render_privacy_settings_section_header("Help improve Krust", appearance).finish(),
             )
             .finish(),
         )
@@ -468,7 +468,7 @@ pub fn render_privacy_settings_toggles<A: Action + Clone + 'static>(
 
     let telemetry_description = render_description(
         appearance,
-        "High-level feature usage data helps Bork's product team prioritize the roadmap.".into(),
+        "High-level feature usage data helps Krust's product team prioritize the roadmap.".into(),
     );
 
     let telemetry_link = Flex::row()
@@ -513,7 +513,7 @@ pub fn render_privacy_settings_toggles<A: Action + Clone + 'static>(
 
     let crash_reporting_description = render_description(
         appearance,
-        "Crash reporting helps Bork's engineering team understand stability and improve performance.".into(),
+        "Crash reporting helps Krust's engineering team understand stability and improve performance.".into(),
     );
 
     let toggle_cloud = actions.toggle_cloud_conversation_storage.clone();
@@ -547,7 +547,7 @@ pub fn render_privacy_settings_toggles<A: Action + Clone + 'static>(
     let cloud_conversation_storage_description = render_description(
         appearance,
         if PrivacySettings::as_ref(app).is_cloud_conversation_storage_enabled {
-            "Agent conversations can be shared with others and are retained when you log in on different devices. This data is only stored for product functionality, and Bork will not use it for analytics."
+            "Agent conversations can be shared with others and are retained when you log in on different devices. This data is only stored for product functionality, and Krust will not use it for analytics."
         } else {
             "Agent conversations are only stored locally on your machine, are lost upon logout, and cannot be shared. Note: conversation data for ambient agents are still stored in the cloud."
         }
@@ -556,7 +556,7 @@ pub fn render_privacy_settings_toggles<A: Action + Clone + 'static>(
 
     let mut col = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
 
-    // Builds without a telemetry/crash reporting config (e.g. OpenBork) cannot
+    // Builds without a telemetry/crash reporting config (e.g. OpenKrust) cannot
     // ship the corresponding events, so the toggles would be no-ops. Hide each
     // one independently based on whether its backing config is present.
     if ChannelState::is_telemetry_available() && !FeatureFlag::GlobalAIAnalyticsBanner.is_enabled()

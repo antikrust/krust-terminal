@@ -6,8 +6,8 @@ use pathfinder_geometry::vector::Vector2F;
 use serde::{Deserialize, Serialize};
 use string_offset::{ByteOffset, CharOffset};
 use vec1::Vec1;
-use borkui::text::point::Point;
-use borkui::AppContext;
+use krustui::text::point::Point;
+use krustui::AppContext;
 
 use super::buffer::{Anchor, Buffer, LamportValue, ToBufferOffset, ToCharOffset, ToPoint};
 use super::display_map::{DisplayMap, ToDisplayPoint};

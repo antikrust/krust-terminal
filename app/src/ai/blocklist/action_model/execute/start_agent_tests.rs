@@ -1,6 +1,6 @@
 use ai::agent::action_result::StartAgentVersion;
-use bork_core::features::FeatureFlag;
-use borkui::{App, Entity, EntityId, ModelHandle};
+use krust_core::features::FeatureFlag;
+use krustui::{App, Entity, EntityId, ModelHandle};
 
 use super::*;
 use crate::ai::agent::conversation::ConversationStatus;

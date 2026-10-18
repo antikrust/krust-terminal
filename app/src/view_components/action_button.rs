@@ -3,23 +3,23 @@ use std::sync::Arc;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::color::contrast::MinimumAllowedContrast;
-use bork_core::ui::color::{coloru_with_opacity, ContrastingColor};
-use bork_core::ui::theme::color::internal_colors;
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill};
-use borkui::elements::{
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::color::contrast::MinimumAllowedContrast;
+use krust_core::ui::color::{coloru_with_opacity, ContrastingColor};
+use krust_core::ui::theme::color::internal_colors;
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill};
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, Padding,
     ParentAnchor, ParentElement as _, ParentOffsetBounds, Radius, Stack, Text,
     DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::keymap::Keystroke;
-use borkui::platform::Cursor;
-use borkui::text_layout::ClipConfig;
-use borkui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::fonts::{Properties, Weight};
+use krustui::keymap::Keystroke;
+use krustui::platform::Cursor;
+use krustui::text_layout::ClipConfig;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, BlurContext, Element, Entity, EventContext, FocusContext, Gradient,
     SingletonEntity as _, TypedActionView, View, ViewContext,
 };
@@ -761,7 +761,7 @@ impl View for ActionButton {
                     })
                     .unwrap_or(Fill::Solid(text_color));
                 row.add_child(
-                    ConstrainedBox::new(icon.to_borkui_icon(icon_fill).finish())
+                    ConstrainedBox::new(icon.to_krustui_icon(icon_fill).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),
@@ -829,7 +829,7 @@ impl View for ActionButton {
                 row.add_child(
                     Container::new(
                         ConstrainedBox::new(
-                            Icon::ChevronDown.to_borkui_icon(text_color.into()).finish(),
+                            Icon::ChevronDown.to_krustui_icon(text_color.into()).finish(),
                         )
                         .with_width(icon_size)
                         .with_height(icon_size)

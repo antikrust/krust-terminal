@@ -1,9 +1,9 @@
 //! Support for displaying inherited ACLs.
 
-use bork_core::ui::appearance::Appearance;
-use borkui::elements::{CrossAxisAlignment, Flex, MouseStateHandle, ParentElement as _};
-use borkui::ui_components::components::UiComponent as _;
-use borkui::{AppContext, Element, SingletonEntity as _};
+use krust_core::ui::appearance::Appearance;
+use krustui::elements::{CrossAxisAlignment, Flex, MouseStateHandle, ParentElement as _};
+use krustui::ui_components::components::UiComponent as _;
+use krustui::{AppContext, Element, SingletonEntity as _};
 
 use super::style;
 use crate::cloud_object::model::persistence::CloudModel;

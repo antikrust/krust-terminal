@@ -3,8 +3,8 @@ use std::mem;
 
 use pathfinder_color::ColorU;
 use string_offset::CharOffset;
-use bork_errors::report_error;
-use bork_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use krust_errors::report_error;
+use krust_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 
 use super::ansi;
 use super::block::Block;
@@ -26,17 +26,17 @@ mod tests;
 /// The approach we're using to detect user typeahead.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TypeaheadMode {
-    /// The shell reports its input buffer to Bork, and we use that for typeahead.
+    /// The shell reports its input buffer to Krust, and we use that for typeahead.
     ShellReported,
-    /// Bork matches user input against characters echoed to the PTY to estimate typeahead.
+    /// Krust matches user input against characters echoed to the PTY to estimate typeahead.
     /// This is only used on bash 3.2 and should be removed if we stop supporting
     /// such old bash versions.
     InputMatching,
 }
 
-/// Model for "early" terminal output. Early output is output that Bork receives
+/// Model for "early" terminal output. Early output is output that Krust receives
 /// from the PTY while no block is running. In concrete terms, it's output received
-/// after a `BlockFinished` hook but before Bork has written the next command from
+/// after a `BlockFinished` hook but before Krust has written the next command from
 /// the input editor to the PTY.
 ///
 /// This output belongs to one of two categories:
@@ -152,8 +152,8 @@ impl EarlyOutput {
                 full: ("Matched {ch:?} as typeahead")
             );
 
-            if bork_core::channel::ChannelState::channel()
-                == bork_core::channel::Channel::Integration
+            if krust_core::channel::ChannelState::channel()
+                == krust_core::channel::Channel::Integration
             {
                 log::info!(
                     "Sending input-matched typeahead event for {:?}",
@@ -172,8 +172,8 @@ impl EarlyOutput {
     /// internal count is then updated to match the new typeahead length.
     pub fn advance_typeahead(&mut self) -> Option<(&str, CharOffset)> {
         if self.typeahead.is_empty() {
-            if bork_core::channel::ChannelState::channel()
-                == bork_core::channel::Channel::Integration
+            if krust_core::channel::ChannelState::channel()
+                == krust_core::channel::Channel::Integration
             {
                 log::warn!("Tried to advance typeahead, but it was empty");
             }
@@ -211,9 +211,9 @@ impl EarlyOutput {
             // For most user-entered commands, we know when to switch from background
             // output to the active block's command grid because the input editor
             // marks the block as started right before it sends the command to the pty.
-            // When the command doesn't come from Bork, however, the active block isn't
+            // When the command doesn't come from Krust, however, the active block isn't
             // started until we receive the preexec hook. At this point, the shell has
-            // already written the command to the pty, resulting in Bork treating it as
+            // already written the command to the pty, resulting in Krust treating it as
             // background output.
             // We can't correctly identify the command in advance when this happens, so
             // instead we fix the block list afterwards.
@@ -320,8 +320,8 @@ impl ansi::Handler for EarlyOutputHandler<'_> {
     /// information, such as when the shell reports its input buffer.
     fn input_buffer(&mut self, data: ansi::InputBufferValue) {
         if data.buffer.is_empty() {
-            if bork_core::channel::ChannelState::channel()
-                == bork_core::channel::Channel::Integration
+            if krust_core::channel::ChannelState::channel()
+                == krust_core::channel::Channel::Integration
             {
                 log::info!("Ignoring empty input buffer");
             }
@@ -342,8 +342,8 @@ impl ansi::Handler for EarlyOutputHandler<'_> {
         let me = self.inner();
         if me.mode == TypeaheadMode::ShellReported {
             me.typeahead = data.buffer;
-            if bork_core::channel::ChannelState::channel()
-                == bork_core::channel::Channel::Integration
+            if krust_core::channel::ChannelState::channel()
+                == krust_core::channel::Channel::Integration
             {
                 log::info!(
                     "Sending shell-reported typeahead event for {:?}",

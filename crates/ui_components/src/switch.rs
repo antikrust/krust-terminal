@@ -1,9 +1,9 @@
 use std::sync::LazyLock;
 
-use bork_core::ui::appearance::Appearance;
-use borkui_core::elements::{MouseStateHandle, Rect};
-use borkui_core::prelude::stack::*;
-use borkui_core::prelude::*;
+use krust_core::ui::appearance::Appearance;
+use krustui_core::elements::{MouseStateHandle, Rect};
+use krustui_core::prelude::stack::*;
+use krustui_core::prelude::*;
 
 use crate::{Component, MouseEventHandler, Renderable};
 

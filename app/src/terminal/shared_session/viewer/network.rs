@@ -27,11 +27,11 @@ use session_sharing_protocol::viewer::{
     DownstreamMessage, InitPayload, RoleUpdatedReason, SessionEndedReason, UpstreamMessage,
     ViewerRemovedReason,
 };
-use bork_core::features::FeatureFlag;
-use bork_errors::report_error;
-use bork_server_client::iap::IapManager;
-use borkui::r#async::{SpawnedFutureHandle, Timer};
-use borkui::{
+use krust_core::features::FeatureFlag;
+use krust_errors::report_error;
+use krust_server_client::iap::IapManager;
+use krustui::r#async::{SpawnedFutureHandle, Timer};
+use krustui::{
     Entity, ModelContext, ModelHandle, RequestState, RetryOption, SingletonEntity, WeakViewHandle,
 };
 use websocket::{Message, Sink, Stream, WebsocketMessage as _};
@@ -225,7 +225,7 @@ impl Network {
         let session_id = SessionId::new();
         let viewer_id = ParticipantId::new();
         let viewer_firebase_uid = UserUid::new("mock_firebase_uid");
-        let active_prompt = ActivePrompt::BorkPrompt("test bork prompt".to_owned());
+        let active_prompt = ActivePrompt::KrustPrompt("test krust prompt".to_owned());
 
         let model = Network {
             session_id,

@@ -35,13 +35,13 @@ use vim::{
     vim_a_quote, vim_a_word, vim_find_char_on_line, vim_find_matching_bracket, vim_inner_block,
     vim_inner_paragraph, vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use bork_errors::report_error;
-use borkui::accessibility::{AccessibilityContent, BorkA11yRole};
-use borkui::text::point::Point;
-use borkui::text::word_boundaries::WordBoundariesPolicy;
-use borkui::text::TextBuffer;
-use borkui::text_layout::TextStyle;
-use borkui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use krust_errors::report_error;
+use krustui::accessibility::{AccessibilityContent, KrustA11yRole};
+use krustui::text::point::Point;
+use krustui::text::word_boundaries::WordBoundariesPolicy;
+use krustui::text::TextBuffer;
+use krustui::text_layout::TextStyle;
+use krustui::{AppContext, Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 use self::buffer::Peer;
 use super::{movement, PlainTextEditorViewAction, SelectionInsertion, ValidInputType};
@@ -507,7 +507,7 @@ impl EditorModel {
         let delta = &text[start.as_usize()..end.as_usize()];
         match (was_selecting, is_selecting) {
             (false, false) => {
-                AccessibilityContent::new_without_help(delta, BorkA11yRole::UserAction)
+                AccessibilityContent::new_without_help(delta, KrustA11yRole::UserAction)
             }
             (_, true) => {
                 // Note that Range is start <= x < end, and in our case, when deciding what was the action
@@ -531,10 +531,10 @@ impl EditorModel {
                 } else {
                     "unselected"
                 };
-                AccessibilityContent::new(delta, format!(", {action}"), BorkA11yRole::UserAction)
+                AccessibilityContent::new(delta, format!(", {action}"), KrustA11yRole::UserAction)
             }
             (true, false) => {
-                AccessibilityContent::new_without_help("Unselected", BorkA11yRole::UserAction)
+                AccessibilityContent::new_without_help("Unselected", KrustA11yRole::UserAction)
             }
         }
     }
@@ -2299,7 +2299,7 @@ impl EditorModel {
         ctx.emit_a11y_content(AccessibilityContent::new(
             self.selected_text(ctx),
             ", deleted",
-            BorkA11yRole::UserAction,
+            KrustA11yRole::UserAction,
         ));
         self.change_selections(new_selections, ctx);
         self.insert("", None, ctx);
@@ -2323,7 +2323,7 @@ impl EditorModel {
         ctx.emit_a11y_content(AccessibilityContent::new(
             self.selected_text(ctx),
             ", deleted",
-            BorkA11yRole::UserAction,
+            KrustA11yRole::UserAction,
         ));
         self.change_selections(new_selections, ctx);
         self.insert("", None, ctx);

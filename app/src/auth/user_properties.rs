@@ -1,4 +1,4 @@
-use bork_graphql::queries::get_user::UserOutput as GqlUserOutput;
+use krust_graphql::queries::get_user::UserOutput as GqlUserOutput;
 
 use super::user::User;
 use super::UserUid;

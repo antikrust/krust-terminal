@@ -14,16 +14,16 @@ use ::ai::project_context::model::{ProjectContextModel, ProjectContextModelEvent
 use remote_server::proto::OpenBufferSuccess;
 use repo_metadata::repositories::{DetectedRepositories, RepoDetectionSource};
 use repo_metadata::{RepoMetadataEvent, RepoMetadataModel, RepositoryIdentifier};
-use bork_core::channel::ChannelState;
-use bork_core::{safe_error, SessionId};
-use bork_files::{FileModel, FileModelEvent};
-use bork_util::content_version::ContentVersion;
-use bork_util::file::FileId;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
-use bork_util::standardized_path::StandardizedPath;
-use borkui::platform::TerminationMode;
-use borkui::r#async::{Spawnable, SpawnableOutput, SpawnedFutureHandle};
-use borkui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use krust_core::channel::ChannelState;
+use krust_core::{safe_error, SessionId};
+use krust_files::{FileModel, FileModelEvent};
+use krust_util::content_version::ContentVersion;
+use krust_util::file::FileId;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::standardized_path::StandardizedPath;
+use krustui::platform::TerminationMode;
+use krustui::r#async::{Spawnable, SpawnableOutput, SpawnedFutureHandle};
+use krustui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::codebase_index_status::{
     codebase_index_status_to_proto, disabled_codebase_index_status,
@@ -103,7 +103,7 @@ use crate::util::git;
 /// script (see [`remote_server::setup::remote_server_bundled_resources_dir`]),
 /// expanding the shell-form `~/` prefix against this process's home directory.
 ///
-/// This deliberately does not use `bork_core::paths::bundled_resources_dir`,
+/// This deliberately does not use `krust_core::paths::bundled_resources_dir`,
 /// whose macOS behavior resolves resources inside an app bundle. The global
 /// location is version-independent: the last install wins, and slight skew
 /// against this daemon's version is accepted.
@@ -116,7 +116,7 @@ fn daemon_bundled_resources_dir() -> Option<PathBuf> {
 fn remote_agent_context_snapshot(
     revision: u64,
     bundled_skills: &[RemoteSkillProto],
-    ctx: &borkui::AppContext,
+    ctx: &krustui::AppContext,
 ) -> RemoteAgentContextSnapshot {
     let home_dir = dirs::home_dir()
         .map(|path| path.to_string_lossy().into_owned())
@@ -267,7 +267,7 @@ pub struct ServerModel {
     /// Per-connection outbound channels, keyed by `ConnectionId`.
     ///
     /// The daemon can serve multiple proxy connections simultaneously — one
-    /// per SSH session / Bork tab connecting to this host.  Each entry maps
+    /// per SSH session / Krust tab connecting to this host.  Each entry maps
     /// a connection's `Uuid` to the channel the connection task drains to
     /// write `ServerMessage`s back to its proxy.
     connection_senders: HashMap<ConnectionId, async_channel::Sender<ServerMessage>>,
@@ -742,7 +742,7 @@ impl ServerModel {
         model
     }
 
-    fn refresh_remote_agent_context_snapshot(&mut self, ctx: &borkui::AppContext) {
+    fn refresh_remote_agent_context_snapshot(&mut self, ctx: &krustui::AppContext) {
         let revision = self
             .remote_agent_context_snapshot
             .revision
@@ -1699,7 +1699,7 @@ impl ServerModel {
     /// Called both during `Initialize` and when re-enabling crash reporting
     /// via `UpdatePreferences`.
     #[cfg(feature = "crash_reporting")]
-    fn apply_sentry_user_id(&self, ctx: &mut borkui::AppContext) {
+    fn apply_sentry_user_id(&self, ctx: &mut krustui::AppContext) {
         if let Some(user_id) = self.auth_state.user_id() {
             crate::crash_reporting::set_user_id(user_id, self.auth_state.user_email(), ctx);
         }
@@ -3372,7 +3372,7 @@ impl ServerModel {
     }
 
     /// Handles `GitGenerateCommitMessageRequest` — computes the working-tree
-    /// diff locally, then calls the Bork server's code-review content endpoint
+    /// diff locally, then calls the Krust server's code-review content endpoint
     /// via the daemon's authenticated `AIClient` and returns the generated
     /// message.
     fn handle_generate_git_commit_message(

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
-use borkui::{
+use krustui::{
     AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle,
     WindowId,
 };

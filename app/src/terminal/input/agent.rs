@@ -1,14 +1,14 @@
-use bork_cli::agent::Harness;
-use bork_core::settings::Setting;
-use bork_core::ui::theme::color::internal_colors;
-use borkui::elements::{
+use krust_cli::agent::Harness;
+use krust_core::settings::Setting;
+use krust_core::ui::theme::color::internal_colors;
+use krustui::elements::{
     Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, DropTarget, Element, Empty, EventHandler, Expanded, Flex, Hoverable,
     MainAxisSize, OffsetPositioning, OffsetType, ParentElement, PositionedElementOffsetBounds,
     PositioningAxis, Radius, SavePosition, Stack, XAxisAnchor, YAxisAnchor,
 };
-use borkui::presenter::ChildView;
-use borkui::{AppContext, SingletonEntity as _};
+use krustui::presenter::ChildView;
+use krustui::{AppContext, SingletonEntity as _};
 
 use super::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay,
@@ -595,8 +595,8 @@ impl Input {
             let harness = self
                 .ambient_agent_view_model()
                 .map(|m| m.as_ref(app).selected_harness())
-                .unwrap_or(bork_cli::agent::Harness::Oz);
-            if harness != bork_cli::agent::Harness::Oz && !self.should_show_auth_secret_ftux(app) {
+                .unwrap_or(krust_cli::agent::Harness::Oz);
+            if harness != krust_cli::agent::Harness::Oz && !self.should_show_auth_secret_ftux(app) {
                 row.add_child(ChildView::new(auth_secret_selector).finish());
             }
         }
@@ -715,11 +715,11 @@ impl Input {
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use bork_core::ui::theme::BorkTheme;
+    use krust_core::ui::theme::KrustTheme;
 
     use crate::ui_components::blended_colors;
 
-    pub fn default_border_color(theme: &BorkTheme) -> ColorU {
+    pub fn default_border_color(theme: &KrustTheme) -> ColorU {
         blended_colors::neutral_2(theme)
     }
 }

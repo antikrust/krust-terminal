@@ -1,17 +1,17 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use bork_core::ui::Icon;
-use bork_core::ui::appearance::Appearance;
-use bork_core::ui::theme::color::internal_colors;
-use borkui_core::elements::{
+use krust_core::ui::Icon;
+use krust_core::ui::appearance::Appearance;
+use krust_core::ui::theme::color::internal_colors;
+use krustui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Flex,
     ParentElement, Radius, Shrinkable,
 };
-use borkui_core::fonts::{Properties, Weight};
-use borkui_core::keymap::Keystroke;
-use borkui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
-use borkui_core::{AppContext, EventContext};
+use krustui_core::fonts::{Properties, Weight};
+use krustui_core::keymap::Keystroke;
+use krustui_core::prelude::{MainAxisAlignment, MainAxisSize, Text};
+use krustui_core::{AppContext, EventContext};
 
 use crate::{Component, Options as _, Renderable, button};
 

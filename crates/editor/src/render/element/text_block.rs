@@ -22,8 +22,8 @@ impl RenderableBlock for RenderableTextBlock {
     fn layout(
         &mut self,
         _model: &RenderState,
-        _ctx: &mut borkui_core::LayoutContext,
-        _app: &borkui_core::AppContext,
+        _ctx: &mut krustui_core::LayoutContext,
+        _app: &krustui_core::AppContext,
     ) {
     }
 
@@ -31,7 +31,7 @@ impl RenderableBlock for RenderableTextBlock {
         &mut self,
         model: &RenderState,
         ctx: &mut RenderContext,
-        _app: &borkui_core::AppContext,
+        _app: &krustui_core::AppContext,
     ) {
         let content = model.content();
         let text_block = extract_block!(

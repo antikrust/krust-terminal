@@ -1,4 +1,4 @@
-use bork_util::path::user_friendly_path;
+use krust_util::path::user_friendly_path;
 
 use super::model::session::SessionType;
 use crate::terminal::model::block::Block;
@@ -21,7 +21,7 @@ pub fn user_and_host_name_string(
 ) -> Option<String> {
     match session_type {
         SessionType::Local => None,
-        SessionType::BorkifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
+        SessionType::KrustifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
     }
 }
 

@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use regex::Regex;
-use borkui::integration::{AssertionOutcome, TestStep};
-use borkui::{async_assert, async_assert_eq};
+use krustui::integration::{AssertionOutcome, TestStep};
+use krustui::{async_assert, async_assert_eq};
 
 use super::util::{remote_server_ssh_command, remote_server_user_host, ssh_command, user_host};
 use crate::integration_testing::step::assert_no_pending_model_events;
@@ -92,7 +92,7 @@ pub fn enter_local_subshell_command(shell: &str) -> TestStep {
 }
 
 pub fn assert_subshell_banner_is_showing() -> TestStep {
-    TestStep::new("Assert the Borkify banner is visible")
+    TestStep::new("Assert the Krustify banner is visible")
         .add_assertion(move |app, window_id| {
             let terminal_view = single_terminal_view(app, window_id);
             terminal_view.read(app, |view, _ctx| {
@@ -102,7 +102,7 @@ pub fn assert_subshell_banner_is_showing() -> TestStep {
                         .block_list_mut()
                         .active_block()
                         .block_banner(),
-                    Some(WithinBlockBanner::BorkifyBanner(..))
+                    Some(WithinBlockBanner::KrustifyBanner(..))
                 ))
             })
         })
@@ -132,10 +132,10 @@ pub fn assert_subshell_is_bootstrapped(tab_index: usize, pane_index: usize) -> T
                 };
 
                 match rich_content_type {
-                    Some(RichContentType::BorkifySuccessBlock) => {}
+                    Some(RichContentType::KrustifySuccessBlock) => {}
                     _ => {
                         return AssertionOutcome::failure(
-                            "Borkify success block wasn't added to the blocklist".to_owned(),
+                            "Krustify success block wasn't added to the blocklist".to_owned(),
                         );
                     }
                 }

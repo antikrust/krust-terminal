@@ -1,13 +1,13 @@
 use pathfinder_color::ColorU;
-use bork_core::ui::theme::phenomenon::PhenomenonStyle;
-use bork_core::ui::theme::Fill;
-use borkui::elements::{
+use krust_core::ui::theme::phenomenon::PhenomenonStyle;
+use krust_core::ui::theme::Fill;
+use krustui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize,
     MouseStateHandle, ParentElement, Radius, Stack,
 };
-use borkui::ui_components::checkbox::Checkbox;
-use borkui::ui_components::components::UiComponentStyles;
-use borkui::Element;
+use krustui::ui_components::checkbox::Checkbox;
+use krustui::ui_components::components::UiComponentStyles;
+use krustui::Element;
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -115,7 +115,7 @@ pub fn render_callout_bubble(
         .with_child(
             ConstrainedBox::new(
                 border_icon
-                    .to_borkui_icon(Fill::Solid(border_color))
+                    .to_krustui_icon(Fill::Solid(border_color))
                     .finish(),
             )
             .with_width(24.)
@@ -123,7 +123,7 @@ pub fn render_callout_bubble(
             .finish(),
         )
         .with_child(
-            ConstrainedBox::new(fill_icon.to_borkui_icon(background).finish())
+            ConstrainedBox::new(fill_icon.to_krustui_icon(background).finish())
                 .with_width(24.)
                 .with_height(24.)
                 .finish(),

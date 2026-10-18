@@ -1,5 +1,5 @@
-use borkui::async_assert;
-use borkui::integration::TestStep;
+use krustui::async_assert;
+use krustui::integration::TestStep;
 
 use crate::integration_testing::command_palette::open_command_palette_and_run_action;
 use crate::integration_testing::view_getters::workspace_view;

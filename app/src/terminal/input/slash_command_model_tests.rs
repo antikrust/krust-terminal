@@ -1,6 +1,6 @@
 use settings::Setting as _;
-use bork_errors::report_if_error;
-use borkui::{App, SingletonEntity as _};
+use krust_errors::report_if_error;
+use krustui::{App, SingletonEntity as _};
 
 use super::{ParsedSlashCommandInput, SlashCommandEntryState};
 use crate::ai::agent::conversation::AIConversationId;
@@ -555,7 +555,7 @@ fn test_submit_queued_prompt_detects_slash_command() {
 #[test]
 fn repository_gated_command_drops_when_leaving_repository() {
     use repo_metadata::repositories::DetectedRepositories;
-    use bork_util::standardized_path::StandardizedPath;
+    use krust_util::standardized_path::StandardizedPath;
 
     use crate::terminal::input::tests::simulate_directory_for_completion;
     use crate::terminal::model::session::SessionInfo;
@@ -628,7 +628,7 @@ fn repository_gated_command_stays_within_repository() {
     use std::fs;
 
     use repo_metadata::repositories::DetectedRepositories;
-    use bork_util::standardized_path::StandardizedPath;
+    use krust_util::standardized_path::StandardizedPath;
 
     use crate::terminal::input::tests::simulate_directory_for_completion;
     use crate::terminal::model::session::SessionInfo;

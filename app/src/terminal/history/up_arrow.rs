@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use bork_core::features::FeatureFlag;
-use borkui::{AppContext, EntityId, SingletonEntity};
+use krust_core::features::FeatureFlag;
+use krustui::{AppContext, EntityId, SingletonEntity};
 
 use super::History;
 use crate::ai::blocklist::{BlocklistAIHistoryModel, InputConfig};

@@ -2,7 +2,7 @@
 #
 # Prepares bundled pprof for distribution.
 #
-# This script copies a pprof binary that should be bundled with Bork into a
+# This script copies a pprof binary that should be bundled with Krust into a
 # destination directory.
 #
 # Usage:

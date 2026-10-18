@@ -1,6 +1,6 @@
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
 use tempfile::TempDir;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::*;
 
@@ -11,7 +11,7 @@ fn daemon_skill(id: &str, content: &str) -> ParsedSkill {
         path: LocalOrRemotePath::Local(format!("/daemon/bundled/skills/{id}/SKILL.md").into()),
         content: content.to_string(),
         line_range: None,
-        provider: SkillProvider::Bork,
+        provider: SkillProvider::Krust,
         scope: SkillScope::Bundled,
     }
 }

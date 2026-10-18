@@ -1,5 +1,5 @@
-use borkui::integration::TestStep;
-use borkui::{async_assert, ViewHandle};
+use krustui::integration::TestStep;
+use krustui::{async_assert, ViewHandle};
 
 use crate::integration_testing::command_palette::assert_command_palette_is_open;
 use crate::integration_testing::navigation_palette::assert_navigation_mode_enabled_in_command_palette;

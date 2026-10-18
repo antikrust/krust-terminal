@@ -1,4 +1,4 @@
-use borkui::{ModelHandle, ViewContext, ViewHandle};
+use krustui::{ModelHandle, ViewContext, ViewHandle};
 
 use super::{AgentInputFooter, AgentInputFooterEvent};
 use crate::context_chips::display_chip::{DisplayChip, GitLineChanges, PromptDisplayChipEvent};

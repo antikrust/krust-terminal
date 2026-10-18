@@ -1,12 +1,12 @@
 use pathfinder_geometry::vector::vec2f;
-use borkui::elements::{
+use krustui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Highlight,
     ParentElement, Radius, Shrinkable, Wrap,
 };
-use borkui::fonts::{Properties, Weight};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::units::IntoPixels;
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::fonts::{Properties, Weight};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::units::IntoPixels;
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::context_chips::display_chip::{

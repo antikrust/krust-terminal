@@ -5,15 +5,15 @@ use serde_json::{json, Value};
 use session_sharing_protocol::common::{ParticipantId, Role, SessionId as SharedSessionId};
 use session_sharing_protocol::sharer::{SessionEndedReason, SessionSourceType};
 use strum_macros::{EnumDiscriminants, EnumIter};
-use bork_completer::completer::MatchType;
-use bork_core::command::ExitCode;
-use bork_core::interval_timer::TimingDataPoint;
-use bork_core::telemetry::{
+use krust_completer::completer::MatchType;
+use krust_core::command::ExitCode;
+use krust_core::interval_timer::TimingDataPoint;
+use krust_core::telemetry::{
     EnablementState, TelemetryEvent as TelemetryEventTrait, TelemetryEventDesc,
 };
-use borkui::keymap::Keystroke;
-use borkui::notification::{NotificationSendError, RequestPermissionsOutcome};
-use borkui::rendering::ThinStrokes;
+use krustui::keymap::Keystroke;
+use krustui::notification::{NotificationSendError, RequestPermissionsOutcome};
+use krustui::rendering::ThinStrokes;
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::AIConversationId;
@@ -102,7 +102,7 @@ pub struct BootstrappingInfo {
     /// time, which roughly equals the time cost of running our bootstrap
     /// script.  Will be None if `bootstrap_duration_seconds` or
     /// `rcfiles_duration_seconds` is None.
-    pub bork_attributed_bootstrap_duration_seconds: Option<f64>,
+    pub krust_attributed_bootstrap_duration_seconds: Option<f64>,
     pub shell_version: Option<String>,
     pub terminal_session_id: Option<SessionId>,
 }
@@ -187,7 +187,7 @@ impl From<Space> for TelemetrySpace {
     }
 }
 
-/// Common metadata to include in all Bork Drive telemetry events that act on a specific object.
+/// Common metadata to include in all Krust Drive telemetry events that act on a specific object.
 /// Events that only apply to a single object type may use specific metadata like [`WorkflowTelemetryMetadata`],
 /// [`NotebookTelemetryMetadata`], or [`EnvVarTelemetryMetadata`] instead.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -359,7 +359,7 @@ impl From<rmcp::RmcpError> for MCPServerTelemetryError {
 pub struct OpenedSharingDialogEvent {
     pub source: SharingDialogSource,
 
-    /// Metadata for the object being shared, if it's a Bork Drive object.
+    /// Metadata for the object being shared, if it's a Krust Drive object.
     #[serde(flatten)]
     pub object_metadata: Option<CloudObjectTelemetryMetadata>,
 
@@ -367,18 +367,18 @@ pub struct OpenedSharingDialogEvent {
     pub session_id: Option<SharedSessionId>,
 }
 
-/// How the user opened the Bork Drive sharing dialog.
+/// How the user opened the Krust Drive sharing dialog.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum SharingDialogSource {
     /// The sharing button in the pane header.
     PaneHeader,
     /// The per-pane command palette entry (includes keybindings).
     CommandPalette,
-    /// The Bork Drive index context menu.
+    /// The Krust Drive index context menu.
     DriveIndex,
     /// The sharing dialog was auto-opened from shared session creation.
     StartedSessionShare,
-    /// The user intented into Bork with an email address to invite.
+    /// The user intented into Krust with an email address to invite.
     InviteeRequest,
     /// The user jumped from an inherited ACL to its definition on a parent object.
     InheritedPermission,
@@ -431,7 +431,7 @@ pub enum PaletteSource {
     PrefixChange,
     Keybinding,
     CtrlTab { shift_pressed_initially: bool },
-    BorkDrive,
+    KrustDrive,
     QuitModal,
     LogOutModal,
     IntegrationTest,
@@ -494,7 +494,7 @@ pub enum PluginChipTelemetryKind {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationAgentVariant {
-    /// Bork's built-in agent (Oz).
+    /// Krust's built-in agent (Oz).
     Oz,
     /// A CLI agent (e.g., Claude Code, Gemini CLI, etc.).
     CLIAgent(CLIAgentType),
@@ -524,7 +524,7 @@ pub enum PluginChipTelemetryAction {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum BorkDriveSource {
+pub enum KrustDriveSource {
     Legacy,
     LeftPanelToolbelt,
     ForceOpened,
@@ -554,11 +554,11 @@ pub enum CommandCorrectionEvent {
 pub enum CommandSearchResultType {
     History,
     Workflow,
-    OpenBorkAI,
-    TranslateUsingBorkAI,
+    OpenKrustAI,
+    TranslateUsingKrustAI,
     Notebook,
     EnvVarCollection,
-    ViewInBorkDrive,
+    ViewInKrustDrive,
     AIQuery,
     Project,
 }
@@ -571,8 +571,8 @@ impl From<&CommandSearchItemAction> for CommandSearchResultType {
             AcceptWorkflow(_) => Self::Workflow,
             AcceptNotebook(_) => Self::Notebook,
             AcceptEnvVarCollection(_) => Self::EnvVarCollection,
-            OpenBorkAI => Self::OpenBorkAI,
-            TranslateUsingBorkAI => Self::TranslateUsingBorkAI,
+            OpenKrustAI => Self::OpenKrustAI,
+            TranslateUsingKrustAI => Self::TranslateUsingKrustAI,
             AcceptAIQuery(_) | RunAIQuery(_) => Self::AIQuery,
         }
     }
@@ -600,7 +600,7 @@ pub enum PtySpawnMode {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum OpenedBorkAISource {
+pub enum OpenedKrustAISource {
     GlobalEntryButton,
     HelpWithBlock,
     HelpWithTextSelection,
@@ -609,14 +609,14 @@ pub enum OpenedBorkAISource {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum BorkAIRequestResult {
+pub enum KrustAIRequestResult {
     Succeeded { latency_ms: i64, truncated: bool },
     OutOfRequests,
     Failed,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum BorkAIActionType {
+pub enum KrustAIActionType {
     CopyTranscript,
     Restart,
     CopyAnswer,
@@ -628,8 +628,8 @@ pub enum BorkAIActionType {
 pub enum SaveAsWorkflowModalSource {
     Block,
     Input,
-    BorkAIWorkflowCard,
-    BorkAIPanel,
+    KrustAIWorkflowCard,
+    KrustAIPanel,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -699,8 +699,8 @@ pub enum KnowledgePaneEntrypoint {
     #[serde(rename = "settings")]
     Settings,
 
-    #[serde(rename = "bork_drive")]
-    BorkDrive,
+    #[serde(rename = "krust_drive")]
+    KrustDrive,
 
     #[serde(rename = "ai_blocklist")]
     AIBlocklist,
@@ -718,8 +718,8 @@ pub enum MCPServerCollectionPaneEntrypoint {
     #[serde(rename = "settings")]
     Settings,
 
-    #[serde(rename = "bork_drive")]
-    BorkDrive,
+    #[serde(rename = "krust_drive")]
+    KrustDrive,
 
     #[serde(rename = "slash_command")]
     SlashCommand,
@@ -860,12 +860,12 @@ pub enum PromptSuggestionFallbackReason {
 pub enum AgentModeSetupProjectScopedRulesActionType {
     #[serde(rename = "link_from_existing")]
     LinkFromExisting(String),
-    #[serde(rename = "generate_bork_md")]
-    GenerateBorkMd,
+    #[serde(rename = "generate_krust_md")]
+    GenerateKrustMd,
     #[serde(rename = "skip_rules")]
     SkipRules,
-    #[serde(rename = "regenerate_bork_md")]
-    RegenerateBorkMd,
+    #[serde(rename = "regenerate_krust_md")]
+    RegenerateKrustMd,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -976,11 +976,11 @@ pub enum CodeContextDestination {
 
 #[derive(Clone, Debug, Serialize)]
 pub enum AgentModeCitation {
-    BorkDriveObject {
+    KrustDriveObject {
         object_type: ObjectType,
         uid: ObjectUid,
     },
-    BorkDocs {
+    KrustDocs {
         page: String,
     },
     WebPage {
@@ -1388,7 +1388,7 @@ pub enum TelemetryEvent {
     DatabaseReadError(String),
     DatabaseWriteError(String),
     AppStartup(AppStartupInfo),
-    /// The native app was opened while logged out. Since Bork requires login,
+    /// The native app was opened while logged out. Since Krust requires login,
     /// this usually means a new user.
     LoggedOutStartup,
     /// The download source, if it can be determined. Will only be sent when
@@ -1645,25 +1645,25 @@ pub enum TelemetryEvent {
     InitialWorkingDirectoryConfigurationChanged {
         advanced_mode_enabled: bool,
     },
-    /// Opened legacy Bork AI.
-    OpenedBorkAI {
-        source: OpenedBorkAISource,
+    /// Opened legacy Krust AI.
+    OpenedKrustAI {
+        source: OpenedKrustAISource,
     },
-    /// Issued legacy Bork AI request.
-    BorkAIRequestIssued {
-        result: BorkAIRequestResult,
+    /// Issued legacy Krust AI request.
+    KrustAIRequestIssued {
+        result: KrustAIRequestResult,
     },
-    BorkAIAction {
-        action_type: BorkAIActionType,
+    KrustAIAction {
+        action_type: KrustAIActionType,
     },
     /// This is purely for static prompts! Do not send user-written prompts with this event.
-    UsedBorkAIPreparedPrompt {
+    UsedKrustAIPreparedPrompt {
         prompt: &'static str,
     },
     ToggleFocusPaneOnHover {
         enabled: bool,
     },
-    BorkAICharacterLimitExceeded,
+    KrustAICharacterLimitExceeded,
     OpenInputContextMenu,
     InputCutSelectedText,
     InputCopySelectedText,
@@ -1671,7 +1671,7 @@ pub enum TelemetryEvent {
     InputPaste,
     InputCommandSearch,
     InputAICommandSearch,
-    InputAskBorkAI,
+    InputAskKrustAI,
     SaveAsWorkflowModal {
         source: SaveAsWorkflowModalSource,
     },
@@ -1712,7 +1712,7 @@ pub enum TelemetryEvent {
     AddAddedSubshellCommand,
     RemoveAddedSubshellCommand,
     ReceivedSubshellRcFileDcs,
-    ToggleSshBorkification {
+    ToggleSshKrustification {
         enabled: bool,
     },
     /// User changed the SSH extension install mode.
@@ -1724,11 +1724,11 @@ pub enum TelemetryEvent {
     SshRemoteServerChoiceDoNotAskAgainToggled {
         checked: bool,
     },
-    BorkifyFooterShown {
+    KrustifyFooterShown {
         is_ssh: bool,
     },
     AgentToolbarDismissed,
-    BorkifyFooterAcceptedBorkify {
+    KrustifyFooterAcceptedKrustify {
         is_ssh: bool,
     },
     ShowAliasExpansionBanner,
@@ -1748,12 +1748,12 @@ pub enum TelemetryEvent {
     },
     AnonymousUserHitCloudObjectLimit,
     NeedsReauth,
-    BorkDriveOpened {
-        source: BorkDriveSource,
+    KrustDriveOpened {
+        source: KrustDriveSource,
         is_code_mode_v2: bool,
     },
-    // Toggled the legacy Bork AI side panel.
-    ToggleBorkAI {
+    // Toggled the legacy Krust AI side panel.
+    ToggleKrustAI {
         opened: bool,
     },
     ToggleSecretRedaction {
@@ -1775,7 +1775,7 @@ pub enum TelemetryEvent {
         item_type: UndoCloseItemType,
     },
     /// This event is used to measure PTY throughput.
-    /// NOTE: this event is only meant to be used for BorkDev.
+    /// NOTE: this event is only meant to be used for KrustDev.
     PtyThroughput {
         /// The maximum PTY throughput in bytes/sec, aggregated over a 10 minute period.
         max_bytes_per_second: usize,
@@ -1834,7 +1834,7 @@ pub enum TelemetryEvent {
         team_uid: ServerId,
     },
     CopyObjectToClipboard(TelemetryCloudObjectType),
-    OpenAndBorkifyDockerSubshell {
+    OpenAndKrustifyDockerSubshell {
         /// Some variant if we support this shell type, and None otherwise.
         shell_type: Option<ShellType>,
     },
@@ -2001,7 +2001,7 @@ pub enum TelemetryEvent {
     /// language auto-detection false-positive.
     AgentModePotentialAutoDetectionFalsePositive(AgentModeAutoDetectionFalsePositivePayload),
 
-    /// This is a telemetry event used to help track performance of Agent Predict in Bork,
+    /// This is a telemetry event used to help track performance of Agent Predict in Krust,
     /// by keeping track of the context given and the predictions generated.
     AgentModePrediction {
         was_suggestion_accepted: bool,
@@ -2369,7 +2369,7 @@ pub enum TelemetryEvent {
     AutoupdateMinidumpCleanupFailed {
         exit_code: i32,
     },
-    ExecutedBorkDrivePrompt {
+    ExecutedKrustDrivePrompt {
         id: Option<WorkflowId>,
         selection_source: WorkflowSelectionSource,
     },
@@ -2656,9 +2656,9 @@ pub enum TelemetryEvent {
     AgentManagementViewOpenedSession,
     /// Emitted when the user copies a session link from the Agent Management View.
     AgentManagementViewCopiedSessionLink,
-    /// Detected that Bork is running in an isolated sandbox.
+    /// Detected that Krust is running in an isolated sandbox.
     DetectedIsolationPlatform {
-        platform: bork_isolation_platform::IsolationPlatformType,
+        platform: krust_isolation_platform::IsolationPlatformType,
     },
 
     AgentTipShown {
@@ -2809,7 +2809,7 @@ pub enum TelemetryEvent {
         server_conversation_id: Option<String>,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
     },
-    /// Emitted when a bork://linear deeplink is opened.
+    /// Emitted when a krust://linear deeplink is opened.
     LinearIssueLinkOpened,
     /// Emitted when the remote server binary check completes.
     RemoteServerBinaryCheck {
@@ -2896,7 +2896,7 @@ pub enum TelemetryEvent {
     /// daemon process on the remote host.  Only emitted on success — if
     /// the daemon crashes before binding, no event is sent.
     RemoteServerDaemonStartup {
-        timing_data: Vec<bork_core::interval_timer::TimingDataPoint>,
+        timing_data: Vec<krust_core::interval_timer::TimingDataPoint>,
     },
     /// Emitted when all reconnection attempts are exhausted.
     RemoteServerReconnectExhausted {
@@ -2976,7 +2976,7 @@ impl TelemetryEventTrait for TelemetryEvent {
     }
 
     fn event_descs() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
-        bork_core::telemetry::enum_events::<Self>()
+        krust_core::telemetry::enum_events::<Self>()
     }
 }
 
@@ -3281,9 +3281,9 @@ impl TelemetryEvent {
             TelemetryEvent::InitialWorkingDirectoryConfigurationChanged {
                 advanced_mode_enabled,
             } => Some(json!({ "advanced_mode_enabled": advanced_mode_enabled })),
-            TelemetryEvent::OpenedBorkAI { source } => Some(json!({ "source": source })),
-            TelemetryEvent::BorkAIRequestIssued { result } => Some(json!({ "result": result })),
-            TelemetryEvent::BorkAIAction { action_type } => {
+            TelemetryEvent::OpenedKrustAI { source } => Some(json!({ "source": source })),
+            TelemetryEvent::KrustAIRequestIssued { result } => Some(json!({ "result": result })),
+            TelemetryEvent::KrustAIAction { action_type } => {
                 Some(json!({ "action_type": action_type }))
             }
             TelemetryEvent::MCPServerCollectionPaneOpened { entrypoint } => {
@@ -3339,9 +3339,9 @@ impl TelemetryEvent {
             TelemetryEvent::CodePanelsFileOpened { entrypoint, target } => {
                 let (target, layout, editor) = match target {
                     FileTarget::MarkdownViewer(layout) => {
-                        ("bork_markdown_viewer", Some(*layout), None)
+                        ("krust_markdown_viewer", Some(*layout), None)
                     }
-                    FileTarget::CodeEditor(layout) => ("bork_code_editor", Some(*layout), None),
+                    FileTarget::CodeEditor(layout) => ("krust_code_editor", Some(*layout), None),
                     FileTarget::EnvEditor => ("env_editor", None, None),
                     FileTarget::SystemDefault => ("system_default", None, None),
                     FileTarget::SystemGeneric => ("system_generic", None, None),
@@ -3367,7 +3367,7 @@ impl TelemetryEvent {
             TelemetryEvent::AISuggestedRuleContentChanged { rule_id, is_saved } => {
                 Some(json!({ "rule_id": rule_id, "is_saved": is_saved }))
             }
-            TelemetryEvent::UsedBorkAIPreparedPrompt { prompt } => {
+            TelemetryEvent::UsedKrustAIPreparedPrompt { prompt } => {
                 Some(json!({ "prompt": prompt }))
             }
             TelemetryEvent::ExperimentTriggered {
@@ -3391,8 +3391,8 @@ impl TelemetryEvent {
                 Some(json!({ "remember": remember }))
             }
             TelemetryEvent::AgentToolbarDismissed => None,
-            TelemetryEvent::BorkifyFooterShown { is_ssh }
-            | TelemetryEvent::BorkifyFooterAcceptedBorkify { is_ssh } => {
+            TelemetryEvent::KrustifyFooterShown { is_ssh }
+            | TelemetryEvent::KrustifyFooterAcceptedKrustify { is_ssh } => {
                 Some(json!({ "is_ssh": is_ssh }))
             }
             TelemetryEvent::ToggleSameLinePrompt { enabled } => Some(json!({ "enabled": enabled })),
@@ -3407,7 +3407,7 @@ impl TelemetryEvent {
             } => Some(
                 json!({ "ui_location": ui_location, "open_in_active_window": open_in_active_window }),
             ),
-            TelemetryEvent::ToggleBorkAI { opened } => Some(json!({ "opened": opened })),
+            TelemetryEvent::ToggleKrustAI { opened } => Some(json!({ "opened": opened })),
             TelemetryEvent::ToggleSecretRedaction { enabled } => {
                 Some(json!({ "enabled": enabled }))
             }
@@ -3454,7 +3454,7 @@ impl TelemetryEvent {
             TelemetryEvent::CopyObjectToClipboard(object_type) => {
                 Some(json!({ "object_type": object_type }))
             }
-            TelemetryEvent::OpenAndBorkifyDockerSubshell { shell_type } => {
+            TelemetryEvent::OpenAndKrustifyDockerSubshell { shell_type } => {
                 Some(json!({ "shell_type": shell_type }))
             }
             TelemetryEvent::ToggleBlockFilterQuery { enabled, source } => {
@@ -3478,7 +3478,7 @@ impl TelemetryEvent {
             TelemetryEvent::ToggleNewWindowsAtCustomSize { enabled } => {
                 Some(json!({"enabled": enabled}))
             }
-            TelemetryEvent::ToggleSshBorkification { enabled } => Some(json!({"enabled": enabled})),
+            TelemetryEvent::ToggleSshKrustification { enabled } => Some(json!({"enabled": enabled})),
             TelemetryEvent::SetSshExtensionInstallMode { mode } => Some(json!({"mode": mode})),
             TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { checked } => {
                 Some(json!({"checked": checked}))
@@ -3937,7 +3937,7 @@ impl TelemetryEvent {
                 "conversation_id": conversation_id,
                 "rating": rating,
             })),
-            TelemetryEvent::ExecutedBorkDrivePrompt {
+            TelemetryEvent::ExecutedKrustDrivePrompt {
                 id,
                 selection_source,
             } => Some(json!({
@@ -4128,7 +4128,7 @@ impl TelemetryEvent {
             | TelemetryEvent::QuitModalDisabled
             | TelemetryEvent::UserInitiatedLogOut
             | TelemetryEvent::LogOutModalShown
-            | TelemetryEvent::BorkAICharacterLimitExceeded
+            | TelemetryEvent::KrustAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -4136,7 +4136,7 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskBorkAI
+            | TelemetryEvent::InputAskKrustAI
             | TelemetryEvent::SetNewWindowsAtCustomSize
             | TelemetryEvent::DisableInputSync
             | TelemetryEvent::ShowSubshellBanner
@@ -4536,7 +4536,7 @@ impl TelemetryEvent {
                 "banner_toggle_flag_enabled": banner_toggle_flag_enabled,
                 "post_purchase_modal_flag_enabled": post_purchase_modal_flag_enabled,
             })),
-            TelemetryEvent::BorkDriveOpened {
+            TelemetryEvent::KrustDriveOpened {
                 source,
                 is_code_mode_v2,
             } => Some(json!({
@@ -4938,12 +4938,12 @@ impl TelemetryEvent {
             | TelemetryEvent::InputModeChanged { .. }
             | TelemetryEvent::PtySpawned { .. }
             | TelemetryEvent::InitialWorkingDirectoryConfigurationChanged { .. }
-            | TelemetryEvent::OpenedBorkAI { .. }
-            | TelemetryEvent::BorkAIRequestIssued { .. }
-            | TelemetryEvent::BorkAIAction { .. }
-            | TelemetryEvent::UsedBorkAIPreparedPrompt { .. }
+            | TelemetryEvent::OpenedKrustAI { .. }
+            | TelemetryEvent::KrustAIRequestIssued { .. }
+            | TelemetryEvent::KrustAIAction { .. }
+            | TelemetryEvent::UsedKrustAIPreparedPrompt { .. }
             | TelemetryEvent::ToggleFocusPaneOnHover { .. }
-            | TelemetryEvent::BorkAICharacterLimitExceeded
+            | TelemetryEvent::KrustAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -4951,7 +4951,7 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskBorkAI
+            | TelemetryEvent::InputAskKrustAI
             | TelemetryEvent::SaveAsWorkflowModal { .. }
             | TelemetryEvent::ExperimentTriggered { .. }
             | TelemetryEvent::ToggleSyncAllPanesInAllTabs { .. }
@@ -4970,9 +4970,9 @@ impl TelemetryEvent {
             | TelemetryEvent::AddAddedSubshellCommand
             | TelemetryEvent::RemoveAddedSubshellCommand
             | TelemetryEvent::ReceivedSubshellRcFileDcs
-            | TelemetryEvent::BorkifyFooterShown { .. }
+            | TelemetryEvent::KrustifyFooterShown { .. }
             | TelemetryEvent::AgentToolbarDismissed
-            | TelemetryEvent::BorkifyFooterAcceptedBorkify { .. }
+            | TelemetryEvent::KrustifyFooterAcceptedKrustify { .. }
             | TelemetryEvent::ShowAliasExpansionBanner
             | TelemetryEvent::EnableAliasExpansionFromBanner
             | TelemetryEvent::DismissAliasExpansionBanner
@@ -4986,8 +4986,8 @@ impl TelemetryEvent {
             | TelemetryEvent::AnonymousUserAttemptLoginGatedFeature { .. }
             | TelemetryEvent::AnonymousUserHitCloudObjectLimit
             | TelemetryEvent::NeedsReauth
-            | TelemetryEvent::BorkDriveOpened { .. }
-            | TelemetryEvent::ToggleBorkAI { .. }
+            | TelemetryEvent::KrustDriveOpened { .. }
+            | TelemetryEvent::ToggleKrustAI { .. }
             | TelemetryEvent::ToggleSecretRedaction { .. }
             | TelemetryEvent::CustomSecretRegexAdded
             | TelemetryEvent::ToggleObfuscateSecret { .. }
@@ -5016,7 +5016,7 @@ impl TelemetryEvent {
             | TelemetryEvent::LogOut
             | TelemetryEvent::InviteTeammates { .. }
             | TelemetryEvent::CopyObjectToClipboard(_)
-            | TelemetryEvent::OpenAndBorkifyDockerSubshell { .. }
+            | TelemetryEvent::OpenAndKrustifyDockerSubshell { .. }
             | TelemetryEvent::UpdateBlockFilterQuery
             | TelemetryEvent::UpdateBlockFilterQueryContextLines { .. }
             | TelemetryEvent::ToggleBlockFilterQuery { .. }
@@ -5090,8 +5090,8 @@ impl TelemetryEvent {
             | TelemetryEvent::MCPTemplateShared
             | TelemetryEvent::MCPServerSpawned { .. }
             | TelemetryEvent::MCPToolCallAccepted { .. }
-            | TelemetryEvent::ExecutedBorkDrivePrompt { .. }
-            | TelemetryEvent::ToggleSshBorkification { .. }
+            | TelemetryEvent::ExecutedKrustDrivePrompt { .. }
+            | TelemetryEvent::ToggleSshKrustification { .. }
             | TelemetryEvent::SetSshExtensionInstallMode { .. }
             | TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { .. }
             | TelemetryEvent::SettingsImportInitiated
@@ -5231,7 +5231,7 @@ impl TelemetryEvent {
         // We initialize the feature flags so that we can determine which telemetry events to print.
         crate::features::init_feature_flags();
 
-        let events: serde_json::Map<String, Value> = bork_core::telemetry::all_events()
+        let events: serde_json::Map<String, Value> = krust_core::telemetry::all_events()
             .filter_map(|event| {
                 if !event.enablement_state().is_enabled() {
                     return None;
@@ -5482,11 +5482,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputModeChanged => EnablementState::Always,
             Self::PtySpawned => EnablementState::Always,
             Self::InitialWorkingDirectoryConfigurationChanged => EnablementState::Always,
-            Self::OpenedBorkAI => EnablementState::Always,
-            Self::BorkAIRequestIssued => EnablementState::Always,
-            Self::BorkAIAction => EnablementState::Always,
-            Self::UsedBorkAIPreparedPrompt => EnablementState::Always,
-            Self::BorkAICharacterLimitExceeded => EnablementState::Always,
+            Self::OpenedKrustAI => EnablementState::Always,
+            Self::KrustAIRequestIssued => EnablementState::Always,
+            Self::KrustAIAction => EnablementState::Always,
+            Self::UsedKrustAIPreparedPrompt => EnablementState::Always,
+            Self::KrustAICharacterLimitExceeded => EnablementState::Always,
             Self::OpenInputContextMenu => EnablementState::Always,
             Self::InputCutSelectedText => EnablementState::Always,
             Self::InputCopySelectedText => EnablementState::Always,
@@ -5494,7 +5494,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputPaste => EnablementState::Always,
             Self::InputCommandSearch => EnablementState::Always,
             Self::InputAICommandSearch => EnablementState::Always,
-            Self::InputAskBorkAI => EnablementState::Always,
+            Self::InputAskKrustAI => EnablementState::Always,
             Self::SaveAsWorkflowModal => EnablementState::Always,
             Self::ExperimentTriggered => EnablementState::Always,
             Self::ToggleSyncAllPanesInAllTabs => EnablementState::Always,
@@ -5510,12 +5510,12 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::TriggerSubshellBootstrap => EnablementState::Always,
             Self::AddDenylistedSubshellCommand => EnablementState::Always,
             Self::RemoveDenylistedSubshellCommand => EnablementState::Always,
-            Self::ToggleSshBorkification => EnablementState::Always,
+            Self::ToggleSshKrustification => EnablementState::Always,
             Self::SetSshExtensionInstallMode => EnablementState::Always,
             Self::SshRemoteServerChoiceDoNotAskAgainToggled => EnablementState::Always,
-            Self::BorkifyFooterShown
+            Self::KrustifyFooterShown
             | Self::AgentToolbarDismissed
-            | Self::BorkifyFooterAcceptedBorkify => EnablementState::Always,
+            | Self::KrustifyFooterAcceptedKrustify => EnablementState::Always,
             Self::AddAddedSubshellCommand => EnablementState::Always,
             Self::RemoveAddedSubshellCommand => EnablementState::Always,
             Self::ReceivedSubshellRcFileDcs => EnablementState::Always,
@@ -5527,8 +5527,8 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::DismissVimKeybindingsBanner => EnablementState::Always,
             Self::InitiateReauth => EnablementState::Always,
             Self::NeedsReauth => EnablementState::Always,
-            Self::BorkDriveOpened => EnablementState::Always,
-            Self::ToggleBorkAI => EnablementState::Always,
+            Self::KrustDriveOpened => EnablementState::Always,
+            Self::ToggleKrustAI => EnablementState::Always,
             Self::ToggleSecretRedaction => EnablementState::Always,
             Self::CustomSecretRegexAdded => EnablementState::Always,
             Self::ToggleObfuscateSecret => EnablementState::Always,
@@ -5546,7 +5546,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SettingsImportInitiated => EnablementState::Always,
             Self::InviteTeammates => EnablementState::Always,
             Self::CopyObjectToClipboard => EnablementState::Always,
-            Self::OpenAndBorkifyDockerSubshell => EnablementState::Always,
+            Self::OpenAndKrustifyDockerSubshell => EnablementState::Always,
             Self::UpdateBlockFilterQuery => EnablementState::Always,
             Self::UpdateBlockFilterQueryContextLines => EnablementState::Always,
             Self::ToggleBlockFilterQuery => EnablementState::Always,
@@ -5657,7 +5657,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AgentModeRatedResponse => {
                 EnablementState::Flag(FeatureFlag::GlobalAIAnalyticsBanner)
             }
-            Self::ExecutedBorkDrivePrompt => EnablementState::Flag(FeatureFlag::AgentModeWorkflows),
+            Self::ExecutedKrustDrivePrompt => EnablementState::Flag(FeatureFlag::AgentModeWorkflows),
             Self::FileExceededContextLimit => EnablementState::Always,
             Self::AgentModeError => EnablementState::Always,
             Self::AgentModeRequestRetrySucceeded => EnablementState::Always,
@@ -5972,11 +5972,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "InitialWorkingDirectoryConfigurationChanged"
             }
             Self::InputModeChanged => "Input Mode Changed",
-            Self::OpenedBorkAI => "Opened Bork AI",
-            Self::BorkAIRequestIssued => "Bork AI Request Issued",
-            Self::BorkAIAction => "Bork AI Action",
-            Self::UsedBorkAIPreparedPrompt => "Used Bork AI Prepared Prompt",
-            Self::BorkAICharacterLimitExceeded => "Bork AI Character Limit Exceeded",
+            Self::OpenedKrustAI => "Opened Krust AI",
+            Self::KrustAIRequestIssued => "Krust AI Request Issued",
+            Self::KrustAIAction => "Krust AI Action",
+            Self::UsedKrustAIPreparedPrompt => "Used Krust AI Prepared Prompt",
+            Self::KrustAICharacterLimitExceeded => "Krust AI Character Limit Exceeded",
             Self::OpenInputContextMenu => "OpenInputBoxContextMenu",
             Self::InputCutSelectedText => "InputBoxCutSelectedText",
             Self::InputCopySelectedText => "InputBoxCutSelectedText",
@@ -5984,7 +5984,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputPaste => "InputBoxPaste",
             Self::InputCommandSearch => "InputBoxCommandSearch",
             Self::InputAICommandSearch => "InputBoxAICommandSearch",
-            Self::InputAskBorkAI => "InputBoxAskBorkAI",
+            Self::InputAskKrustAI => "InputBoxAskKrustAI",
             Self::SaveAsWorkflowModal => "Opened Save As Workflow Modal",
             Self::ExperimentTriggered => "experiments.client.enroll_client",
             Self::ToggleSyncAllPanesInAllTabs => "Toggle Sync Inputs Across All Panes in All Tabs",
@@ -6001,21 +6001,21 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AddAddedSubshellCommand => "Add Added Subshell Command",
             Self::RemoveAddedSubshellCommand => "Remove Added Subshell Command",
             Self::ReceivedSubshellRcFileDcs => "Received Subshell RC File DCS",
-            Self::ToggleSshBorkification => "Toggle SSH Borkification",
+            Self::ToggleSshKrustification => "Toggle SSH Krustification",
             Self::SetSshExtensionInstallMode => "Set SSH Extension Install Mode",
             Self::SshRemoteServerChoiceDoNotAskAgainToggled => {
                 "SSH Remote Server Choice Do Not Ask Again Toggled"
             }
-            Self::BorkifyFooterShown => "Borkify Footer Shown",
+            Self::KrustifyFooterShown => "Krustify Footer Shown",
             Self::AgentToolbarDismissed => "Agent Toolbar Dismissed",
-            Self::BorkifyFooterAcceptedBorkify => "Borkify Footer Accepted Borkify",
+            Self::KrustifyFooterAcceptedKrustify => "Krustify Footer Accepted Krustify",
             Self::ShowAliasExpansionBanner => "Show Alias Expansion Banner",
             Self::DismissAliasExpansionBanner => "Dismiss Alias Expansion Banner",
             Self::EnableAliasExpansionFromBanner => "Enable Alias Expansion From Banner",
             Self::InitiateReauth => "Initiate Reauth",
             Self::NeedsReauth => "Needs Reauth",
-            Self::BorkDriveOpened => "Bork Drive Opened",
-            Self::ToggleBorkAI => "Toggle Bork AI",
+            Self::KrustDriveOpened => "Krust Drive Opened",
+            Self::ToggleKrustAI => "Toggle Krust AI",
             Self::ToggleSecretRedaction => "Toggle Secret Redaction",
             Self::CustomSecretRegexAdded => "Custom Secret Regex Added",
             Self::ToggleObfuscateSecret => "Toggle Obfuscate Secret",
@@ -6040,13 +6040,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::JumpToSharedSessionParticipant { .. } => "Jumped to Shared Session Participant",
             Self::CopiedSharedSessionLink { .. } => "Copied Shared Session Link",
             Self::WebSessionOpenedOnDesktop { .. } => "Web session opened on desktop",
-            Self::WebCloudObjectOpenedOnDesktop { .. } => "Bork Drive object opened on desktop",
-            Self::DriveSharingOnboardingBlockShown => "Bork Drive Sharing onboarding block shown",
+            Self::WebCloudObjectOpenedOnDesktop { .. } => "Krust Drive object opened on desktop",
+            Self::DriveSharingOnboardingBlockShown => "Krust Drive Sharing onboarding block shown",
             Self::UnsupportedShell => "Unsupported Shell",
             Self::SettingsImportInitiated => "Settings Import Initiated",
             Self::InviteTeammates => "Invited Teammates",
             Self::CopyObjectToClipboard => "Copy Object To Clipboard",
-            Self::OpenAndBorkifyDockerSubshell => "OpenAndBorkifyDockerSubshell",
+            Self::OpenAndKrustifyDockerSubshell => "OpenAndKrustifyDockerSubshell",
             Self::UpdateBlockFilterQuery => "Update Block Filter Query",
             Self::ToggleBlockFilterQuery => "Toggle Block Filter Query",
             Self::ToggleBlockFilterCaseSensitivity => "Toggle Block Filter Case Sensitivity",
@@ -6191,7 +6191,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleAutoIndexing => "Toggle Codebase Context Autoindexing",
             Self::AttachedImagesToAgentModeQuery => "AgentMode.AttachedImages",
             Self::AgentModeRatedResponse => "AgentMode.RatedResponse",
-            Self::ExecutedBorkDrivePrompt => "AgentMode.ExecutedBorkDrivePrompt",
+            Self::ExecutedKrustDrivePrompt => "AgentMode.ExecutedKrustDrivePrompt",
             Self::FileExceededContextLimit => "AgentMode.Code.FileExceededContextLimit",
             Self::AgentModeError => "AgentMode.Error",
             Self::AgentModeRequestRetrySucceeded => "AgentMode.RequestRetrySucceeded",
@@ -6340,7 +6340,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::InitiateAnonymousUserSignup => "An anonymous user initiated the sign up flow",
             Self::AnonymousUserExpirationLockout => {
-                "An anonymous user opened Bork after their conversion deadline and was locked out"
+                "An anonymous user opened Krust after their conversion deadline and was locked out"
             }
             Self::AnonymousUserLinkedFromBrowser => {
                 "Received an auth payload from anonymous user after linking in browser"
@@ -6352,7 +6352,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Anonymous user attempted to create a cloud object past their personal object limit"
             }
             Self::BackgroundBlockStarted => {
-                "Bork created a background-output Block (whenever a processes has been backgrounded and yields some output)"
+                "Krust created a background-output Block (whenever a processes has been backgrounded and yields some output)"
             }
             Self::BaselineCommandLatency => "Command execution time",
             Self::SessionCreation => "Created a tab",
@@ -6447,9 +6447,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Database write error when trying to write app state for session restoration"
             }
             Self::AppStartup => "App is launched",
-            Self::LoggedOutStartup => "Started Bork in the logged-out / signed-out state",
+            Self::LoggedOutStartup => "Started Krust in the logged-out / signed-out state",
             Self::DownloadSource => {
-                "Whether the Bork was installed from the home page or through homebrew"
+                "Whether the Krust was installed from the home page or through homebrew"
             }
             Self::SSHBootstrapAttempt => "Attempted bootstrapping for an SSH session",
             Self::SSHControlMasterError => {
@@ -6484,13 +6484,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::NotificationSent => "Sent desktop notification",
             Self::NotificationFailedToSend => "Failed to send desktop notification",
-            Self::NotificationClicked => "Clicked desktop notification sent from Bork",
+            Self::NotificationClicked => "Clicked desktop notification sent from Krust",
             Self::ToggleShowAgentTips => "Toggled the Show Agent Tips setting in AI settings",
             Self::ToggleFindOption => "Changed settings in Find Toggle",
             Self::SignUpButtonClicked => "Clicked \"Sign Up\" button",
             Self::LoginButtonClicked => "Clicked on \"Log in\" button",
             Self::OpenNewSessionFromFilePath => {
-                "Dragged a file, folder, etc. into Bork to start a session"
+                "Dragged a file, folder, etc. into Krust to start a session"
             }
             Self::OpenTeamFromURI => {
                 "Showed settings view of their newly joined team within the app"
@@ -6541,16 +6541,16 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Opened the launch config YAML file from modal once saved successfully"
             }
             Self::OpenLaunchConfig => "Opened launch config for a session",
-            Self::TeamCreated => "Created a Bork Drive team",
-            Self::TeamJoined => "Joined a Bork Drive team",
-            Self::TeamLeft => "Left a Bork Drive team",
-            Self::TeamLinkCopied => "Copied a Bork Drive team link",
-            Self::RemovedUserFromTeam => "Remove user from Bork Drive team",
-            Self::DeletedWorkflow => "Deleted workflow from Bork Drive team",
-            Self::DeletedNotebook => "Deleted notebook from Bork Drive team",
+            Self::TeamCreated => "Created a Krust Drive team",
+            Self::TeamJoined => "Joined a Krust Drive team",
+            Self::TeamLeft => "Left a Krust Drive team",
+            Self::TeamLinkCopied => "Copied a Krust Drive team link",
+            Self::RemovedUserFromTeam => "Remove user from Krust Drive team",
+            Self::DeletedWorkflow => "Deleted workflow from Krust Drive team",
+            Self::DeletedNotebook => "Deleted notebook from Krust Drive team",
             Self::ToggleApprovalsModal => "Opened or closed teams modal",
             Self::ChangedInviteViewOption => "Toggled between link and invite for invite",
-            Self::SendEmailInvites => "Sent email invites for Bork Drive team",
+            Self::SendEmailInvites => "Sent email invites for Krust Drive team",
             Self::CommandCorrection => "Accepted command correction",
             Self::SetLineHeight => "Set line height through Settings -> Appearance",
             Self::ResourceCenterOpened => "Opened Resource Center pane",
@@ -6578,7 +6578,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::QuitModalCancel => "`Cancel` button on the alert modal was pressed",
             Self::QuitModalDisabled => {
-                "The quit modal dialog has been disabled and will not popup when a user closes Bork while a session is running"
+                "The quit modal dialog has been disabled and will not popup when a user closes Krust while a session is running"
             }
             Self::UserInitiatedLogOut => {
                 "Confirms a user has explicitly logged out of the application"
@@ -6603,14 +6603,14 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InitialWorkingDirectoryConfigurationChanged => {
                 "Replaced the default working directory with a different path"
             }
-            Self::OpenedBorkAI => "Activated Bork AI",
-            Self::BorkAIRequestIssued => "Issued a question to Bork AI",
-            Self::BorkAIAction => "Executed a Bork AI action: Restart, Copy, Insert into terminal",
-            Self::UsedBorkAIPreparedPrompt => {
-                "Used one of the Bork-provided prompts, like \"Show examples\""
+            Self::OpenedKrustAI => "Activated Krust AI",
+            Self::KrustAIRequestIssued => "Issued a question to Krust AI",
+            Self::KrustAIAction => "Executed a Krust AI action: Restart, Copy, Insert into terminal",
+            Self::UsedKrustAIPreparedPrompt => {
+                "Used one of the Krust-provided prompts, like \"Show examples\""
             }
-            Self::BorkAICharacterLimitExceeded => {
-                "Attempted to ask a question longer than 1k chars to Bork AI"
+            Self::KrustAICharacterLimitExceeded => {
+                "Attempted to ask a question longer than 1k chars to Krust AI"
             }
             Self::OpenInputContextMenu => "Opened the Input Editor's context menu",
             Self::InputCutSelectedText => {
@@ -6629,7 +6629,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputAICommandSearch => {
                 "Opened AI Command Search via the Input Editor's context menu (right clicking the buffer)"
             }
-            Self::InputAskBorkAI => "Clicked \"Ask Bork AI\" from the Input Editor's context menu",
+            Self::InputAskKrustAI => "Clicked \"Ask Krust AI\" from the Input Editor's context menu",
             Self::SaveAsWorkflowModal => {
                 "Opened the modal to create a new workflow using a Block's context--command, etc."
             }
@@ -6660,28 +6660,28 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Enabled or disabled preserving the active tab color"
             }
             Self::ShowSubshellBanner => {
-                "Displayed the banner asking whether Bork should Borkify the current session via Bork's subshell wrapper"
+                "Displayed the banner asking whether Krust should Krustify the current session via Krust's subshell wrapper"
             }
             Self::DeclineSubshellBootstrap => {
-                "Developer declined the Bork banner to Borkify the current session"
+                "Developer declined the Krust banner to Krustify the current session"
             }
             Self::TriggerSubshellBootstrap => {
-                "Attempted to Borkify the current session via Bork's subshell wrapper"
+                "Attempted to Krustify the current session via Krust's subshell wrapper"
             }
             Self::AddDenylistedSubshellCommand => {
-                "Explicitly prevent a command from being Borkified via Bork's subshell wrapper"
+                "Explicitly prevent a command from being Krustified via Krust's subshell wrapper"
             }
             Self::RemoveDenylistedSubshellCommand => {
-                "Removed a command from the list of commands to IGNORE when trying to Borkify via Bork's subshell wrapper"
+                "Removed a command from the list of commands to IGNORE when trying to Krustify via Krust's subshell wrapper"
             }
             Self::AddAddedSubshellCommand => {
-                "Added a command to be automatically Borkified via Bork's subshell wrapper"
+                "Added a command to be automatically Krustified via Krust's subshell wrapper"
             }
             Self::RemoveAddedSubshellCommand => {
-                "Removed a command from the list of commands to automatically Borkify via Bork's subshell wrapper"
+                "Removed a command from the list of commands to automatically Krustify via Krust's subshell wrapper"
             }
-            Self::ReceivedSubshellRcFileDcs => "Spawned a subshell to be automatically Borkified",
-            Self::ToggleSshBorkification => "Changed the setting for SSH sessions to be warified",
+            Self::ReceivedSubshellRcFileDcs => "Spawned a subshell to be automatically Krustified",
+            Self::ToggleSshKrustification => "Changed the setting for SSH sessions to be warified",
             Self::SetSshExtensionInstallMode => {
                 "Changed the SSH extension install mode (always ask / always allow / always skip)"
             }
@@ -6689,13 +6689,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Toggled the 'Don't ask me this again' checkbox on the SSH remote-server choice block"
             }
             Self::AgentModeRatedResponse => "User rated an Agent Mode response",
-            Self::BorkifyFooterShown => {
-                "Displayed the borkify footer for a detected subshell or SSH session"
+            Self::KrustifyFooterShown => {
+                "Displayed the krustify footer for a detected subshell or SSH session"
             }
             Self::AgentToolbarDismissed => "User dismissed the use-agent toolbar",
-            Self::BorkifyFooterAcceptedBorkify => "User clicked Borkify in the borkify footer",
+            Self::KrustifyFooterAcceptedKrustify => "User clicked Krustify in the krustify footer",
             Self::ShowAliasExpansionBanner => {
-                "Displayed the banner asking whether Bork should automatically expand aliases within the Input Editor"
+                "Displayed the banner asking whether Krust should automatically expand aliases within the Input Editor"
             }
             Self::EnableAliasExpansionFromBanner => {
                 "Enabled automatic alias expansion within the Input Editor from the banner"
@@ -6704,7 +6704,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Dismissed the banner to enable automatic alias expansion within the Input Editor"
             }
             Self::ShowVimKeybindingsBanner => {
-                "Displayed the banner asking whether Bork should enable Vim keybindings in the Input Editor"
+                "Displayed the banner asking whether Krust should enable Vim keybindings in the Input Editor"
             }
             Self::EnableVimKeybindingsFromBanner => {
                 "Enabled Vim keybindings in the Input Editor from the banner"
@@ -6714,9 +6714,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::InitiateReauth => "Started the flow to re-authenticate the client",
             Self::NeedsReauth => "User needs to re-authenticate",
-            Self::BorkDriveOpened => "Opened Bork Drive panel",
-            Self::ToggleBorkAI => {
-                "Toggled Bork AI--an AI assistant to help you debug errors, look up forgotten commands and more"
+            Self::KrustDriveOpened => "Opened Krust Drive panel",
+            Self::ToggleKrustAI => {
+                "Toggled Krust AI--an AI assistant to help you debug errors, look up forgotten commands and more"
             }
             Self::ToggleSecretRedaction => {
                 "Toggled on/off the setting for Secret Redaction - attempts to redact secrets and sensitive information"
@@ -6725,18 +6725,18 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleObfuscateSecret => "Revealed or hid a secret",
             Self::CopySecret => "Copied a secret's obfuscated contents to clipboard",
             Self::AutoGenerateMetadataSuccess => {
-                "Successfully generated metadata for a workflow using Bork AI"
+                "Successfully generated metadata for a workflow using Krust AI"
             }
             Self::AutoGenerateMetadataError => {
-                "Failed to generate metadata for a workflow using Bork AI"
+                "Failed to generate metadata for a workflow using Krust AI"
             }
-            Self::UpdateSortingChoice => "Modified the sorting scheme for Bork Drive objects",
+            Self::UpdateSortingChoice => "Modified the sorting scheme for Krust Drive objects",
             Self::UndoClose => "Re-opened a closed tab or window (undo closing a tab or window)",
             Self::PtyThroughput => "A sample of the max PTY throughput in bytes/sec",
-            Self::DuplicateObject => "Cloned a Bork Drive object",
-            Self::ExportObject => "Exported a Bork Drive object",
+            Self::DuplicateObject => "Cloned a Krust Drive object",
+            Self::ExportObject => "Exported a Krust Drive object",
             Self::CommandFileRun => {
-                "Opened a .cmd or unix executable file and ran it directly in Bork"
+                "Opened a .cmd or unix executable file and ran it directly in Krust"
             }
             Self::PageUpDownInEditorPressed => {
                 "Pressed `PAGE-UP` or `PAGE-DOWN` within the Input Editor"
@@ -6744,7 +6744,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::StartedSharingCurrentSession => "Started sharing the current session",
             Self::StoppedSharingCurrentSession => "Halted sharing the current session",
             Self::JoinedSharedSession => {
-                "When you join another instance of Bork using shared sessions"
+                "When you join another instance of Krust using shared sessions"
             }
             Self::SharedSessionModalUpgradePressed => {
                 "Pressed upgrade after reaching max session sharing limit"
@@ -6763,18 +6763,18 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Shared session viewed on the web was opened on the desktop"
             }
             Self::WebCloudObjectOpenedOnDesktop => {
-                "Bork Drive object on the web was opened on the desktop"
+                "Krust Drive object on the web was opened on the desktop"
             }
             Self::DriveSharingOnboardingBlockShown => {
-                "Showed onboarding block for Bork Drive sharing"
+                "Showed onboarding block for Krust Drive sharing"
             }
-            Self::UnsupportedShell => "Booted Bork with a shell that isn't supported",
-            Self::LogOut => "Logged out of the Bork client",
+            Self::UnsupportedShell => "Booted Krust with a shell that isn't supported",
+            Self::LogOut => "Logged out of the Krust client",
             Self::SettingsImportInitiated => "Started the import settings flow for new users",
-            Self::InviteTeammates => "Sent emails to invite teammates to join Bork Drive team",
+            Self::InviteTeammates => "Sent emails to invite teammates to join Krust Drive team",
             Self::CopyObjectToClipboard => "Copied an object to the user's keyboard",
-            Self::OpenAndBorkifyDockerSubshell => {
-                "Borkifying a docker subshell from using the docker extension"
+            Self::OpenAndKrustifyDockerSubshell => {
+                "Krustifying a docker subshell from using the docker extension"
             }
             Self::UpdateBlockFilterQuery => "When a new filter is applied to a block",
             Self::UpdateBlockFilterQueryContextLines => {
@@ -6855,7 +6855,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ObjectLinkCopied => "The web link to an object has been copied.",
             Self::FileTreeToggled => "Opened the file tree/project explorer",
             Self::GlobalSearchOpened => "Opened the global search view",
-            Self::GlobalSearchQueryStarted => "Started a global search (bork_ripgrep) search",
+            Self::GlobalSearchQueryStarted => "Started a global search (krust_ripgrep) search",
             Self::GlobalSearchQueryCompleted => {
                 "Completed a global search across local and remote sources"
             }
@@ -6920,20 +6920,20 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::AgentModeOpenedCitation => "Opened a citation that was surfaced in agent mode",
             Self::OpenedSharingDialog => {
-                "Opened the sharing settings dialog for a session or Bork Drive object"
+                "Opened the sharing settings dialog for a session or Krust Drive object"
             }
 			Self::ToggleGlobalAI => "Toggled global AI enablement.",
 			Self::SuperGrokSubscriptionConnectInitiated => "User clicked Connect SuperGrok subscription; OAuth connection attempt initiated.",
             Self::SuperGrokSubscriptionConnectFinished => "SuperGrok subscription OAuth connection flow finished (success or failure).",
             Self::ToggleActiveAI => "Toggled active AI enablement.",
             Self::ToggleLigatureRendering => "Toggled ligature rendering",
-            Self::WorkflowAliasAdded => "Added an alias to a Bork Drive workflow",
-            Self::WorkflowAliasRemoved => "Removed an alias from a Bork Drive workflow",
+            Self::WorkflowAliasAdded => "Added an alias to a Krust Drive workflow",
+            Self::WorkflowAliasRemoved => "Removed an alias from a Krust Drive workflow",
             Self::WorkflowAliasArgumentEdited => {
-                "Edited an argument in a Bork Drive workflow alias"
+                "Edited an argument in a Krust Drive workflow alias"
             }
             Self::WorkflowAliasEnvVarsAttached => {
-                "Added or removed environment variables for a Bork Drive workflow alias"
+                "Added or removed environment variables for a Krust Drive workflow alias"
             }
             Self::ToggledAgentModeAutoexecuteReadonlyCommandsSetting => {
                 "Toggled setting to autoexecute readonly Agent Mode requested commands"
@@ -6962,11 +6962,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             #[cfg(windows)]
             Self::AutoupdateMutexTimeout => {
-                "The Windows auto-update installer timed out waiting for Bork to release its mutex; a force-kill was attempted"
+                "The Windows auto-update installer timed out waiting for Krust to release its mutex; a force-kill was attempted"
             }
             #[cfg(windows)]
             Self::AutoupdateForcekillFailed { .. } => {
-                "The Windows auto-update installer failed to force-kill Bork after the mutex timeout"
+                "The Windows auto-update installer failed to force-kill Krust after the mutex timeout"
             }
             #[cfg(windows)]
             Self::AutoupdateMinidumpCleanupFailed { .. } => {
@@ -6978,7 +6978,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleAutoIndexing => {
                 "Toggled on/off the enablement of autoindexing for codebase context."
             }
-            Self::ExecutedBorkDrivePrompt => "Executed a saved prompt.",
+            Self::ExecutedKrustDrivePrompt => "Executed a saved prompt.",
             Self::FileExceededContextLimit => "File from AI exceeded context limit",
             Self::AgentModeError => "Received an error when getting Agent Mode response",
             Self::AgentModeRequestRetrySucceeded => {
@@ -7084,7 +7084,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "User copied a session link from the Agent Management View"
             }
             Self::DetectedIsolationPlatform { .. } => {
-                "Detected that Bork is running in an isolated sandbox"
+                "Detected that Krust is running in an isolated sandbox"
             }
             Self::AgentTipShown => "Selected an Agent Tip to show in the Agent Mode status bar",
             Self::AgentTipClicked => "User clicked a link or action in an Agent Tip",
@@ -7130,7 +7130,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CodexModalOpened => "User opened the Codex modal",
             Self::CodexModalUseCodexClicked => "User clicked 'Use Codex' in the Codex modal",
             Self::LinearIssueLinkOpened => {
-                "User opened a bork://linear deeplink to work on an issue"
+                "User opened a krust://linear deeplink to work on an issue"
             }
             Self::CloudAgentCapacityModalOpened => "User opened the cloud agent capacity modal",
             Self::CloudAgentCapacityModalDismissed => {
@@ -7198,7 +7198,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
     }
 }
 
-bork_core::register_telemetry_event!(TelemetryEvent);
+krust_core::register_telemetry_event!(TelemetryEvent);
 
 #[cfg(test)]
 #[path = "events_tests.rs"]

@@ -10,8 +10,8 @@ use std::io::sink;
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::Vector2F;
-use bork_core::command::ExitCode;
-use borkui::r#async::executor::Background;
+use krust_core::command::ExitCode;
+use krustui::r#async::executor::Background;
 
 use super::ansi::{
     CommandFinishedValue, CompletionMetadata, Handler, PrecmdValue, PreexecValue, Processor,
@@ -38,7 +38,7 @@ pub fn block_size() -> BlockSize {
         size: SizeInfo::new_without_font_metrics(10, 7),
         block_padding: block_padding(),
         max_block_scroll_limit: 1000,
-        bork_prompt_height_lines: 0.6,
+        krust_prompt_height_lines: 0.6,
     }
 }
 
@@ -113,7 +113,7 @@ fn block_padding() -> BlockPadding {
 /// prompt:
 ///
 /// ```no_run
-/// # use bork::terminal::model::test_utils::TestBlockListBuilder;
+/// # use krust::terminal::model::test_utils::TestBlockListBuilder;
 /// let block_list = TestBlockListBuilder::new()
 ///     .with_honor_ps1(true)
 ///     .build();
@@ -125,10 +125,10 @@ fn block_padding() -> BlockPadding {
 /// the channel event proxy:
 ///
 /// ```no_run
-/// # use bork::terminal::event::{BlockType, Event};
-/// # use bork::terminal::event_listener::ChannelEventListener;
-/// # use bork::terminal::model::block::SerializedBlock;
-/// # use bork::terminal::model::test_utils::TestBlockListBuilder;
+/// # use krust::terminal::event::{BlockType, Event};
+/// # use krust::terminal::event_listener::ChannelEventListener;
+/// # use krust::terminal::model::block::SerializedBlock;
+/// # use krust::terminal::model::test_utils::TestBlockListBuilder;
 ///
 /// let (events_tx, events_rx) = async_channel::unbounded();
 /// let channel_event_proxy = ChannelEventListener::builder_for_test()
@@ -193,8 +193,8 @@ impl<'a> TestBlockListBuilder<'a> {
             self.block_sizes,
             self.channel_event_proxy,
             Arc::new(Background::default()),
-            false, /* show_bork_bootstrap_input */
-            false, /* show_bork_bootstrap_input */
+            false, /* show_krust_bootstrap_input */
+            false, /* show_krust_bootstrap_input */
             false, /* show_memory_stats */
             self.honor_ps1,
             false, /* is_inverted */
@@ -221,7 +221,7 @@ impl Default for TestBlockListBuilder<'_> {
 /// For example, to create a [`Block`] that respects the user's custom prompt:
 ///
 /// ```no_run
-/// # use bork::terminal::model::test_utils::TestBlockBuilder;
+/// # use krust::terminal::model::test_utils::TestBlockBuilder;
 /// let block = TestBlockBuilder::new()
 ///     .with_honor_ps1(true)
 ///     .build();
@@ -278,7 +278,7 @@ impl TestBlockBuilder {
             self.event_proxy,
             Arc::new(Background::default()),
             self.bootstrap_stage,
-            false, /* show_bork_bootstrap_input */
+            false, /* show_krust_bootstrap_input */
             false, /* show_in_band_command_blocks */
             false, /* show_memory_stats */
             self.block_index,

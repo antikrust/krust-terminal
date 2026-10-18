@@ -7,7 +7,7 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
 use thiserror::Error;
-use bork_util::local_or_remote_path::LocalOrRemotePath;
+use krust_util::local_or_remote_path::LocalOrRemotePath;
 
 use super::parser::parse_markdown_content;
 use super::skill_provider::{get_provider_for_path, get_scope_for_path, SkillProvider, SkillScope};
@@ -84,14 +84,14 @@ pub struct ParsedSkill {
     /// The line range where the markdown content (without front matter) is located (1-indexed)
     /// None if there is no front matter (content is the entire file)
     pub line_range: Option<Range<usize>>,
-    /// The provider of the skill (Agents, Claude, Codex, or Bork), determined from the path.
+    /// The provider of the skill (Agents, Claude, Codex, or Krust), determined from the path.
     pub provider: SkillProvider,
     /// The scope of the skill (home directory vs project directory).
     pub scope: SkillScope,
 }
 
 impl ParsedSkill {
-    /// Returns true if this skill is bundled with Bork (not a user-editable file).
+    /// Returns true if this skill is bundled with Krust (not a user-editable file).
     pub fn is_bundled(&self) -> bool {
         self.scope == SkillScope::Bundled
     }
@@ -120,7 +120,7 @@ pub fn parse_skill(path: &Path) -> Result<ParsedSkill> {
 /// Parse a bundled skill markdown file.
 ///
 /// Unlike `parse_skill`, this function does not require the path to match a known
-/// skill provider directory. Bundled skills are always assigned `SkillProvider::Bork`
+/// skill provider directory. Bundled skills are always assigned `SkillProvider::Krust`
 /// and `SkillScope::Bundled`.
 ///
 /// # Arguments
@@ -129,7 +129,7 @@ pub fn parse_skill(path: &Path) -> Result<ParsedSkill> {
 /// # Returns
 /// * `Result<ParsedSkill>` - Parsed skill with validated name and description
 pub fn parse_bundled_skill(path: &Path) -> Result<ParsedSkill> {
-    parse_local_skill_internal(path, SkillProvider::Bork, SkillScope::Bundled)
+    parse_local_skill_internal(path, SkillProvider::Krust, SkillScope::Bundled)
 }
 
 fn parse_local_skill_internal(

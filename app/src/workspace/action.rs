@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use session_sharing_protocol::common::SessionId;
 use ui_components::lightbox;
-use bork_util::path::LineAndColumnArg;
-use borkui::accessibility::AccessibilityVerbosity;
-use borkui::geometry::rect::RectF;
-use borkui::geometry::vector::Vector2F;
-use borkui::platform::Cursor;
-use borkui::{EntityId, WeakViewHandle, WindowId};
+use krust_util::path::LineAndColumnArg;
+use krustui::accessibility::AccessibilityVerbosity;
+use krustui::geometry::rect::RectF;
+use krustui::geometry::vector::Vector2F;
+use krustui::platform::Cursor;
+use krustui::{EntityId, WeakViewHandle, WindowId};
 
 use super::global_actions::{ForkFromExchange, ForkedConversationDestination};
 use super::tab_settings::{
@@ -26,7 +26,7 @@ use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::blocklist::PendingAttachment;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
 use crate::auth::auth_manager::LoginGatedFeature;
-use crate::drive::items::BorkDriveItemId;
+use crate::drive::items::KrustDriveItemId;
 use crate::drive::CloudObjectTypeAndId;
 use crate::palette::PaletteMode;
 use crate::pane_group::PaneGroup;
@@ -336,7 +336,7 @@ pub enum WorkspaceAction {
     ToggleErrorUnderlining,
     ToggleSyntaxHighlighting,
     CheckForUpdate,
-    ExportAllBorkDriveObjects,
+    ExportAllKrustDriveObjects,
     SetA11yVerbosityLevel(AccessibilityVerbosity),
     ToggleNotifications,
     ToggleTabColor {
@@ -388,15 +388,15 @@ pub enum WorkspaceAction {
         cursor_position: Vector2F,
     },
     DropGroup,
-    /// Toggles the left panel. In Code Mode V1 this toggles Bork Drive.
+    /// Toggles the left panel. In Code Mode V1 this toggles Krust Drive.
     /// In Code Mode V2 this toggles the left panel which contains both the project explorer and
-    /// Bork Drive. This happens as explicit action from the user.
+    /// Krust Drive. This happens as explicit action from the user.
     ToggleLeftPanel,
-    /// Toggles directly to the Bork Drive tab of the left panel in Code Mode V2
-    ToggleBorkDrive,
-    /// Unconditionally opens Bork Drive. This is used in the case of user lifecycle
+    /// Toggles directly to the Krust Drive tab of the left panel in Code Mode V2
+    ToggleKrustDrive,
+    /// Unconditionally opens Krust Drive. This is used in the case of user lifecycle
     /// events like new user onboarding or when the user joins a team.
-    OpenBorkDrive,
+    OpenKrustDrive,
     /// Fork: opens the left panel on the embedded Chat view.
     OpenChatPanel,
     /// Toggles the right panel. This happens as an explicit action from the user.
@@ -463,7 +463,7 @@ pub enum WorkspaceAction {
     SignupAnonymousUser,
     SignInAnonymousWebUser,
     OpenLink(String),
-    /// On WASM, opens a given URL in the desktop Bork app (if installed) or redirects to download page.
+    /// On WASM, opens a given URL in the desktop Krust app (if installed) or redirects to download page.
     #[cfg(target_family = "wasm")]
     OpenLinkOnDesktop(url::Url),
     ReopenClosedSession,
@@ -489,7 +489,7 @@ pub enum WorkspaceAction {
     /// Moves focus to the panel on the right
     FocusRightPanel,
     /// An action to view a newly created/edited workflow in WD from the toast
-    ViewObjectInBorkDrive(BorkDriveItemId),
+    ViewObjectInKrustDrive(KrustDriveItemId),
     /// Open the object's sharing settings in WD.
     OpenObjectSharingSettings {
         object_id: CloudObjectTypeAndId,
@@ -506,7 +506,7 @@ pub enum WorkspaceAction {
     },
     TerminateApp,
     CloseWindow,
-    /// Help the user call the Bork executable with the [`crate::args::DEBUG_DUMP_FLAG`].
+    /// Help the user call the Krust executable with the [`crate::args::DEBUG_DUMP_FLAG`].
     DumpDebugInfo,
     /// Log review comment send eligibility for panes in the active tab.
     LogReviewCommentSendStatusForActiveTab,
@@ -669,7 +669,7 @@ pub enum WorkspaceAction {
     /// Open the workspace modal for creating a new managed auth secret.
     /// Dispatched by orchestration card pickers' "New API key…" item.
     OpenCreateAuthSecretModal {
-        harness: bork_cli::agent::Harness,
+        harness: krust_cli::agent::Harness,
     },
     /// Summarize the active AI conversation in the focused pane.
     SummarizeAIConversation {
@@ -683,12 +683,12 @@ pub enum WorkspaceAction {
     /// Uninstall the Oz CLI command from /usr/local/bin
     #[cfg(target_os = "macos")]
     UninstallOz,
-    /// Install the Bork Control CLI command to /usr/local/bin
+    /// Install the Krust Control CLI command to /usr/local/bin
     #[cfg(target_os = "macos")]
-    InstallBorkctrl,
-    /// Uninstall the Bork Control CLI command from /usr/local/bin
+    InstallKrustctrl,
+    /// Uninstall the Krust Control CLI command from /usr/local/bin
     #[cfg(target_os = "macos")]
-    UninstallBorkctrl,
+    UninstallKrustctrl,
     UndoRevertInCodeReviewPane {
         window_id: WindowId,
         view_id: EntityId,
@@ -744,12 +744,12 @@ pub enum WorkspaceAction {
     /// Reset the Oz launch modal dismissed state (for debugging)
     #[cfg(debug_assertions)]
     ResetOzLaunchModalState,
-    /// Open the OpenBork Launch Modal (for debugging)
+    /// Open the OpenKrust Launch Modal (for debugging)
     #[cfg(debug_assertions)]
-    OpenOpenBorkLaunchModal,
-    /// Reset the OpenBork launch modal dismissed state (for debugging)
+    OpenOpenKrustLaunchModal,
+    /// Reset the OpenKrust launch modal dismissed state (for debugging)
     #[cfg(debug_assertions)]
-    ResetOpenBorkLaunchModalState,
+    ResetOpenKrustLaunchModalState,
     /// Open the Orchestration Launch Modal (for debugging)
     #[cfg(debug_assertions)]
     OpenOrchestrationLaunchModal,
@@ -778,12 +778,12 @@ pub enum WorkspaceAction {
     /// Reset the free AI removal modal seen state (for debugging)
     #[cfg(debug_assertions)]
     ResetFreeAiRemovalModalState,
-    /// Install the opencode-bork plugin from GitHub into the global opencode config.
+    /// Install the opencode-krust plugin from GitHub into the global opencode config.
     #[cfg(debug_assertions)]
-    InstallOpenCodeBorkPlugin,
-    /// Use a local checkout of the opencode-bork plugin (for testing/development).
+    InstallOpenCodeKrustPlugin,
+    /// Use a local checkout of the opencode-krust plugin (for testing/development).
     #[cfg(debug_assertions)]
-    UseLocalOpenCodeBorkPlugin,
+    UseLocalOpenCodeKrustPlugin,
     /// Take a process sample of the app (equivalent to Activity Monitor > Sample Process).
     #[cfg(target_os = "macos")]
     SampleProcess,
@@ -1019,7 +1019,7 @@ impl WorkspaceAction {
             | CopyVersion(_)
             | DownloadNewVersion
             | ConfigureKeybindingSettings { .. }
-            | ExportAllBorkDriveObjects
+            | ExportAllKrustDriveObjects
             | ShowSettings
             | ShowSettingsPage(_)
             | ShowSettingsPageWithSearch { .. }
@@ -1083,8 +1083,8 @@ impl WorkspaceAction {
             | DragGroup { .. }
             | StartGroupDrag(_)
             | ToggleLeftPanel
-            | ToggleBorkDrive
-            | OpenBorkDrive
+            | ToggleKrustDrive
+            | OpenKrustDrive
             | OpenChatPanel
             | ClosePanel
             | ToggleRightPanel
@@ -1149,7 +1149,7 @@ impl WorkspaceAction {
             | AttemptLoginGatedAIUpgrade
             | UndoTrash(_)
             | OpenFilePath { .. }
-            | ViewObjectInBorkDrive(_)
+            | ViewObjectInKrustDrive(_)
             | OpenObjectSharingSettings { .. }
             | TerminateApp
             | SignInAnonymousWebUser
@@ -1218,8 +1218,8 @@ impl WorkspaceAction {
             | DebugResetAwsBedrockLoginBannerDismissed
             | OpenOzLaunchModal
             | ResetOzLaunchModalState
-            | OpenOpenBorkLaunchModal
-            | ResetOpenBorkLaunchModalState
+            | OpenOpenKrustLaunchModal
+            | ResetOpenKrustLaunchModalState
             | OpenOrchestrationLaunchModal
             | ResetOrchestrationLaunchModalState
             | OpenFeatureIntroModal
@@ -1229,8 +1229,8 @@ impl WorkspaceAction {
             | TriggerAutoHandoffToCloud
             | OpenFreeAiRemovalModal
             | ResetFreeAiRemovalModalState
-            | InstallOpenCodeBorkPlugin
-            | UseLocalOpenCodeBorkPlugin => false,
+            | InstallOpenCodeKrustPlugin
+            | UseLocalOpenCodeKrustPlugin => false,
             #[cfg(not(target_family = "wasm"))]
             ViewLogs => false,
             #[cfg(target_os = "macos")]
@@ -1238,7 +1238,7 @@ impl WorkspaceAction {
             #[cfg(target_os = "macos")]
             InstallOz | UninstallOz => false,
             #[cfg(target_os = "macos")]
-            InstallBorkctrl | UninstallBorkctrl => false,
+            InstallKrustctrl | UninstallKrustctrl => false,
             #[cfg(feature = "local_fs")]
             FileRenamed { .. } => false, // File rename doesn't change workspace state
             #[cfg(feature = "local_fs")]

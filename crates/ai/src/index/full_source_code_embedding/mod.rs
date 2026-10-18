@@ -21,7 +21,7 @@ pub use snapshot::SnapshotStorage;
 use string_offset::ByteOffset;
 pub use sync_client::SyncTask;
 use thiserror::Error;
-use bork_graphql::queries::rerank_fragments::FragmentLocationInput;
+use krust_graphql::queries::rerank_fragments::FragmentLocationInput;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -98,54 +98,54 @@ pub struct RepoMetadata {
     pub path: Option<String>,
 }
 
-impl From<RepoMetadata> for bork_graphql::full_source_code_embedding::RepoMetadata {
+impl From<RepoMetadata> for krust_graphql::full_source_code_embedding::RepoMetadata {
     fn from(val: RepoMetadata) -> Self {
         Self { path: val.path }
     }
 }
 
-impl From<EmbeddingConfig> for bork_graphql::full_source_code_embedding::EmbeddingConfig {
+impl From<EmbeddingConfig> for krust_graphql::full_source_code_embedding::EmbeddingConfig {
     fn from(val: EmbeddingConfig) -> Self {
         match val {
             EmbeddingConfig::OpenAiTextSmall3_256 => {
-                bork_graphql::full_source_code_embedding::EmbeddingConfig::OpenaiTextSmall3256
+                krust_graphql::full_source_code_embedding::EmbeddingConfig::OpenaiTextSmall3256
             }
             EmbeddingConfig::VoyageCode3_512 => {
-                bork_graphql::full_source_code_embedding::EmbeddingConfig::VoyageCode3512
+                krust_graphql::full_source_code_embedding::EmbeddingConfig::VoyageCode3512
             }
             EmbeddingConfig::Voyage3_5_512 => {
-                bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35512
+                krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35512
             }
             EmbeddingConfig::Voyage3_5_Lite_512 => {
-                bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35Lite512
+                krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35Lite512
             }
             EmbeddingConfig::Voyage4_512 => {
-                bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage4512
+                krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage4512
             }
         }
     }
 }
 
-impl TryFrom<bork_graphql::full_source_code_embedding::EmbeddingConfig> for EmbeddingConfig {
+impl TryFrom<krust_graphql::full_source_code_embedding::EmbeddingConfig> for EmbeddingConfig {
     type Error = Error;
 
     fn try_from(
-        value: bork_graphql::full_source_code_embedding::EmbeddingConfig,
+        value: krust_graphql::full_source_code_embedding::EmbeddingConfig,
     ) -> Result<Self, Self::Error> {
         match value {
-            bork_graphql::full_source_code_embedding::EmbeddingConfig::OpenaiTextSmall3256 => {
+            krust_graphql::full_source_code_embedding::EmbeddingConfig::OpenaiTextSmall3256 => {
                 Ok(Self::OpenAiTextSmall3_256)
             }
-            bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35Lite512 => {
+            krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35Lite512 => {
                 Ok(Self::Voyage3_5_Lite_512)
             }
-            bork_graphql::full_source_code_embedding::EmbeddingConfig::VoyageCode3512 => {
+            krust_graphql::full_source_code_embedding::EmbeddingConfig::VoyageCode3512 => {
                 Ok(Self::VoyageCode3_512)
             }
-            bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35512 => {
+            krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage35512 => {
                 Ok(Self::Voyage3_5_512)
             }
-            bork_graphql::full_source_code_embedding::EmbeddingConfig::Voyage4512 => {
+            krust_graphql::full_source_code_embedding::EmbeddingConfig::Voyage4512 => {
                 Ok(Self::Voyage4_512)
             }
         }
@@ -201,7 +201,7 @@ impl Fragment {
     }
 }
 
-impl From<Fragment> for bork_graphql::full_source_code_embedding::Fragment {
+impl From<Fragment> for krust_graphql::full_source_code_embedding::Fragment {
     fn from(val: Fragment) -> Self {
         Self {
             content: val.content,
@@ -210,7 +210,7 @@ impl From<Fragment> for bork_graphql::full_source_code_embedding::Fragment {
     }
 }
 
-impl From<Fragment> for bork_graphql::queries::rerank_fragments::RerankFragmentInput {
+impl From<Fragment> for krust_graphql::queries::rerank_fragments::RerankFragmentInput {
     fn from(val: Fragment) -> Self {
         Self {
             content: val.content,
@@ -224,11 +224,11 @@ impl From<Fragment> for bork_graphql::queries::rerank_fragments::RerankFragmentI
     }
 }
 
-impl TryFrom<bork_graphql::queries::rerank_fragments::RerankFragment> for Fragment {
+impl TryFrom<krust_graphql::queries::rerank_fragments::RerankFragment> for Fragment {
     type Error = Error;
 
     fn try_from(
-        val: bork_graphql::queries::rerank_fragments::RerankFragment,
+        val: krust_graphql::queries::rerank_fragments::RerankFragment,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             content: val.content,

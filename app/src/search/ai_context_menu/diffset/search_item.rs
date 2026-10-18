@@ -1,9 +1,9 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use borkui::elements::{
+use krustui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Icon, ParentElement, Text,
 };
-use borkui::{AppContext, Element, SingletonEntity};
+use krustui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::code_review::diff_state::DiffMode;

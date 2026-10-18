@@ -1,4 +1,4 @@
-use borkui_core::ModelContext;
+use krustui_core::ModelContext;
 
 use crate::content::buffer::BufferSnapshot;
 use crate::content::edit::PreciseDelta;

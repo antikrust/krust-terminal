@@ -1,6 +1,6 @@
 //! `kubecolor` is a wrapper around kubectl providing colorized output; thus its CommandSignature
 //! and generators are mirrors of the kubectl signature and generators.
-use bork_completion_metadata::CommandSignatureGenerators;
+use krust_completion_metadata::CommandSignatureGenerators;
 
 use super::kubectl::{
     CLUSTER_GENERATOR, CLUSTER_ROLE_GENERATOR, CONTEXT_GENERATOR, DEPLOYMENTS_GENERATOR,

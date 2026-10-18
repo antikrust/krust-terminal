@@ -3,17 +3,17 @@ use std::sync::Arc;
 
 use byte_unit::Byte;
 use parking_lot::FairMutex;
-use bork_core::features::FeatureFlag;
-use borkui::elements::{
+use krust_core::features::FeatureFlag;
+use krustui::elements::{
     Container, Flex, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable, Text,
 };
-use borkui::platform::Cursor;
-use borkui::ui_components::button::ButtonVariant;
-use borkui::ui_components::components::UiComponent;
-use borkui::ui_components::radio_buttons::{
+use krustui::platform::Cursor;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::UiComponent;
+use krustui::ui_components::radio_buttons::{
     RadioButtonItem, RadioButtonLayout, RadioButtonStateHandle,
 };
-use borkui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use krustui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::style::{self, BUTTON_GAP, MODAL_MARGIN};
 use crate::ai::blocklist::BlocklistAIHistoryModel;
@@ -77,7 +77,7 @@ impl Body {
     /// during session initialization. This is important because these events count toward
     /// the session size quota, but are separate from the scrollback blocks.
     fn calculate_agent_conversations_size(
-        terminal_view_id: borkui::EntityId,
+        terminal_view_id: krustui::EntityId,
         ctx: &ViewContext<Self>,
     ) -> Byte {
         let conversations: Vec<_> = BlocklistAIHistoryModel::as_ref(ctx)
@@ -100,7 +100,7 @@ impl Body {
         &mut self,
         open_source: SharedSessionActionSource,
         model: Arc<FairMutex<TerminalModel>>,
-        terminal_view_id: borkui::EntityId,
+        terminal_view_id: krustui::EntityId,
         ctx: &mut ViewContext<Self>,
     ) {
         let model = model.lock();

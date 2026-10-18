@@ -12,12 +12,12 @@ use markdown_parser::parse_markdown;
 use pathfinder_color::ColorU;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use bork_cli::agent::Harness;
-use bork_completer::parsers::simple::top_level_command;
-use bork_editor::content::buffer::Buffer;
-use bork_editor::content::markdown::MarkdownStyle;
-use bork_util::path::EscapeChar;
-use borkui::{AppContext, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_completer::parsers::simple::top_level_command;
+use krust_editor::content::buffer::Buffer;
+use krust_editor::content::markdown::MarkdownStyle;
+use krust_util::path::EscapeChar;
+use krustui::{AppContext, SingletonEntity};
 
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
 use crate::ai::blocklist::CLAUDE_ORANGE;
@@ -28,7 +28,7 @@ use crate::ui_components::icons::Icon;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// UID for the Uber team.
-/// See https://bork.metabaseapp.com/dashboard/1454?team_id=46347
+/// See https://krust.metabaseapp.com/dashboard/1454?team_id=46347
 const UBER_TEAM_UID: &str = "BdVbYjy9LRZcZrYBemSfAF";
 
 /// Gemini brand blue color
@@ -193,7 +193,7 @@ impl CLIAgent {
     }
 
     /// Returns the [`CLIAgent`] corresponding to a cloud-agent [`Harness`] when it represents a
-    /// third-party agent. Returns `None` for [`Harness::Oz`] (Bork's built-in harness has no
+    /// third-party agent. Returns `None` for [`Harness::Oz`] (Krust's built-in harness has no
     /// distinct CLI agent identity).
     pub fn from_harness(harness: Harness) -> Option<Self> {
         match harness {

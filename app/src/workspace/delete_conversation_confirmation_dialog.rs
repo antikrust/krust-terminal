@@ -1,13 +1,13 @@
 use pathfinder_geometry::vector::vec2f;
-use bork_core::ui::theme::Fill;
-use bork_errors::report_error;
-use borkui::elements::{
+use krust_core::ui::theme::Fill;
+use krust_errors::report_error;
+use krustui::elements::{
     Align, ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentOffsetBounds,
     Stack,
 };
-use borkui::keymap::{FixedBinding, Keystroke};
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{
+use krustui::keymap::{FixedBinding, Keystroke};
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -19,7 +19,7 @@ use crate::view_components::action_button::{
 };
 
 pub fn init(app: &mut AppContext) {
-    use borkui::keymap::macros::*;
+    use krustui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -41,7 +41,7 @@ const DIALOG_WIDTH: f32 = 460.;
 pub struct DeleteConversationDialogSource {
     pub conversation_id: AIConversationId,
     pub conversation_title: String,
-    pub terminal_view_id: Option<borkui::EntityId>,
+    pub terminal_view_id: Option<krustui::EntityId>,
 }
 
 pub struct DeleteConversationConfirmationDialog {
@@ -88,7 +88,7 @@ impl View for DeleteConversationConfirmationDialog {
         "DeleteConversationConfirmationDialog"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &borkui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &krustui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

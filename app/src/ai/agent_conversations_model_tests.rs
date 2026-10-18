@@ -6,9 +6,9 @@ use chrono::{DateTime, Duration, Utc};
 use instant::Instant;
 use parking_lot::Mutex;
 use persistence::model::{AgentConversationData, ConversationUsageMetadata};
-use bork_cli::agent::Harness;
-use bork_core::features::FeatureFlag;
-use borkui::{App, EntityId, ModelHandle, SingletonEntity};
+use krust_cli::agent::Harness;
+use krust_core::features::FeatureFlag;
+use krustui::{App, EntityId, ModelHandle, SingletonEntity};
 
 use super::entry::{
     AgentConversationEntryId, AgentConversationNavigationSubject, AgentConversationProvenance,
@@ -2275,13 +2275,13 @@ fn test_harness_filter_matches_only_selected_harness() {
             assert_eq!(
                 oz_items.len(),
                 2,
-                "expected 2 Bork Agent matches, got {oz_items:?}"
+                "expected 2 Krust Agent matches, got {oz_items:?}"
             );
             assert!(oz_items.contains(&format!("task:{}", task_oz_default.task_id)));
             assert!(oz_items.contains(&format!("conversation:{conv_id}")));
             assert!(
                 !oz_items.contains(&format!("task:{}", task_no_snapshot.task_id)),
-                "stub task with no snapshot should not match the Bork Agent filter"
+                "stub task with no snapshot should not match the Krust Agent filter"
             );
         });
     });

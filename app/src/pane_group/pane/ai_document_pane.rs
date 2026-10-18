@@ -1,4 +1,4 @@
-use borkui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use krustui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use super::view::PaneView;
 use super::{
@@ -92,16 +92,16 @@ impl PaneContent for AIDocumentPane {
                 AIDocumentEvent::CloseRequested => {
                     group.close_pane_with_confirmation(pane_id, ctx);
                 }
-                AIDocumentEvent::ViewInBorkDrive(id) => {
-                    ctx.emit(crate::pane_group::Event::ViewInBorkDrive(*id));
+                AIDocumentEvent::ViewInKrustDrive(id) => {
+                    ctx.emit(crate::pane_group::Event::ViewInKrustDrive(*id));
                 }
                 #[cfg(feature = "local_fs")]
-                AIDocumentEvent::OpenCodeInBork {
+                AIDocumentEvent::OpenCodeInKrust {
                     source,
                     layout,
                     line_col,
                 } => {
-                    ctx.emit(crate::pane_group::Event::OpenCodeInBork {
+                    ctx.emit(crate::pane_group::Event::OpenCodeInKrust {
                         source: source.clone(),
                         layout: *layout,
                         line_col: *line_col,

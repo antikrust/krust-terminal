@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use itertools::Itertools;
 use string_offset::CharOffset;
-use borkui_core::text::TextBuffer;
+use krustui_core::text::TextBuffer;
 
 use crate::vim::{BracketChar, BracketEnd, BracketType};
 use crate::vim_find_matching_bracket;

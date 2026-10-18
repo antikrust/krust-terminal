@@ -1,6 +1,6 @@
 use markdown_parser::{CodeBlockText, FormattedTable};
-use bork_core::features::FeatureFlag;
-use borkui_core::fonts::Weight;
+use krust_core::features::FeatureFlag;
+use krustui_core::fonts::Weight;
 
 use super::{
     BufferBlockItem, BufferTextStyle, CodeBlockType, MarkdownStyle, TextStyles,

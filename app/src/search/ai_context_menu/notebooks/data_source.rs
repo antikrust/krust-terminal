@@ -1,5 +1,5 @@
 use fuzzy_match::FuzzyMatchResult;
-use borkui::{AppContext, SingletonEntity};
+use krustui::{AppContext, SingletonEntity};
 
 use super::search_item::NotebookSearchItem;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -153,7 +153,7 @@ impl SyncDataSource for NotebookDataSource {
     }
 }
 
-impl borkui::Entity for NotebookDataSource {
+impl krustui::Entity for NotebookDataSource {
     type Event = ();
 }
 

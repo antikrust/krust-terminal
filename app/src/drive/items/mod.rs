@@ -1,8 +1,8 @@
-use borkui::elements::MouseStateHandle;
-use borkui::{AppContext, Element};
+use krustui::elements::MouseStateHandle;
+use krustui::{AppContext, Element};
 
-use super::cloud_object_styling::bork_drive_icon_color;
-use super::index::{bork_drive_section_header_position_id, DriveIndexAction, DriveIndexSection};
+use super::cloud_object_styling::krust_drive_icon_color;
+use super::index::{krust_drive_section_header_position_id, DriveIndexAction, DriveIndexSection};
 use super::{CloudObjectTypeAndId, DriveObjectType};
 use crate::appearance::Appearance;
 use crate::cloud_object::{CloudObjectMetadata, Space};
@@ -20,7 +20,7 @@ pub mod notebook;
 pub mod space;
 pub mod workflow;
 
-pub trait BorkDriveItem {
+pub trait KrustDriveItem {
     /// The display name of the item. If the item is unnamed, this may return `None` - implementations
     /// should prefer this over `Some("")`, as it lets the index view use alternate styling.
     fn display_name(&self) -> Option<String>;
@@ -29,7 +29,7 @@ pub trait BorkDriveItem {
     fn secondary_icon(&self, color: Option<Fill>) -> Option<Box<dyn Element>>; // The optional icon to the right of the name
     fn click_action(&self) -> Option<DriveIndexAction>;
     fn preview(&self, appearance: &Appearance) -> Option<Box<dyn Element>>;
-    fn bork_drive_id(&self) -> BorkDriveItemId;
+    fn krust_drive_id(&self) -> KrustDriveItemId;
     fn sync_status_icon(
         &self,
         sync_queue_is_dequeueing: bool,
@@ -39,8 +39,8 @@ pub trait BorkDriveItem {
 
     fn icon(&self, appearance: &Appearance, color: Option<Fill>) -> Option<Box<dyn Element>> {
         let object_type = self.object_type()?;
-        let icon_fill = color.unwrap_or(bork_drive_icon_color(appearance, object_type).into());
-        Some(Icon::from(object_type).to_borkui_icon(icon_fill).finish())
+        let icon_fill = color.unwrap_or(krust_drive_icon_color(appearance, object_type).into());
+        Some(Icon::from(object_type).to_krustui_icon(icon_fill).finish())
     }
 
     /// If implemented, returns a string that summarizes the primary action history. For example, "Run 2 times in the last week"
@@ -51,26 +51,26 @@ pub trait BorkDriveItem {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem>;
+    fn clone_box(&self) -> Box<dyn KrustDriveItem>;
 }
 
-impl BorkDriveItemId {
+impl KrustDriveItemId {
     pub fn drive_row_position_id(&self) -> String {
         match self {
             Self::AIFactCollection => "AI_fact_collection".to_string(),
             Self::MCPServerCollection => "MCP_server_collection".to_string(),
             Self::Object(object_id) => object_id.drive_row_position_id(),
             Self::Space(space) => {
-                bork_drive_section_header_position_id(&DriveIndexSection::Space(*space))
+                krust_drive_section_header_position_id(&DriveIndexSection::Space(*space))
             }
             Self::Trash => "Trash".to_string(),
         }
     }
 }
-/// This uniquely identifies an item in Bork Drive index
+/// This uniquely identifies an item in Krust Drive index
 /// Includes spaces (which CloudObjectTypeAndId does not entail)
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum BorkDriveItemId {
+pub enum KrustDriveItemId {
     AIFactCollection,
     MCPServerCollection,
     Object(CloudObjectTypeAndId),
@@ -78,7 +78,7 @@ pub enum BorkDriveItemId {
     Trash,
 }
 
-impl Clone for Box<dyn BorkDriveItem> {
+impl Clone for Box<dyn KrustDriveItem> {
     fn clone(&self) -> Self {
         self.clone_box()
     }

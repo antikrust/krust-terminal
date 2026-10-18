@@ -1,10 +1,10 @@
-use bork_core::context_flag::ContextFlag;
-use borkui::elements::{Container, Flex, MouseStateHandle, ParentElement};
-use borkui::fonts::Weight;
-use borkui::ui_components::components::{UiComponent, UiComponentStyles};
-use borkui::{AppContext, Element, SingletonEntity};
+use krust_core::context_flag::ContextFlag;
+use krustui::elements::{Container, Flex, MouseStateHandle, ParentElement};
+use krustui::fonts::Weight;
+use krustui::ui_components::components::{UiComponent, UiComponentStyles};
+use krustui::{AppContext, Element, SingletonEntity};
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::model::actions::{ObjectActionType, ObjectActions};
 use crate::cloud_object::CloudObjectMetadata;
@@ -14,18 +14,18 @@ use crate::themes::theme::Fill;
 use crate::workflows::{CloudWorkflow, WorkflowViewMode};
 
 #[derive(Clone)]
-pub struct BorkDriveWorkflow {
+pub struct KrustDriveWorkflow {
     id: CloudObjectTypeAndId,
     workflow: CloudWorkflow,
 }
 
-impl BorkDriveWorkflow {
+impl KrustDriveWorkflow {
     pub fn new(id: CloudObjectTypeAndId, workflow: CloudWorkflow) -> Self {
         Self { id, workflow }
     }
 }
 
-impl BorkDriveItem for BorkDriveWorkflow {
+impl KrustDriveItem for KrustDriveWorkflow {
     fn display_name(&self) -> Option<String> {
         if self.workflow.model().data.name().is_empty() {
             None
@@ -65,7 +65,7 @@ impl BorkDriveItem for BorkDriveWorkflow {
 
     fn preview(&self, appearance: &Appearance) -> Option<Box<dyn Element>> {
         let mut modal =
-            Flex::column().with_cross_axis_alignment(borkui::elements::CrossAxisAlignment::Stretch);
+            Flex::column().with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Stretch);
 
         let mut text = Flex::column()
             .with_child(Container::new(self.render_workflow_name(appearance)).finish());
@@ -105,8 +105,8 @@ impl BorkDriveItem for BorkDriveWorkflow {
         Some(modal.finish())
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::Object(self.id)
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -127,12 +127,12 @@ impl BorkDriveItem for BorkDriveWorkflow {
             .get_action_history_summary_for_action_type(&self.id.uid(), ObjectActionType::Execute)
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 }
 
-impl BorkDriveWorkflow {
+impl KrustDriveWorkflow {
     fn render_workflow_name(&self, appearance: &Appearance) -> Box<dyn Element> {
         appearance
             .ui_builder()

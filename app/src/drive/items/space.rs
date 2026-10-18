@@ -1,7 +1,7 @@
-use borkui::elements::MouseStateHandle;
-use borkui::Element;
+use krustui::elements::MouseStateHandle;
+use krustui::Element;
 
-use super::{BorkDriveItem, BorkDriveItemId};
+use super::{KrustDriveItem, KrustDriveItemId};
 use crate::appearance::Appearance;
 use crate::cloud_object::{CloudObjectMetadata, Space};
 use crate::drive::index::DriveIndexAction;
@@ -9,18 +9,18 @@ use crate::drive::DriveObjectType;
 use crate::themes::theme::Fill;
 
 #[derive(Clone)]
-pub struct BorkDriveSpace {
+pub struct KrustDriveSpace {
     space: Space,
 }
 
-impl BorkDriveSpace {
+impl KrustDriveSpace {
     #[allow(dead_code)]
     pub fn new(space: Space) -> Self {
         Self { space }
     }
 }
 
-impl BorkDriveItem for BorkDriveSpace {
+impl KrustDriveItem for KrustDriveSpace {
     fn display_name(&self) -> Option<String> {
         None
     }
@@ -45,8 +45,8 @@ impl BorkDriveItem for BorkDriveSpace {
         None
     }
 
-    fn bork_drive_id(&self) -> BorkDriveItemId {
-        BorkDriveItemId::Space(self.space)
+    fn krust_drive_id(&self) -> KrustDriveItemId {
+        KrustDriveItemId::Space(self.space)
     }
 
     fn sync_status_icon(
@@ -58,11 +58,11 @@ impl BorkDriveItem for BorkDriveSpace {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn BorkDriveItem> {
+    fn clone_box(&self) -> Box<dyn KrustDriveItem> {
         Box::new(self.clone())
     }
 
-    fn action_summary(&self, _app: &borkui::AppContext) -> Option<String> {
+    fn action_summary(&self, _app: &krustui::AppContext) -> Option<String> {
         None
     }
 }

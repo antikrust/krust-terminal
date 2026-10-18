@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use string_offset::CharOffset;
-use bork_editor::render::model::BlockItem;
-use borkui::integration::{AssertionCallback, AssertionOutcome, AssertionWithDataCallback};
-use borkui::{async_assert, async_assert_eq, App, ViewHandle};
+use krust_editor::render::model::BlockItem;
+use krustui::integration::{AssertionCallback, AssertionOutcome, AssertionWithDataCallback};
+use krustui::{async_assert, async_assert_eq, App, ViewHandle};
 
 use crate::cloud_object::model::generic_string_model::GenericStringObjectId;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -146,13 +146,13 @@ fn notebook_views(app: &App, id: SyncId) -> impl Iterator<Item = ViewHandle<Note
         .filter(move |view| view.read(app, |view, ctx| view.notebook_id(ctx)) == Some(id))
 }
 
-pub fn assert_open_in_bork_banner_open(tab_index: usize, pane_index: usize) -> AssertionCallback {
+pub fn assert_open_in_krust_banner_open(tab_index: usize, pane_index: usize) -> AssertionCallback {
     Box::new(move |app, window_id| {
         let terminal = terminal_view(app, window_id, tab_index, pane_index);
         terminal.read(app, |view, _ctx| {
             async_assert!(
-                view.is_open_in_bork_banner_open(),
-                "Expected the 'Open in Bork' banner to be open"
+                view.is_open_in_krust_banner_open(),
+                "Expected the 'Open in Krust' banner to be open"
             )
         })
     })

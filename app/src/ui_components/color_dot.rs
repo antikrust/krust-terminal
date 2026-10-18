@@ -2,13 +2,13 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::tooltip::{Params as TooltipParams, Tooltip as TooltipComponent};
 use ui_components::{Component as _, Options as ComponentOptions};
-use bork_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
-use borkui::elements::{
+use krust_core::ui::theme::{AnsiColorIdentifier, Fill as ThemeFill};
+use krustui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Element, Hoverable,
     MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Stack,
 };
-use borkui::platform::Cursor;
+use krustui::platform::Cursor;
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
@@ -40,7 +40,7 @@ pub(crate) fn render_color_dot(
 ) -> Hoverable {
     Hoverable::new(mouse_state, move |state| {
         let overlay: Option<Box<dyn Element>> = if is_no_color {
-            Some(Icon::SlashCircle.to_borkui_icon(foreground_color).finish())
+            Some(Icon::SlashCircle.to_krustui_icon(foreground_color).finish())
         } else {
             None
         };
@@ -81,7 +81,7 @@ fn render_dot_element(
     ring_color: ColorU,
     overlay: Option<Box<dyn Element>>,
 ) -> Box<dyn Element> {
-    let dot = ConstrainedBox::new(Icon::Ellipse.to_borkui_icon(dot_color.into()).finish())
+    let dot = ConstrainedBox::new(Icon::Ellipse.to_krustui_icon(dot_color.into()).finish())
         .with_width(COLOR_DOT_SIZE)
         .with_height(COLOR_DOT_SIZE)
         .finish();

@@ -1,11 +1,11 @@
 //! Provider command for linking third-party services.
 use comfy_table::Cell;
 use serde::Serialize;
-use bork_cli::provider::{ProviderCommand, ProviderType};
-use bork_cli::GlobalOptions;
-use bork_core::channel::ChannelState;
-use borkui::platform::TerminationMode;
-use borkui::{AppContext, ModelContext, SingletonEntity};
+use krust_cli::provider::{ProviderCommand, ProviderType};
+use krust_cli::GlobalOptions;
+use krust_core::channel::ChannelState;
+use krustui::platform::TerminationMode;
+use krustui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -122,7 +122,7 @@ impl ProviderCommandRunner {
     }
 }
 
-impl borkui::Entity for ProviderCommandRunner {
+impl krustui::Entity for ProviderCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for ProviderCommandRunner {}

@@ -7,10 +7,10 @@ use std::path::PathBuf;
 #[cfg(feature = "local_fs")]
 use std::sync::{Arc, Mutex};
 
-use borkui::elements::ChildView;
+use krustui::elements::ChildView;
 #[cfg(feature = "local_fs")]
-use borkui::SingletonEntity;
-use borkui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use krustui::SingletonEntity;
+use krustui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::blocklist::agent_view::AgentViewController;
 #[cfg(feature = "local_fs")]
@@ -224,7 +224,7 @@ impl View for InlineReposMenuView {
         "InlineReposMenuView"
     }
 
-    fn render(&self, _app: &borkui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &krustui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

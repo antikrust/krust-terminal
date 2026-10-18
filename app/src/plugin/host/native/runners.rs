@@ -4,9 +4,9 @@ use std::sync::Arc;
 use async_channel::Receiver;
 use futures::channel::oneshot;
 use parking_lot::Mutex;
-use bork_errors::report_error;
-use bork_js::JsFunctionId;
-use borkui::r#async::executor::Background;
+use krust_errors::report_error;
+use krust_js::JsFunctionId;
+use krustui::r#async::executor::Background;
 
 use super::plugin::{AppServiceCallers, PluginRequest, PluginResponse};
 use super::plugin_ref::PluginRef;
