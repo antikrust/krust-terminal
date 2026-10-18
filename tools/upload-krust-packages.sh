@@ -19,7 +19,15 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
 stage() { # stage <src> <stable-name>
-    [ -f "$1" ] && cp "$1" "$STAGE/$2"
+    [ -f "$1" ] || return 0
+    # Two packages mapping to one stable name means a stale build is lying
+    # around (e.g. an old bork-terminal_*.deb next to the new krust one) --
+    # refuse rather than let whichever was copied last silently win.
+    if [ -e "$STAGE/$2" ]; then
+        echo "error: more than one package maps to $2 (second: $(basename "$1")) -- refusing to guess" >&2
+        exit 1
+    fi
+    cp "$1" "$STAGE/$2"
 }
 
 # --- macOS ---

@@ -81,6 +81,11 @@ jobs:
                 -Uri "$api/releases" | Out-Null } catch {}
           $rel = Invoke-RestMethod -Headers $H -Uri "$api/releases/tags/$env:GITHUB_REF_NAME"
           Get-ChildItem -Recurse -File | Where-Object { $_.Extension -in ".exe",".msi",".zip" -and $_.FullName -match "\\(dist|bundle|installer)\\" } | ForEach-Object {
+            # Replace rather than duplicate a same-named asset from an earlier run.
+            $name = $_.Name
+            (Invoke-RestMethod -Headers $H -Uri "$api/releases/$($rel.id)/assets") | Where-Object { $_.name -eq $name } | ForEach-Object {
+              Invoke-RestMethod -Method Delete -Headers $H -Uri "$api/releases/$($rel.id)/assets/$($_.id)" | Out-Null
+            }
             curl.exe -sf -X POST -H "Authorization: token $T" -F "attachment=@$($_.FullName)" `
               "$api/releases/$($rel.id)/assets?name=$($_.Name)" | Out-Null
             $_.Name
@@ -134,6 +139,12 @@ jobs:
           # release+LTO codegen/linking (repeatedly OOM-killed rustc even with
           # 16G extra swap added). Trade build time for actually completing.
           export CARGO_BUILD_JOBS=2
+          # CARGO_TARGET_DIR persists across runs on this runner, so packages
+          # from earlier releases (e.g. the old bork-terminal_* ones) would
+          # otherwise be collected and published again by the attach step.
+          # Clear them so only this run's output exists.
+          find "${CARGO_TARGET_DIR:-/nonexistent}" -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.pkg.tar.zst' \) \
+            -print -delete 2>/dev/null || true
           ./script/linux/bundle -c oss --release-tag "${GITHUB_REF_NAME}" --packages deb,rpm,appimage 2>&1 | tee /tmp/krust-release.log
       - name: report failure as an issue
         if: failure()
@@ -159,8 +170,16 @@ jobs:
             -not -path '*/vendor/*' -exec cp -n {} dist/linux/ \; 2>/dev/null || true
           for f in dist/linux/*; do
             [ -f "$f" ] || continue
-            curl -sf -X POST -H "Authorization: token $T" -F "attachment=@$f" "$api/releases/$rid/assets?name=$(basename "$f")" >/dev/null
-            echo "attached $(basename "$f")"
+            name=$(basename "$f")
+            # Replace rather than duplicate: a retag re-runs this, and the
+            # release otherwise accumulates one copy of each file per run.
+            curl -sf -H "Authorization: token $T" "$api/releases/$rid/assets" \
+              | python3 -c "import json,sys; [print(a['id']) for a in json.load(sys.stdin) if a['name']==sys.argv[1]]" "$name" \
+              | while read -r old; do
+                  curl -sf -X DELETE -H "Authorization: token $T" "$api/releases/$rid/assets/$old" >/dev/null && echo "replaced old $name ($old)"
+                done
+            curl -sf -X POST -H "Authorization: token $T" -F "attachment=@$f" "$api/releases/$rid/assets?name=$name" >/dev/null
+            echo "attached $name"
           done
       - name: gather windows + mac artifacts for the website
         run: |
