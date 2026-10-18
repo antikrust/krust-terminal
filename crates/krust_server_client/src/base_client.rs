@@ -15,7 +15,12 @@ use crate::auth::{AuthEvent, AuthSession, UserUid};
 pub const AMBIENT_WORKLOAD_TOKEN_HEADER: &str = "X-Krust-Ambient-Workload-Token";
 
 /// Header key for the cloud agent task ID attached to ambient-agent requests.
-pub const CLOUD_AGENT_ID_HEADER: &str = "X-Krust-Cloud-Agent-ID";
+///
+/// Deliberately brand-neutral: Moloch (a separate repo) looks it up by name,
+/// and every rename of this fork used to rewrite a branded name here and
+/// silently break that lookup. Keep in sync with Moloch's
+/// `CLOUD_AGENT_ID_HEADER` (moloch/src/lib.rs).
+pub const CLOUD_AGENT_ID_HEADER: &str = "X-Cloud-Agent-ID";
 
 /// Header used to communicate the source of an agent run.
 pub const AGENT_SOURCE_HEADER: &str = "X-Oz-Api-Source";

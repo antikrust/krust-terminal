@@ -216,3 +216,11 @@ fn authenticated_graphql_configuration_cannot_override_base_client_owned_headers
         Some("1234")
     );
 }
+
+/// Moloch (the separate broker repo) looks this header up by name and pins the
+/// same literal in its own tests, so renaming it on either side fails a test
+/// instead of silently breaking harness workers.
+#[test]
+fn cloud_agent_id_header_is_brand_neutral() {
+    assert_eq!(CLOUD_AGENT_ID_HEADER, "X-Cloud-Agent-ID");
+}

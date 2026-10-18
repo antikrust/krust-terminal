@@ -152,7 +152,9 @@ built** (a tick that reads due, non-paused schedules and calls the spawn path).
 
 The full `HarnessSupportClient` surface so an external worker phones home
 exactly as the app's `krust agent run` binary would to the cloud. Run
-identified by the `X-Krust-Cloud-Agent-ID` header. Slots:
+identified by the brand-neutral `X-Cloud-Agent-ID` header (Moloch also
+accepts the older `X-Krust-`/`X-Bork-`/`X-Derp-`/`X-Warp-Cloud-Agent-ID`
+names that earlier builds send). Slots:
 `external-conversation`, `resolve-prompt`, `transcript` (POST target / GET
 download), `block-snapshot`, `upload-snapshot`, `report-artifact`,
 `notify-user`, `finish-task`, `report-shutdown`; plus
