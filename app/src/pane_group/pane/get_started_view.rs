@@ -2,9 +2,11 @@ use pathfinder_geometry::vector::vec2f;
 use krust_core::ui::appearance::Appearance;
 use krust_core::ui::color::blend::Blend as _;
 use krust_core::ui::{self};
+use krustui::assets::asset_cache::AssetSource;
 use krustui::elements::{
-    Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon,
-    MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _, Radius,
+    Align, CacheOption, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
+    Flex, Icon, Image, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _,
+    Radius,
 };
 use krustui::keymap::EditableBinding;
 use krustui::platform::Cursor;
@@ -215,17 +217,28 @@ impl GetStartedView {
         } else {
             ("Welcome to Krust", "The Agentic Development Environment")
         };
+        // Swear mode greets you with Crusty, the googly-eyed terminal sticking
+        // its tongue out, next to the sweary welcome; otherwise the plain logo.
+        let welcome_logo = if swear_mode {
+            Image::new(
+                AssetSource::Bundled {
+                    path: "bundled/png/krust-crusty.png",
+                },
+                CacheOption::BySize,
+            )
+            .finish()
+        } else {
+            Icon::new("bundled/svg/krust-logo-neutral.svg", theme.foreground()).finish()
+        };
 
         Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_children([
                 Container::new(
-                    ConstrainedBox::new(
-                        Icon::new("bundled/svg/krust-logo-neutral.svg", theme.foreground()).finish(),
-                    )
-                    .with_height(40.)
-                    .with_width(40.)
-                    .finish(),
+                    ConstrainedBox::new(welcome_logo)
+                        .with_height(40.)
+                        .with_width(40.)
+                        .finish(),
                 )
                 .with_margin_bottom(12.)
                 .finish(),

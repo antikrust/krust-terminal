@@ -9,6 +9,7 @@ Writes:
   app/channels/oss/icon/no-padding/512x512.png  app icon (macOS .icns + Linux)
   app/channels/oss/icon/no-padding/icon.ico     app icon (Windows)
   app/assets/bundled/png/krust-logo.png         wordmark (About page)
+  app/assets/bundled/png/krust-crusty.png       Crusty face (swear-mode Get Started screen)
   PATH (optional)                               the same wordmark, for the website
 
 Needs Pillow. The wordmark font is Fredoka (SIL OFL 1.1, see fonts/Fredoka/OFL.txt).
@@ -89,6 +90,57 @@ def render_icon():
     return clipped.crop((SQ0 * SS, SQ0 * SS, SQ1 * SS, SQ1 * SS))
 
 
+def ring(draw, center, r, width, color):
+    """A circle outline centred on radius r (SVG-style centred stroke)."""
+    cx, cy = s(center)
+    outer, inner = (r + width / 2) * SS, (r - width / 2) * SS
+    draw.ellipse([cx - outer, cy - outer, cx + outer, cy + outer], fill=color)
+    return inner
+
+
+def thick_path(draw, pts, color, width):
+    """Round-capped, round-joined polyline through pts (1024-grid coords)."""
+    scaled = [s(p) for p in pts]
+    w = width * SS
+    draw.line(scaled, fill=color, width=w, joint="curve")
+    r = w / 2
+    for x, y in (scaled[0], scaled[-1]):
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=color)
+
+
+def quadratic(p0, p1, p2, n=64):
+    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1])
+            for t in (i / n for i in range(n + 1))]
+
+
+def render_crusty(size):
+    """Crusty: a googly-eyed terminal window with its tongue out (swear mode)."""
+    canvas = 1024 * SS
+    img = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    line = "#161211"
+    d.rounded_rectangle([s((SQ0, SQ0)), s((SQ1, SQ1))], radius=SQ_RADIUS * SS, fill=EMBER)
+    # Window: 30px outline centred on the 200,250 624x500 r72 rect.
+    d.rounded_rectangle([s((185, 235)), s((839, 765))], radius=87 * SS, fill=line)
+    d.rounded_rectangle([s((215, 265)), s((809, 735))], radius=57 * SS, fill="#FFF4E6")
+    for x in (270, 320, 370):
+        d.ellipse([s((x - 16, 290)), s((x + 16, 322))], fill=line)
+    # Googly eyes, cross-eyed: white with a 26px outline, pupils pulled inward.
+    for eye, pupil in (((418, 496), (452, 518)), ((606, 496), (572, 518))):
+        inner = ring(d, eye, 92, 26, line)
+        cx, cy = s(eye)
+        d.ellipse([cx - inner, cy - inner, cx + inner, cy + inner], fill="#FFFFFF")
+        d.ellipse([s((pupil[0] - 38, pupil[1] - 38)), s((pupil[0] + 38, pupil[1] + 38))], fill=line)
+    thick_path(d, quadratic((430, 644), (512, 694), (600, 644)), line, 24)
+    # Tongue: the cubic is outlined, its open top edge tucks under the mouth.
+    tongue = [(516, 662)] + cubic((516, 662), (512, 800), (626, 800), (618, 652))
+    d.polygon([s(p) for p in tongue], fill="#F28AA8")
+    thick_path(d, tongue, line, 22)
+    thick_path(d, [(567, 684), (567, 738)], "#C9567A", 10)
+    return img.crop((SQ0 * SS, SQ0 * SS, SQ1 * SS, SQ1 * SS)).resize((size, size), Image.LANCZOS)
+
+
 def render_wordmark(height):
     """White Fredoka Bold with a heavy black outline and a soft drop shadow."""
     big = height * 4
@@ -122,6 +174,8 @@ def main():
     icon.resize((512, 512), Image.LANCZOS).save(os.path.join(icon_dir, "512x512.png"), optimize=True)
     icon.resize((256, 256), Image.LANCZOS).save(
         os.path.join(icon_dir, "icon.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+
+    render_crusty(256).save(os.path.join(ROOT, "app/assets/bundled/png/krust-crusty.png"), optimize=True)
 
     wordmark = render_wordmark(240)
     wordmark.save(os.path.join(ROOT, "app/assets/bundled/png/krust-logo.png"), optimize=True)
