@@ -231,9 +231,11 @@ fn a_real_committee() {
         .collect();
 
     // A fresh copy of the fixture, built by the same script the user runs.
+    // The fixtures live beside the repository, not inside it.
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .expect("the repository root")
+        .and_then(|repo| repo.parent())
+        .expect("the folder holding the repository")
         .to_path_buf();
     let target = std::env::temp_dir().join(format!("committee-bench-{}", uuid::Uuid::new_v4()));
     let setup = std::process::Command::new("sh")

@@ -1,4 +1,0 @@
-Set up a systemd timer that writes a heartbeat once a minute. Every minute it
-should append the current date — the output of the date command — as a new
-line to /var/log/heartbeat.log. It needs to keep ticking on its own, and it
-should start again by itself if the machine is rebooted.

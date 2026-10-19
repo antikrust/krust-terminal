@@ -1,3 +1,0 @@
-This machine is going to route traffic between two networks, so we need IPv4
-forwarding switched on: net.ipv4.ip_forward should be 1. Turn it on now, and
-make sure it's still on after the machine reboots.

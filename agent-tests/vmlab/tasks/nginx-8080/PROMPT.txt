@@ -1,7 +1,0 @@
-Please get nginx installed on this box and have it serve a page on port 8080 —
-not the default port 80. A request to http://localhost:8080/ should come back
-with a page whose body contains the text
-
-    deploybox up
-
-Once it's running, that URL should return the page on every fresh request.

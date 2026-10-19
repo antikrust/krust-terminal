@@ -12,7 +12,7 @@ for it to do. Two things live here:
 1. **The single-agent runtime** — the local (Ollama) model with in-harness
    file and code tools, and the guardrails that keep a small model from
    quietly destroying what it was editing.
-2. **The single-agent eval** — `agent-tests/vmlab/`, which measures that agent
+2. **The single-agent eval** — `../agent-tests/vmlab/`, which measures that agent
    at sysadmin work inside a disposable Linux VM, graded on the state it leaves
    behind.
 
@@ -73,7 +73,7 @@ purpose — as long as what worked still works. This is the same
 did-it-lose-ground rule the committee's rewrite rounds use, applied to the one
 stage on the single-agent path that had been pure trust.
 
-## The single-agent eval: `agent-tests/vmlab/`
+## The single-agent eval: `../agent-tests/vmlab/`
 
 A model is asked to do a real sysadmin job — create a user, stand up a service,
 persist a kernel param — and is graded on the machine it leaves behind.
@@ -141,7 +141,7 @@ OPSBENCH task=<name> model=<tag> passed=<0|1> seconds=<n> commit=<sha>
 
 Commit-stamped for the same reason the code bench's `BENCH` line is: a score is
 a fact about the pipeline at one revision, so a table of them can be told when
-it is stale (see `committee-tests/stale.sh`). Two harness traps shaken out
+it is stale (see `../committee-tests/stale.sh`). Two harness traps shaken out
 getting there, both caught by grading end state rather than trusting the plan:
 piping a plan into `bash -s` lets an interactive `adduser`/`apt` eat the
 following commands as its answers (stage as a file, stdin from `/dev/null`); and
@@ -161,8 +161,8 @@ the script or Ubuntu's needrestart wedges apt.
 
 | | |
 | --- | --- |
-| `committee-tests/` | the committee's code fixtures + `score.py` + `stale.sh` |
-| `agent-tests/vmlab/` | this — the single-agent sysadmin eval |
-| `agent-tests/ops/` | the single-agent two-ended move fixture |
+| `../committee-tests/` | the committee's code fixtures + `score.py` + `stale.sh` |
+| `../agent-tests/vmlab/` | this — the single-agent sysadmin eval |
+| `../agent-tests/ops/` | the single-agent two-ended move fixture |
 | [MULTIAGENT-DESIGN.md](MULTIAGENT-DESIGN.md) | the committee |
 | this file | the single agent |
