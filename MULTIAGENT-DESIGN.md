@@ -521,7 +521,7 @@ identically, so the ordering holds even when the number does not.
 ## What the runs actually showed
 
 Every entry above the line was designed in. The ones below were found by
-running it, which is what `../committee-tests/` and the `a_real_committee`
+running it, which is what `../krust-test/committee-tests/` and the `a_real_committee`
 bench exist for.
 
 **The fixture was the first bug.** `stock.py`'s module docstring explained
@@ -552,7 +552,7 @@ reported a defect that was entirely the probe's own doing.
 **The scoreboard flattered itself.** A verdict reading "Definite (5)" was, on
 inspection, two real defects, one of them counted twice under two line
 numbers, one invention from the paragraph above, and one finding the judge
-had rejected in the same breath. Which is why `../committee-tests/README.md`
+had rejected in the same breath. Which is why `../krust-test/committee-tests/README.md`
 scores runs as found / missed / invented / doubled rather than by the
 verdict's own headline.
 | A recognisable command that isn't understood | Asks what it needs — it never silently becomes a panel question |

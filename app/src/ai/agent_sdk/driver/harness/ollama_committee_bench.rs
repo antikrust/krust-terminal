@@ -231,7 +231,7 @@ fn a_real_committee() {
         .collect();
 
     // A fresh copy of the fixture, built by the same script the user runs.
-    // The fixtures live beside the repository, not inside it.
+    // The fixtures live beside the repository, in the krust-test repo.
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(|repo| repo.parent())
@@ -239,7 +239,7 @@ fn a_real_committee() {
         .to_path_buf();
     let target = std::env::temp_dir().join(format!("committee-bench-{}", uuid::Uuid::new_v4()));
     let setup = std::process::Command::new("sh")
-        .arg(root.join("committee-tests/setup.sh"))
+        .arg(root.join("krust-test/committee-tests/setup.sh"))
         .arg(&target)
         .output()
         .expect("setup.sh runs");
