@@ -486,7 +486,7 @@ fn a_case_check_that_comes_back_empty_is_asked_again_plainly() {
     assert_eq!(checks.len(), 2, "asked once more");
     assert_eq!(checks[0]["think"], json!(true));
     assert_eq!(checks[1]["think"], json!(false));
-    assert!(last_of(&checks[1]).ends_with("Start your reply with the one word YES or NO."));
+    assert!(last_of(&checks[1]).ends_with("the one line VERDICT: YES or VERDICT: NO."));
     // A thinking judge doesn't think while filling in the report.
     assert_eq!(run.requests_of(Kind::Report)[0]["think"], json!(false));
 }

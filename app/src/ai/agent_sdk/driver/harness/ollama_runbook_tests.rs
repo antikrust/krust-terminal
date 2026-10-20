@@ -590,6 +590,16 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     assert_eq!(yes_or_no("YES, it holds"), Some(true));
     assert_eq!(yes_or_no("No."), Some(false));
     assert_eq!(yes_or_no("It is unclear."), None);
+    // A labelled verdict on the last line wins over the words before it.
+    assert_eq!(
+        yes_or_no("No conflicts remain, as `--- conflicted files:` lists none.\nVERDICT: YES"),
+        Some(true)
+    );
+    assert_eq!(
+        yes_or_no("The count is 37.\n\nVERDICT: NO — not in the hundreds"),
+        Some(false)
+    );
+    assert_eq!(yes_or_no("VERDICT: unsure"), None);
 
     // After each call the worker is told where the step stands.
     assert_eq!(

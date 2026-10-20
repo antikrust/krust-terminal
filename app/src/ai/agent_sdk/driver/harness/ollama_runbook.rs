@@ -1444,16 +1444,20 @@ you would need is missing. When in doubt, stop.
 - facts: values a later step will need that this step established, under the variable name the runbook itself \
 uses (for example V). Usually empty; leave out anything already known.";
 
+/// The reason comes first and the verdict last, labelled: qwen3.5:4b, asked
+/// for the verdict first, wrote "NO — the output shows AGENTS.md is still
+/// conflicted, so the condition holds, making this block run".
 const CONDITION_SYSTEM_PROMPT: &str = "You decide whether one block of a runbook step runs now. The runbook runs \
 it only in the case it states just before the block. From what the step's commands have printed so far, does that \
 case hold? Decide this block's own case, as stated before it, not another block's: that an earlier block was not \
-run because its own case failed says nothing about this one. Reply YES or NO, then one short reason quoting the \
-output that decides it.";
+run because its own case failed says nothing about this one. In one or two sentences, say what the output shows \
+that decides it, quoting it; then on the last line write VERDICT: YES or VERDICT: NO.";
 
 const DONE_CHECK_SYSTEM_PROMPT: &str = "You check one decision about a runbook run. A step was judged to end the \
 whole run, as if the steps after it weren't needed. That is right only when the step's own text or output says \
-there is nothing more to do — for example, already up to date. Reply YES if the step's text or output says that, \
-NO if the step simply did its own work. Then give one short reason.";
+there is nothing more to do — for example, already up to date. In one sentence, say what the step's text or output \
+says about that; then on the last line write VERDICT: YES if it says there is nothing more to do, or VERDICT: NO if \
+the step simply did its own work.";
 
 const REPORT_SYSTEM_PROMPT: &str = "You write the final report of a runbook run by filling in the runbook's own \
 reporting template from the run record. Under each step the record has what its commands printed: take what \
@@ -3359,21 +3363,33 @@ async fn ask_judge_yes_or_no(
         context.judge_thinks.then_some(false),
         SHORT_REPLY_MAX_TOKENS,
         system,
-        &format!("{user}\n\nStart your reply with the one word YES or NO."),
+        &format!(
+            "{user}\n\nReply with one short reason, then the one line VERDICT: YES or VERDICT: NO."
+        ),
         on_event,
     )
     .await
 }
 
-/// A reply's first YES or NO: `Some(true)` for yes.
+/// A reply's verdict: the word after its last `VERDICT:`, or, without one,
+/// its first YES or NO. `Some(true)` for yes.
 fn yes_or_no(reply: &str) -> Option<bool> {
-    reply
-        .split(|c: char| !c.is_ascii_alphabetic())
-        .find_map(|word| match word.to_ascii_uppercase().as_str() {
-            "YES" => Some(true),
-            "NO" => Some(false),
-            _ => None,
-        })
+    let upper = reply.to_ascii_uppercase();
+    let words = |text: &str| {
+        text.split(|c: char| !c.is_ascii_alphabetic())
+            .filter(|word| !word.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>()
+    };
+    let candidates = match upper.rfind("VERDICT:") {
+        Some(at) => words(&upper[at + "VERDICT:".len()..]),
+        None => words(&upper),
+    };
+    candidates.iter().find_map(|word| match word.as_str() {
+        "YES" => Some(true),
+        "NO" => Some(false),
+        _ => None,
+    })
 }
 
 /// Whether a reply's first YES or NO is a no.
