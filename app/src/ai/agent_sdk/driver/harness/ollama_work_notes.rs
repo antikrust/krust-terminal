@@ -60,9 +60,15 @@ If nothing in this part bears on the question, reply with the single word NOTHIN
 /// Asked of each finding a reader makes before it becomes a note: small
 /// readers told to look for a problem find one in every part, and checking
 /// one claim against the lines it cites is a smaller job than the search.
+/// Three small readers in turn called a statement that goes on over the
+/// next lines "incomplete", or a name defined a few lines up "undefined",
+/// and the same models checking the finding let it through: the lines
+/// around a finding are shown so that the checker reads them.
 const FINDING_CHECK_SYSTEM_PROMPT: &str = "You check one finding a reader made about a long text, against the \
-lines it cites, each shown with its label. Reply YES if those lines show what the finding says, or show something \
-that bears it out. Reply NO if they contradict it, or show nothing of what it says. Then give one short reason.";
+lines it cites, each shown with its label and the lines around it. Reply YES if those lines show what the finding \
+says, or show something that bears it out. Reply NO if they contradict it, or show nothing of what it says — a \
+statement that goes on over the next lines is not incomplete, and a name defined on a nearby line is not \
+undefined. Then give one short reason.";
 
 const REDUCE_SYSTEM_PROMPT: &str = "You condense notes taken on one stretch of a long text. Keep everything that \
 bears on the question and every line number cited; drop repeats and anything off the question. Reply with the \
@@ -80,8 +86,9 @@ missing. Be brief: at most fifteen lines.";
 const CHECK_SYSTEM_PROMPT: &str = "You check one line an answer rests on. The answer to the question below says \
 this line (with those near it) shows what the question asks about. The lines are shown with their labels. Reply \
 FALSE only if they plainly show otherwise — for example, the answer says a line lacks something the line has, or \
-has a problem it doesn't. Otherwise reply TRUE: when the lines bear the answer out, however it is worded, and when \
-they can't settle it. Then give one short reason.";
+has a problem it doesn't; a statement that goes on over the next lines is not incomplete, and a name defined on a \
+nearby line is not undefined. Otherwise reply TRUE: when the lines bear the answer out, however it is worded, and \
+when they can't settle it. Then give one short reason.";
 
 /// One part of the text: its lines, numbered from 1 in the whole text.
 #[derive(Debug, Clone, PartialEq)]
