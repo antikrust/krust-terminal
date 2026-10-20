@@ -32,7 +32,9 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS,
     MAX_REVIEWERS,
 };
-use crate::ai::agent_sdk::driver::harness::ollama_runbook::{self, cycle_judge, RunbookConfig};
+use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
+    self, cycle_helper, cycle_judge, RunbookConfig,
+};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
@@ -114,6 +116,9 @@ pub enum OllamaPageAction {
     ToggleCommitteePersonas,
     /// Cycle runbook mode's judge: auto, then each installed model.
     CycleRunbookJudge,
+    /// Cycle runbook mode's helper (the small model that checks each fix in
+    /// the work-file pass): auto, then each installed model.
+    CycleRunbookHelper,
     /// Add whatever address is in the remote-host field, then check it.
     AddRemoteHost,
     /// Re-ask a known host what models it has.
@@ -248,6 +253,7 @@ struct StateHandles {
     committee_audit_link: MouseStateHandle,
     committee_personas_link: MouseStateHandle,
     runbook_judge_link: MouseStateHandle,
+    runbook_helper_link: MouseStateHandle,
     add_remote_link: MouseStateHandle,
     /// Per-remote-host check links, keyed by base URL. Stable handles so the
     /// click registers (see the install-button note).
@@ -467,6 +473,29 @@ impl OllamaPageView {
         HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
             availability.refresh_ollama_models(ctx)
         });
+        ctx.notify();
+    }
+
+    /// Reads the runbook config, applies one change given the installed
+    /// models, and persists it.
+    fn update_runbook_config(
+        &mut self,
+        ctx: &mut ViewContext<Self>,
+        mutate: impl FnOnce(&mut RunbookConfig, &[String]),
+    ) {
+        let installed = self.installed_model_names();
+        let mut config = RunbookConfig::from_settings_json(
+            AISettings::as_ref(ctx)
+                .ollama_runbook_config
+                .value()
+                .as_deref(),
+        );
+        mutate(&mut config, &installed);
+        report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            settings
+                .ollama_runbook_config
+                .set_value(Some(config.to_settings_json()), ctx)
+        }));
         ctx.notify();
     }
 
@@ -947,20 +976,10 @@ impl TypedActionView for OllamaPageView {
                 });
             }
             OllamaPageAction::CycleRunbookJudge => {
-                let installed = self.installed_model_names();
-                let mut config = RunbookConfig::from_settings_json(
-                    AISettings::as_ref(ctx)
-                        .ollama_runbook_config
-                        .value()
-                        .as_deref(),
-                );
-                cycle_judge(&mut config, &installed);
-                report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
-                    settings
-                        .ollama_runbook_config
-                        .set_value(Some(config.to_settings_json()), ctx)
-                }));
-                ctx.notify();
+                self.update_runbook_config(ctx, cycle_judge);
+            }
+            OllamaPageAction::CycleRunbookHelper => {
+                self.update_runbook_config(ctx, cycle_helper);
             }
             OllamaPageAction::AddRemoteHost => self.add_remote_host(ctx),
             OllamaPageAction::CheckRemoteHost { url } => self.check_remote_host(url.clone(), ctx),
@@ -2273,7 +2292,7 @@ impl SettingsWidget for RunbookWidget {
     type View = OllamaPageView;
 
     fn search_terms(&self) -> &str {
-        "ollama runbook mode step by step plan checklist judge worker sandbox"
+        "ollama runbook mode step by step plan checklist judge helper worker sandbox merge conflicts work notes"
     }
 
     fn should_render(&self, _app: &AppContext) -> bool {
@@ -2357,6 +2376,50 @@ impl SettingsWidget for RunbookWidget {
                  Auto picks the first installed reasoning model from deepseek-r1:14b, \
                  qwen3:14b and phi4:14b. A run refuses to start in a git repository that \
                  can push anywhere but a local folder, so try a runbook on a sandbox copy.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
+
+        let helper_label = match &config.helper {
+            Some(helper) => format!("Helper: {helper}"),
+            None => {
+                let installed = view.installed_model_names();
+                let disabled = service::disabled_models_for(app);
+                let picked = ollama_runbook::pick_helper(&installed, "", &disabled);
+                if picked.is_empty() {
+                    "Helper: auto (the selected model checks its own fixes)".to_string()
+                } else {
+                    format!("Helper: auto ({picked})")
+                }
+            }
+        };
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        helper_label,
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleRunbookHelper);
+                        })),
+                        handles.runbook_helper_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "When a runbook's resolve block works through merge conflicts, the judge \
+                 proposes a fix for each conflict and the helper — a small, quick model — \
+                 checks it before it is written. Auto picks the first installed of \
+                 qwen3.5:9b, qwen2.5-coder:7b, qwen3:8b and granite4:7b-a1b-h.",
                 appearance,
             ))
             .with_margin_top(2.)

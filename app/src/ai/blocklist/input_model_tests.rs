@@ -397,3 +397,24 @@ fn settings_change_applies_policy_update() {
         });
     });
 }
+
+#[test]
+fn a_lone_markdown_path_is_a_runbook_path() {
+    assert!(is_lone_markdown_path(&["../toy-runbook.md"]));
+    assert!(is_lone_markdown_path(&["/abs/path/RUNBOOK.MD"]));
+    assert!(is_lone_markdown_path(&["'my runbook.md'"]));
+    assert!(is_lone_markdown_path(&["my\\ runbook.markdown"]));
+}
+
+#[test]
+fn commands_and_sentences_are_not_runbook_paths() {
+    assert!(!is_lone_markdown_path(&["cat", "README.md"]));
+    assert!(!is_lone_markdown_path(&[
+        "run",
+        "the",
+        "runbook",
+        "../toy-runbook.md"
+    ]));
+    assert!(!is_lone_markdown_path(&["./build.sh"]));
+    assert!(!is_lone_markdown_path(&[]));
+}

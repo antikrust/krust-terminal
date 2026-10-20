@@ -74,6 +74,15 @@ const JUDGE_PREFERENCE: &[&str] = &[
     "qwen3:8b",
     "deepseek-r1:8b",
 ];
+/// Helpers tried, in order, when none is chosen: small, quick models that fit
+/// beside a 14B judge, for checking one proposed fix at a time.
+const HELPER_PREFERENCE: &[&str] = &[
+    "qwen3.5:9b",
+    "qwen2.5-coder:7b",
+    "qwen3:8b",
+    "granite4:7b-a1b-h",
+    "llama3.1:8b",
+];
 /// Separates a block's own output from the values it reports back.
 const FACTS_MARKER: &str = "__RUNBOOK_FACTS__";
 const RUN_BLOCK: &str = "run_block";
@@ -96,32 +105,43 @@ pub(crate) type Facts = BTreeMap<String, String>;
 pub(crate) struct RunbookConfig {
     /// The judge's model tag; `None` picks one automatically.
     pub(crate) judge: Option<String>,
+    /// The helper's model tag — the small model that checks each fix in the
+    /// work-file pass; `None` picks one automatically.
+    pub(crate) helper: Option<String>,
 }
 
 impl RunbookConfig {
     pub(crate) fn from_settings_json(json: Option<&str>) -> Self {
-        let judge = json
-            .and_then(|json| serde_json::from_str::<Value>(json).ok())
-            .and_then(|value| {
+        let value = json.and_then(|json| serde_json::from_str::<Value>(json).ok());
+        let choice = |name: &str| {
+            value.as_ref().and_then(|value| {
                 value
-                    .get("judge")
+                    .get(name)
                     .and_then(Value::as_str)
                     .map(str::trim)
-                    .filter(|judge| !judge.is_empty() && *judge != "auto")
+                    .filter(|choice| !choice.is_empty() && *choice != "auto")
                     .map(str::to_owned)
-            });
-        Self { judge }
+            })
+        };
+        Self {
+            judge: choice("judge"),
+            helper: choice("helper"),
+        }
     }
 
     pub(crate) fn to_settings_json(&self) -> String {
-        json!({ "judge": self.judge.as_deref().unwrap_or("auto") }).to_string()
+        json!({
+            "judge": self.judge.as_deref().unwrap_or("auto"),
+            "helper": self.helper.as_deref().unwrap_or("auto"),
+        })
+        .to_string()
     }
 }
 
-/// Steps the judge choice through `auto` and then each installed model, for
-/// the settings page's cycling link.
-pub(crate) fn cycle_judge(config: &mut RunbookConfig, installed: &[String]) {
-    let next = match &config.judge {
+/// Steps a model choice through `auto` and then each installed model, for the
+/// settings page's cycling links.
+fn cycle_choice(choice: &mut Option<String>, installed: &[String]) {
+    let next = match choice {
         None => installed.first().cloned(),
         Some(current) => installed
             .iter()
@@ -129,20 +149,44 @@ pub(crate) fn cycle_judge(config: &mut RunbookConfig, installed: &[String]) {
             .and_then(|index| installed.get(index + 1))
             .cloned(),
     };
-    config.judge = next;
+    *choice = next;
 }
 
-/// The judge to use when none is chosen: the first preferred reasoning model
-/// installed and switched on, else the worker itself.
-pub(crate) fn pick_judge(installed: &[String], worker: &str, disabled: &[String]) -> String {
-    JUDGE_PREFERENCE
+pub(crate) fn cycle_judge(config: &mut RunbookConfig, installed: &[String]) {
+    cycle_choice(&mut config.judge, installed);
+}
+
+pub(crate) fn cycle_helper(config: &mut RunbookConfig, installed: &[String]) {
+    cycle_choice(&mut config.helper, installed);
+}
+
+/// The first model of `preference` installed and switched on, else `fallback`.
+fn pick_preferred(
+    preference: &[&str],
+    installed: &[String],
+    fallback: &str,
+    disabled: &[String],
+) -> String {
+    preference
         .iter()
         .find(|preferred| {
             installed.iter().any(|tag| tag == *preferred)
                 && !disabled.iter().any(|off| off == *preferred)
         })
         .map(|preferred| preferred.to_string())
-        .unwrap_or_else(|| worker.to_string())
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+/// The judge to use when none is chosen: the first preferred reasoning model
+/// installed and switched on, else the worker itself.
+pub(crate) fn pick_judge(installed: &[String], worker: &str, disabled: &[String]) -> String {
+    pick_preferred(JUDGE_PREFERENCE, installed, worker, disabled)
+}
+
+/// The helper to use when none is chosen: the first preferred small model
+/// installed and switched on, else the worker itself.
+pub(crate) fn pick_helper(installed: &[String], worker: &str, disabled: &[String]) -> String {
+    pick_preferred(HELPER_PREFERENCE, installed, worker, disabled)
 }
 
 // ---------------------------------------------------------------------------
@@ -185,11 +229,22 @@ impl RunbookBlock {
             "" | "bash" | "sh" | "zsh" | "shell" | "console"
         )
     }
+
+    /// A `resolve` block runs the work-file pass over the merge conflicts
+    /// (see `conflicts`) instead of a shell.
+    pub(crate) fn is_resolve(&self) -> bool {
+        self.lang == "resolve"
+    }
+
+    /// Whether `run_block` runs this block.
+    pub(crate) fn offered(&self) -> bool {
+        self.runnable() || self.is_resolve()
+    }
 }
 
 impl RunbookStep {
     fn has_runnable_blocks(&self) -> bool {
-        self.blocks.iter().any(RunbookBlock::runnable)
+        self.blocks.iter().any(RunbookBlock::offered)
     }
 
     /// The step as the worker sees it: its text with each runnable block
@@ -202,14 +257,15 @@ impl RunbookStep {
             if is_fence(line.trim_start()) {
                 if !in_fence {
                     block_index += 1;
-                    if self
-                        .blocks
-                        .get(block_index - 1)
-                        .is_some_and(RunbookBlock::runnable)
-                    {
-                        out.push(format!(
+                    match self.blocks.get(block_index - 1) {
+                        Some(block) if block.is_resolve() => out.push(format!(
+                            "**Block {block_index}** (`run_block` {block_index} — works through the merge \
+                             conflicts one at a time):"
+                        )),
+                        Some(block) if block.runnable() => out.push(format!(
                             "**Block {block_index}** (`run_block` {block_index}):"
-                        ));
+                        )),
+                        _ => {}
                     }
                 }
                 in_fence = !in_fence;
@@ -1104,6 +1160,12 @@ struct RunContext<'a> {
     worker: &'a str,
     judge: &'a str,
     judge_thinks: bool,
+    /// The small model that checks each fix in the work-file pass.
+    helper: &'a str,
+    helper_thinks: bool,
+    /// Where the work-file pass keeps its notes unless a block says otherwise:
+    /// beside the runbook, named after it.
+    work_dir: &'a Path,
     cancel: Option<HarnessCancel>,
 }
 
@@ -1224,16 +1286,26 @@ pub(crate) async fn run_ollama_runbook(
             return Ok(success_status());
         }
     }
-    let judge = match config.judge.clone() {
-        Some(judge) => judge,
-        None => {
-            let installed = fetch_installed_model_names(path).await.unwrap_or_default();
-            pick_judge(&installed, worker, &disabled)
-        }
+    let installed = if config.judge.is_none() || config.helper.is_none() {
+        fetch_installed_model_names(path).await.unwrap_or_default()
+    } else {
+        Vec::new()
     };
+    let judge = config
+        .judge
+        .clone()
+        .unwrap_or_else(|| pick_judge(&installed, worker, &disabled));
+    let helper = config
+        .helper
+        .clone()
+        .unwrap_or_else(|| pick_helper(&installed, worker, &disabled));
     let judge_thinks = probe_model_caps_checked(&judge, path)
         .await
         .is_some_and(|caps| caps.thinking);
+    let helper_thinks = probe_model_caps_checked(&helper, path)
+        .await
+        .is_some_and(|caps| caps.thinking);
+    let work_dir = request.path.with_extension("work");
 
     let context = RunContext {
         working_dir,
@@ -1241,16 +1313,32 @@ pub(crate) async fn run_ollama_runbook(
         worker,
         judge: &judge,
         judge_thinks,
+        helper: &helper,
+        helper_thinks,
+        work_dir: &work_dir,
         cancel: harness_cancel_for(session_id),
     };
 
+    let has_pass = runbook
+        .steps
+        .iter()
+        .any(|step| step.blocks.iter().any(RunbookBlock::is_resolve));
     on_event(TurnEvent::Text {
         text: format!(
             "**Runbook:** {} — {} steps, run in `{}`.\n\nWorker **`{worker}`** runs each step in a fresh \
-             conversation; judge **`{judge}`** checks it against the runbook's own criteria.{}",
+             conversation; judge **`{judge}`** checks it against the runbook's own criteria.{}{}",
             runbook.title,
             runbook.steps.len(),
             working_dir.display(),
+            if has_pass {
+                format!(
+                    " Merge conflicts are worked one at a time: `{judge}` proposes each fix and helper **`{helper}`** \
+                     checks it, with notes kept in `{}`.",
+                    work_dir.display()
+                )
+            } else {
+                String::new()
+            },
             sandbox_note
                 .map(|note| format!("\n\n{note}"))
                 .unwrap_or_default()
@@ -1614,7 +1702,7 @@ async fn execute_call(
                 .and_then(|number| usize::try_from(number).ok())
                 .and_then(|number| number.checked_sub(1))
                 .and_then(|index| step.blocks.get(index))
-                .filter(|block| block.runnable());
+                .filter(|block| block.offered());
             let Some(block) = block else {
                 let label = format!(
                     "run_block {}",
@@ -1629,6 +1717,9 @@ async fn execute_call(
                 );
                 return Some(refusal(&call_id, label, error, on_event));
             };
+            if block.is_resolve() {
+                return conflicts::run_conflict_pass(context, step, &block.code, on_event).await;
+            }
             let set = string_map(call.arguments.get("set"));
             let prepared = prepare_block(&block.code, &set, facts);
             let label = format!("block {}", number.unwrap_or_default());
@@ -1818,7 +1909,7 @@ fn runnable_block_numbers(step: &RunbookStep) -> String {
         .blocks
         .iter()
         .enumerate()
-        .filter(|(_, block)| block.runnable())
+        .filter(|(_, block)| block.offered())
         .map(|(index, _)| (index + 1).to_string())
         .collect();
     if numbers.is_empty() {
@@ -2049,6 +2140,9 @@ fn truncate_chars(text: &str, max: usize) -> String {
     let cut: String = text.chars().take(max).collect();
     format!("{cut}…")
 }
+
+#[path = "ollama_runbook_conflicts.rs"]
+mod conflicts;
 
 #[cfg(test)]
 #[path = "ollama_runbook_tests.rs"]

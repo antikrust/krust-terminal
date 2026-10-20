@@ -80,6 +80,8 @@ pub enum InputTypeAutoDetectionSource {
     VoiceInputToggle,
     /// Inserting from the AI `@` context menu forced AI mode.
     AtContextMenuInsert,
+    /// Runbook mode sent a lone markdown path to the agent as the runbook to run.
+    RunbookPath,
 }
 
 impl From<InputClassifierDecisionSource> for InputTypeAutoDetectionSource {
@@ -660,6 +662,29 @@ impl BlocklistAIInputModel {
             .split(',')
             .collect();
 
+        // In runbook mode a lone markdown path names the runbook to run. Left to
+        // the classifier it reads as a command, and the shell tries to execute
+        // the file.
+        let is_runbook_path = *AISettings::as_ref(ctx).ollama_runbook_mode.value() && {
+            let tokens: Vec<&str> = input
+                .parsed_tokens
+                .iter()
+                .map(|t| t.token.as_str())
+                .collect();
+            is_lone_markdown_path(&tokens)
+        };
+        if is_runbook_path {
+            self.set_input_config_internal(
+                InputConfig {
+                    input_type: InputType::AI,
+                    ..self.input_config()
+                },
+                Some(InputTypeAutoDetectionSource::RunbookPath),
+                ctx,
+            );
+            return;
+        }
+
         // Early return if the first token is included in the denylist. No need to parse history.
         if denylist.contains(&first_token_str.as_str()) {
             self.set_input_config_internal(
@@ -983,6 +1008,16 @@ fn resolve_history_match(
             Some((InputType::AI, InputTypeAutoDetectionSource::HistoryMatch))
         }
     }
+}
+
+/// Whether the input is a single markdown path, as dragging a file in or typing
+/// its name produces (`../runbook.md`, `'my runbook.md'`, `my\ runbook.md`).
+fn is_lone_markdown_path(tokens: &[&str]) -> bool {
+    let [token] = tokens else {
+        return false;
+    };
+    let token = token.trim_matches(['\'', '"']).to_ascii_lowercase();
+    token.ends_with(".md") || token.ends_with(".markdown")
 }
 
 #[cfg(test)]

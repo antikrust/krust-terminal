@@ -371,10 +371,19 @@ fn the_judge_setting_round_trips_and_cycles() {
     );
     let chosen = RunbookConfig {
         judge: Some("qwen3:14b".to_string()),
+        helper: Some("qwen3.5:9b".to_string()),
     };
     assert_eq!(
         RunbookConfig::from_settings_json(Some(&chosen.to_settings_json())),
         chosen
+    );
+    assert_eq!(
+        RunbookConfig::from_settings_json(Some("{\"judge\":\"phi4:14b\"}")),
+        RunbookConfig {
+            judge: Some("phi4:14b".to_string()),
+            helper: None,
+        },
+        "a setting saved before the helper existed still reads"
     );
     assert_eq!(
         RunbookConfig::from_settings_json(Some("not json")),
@@ -389,6 +398,50 @@ fn the_judge_setting_round_trips_and_cycles() {
     assert_eq!(config.judge.as_deref(), Some("b:2b"));
     cycle_judge(&mut config, &installed);
     assert_eq!(config.judge, None, "past the last model comes back to auto");
+
+    cycle_helper(&mut config, &installed);
+    assert_eq!(config.helper.as_deref(), Some("a:1b"));
+    assert_eq!(
+        config.judge, None,
+        "cycling the helper leaves the judge alone"
+    );
+}
+
+#[test]
+fn picks_a_small_helper_that_is_installed_and_switched_on() {
+    let installed: Vec<String> = ["qwen2.5-coder:14b", "granite4:7b-a1b-h", "qwen3.5:9b"]
+        .iter()
+        .map(|tag| tag.to_string())
+        .collect();
+    assert_eq!(
+        pick_helper(&installed, "qwen2.5-coder:14b", &[]),
+        "qwen3.5:9b"
+    );
+    assert_eq!(
+        pick_helper(&installed, "qwen2.5-coder:14b", &["qwen3.5:9b".to_string()]),
+        "granite4:7b-a1b-h"
+    );
+    assert_eq!(
+        pick_helper(&["qwen2.5-coder:14b".to_string()], "qwen2.5-coder:14b", &[]),
+        "qwen2.5-coder:14b",
+        "with no small model installed, the worker checks its own fixes"
+    );
+}
+
+#[test]
+fn a_resolve_block_is_offered_to_run_block_with_its_own_label() {
+    let runbook = parse_runbook(
+        "## Step 1: merge\n\n```bash\ngit merge x\n```\n\n```resolve\nreference: refs/floorp/main\n```\n\n\
+         ```ini\nnot = run\n```\n",
+    );
+    let step = &runbook.steps[0];
+    assert!(step.blocks[1].is_resolve());
+    assert!(step.blocks[1].offered() && !step.blocks[1].runnable());
+    assert!(!step.blocks[2].offered());
+    let annotated = step.annotated_body();
+    assert!(annotated.contains("**Block 2** (`run_block` 2 — works through the merge conflicts"));
+    assert!(!annotated.contains("**Block 3**"));
+    assert_eq!(runnable_block_numbers(step), "1, 2");
 }
 
 #[test]
@@ -431,13 +484,16 @@ fn a_toy_runbook_runs_end_to_end_against_live_ollama() {
     )
     .unwrap();
 
+    // Trying a different worker: RUNBOOK_LIVE_WORKER=qwen3.5:9b.
+    let worker =
+        std::env::var("RUNBOOK_LIVE_WORKER").unwrap_or_else(|_| "qwen2.5-coder:14b".to_string());
     let mut events = Vec::new();
     block_on(run_ollama_runbook(
         &runbook_path.to_string_lossy(),
         &Uuid::new_v4(),
         &repo,
         &path,
-        "qwen2.5-coder:14b",
+        &worker,
         RunbookConfig::default(),
         Vec::new(),
         |event| events.push(event),

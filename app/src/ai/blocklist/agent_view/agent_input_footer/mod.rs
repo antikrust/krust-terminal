@@ -772,7 +772,7 @@ impl AgentInputFooter {
         // turns that model's next prompt into a step-by-step runbook run.
         let runbook_mode_button = ctx.add_typed_action_view(|ctx| {
             let is_on = *AISettings::as_ref(ctx).ollama_runbook_mode.value();
-            let mut button = ActionButton::new("Runbook", AgentInputButtonTheme)
+            let mut button = ActionButton::new("Runbook", NLDButtonTheme)
                 .with_icon(Icon::TaskListBlock)
                 .with_size(button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
@@ -3032,7 +3032,8 @@ impl ActionButtonTheme for FastForwardLockedTheme {
     }
 }
 
-/// Same as `AgentInputButtonTheme`, except with one-off special active styling for the NLD button.
+/// Same as `AgentInputButtonTheme`, except with the footer toggles' active styling: blue when
+/// on, dimmed when off. Used by the NLD and runbook-mode buttons.
 struct NLDButtonTheme;
 
 impl ActionButtonTheme for NLDButtonTheme {
