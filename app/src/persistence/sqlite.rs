@@ -28,13 +28,19 @@ use cloud_object_persistence::{
 };
 use diesel::connection::{DefaultLoadingMode, SimpleConnection};
 use diesel::result::Error;
+use diesel::sql_types::Text;
 use diesel::sqlite::SqliteConnection;
 use diesel::{
     BelongingToDsl, BoolExpressionMethods, Connection, ExpressionMethods, GroupedBy,
-    OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
+    OptionalExtension, QueryDsl, QueryableByName, RunQueryDsl, SelectableHelper,
 };
 use diesel_migrations::MigrationHarness;
 use itertools::Itertools;
+use krust_core::features::FeatureFlag;
+use krust_errors::{report_error, report_if_error};
+use krustui::platform::FullscreenState;
+use krustui::windowing::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
+use krustui::{AppContext, SingletonEntity};
 use libsqlite3_sys as sqlite3;
 use lsp::supported_servers::LSPServerType;
 use num_traits::FromPrimitive;
@@ -42,11 +48,6 @@ use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
 use persistence::model::AMBIENT_AGENT_PANE_KIND;
 use uuid::Uuid;
-use krust_core::features::FeatureFlag;
-use krust_errors::{report_error, report_if_error};
-use krustui::platform::FullscreenState;
-use krustui::windowing::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
-use krustui::{AppContext, SingletonEntity};
 
 use super::agent::{
     backfill_conversation_summaries, delete_agent_conversations, read_agent_conversation_metadata,
@@ -126,6 +127,20 @@ const CHANNEL_SIZE: usize = 1024;
 const COMMANDS_COUNT_LIMIT: i64 = 10000;
 
 const KRUST_SQLITE_FILE_NAME: &str = "krust.sqlite";
+
+/// Columns named after the product, as `(table, column)`, under [`BRAND`].
+/// Each rebrand (Warp, Derp, Bork, Krust) text-swapped the migrations that add
+/// them, but diesel never re-runs an applied migration, so a database created
+/// under an earlier brand still has that brand's names, such as `bork_ai_width`
+/// for `krust_ai_width`. `krust_drive_asset_width` is no longer in the schema,
+/// but the migration that drops it looks for it under this name.
+const BRANDED_COLUMNS: &[(&str, &str)] = &[
+    ("windows", "krust_ai_width"),
+    ("windows", "krust_drive_index_width"),
+    ("windows", "krust_drive_asset_width"),
+    ("folders", "is_krust_pack"),
+];
+const BRAND: &str = "krust";
 
 /// Runs any migrations and creates the Sqlite database if it doesn't exist.
 /// Reads from the sqlite database to get the app state for session restoration.
@@ -418,10 +433,61 @@ fn setup_database(database_path: &Path) -> Result<SqliteConnection> {
         safe: ("Connecting to SQLite database"),
         full: ("Connecting to SQLite database at {db_url}")
     );
+    report_if_error!(rename_columns_from_earlier_brands(&mut conn)
+        .context("Failed to rename columns named after an earlier brand"));
     conn.run_pending_migrations(persistence::MIGRATIONS)
         .map_err(|e| anyhow!(e))
         .context("Failed to perform migrations")?;
     Ok(conn)
+}
+
+/// Renames each of [`BRANDED_COLUMNS`] that the database has under an earlier
+/// brand's name. Does nothing when the columns already have their current
+/// names, or when their tables don't exist yet, as in a new database.
+///
+/// Runs before migrations, so that a pending one finds these columns under the
+/// names it uses.
+fn rename_columns_from_earlier_brands(conn: &mut SqliteConnection) -> Result<()> {
+    for &(table, column) in BRANDED_COLUMNS {
+        let (prefix, suffix) = column
+            .split_once(BRAND)
+            .expect("branded column names should contain the brand");
+        let columns = column_names(conn, table)?;
+        if columns.iter().any(|name| name == column) {
+            continue;
+        }
+        // A name that differs only in the brand, one word of letters and
+        // digits, so neither name needs quoting and the schema keeps the
+        // unquoted form the migrations use.
+        let earlier_name = columns.into_iter().find(|name| {
+            name.strip_prefix(prefix)
+                .and_then(|name| name.strip_suffix(suffix))
+                .is_some_and(|brand| {
+                    !brand.is_empty() && brand.bytes().all(|byte| byte.is_ascii_alphanumeric())
+                })
+        });
+        if let Some(earlier_name) = earlier_name {
+            conn.batch_execute(&format!(
+                "ALTER TABLE {table} RENAME COLUMN {earlier_name} TO {column};"
+            ))?;
+            log::info!("Renamed column {table}.{earlier_name} to {column}");
+        }
+    }
+    Ok(())
+}
+
+/// The names of `table`'s columns, or none if it doesn't exist.
+fn column_names(conn: &mut SqliteConnection, table: &str) -> Result<Vec<String>> {
+    #[derive(QueryableByName)]
+    struct Column {
+        #[diesel(sql_type = Text)]
+        name: String,
+    }
+
+    let columns = diesel::sql_query("SELECT name FROM pragma_table_info(?)")
+        .bind::<Text, _>(table)
+        .load::<Column>(conn)?;
+    Ok(columns.into_iter().map(|column| column.name).collect())
 }
 
 /// The path at which the sqlite database is located for the given scope.

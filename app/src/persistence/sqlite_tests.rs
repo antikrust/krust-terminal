@@ -6,15 +6,17 @@ use ai::workspace::WorkspaceMetadata;
 use chrono::Utc;
 use cloud_object_persistence::to_cloud_object_permissions;
 use diesel::connection::SimpleConnection;
-use pathfinder_geometry::rect::RectF;
-use pathfinder_geometry::vector::Vector2F;
+use diesel::sqlite::SqliteConnection;
 use krust_core::features::FeatureFlag;
 use krust_graphql::scalars::time::ServerTimestamp;
+use pathfinder_geometry::rect::RectF;
+use pathfinder_geometry::vector::Vector2F;
 
 use super::{
-    app_database_file_path, database_file_path_for_current_scope, database_file_path_for_scope,
-    decode_path, deduplicate_events, encode_path, get_all_codebase_index_metadata,
-    read_sqlite_data, save_app_state, save_codebase_index_metadata, setup_database, start_writer,
+    app_database_file_path, column_names, database_file_path_for_current_scope,
+    database_file_path_for_scope, decode_path, deduplicate_events, encode_path,
+    get_all_codebase_index_metadata, read_sqlite_data, save_app_state,
+    save_codebase_index_metadata, setup_database, start_writer,
 };
 use crate::app_state::{
     AppState, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, PaneNodeSnapshot,
@@ -401,6 +403,103 @@ fn test_sqlite_round_trips_vertical_tabs_panel_open() {
             .collect::<Vec<_>>(),
         vec![false, true]
     );
+}
+
+/// The columns of the tables that have branded columns, as `table.column`.
+fn branded_table_columns(conn: &mut SqliteConnection) -> Vec<String> {
+    let mut columns = Vec::new();
+    for table in ["windows", "folders"] {
+        for column in column_names(conn, table).expect("columns should load") {
+            columns.push(format!("{table}.{column}"));
+        }
+    }
+    columns
+}
+
+/// A database created under the current brand, new or reopened, keeps its
+/// column names.
+#[test]
+fn setup_database_keeps_current_brand_column_names() {
+    let tempdir = tempfile::tempdir().expect("tempdir should be created");
+    let database_path = tempdir.path().join("krust.sqlite");
+    let mut conn = setup_database(&database_path).expect("database should initialize");
+    let columns = branded_table_columns(&mut conn);
+    for column in [
+        "windows.krust_ai_width",
+        "windows.krust_drive_index_width",
+        "folders.is_krust_pack",
+    ] {
+        assert!(
+            columns.iter().any(|name| name == column),
+            "{column} should exist"
+        );
+    }
+    drop(conn);
+
+    let mut conn = setup_database(&database_path).expect("database should reopen");
+    assert_eq!(branded_table_columns(&mut conn), columns);
+}
+
+/// Each rebrand text-swapped the migrations, so a database created under an
+/// earlier brand has that brand's column names, and saving app state into it
+/// failed with "table windows has no column named krust_ai_width".
+#[test]
+fn setup_database_renames_columns_named_after_earlier_brands() {
+    for brand in ["warp", "derp", "bork"] {
+        let tempdir = tempfile::tempdir().expect("tempdir should be created");
+        let database_path = tempdir.path().join("krust.sqlite");
+        let mut conn = setup_database(&database_path).expect("database should initialize");
+        let columns = branded_table_columns(&mut conn);
+
+        let mut window = test_terminal_window_snapshot(false);
+        window.krust_ai_width = Some(420.);
+        let app_state = AppState {
+            windows: vec![window],
+            active_window_index: Some(0),
+            block_lists: Default::default(),
+            running_mcp_servers: Default::default(),
+        };
+        save_app_state(&mut conn, &app_state).expect("app state should save");
+
+        // Give the columns the names that brand's migrations gave them.
+        conn.batch_execute(&format!(
+            "ALTER TABLE windows RENAME COLUMN krust_ai_width TO {brand}_ai_width;
+            ALTER TABLE windows RENAME COLUMN krust_drive_index_width TO {brand}_drive_index_width;
+            ALTER TABLE folders RENAME COLUMN is_krust_pack TO is_{brand}_pack;"
+        ))
+        .expect("columns should take the earlier brand's names");
+        drop(conn);
+
+        let mut conn = setup_database(&database_path).expect("database should reopen");
+        assert_eq!(branded_table_columns(&mut conn), columns);
+        let restored = read_sqlite_data(&mut conn, None, PersistedDataScope::Full)
+            .expect("app state should load")
+            .app_state
+            .expect("app state should be present for the full scope");
+        assert_eq!(restored.windows[0].krust_ai_width, Some(420.));
+        save_app_state(&mut conn, &app_state).expect("app state should save");
+    }
+}
+
+/// A database old enough to predate the migration that drops
+/// `krust_drive_asset_width` has that column under its brand's name. The
+/// rename runs before migrations, so the drop finds it.
+#[test]
+fn setup_database_renames_earlier_brand_columns_before_migrating() {
+    let tempdir = tempfile::tempdir().expect("tempdir should be created");
+    let database_path = tempdir.path().join("krust.sqlite");
+    let mut conn = setup_database(&database_path).expect("database should initialize");
+    conn.batch_execute(
+        "ALTER TABLE windows ADD warp_drive_asset_width FLOAT CHECK (warp_drive_asset_width >= 0);
+        DELETE FROM __diesel_schema_migrations WHERE version = '20230809203516';",
+    )
+    .expect("database should go back to before the drop migration");
+    drop(conn);
+
+    let mut conn = setup_database(&database_path).expect("pending migration should run");
+    assert!(!branded_table_columns(&mut conn)
+        .iter()
+        .any(|column| column.ends_with("_drive_asset_width")));
 }
 
 #[test]
