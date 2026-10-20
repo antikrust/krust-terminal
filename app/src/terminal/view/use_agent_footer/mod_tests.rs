@@ -22,7 +22,7 @@ use crate::terminal::cli_agent_sessions::{
     CLIAgentSessionsModel,
 };
 use crate::terminal::model::ansi::{BootstrappedValue, Handler as _, InitShellValue};
-use crate::terminal::shared_session::SharedSessionSource;
+use crate::terminal::shared_session::{SharedSessionSource, SharedSessionStatus};
 use crate::terminal::CLIAgent;
 use crate::test_util::add_window_with_terminal;
 use crate::test_util::terminal::initialize_app_for_terminal_view;
@@ -386,4 +386,205 @@ fn cli_agent_footer_renders_for_viewer_of_shared_cloud_agent_session() {
             assert_eq!(rendered_footer_view_id, Some(view.use_agent_footer.id()));
         });
     })
+}
+
+/// Like [`simulate_user_started_long_running_command`], but the command runs
+/// in a block that started after the shell bootstrapped, as a real one does,
+/// so the agent can be tagged in to it.
+fn simulate_user_started_command_after_bootstrap(view: &mut TerminalView) {
+    simulate_user_started_long_running_command(view);
+    let mut model = view.model.lock();
+    model.finish_block();
+    model.simulate_long_running_block("bash", "bash-3.2$ ");
+    assert!(model
+        .block_list()
+        .active_block()
+        .is_eligible_to_tag_in_agent());
+}
+
+/// The footer's place in the blocklist, if it is there: right after the
+/// active (running) block.
+fn rendered_use_agent_footer(view: &TerminalView) -> Option<EntityId> {
+    let model = view.model.lock();
+    let active_block_index = model.block_list().active_block_index();
+    model
+        .block_list()
+        .last_non_hidden_rich_content_block_after_block(Some(active_block_index))
+        .map(|(_, item)| item.view_id)
+}
+
+/// "Use agent" on a running command in a plain terminal: no local
+/// conversation is on screen, so nothing is tagged in or opened, and the
+/// footer (which the subshell variant hides on click) is back to try again.
+#[test]
+fn use_agent_on_running_command_explains_instead_of_tagging_in() {
+    App::test((), |mut app| async move {
+        initialize_app_for_terminal_view(&mut app);
+        app.add_singleton_model(|_| ToastStack);
+        let _agent_view = FeatureFlag::AgentView.override_enabled(true);
+
+        let terminal = add_window_with_terminal(&mut app, None);
+
+        terminal.update(&mut app, |view, ctx| {
+            simulate_user_started_command_after_bootstrap(view);
+            view.maybe_show_use_agent_footer_in_blocklist(ctx);
+            assert_eq!(
+                rendered_use_agent_footer(view),
+                Some(view.use_agent_footer.id())
+            );
+            view.hide_use_agent_footer_in_blocklist(ctx);
+
+            view.handle_action(&TerminalAction::SetInputModeAgent, ctx);
+
+            assert!(!view.agent_view_controller().as_ref(ctx).is_active());
+            assert!(!view
+                .model
+                .lock()
+                .block_list()
+                .active_block()
+                .is_agent_tagged_in());
+            assert_eq!(
+                rendered_use_agent_footer(view),
+                Some(view.use_agent_footer.id())
+            );
+        });
+    })
+}
+
+/// In an agent tab the fullscreen agent view is already open when the
+/// command starts. "Use agent" leaves it on its conversation instead of
+/// trying to open an inline one over it.
+#[test]
+fn use_agent_on_running_command_in_agent_view_stays_on_its_conversation() {
+    App::test((), |mut app| async move {
+        initialize_app_for_terminal_view(&mut app);
+        app.add_singleton_model(|_| ToastStack);
+        let _agent_view = FeatureFlag::AgentView.override_enabled(true);
+
+        let terminal = add_window_with_terminal(&mut app, None);
+
+        terminal.update(&mut app, |view, ctx| {
+            let conversation_id = view.agent_view_controller().update(ctx, |controller, ctx| {
+                controller
+                    .try_enter_agent_view(
+                        None,
+                        AgentViewEntryOrigin::Input {
+                            was_prompt_autodetected: false,
+                        },
+                        ctx,
+                    )
+                    .expect("agent view should open while no command runs")
+            });
+            simulate_user_started_command_after_bootstrap(view);
+
+            view.handle_action(&TerminalAction::SetInputModeAgent, ctx);
+
+            let agent_view_state = view.agent_view_controller().as_ref(ctx).agent_view_state();
+            assert!(agent_view_state.is_fullscreen());
+            assert_eq!(
+                agent_view_state.active_conversation_id(),
+                Some(conversation_id)
+            );
+            assert!(!view
+                .model
+                .lock()
+                .block_list()
+                .active_block()
+                .is_agent_tagged_in());
+        });
+    })
+}
+
+/// A shared session viewer's agent prompts go to the sharer, so "Use agent"
+/// still tags the agent in for them.
+#[test]
+fn use_agent_on_running_command_as_viewer_tags_in() {
+    App::test((), |mut app| async move {
+        initialize_app_for_terminal_view(&mut app);
+        let _agent_view = FeatureFlag::AgentView.override_enabled(true);
+
+        let terminal = add_window_with_terminal(&mut app, None);
+
+        terminal.update(&mut app, |view, ctx| {
+            simulate_user_started_command_after_bootstrap(view);
+            view.model
+                .lock()
+                .set_shared_session_status(SharedSessionStatus::executor());
+
+            view.handle_action(&TerminalAction::SetInputModeAgent, ctx);
+
+            assert!(view.agent_view_controller().as_ref(ctx).is_inline());
+            assert!(view
+                .model
+                .lock()
+                .block_list()
+                .active_block()
+                .is_agent_tagged_in());
+        });
+    })
+}
+
+#[test]
+fn local_agent_is_asked_about_running_command_only_in_idle_local_conversation() {
+    use LocalHarnessKind::{Claude, Codex, Ollama};
+    let can_ask = can_ask_local_agent_about_running_command;
+
+    // Nothing local on screen to continue.
+    assert!(!can_ask(None, false, true));
+    // Still answering.
+    assert!(!can_ask(Some(Claude), true, true));
+    assert!(can_ask(Some(Claude), false, false));
+    assert!(can_ask(Some(Codex), false, false));
+    assert!(can_ask(Some(Ollama), false, true));
+    // Ollama switched off, or working through runbooks.
+    assert!(!can_ask(Some(Ollama), false, false));
+}
+
+#[test]
+fn running_command_help_prompt_shows_command_and_tidied_screen() {
+    assert_eq!(
+        running_command_help_prompt(" bash ", "\n\nbash-3.2$ ls   \nfoo  bar\nbash-3.2$ \n\n"),
+        "`bash` is still running in my terminal and I'm stuck in it. You can't type into it \
+         for me, so tell me in a few sentences what is going on and exactly what to type or \
+         press to get out of it or carry on. You don't need to run anything.\n\n\
+         Its screen right now:\n\n```\nbash-3.2$ ls\nfoo  bar\nbash-3.2$\n```"
+    );
+}
+
+#[test]
+fn running_command_help_prompt_says_when_nothing_was_printed() {
+    let prompt = running_command_help_prompt("sleep 100", "  \n\n ");
+    assert!(prompt.starts_with("`sleep 100` is still running in my terminal"));
+    assert!(prompt.ends_with("You don't need to run anything.\n\nIt hasn't printed anything yet."));
+}
+
+#[test]
+fn running_command_help_prompt_quotes_backticks_safely() {
+    let prompt = running_command_help_prompt("echo `date`", "```rust\nfn main() {}\n```");
+    assert!(prompt.starts_with("`` echo `date` `` is still running"));
+    assert!(prompt.ends_with("\n\n````\n```rust\nfn main() {}\n```\n````"));
+}
+
+#[test]
+fn tidy_screen_keeps_whole_lines_from_the_end_of_a_long_screen() {
+    let filler = "x".repeat(99);
+    let screen = (0..100)
+        .map(|row| format!("{row:03}{filler}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let tidy = tidy_screen(&screen);
+
+    assert!(tidy.len() <= RUNNING_COMMAND_SCREEN_MAX_CHARS);
+    assert!(tidy.ends_with(&format!("099{filler}")));
+    assert!(tidy.lines().all(|line| line.len() == 102));
+}
+
+#[test]
+fn tidy_screen_cuts_a_long_line_on_a_char_boundary() {
+    let tidy = tidy_screen(&"€".repeat(2000));
+
+    assert!(tidy.len() <= RUNNING_COMMAND_SCREEN_MAX_CHARS);
+    assert!(!tidy.is_empty());
+    assert!(tidy.chars().all(|c| c == '€'));
 }

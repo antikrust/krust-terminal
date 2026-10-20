@@ -209,6 +209,32 @@ paths (they 401 under this fork's local auth):
 If you add a code path that reacts to finished actions/exchanges and might
 send a request, gate it the same way: `local_harness_threads::lookup`.
 
+## Running commands ("Use agent")
+
+Upstream's "Use agent" on a command the user is running tags the cloud
+agent in so it can type into the command. A local harness runs in its own
+process and can't, so for a local terminal
+`TerminalView::explain_running_command_with_local_agent`
+(terminal/view/use_agent_footer/mod.rs) shows a toast saying so instead,
+and, when the conversation on screen is a local one that can take another
+turn, sends its agent a follow-up carrying the command and its screen.
+Shared-session viewers still tag in: their prompts go to the sharer.
+
+**Traps:**
+- A **fresh** local run can't show while a command is running in the
+  fullscreen agent view. `LocalHarnessStream::begin` always starts a new
+  conversation and the drain then switches the agent view to it, but
+  `AgentViewController::try_enter_agent_view` refuses that while a command
+  runs: the user gets "Cannot enter agent mode while a command is
+  running." and the reply streams into a conversation nothing shows. Only
+  follow-ups (`begin_follow_up`, appending to the conversation on screen)
+  work then. Never `begin_follow_up` an empty conversation instead: its
+  root task is still optimistic, and appending wedges it (see the
+  AddMessagesToTask trap above).
+- Runbook mode treats any word of a prompt that names an existing file as
+  the runbook to run, so don't route prompts carrying terminal output into
+  it.
+
 ## Known rendering trap (blocklist paint)
 
 In `block_list_element.rs::paint`, one running `grid_origin` is carried

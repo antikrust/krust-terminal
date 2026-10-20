@@ -47,7 +47,10 @@ use krustui::{
 };
 
 use super::{RichContentInsertionPosition, TerminalAction, TerminalView};
+use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::blocklist::block::cli_controller::CLISubagentEvent;
+use crate::ai::blocklist::{local_harness_threads, BlocklistAIHistoryModel};
+use crate::ai::harness_availability::selected_local_harness;
 use crate::cmd_or_ctrl_shift;
 use crate::code_review::diff_state::GitDeltaPreference;
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
@@ -56,6 +59,8 @@ use crate::settings::{
     AISettings, AISettingsChangedEvent, CompiledCommandsForCodingAgentToolbar, InputModeSettings,
 };
 use crate::terminal::cli_agent_sessions::CLIAgentRichInputCloseReason;
+use crate::terminal::input::Event as InputEvent;
+use crate::terminal::model::block::formatted_terminal_contents_for_input;
 use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
 pub use crate::terminal::CLIAgent;
 use crate::terminal::TerminalModel;
@@ -64,6 +69,8 @@ use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, ActionButtonTheme, ButtonSize, KeystrokeSource, TooltipAlignment,
 };
+use crate::view_components::DismissibleToast;
+use crate::workspace::ToastStack;
 
 /// Small delay inserted between separate PTY writes to CLI agents.
 /// (Used both for the mode-switch prefix split and for the `DelayedEnter`
@@ -138,6 +145,104 @@ fn rich_input_submit_strategy(agent: CLIAgent) -> RichInputSubmitStrategy {
         | CLIAgent::Antigravity
         | CLIAgent::Unknown => RichInputSubmitStrategy::Inline,
     }
+}
+
+/// Groups the toasts "Use agent" shows on a running command, so pressing it
+/// again replaces the last one instead of stacking another.
+const RUNNING_COMMAND_TOAST_ID: &str = "use-agent-on-running-command";
+
+/// Shown while a local agent is asked to explain a running command.
+const ASKING_LOCAL_AGENT_MESSAGE: &str = "Local agents can't type into a running command, so \
+    the agent will explain this one instead. Its answer appears above the command.";
+
+/// Shown when no local agent can be asked about a running command.
+const STOP_RUNNING_COMMAND_MESSAGE: &str = "Local agents can't type into a running command. \
+    Stop it first (Ctrl-C for most commands, Ctrl-D or exit for a shell, or close the tab), \
+    then ask in the input.";
+
+/// Rows of a running command's output, around its cursor, that a local agent
+/// is shown when asked about the command.
+const RUNNING_COMMAND_SCREEN_ROWS: usize = 40;
+
+/// The most of a running command's screen a local agent is shown, kept from
+/// the end, where the command is waiting.
+const RUNNING_COMMAND_SCREEN_MAX_CHARS: usize = 4000;
+
+/// Whether "Use agent" on a running command can have the agent of the
+/// conversation on screen explain the command. `harness` is the local harness
+/// that conversation runs on, if it is a local one at all. A conversation
+/// still answering can't take another turn yet, and an Ollama one only can
+/// when Ollama is answering questions (on, and not working through runbooks).
+fn can_ask_local_agent_about_running_command(
+    harness: Option<LocalHarnessKind>,
+    is_in_progress: bool,
+    ollama_answers_questions: bool,
+) -> bool {
+    match harness {
+        None => false,
+        Some(_) if is_in_progress => false,
+        Some(LocalHarnessKind::Claude | LocalHarnessKind::Codex) => true,
+        Some(LocalHarnessKind::Ollama) => ollama_answers_questions,
+    }
+}
+
+/// The prompt asking a local agent to explain `command`, which the user is
+/// stuck in, from `screen`: what the command shows right now.
+fn running_command_help_prompt(command: &str, screen: &str) -> String {
+    let command = command.trim();
+    let mut prompt = if command.is_empty() {
+        "A command".to_owned()
+    } else {
+        let ticks = "`".repeat(longest_backtick_run(command) + 1);
+        let pad = if ticks.len() > 1 { " " } else { "" };
+        format!("{ticks}{pad}{command}{pad}{ticks}")
+    };
+    prompt.push_str(
+        " is still running in my terminal and I'm stuck in it. You can't type into it for me, \
+         so tell me in a few sentences what is going on and exactly what to type or press to \
+         get out of it or carry on. You don't need to run anything.",
+    );
+    let screen = tidy_screen(screen);
+    if screen.is_empty() {
+        prompt.push_str("\n\nIt hasn't printed anything yet.");
+    } else {
+        let fence = "`".repeat((longest_backtick_run(&screen) + 1).max(3));
+        prompt.push_str(&format!(
+            "\n\nIts screen right now:\n\n{fence}\n{screen}\n{fence}"
+        ));
+    }
+    prompt
+}
+
+/// `screen` without trailing spaces on its lines or blank lines around it,
+/// cut at a line start to its last [`RUNNING_COMMAND_SCREEN_MAX_CHARS`].
+fn tidy_screen(screen: &str) -> String {
+    let lines: Vec<&str> = screen.lines().map(str::trim_end).collect();
+    let first = lines
+        .iter()
+        .position(|line| !line.is_empty())
+        .unwrap_or(lines.len());
+    let last = lines
+        .iter()
+        .rposition(|line| !line.is_empty())
+        .map_or(first, |index| index + 1);
+    let tidy = lines[first..last].join("\n");
+    if tidy.len() <= RUNNING_COMMAND_SCREEN_MAX_CHARS {
+        return tidy;
+    }
+    let mut cut = tidy.len() - RUNNING_COMMAND_SCREEN_MAX_CHARS;
+    while !tidy.is_char_boundary(cut) {
+        cut += 1;
+    }
+    if let Some(newline) = tidy[cut..].find('\n') {
+        cut += newline + 1;
+    }
+    tidy[cut..].to_owned()
+}
+
+/// The length of the longest run of backticks in `text`.
+fn longest_backtick_run(text: &str) -> usize {
+    text.split(|c| c != '`').map(str::len).max().unwrap_or(0)
 }
 
 static USE_AGENT_KEYSTROKE: LazyLock<Keystroke> =
@@ -491,6 +596,98 @@ impl TerminalView {
                 control_state: CLISubagentControlState::AgentTaggedOut,
             },
             ctx
+        );
+    }
+
+    /// "Use agent" on a command the user is running, when the agent is local.
+    ///
+    /// Tagging the agent in is for the cloud agent, which can type into the
+    /// running command. A local agent (the claude or codex CLI, or Ollama)
+    /// runs in a process of its own and can't, so a toast says so and how to
+    /// stop the command. When the conversation on screen is a local one that
+    /// can take another turn, its agent is also asked to explain the command
+    /// from its screen. The answer has to go into that conversation: a new
+    /// one would need the agent view to switch to it, which it won't do while
+    /// a command is running.
+    pub(super) fn explain_running_command_with_local_agent(&mut self, ctx: &mut ViewContext<Self>) {
+        let ai_settings = AISettings::as_ref(ctx);
+        // Runbook mode reads any file path in a prompt as a runbook to work
+        // through, and a command's screen can easily show one.
+        let ollama_answers_questions =
+            *ai_settings.ollama_enabled.value() && !*ai_settings.ollama_runbook_mode.value();
+        let can_ask = self
+            .agent_view_controller
+            .as_ref(ctx)
+            .agent_view_state()
+            .active_conversation_id()
+            .is_some_and(|conversation_id| {
+                let is_in_progress = BlocklistAIHistoryModel::as_ref(ctx)
+                    .conversation(&conversation_id)
+                    .is_some_and(|conversation| conversation.status().is_in_progress());
+                can_ask_local_agent_about_running_command(
+                    local_harness_threads::lookup(conversation_id).map(|(harness, _)| harness),
+                    is_in_progress,
+                    ollama_answers_questions,
+                )
+            });
+
+        let window_id = ctx.window_id();
+        ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+            if can_ask {
+                let toast = DismissibleToast::default(ASKING_LOCAL_AGENT_MESSAGE.to_owned())
+                    .with_object_id(RUNNING_COMMAND_TOAST_ID.to_owned());
+                toast_stack.add_ephemeral_toast(toast, window_id, ctx);
+            } else {
+                let toast = DismissibleToast::default(STOP_RUNNING_COMMAND_MESSAGE.to_owned())
+                    .with_object_id(RUNNING_COMMAND_TOAST_ID.to_owned());
+                toast_stack.add_persistent_toast(toast, window_id, ctx);
+            }
+        });
+        // The subshell footer hides itself before "Use agent" gets here,
+        // expecting the agent input to take its place.
+        self.maybe_show_use_agent_footer_in_blocklist(ctx);
+        if !can_ask {
+            return;
+        }
+
+        let prompt = {
+            let model = self.model.lock();
+            let block = model.block_list().active_block();
+            let screen = if model.is_alt_screen_active() {
+                formatted_terminal_contents_for_input(model.alt_screen().grid_handler(), None, "")
+            } else {
+                formatted_terminal_contents_for_input(
+                    block.output_grid().grid_handler(),
+                    Some(RUNNING_COMMAND_SCREEN_ROWS),
+                    "",
+                )
+            };
+            running_command_help_prompt(&block.command_with_secrets_obfuscated(false), &screen)
+        };
+        // Runs exactly as a prompt submitted from the input would, on the
+        // harness, model and reasoning level picked for it.
+        let (harness, model_id, reasoning_level) = self
+            .ambient_agent_view_model()
+            .map(|view_model| {
+                let view_model = view_model.as_ref(ctx);
+                (
+                    view_model.selected_harness(),
+                    view_model.selected_harness_model_id().map(str::to_owned),
+                    view_model
+                        .selected_harness_reasoning_level()
+                        .map(str::to_owned),
+                )
+            })
+            .unwrap_or_else(|| selected_local_harness(ctx));
+        log::info!("fork: asking local harness {harness:?} about a running command");
+        self.handle_input_event(
+            &InputEvent::RunLocalClaudeQuery {
+                prompt,
+                harness,
+                model_id,
+                reasoning_level,
+            },
+            ctx,
         );
     }
 

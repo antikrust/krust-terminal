@@ -27813,21 +27813,31 @@ impl TypedActionView for TerminalView {
                     .active_block()
                     .is_eligible_to_tag_in_agent()
                 {
-                    if FeatureFlag::AgentView.is_enabled() {
-                        self.agent_view_controller.update(ctx, |controller, ctx| {
-                            if !controller.is_inline() {
-                                if let Err(e) = controller.try_enter_inline_agent_view(
-                                    None,
-                                    AgentViewEntryOrigin::LongRunningCommand,
-                                    ctx,
-                                ) {
-                                    report_error!(anyhow::Error::new(e)
-                                        .context("Failed to enter inline agent view for tag-in"));
+                    // A viewer's agent prompts go to the sharer, so a viewer
+                    // still tags in. Everywhere else the agent is a local
+                    // harness, which can't take over a running command.
+                    if self.model.lock().shared_session_status().is_viewer() {
+                        if FeatureFlag::AgentView.is_enabled() {
+                            self.agent_view_controller.update(ctx, |controller, ctx| {
+                                // Entering inline fails when any agent view,
+                                // inline or fullscreen, is already showing.
+                                if !controller.is_active() {
+                                    if let Err(e) = controller.try_enter_inline_agent_view(
+                                        None,
+                                        AgentViewEntryOrigin::LongRunningCommand,
+                                        ctx,
+                                    ) {
+                                        report_error!(anyhow::Error::new(e).context(
+                                            "Failed to enter inline agent view for tag-in"
+                                        ));
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
+                        self.tag_in_agent_for_user_long_running_command(ctx);
+                    } else {
+                        self.explain_running_command_with_local_agent(ctx);
                     }
-                    self.tag_in_agent_for_user_long_running_command(ctx);
                 } else {
                     self.input.update(ctx, |input, ctx| {
                         input.set_input_mode_agent(false, ctx);
