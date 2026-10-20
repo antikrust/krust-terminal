@@ -1263,6 +1263,11 @@ const CONDITION_SYSTEM_PROMPT: &str = "You decide whether one block of a runbook
 it only in the case it states just before the block. From what the step's commands have printed so far, does that \
 case hold? Reply YES or NO, then one short reason quoting the output that decides it.";
 
+const DONE_CHECK_SYSTEM_PROMPT: &str = "You check one decision about a runbook run. A step was judged to end the \
+whole run, as if the steps after it weren't needed. That is right only when the step's own text or output says \
+there is nothing more to do — for example, already up to date. Reply YES if the step's text or output says that, \
+NO if the step simply did its own work. Then give one short reason.";
+
 const REPORT_SYSTEM_PROMPT: &str = "You write the final report of a runbook run by filling in the runbook's own \
 reporting template from the run record. Under each step the record has what its commands printed: take what \
 conflicted, what was looked up and what was pushed from that output, not from the verdicts alone. Use only what \
@@ -1359,7 +1364,7 @@ fn judge_user_prompt(
     let unrun: Vec<usize> = offered_block_numbers(step)
         .into_iter()
         .filter(|number| {
-            !worker_run.ran_blocks.contains(number) && !worker_run.ruled_out.contains_key(number)
+            !worker_run.ran_blocks.contains(number) && ruled_out_now(worker_run, *number).is_none()
         })
         .collect();
     let unrun = match unrun.as_slice() {
@@ -1379,6 +1384,7 @@ fn judge_user_prompt(
     let ruled_out: String = worker_run
         .ruled_out
         .keys()
+        .filter(|number| ruled_out_now(worker_run, **number).is_some())
         .map(|number| {
             format!(
                 "\n\nChecked by the driver: block {number} was not run, as a check found the case it runs in \
@@ -1463,14 +1469,23 @@ struct WorkerRun {
     /// The step's blocks that ran, by number, so the judge can be told which
     /// never did.
     ran_blocks: BTreeSet<usize>,
-    /// Blocks a condition check ruled out, with why.
-    ruled_out: BTreeMap<usize, String>,
+    /// Blocks a condition check ruled out, with why and when.
+    ruled_out: BTreeMap<usize, RuledOut>,
     summary: String,
     usage: Option<TurnUsage>,
     cancelled: bool,
     /// The turn broke down (service unreachable, call limit) before the step
     /// could be judged.
     failure: Option<String>,
+}
+
+/// A block a condition check ruled out: the reply the worker got, and how
+/// many records the step had when it was checked — once more output comes
+/// in, the case may hold after all, and the block is checked again.
+#[derive(Debug, Clone, Default, PartialEq)]
+struct RuledOut {
+    why: String,
+    at_records: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1738,7 +1753,7 @@ pub(crate) async fn run_ollama_runbook(
         });
 
         let facts_before = facts.clone();
-        let worker_run = run_worker(
+        let mut worker_run = run_worker(
             &context,
             &runbook,
             step,
@@ -1789,6 +1804,46 @@ pub(crate) async fn run_ollama_runbook(
                     },
                 }
             }
+        };
+        // A pass with `# must print` checks never made is no pass: qwen3.5:4b
+        // skipped step B's "record the merge and push" block, and as judge
+        // passed the step on the checks it could see.
+        let verdict = if verdict.kind == VerdictKind::Pass {
+            let unmet = unmet_print_checks(&context, step, &mut worker_run, &mut on_event).await?;
+            if unmet.is_empty() {
+                verdict
+            } else {
+                Verdict {
+                    kind: VerdictKind::Stop,
+                    reason: format!(
+                        "The judge passed this step, but the driver found checks it states that were never made: {}.",
+                        unmet
+                            .iter()
+                            .map(|(number, checks)| format!(
+                                "block {number} did not run, and its case wasn't ruled out ({checks})"
+                            ))
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    ),
+                    facts: Facts::new(),
+                }
+            }
+        } else {
+            verdict
+        };
+        // "Done" ends the whole run: qwen3.5:4b, judging, called a finished
+        // step 1c done, and the runtime tag (step 3) was never chosen. With
+        // steps still to come, that is put to the judge again as a question.
+        let verdict = if verdict.kind == VerdictKind::Done
+            && index + 1 < runbook.steps.len()
+            && !run_really_ends(&context, &runbook, index, &worker_run, &mut on_event).await?
+        {
+            Verdict {
+                kind: VerdictKind::Pass,
+                ..verdict
+            }
+        } else {
+            verdict
         };
 
         let new_facts: Facts = verdict
@@ -1910,8 +1965,8 @@ async fn run_worker(
     ];
     let mut run = WorkerRun::default();
     let mut nudged = false;
-    // The blocks a worker was last told hadn't run, and how often it was.
-    let mut nudged_about: Option<BTreeSet<usize>> = None;
+    // The block a worker was last sent back to run, and how often it was.
+    let mut nudged_about: Option<usize> = None;
     let mut unrun_nudges = 0;
     // Calls that already succeeded this step, with what they returned: a
     // small model that has run every block sometimes starts over from block
@@ -1975,35 +2030,30 @@ async fn run_worker(
             }
             // One that comes with blocks still to run — after the last call
             // went through, so not a step stopping on a failure — is sent back
-            // too, each time that list changes, at most four times:
-            // llama3.1:8b ran block 1 of 2 and then reported what block 2
-            // "confirmed". A conditional block before one that ran was passed
-            // over on purpose and isn't raised again.
-            let decided = decided_blocks(&run);
-            let last_ran = decided.iter().max().copied().unwrap_or(0);
-            let unrun: Vec<(usize, &RunbookBlock)> = offered
-                .iter()
-                .copied()
-                .filter(|number| !decided.contains(number))
-                .filter_map(|number| Some((number, step.blocks.get(number - 1)?)))
-                .filter(|(number, block)| !block.is_conditional() || *number > last_ran)
-                .collect();
-            let unrun_numbers: BTreeSet<usize> = unrun.iter().map(|(number, _)| *number).collect();
+            // to run the next one, at most four times: llama3.1:8b ran block 1
+            // of 2 and then reported what block 2 "confirmed"; qwen3.5:4b
+            // decided step B's "Otherwise … push" didn't apply. Whether a
+            // block's case holds is put to the judge here, as a call to it
+            // would be, not left to the worker.
             let last_failed = run
                 .records
                 .last()
                 .is_some_and(|record| record.exit_code.is_some_and(|code| code != 0));
-            if !unrun.is_empty()
-                && !run.records.is_empty()
-                && !last_failed
-                && unrun_nudges < 4
-                && nudged_about.as_ref() != Some(&unrun_numbers)
-            {
-                unrun_nudges += 1;
-                nudged_about = Some(unrun_numbers);
-                messages.push(json!({ "role": "assistant", "content": response.content }));
-                messages.push(json!({ "role": "user", "content": unrun_blocks_nudge(&unrun) }));
-                continue;
+            if !run.records.is_empty() && !last_failed && unrun_nudges < 4 {
+                if let Some((number, checked)) =
+                    next_block_to_run(context, step, &mut run, on_event).await?
+                {
+                    if nudged_about != Some(number) {
+                        unrun_nudges += 1;
+                        nudged_about = Some(number);
+                        messages.push(json!({ "role": "assistant", "content": response.content }));
+                        messages.push(json!({
+                            "role": "user",
+                            "content": run_block_nudge(number, &step.blocks[number - 1], checked),
+                        }));
+                        continue;
+                    }
+                }
             }
             run.summary = response.content;
             return Ok(run);
@@ -2043,8 +2093,8 @@ async fn run_worker(
                      If the blocks this step needs have run, stop calling tools and reply with your summary."
                 )
             } else if let Some(why) = run_block_number(call)
-                .and_then(|number| run.ruled_out.get(&number))
-                .cloned()
+                .and_then(|number| ruled_out_now(&run, number))
+                .map(str::to_string)
             {
                 repeats += 1;
                 if repeats > 2 {
@@ -2070,22 +2120,10 @@ async fn run_worker(
                 }
                 None => None,
             } {
-                let lead_in = step
-                    .blocks
-                    .get(number - 1)
-                    .map(|block| truncate_chars(&block.lead_in, 200))
-                    .unwrap_or_default();
-                let (record, reply) = refusal(
-                    &format!("runbook-{}", Uuid::new_v4()),
-                    format!("block {number}"),
-                    format!(
-                        "Not run: block {number} runs only in the case the runbook states before it (\"{lead_in}\"), \
-                         and a check of what the step has printed says that case doesn't hold — {why}"
-                    ),
-                    on_event,
-                );
-                run.records.push(record);
-                run.ruled_out.insert(number, reply.clone());
+                let reply = match step.blocks.get(number - 1) {
+                    Some(block) => rule_out(&mut run, number, block, &why, on_event),
+                    None => why,
+                };
                 match next_blocks_hint(step, &decided_blocks(&run)) {
                     Some(next) => format!("{reply}\n\n{next}"),
                     None => format!(
@@ -2656,60 +2694,199 @@ fn same_script(code: &str, command: &str) -> bool {
     !pasted.is_empty() && pasted == lines(code)
 }
 
-/// Sent back to a worker that answers while blocks haven't run. Blocks the
-/// step runs in any case come first: run them. Once those have run, blocks
-/// it runs only in some case (the lead-in says if, otherwise, STOP …) are
-/// offered with what the runbook says before each, to choose from by what
-/// the output showed — not before, when that output isn't there yet.
-fn unrun_blocks_nudge(unrun: &[(usize, &RunbookBlock)]) -> String {
-    let quoted = |block: &RunbookBlock| {
-        if block.lead_in.is_empty() {
-            String::new()
-        } else {
-            format!(" (\"{}\")", truncate_chars(&block.lead_in, 200))
-        }
+/// Sent back to a worker that stopped with block `number` still to run:
+/// one the step runs in any case, or one whose case a check says holds.
+fn run_block_nudge(number: usize, block: &RunbookBlock, checked: bool) -> String {
+    let quoted = if block.lead_in.is_empty() {
+        String::new()
+    } else {
+        format!(" (\"{}\")", truncate_chars(&block.lead_in, 200))
     };
-    let any_case: Vec<&(usize, &RunbookBlock)> = unrun
-        .iter()
-        .filter(|(_, block)| !block.is_conditional())
-        .collect();
-    let ending =
-        "Then reply with your summary — or reply now, if the step says this doesn't apply here.";
-    match any_case.as_slice() {
-        [] => format!(
-            "{} only in some cases — {}. Run the one the output so far calls for, if any; then reply with \
-             your summary.",
-            if unrun.len() == 1 {
-                "The block left runs"
-            } else {
-                "The blocks left run"
-            },
-            unrun
-                .iter()
-                .map(|(number, block)| format!("block {number}{}", quoted(block)))
-                .collect::<Vec<_>>()
-                .join("; ")
-        ),
-        [(number, block)] => format!(
-            "Block {number} of this step has not run yet, and the step runs it in any case{}: run it with \
-             run_block ({{\"block\": {number}}}). {ending}",
-            quoted(block)
-        ),
-        [(first, _), ..] => format!(
-            "Blocks {} of this step have not run yet, and the step runs them in any case: run them in order \
-             with run_block, starting with {{\"block\": {first}}}. {ending}",
-            join_and(&any_case.iter().map(|(number, _)| *number).collect::<Vec<_>>())
-        ),
+    if checked {
+        format!(
+            "Block {number} of this step has not run yet, and a check of what the step has printed says the case \
+             it runs in holds{quoted}: run it with run_block ({{\"block\": {number}}}). Then reply with your summary."
+        )
+    } else {
+        format!(
+            "Block {number} of this step has not run yet, and the step runs it in any case{quoted}: run it with \
+             run_block ({{\"block\": {number}}}). Then reply with your summary — or reply now, if the step says \
+             this doesn't apply here."
+        )
     }
 }
 
-/// The blocks of a step that ran or that a condition check ruled out.
+/// Asks the judge, in a fresh conversation, whether step `index`'s text or
+/// output really says the rest of the run isn't needed. `true` too when no
+/// answer comes back: the verdict stands.
+async fn run_really_ends(
+    context: &RunContext<'_>,
+    runbook: &Runbook,
+    index: usize,
+    run: &WorkerRun,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<bool> {
+    let step = &runbook.steps[index];
+    let later = runbook.steps[index + 1..]
+        .iter()
+        .map(|step| format!("- {}", step.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let user = format!(
+        "The step — {}:\n\n{}\n\nWhat it ran, and the end of what each call printed:\n{}\n\nThe steps after it:\n{later}",
+        step.title,
+        truncate_chars(&step.body, 4_000),
+        printed_digest(&run.records)
+    );
+    let reply = ask_fresh(
+        context,
+        context.judge,
+        context.judge_thinks.then_some(true),
+        CONDITION_MAX_TOKENS,
+        DONE_CHECK_SYSTEM_PROMPT,
+        &user,
+        on_event,
+    )
+    .await?;
+    Ok(!reply.is_some_and(|reply| answers_no(&reply)))
+}
+
+/// The blocks of a step that ran or that a condition check ruled out (and
+/// no output has come in since).
 fn decided_blocks(run: &WorkerRun) -> BTreeSet<usize> {
     run.ran_blocks
         .iter()
-        .chain(run.ruled_out.keys())
         .copied()
+        .chain(
+            run.ruled_out
+                .keys()
+                .copied()
+                .filter(|number| ruled_out_now(run, *number).is_some()),
+        )
         .collect()
+}
+
+/// Why block `number` was ruled out, while that still stands: nothing but
+/// the ruling has been recorded since the check.
+fn ruled_out_now(run: &WorkerRun, number: usize) -> Option<&str> {
+    run.ruled_out
+        .get(&number)
+        .filter(|ruled| run.records.len() <= ruled.at_records + 1)
+        .map(|ruled| ruled.why.as_str())
+}
+
+/// Records that a check ruled block `number` out — a card, and a record the
+/// judge reads — and returns what the worker is told.
+fn rule_out(
+    run: &mut WorkerRun,
+    number: usize,
+    block: &RunbookBlock,
+    why: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> String {
+    let (record, reply) = refusal(
+        &format!("runbook-{}", Uuid::new_v4()),
+        format!("block {number}"),
+        format!(
+            "Not run: block {number} runs only in the case the runbook states before it (\"{}\"), and a check of \
+             what the step has printed says that case doesn't hold — {why}",
+            truncate_chars(&block.lead_in, 200)
+        ),
+        on_event,
+    );
+    run.ruled_out.insert(
+        number,
+        RuledOut {
+            why: reply.clone(),
+            at_records: run.records.len(),
+        },
+    );
+    run.records.push(record);
+    reply
+}
+
+/// The block a worker that stopped should run next, if any: one it skipped
+/// that the step runs in any case; else the first after the last that ran
+/// that runs in any case, or whose case — put to the judge — holds. Blocks
+/// whose case doesn't hold are ruled out on the way. With it, whether a
+/// check said so.
+async fn next_block_to_run(
+    context: &RunContext<'_>,
+    step: &RunbookStep,
+    run: &mut WorkerRun,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Option<(usize, bool)>> {
+    let last_ran = run.ran_blocks.iter().max().copied().unwrap_or(0);
+    let offered = offered_block_numbers(step);
+    let skipped = offered.iter().copied().find(|number| {
+        *number < last_ran
+            && !run.ran_blocks.contains(number)
+            && step
+                .blocks
+                .get(number - 1)
+                .is_some_and(|block| !block.is_conditional())
+    });
+    if let Some(number) = skipped {
+        return Ok(Some((number, false)));
+    }
+    for number in offered.into_iter().filter(|number| *number > last_ran) {
+        if ruled_out_now(run, number).is_some() {
+            continue;
+        }
+        let Some(block) = step.blocks.get(number - 1) else {
+            continue;
+        };
+        if !block.has_condition() {
+            return Ok(Some((number, false)));
+        }
+        match condition_fails(context, step, number, block, &run.records, on_event).await? {
+            Some(why) => {
+                rule_out(run, number, block, &why, on_event);
+            }
+            None => return Ok(Some((number, true))),
+        }
+    }
+    Ok(None)
+}
+
+/// Blocks with `# must print` checks that neither ran nor were ruled out —
+/// their case put to the judge now, if it wasn't — by number, with the
+/// checks. A step with any can't pass: those checks are the runbook's own
+/// measure of it.
+async fn unmet_print_checks(
+    context: &RunContext<'_>,
+    step: &RunbookStep,
+    run: &mut WorkerRun,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Vec<(usize, String)>> {
+    let mut unmet = Vec::new();
+    for number in offered_block_numbers(step) {
+        let Some(block) = step.blocks.get(number - 1) else {
+            continue;
+        };
+        let checks = print_checks(&block.code);
+        if checks.is_empty()
+            || run.ran_blocks.contains(&number)
+            || ruled_out_now(run, number).is_some()
+        {
+            continue;
+        }
+        if block.has_condition() {
+            if let Some(why) =
+                condition_fails(context, step, number, block, &run.records, on_event).await?
+            {
+                rule_out(run, number, block, &why, on_event);
+                continue;
+            }
+        }
+        let checks = checks
+            .iter()
+            .map(|check| format!("\"{}\" must print {}", check.label, check.expected))
+            .collect::<Vec<_>>()
+            .join("; ");
+        unmet.push((number, checks));
+    }
+    Ok(unmet)
 }
 
 /// Asks the judge, in a fresh conversation, whether the case a block runs in

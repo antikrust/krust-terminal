@@ -554,24 +554,43 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     let other = tool_call("shell", serde_json::json!({ "command": "echo one" }));
     assert_eq!(normalize_call(&other, step).name, "shell");
 
-    // The nudge: block 2 first, which runs in any case; then blocks 3 and 4
-    // to choose between, once block 2's output is there to choose by.
-    let unrun: Vec<(usize, &RunbookBlock)> = (2..=4).map(|n| (n, &step.blocks[n - 1])).collect();
+    // A worker that stops with blocks unrun is sent back to run the next one:
+    // one the step runs in any case, or one a check of its case approved.
     assert_eq!(
-        unrun_blocks_nudge(&unrun),
+        run_block_nudge(2, &step.blocks[1], false),
         "Block 2 of this step has not run yet, and the step runs it in any case (\"Then check the \
          difference:\"): run it with run_block ({\"block\": 2}). Then reply with your summary — or reply \
          now, if the step says this doesn't apply here."
     );
-    let nudge = unrun_blocks_nudge(&unrun[1..]);
-    assert!(
-        nudge.starts_with(
-            "The blocks left run only in some cases — block 3 (\"A count in the hundreds"
-        ),
-        "{nudge}"
+    assert!(run_block_nudge(4, &step.blocks[3], true).starts_with(
+        "Block 4 of this step has not run yet, and a check of what the step has printed says the case it runs \
+         in holds (\"Otherwise record it and push:\")"
+    ));
+
+    // A ruling stands until more output comes in.
+    let mut run = WorkerRun::default();
+    run.records.push(CallRecord {
+        label: "block 1".to_string(),
+        exit_code: Some(0),
+        output: String::new(),
+    });
+    run.ran_blocks.insert(1);
+    rule_out(
+        &mut run,
+        3,
+        &step.blocks[2],
+        "NO — the count is 37",
+        &mut |_| {},
     );
-    assert!(nudge.contains("block 4 (\"Otherwise record it and push:\")"));
-    assert!(nudge.contains("Run the one the output so far calls for, if any"));
+    assert!(ruled_out_now(&run, 3).unwrap().contains("the count is 37"));
+    assert_eq!(decided_blocks(&run), BTreeSet::from([1, 3]));
+    run.records.push(CallRecord {
+        label: "block 4".to_string(),
+        exit_code: Some(0),
+        output: String::new(),
+    });
+    assert_eq!(ruled_out_now(&run, 3), None);
+    assert_eq!(decided_blocks(&run), BTreeSet::from([1]));
 
     // After each call the worker is told where the step stands.
     assert_eq!(
