@@ -76,8 +76,8 @@ pub enum OllamaPageAction {
     CycleModelMode {
         tag: String,
     },
-    /// Select this model as the local harness and open a fresh terminal tab
-    /// to use it.
+    /// Select this model as the local harness and open a new agent tab to
+    /// use it.
     OpenTerminalWithModel {
         tag: String,
     },
@@ -383,8 +383,8 @@ impl OllamaPageView {
         ctx.notify();
     }
 
-    /// Selects `tag` as the local harness model and opens a fresh terminal tab
-    /// to use it — the quick path from "this model is installed" to chatting
+    /// Selects `tag` as the local harness model and opens a new agent tab to
+    /// use it — the quick path from "this model is installed" to chatting
     /// with it, without going through the harness model picker.
     fn open_terminal_with_model(&mut self, tag: String, ctx: &mut ViewContext<Self>) {
         let model_id = format!("{OLLAMA_MODEL_ID_PREFIX}{tag}");
@@ -405,11 +405,12 @@ impl OllamaPageView {
         HarnessAvailabilityModel::handle(ctx).update(ctx, |availability, ctx| {
             availability.refresh_ollama_models(ctx)
         });
-        // Open a new tab in the active window; it reads the selection above
-        // when its local harness initializes.
+        // Open a new tab straight into the agent view, in the active window;
+        // it reads the selection above when its local harness initializes. A
+        // plain terminal tab left the model selected but nowhere to use it.
         let active_window = WindowManager::handle(ctx).as_ref(ctx).active_window();
         if let Some(window_id) = active_window {
-            ctx.dispatch_custom_action(CustomAction::NewTab, window_id);
+            ctx.dispatch_custom_action(CustomAction::NewAgentTab, window_id);
         }
     }
 
