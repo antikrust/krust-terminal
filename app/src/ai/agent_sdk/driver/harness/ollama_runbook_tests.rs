@@ -505,6 +505,25 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     assert!(!step.blocks[1].is_conditional());
     assert!(step.blocks[2].is_conditional());
     assert!(step.blocks[3].is_conditional());
+    // Blocks whose lead-in opens with the case they run in are run only when
+    // a check says the case holds.
+    assert!(!step.blocks[0].has_condition());
+    assert!(!step.blocks[1].has_condition());
+    assert!(step.blocks[2].has_condition());
+    assert!(step.blocks[3].has_condition());
+    assert!(answers_no("NO — the pass left nothing for you"));
+    assert!(!answers_no("Yes: the count is 37, not in the hundreds"));
+    assert!(!answers_no("The case holds."));
+    // Only the block the runbook stops after says STOP as an order.
+    assert!(step.blocks[2].says_stop());
+    assert!(!step.blocks[3].says_stop());
+    let mention = RunbookBlock {
+        lang: "resolve".to_string(),
+        code: String::new(),
+        lead_in: "Then work through what is left; the table's STOP rows are never touched."
+            .to_string(),
+    };
+    assert!(!mention.says_stop());
 
     // No number: not guessed at — the next block could be the `git tag -d`.
     let bare = tool_call("run_block", serde_json::json!({}));
@@ -567,8 +586,8 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
         "{choice}"
     );
     assert!(choice.ends_with(
-        "block 4, only in some cases (\"Otherwise record it and push:\"). Run whichever the output so far \
-         calls for, in order."
+        "block 4, only in some cases (\"Otherwise record it and push:\"). Each of these runs only if what it \
+         says holds for the output so far: run those it holds for, and skip the rest."
     ));
     assert_eq!(next_blocks_hint(step, &BTreeSet::from([1, 2, 4])), None);
 

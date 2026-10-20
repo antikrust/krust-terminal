@@ -462,7 +462,9 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
 /// of it, and WORK_NOTES_EXPECT_LINE the line the answer must name.
 /// Optionally WORK_NOTES_EXPECT_WORDS (comma-separated; the answer must say
 /// one), WORK_NOTES_TITLE, WORK_NOTES_DIR (where the notes are kept, one
-/// folder per model; a temporary one otherwise) and WORK_NOTES_LIVE_MODEL.
+/// folder per model; a temporary one otherwise), WORK_NOTES_PART_CHARS (the
+/// most text one reading call sees, for trying other sizes) and
+/// WORK_NOTES_LIVE_MODEL.
 /// Each reply is printed as it comes, then how the pass went.
 #[test]
 #[ignore = "hits the live local Ollama service; set WORK_NOTES_FILE to use it"]
@@ -502,7 +504,11 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
     let think = block_on(probe_model_caps_checked(&model, &path))
         .is_some_and(|caps| caps.thinking)
         .then_some(false);
-    let mut notes = WorkNotes::new(&title, &question, &text, &dir);
+    let part_chars = env("WORK_NOTES_PART_CHARS")
+        .and_then(|chars| chars.parse().ok())
+        .unwrap_or(PART_CHARS);
+    let mut notes =
+        WorkNotes::with_limits(&title, &question, &text, &dir, part_chars, REDUCE_CHARS);
     let started = Instant::now();
     eprintln!(
         "{} lines in {} parts, read by {model}; notes in {}",
@@ -511,7 +517,7 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
         notes.notes_path().display()
     );
     if let Some(other) = env("WORK_NOTES_REUSE").map(PathBuf::from) {
-        let carried = carry_over_notes(&mut notes, &other);
+        let carried = carry_over_notes(&mut notes, &other, part_chars);
         eprintln!(
             "{carried} of {} parts are the same in {}: their notes are carried over, not read again",
             notes.part_count(),
@@ -588,7 +594,7 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
 /// whose text is the same there got its note from the same prompt at
 /// temperature 0, so that note is taken instead of reading the part again.
 /// Returns how many were carried over.
-fn carry_over_notes(notes: &mut WorkNotes, other: &Path) -> usize {
+fn carry_over_notes(notes: &mut WorkNotes, other: &Path, part_chars: usize) -> usize {
     let Ok(entries) = std::fs::read_dir(other) else {
         return 0;
     };
@@ -607,10 +613,10 @@ fn carry_over_notes(notes: &mut WorkNotes, other: &Path) -> usize {
             continue;
         };
         // The same question and part size, or the notes answer something else.
-        if saved.key != notes_key(&notes.question, &text, PART_CHARS) {
+        if saved.key != notes_key(&notes.question, &text, part_chars) {
             continue;
         }
-        let parts = split_into_parts(&text, PART_CHARS);
+        let parts = split_into_parts(&text, part_chars);
         for (index, part) in notes.parts.iter().enumerate() {
             if notes.saved.notes[index].is_some() {
                 continue;
