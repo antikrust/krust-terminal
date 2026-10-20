@@ -207,6 +207,20 @@ fn a_finding_the_lines_dont_bear_out_is_dropped() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// bonsai-2:27b's finding on the Blunt file: the label's line, then why,
+/// citing the line the misspelled name is defined on. One finding, not two.
+#[test]
+fn a_finding_goes_on_until_the_next_line_that_opens_with_a_label() {
+    let reply = "[L6197] state.biasDcX = shaepd;\nThis line assigns a variable named `shaepd`, a misspelling of \
+                 `shaped` (defined on L6170).\n- [L6201] another\n1. [L6203] and one more\nL6210| a fifth";
+    let findings = findings_in(reply);
+    assert_eq!(findings.len(), 4, "{findings:?}");
+    assert!(findings[0].ends_with("(defined on L6170)."));
+    assert!(starts_with_label("**[L12]** typo"));
+    assert!(!starts_with_label("This line (L12) has a typo"));
+    assert!(!starts_with_label("6197 is the line"));
+}
+
 /// llama3.1:8b's answer on the Blunt file named a line "missing a
 /// semicolon" that has one. Checked against the text, a claim like that is
 /// dropped with the notes behind it, and the question answered again.

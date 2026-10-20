@@ -1148,13 +1148,13 @@ fn excerpt_range(first: usize, last: usize, total_lines: usize) -> (usize, usize
     (from, to)
 }
 
-/// A note's findings: each line that cites the text starts one; lines that
-/// don't belong to the finding before them.
+/// A note's findings: each line that opens with a label starts one; the
+/// lines after it, whatever they cite, belong to it.
 fn findings_in(note: &str) -> Vec<String> {
     let mut findings: Vec<String> = Vec::new();
     for line in note.lines().filter(|line| !line.trim().is_empty()) {
         match findings.last_mut() {
-            Some(finding) if cited_lines(line).is_empty() => {
+            Some(finding) if !starts_with_label(line) => {
                 finding.push('\n');
                 finding.push_str(line);
             }
@@ -1162,6 +1162,23 @@ fn findings_in(note: &str) -> Vec<String> {
         }
     }
     findings
+}
+
+/// Whether a line opens with a label, past a list marker: `[L612] …`,
+/// `L612| …`, `- [L120-L134] …`, `1. [L8] …`. Only such a line starts a
+/// finding: bonsai-2:27b wrote the right one over two lines, the second
+/// naming the line the misspelled name is defined on, and cut at every line
+/// that cited something it became two findings that each failed its check.
+fn starts_with_label(line: &str) -> bool {
+    let rest = line
+        .trim_start()
+        .trim_start_matches(['-', '*', '•', '>', ' ', '`']);
+    let rest = match rest.find(|c: char| !c.is_ascii_digit()) {
+        Some(at) if at > 0 && rest[at..].starts_with(['.', ')']) => rest[at + 1..].trim_start(),
+        _ => rest,
+    };
+    let rest = rest.trim_start_matches(['[', '(', '*', '`']);
+    rest.starts_with('L') && rest[1..].starts_with(|c: char| c.is_ascii_digit())
 }
 
 /// Whether a finding check's reply says no: its first YES or NO decides.
