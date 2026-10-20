@@ -209,11 +209,11 @@ fn a_finding_the_lines_dont_bear_out_is_dropped() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// bonsai-2:27b's finding on the Blunt file: the label's line, then why,
+/// bonsai-2:27b's finding on a 10,117-line source file: the label's line, then why,
 /// citing the line the misspelled name is defined on. One finding, not two.
 #[test]
 fn a_finding_goes_on_until_the_next_line_that_opens_with_a_label() {
-    let reply = "[L6197] state.biasDcX = shaepd;\nThis line assigns a variable named `shaepd`, a misspelling of \
+    let reply = "[L6197] state.lastDc = shaepd;\nThis line assigns a variable named `shaepd`, a misspelling of \
                  `shaped` (defined on L6170).\n- [L6201] another\n1. [L6203] and one more\nL6210| a fifth\n\
                  Line 6220: a sixth\nlines 6230–6231: a seventh";
     let findings = findings_in(reply);
@@ -225,7 +225,7 @@ fn a_finding_goes_on_until_the_next_line_that_opens_with_a_label() {
     assert!(!starts_with_label("6197 is the line"));
 }
 
-/// llama3.1:8b's answer on the Blunt file named a line "missing a
+/// llama3.1:8b's answer on a 10,117-line source file named a line "missing a
 /// semicolon" that has one. Checked against the text, a claim like that is
 /// dropped with the notes behind it, and the question answered again.
 #[test]
@@ -784,13 +784,13 @@ fn a_citation_one_line_off_is_moved_to_the_line_it_means() {
 #[test]
 fn a_quoted_token_on_one_line_of_the_part_is_cited() {
     let lines = numbered_lines(&[
-        (6172, "    float u = dryIn * drv;"),
+        (6172, "    float u = input * drive;"),
         (
             6174,
-            "    const double F = au + std::log1p(std::exp(-2.0 * au));",
+            "    const double gain = base + std::exp(-2.0 * base);",
         ),
-        (6196, "    x = shaped - state.biasDcX;"),
-        (6197, "    state.biasDcX = shaepd;"),
+        (6196, "    x = shaped - state.lastDc;"),
+        (6197, "    state.lastDc = shaepd;"),
     ]);
     assert_eq!(
         cite_quoted_lines(
