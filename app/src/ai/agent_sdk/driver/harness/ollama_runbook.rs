@@ -2676,6 +2676,9 @@ async fn read_output_in_parts(
         step.title
     );
     let mut notes = WorkNotes::new(label, &question, output, &context.work_dir.join("notes"));
+    // A helper that answers nothing at all ends the pass; the output then
+    // goes to the worker clipped, as it would without one.
+    let mut failures_in_a_row = 0;
     while let Some(next) = notes.next_call() {
         if context.cancelled() {
             break;
@@ -2693,6 +2696,21 @@ async fn read_output_in_parts(
         .await
         .ok()
         .flatten();
+        if reply.is_some() {
+            failures_in_a_row = 0;
+        } else {
+            failures_in_a_row += 1;
+            if failures_in_a_row >= 3 {
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "_The helper `{}` answered nothing three times running, so this output is shown clipped \
+                         instead of read in parts._",
+                        context.helper
+                    ),
+                });
+                return clip_output(output);
+            }
+        }
         notes.accept(reply.as_deref());
     }
     match notes.answer() {

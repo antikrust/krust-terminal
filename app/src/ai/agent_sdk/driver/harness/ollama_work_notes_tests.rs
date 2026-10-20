@@ -468,8 +468,9 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
             &dir,
             &path,
         ))
-        .unwrap();
-        notes.accept(reply.as_deref());
+        .unwrap()
+        .unwrap_or_else(|error| panic!("{}: {error}", next.label));
+        notes.accept(Some(&reply));
     }
     let answer = notes.answer().unwrap().to_string();
     let file = std::fs::read_to_string(notes.notes_path()).unwrap();
@@ -551,6 +552,7 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
             other.display()
         );
     }
+    let mut failures_in_a_row = 0;
     while let Some(next) = notes.next_call() {
         let reply = block_on(ask_fresh(
             &model,
@@ -566,9 +568,25 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
             "[{:>5}s] {}: {}",
             started.elapsed().as_secs(),
             next.label,
-            reply.as_deref().map_or("(no reply)".to_string(), one_line)
+            match &reply {
+                Ok(reply) => one_line(reply),
+                Err(error) => format!("(no reply: {error})"),
+            }
         );
-        notes.accept(reply.as_deref());
+        match reply {
+            Ok(reply) => {
+                failures_in_a_row = 0;
+                notes.accept(Some(&reply));
+            }
+            Err(error) => {
+                failures_in_a_row += 1;
+                assert!(
+                    failures_in_a_row < 3,
+                    "the model answered nothing three times running: {error}"
+                );
+                notes.accept(None);
+            }
+        }
     }
 
     let answer = notes.answer().unwrap().to_string();

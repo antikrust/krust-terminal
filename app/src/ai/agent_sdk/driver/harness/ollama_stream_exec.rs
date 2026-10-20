@@ -18,13 +18,13 @@ use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
 use async_trait::async_trait;
 use command::r#async::Command;
 use futures::io::{AsyncRead, AsyncReadExt};
+use krustui::r#async::Timer;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
-use krustui::r#async::Timer;
 
 use super::claude_stream_exec::{
-    harness_cancel_for, register_harness_session, finish_harness_session, run_jsonl_stream,
+    finish_harness_session, harness_cancel_for, register_harness_session, run_jsonl_stream,
     run_jsonl_stream_cancellable, HarnessCancel,
 };
 use super::ollama_committee_proof::{lost_ground, probe_source};
@@ -1925,6 +1925,25 @@ async fn run_ollama_chat_with_tools(
     unreachable!("the bounded tool-call loop always returns")
 }
 
+/// Model calls failing one after another that end a reading pass.
+const FAILURES_THAT_END_A_PASS: usize = 3;
+
+/// The head and tail of a text too long to show whole.
+fn clip_text(text: &str) -> String {
+    const HEAD: usize = 1_200;
+    const TAIL: usize = 1_200;
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= HEAD + TAIL {
+        return text.to_string();
+    }
+    format!(
+        "{}\n… [{} characters omitted] …\n{}",
+        chars[..HEAD].iter().collect::<String>(),
+        chars.len() - HEAD - TAIL,
+        chars[chars.len() - TAIL..].iter().collect::<String>()
+    )
+}
+
 /// Reads a tool result too long for the model in parts, against the user's
 /// request, and returns what the model reads in its place: the answer, with
 /// where the full output and the part-by-part notes are saved.
@@ -1960,6 +1979,11 @@ async fn read_in_parts(
             "parts": notes.part_count(),
         }),
     });
+    // A part that can't be read is noted and the pass goes on; a model that
+    // answers nothing at all (not installed, the service down) ends it,
+    // with why, rather than noting every part unreadable and "answering"
+    // from that.
+    let mut failures_in_a_row = 0;
     while let Some(next) = notes.next_call() {
         if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
             break;
@@ -1974,7 +1998,27 @@ async fn read_in_parts(
             path,
         )
         .await?;
-        notes.accept(reply.as_deref());
+        match reply {
+            Ok(reply) => {
+                failures_in_a_row = 0;
+                notes.accept(Some(&reply));
+            }
+            Err(error) => {
+                failures_in_a_row += 1;
+                if failures_in_a_row >= FAILURES_THAT_END_A_PASS {
+                    on_event(TurnEvent::ToolCallResult {
+                        call_id,
+                        outcome: ToolCallOutcome::Error(error.clone()),
+                    });
+                    return Ok(format!(
+                        "Could not read this {}-line output in parts: {error}. Its first and last lines:\n{}",
+                        notes.total_lines(),
+                        clip_text(text)
+                    ));
+                }
+                notes.accept(None);
+            }
+        }
     }
     let Some(answer) = notes.answer() else {
         on_event(TurnEvent::ToolCallResult {
@@ -2014,7 +2058,7 @@ pub(crate) async fn ask_fresh(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
-) -> std::io::Result<Option<String>> {
+) -> std::io::Result<Result<String, String>> {
     let mut request = json!({
         "model": wire_name(model),
         "messages": [
@@ -2044,12 +2088,15 @@ pub(crate) async fn ask_fresh(
     )
     .await?;
     if !status.success() {
-        return Ok(None);
+        return Ok(Err(format!(
+            "could not reach Ollama for `{model}` at {}",
+            base_url_of(model)
+        )));
     }
     Ok(accumulator
         .lock()
-        .ok()
-        .and_then(|accumulator| accumulator.clone().finish(model).ok())
+        .map_err(|_| "Ollama response state became unavailable".to_string())
+        .and_then(|accumulator| accumulator.clone().finish(model))
         .map(|response| response.content))
 }
 
