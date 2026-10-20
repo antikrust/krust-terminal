@@ -58,6 +58,7 @@ use crate::ai::blocklist::history_model::{BlocklistAIHistoryEvent, BlocklistAIHi
 use crate::ai::blocklist::prompt::prompt_alert::{PromptAlertEvent, PromptAlertView};
 use crate::ai::blocklist::usage::icon_for_context_window_usage;
 use crate::ai::blocklist::BlocklistAIInputModel;
+use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 use crate::ai::AIRequestUsageModel;
@@ -791,6 +792,14 @@ impl AgentInputFooter {
                 button.set_active(is_on, ctx);
                 button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
             });
+        });
+        // Whether the button shows depends on the local model selection and
+        // on which models are installed; redraw when either changes.
+        ctx.subscribe_to_model(&CloudAgentSettings::handle(ctx), |_, _, _, ctx| {
+            ctx.notify();
+        });
+        ctx.subscribe_to_model(&HarnessAvailabilityModel::handle(ctx), |_, _, _, ctx| {
+            ctx.notify();
         });
 
         ctx.subscribe_to_view(
@@ -1755,14 +1764,20 @@ impl AgentInputFooter {
     }
 
     /// Whether a single Ollama model (not the committee) is selected — the
-    /// only kind of model runbook mode drives.
+    /// only kind of model runbook mode drives. Read the way prompt submission
+    /// reads it: the agent view model's pick when there is one, else the
+    /// persisted local selection, which is what a local agent tab runs.
     fn single_ollama_model_is_selected(&self, app: &AppContext) -> bool {
-        self.ambient_agent_view_model
-            .as_ref()
-            .and_then(|model| model.as_ref(app).selected_harness_model_id())
-            .is_some_and(|id| {
-                id.starts_with(OLLAMA_MODEL_ID_PREFIX) && id != OLLAMA_COMMITTEE_MODEL_ID
-            })
+        let model_id = match self.ambient_agent_view_model.as_ref() {
+            Some(model) => model
+                .as_ref(app)
+                .selected_harness_model_id()
+                .map(str::to_owned),
+            None => crate::ai::harness_availability::selected_local_harness(app).1,
+        };
+        model_id.is_some_and(|id| {
+            id.starts_with(OLLAMA_MODEL_ID_PREFIX) && id != OLLAMA_COMMITTEE_MODEL_ID
+        })
     }
 
     pub fn has_open_chip_menu(&self, app: &AppContext) -> bool {
