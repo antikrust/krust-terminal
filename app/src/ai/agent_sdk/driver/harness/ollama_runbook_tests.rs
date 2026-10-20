@@ -567,13 +567,9 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
          in holds (\"Otherwise record it and push:\")"
     ));
 
-    // A ruling stands until more output comes in.
+    // A ruling stands while the blocks before it stay as they were: one
+    // after it running changes nothing, one before it running reopens it.
     let mut run = WorkerRun::default();
-    run.records.push(CallRecord {
-        label: "block 1".to_string(),
-        exit_code: Some(0),
-        output: String::new(),
-    });
     run.ran_blocks.insert(1);
     rule_out(
         &mut run,
@@ -584,13 +580,14 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     );
     assert!(ruled_out_now(&run, 3).unwrap().contains("the count is 37"));
     assert_eq!(decided_blocks(&run), BTreeSet::from([1, 3]));
-    run.records.push(CallRecord {
-        label: "block 4".to_string(),
-        exit_code: Some(0),
-        output: String::new(),
-    });
+    run.ran_blocks.insert(4);
+    assert!(ruled_out_now(&run, 3).is_some());
+    run.ran_blocks.insert(2);
     assert_eq!(ruled_out_now(&run, 3), None);
-    assert_eq!(decided_blocks(&run), BTreeSet::from([1]));
+    assert_eq!(decided_blocks(&run), BTreeSet::from([1, 2, 4]));
+    assert_eq!(yes_or_no("YES, it holds"), Some(true));
+    assert_eq!(yes_or_no("No."), Some(false));
+    assert_eq!(yes_or_no("It is unclear."), None);
 
     // After each call the worker is told where the step stands.
     assert_eq!(
@@ -617,6 +614,40 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
         serde_json::json!(3),
     ] {
         assert_eq!(loose_block_number(&arguments), Some(3));
+    }
+}
+
+/// The worker's own shell is for looking; changes come from the blocks.
+#[test]
+fn the_free_shell_may_look_but_not_change_anything() {
+    for looking in [
+        "git status --short",
+        "git log --oneline -3 main",
+        "git diff --name-only --diff-filter=U",
+        "git branch -a --contains firefox-153.0.4 2>&1 || echo none",
+        "git tag -l 'firefox-*'",
+        "git -C ../remote.git log --oneline -1 main",
+        "git config --get user.name",
+        "git apply --check -R .github/patches/upstream/a.patch",
+        "git fetch --no-tags origin 2>&1 | tail -5",
+        "cat browser/config/version.txt",
+        "sed -n 1,5p AGENTS.md",
+        "ls 2>/dev/null",
+    ] {
+        assert_eq!(changes_something(looking), None, "{looking}");
+    }
+    for changing in [
+        "git checkout -b temp-branch firefox-153.0.4 && git merge --no-edit temp-branch",
+        "git commit --no-edit",
+        "git branch temp",
+        "git tag firefox-1",
+        "git reset --hard HEAD~1",
+        "git apply fix.patch",
+        "echo hi > notes.txt",
+        "sed -i s/a/b/ AGENTS.md",
+        "rm -f merge.log",
+    ] {
+        assert!(changes_something(changing).is_some(), "{changing}");
     }
 }
 

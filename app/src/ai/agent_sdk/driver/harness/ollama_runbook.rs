@@ -75,7 +75,7 @@ const JUDGE_MAX_TOKENS: u32 = 8_192;
 const ANALYST_MAX_TOKENS: u32 = 6_144;
 const REPORT_MAX_TOKENS: u32 = 4_096;
 pub(crate) const SHORT_REPLY_MAX_TOKENS: u32 = 1_024;
-/// The output cap of a condition check (see `condition_fails`), room for a
+/// The output cap of a condition check (see `check_case`), room for a
 /// thinking judge to think.
 const CONDITION_MAX_TOKENS: u32 = 4_096;
 /// Judges tried, in order, when none is chosen: reasoning models that fit
@@ -1052,6 +1052,124 @@ pub(crate) fn escapes_root(script: &str, root: &Path) -> Option<String> {
     None
 }
 
+/// What a free shell command would change, if it changes anything: the
+/// worker's shell is for looking, and changes are made by the step's own
+/// blocks. qwen3.5:4b, after a merge failed, made a branch from pristine
+/// Firefox, "merged" it into itself and committed there, and the step's
+/// "main now ships: 153.0.4" printed from the wrong branch.
+pub(crate) fn changes_something(script: &str) -> Option<String> {
+    for command in simple_commands(script) {
+        let words: Vec<String> = command.split_whitespace().map(unquote).collect();
+        // Redirection into a file (`> out`, `2>log`, `>>x`); `2>&1` and
+        // `/dev/null` write nothing.
+        for (index, word) in words.iter().enumerate() {
+            let Some(at) = word.find('>') else {
+                continue;
+            };
+            let after = word[at..].trim_start_matches('>');
+            let target = if after.is_empty() {
+                words.get(index + 1).map(String::as_str).unwrap_or_default()
+            } else {
+                after
+            };
+            if !target.starts_with('&') && target != "/dev/null" {
+                return Some(format!("`{command}` writes to a file"));
+            }
+        }
+        let Some(program) = words.first().map(String::as_str) else {
+            continue;
+        };
+        let args: Vec<&str> = words.iter().skip(1).map(String::as_str).collect();
+        let changes = match program {
+            "rm" | "rmdir" | "mv" | "cp" | "mkdir" | "touch" | "chmod" | "chown" | "ln" | "tee"
+            | "truncate" | "dd" | "install" | "patch" => true,
+            "sed" | "perl" => args.iter().any(|arg| arg.starts_with("-i")),
+            "git" => git_changes_something(&args),
+            _ => false,
+        };
+        if changes {
+            return Some(format!("`{command}` changes the repository or its files"));
+        }
+    }
+    None
+}
+
+/// Whether a git command (its arguments after `git`) changes refs, the index
+/// or the working tree.
+fn git_changes_something(args: &[&str]) -> bool {
+    // Past global options like `-C dir` or `--no-pager`.
+    let mut rest = args;
+    while let Some((first, tail)) = rest.split_first() {
+        match *first {
+            "-C" | "-c" => rest = tail.get(1..).unwrap_or_default(),
+            option if option.starts_with('-') => rest = tail,
+            _ => break,
+        }
+    }
+    let Some((subcommand, options)) = rest.split_first() else {
+        return false;
+    };
+    let has = |names: &[&str]| options.iter().any(|option| names.contains(option));
+    let named = options.iter().any(|option| !option.starts_with('-'));
+    match *subcommand {
+        "checkout" | "switch" | "merge" | "commit" | "reset" | "revert" | "rebase"
+        | "cherry-pick" | "push" | "pull" | "stash" | "am" | "rm" | "mv" | "clean" | "restore"
+        | "add" | "update-ref" | "gc" | "prune" | "replace" | "filter-branch" | "notes"
+        | "symbolic-ref" | "read-tree" | "update-index" | "commit-tree" | "write-tree" => {
+            !(*subcommand == "stash" && has(&["list", "show"]))
+        }
+        "apply" => !has(&["--check", "--stat", "--numstat", "--summary"]),
+        "branch" => {
+            has(&[
+                "-d",
+                "-D",
+                "-m",
+                "-M",
+                "-c",
+                "-C",
+                "-f",
+                "-u",
+                "--delete",
+                "--move",
+                "--copy",
+                "--force",
+                "--set-upstream-to",
+                "--unset-upstream",
+                "--edit-description",
+            ]) || (named
+                && !has(&[
+                    "-l",
+                    "--list",
+                    "--contains",
+                    "--merged",
+                    "--no-merged",
+                    "--points-at",
+                ]))
+        }
+        "tag" => {
+            has(&["-d", "--delete", "-f", "--force", "-a", "-s", "-m"])
+                || (named
+                    && !has(&[
+                        "-l",
+                        "--list",
+                        "--contains",
+                        "--points-at",
+                        "--merged",
+                        "-n",
+                    ]))
+        }
+        "config" => !has(&["--get", "--get-all", "--get-regexp", "--list", "-l"]),
+        "remote" => options.first().is_some_and(|action| {
+            matches!(
+                *action,
+                "add" | "remove" | "rm" | "rename" | "set-url" | "set-head" | "prune"
+            )
+        }),
+        "worktree" => options.first().is_some_and(|action| *action != "list"),
+        _ => false,
+    }
+}
+
 fn simple_commands(script: &str) -> Vec<String> {
     script
         .replace("&&", "\n")
@@ -1479,13 +1597,23 @@ struct WorkerRun {
     failure: Option<String>,
 }
 
-/// A block a condition check ruled out: the reply the worker got, and how
-/// many records the step had when it was checked — once more output comes
-/// in, the case may hold after all, and the block is checked again.
+/// A block a condition check ruled out: the reply the worker got, and which
+/// of the blocks before it had run then. Once another of those runs, its
+/// case may hold after all, and it is checked again; blocks after it running
+/// change nothing (attempt 11 lost a right ruling to the commit after it).
 #[derive(Debug, Clone, Default, PartialEq)]
 struct RuledOut {
     why: String,
-    at_records: usize,
+    ran_before: BTreeSet<usize>,
+}
+
+/// What a check of a block's case came back with.
+#[derive(Debug, Clone, PartialEq)]
+enum CaseCheck {
+    Holds,
+    Fails(String),
+    /// No answer, or none that says yes or no.
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2114,9 +2242,10 @@ async fn run_worker(
                 // turn, "abort the merge and STOP" among them, whatever it
                 // was told.
                 Some((number, block)) => {
-                    condition_fails(context, step, number, block, &run.records, on_event)
-                        .await?
-                        .map(|why| (number, why))
+                    match check_case(context, step, number, block, &run.records, on_event).await? {
+                        CaseCheck::Fails(why) => Some((number, why)),
+                        CaseCheck::Holds | CaseCheck::Unknown => None,
+                    }
                 }
                 None => None,
             } {
@@ -2294,6 +2423,18 @@ async fn execute_call(
                     &call_id,
                     "shell".to_string(),
                     "No command was given.".to_string(),
+                    on_event,
+                ));
+            }
+            if let Some(what) = changes_something(&command) {
+                return Some(refusal(
+                    &call_id,
+                    format!("shell: {}", truncate_chars(&command, 160)),
+                    format!(
+                        "Refused: the shell tool is for looking at things, and {what}. Changes are made by the \
+                         step's own blocks: run the one that applies, or reply with your summary — saying what \
+                         went wrong, if a block failed."
+                    ),
                     on_event,
                 ));
             }
@@ -2752,7 +2893,7 @@ async fn run_really_ends(
 }
 
 /// The blocks of a step that ran or that a condition check ruled out (and
-/// no output has come in since).
+/// no block before it has run since).
 fn decided_blocks(run: &WorkerRun) -> BTreeSet<usize> {
     run.ran_blocks
         .iter()
@@ -2766,12 +2907,12 @@ fn decided_blocks(run: &WorkerRun) -> BTreeSet<usize> {
         .collect()
 }
 
-/// Why block `number` was ruled out, while that still stands: nothing but
-/// the ruling has been recorded since the check.
+/// Why block `number` was ruled out, while that still stands: no block
+/// before it has run since the check.
 fn ruled_out_now(run: &WorkerRun, number: usize) -> Option<&str> {
     run.ruled_out
         .get(&number)
-        .filter(|ruled| run.records.len() <= ruled.at_records + 1)
+        .filter(|ruled| ruled.ran_before.iter().eq(run.ran_blocks.range(..number)))
         .map(|ruled| ruled.why.as_str())
 }
 
@@ -2798,7 +2939,7 @@ fn rule_out(
         number,
         RuledOut {
             why: reply.clone(),
-            at_records: run.records.len(),
+            ran_before: run.ran_blocks.range(..number).copied().collect(),
         },
     );
     run.records.push(record);
@@ -2839,11 +2980,14 @@ async fn next_block_to_run(
         if !block.has_condition() {
             return Ok(Some((number, false)));
         }
-        match condition_fails(context, step, number, block, &run.records, on_event).await? {
-            Some(why) => {
+        match check_case(context, step, number, block, &run.records, on_event).await? {
+            CaseCheck::Fails(why) => {
                 rule_out(run, number, block, &why, on_event);
             }
-            None => return Ok(Some((number, true))),
+            CaseCheck::Holds => return Ok(Some((number, true))),
+            // Not sure: no sending a worker into a block that may be the
+            // one that deletes something.
+            CaseCheck::Unknown => return Ok(None),
         }
     }
     Ok(None)
@@ -2872,11 +3016,14 @@ async fn unmet_print_checks(
             continue;
         }
         if block.has_condition() {
-            if let Some(why) =
-                condition_fails(context, step, number, block, &run.records, on_event).await?
-            {
-                rule_out(run, number, block, &why, on_event);
-                continue;
+            match check_case(context, step, number, block, &run.records, on_event).await? {
+                CaseCheck::Fails(why) => {
+                    rule_out(run, number, block, &why, on_event);
+                    continue;
+                }
+                CaseCheck::Holds => {}
+                // Overruling the judge takes a clear answer.
+                CaseCheck::Unknown => continue,
             }
         }
         let checks = checks
@@ -2890,17 +3037,15 @@ async fn unmet_print_checks(
 }
 
 /// Asks the judge, in a fresh conversation, whether the case a block runs in
-/// holds for what the step has printed so far. `Some(why)` when it doesn't;
-/// `None` when it does, or when no answer came back — the worker's call then
-/// stands.
-async fn condition_fails(
+/// holds for what the step has printed so far.
+async fn check_case(
     context: &RunContext<'_>,
     step: &RunbookStep,
     number: usize,
     block: &RunbookBlock,
     records: &[CallRecord],
     on_event: &mut impl FnMut(TurnEvent),
-) -> std::io::Result<Option<String>> {
+) -> std::io::Result<CaseCheck> {
     let user = format!(
         "The step — {}:\n\n{}\n\nThe block in question is block {number}. Just before it, the runbook says: \
          \"{}\"\n\nThe block:\n```\n{}\n```\n\nWhat this step has run so far, and what it printed:\n\n{}",
@@ -2910,7 +3055,7 @@ async fn condition_fails(
         truncate_chars(&block.code, 1_500),
         last_chars(&records_text(records), 6_000),
     );
-    let reply = ask_fresh(
+    let mut reply = ask_fresh(
         context,
         context.judge,
         context.judge_thinks.then_some(true),
@@ -2920,21 +3065,64 @@ async fn condition_fails(
         on_event,
     )
     .await?;
-    Ok(reply
-        .filter(|reply| answers_no(reply))
-        .map(|reply| truncate_chars(&reply.split_whitespace().collect::<Vec<_>>().join(" "), 240)))
+    // An answer without its YES or NO is asked for once more, in one word:
+    // a 4B judge's unclear answer let step B's "Otherwise … push" go unrun.
+    if reply
+        .as_deref()
+        .is_some_and(|reply| yes_or_no(reply).is_none())
+    {
+        reply = ask_fresh(
+            context,
+            context.judge,
+            context.judge_thinks.then_some(true),
+            CONDITION_MAX_TOKENS,
+            CONDITION_SYSTEM_PROMPT,
+            &format!("{user}\n\nStart your reply with the one word YES or NO."),
+            on_event,
+        )
+        .await?;
+    }
+    let said = reply
+        .as_deref()
+        .map(|reply| truncate_chars(&reply.split_whitespace().collect::<Vec<_>>().join(" "), 240))
+        .unwrap_or_default();
+    match reply.as_deref().and_then(yes_or_no) {
+        Some(true) => on_event(TurnEvent::Text {
+            text: format!("↳ Block {number}'s case, checked: it holds — {said}"),
+        }),
+        None => on_event(TurnEvent::Text {
+            text: format!("↳ Block {number}'s case, checked: no clear answer — {said}"),
+        }),
+        Some(false) => {}
+    }
+    Ok(match reply.as_deref().and_then(yes_or_no) {
+        Some(true) => CaseCheck::Holds,
+        Some(false) => CaseCheck::Fails(truncate_chars(
+            &reply
+                .unwrap_or_default()
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" "),
+            240,
+        )),
+        None => CaseCheck::Unknown,
+    })
+}
+
+/// A reply's first YES or NO: `Some(true)` for yes.
+fn yes_or_no(reply: &str) -> Option<bool> {
+    reply
+        .split(|c: char| !c.is_ascii_alphabetic())
+        .find_map(|word| match word.to_ascii_uppercase().as_str() {
+            "YES" => Some(true),
+            "NO" => Some(false),
+            _ => None,
+        })
 }
 
 /// Whether a reply's first YES or NO is a no.
 fn answers_no(reply: &str) -> bool {
-    reply
-        .split(|c: char| !c.is_ascii_alphabetic())
-        .find_map(|word| match word.to_ascii_uppercase().as_str() {
-            "YES" => Some(false),
-            "NO" => Some(true),
-            _ => None,
-        })
-        .unwrap_or(false)
+    yes_or_no(reply) == Some(false)
 }
 
 /// Where the step stands, told after every call: the next block after the
