@@ -255,6 +255,164 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A text from a file, read by a real model, for trying readers on real
+/// material: WORK_NOTES_FILE is the text, WORK_NOTES_QUESTION what is asked
+/// of it, and WORK_NOTES_EXPECT_LINE the line the answer must name.
+/// Optionally WORK_NOTES_EXPECT_WORDS (comma-separated; the answer must say
+/// one), WORK_NOTES_TITLE, WORK_NOTES_DIR (where the notes are kept, one
+/// folder per model; a temporary one otherwise) and WORK_NOTES_LIVE_MODEL.
+/// Each reply is printed as it comes, then how the pass went.
+#[test]
+#[ignore = "hits the live local Ollama service; set WORK_NOTES_FILE to use it"]
+fn the_file_named_in_the_environment_is_read_against_live_ollama() {
+    use std::time::Instant;
+
+    use futures_lite::future::block_on;
+
+    use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+        ask_fresh, probe_model_caps_checked,
+    };
+
+    let env = |name: &str| std::env::var(name).ok().filter(|value| !value.is_empty());
+    let file = PathBuf::from(env("WORK_NOTES_FILE").expect("WORK_NOTES_FILE names the text"));
+    let question = env("WORK_NOTES_QUESTION").expect("WORK_NOTES_QUESTION is what to ask of it");
+    let line: usize = env("WORK_NOTES_EXPECT_LINE")
+        .and_then(|line| line.parse().ok())
+        .expect("WORK_NOTES_EXPECT_LINE is the line the answer must name");
+    let words: Vec<String> = env("WORK_NOTES_EXPECT_WORDS")
+        .map(|words| {
+            words
+                .split(',')
+                .map(|word| word.trim().to_lowercase())
+                .filter(|word| !word.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let title = env("WORK_NOTES_TITLE")
+        .unwrap_or_else(|| file.file_name().unwrap().to_string_lossy().into_owned());
+    let model = env("WORK_NOTES_LIVE_MODEL").unwrap_or_else(|| "qwen2.5-coder:14b".to_string());
+    let kept = env("WORK_NOTES_DIR").map(PathBuf::from);
+    let dir = kept.clone().unwrap_or_else(|| temp_dir("file"));
+    let text = std::fs::read_to_string(&file).unwrap();
+
+    let path = std::env::var("PATH").unwrap_or_default();
+    let session = Uuid::new_v4();
+    let think = block_on(probe_model_caps_checked(&model, &path))
+        .is_some_and(|caps| caps.thinking)
+        .then_some(false);
+    let mut notes = WorkNotes::new(&title, &question, &text, &dir);
+    let started = Instant::now();
+    eprintln!(
+        "{} lines in {} parts, read by {model}; notes in {}",
+        notes.total_lines(),
+        notes.part_count(),
+        notes.notes_path().display()
+    );
+    while let Some(next) = notes.next_call() {
+        let reply = block_on(ask_fresh(
+            &model,
+            think,
+            next.system,
+            &next.user,
+            &session,
+            &dir,
+            &path,
+        ))
+        .unwrap();
+        eprintln!(
+            "[{:>5}s] {}: {}",
+            started.elapsed().as_secs(),
+            next.label,
+            reply.as_deref().map_or("(no reply)".to_string(), one_line)
+        );
+        notes.accept(reply.as_deref());
+    }
+
+    let answer = notes.answer().unwrap().to_string();
+    let holder = notes
+        .parts
+        .iter()
+        .position(|part| (part.first_line..=part.last_line).contains(&line))
+        .expect("the expected line is in the text");
+    let noted = notes
+        .saved
+        .notes
+        .iter()
+        .filter(|note| note.as_deref().is_some_and(|note| !note.trim().is_empty()))
+        .count();
+    let holder_note = notes.saved.notes[holder].clone().unwrap_or_default();
+    let named = names_line(&answer, line);
+    let in_a_range = !named && a_range_holds(&answer, line);
+    let lower = answer.to_lowercase();
+    let said = words.is_empty() || words.iter().any(|word| lower.contains(word.as_str()));
+    let part = &notes.parts[holder];
+    eprintln!(
+        "\nThe part holding L{line} (lines {}–{}) noted: {}\n\n## Answer\n\n{answer}\n",
+        part.first_line,
+        part.last_line,
+        if holder_note.trim().is_empty() {
+            "nothing"
+        } else {
+            holder_note.trim()
+        }
+    );
+    eprintln!(
+        "RESULT model={model} names_line={} line_in_a_range={in_a_range} says_what={said} \
+         part_noted_line={} parts_with_notes={noted}/{} seconds={}",
+        named,
+        names_line(&holder_note, line) || a_range_holds(&holder_note, line),
+        notes.part_count(),
+        started.elapsed().as_secs()
+    );
+    if kept.is_none() {
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+    assert!(
+        named && said,
+        "the answer names L{line} and says what is wrong:\n{answer}"
+    );
+}
+
+/// A reply on one line, cut to 240 characters, for a progress log.
+fn one_line(reply: &str) -> String {
+    let flat = reply.split_whitespace().collect::<Vec<_>>().join(" ");
+    match flat.char_indices().nth(240) {
+        Some((cut, _)) => format!("{}…", &flat[..cut]),
+        None => flat,
+    }
+}
+
+/// Whether `text` names line `line`: its number on its own (`6197`,
+/// `L6197`, `line 6197`), not inside a longer number.
+fn names_line(text: &str, line: usize) -> bool {
+    let digits = line.to_string();
+    text.match_indices(&digits).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + digits.len()..].chars().next();
+        !before.is_some_and(|c| c.is_ascii_digit()) && !after.is_some_and(|c| c.is_ascii_digit())
+    })
+}
+
+/// Whether a range `text` cites (`[L6190-L6205]`) holds `line`.
+fn a_range_holds(text: &str, line: usize) -> bool {
+    citations(text).windows(2).any(|pair| {
+        let ((first_at, first), (second_at, second)) = (&pair[0], &pair[1]);
+        text.get(first_at.end..second_at.start.saturating_sub(1)) == Some("-")
+            && (*first.min(second)..=*first.max(second)).contains(&line)
+    })
+}
+
+#[test]
+fn a_line_is_named_only_by_its_own_number() {
+    assert!(names_line("the typo at [L6197]", 6197));
+    assert!(names_line("line 6197: shaepd", 6197));
+    assert!(!names_line("L61970", 6197));
+    assert!(!names_line("16197", 6197));
+    assert!(a_range_holds("in [L6190-L6205]", 6197));
+    assert!(!a_range_holds("in [L6190-L6195]", 6197));
+    assert!(!a_range_holds("[L6190] and [L6205]", 6197));
+}
+
 fn numbered_lines(lines: &[(usize, &str)]) -> Vec<(usize, String)> {
     lines
         .iter()

@@ -338,6 +338,7 @@ fn the_pass_applies_the_tables_rules_and_leaves_what_it_must() {
         working_dir: &repo,
         path: &path,
         worker: "unused",
+        worker_thinks: false,
         judge: "unused",
         judge_thinks: false,
         helper: "unused",

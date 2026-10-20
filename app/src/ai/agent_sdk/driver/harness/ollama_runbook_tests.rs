@@ -586,6 +586,58 @@ fn long_output_keeps_its_head_and_tail() {
     assert_eq!(clip_output("short"), "short");
 }
 
+/// The first Firefox run's report said "merge conflicts: none" and "pushed:
+/// nothing" after a merge with five conflicts and four pushes: its writer saw
+/// only the verdicts. It now sees the end of what each call printed.
+#[test]
+fn the_report_writer_sees_what_each_step_printed() {
+    let merge = format!(
+        "exit=1\n{}Automatic merge failed\n--- conflicted files:\nAGENTS.md\nconfig/milestone.txt",
+        "Auto-merging some/file.cpp\n".repeat(60)
+    );
+    let records = vec![
+        CallRecord {
+            label: "run_block 1".to_string(),
+            exit_code: Some(0),
+            output: merge,
+        },
+        CallRecord {
+            label: "resolve AGENTS.md".to_string(),
+            exit_code: Some(0),
+            output: "kept ours whole, by the runbook's rule".to_string(),
+        },
+        CallRecord {
+            label: "run_block 3".to_string(),
+            exit_code: Some(0),
+            output: "To ../remote.git\n * [new tag] firefox-153.0.4 -> firefox-153.0.4".to_string(),
+        },
+    ];
+    let digest = printed_digest(&records);
+    assert!(
+        digest.contains("--- conflicted files:\n    AGENTS.md"),
+        "{digest}"
+    );
+    assert!(digest.contains("kept ours whole"), "{digest}");
+    assert!(digest.contains("[new tag] firefox-153.0.4"), "{digest}");
+    assert!(digest.len() < 3_000, "{}", digest.len());
+
+    let results = vec![
+        (
+            "Step 1b: merge".to_string(),
+            StepResult::Judged(VerdictKind::Pass, "merged".to_string(), digest),
+        ),
+        ("Step 3: tag".to_string(), StepResult::NotReached),
+    ];
+    let shown = run_record(&results, false);
+    assert_eq!(
+        shown,
+        "- Step 1b: merge: passed — merged\n- Step 3: tag: not reached"
+    );
+    let for_writer = run_record(&results, true);
+    assert!(for_writer.contains("AGENTS.md"));
+    assert!(for_writer.ends_with("- Step 3: tag: not reached"));
+}
+
 /// A whole run, live: a two-step runbook in a throwaway repository whose
 /// only remote is a local bare repo, worked by a real 14B model and judged by
 /// a real one. Asserts the plan, the commands, the verdicts and the effect.

@@ -1170,8 +1170,9 @@ you would need is missing. When in doubt, stop.
 uses (for example V). Usually empty; leave out anything already known.";
 
 const REPORT_SYSTEM_PROMPT: &str = "You write the final report of a runbook run by filling in the runbook's own \
-reporting template from the run record. Use only what the record shows; write n/a for anything the run did not \
-reach. Reply with the filled-in template only.";
+reporting template from the run record. Under each step the record has what its commands printed: take what \
+conflicted, what was looked up and what was pushed from that output, not from the verdicts alone. Use only what \
+the record shows; write n/a for anything the run did not reach. Reply with the filled-in template only.";
 
 fn facts_lines(facts: &Facts) -> String {
     if facts.is_empty() {
@@ -1306,6 +1307,10 @@ struct RunContext<'a> {
     working_dir: &'a Path,
     path: &'a str,
     worker: &'a str,
+    /// A thinking worker is told not to: its job is running the step's
+    /// blocks, and reasoning before each call can use up its output cap
+    /// before the call is made.
+    worker_thinks: bool,
     judge: &'a str,
     judge_thinks: bool,
     /// The small model that checks each fix in the work-file pass.
@@ -1339,8 +1344,66 @@ struct WorkerRun {
 
 #[derive(Debug, Clone, PartialEq)]
 enum StepResult {
-    Judged(VerdictKind, String),
+    /// The verdict, its reason, and what the step's calls printed, cut down
+    /// for the closing report ([`printed_digest`]).
+    Judged(VerdictKind, String, String),
     NotReached,
+}
+
+/// What a step's calls printed, for the closing report: each call with its
+/// exit status and the end of its output — where a command's result usually
+/// is — cut so a whole run's record fits the report writer's window. The
+/// verdicts alone don't say which files conflicted or what was pushed, and a
+/// report written from them guesses.
+fn printed_digest(records: &[CallRecord]) -> String {
+    const CALL_CHARS: usize = 600;
+    const STEP_CHARS: usize = 2_400;
+    // Every call gets a share, so the last — often the one that pushed or
+    // committed — isn't the one cut.
+    let share = (STEP_CHARS / records.len().max(1)).clamp(160, CALL_CHARS);
+    let mut digest = String::new();
+    for record in records {
+        let status = record
+            .exit_code
+            .map(|code| format!(" — exit {code}"))
+            .unwrap_or_default();
+        let output = record.output.trim();
+        let output = if output.is_empty() {
+            "(no output)".to_string()
+        } else {
+            last_chars(output, share)
+        };
+        let entry = format!(
+            "  {}{status}\n{}\n",
+            truncate_chars(record.label.trim(), 120),
+            output
+                .lines()
+                .map(|line| format!("    {line}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        if digest.len() + entry.len() > STEP_CHARS + 1_000 {
+            digest.push_str("  …\n");
+            break;
+        }
+        digest.push_str(&entry);
+    }
+    digest
+}
+
+/// The end of `text`, at most `max` characters, from the start of a line
+/// when one is near.
+fn last_chars(text: &str, max: usize) -> String {
+    let count = text.chars().count();
+    if count <= max {
+        return text.to_string();
+    }
+    let tail: String = text.chars().skip(count - max).collect();
+    let tail = match tail.find('\n') {
+        Some(at) if at < max / 3 => tail[at + 1..].to_string(),
+        _ => tail,
+    };
+    format!("…\n{tail}")
 }
 
 /// Runs the runbook named in `prompt` against `working_dir`, step by step,
@@ -1426,8 +1489,8 @@ pub(crate) async fn run_ollama_runbook(
         );
         return Err(error);
     }
-    match probe_model_caps_checked(worker, path).await {
-        Some(caps) if caps.tools => {}
+    let worker_thinks = match probe_model_caps_checked(worker, path).await {
+        Some(caps) if caps.tools => caps.thinking,
         Some(_) => {
             finish_with_text(
                 &mut on_event,
@@ -1446,7 +1509,7 @@ pub(crate) async fn run_ollama_runbook(
             );
             return Ok(success_status());
         }
-    }
+    };
     let installed = if config.judge.is_none() || config.helper.is_none() {
         fetch_installed_model_names(path).await.unwrap_or_default()
     } else {
@@ -1472,6 +1535,7 @@ pub(crate) async fn run_ollama_runbook(
         working_dir,
         path,
         worker,
+        worker_thinks,
         judge: &judge,
         judge_thinks,
         helper: &helper,
@@ -1608,7 +1672,11 @@ pub(crate) async fn run_ollama_runbook(
         } else {
             verdict.reason.clone()
         };
-        results[index].1 = StepResult::Judged(verdict.kind, reason.clone());
+        results[index].1 = StepResult::Judged(
+            verdict.kind,
+            reason.clone(),
+            printed_digest(&worker_run.records),
+        );
         match verdict.kind {
             VerdictKind::Pass | VerdictKind::Skip => {
                 facts.extend(new_facts.clone());
@@ -1724,7 +1792,7 @@ async fn run_worker(
             run.cancelled = true;
             return Ok(run);
         }
-        let request = json!({
+        let mut request = json!({
             "model": wire_name(context.worker),
             "messages": messages,
             "tools": tool_defs,
@@ -1735,8 +1803,11 @@ async fn run_worker(
                 "num_ctx": RUNBOOK_NUM_CTX,
                 "num_predict": WORKER_MAX_TOKENS,
             },
-        })
-        .to_string();
+        });
+        if context.worker_thinks {
+            request["think"] = json!(false);
+        }
+        let request = request.to_string();
         let response = match chat_call(context, context.worker, &request, on_event).await? {
             Ok(response) => response,
             Err(error) => {
@@ -2468,16 +2539,7 @@ async fn write_report(
     facts: &Facts,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<String> {
-    let record = results
-        .iter()
-        .map(|(title, result)| match result {
-            StepResult::Judged(kind, reason) => {
-                format!("- {title}: {} — {reason}", verdict_word(*kind))
-            }
-            StepResult::NotReached => format!("- {title}: not reached"),
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+    let record = run_record(results, false);
     let plain = format!("**Run record**\n\n{record}\n\nValues found: {}", {
         let inline = facts_inline(facts);
         if inline.is_empty() {
@@ -2496,7 +2558,8 @@ async fn write_report(
             {
                 "role": "user",
                 "content": format!(
-                    "Template:\n{template}\n\nRun record:\n{record}\n\nValues found:\n{}",
+                    "Template:\n{template}\n\nRun record:\n{}\n\nValues found:\n{}",
+                    run_record(results, true),
                     facts_lines(facts)
                 ),
             },
@@ -2517,6 +2580,28 @@ async fn write_report(
         )),
         _ => Ok(plain),
     }
+}
+
+/// Each step's verdict and reason, one line each; with `printed`, what its
+/// calls printed under it, for the report writer.
+fn run_record(results: &[(String, StepResult)], printed: bool) -> String {
+    results
+        .iter()
+        .map(|(title, result)| match result {
+            StepResult::Judged(kind, reason, digest) => {
+                let line = format!("- {title}: {} — {reason}", verdict_word(*kind));
+                if printed && !digest.is_empty() {
+                    format!(
+                        "{line}\n  What it ran, and the end of what each call printed:\n{digest}"
+                    )
+                } else {
+                    line
+                }
+            }
+            StepResult::NotReached => format!("- {title}: not reached"),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn verdict_word(kind: VerdictKind) -> &'static str {
