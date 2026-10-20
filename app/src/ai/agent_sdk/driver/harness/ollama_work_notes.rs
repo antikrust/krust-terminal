@@ -344,6 +344,7 @@ impl WorkNotes {
             .filter(|saved| saved.key == key && saved.notes.len() == notes.parts.len())
         {
             notes.saved = saved;
+            notes.saved.dropped.resize(notes.parts.len(), Vec::new());
         }
         if notes.saved.answer.is_some() {
             notes.stage = Stage::Done;
@@ -727,14 +728,15 @@ impl WorkNotes {
     }
 
     /// A note without its findings on lines a check found the answer wrong
-    /// about.
+    /// about — each finding whole, with the lines that go on from its label.
     fn without_rejected(&self, note: &str) -> String {
         if self.saved.rejected.is_empty() {
             return note.to_string();
         }
-        note.lines()
-            .filter(|line| {
-                !cited_lines(line).iter().any(|(first, last)| {
+        findings_in(note)
+            .into_iter()
+            .filter(|finding| {
+                !cited_lines(finding).iter().any(|(first, last)| {
                     self.saved
                         .rejected
                         .iter()
@@ -1041,6 +1043,16 @@ fn quoted_tokens(note: &str) -> Vec<(usize, &str)> {
         let mut from = 0;
         while let Some(open) = note[from..].find(quote).map(|at| from + at) {
             let start = open + quote.len_utf8();
+            // "it's", "doesn't": an apostrophe inside a word opens nothing.
+            if quote == '\''
+                && note[..open]
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_ascii_alphanumeric())
+            {
+                from = start;
+                continue;
+            }
             let Some(close) = note[start..].find(quote).map(|at| start + at) else {
                 break;
             };
@@ -1178,7 +1190,14 @@ fn starts_with_label(line: &str) -> bool {
         _ => rest,
     };
     let rest = rest.trim_start_matches(['[', '(', '*', '`']);
-    rest.starts_with('L') && rest[1..].starts_with(|c: char| c.is_ascii_digit())
+    if rest.starts_with('L') && rest[1..].starts_with(|c: char| c.is_ascii_digit()) {
+        return true;
+    }
+    let lower = rest.to_ascii_lowercase();
+    lower
+        .strip_prefix("lines")
+        .or_else(|| lower.strip_prefix("line"))
+        .is_some_and(|after| after.trim_start().starts_with(|c: char| c.is_ascii_digit()))
 }
 
 /// Whether a finding check's reply says no: its first YES or NO decides.
@@ -1208,12 +1227,14 @@ fn rejects(reply: &str) -> bool {
     }
 }
 
+/// A reply that is NOTHING, or opens with it and cites no line ("Nothing
+/// in this part bears on the question, which asks about …").
 fn is_nothing(reply: &str) -> bool {
     let first = reply
         .trim()
         .trim_matches(|c: char| !c.is_ascii_alphabetic())
         .to_ascii_uppercase();
-    first == NOTHING || (first.starts_with(NOTHING) && reply.len() < 40)
+    first == NOTHING || (first.starts_with(NOTHING) && citations(reply).is_empty())
 }
 
 fn truncate(text: &str, max: usize) -> String {

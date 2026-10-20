@@ -212,10 +212,12 @@ fn a_finding_the_lines_dont_bear_out_is_dropped() {
 #[test]
 fn a_finding_goes_on_until_the_next_line_that_opens_with_a_label() {
     let reply = "[L6197] state.biasDcX = shaepd;\nThis line assigns a variable named `shaepd`, a misspelling of \
-                 `shaped` (defined on L6170).\n- [L6201] another\n1. [L6203] and one more\nL6210| a fifth";
+                 `shaped` (defined on L6170).\n- [L6201] another\n1. [L6203] and one more\nL6210| a fifth\n\
+                 Line 6220: a sixth\nlines 6230–6231: a seventh";
     let findings = findings_in(reply);
-    assert_eq!(findings.len(), 4, "{findings:?}");
+    assert_eq!(findings.len(), 6, "{findings:?}");
     assert!(findings[0].ends_with("(defined on L6170)."));
+    assert!(findings[5].starts_with("lines 6230"));
     assert!(starts_with_label("**[L12]** typo"));
     assert!(!starts_with_label("This line (L12) has a typo"));
     assert!(!starts_with_label("6197 is the line"));
@@ -230,7 +232,7 @@ fn an_answer_the_text_contradicts_is_dropped_and_given_again() {
     let text = paragraphs();
     let mut notes = WorkNotes::with_limits("log", "did it fail?", &text, &dir, 300, 5_000);
     read_all(&mut notes, |index| match index {
-        0 => "[L2] the semicolon is missing here",
+        0 => "[L2] the semicolon is missing here\n  (the line ends without one)",
         1 => "[L8] the error that stops the build",
         _ => "NOTHING",
     });
@@ -252,6 +254,11 @@ fn an_answer_the_text_contradicts_is_dropped_and_given_again() {
     let again = notes.next_call().unwrap();
     assert_eq!(again.label, "answering from the notes");
     assert!(!again.user.contains("semicolon"), "{}", again.user);
+    assert!(
+        !again.user.contains("ends without one"),
+        "the rejected finding goes whole:\n{}",
+        again.user
+    );
     assert!(again.user.contains("[L8] the error"));
     notes.accept(Some("It failed at [L8]."));
     notes.accept(Some("TRUE"));
@@ -374,8 +381,14 @@ fn notes_too_long_to_answer_from_are_condensed_in_rounds() {
 fn a_text_with_nothing_on_the_question_answers_without_a_call() {
     let dir = temp_dir("nothing");
     let mut notes = WorkNotes::with_limits("log", "q", &paragraphs(), &dir, 300, 5_000);
+    let mut turn = 0;
     while notes.answer().is_none() {
-        notes.accept(Some("**Nothing.**"));
+        turn += 1;
+        notes.accept(Some(if turn % 2 == 0 {
+            "**Nothing.**"
+        } else {
+            "Nothing in this part bears on the question, which asks about a compile error."
+        }));
     }
     assert_eq!(
         notes.answer(),
@@ -762,6 +775,11 @@ fn a_quoted_token_on_one_line_of_the_part_is_cited() {
             &lines
         ),
         "[L6174] references a variable named \"shaepd\" [L6197], which is undefined"
+    );
+    // An apostrophe inside a word opens no quote.
+    assert_eq!(
+        cite_quoted_lines("[L6174] it's wrong: 'shaepd' isn't declared", &lines),
+        "[L6174] it's wrong: 'shaepd' [L6197] isn't declared"
     );
     // Already cited, on more than one line, or on none: left as it is.
     for note in [

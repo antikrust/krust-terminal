@@ -263,7 +263,11 @@ impl RunbookBlock {
     /// "When …", "Otherwise …", "Unless …", "A count in the hundreds means
     /// …" — so whether to run it is a question the output so far answers.
     pub(crate) fn has_condition(&self) -> bool {
-        let lead_in = self.lead_in.trim_start().to_ascii_lowercase();
+        let lead_in = self
+            .lead_in
+            .trim_start()
+            .trim_start_matches(['*', '_', '>', ' '])
+            .to_ascii_lowercase();
         let opening = lead_in.split([':', ';']).next().unwrap_or_default();
         [
             "if ",
@@ -287,33 +291,6 @@ impl RunbookBlock {
             .iter()
             .any(|order| self.lead_in.contains(order))
             || self.lead_in.starts_with("STOP")
-    }
-
-    /// Whether the runbook runs this block only in some case — its lead-in
-    /// says if, otherwise, unless, STOP, … — so a worker that skipped it
-    /// may have been right to.
-    pub(crate) fn is_conditional(&self) -> bool {
-        let lead_in = self.lead_in.to_ascii_lowercase();
-        let words: Vec<&str> = lead_in
-            .split(|c: char| !c.is_ascii_alphanumeric())
-            .filter(|word| !word.is_empty())
-            .collect();
-        words.iter().any(|word| {
-            matches!(
-                *word,
-                "if" | "otherwise"
-                    | "unless"
-                    | "instead"
-                    | "means"
-                    | "stop"
-                    | "when"
-                    | "else"
-                    | "fails"
-                    | "failed"
-                    | "either"
-                    | "alternatively"
-            )
-        }) || lead_in.contains("in that case")
     }
 }
 
@@ -1059,10 +1036,14 @@ pub(crate) fn escapes_root(script: &str, root: &Path) -> Option<String> {
 /// "main now ships: 153.0.4" printed from the wrong branch.
 pub(crate) fn changes_something(script: &str) -> Option<String> {
     for command in simple_commands(script) {
-        let words: Vec<String> = command.split_whitespace().map(unquote).collect();
+        let raw: Vec<&str> = command.split_whitespace().collect();
+        let words: Vec<String> = raw.iter().map(|word| unquote(word)).collect();
         // Redirection into a file (`> out`, `2>log`, `>>x`); `2>&1` and
-        // `/dev/null` write nothing.
-        for (index, word) in words.iter().enumerate() {
+        // `/dev/null` write nothing, and a quoted `>` is an argument.
+        for (index, word) in raw.iter().enumerate() {
+            if word.starts_with(['\'', '"']) {
+                continue;
+            }
             let Some(at) = word.find('>') else {
                 continue;
             };
@@ -1076,15 +1057,34 @@ pub(crate) fn changes_something(script: &str) -> Option<String> {
                 return Some(format!("`{command}` writes to a file"));
             }
         }
-        let Some(program) = words.first().map(String::as_str) else {
+        // Past `VAR=value` words before the program.
+        let first = words
+            .iter()
+            .position(|word| !is_shell_assignment(word))
+            .unwrap_or(words.len());
+        let Some(program) = words.get(first).map(String::as_str) else {
             continue;
         };
-        let args: Vec<&str> = words.iter().skip(1).map(String::as_str).collect();
+        let args: Vec<&str> = words.iter().skip(first + 1).map(String::as_str).collect();
         let changes = match program {
             "rm" | "rmdir" | "mv" | "cp" | "mkdir" | "touch" | "chmod" | "chown" | "ln" | "tee"
             | "truncate" | "dd" | "install" | "patch" => true,
             "sed" | "perl" => args.iter().any(|arg| arg.starts_with("-i")),
+            "find" => args
+                .iter()
+                .any(|arg| matches!(*arg, "-delete" | "-exec" | "-execdir" | "-ok" | "-okdir")),
             "git" => git_changes_something(&args),
+            // A command run through another is the command it runs: the
+            // quotes around it are read past, and the wrapper's own options
+            // and their values (`sh -c`, `sudo -u who`) dropped a word at a
+            // time until what is left is checked as a command.
+            "sh" | "bash" | "zsh" | "env" | "nice" | "time" | "command" | "xargs" | "sudo"
+            | "eval" | "exec" => {
+                let inner = raw[first + 1..].join(" ").replace(['"', '\''], "");
+                let inner: Vec<&str> = inner.split_whitespace().collect();
+                (0..=inner.len().min(3))
+                    .any(|skip| changes_something(&inner[skip..].join(" ")).is_some())
+            }
             _ => false,
         };
         if changes {
@@ -1092,6 +1092,16 @@ pub(crate) fn changes_something(script: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// `FOO=bar`, as it precedes a program.
+fn is_shell_assignment(word: &str) -> bool {
+    let Some((name, _)) = word.split_once('=') else {
+        return false;
+    };
+    !name.is_empty()
+        && name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Whether a git command (its arguments after `git`) changes refs, the index
@@ -1110,14 +1120,24 @@ fn git_changes_something(args: &[&str]) -> bool {
         return false;
     };
     let has = |names: &[&str]| options.iter().any(|option| names.contains(option));
-    let named = options.iter().any(|option| !option.starts_with('-'));
+    let positional = options
+        .iter()
+        .filter(|option| !option.starts_with('-'))
+        .count();
+    let named = positional > 0;
     match *subcommand {
         "checkout" | "switch" | "merge" | "commit" | "reset" | "revert" | "rebase"
-        | "cherry-pick" | "push" | "pull" | "stash" | "am" | "rm" | "mv" | "clean" | "restore"
-        | "add" | "update-ref" | "gc" | "prune" | "replace" | "filter-branch" | "notes"
-        | "symbolic-ref" | "read-tree" | "update-index" | "commit-tree" | "write-tree" => {
-            !(*subcommand == "stash" && has(&["list", "show"]))
-        }
+        | "cherry-pick" | "push" | "pull" | "am" | "rm" | "mv" | "clean" | "restore" | "add"
+        | "update-ref" | "gc" | "prune" | "filter-branch" | "read-tree" | "update-index"
+        | "commit-tree" | "write-tree" | "repack" | "sparse-checkout" | "maintenance" | "init"
+        | "clone" => true,
+        "stash" => !has(&["list", "show"]),
+        // A fetch writes only under refs/remotes, unless a refspec names a
+        // local ref to write.
+        "fetch" => options
+            .iter()
+            .any(|option| option.contains(':') || *option == "--update-head-ok"),
+        "submodule" => !has(&["status", "summary"]),
         "apply" => !has(&["--check", "--stat", "--numstat", "--summary"]),
         "branch" => {
             has(&[
@@ -1158,14 +1178,51 @@ fn git_changes_something(args: &[&str]) -> bool {
                         "-n",
                     ]))
         }
-        "config" => !has(&["--get", "--get-all", "--get-regexp", "--list", "-l"]),
+        "replace" => {
+            has(&["-d", "--delete", "-f", "--force", "--edit", "--graft"])
+                || (named && !has(&["-l", "--list"]))
+        }
+        "notes" => options
+            .first()
+            .is_some_and(|action| !matches!(*action, "show" | "list" | "get-ref")),
+        "symbolic-ref" => has(&["-d", "--delete"]) || positional >= 2,
+        "config" => {
+            has(&[
+                "--unset",
+                "--unset-all",
+                "--add",
+                "--replace-all",
+                "--remove-section",
+                "--rename-section",
+                "-e",
+                "--edit",
+            ]) || positional >= 2
+        }
         "remote" => options.first().is_some_and(|action| {
             matches!(
                 *action,
-                "add" | "remove" | "rm" | "rename" | "set-url" | "set-head" | "prune"
+                "add"
+                    | "remove"
+                    | "rm"
+                    | "rename"
+                    | "set-url"
+                    | "set-head"
+                    | "set-branches"
+                    | "prune"
             )
         }),
         "worktree" => options.first().is_some_and(|action| *action != "list"),
+        "format-patch" => !has(&["--stdout"]),
+        "archive" => {
+            has(&["-o", "--output"]) || options.iter().any(|option| option.starts_with("--output="))
+        }
+        "bundle" => options.first() == Some(&"create"),
+        "reflog" => options
+            .first()
+            .is_some_and(|action| matches!(*action, "expire" | "delete")),
+        "lfs" => options.first().is_some_and(|action| {
+            !matches!(*action, "ls-files" | "status" | "env" | "version" | "logs")
+        }),
         _ => false,
     }
 }
@@ -1174,7 +1231,7 @@ fn simple_commands(script: &str) -> Vec<String> {
     script
         .replace("&&", "\n")
         .replace("||", "\n")
-        .split(['\n', ';', '|', '(', ')', '{', '}'])
+        .split(['\n', ';', '|', '(', ')', '{', '}', '`'])
         .map(|part| part.trim().to_string())
         .filter(|part| !part.is_empty())
         .collect()
@@ -1500,7 +1557,7 @@ fn judge_user_prompt(
         ),
     };
     let ruled_out: String = worker_run
-        .ruled_out
+        .rulings
         .keys()
         .filter(|number| ruled_out_now(worker_run, **number).is_some())
         .map(|number| {
@@ -1587,8 +1644,12 @@ struct WorkerRun {
     /// The step's blocks that ran, by number, so the judge can be told which
     /// never did.
     ran_blocks: BTreeSet<usize>,
-    /// Blocks a condition check ruled out, with why and when.
-    ruled_out: BTreeMap<usize, RuledOut>,
+    /// What a check of a block's case found, with when: a hold is not asked
+    /// about again, a refusal is given back without a second check.
+    rulings: BTreeMap<usize, CaseRuling>,
+    /// The block whose lead-in orders a STOP, once it has run: the runbook
+    /// ends the step there, so no block runs after it.
+    stopped_at: Option<usize>,
     summary: String,
     usage: Option<TurnUsage>,
     cancelled: bool,
@@ -1597,12 +1658,14 @@ struct WorkerRun {
     failure: Option<String>,
 }
 
-/// A block a condition check ruled out: the reply the worker got, and which
-/// of the blocks before it had run then. Once another of those runs, its
-/// case may hold after all, and it is checked again; blocks after it running
-/// change nothing (attempt 11 lost a right ruling to the commit after it).
+/// What a check found of a block's case, and which of the blocks before it
+/// had run then. Once another of those runs, the case may have changed, and
+/// it is checked again; blocks after it running change nothing (attempt 11
+/// lost a right ruling to the commit after it).
 #[derive(Debug, Clone, Default, PartialEq)]
-struct RuledOut {
+struct CaseRuling {
+    holds: bool,
+    /// For a refusal, the reply the worker got.
     why: String,
     ran_before: BTreeSet<usize>,
 }
@@ -1756,12 +1819,16 @@ pub(crate) async fn run_ollama_runbook(
         }
     };
 
-    if let Err(error) = ensure_ollama_service(path).await {
-        emit_failed_turn(
-            &mut on_event,
-            format!("Could not start the local Ollama service: {error}"),
-        );
-        return Err(error);
+    // A worker on another machine (`name@@http://host:port`) needs no
+    // service started here.
+    if crate::ai::ollama::remote::split(worker).1.is_none() {
+        if let Err(error) = ensure_ollama_service(path).await {
+            emit_failed_turn(
+                &mut on_event,
+                format!("Could not start the local Ollama service: {error}"),
+            );
+            return Err(error);
+        }
     }
     let worker_thinks = match probe_model_caps_checked(worker, path).await {
         Some(caps) if caps.tools => caps.thinking,
@@ -1933,6 +2000,21 @@ pub(crate) async fn run_ollama_runbook(
                 }
             }
         };
+        // "Done" ends the whole run: qwen3.5:4b, judging, called a finished
+        // step 1c done, and the runtime tag (step 3) was never chosen. With
+        // steps still to come, that is put to the judge again as a question.
+        let verdict = if verdict.kind == VerdictKind::Done
+            && index + 1 < runbook.steps.len()
+            && !run_really_ends(&context, &runbook, index, &worker_run, &mut on_event).await?
+        {
+            Verdict {
+                kind: VerdictKind::Pass,
+                ..verdict
+            }
+        } else {
+            verdict
+        };
+
         // A pass with `# must print` checks never made is no pass: qwen3.5:4b
         // skipped step B's "record the merge and push" block, and as judge
         // passed the step on the checks it could see.
@@ -1959,21 +2041,6 @@ pub(crate) async fn run_ollama_runbook(
         } else {
             verdict
         };
-        // "Done" ends the whole run: qwen3.5:4b, judging, called a finished
-        // step 1c done, and the runtime tag (step 3) was never chosen. With
-        // steps still to come, that is put to the judge again as a question.
-        let verdict = if verdict.kind == VerdictKind::Done
-            && index + 1 < runbook.steps.len()
-            && !run_really_ends(&context, &runbook, index, &worker_run, &mut on_event).await?
-        {
-            Verdict {
-                kind: VerdictKind::Pass,
-                ..verdict
-            }
-        } else {
-            verdict
-        };
-
         let new_facts: Facts = verdict
             .facts
             .iter()
@@ -2231,28 +2298,29 @@ async fn run_worker(
                     return Ok(run);
                 }
                 format!("{why}\n\nThat was checked already: go on with the rest of the step.")
-            } else if let Some((number, why)) = match run_block_number(call)
-                .and_then(|number| Some((number, step.blocks.get(number - 1)?)))
-                .filter(|(number, block)| {
-                    block.offered() && block.has_condition() && !run.ran_blocks.contains(number)
-                }) {
-                // A block whose runbook text opens with the case it runs in
-                // runs only when a check of the output so far says the case
-                // holds: qwen3.5:9b ran every block of the merge step in
-                // turn, "abort the merge and STOP" among them, whatever it
-                // was told.
-                Some((number, block)) => {
-                    match check_case(context, step, number, block, &run.records, on_event).await? {
-                        CaseCheck::Fails(why) => Some((number, why)),
-                        CaseCheck::Holds | CaseCheck::Unknown => None,
-                    }
+            } else if let (Some(stopped), Some(number)) = (run.stopped_at, run_block_number(call)) {
+                // qwen3.5:9b ran the merge step's "abort the merge and STOP"
+                // block and then the commit after it.
+                repeats += 1;
+                if repeats > 2 {
+                    run.summary =
+                        "(The worker kept calling blocks after the one the runbook stops at.)"
+                            .to_string();
+                    return Ok(run);
                 }
-                None => None,
-            } {
-                let reply = match step.blocks.get(number - 1) {
-                    Some(block) => rule_out(&mut run, number, block, &why, on_event),
-                    None => why,
-                };
+                // A card, and a record the judge reads.
+                let (record, reply) = refusal(
+                    &format!("runbook-{}", Uuid::new_v4()),
+                    format!("block {number}"),
+                    format!(
+                        "Not run: the runbook says to STOP after block {stopped}, which has run. Block {number} \
+                         is not run. Reply with your summary."
+                    ),
+                    on_event,
+                );
+                run.records.push(record);
+                reply
+            } else if let Some(reply) = gate(context, step, &mut run, call, on_event).await? {
                 match next_blocks_hint(step, &decided_blocks(&run)) {
                     Some(next) => format!("{reply}\n\n{next}"),
                     None => format!(
@@ -2266,7 +2334,8 @@ async fn run_worker(
                     run.cancelled = true;
                     return Ok(run);
                 };
-                if record.exit_code == Some(0) {
+                let succeeded_now = record.exit_code == Some(0);
+                if succeeded_now {
                     succeeded.insert(signature, reply.clone());
                 }
                 run.records.push(record);
@@ -2276,9 +2345,10 @@ async fn run_worker(
                 let says_stop = run_block_number(call)
                     .and_then(|number| step.blocks.get(number - 1))
                     .is_some_and(RunbookBlock::says_stop);
+                if says_stop && succeeded_now {
+                    run.stopped_at = run_block_number(call);
+                }
                 if says_stop {
-                    // qwen3.5:9b ran the merge step's "abort the merge and
-                    // STOP" block and then the commit after it.
                     format!(
                         "{reply}\n\nThe runbook says to STOP after this block: run nothing further, and reply \
                          with your summary."
@@ -2890,7 +2960,7 @@ fn decided_blocks(run: &WorkerRun) -> BTreeSet<usize> {
         .iter()
         .copied()
         .chain(
-            run.ruled_out
+            run.rulings
                 .keys()
                 .copied()
                 .filter(|number| ruled_out_now(run, *number).is_some()),
@@ -2898,13 +2968,35 @@ fn decided_blocks(run: &WorkerRun) -> BTreeSet<usize> {
         .collect()
 }
 
-/// Why block `number` was ruled out, while that still stands: no block
+/// The ruling on block `number`'s case, while it still stands: no block
 /// before it has run since the check.
-fn ruled_out_now(run: &WorkerRun, number: usize) -> Option<&str> {
-    run.ruled_out
+fn ruling_now(run: &WorkerRun, number: usize) -> Option<&CaseRuling> {
+    run.rulings
         .get(&number)
-        .filter(|ruled| ruled.ran_before.iter().eq(run.ran_blocks.range(..number)))
-        .map(|ruled| ruled.why.as_str())
+        .filter(|ruling| ruling.ran_before.iter().eq(run.ran_blocks.range(..number)))
+}
+
+/// Why block `number` was ruled out, while that still stands.
+fn ruled_out_now(run: &WorkerRun, number: usize) -> Option<&str> {
+    ruling_now(run, number)
+        .filter(|ruling| !ruling.holds)
+        .map(|ruling| ruling.why.as_str())
+}
+
+/// Whether a check found block `number`'s case to hold, and that still stands.
+fn held_now(run: &WorkerRun, number: usize) -> bool {
+    ruling_now(run, number).is_some_and(|ruling| ruling.holds)
+}
+
+fn record_holds(run: &mut WorkerRun, number: usize) {
+    run.rulings.insert(
+        number,
+        CaseRuling {
+            holds: true,
+            why: String::new(),
+            ran_before: run.ran_blocks.range(..number).copied().collect(),
+        },
+    );
 }
 
 /// Records that a check ruled block `number` out — a card, and a record the
@@ -2926,15 +3018,85 @@ fn rule_out(
         ),
         on_event,
     );
-    run.ruled_out.insert(
+    run.rulings.insert(
         number,
-        RuledOut {
+        CaseRuling {
+            holds: false,
             why: reply.clone(),
             ran_before: run.ran_blocks.range(..number).copied().collect(),
         },
     );
     run.records.push(record);
     reply
+}
+
+/// Whether block `number`'s case holds, by the standing ruling or, failing
+/// one, by a check now — recorded either way.
+async fn case_holds(
+    context: &RunContext<'_>,
+    step: &RunbookStep,
+    run: &mut WorkerRun,
+    number: usize,
+    block: &RunbookBlock,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<CaseCheck> {
+    if held_now(run, number) {
+        return Ok(CaseCheck::Holds);
+    }
+    if let Some(why) = ruled_out_now(run, number) {
+        return Ok(CaseCheck::Fails(why.to_string()));
+    }
+    let check = check_case(context, step, number, block, &run.records, on_event).await?;
+    match &check {
+        CaseCheck::Holds => record_holds(run, number),
+        CaseCheck::Fails(why) => {
+            rule_out(run, number, block, why, on_event);
+        }
+        CaseCheck::Unknown => {}
+    }
+    Ok(check)
+}
+
+/// Whether the worker's `run_block` call is refused, and what it is told:
+/// a block whose runbook text opens with the case it runs in runs only when
+/// a check of the output so far says the case holds. qwen3.5:9b ran every
+/// block of the merge step in turn, "abort the merge and STOP" among them,
+/// whatever it was told. A check that can't say either way lets an ordinary
+/// block run on the worker's judgement, not one the runbook stops at — that
+/// one aborts or deletes something.
+async fn gate(
+    context: &RunContext<'_>,
+    step: &RunbookStep,
+    run: &mut WorkerRun,
+    call: &OllamaToolCall,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Option<String>> {
+    let Some(number) = run_block_number(call) else {
+        return Ok(None);
+    };
+    let Some(block) = step.blocks.get(number - 1) else {
+        return Ok(None);
+    };
+    if !block.offered() || !block.has_condition() || run.ran_blocks.contains(&number) {
+        return Ok(None);
+    }
+    Ok(match case_holds(context, step, run, number, block, on_event).await? {
+        CaseCheck::Holds => None,
+        CaseCheck::Fails(_) => Some(
+            ruled_out_now(run, number)
+                .map(str::to_string)
+                .unwrap_or_default(),
+        ),
+        CaseCheck::Unknown if block.says_stop() => Some(rule_out(
+            run,
+            number,
+            block,
+            "the check gave no clear answer, and this block ends the step (the runbook says STOP), so it does \
+             not run on a guess. If its case holds, say so in your summary.",
+            on_event,
+        )),
+        CaseCheck::Unknown => None,
+    })
 }
 
 /// The block a worker that stopped should run next, if any: one it skipped
@@ -2948,6 +3110,9 @@ async fn next_block_to_run(
     run: &mut WorkerRun,
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<Option<(usize, bool)>> {
+    if run.stopped_at.is_some() {
+        return Ok(None);
+    }
     let last_ran = run.ran_blocks.iter().max().copied().unwrap_or(0);
     let offered = offered_block_numbers(step);
     let skipped = offered.iter().copied().find(|number| {
@@ -2956,7 +3121,7 @@ async fn next_block_to_run(
             && step
                 .blocks
                 .get(number - 1)
-                .is_some_and(|block| !block.is_conditional())
+                .is_some_and(|block| !block.has_condition())
     });
     if let Some(number) = skipped {
         return Ok(Some((number, false)));
@@ -2971,10 +3136,8 @@ async fn next_block_to_run(
         if !block.has_condition() {
             return Ok(Some((number, false)));
         }
-        match check_case(context, step, number, block, &run.records, on_event).await? {
-            CaseCheck::Fails(why) => {
-                rule_out(run, number, block, &why, on_event);
-            }
+        match case_holds(context, step, run, number, block, on_event).await? {
+            CaseCheck::Fails(_) => {}
             CaseCheck::Holds => return Ok(Some((number, true))),
             // Not sure: no sending a worker into a block that may be the
             // one that deletes something.
@@ -3007,11 +3170,8 @@ async fn unmet_print_checks(
             continue;
         }
         if block.has_condition() {
-            match check_case(context, step, number, block, &run.records, on_event).await? {
-                CaseCheck::Fails(why) => {
-                    rule_out(run, number, block, &why, on_event);
-                    continue;
-                }
+            match case_holds(context, step, run, number, block, on_event).await? {
+                CaseCheck::Fails(_) => continue,
                 CaseCheck::Holds => {}
                 // Overruling the judge takes a clear answer.
                 CaseCheck::Unknown => continue,
@@ -3140,7 +3300,7 @@ fn next_blocks_hint(step: &RunbookStep, ran: &BTreeSet<usize>) -> Option<String>
             continue;
         }
         upcoming.push((number, block));
-        if !block.is_conditional() {
+        if !block.has_condition() {
             break;
         }
     }
@@ -3153,7 +3313,7 @@ fn next_blocks_hint(step: &RunbookStep, ran: &BTreeSet<usize>) -> Option<String>
     };
     match upcoming.as_slice() {
         [] => None,
-        [(number, block)] if !block.is_conditional() => Some(format!(
+        [(number, block)] if !block.has_condition() => Some(format!(
             "Next in this step: block {number}{} — run_block {{\"block\": {number}}}.",
             quoted(block)
         )),
@@ -3163,7 +3323,7 @@ fn next_blocks_hint(step: &RunbookStep, ran: &BTreeSet<usize>) -> Option<String>
             upcoming
                 .iter()
                 .map(|(number, block)| {
-                    let when = if block.is_conditional() {
+                    let when = if block.has_condition() {
                         ", only in some cases"
                     } else {
                         ""
@@ -3532,3 +3692,7 @@ mod conflicts;
 #[cfg(test)]
 #[path = "ollama_runbook_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "ollama_runbook_replay_tests.rs"]
+mod replay_tests;

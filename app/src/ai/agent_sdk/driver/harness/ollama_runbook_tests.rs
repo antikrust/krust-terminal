@@ -501,10 +501,10 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     );
     let step = &runbook.steps[0];
     assert_eq!(step.blocks[0].lead_in, "Make the snapshot:");
-    assert!(!step.blocks[0].is_conditional());
-    assert!(!step.blocks[1].is_conditional());
-    assert!(step.blocks[2].is_conditional());
-    assert!(step.blocks[3].is_conditional());
+    assert!(!step.blocks[0].has_condition());
+    assert!(!step.blocks[1].has_condition());
+    assert!(step.blocks[2].has_condition());
+    assert!(step.blocks[3].has_condition());
     // Blocks whose lead-in opens with the case they run in are run only when
     // a check says the case holds.
     assert!(!step.blocks[0].has_condition());
@@ -633,6 +633,14 @@ fn the_free_shell_may_look_but_not_change_anything() {
         "cat browser/config/version.txt",
         "sed -n 1,5p AGENTS.md",
         "ls 2>/dev/null",
+        "grep -c '>' AGENTS.md",
+        "git symbolic-ref HEAD",
+        "git config user.name",
+        "git remote -v",
+        "git stash list",
+        "git fetch --no-tags origin",
+        "FOO=1 git log -1",
+        "git log --oneline | head -3",
     ] {
         assert_eq!(changes_something(looking), None, "{looking}");
     }
@@ -646,6 +654,19 @@ fn the_free_shell_may_look_but_not_change_anything() {
         "echo hi > notes.txt",
         "sed -i s/a/b/ AGENTS.md",
         "rm -f merge.log",
+        "sh -c \"git checkout -- AGENTS.md\"",
+        "ls | xargs rm",
+        "echo `git commit -m x`",
+        "find . -name '*.orig' -delete",
+        "git fetch origin +main:main",
+        "git submodule update --init",
+        "git config user.name someone",
+        "git symbolic-ref HEAD refs/heads/other",
+        "FOO=1 git commit -m x",
+        "echo x | tee notes.txt",
+        "echo x >> notes.txt",
+        "git stash",
+        "git init",
     ] {
         assert!(changes_something(changing).is_some(), "{changing}");
     }
