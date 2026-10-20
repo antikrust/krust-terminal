@@ -2064,28 +2064,92 @@ pub(crate) struct OllamaToolCall {
 /// `tool_calls: null` for such models (notably qwen2.5-coder), so without this
 /// the raw JSON would be shown to the user instead of the tool running.
 ///
-/// Scans for the outermost `{...}` object in `content`, tolerating a code fence
-/// or a little surrounding prose, and only accepts it when `name` matches one
-/// of the advertised tools (so an ordinary JSON answer isn't mistaken for one).
+/// Takes the first JSON object in `content` — past a code fence, prose, or
+/// other objects — whose `name` is one of the advertised tools (so an
+/// ordinary JSON answer isn't mistaken for one). Its arguments are under
+/// `arguments`, or under `parameters` as llama3.1 writes them in its own
+/// format: in a long runbook prompt it puts its calls in its text that way,
+/// and reading only `arguments` gave every one of them no arguments at all.
 pub(crate) fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaToolCall> {
-    let start = content.find('{')?;
-    let end = content.rfind('}')?;
-    if end <= start {
-        return None;
-    }
-    let value: Value = serde_json::from_str(&content[start..=end]).ok()?;
-    let name = value.get("name").and_then(Value::as_str)?;
-    if !tools.iter().any(|tool| tool.name == name) {
-        return None;
-    }
-    let arguments = value
-        .get("arguments")
-        .cloned()
-        .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-    Some(OllamaToolCall {
-        name: name.to_string(),
-        arguments,
+    json_objects(content).into_iter().find_map(|value| {
+        let call = value
+            .get("function")
+            .filter(|function| function.is_object())
+            .unwrap_or(&value);
+        let name = call.get("name").and_then(Value::as_str)?;
+        if !tools.iter().any(|tool| tool.name == name) {
+            return None;
+        }
+        let arguments = ["arguments", "parameters"]
+            .iter()
+            .find_map(|key| call.get(*key))
+            .map(|arguments| match arguments {
+                // Arguments sent as a JSON string of their own.
+                Value::String(text) => {
+                    serde_json::from_str(text).unwrap_or_else(|_| arguments.clone())
+                }
+                _ => arguments.clone(),
+            })
+            .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+        Some(OllamaToolCall {
+            name: name.to_string(),
+            arguments,
+        })
     })
+}
+
+/// The JSON objects in `text`, in order: each `{` that opens a balanced
+/// object that parses (an object inside one that parses isn't listed apart).
+fn json_objects(text: &str) -> Vec<Value> {
+    let bytes = text.as_bytes();
+    let mut objects = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'{' {
+            index += 1;
+            continue;
+        }
+        match balanced_end(bytes, index)
+            .and_then(|end| Some((end, serde_json::from_str::<Value>(&text[index..=end]).ok()?)))
+        {
+            Some((end, value)) if value.is_object() => {
+                objects.push(value);
+                index = end + 1;
+            }
+            _ => index += 1,
+        }
+    }
+    objects
+}
+
+/// Where the object that opens at `start` closes, minding strings.
+fn balanced_end(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (offset, &byte) in bytes[start..].iter().enumerate() {
+        if in_string {
+            match byte {
+                _ if escaped => escaped = false,
+                b'\\' => escaped = true,
+                b'"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+        match byte {
+            b'"' => in_string = true,
+            b'{' => depth += 1,
+            b'}' => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(start + offset);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 pub(crate) struct OllamaChatResult {

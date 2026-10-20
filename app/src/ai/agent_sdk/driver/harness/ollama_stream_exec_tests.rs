@@ -638,6 +638,29 @@ fn recovers_tool_call_emitted_as_json_text() {
     assert!(parse_text_tool_call("Here's your answer.", &tools).is_none());
     // A JSON object naming an unknown tool is left alone.
     assert!(parse_text_tool_call(r#"{"name":"nope","arguments":{}}"#, &tools).is_none());
+
+    // llama3.1:8b in a long runbook prompt: its own format's `parameters`.
+    let call = parse_text_tool_call(
+        "Here is the JSON for the function call with its proper arguments:\n\n```json\n{\n  \"name\": \
+         \"web_search\",\n  \"parameters\": {\n    \"query\": \"rust\",\n    \"set\": {}\n  }\n}\n```",
+        &tools,
+    )
+    .expect("recovers a call written with `parameters`");
+    assert_eq!(call.arguments["query"], "rust");
+    // Several objects: the first that is a call to a known tool, whole.
+    let call = parse_text_tool_call(
+        r#"First {"note": "not a call"}, then {"name":"web_search","arguments":{"query":"a {b} \"c\""}} and {"name":"web_search","arguments":{"query":"later"}}"#,
+        &tools,
+    )
+    .unwrap();
+    assert_eq!(call.arguments["query"], "a {b} \"c\"");
+    // Wrapped as Ollama sends it, or with its arguments as a string.
+    let call = parse_text_tool_call(
+        r#"{"function": {"name": "web_search", "arguments": "{\"query\": \"x\"}"}}"#,
+        &tools,
+    )
+    .unwrap();
+    assert_eq!(call.arguments["query"], "x");
 }
 
 #[test]

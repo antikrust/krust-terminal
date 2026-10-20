@@ -20,6 +20,22 @@ fn paragraphs() -> String {
         .join("\n")
 }
 
+/// Reads every part, answering each with `reply(part index)` and every
+/// finding check with YES.
+fn read_all<'a>(notes: &mut WorkNotes, reply: impl Fn(usize) -> &'a str) {
+    let mut part = 0;
+    while let Some(call) = notes.next_call() {
+        if call.label.contains("checking finding") {
+            notes.accept(Some("YES"));
+        } else if call.label.starts_with("part") {
+            notes.accept(Some(reply(part)));
+            part += 1;
+        } else {
+            break;
+        }
+    }
+}
+
 #[test]
 fn parts_cover_every_line_once_and_end_at_blank_lines() {
     // 180 lines in paragraphs of six; parts of about 27 lines, so the last
@@ -80,6 +96,17 @@ fn reads_each_part_then_answers_from_the_notes() {
             "NOTHING"
         };
         notes.accept(Some(reply));
+        if index == 1 {
+            // A finding is checked against the lines it cites first.
+            let check = notes.next_call().unwrap();
+            assert_eq!(
+                check.label,
+                format!("part 2 of {parts}: checking finding 1 of 1")
+            );
+            assert!(check.user.contains("A reader's finding: error at [L8]"));
+            assert!(check.user.contains("L8| line 8 of a long log"));
+            notes.accept(Some("YES, line 8 shows it"));
+        }
     }
     let call = notes.next_call().unwrap();
     assert_eq!(call.label, "answering from the notes");
@@ -89,6 +116,14 @@ fn reads_each_part_then_answers_from_the_notes() {
         "empty parts aren't passed on"
     );
     notes.accept(Some("It failed: see [L8]."));
+    // The line the answer rests on is checked against the text.
+    let check = notes.next_call().unwrap();
+    assert_eq!(check.label, "checking the answer against the text (1 of 1)");
+    assert!(check.user.starts_with("Claim: It failed: see [L8]."));
+    assert!(check.user.contains("L8| line 8 of a long log"));
+    assert!(check.user.contains("L4| line 4"));
+    assert!(!check.user.contains("L13|"));
+    notes.accept(Some("TRUE: line 8 is there."));
     assert_eq!(notes.answer(), Some("It failed: see [L8]."));
     assert!(notes.next_call().is_none());
 
@@ -100,6 +135,173 @@ fn reads_each_part_then_answers_from_the_notes() {
     )));
     assert_eq!(std::fs::read_to_string(notes.text_path()).unwrap(), text);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A finding the lines it cites don't bear out is dropped before it becomes
+/// a note; one they do is kept, as are lines that cite nothing. Past six
+/// cited findings a reader is listing noise: the rest go unchecked, dropped.
+#[test]
+fn a_finding_the_lines_dont_bear_out_is_dropped() {
+    let dir = temp_dir("findings");
+    let text = paragraphs();
+    let mut notes = WorkNotes::with_limits("log", "did it fail?", &text, &dir, 600, 5_000);
+    notes.accept(Some(
+        "Two things:\n[L2] the write fails here\n  because the disk is full\n[L3] line 3 of a long log",
+    ));
+    let first = notes.next_call().unwrap();
+    assert!(
+        first.label.ends_with("checking finding 1 of 2"),
+        "{}",
+        first.label
+    );
+    assert!(first
+        .user
+        .contains("A reader's finding: [L2] the write fails here\n  because the disk is full"));
+    notes.accept(Some("NO — line 2 says nothing of a write"));
+    assert!(notes
+        .next_call()
+        .unwrap()
+        .label
+        .ends_with("checking finding 2 of 2"));
+    notes.accept(Some("Yes."));
+    assert!(notes.next_call().unwrap().label.starts_with("part 2 of"));
+    let file = notes.render();
+    assert!(
+        file.contains("Two things:\n[L3] line 3 of a long log"),
+        "{file}"
+    );
+    assert!(
+        file.contains("Dropped, as the lines didn't bear them out:\n- [L2] the write fails here")
+    );
+
+    // Seven findings on lines of the second part.
+    let numbers: Vec<usize> = notes.parts[1]
+        .lines
+        .iter()
+        .filter(|(_, line)| !line.trim().is_empty())
+        .map(|(number, _)| *number)
+        .take(7)
+        .collect();
+    assert_eq!(numbers.len(), 7);
+    let many = numbers
+        .iter()
+        .map(|n| format!("[L{n}] line {n} of a long log"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    notes.accept(Some(&many));
+    let mut checks = 0;
+    while notes
+        .next_call()
+        .is_some_and(|call| call.label.contains("checking finding"))
+    {
+        checks += 1;
+        notes.accept(Some("YES"));
+    }
+    assert_eq!(checks, 6);
+    let file = notes.render();
+    let last = numbers[6];
+    assert!(
+        file.contains(&format!("- [L{last}] line {last} of a long log")),
+        "{file}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// llama3.1:8b's answer on the Blunt file named a line "missing a
+/// semicolon" that has one. Checked against the text, a claim like that is
+/// dropped with the notes behind it, and the question answered again.
+#[test]
+fn an_answer_the_text_contradicts_is_dropped_and_given_again() {
+    let dir = temp_dir("check");
+    let text = paragraphs();
+    let mut notes = WorkNotes::with_limits("log", "did it fail?", &text, &dir, 300, 5_000);
+    read_all(&mut notes, |index| match index {
+        0 => "[L2] the semicolon is missing here",
+        1 => "[L8] the error that stops the build",
+        _ => "NOTHING",
+    });
+    assert_eq!(notes.next_call().unwrap().label, "answering from the notes");
+    notes.accept(Some("Line 2 is missing a semicolon.\nAlso see [L8]."));
+    assert_eq!(
+        notes.next_call().unwrap().label,
+        "checking the answer against the text (1 of 2)"
+    );
+    notes.accept(Some("FALSE — line 2 ends as it should."));
+    assert!(notes
+        .next_call()
+        .unwrap()
+        .user
+        .contains("Claim: Also see [L8]."));
+    notes.accept(Some("TRUE"));
+
+    // Answered again, without the note on line 2.
+    let again = notes.next_call().unwrap();
+    assert_eq!(again.label, "answering from the notes");
+    assert!(!again.user.contains("semicolon"), "{}", again.user);
+    assert!(again.user.contains("[L8] the error"));
+    notes.accept(Some("It failed at [L8]."));
+    notes.accept(Some("TRUE"));
+    assert_eq!(notes.answer(), Some("It failed at [L8]."));
+    let file = std::fs::read_to_string(notes.notes_path()).unwrap();
+    assert!(file.contains("## Checked against the text, and dropped"));
+    assert!(file
+        .contains("- L2: \"Line 2 is missing a semicolon.\" — FALSE — line 2 ends as it should."));
+
+    // When nothing is left once the rejected notes go, that is the answer.
+    let dir2 = temp_dir("check-nothing-left");
+    let mut emptied = WorkNotes::with_limits("log", "q", &text, &dir2, 300, 5_000);
+    read_all(&mut emptied, |_| "[L2] a semicolon is missing");
+    emptied.accept(Some("See [L2]."));
+    emptied.accept(Some("FALSE: it isn't missing"));
+    assert!(emptied
+        .answer()
+        .unwrap()
+        .starts_with("Nothing found in the text bears on the question."));
+
+    // A second answer the text contradicts stands, with what failed said.
+    let dir3 = temp_dir("check-twice");
+    let mut twice = WorkNotes::with_limits("log", "q", &text, &dir3, 300, 5_000);
+    read_all(&mut twice, |_| {
+        "[L2] a semicolon is missing\n[L3] one is missing here too"
+    });
+    twice.accept(Some("See [L2]."));
+    twice.accept(Some("FALSE: it isn't missing"));
+    assert_eq!(twice.next_call().unwrap().label, "answering from the notes");
+    twice.accept(Some("See [L3]."));
+    twice.accept(Some("FALSE: nor here"));
+    assert_eq!(
+        twice.answer(),
+        Some("See [L3].\n\n(Checked against the text, this did not hold up: L3 — FALSE: nor here)")
+    );
+    for dir in [dir, dir2, dir3] {
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[test]
+fn an_answers_cited_lines_are_found_however_it_writes_them() {
+    assert_eq!(cited_lines("see [L12]"), vec![(12, 12)]);
+    assert_eq!(cited_lines("in [L12-L14]"), vec![(12, 14)]);
+    assert_eq!(
+        cited_lines("Line 7550 is missing a semicolon"),
+        vec![(7550, 7550)]
+    );
+    assert_eq!(
+        cited_lines("lines 610–615 and line 9"),
+        vec![(610, 615), (9, 9)]
+    );
+    assert_eq!(
+        cited_lines("the pipeline 3 times"),
+        Vec::<(usize, usize)>::new()
+    );
+    assert!(rejects("FALSE — it has one"));
+    assert!(rejects("false."));
+    assert!(!rejects("TRUE: the lines show it, not false"));
+    assert!(!rejects("The lines can't settle it."));
+    let claims = answer_claims("It is [L5].\nAnd [L5] again, and line 99999.", 60);
+    assert_eq!(claims.len(), 1);
+    assert_eq!(excerpt_range(2, 2, 60), (1, 6));
+    assert_eq!(excerpt_range(100, 400, 1_000), (96, 111));
 }
 
 #[test]
@@ -308,6 +510,14 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
         notes.part_count(),
         notes.notes_path().display()
     );
+    if let Some(other) = env("WORK_NOTES_REUSE").map(PathBuf::from) {
+        let carried = carry_over_notes(&mut notes, &other);
+        eprintln!(
+            "{carried} of {} parts are the same in {}: their notes are carried over, not read again",
+            notes.part_count(),
+            other.display()
+        );
+    }
     while let Some(next) = notes.next_call() {
         let reply = block_on(ask_fresh(
             &model,
@@ -371,6 +581,55 @@ fn the_file_named_in_the_environment_is_read_against_live_ollama() {
         named && said,
         "the answer names L{line} and says what is wrong:\n{answer}"
     );
+}
+
+/// For WORK_NOTES_REUSE: another run's notes folder — the same model and
+/// question, on a text that differs from this one in a few lines. A part
+/// whose text is the same there got its note from the same prompt at
+/// temperature 0, so that note is taken instead of reading the part again.
+/// Returns how many were carried over.
+fn carry_over_notes(notes: &mut WorkNotes, other: &Path) -> usize {
+    let Ok(entries) = std::fs::read_dir(other) else {
+        return 0;
+    };
+    let mut carried = 0;
+    for entry in entries.flatten() {
+        let state = entry.path();
+        if state.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let (Some(saved), Ok(text)) = (
+            std::fs::read_to_string(&state)
+                .ok()
+                .and_then(|json| serde_json::from_str::<Saved>(&json).ok()),
+            std::fs::read_to_string(state.with_extension("txt")),
+        ) else {
+            continue;
+        };
+        // The same question and part size, or the notes answer something else.
+        if saved.key != notes_key(&notes.question, &text, PART_CHARS) {
+            continue;
+        }
+        let parts = split_into_parts(&text, PART_CHARS);
+        for (index, part) in notes.parts.iter().enumerate() {
+            if notes.saved.notes[index].is_some() {
+                continue;
+            }
+            let same = parts
+                .iter()
+                .position(|theirs| theirs.numbered == part.numbered)
+                .and_then(|theirs| saved.notes.get(theirs).cloned().flatten());
+            if let Some(note) = same {
+                notes.saved.notes[index] = Some(note);
+                carried += 1;
+            }
+        }
+    }
+    if notes.saved.answer.is_none() && notes.saved.notes.iter().all(Option::is_some) {
+        notes.start_reducing(0);
+    }
+    notes.save();
+    carried
 }
 
 /// A reply on one line, cut to 240 characters, for a progress log.
@@ -462,6 +721,55 @@ fn a_citation_one_line_off_is_moved_to_the_line_it_means() {
         ground_citations("disk full at [L40]", &lines),
         "disk full at [L40]"
     );
+}
+
+/// granite4 named the misspelled identifier and cited a line 23 lines from
+/// the one that has it: a quoted token found on one line only is cited.
+#[test]
+fn a_quoted_token_on_one_line_of_the_part_is_cited() {
+    let lines = numbered_lines(&[
+        (6172, "    float u = dryIn * drv;"),
+        (
+            6174,
+            "    const double F = au + std::log1p(std::exp(-2.0 * au));",
+        ),
+        (6196, "    x = shaped - state.biasDcX;"),
+        (6197, "    state.biasDcX = shaepd;"),
+    ]);
+    assert_eq!(
+        cite_quoted_lines(
+            "[L6174] references a variable named \"shaepd\", which is undefined",
+            &lines
+        ),
+        "[L6174] references a variable named \"shaepd\" [L6197], which is undefined"
+    );
+    // Already cited, on more than one line, or on none: left as it is.
+    for note in [
+        "[L6197] `shaepd` is a typo",
+        "[L6174] uses `state` here",
+        "[L6174] `nowhere` is undefined",
+        "[L6174] it's fine, isn't it",
+    ] {
+        assert_eq!(cite_quoted_lines(note, &lines), note);
+    }
+}
+
+/// A finding that cites two lines far apart is checked against both.
+#[test]
+fn a_finding_on_two_far_lines_is_checked_against_both() {
+    let dir = temp_dir("far");
+    let mut notes = WorkNotes::with_limits("log", "q", &paragraphs(), &dir, 2_000, 5_000);
+    notes.accept(Some("[L2] and [L40] differ"));
+    let call = notes.next_call().unwrap();
+    assert!(
+        call.user.contains("Lines 1–6 and 36–44 of log"),
+        "{}",
+        call.user
+    );
+    assert!(call.user.contains("L2| line 2 of a long log"));
+    assert!(call.user.contains("\n…\nL36| "));
+    assert!(call.user.contains("L40| line 40 of a long log"));
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

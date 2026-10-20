@@ -486,6 +486,102 @@ fn the_same_block_called_twice_is_recognized_as_one_call() {
     );
 }
 
+/// What llama3.1:8b did on the first small-model Firefox run: `run_block`
+/// with no number, block 1 pasted into the shell, and an answer about blocks
+/// that never ran. The step is shaped like that run's step B: two blocks
+/// that always run, one only when a check fails (`git tag -d … STOP`), and
+/// the "otherwise" one that pushes.
+#[test]
+fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
+    let runbook = parse_runbook(
+        "# Runbook: bootstrap\n\n## Step B: snapshot\n\nMake the snapshot:\n\n```bash\necho one\necho \"V=1\"\n```\n\n\
+         Then check the difference:\n\n```bash\necho 37\n```\n\nA count in the hundreds means the wrong version: \
+         delete the tag and STOP:\n\n```bash\ngit tag -d snap\n```\n\nOtherwise record it and push:\n\n```bash\n\
+         git push origin main\n```\n",
+    );
+    let step = &runbook.steps[0];
+    assert_eq!(step.blocks[0].lead_in, "Make the snapshot:");
+    assert!(!step.blocks[0].is_conditional());
+    assert!(!step.blocks[1].is_conditional());
+    assert!(step.blocks[2].is_conditional());
+    assert!(step.blocks[3].is_conditional());
+
+    // No number: not guessed at — the next block could be the `git tag -d`.
+    let bare = tool_call("run_block", serde_json::json!({}));
+    assert_eq!(run_block_number(&normalize_call(&bare, step)), None);
+
+    // The number some other way.
+    for arguments in [
+        serde_json::json!({ "number": 2 }),
+        serde_json::json!({ "block": 2.0 }),
+        serde_json::json!({ "block": "block 2" }),
+        serde_json::json!({ "which": 2 }),
+    ] {
+        let call = normalize_call(&tool_call("run_block", arguments), step);
+        assert_eq!(run_block_number(&call), Some(2));
+    }
+    let with_value = tool_call(
+        "run_block",
+        serde_json::json!({ "number": 1, "set": { "V": "2" } }),
+    );
+    assert_eq!(normalize_call(&with_value, step).arguments["set"]["V"], "2");
+
+    // A block pasted into the shell is that block; any other command isn't.
+    let pasted = tool_call(
+        "shell",
+        serde_json::json!({ "command": "  echo one\n\necho \"V=1\"  " }),
+    );
+    assert_eq!(run_block_number(&normalize_call(&pasted, step)), Some(1));
+    let other = tool_call("shell", serde_json::json!({ "command": "echo one" }));
+    assert_eq!(normalize_call(&other, step).name, "shell");
+
+    // The nudge: block 2 first, which runs in any case; then blocks 3 and 4
+    // to choose between, once block 2's output is there to choose by.
+    let unrun: Vec<(usize, &RunbookBlock)> = (2..=4).map(|n| (n, &step.blocks[n - 1])).collect();
+    assert_eq!(
+        unrun_blocks_nudge(&unrun),
+        "Block 2 of this step has not run yet, and the step runs it in any case (\"Then check the \
+         difference:\"): run it with run_block ({\"block\": 2}). Then reply with your summary — or reply \
+         now, if the step says this doesn't apply here."
+    );
+    let nudge = unrun_blocks_nudge(&unrun[1..]);
+    assert!(
+        nudge.starts_with(
+            "The blocks left run only in some cases — block 3 (\"A count in the hundreds"
+        ),
+        "{nudge}"
+    );
+    assert!(nudge.contains("block 4 (\"Otherwise record it and push:\")"));
+    assert!(nudge.contains("Run the one the output so far calls for, if any"));
+
+    // After each call the worker is told where the step stands.
+    assert_eq!(
+        next_blocks_hint(step, &BTreeSet::from([1])).unwrap(),
+        "Next in this step: block 2 (\"Then check the difference:\") — run_block {\"block\": 2}."
+    );
+    let choice = next_blocks_hint(step, &BTreeSet::from([1, 2])).unwrap();
+    assert!(
+        choice.starts_with(
+            "What comes next in this step: block 3, only in some cases (\"A count in the hundreds"
+        ),
+        "{choice}"
+    );
+    assert!(choice.ends_with(
+        "block 4, only in some cases (\"Otherwise record it and push:\"). Run whichever the output so far \
+         calls for, in order."
+    ));
+    assert_eq!(next_blocks_hint(step, &BTreeSet::from([1, 2, 4])), None);
+
+    // Arguments sent as a JSON string, or as a number on their own.
+    for arguments in [
+        serde_json::json!("{\"block\": 3}"),
+        serde_json::json!("3"),
+        serde_json::json!(3),
+    ] {
+        assert_eq!(loose_block_number(&arguments), Some(3));
+    }
+}
+
 #[test]
 fn must_print_comments_become_checks_the_driver_runs() {
     let block = r#"echo "shallow: $(git rev-parse --is-shallow-repository)"              # must print false

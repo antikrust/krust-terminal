@@ -54,7 +54,9 @@ use super::ollama_stream_exec::{
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 
 /// Model calls a worker may make on one step before the step is called off.
-const MAX_WORKER_CALLS: usize = 16;
+/// Repeats are caught on their own; this is for a worker that wanders — a
+/// six-block step with a few looks at files ran out at 16.
+const MAX_WORKER_CALLS: usize = 24;
 /// Context window asked of both models: the runbook's rules, one step and a
 /// handful of command outputs.
 const RUNBOOK_NUM_CTX: u32 = 16_384;
@@ -227,6 +229,10 @@ pub(crate) struct RunbookStep {
 pub(crate) struct RunbookBlock {
     pub(crate) lang: String,
     pub(crate) code: String,
+    /// The paragraph just before the block, which says when it runs ("Then
+    /// check that …", "Otherwise … push:", "A count in the hundreds means …
+    /// STOP:").
+    pub(crate) lead_in: String,
 }
 
 impl RunbookBlock {
@@ -248,6 +254,33 @@ impl RunbookBlock {
     /// Whether `run_block` runs this block.
     pub(crate) fn offered(&self) -> bool {
         self.runnable() || self.is_resolve()
+    }
+
+    /// Whether the runbook runs this block only in some case — its lead-in
+    /// says if, otherwise, unless, STOP, … — so a worker that skipped it
+    /// may have been right to.
+    pub(crate) fn is_conditional(&self) -> bool {
+        let lead_in = self.lead_in.to_ascii_lowercase();
+        let words: Vec<&str> = lead_in
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .filter(|word| !word.is_empty())
+            .collect();
+        words.iter().any(|word| {
+            matches!(
+                *word,
+                "if" | "otherwise"
+                    | "unless"
+                    | "instead"
+                    | "means"
+                    | "stop"
+                    | "when"
+                    | "else"
+                    | "fails"
+                    | "failed"
+                    | "either"
+                    | "alternatively"
+            )
+        }) || lead_in.contains("in that case")
     }
 }
 
@@ -425,24 +458,48 @@ fn fence_lang(line: &str) -> String {
 
 fn fenced_blocks(body: &str) -> Vec<RunbookBlock> {
     let mut blocks = Vec::new();
-    let mut current: Option<(String, Vec<&str>)> = None;
+    let mut current: Option<(String, String, Vec<&str>)> = None;
+    // The prose since the last block, for the next block's lead-in.
+    let mut prose: Vec<&str> = Vec::new();
     for line in body.lines() {
         let trimmed = line.trim_start();
         if is_fence(trimmed) {
             match current.take() {
-                Some((lang, lines)) => blocks.push(RunbookBlock {
+                Some((lang, lead_in, lines)) => blocks.push(RunbookBlock {
                     lang,
                     code: lines.join("\n"),
+                    lead_in,
                 }),
-                None => current = Some((fence_lang(trimmed), Vec::new())),
+                None => {
+                    current = Some((fence_lang(trimmed), last_paragraph(&prose), Vec::new()));
+                    prose.clear();
+                }
             }
             continue;
         }
-        if let Some((_, lines)) = current.as_mut() {
-            lines.push(line);
+        match current.as_mut() {
+            Some((_, _, lines)) => lines.push(line),
+            None => prose.push(line),
         }
     }
     blocks
+}
+
+/// The last paragraph of `lines`, on one line.
+fn last_paragraph(lines: &[&str]) -> String {
+    let end = lines
+        .iter()
+        .rposition(|line| !line.trim().is_empty())
+        .map_or(0, |index| index + 1);
+    let start = lines[..end]
+        .iter()
+        .rposition(|line| line.trim().is_empty())
+        .map_or(0, |index| index + 1);
+    lines[start..end]
+        .iter()
+        .map(|line| line.trim())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn is_step_heading(heading: &str) -> bool {
@@ -1257,9 +1314,29 @@ fn judge_user_prompt(
     runbook: &Runbook,
     step: &RunbookStep,
     facts_before: &Facts,
-    records: &[CallRecord],
-    summary: &str,
+    worker_run: &WorkerRun,
 ) -> String {
+    let (records, summary) = (&worker_run.records, &worker_run.summary);
+    // A judge took a small worker's word for what a block that never ran
+    // "confirmed"; the driver knows which blocks ran, so it says.
+    let unrun: Vec<usize> = offered_block_numbers(step)
+        .into_iter()
+        .filter(|number| !worker_run.ran_blocks.contains(number))
+        .collect();
+    let unrun = match unrun.as_slice() {
+        [] => String::new(),
+        [only] => format!(
+            "\n\nChecked by the driver: block {only} of this step did not run. Whether it needed to is for the \
+             step's text to say; but nothing above shows its output, so anything the worker says it printed is \
+             unproven."
+        ),
+        _ => format!(
+            "\n\nChecked by the driver: blocks {} of this step did not run. Whether they needed to is for the \
+             step's text to say; but nothing above shows their output, so anything the worker says they printed \
+             is unproven.",
+            join_and(&unrun)
+        ),
+    };
     let checks = step.stated_checks();
     let checks = if checks.is_empty() {
         String::new()
@@ -1275,7 +1352,7 @@ fn judge_user_prompt(
     };
     format!(
         "The runbook's rules, for context:\n{}\n\nStep — {}:\n\n{}\n\n{checks}Known values before this step:\n{}\n\n\
-         What was run, in order:\n\n{}\n\nThe worker's summary:\n{}",
+         What was run, in order:\n\n{}{unrun}\n\nThe worker's summary (its own account, not evidence):\n{}",
         truncate_chars(&runbook.preamble, 3_000),
         step.title,
         step.body,
@@ -1334,6 +1411,9 @@ impl RunContext<'_> {
 #[derive(Debug, Default)]
 struct WorkerRun {
     records: Vec<CallRecord>,
+    /// The step's blocks that ran, by number, so the judge can be told which
+    /// never did.
+    ran_blocks: BTreeSet<usize>,
     summary: String,
     usage: Option<TurnUsage>,
     cancelled: bool,
@@ -1779,13 +1859,15 @@ async fn run_worker(
     ];
     let mut run = WorkerRun::default();
     let mut nudged = false;
+    // The blocks a worker was last told hadn't run, and how often it was.
+    let mut nudged_about: Option<BTreeSet<usize>> = None;
+    let mut unrun_nudges = 0;
     // Calls that already succeeded this step, with what they returned: a
     // small model that has run every block sometimes starts over from block
     // 1 rather than answer, and would loop until it ran out of calls.
     let mut succeeded: BTreeMap<String, String> = BTreeMap::new();
     let mut repeats = 0;
     let offered = offered_block_numbers(step);
-    let mut ran_blocks: BTreeSet<usize> = BTreeSet::new();
 
     for call_index in 0..=MAX_WORKER_CALLS {
         if context.cancelled() {
@@ -1840,6 +1922,37 @@ async fn run_worker(
                 }));
                 continue;
             }
+            // One that comes with blocks still to run — after the last call
+            // went through, so not a step stopping on a failure — is sent back
+            // too, each time that list changes, at most four times:
+            // llama3.1:8b ran block 1 of 2 and then reported what block 2
+            // "confirmed". A conditional block before one that ran was passed
+            // over on purpose and isn't raised again.
+            let last_ran = run.ran_blocks.iter().max().copied().unwrap_or(0);
+            let unrun: Vec<(usize, &RunbookBlock)> = offered
+                .iter()
+                .copied()
+                .filter(|number| !run.ran_blocks.contains(number))
+                .filter_map(|number| Some((number, step.blocks.get(number - 1)?)))
+                .filter(|(number, block)| !block.is_conditional() || *number > last_ran)
+                .collect();
+            let unrun_numbers: BTreeSet<usize> = unrun.iter().map(|(number, _)| *number).collect();
+            let last_failed = run
+                .records
+                .last()
+                .is_some_and(|record| record.exit_code.is_some_and(|code| code != 0));
+            if !unrun.is_empty()
+                && !run.records.is_empty()
+                && !last_failed
+                && unrun_nudges < 4
+                && nudged_about.as_ref() != Some(&unrun_numbers)
+            {
+                unrun_nudges += 1;
+                nudged_about = Some(unrun_numbers);
+                messages.push(json!({ "role": "assistant", "content": response.content }));
+                messages.push(json!({ "role": "user", "content": unrun_blocks_nudge(&unrun) }));
+                continue;
+            }
             run.summary = response.content;
             return Ok(run);
         };
@@ -1864,6 +1977,7 @@ async fn run_worker(
             }));
         }
         for call in &calls {
+            let call = &normalize_call(call, step);
             let signature = call_signature(call);
             let reply = if let Some(earlier) = succeeded.get(&signature) {
                 repeats += 1;
@@ -1888,13 +2002,15 @@ async fn run_worker(
                 }
                 run.records.push(record);
                 if let Some(number) = run_block_number(call) {
-                    ran_blocks.insert(number);
+                    run.ran_blocks.insert(number);
                 }
-                if !offered.is_empty() && offered.is_subset(&ran_blocks) {
+                if !offered.is_empty() && offered.is_subset(&run.ran_blocks) {
                     format!(
                         "{reply}\n\nEvery block in this step has now run. Unless the step asks for something \
                          more, reply with your summary instead of another tool call."
                     )
+                } else if let Some(next) = next_blocks_hint(step, &run.ran_blocks) {
+                    format!("{reply}\n\n{next}")
                 } else {
                     reply
                 }
@@ -1982,13 +2098,18 @@ async fn execute_call(
                     "run_block {}",
                     number.map(|n| n.to_string()).unwrap_or_default()
                 );
-                let error = format!(
-                    "There is no runnable block {} in this step. Its runnable blocks are: {}.",
-                    number
-                        .map(|n| n.to_string())
-                        .unwrap_or_else(|| "(missing number)".to_string()),
-                    runnable_block_numbers(step)
-                );
+                let error = match number {
+                    Some(number) => format!(
+                        "There is no runnable block {number} in this step. Its runnable blocks are: {}.",
+                        runnable_block_numbers(step)
+                    ),
+                    None => format!(
+                        "That call named no block (it sent {}). Call run_block with the block's number, e.g. \
+                         {{\"block\": 1}}. This step's runnable blocks are: {}.",
+                        call.arguments,
+                        runnable_block_numbers(step)
+                    ),
+                };
                 return Some(refusal(&call_id, label, error, on_event));
             };
             if block.is_resolve() {
@@ -2308,6 +2429,228 @@ fn run_block_number(call: &OllamaToolCall) -> Option<usize> {
         .and_then(|number| usize::try_from(number).ok())
 }
 
+/// What a small worker's call means, as a call the driver runs:
+/// - `run_block` with its number given some other way (`"number": 2`,
+///   `2.0`, `"block 2"`) is that block;
+/// - a shell command that is a block's text, pasted (llama3.1:8b does
+///   this), is that block, so its values are captured, its checks run and
+///   it counts as run.
+///
+/// A `run_block` with no number at all is not guessed at — the next block
+/// may be one the runbook runs only when a check fails (step B's `git tag
+/// -d`) — and gets a refusal that says what to send.
+fn normalize_call(call: &OllamaToolCall, step: &RunbookStep) -> OllamaToolCall {
+    let as_block = |number: usize, set: Option<&Value>| {
+        let mut arguments = json!({ "block": number });
+        if let Some(set) = set {
+            arguments["set"] = set.clone();
+        }
+        OllamaToolCall {
+            name: RUN_BLOCK.to_string(),
+            arguments,
+        }
+    };
+    match call.name.as_str() {
+        RUN_BLOCK if run_block_number(call).is_none() => {
+            match loose_block_number(&call.arguments) {
+                Some(number) => as_block(number, call.arguments.get("set")),
+                None => call.clone(),
+            }
+        }
+        SHELL => {
+            let command = call
+                .arguments
+                .get("command")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let pasted = step.blocks.iter().position(|block| {
+                block.offered() && !block.is_resolve() && same_script(&block.code, command)
+            });
+            match pasted {
+                Some(index) => as_block(index + 1, None),
+                None => call.clone(),
+            }
+        }
+        _ => call.clone(),
+    }
+}
+
+/// A block number given some other way than `"block": 2`: under another
+/// name, as `2.0`, or as text like `"block 2"`.
+fn loose_block_number(arguments: &Value) -> Option<usize> {
+    let parsed: Value;
+    let arguments = match arguments {
+        // Arguments sent as a JSON string, or as a bare number in one.
+        Value::String(text) => {
+            parsed = match serde_json::from_str::<Value>(text) {
+                Ok(object @ Value::Object(_)) => object,
+                _ => json!({ "block": text }),
+            };
+            &parsed
+        }
+        Value::Number(_) => {
+            parsed = json!({ "block": arguments });
+            &parsed
+        }
+        _ => arguments,
+    };
+    let object = arguments.as_object()?;
+    let value = [
+        "block",
+        "number",
+        "block_number",
+        "blockNumber",
+        "n",
+        "index",
+        "id",
+    ]
+    .iter()
+    .find_map(|name| object.get(*name))
+    .or_else(|| {
+        object
+            .iter()
+            .filter(|(name, _)| name.as_str() != "set")
+            .map(|(_, value)| value)
+            .next()
+            .filter(|_| object.len() == 1)
+    })?;
+    let number: u64 = match value {
+        Value::Number(number) => number
+            .as_f64()
+            .filter(|number| number.fract() == 0.0 && *number >= 1.0)
+            .map(|number| number as u64),
+        Value::String(text) => text
+            .chars()
+            .filter(char::is_ascii_digit)
+            .collect::<String>()
+            .parse()
+            .ok(),
+        _ => None,
+    }?;
+    usize::try_from(number).ok().filter(|number| *number >= 1)
+}
+
+/// Whether a pasted command is a block's script: the same lines, ignoring
+/// indentation and blank lines.
+fn same_script(code: &str, command: &str) -> bool {
+    let lines = |text: &str| {
+        text.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>()
+    };
+    let pasted = lines(command);
+    !pasted.is_empty() && pasted == lines(code)
+}
+
+/// Sent back to a worker that answers while blocks haven't run. Blocks the
+/// step runs in any case come first: run them. Once those have run, blocks
+/// it runs only in some case (the lead-in says if, otherwise, STOP …) are
+/// offered with what the runbook says before each, to choose from by what
+/// the output showed — not before, when that output isn't there yet.
+fn unrun_blocks_nudge(unrun: &[(usize, &RunbookBlock)]) -> String {
+    let quoted = |block: &RunbookBlock| {
+        if block.lead_in.is_empty() {
+            String::new()
+        } else {
+            format!(" (\"{}\")", truncate_chars(&block.lead_in, 200))
+        }
+    };
+    let any_case: Vec<&(usize, &RunbookBlock)> = unrun
+        .iter()
+        .filter(|(_, block)| !block.is_conditional())
+        .collect();
+    let ending =
+        "Then reply with your summary — or reply now, if the step says this doesn't apply here.";
+    match any_case.as_slice() {
+        [] => format!(
+            "{} only in some cases — {}. Run the one the output so far calls for, if any; then reply with \
+             your summary.",
+            if unrun.len() == 1 {
+                "The block left runs"
+            } else {
+                "The blocks left run"
+            },
+            unrun
+                .iter()
+                .map(|(number, block)| format!("block {number}{}", quoted(block)))
+                .collect::<Vec<_>>()
+                .join("; ")
+        ),
+        [(number, block)] => format!(
+            "Block {number} of this step has not run yet, and the step runs it in any case{}: run it with \
+             run_block ({{\"block\": {number}}}). {ending}",
+            quoted(block)
+        ),
+        [(first, _), ..] => format!(
+            "Blocks {} of this step have not run yet, and the step runs them in any case: run them in order \
+             with run_block, starting with {{\"block\": {first}}}. {ending}",
+            join_and(&any_case.iter().map(|(number, _)| *number).collect::<Vec<_>>())
+        ),
+    }
+}
+
+/// Where the step stands, told after every call: the next block after the
+/// last that ran, with what the runbook says before it — and when that one
+/// runs only in some case, those after it up to one that runs in any case.
+/// qwen3.5:9b, three blocks into a merge, looked about with shell, resolved
+/// a conflict by hand and ran the "abort and STOP" block meant for when the
+/// conflict pass it never ran leaves something over.
+fn next_blocks_hint(step: &RunbookStep, ran: &BTreeSet<usize>) -> Option<String> {
+    let last_ran = ran.iter().max().copied().unwrap_or(0);
+    let mut upcoming: Vec<(usize, &RunbookBlock)> = Vec::new();
+    for (index, block) in step.blocks.iter().enumerate() {
+        let number = index + 1;
+        if number <= last_ran || !block.offered() || ran.contains(&number) {
+            continue;
+        }
+        upcoming.push((number, block));
+        if !block.is_conditional() {
+            break;
+        }
+    }
+    let quoted = |block: &RunbookBlock| {
+        if block.lead_in.is_empty() {
+            String::new()
+        } else {
+            format!(" (\"{}\")", truncate_chars(&block.lead_in, 200))
+        }
+    };
+    match upcoming.as_slice() {
+        [] => None,
+        [(number, block)] if !block.is_conditional() => Some(format!(
+            "Next in this step: block {number}{} — run_block {{\"block\": {number}}}.",
+            quoted(block)
+        )),
+        _ => Some(format!(
+            "What comes next in this step: {}. Run whichever the output so far calls for, in order.",
+            upcoming
+                .iter()
+                .map(|(number, block)| {
+                    let when = if block.is_conditional() {
+                        ", only in some cases"
+                    } else {
+                        ""
+                    };
+                    format!("block {number}{when}{}", quoted(block))
+                })
+                .collect::<Vec<_>>()
+                .join("; ")
+        )),
+    }
+}
+
+/// `[2, 3, 4]` → "2, 3 and 4".
+fn join_and(numbers: &[usize]) -> String {
+    let words: Vec<String> = numbers.iter().map(ToString::to_string).collect();
+    match words.split_last() {
+        Some((last, rest)) if !rest.is_empty() => format!("{} and {last}", rest.join(", ")),
+        Some((last, _)) => last.clone(),
+        None => String::new(),
+    }
+}
+
 /// What makes two calls the same call: for `run_block`, the block and the
 /// values given; for anything else, the tool and its arguments.
 fn call_signature(call: &OllamaToolCall) -> String {
@@ -2492,7 +2835,7 @@ async fn judge_step(
         json!({ "role": "system", "content": JUDGE_SYSTEM_PROMPT }),
         json!({
             "role": "user",
-            "content": judge_user_prompt(runbook, step, facts_before, &worker_run.records, &worker_run.summary),
+            "content": judge_user_prompt(runbook, step, facts_before, worker_run),
         }),
     ];
     for _ in 0..2 {
