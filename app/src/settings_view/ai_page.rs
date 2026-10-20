@@ -520,6 +520,15 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             )
             .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
+                "runbook mode",
+                builder(SettingsAction::AI(
+                    AISettingsPageAction::ToggleOllamaRunbookMode,
+                )),
+                &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
+                flags::IS_OLLAMA_RUNBOOK_MODE_ENABLED,
+            )
+            .with_group(bindings::BindingGroup::KrustAi),
+            ToggleSettingActionPair::new(
                 "conversation history in tools panel",
                 builder(SettingsAction::AI(
                     AISettingsPageAction::ToggleShowConversationHistory,
@@ -3667,6 +3676,8 @@ pub enum AISettingsPageAction {
     ToggleIncludeAgentCommandsInHistory,
     ToggleSwearMode,
     ToggleMiseryMode,
+    /// Turn Ollama runbook mode on or off (also the agent input's toggle).
+    ToggleOllamaRunbookMode,
     SubscribeToDisableFlavour,
     ToggleAgentAttribution,
 
@@ -4425,6 +4436,12 @@ impl TypedActionView for AISettingsPageView {
             AISettingsPageAction::ToggleMiseryMode => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.misery_mode.toggle_and_save_value(ctx));
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleOllamaRunbookMode => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.ollama_runbook_mode.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
             }

@@ -1,0 +1,490 @@
+use std::path::Path;
+
+use ai::agent::{PlanUpdate, ToolCallOutcome, TurnEvent};
+use futures_lite::future::block_on;
+
+use super::*;
+
+/// The shape of a real runbook (bork's Firefox update), cut down: background
+/// and rules before the steps, a heading inside a code block, a conditional
+/// step, a report template at the end.
+const RUNBOOK: &str = r#"# Runbook: rebuilding on a new release
+
+This is an operating procedure for an AI agent.
+
+## Background: how the pieces fit
+
+The runtime lives in this repository.
+
+## Hard rules
+
+- Never force-push `main`.
+
+## Step 0: is there anything to do?
+
+```bash
+V=158.0.1                          # the new version
+T="FIREFOX_${V//./_}_RELEASE"
+git ls-remote --tags https://example.invalid "refs/tags/$T"
+```
+
+No output means it was never tagged: STOP.
+
+## Step B (one time only): bootstrap the snapshot history
+
+Only if `git tag -l 'firefox-*'` is empty.
+
+```sh
+# ## not a heading, just a comment
+git tag -l 'firefox-*'
+```
+
+## Step 1: import the new release
+
+```bash
+git status --short            # must be empty; if not, STOP
+git rev-parse --is-shallow-repository           # must print false
+```
+
+```ini
+[not]
+runnable = true
+```
+
+`version.txt` must now read `$V`.
+
+## Reporting template
+
+```
+release <old> -> <new>
+stopped at step <n>: <why>
+```
+"#;
+
+#[test]
+fn parses_steps_rules_and_report_from_a_real_shaped_runbook() {
+    let runbook = parse_runbook(RUNBOOK);
+    assert_eq!(runbook.title, "Runbook: rebuilding on a new release");
+    let ids: Vec<&str> = runbook.steps.iter().map(|step| step.id.as_str()).collect();
+    assert_eq!(ids, ["step-0", "step-b", "step-1"]);
+    assert_eq!(
+        runbook.steps[1].title,
+        "Step B (one time only): bootstrap the snapshot history"
+    );
+    // Context sections are everyone's preamble, not steps.
+    assert!(runbook.preamble.contains("operating procedure"));
+    assert!(runbook.preamble.contains("## Hard rules"));
+    assert!(runbook.preamble.contains("Never force-push"));
+    assert!(runbook.preamble.contains("## Background"));
+    // A `##` inside a fenced block is code, not a section break.
+    assert!(runbook.steps[1].blocks[0].code.contains("## not a heading"));
+    // The template is the fenced body of the reporting section.
+    assert_eq!(
+        runbook.report_template.as_deref(),
+        Some("release <old> -> <new>\nstopped at step <n>: <why>")
+    );
+    let step_1 = &runbook.steps[2];
+    assert_eq!(step_1.blocks.len(), 2);
+    assert!(step_1.blocks[0].runnable());
+    assert!(
+        !step_1.blocks[1].runnable(),
+        "an ini sample is not a shell block"
+    );
+}
+
+#[test]
+fn sections_become_steps_when_a_runbook_never_says_step() {
+    let runbook = parse_runbook(
+        "# Deploy\n\n## Overview\n\nWhat this is.\n\n## Build it\n\n```bash\nmake\n```\n\n## Ship it\n\n```bash\nmake ship\n```\n",
+    );
+    let titles: Vec<&str> = runbook
+        .steps
+        .iter()
+        .map(|step| step.title.as_str())
+        .collect();
+    assert_eq!(
+        titles,
+        ["Build it", "Ship it"],
+        "the overview stays context"
+    );
+    assert_eq!(runbook.steps[0].id, "step-1");
+    assert_eq!(runbook.steps[1].id, "step-2");
+    assert!(runbook.preamble.contains("What this is."));
+}
+
+#[test]
+fn duplicate_step_labels_still_get_distinct_ids() {
+    let runbook = parse_runbook("## Step 1: a\n\ntext\n\n## Step 1: again\n\ntext\n");
+    let ids: Vec<&str> = runbook.steps.iter().map(|step| step.id.as_str()).collect();
+    assert_eq!(ids, ["step-1", "step-1-2"]);
+}
+
+#[test]
+fn the_worker_sees_runnable_blocks_numbered_and_the_judge_sees_the_checks() {
+    let runbook = parse_runbook(RUNBOOK);
+    let step_1 = &runbook.steps[2];
+    let annotated = step_1.annotated_body();
+    assert!(annotated.contains("**Block 1** (`run_block` 1):\n```bash"));
+    assert!(
+        !annotated.contains("**Block 2**"),
+        "the ini block is not offered to run_block"
+    );
+
+    let checks = step_1.stated_checks();
+    assert!(checks
+        .iter()
+        .any(|check| check.contains("must be empty; if not, STOP")));
+    assert!(checks
+        .iter()
+        .any(|check| check.contains("must print false")));
+    assert!(checks.iter().any(|check| check.contains("must now read")));
+    assert!(runbook.steps[0]
+        .stated_checks()
+        .iter()
+        .any(|check| check.contains("never tagged: STOP")));
+    assert_eq!(
+        runbook.steps[1].summary(),
+        "Only if git tag -l 'firefox-*' is empty."
+    );
+}
+
+fn facts(pairs: &[(&str, &str)]) -> Facts {
+    pairs
+        .iter()
+        .map(|(name, value)| (name.to_string(), value.to_string()))
+        .collect()
+}
+
+#[test]
+fn a_known_value_beats_the_runbooks_example_value() {
+    let code = "V=158.0.1                          # the new version\nT=\"FIREFOX_${V//./_}_RELEASE\"\necho \"$T\"";
+    let prepared = prepare_block(code, &Facts::new(), &facts(&[("V", "158.0")]));
+    assert!(
+        prepared
+            .display
+            .starts_with("V='158.0'  # the new version\n"),
+        "{}",
+        prepared.display
+    );
+    // Computed values are left to the shell.
+    assert!(prepared.display.contains("T=\"FIREFOX_${V//./_}_RELEASE\""));
+    assert!(prepared.script.starts_with("export V='158.0'\n"));
+    assert!(prepared.script.contains(FACTS_MARKER));
+    assert!(
+        !prepared.display.contains(FACTS_MARKER),
+        "the card shows no plumbing"
+    );
+}
+
+#[test]
+fn set_wins_over_known_and_quotes_are_safe() {
+    let prepared = prepare_block(
+        "  NAME=placeholder",
+        &facts(&[("NAME", "it's")]),
+        &facts(&[("NAME", "older")]),
+    );
+    assert_eq!(prepared.display, "  NAME='it'\\''s'");
+}
+
+#[test]
+fn exports_are_not_assignments_and_lowercase_is_local() {
+    let code = "export GIT_INDEX_FILE=/tmp/x\ntree=$(git write-tree)\necho ok";
+    let prepared = prepare_block(code, &Facts::new(), &facts(&[("GIT_INDEX_FILE", "stale")]));
+    assert_eq!(prepared.display, code, "nothing here is a fact assignment");
+    assert!(
+        !prepared.script.contains(FACTS_MARKER),
+        "nothing to capture, so no trailer"
+    );
+}
+
+#[test]
+fn a_prepared_block_runs_carries_values_and_keeps_its_exit_status() {
+    let dir = std::env::temp_dir().join(format!("runbook-exec-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+
+    let block = "V=1.0  # example\nT=\"X_${V//./_}\"\necho \"tag $T\"";
+    let prepared = prepare_block(block, &facts(&[("V", "2.5")]), &Facts::new());
+    let execution = block_on(execute_shell(&prepared.script, &dir, &path));
+    assert_eq!(execution.exit_code, 0, "stderr: {}", execution.stderr);
+    let (stdout, captured) = split_captured_facts(&execution.stdout);
+    assert_eq!(stdout, "tag X_2_5");
+    assert_eq!(captured, facts(&[("T", "X_2_5"), ("V", "2.5")]));
+
+    // A later block sees the earlier one's values without re-declaring them.
+    let later = prepare_block("echo \"still $T\"", &Facts::new(), &captured);
+    let execution = block_on(execute_shell(&later.script, &dir, &path));
+    assert_eq!(execution.stdout.trim(), "still X_2_5");
+
+    // The trailer reports values but never masks a failure.
+    let failing = prepare_block("V=3\nfalse", &Facts::new(), &Facts::new());
+    let execution = block_on(execute_shell(&failing.script, &dir, &path));
+    assert_eq!(execution.exit_code, 1);
+    assert_eq!(
+        split_captured_facts(&execution.stdout).1,
+        facts(&[("V", "3")])
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn reported_values_skip_empty_and_non_fact_names() {
+    let (stdout, captured) = split_captured_facts(&format!(
+        "out\n\n{FACTS_MARKER}\nV=1\nEMPTY=\nlower=x\nNOEQUALS\n"
+    ));
+    assert_eq!(stdout, "out");
+    assert_eq!(captured, facts(&[("V", "1")]));
+    assert_eq!(split_captured_facts("no marker").0, "no marker");
+}
+
+#[test]
+fn the_fence_catches_absolute_paths_outside_the_target() {
+    let root = Path::new("/sandbox/repo");
+    assert!(escapes_root("cd /Volumes/real/repo", root).is_some());
+    assert!(escapes_root("git status && cd /elsewhere; ls", root).is_some());
+    assert!(
+        escapes_root("cd /sandbox/repo/../../real", root).is_some(),
+        "`..` is resolved"
+    );
+    assert!(escapes_root("rm -rf /real/objdir", root).is_some());
+    assert!(escapes_root("rm -r -f /real/objdir", root).is_some());
+
+    assert!(escapes_root("cd /sandbox/repo/sub", root).is_none());
+    assert!(escapes_root("cd ..", root).is_none(), "relative paths pass");
+    assert!(
+        escapes_root("rm -f /real/file", root).is_none(),
+        "only recursive deletes are fenced"
+    );
+    assert!(escapes_root("rm -rf /sandbox/repo/tmp", root).is_none());
+    assert!(
+        escapes_root("rm -f \"$(git rev-parse --git-dir)/import.index\"", root).is_none(),
+        "computed paths pass"
+    );
+}
+
+#[test]
+fn only_local_push_remotes_count_as_a_sandbox() {
+    let remotes = "origin\t/Volumes/DATA/sandbox/remote.git (fetch)\n\
+                   origin\t/Volumes/DATA/sandbox/remote.git (push)\n\
+                   mirror\tgit@github.com:someone/repo.git (push)\n\
+                   web\thttps://example.com/repo.git (fetch)\n";
+    assert_eq!(
+        network_push_remotes(remotes),
+        ["mirror → git@github.com:someone/repo.git"]
+    );
+    assert!(
+        network_push_remotes("origin\t../bare.git (push)\nup\tfile:///srv/x (push)").is_empty()
+    );
+}
+
+#[test]
+fn finds_the_runbook_file_however_the_prompt_names_it() {
+    let dir = std::env::temp_dir().join(format!("runbook-req-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(dir.join("with space")).unwrap();
+    let file = dir.join("with space").join("rb.md");
+    std::fs::write(&file, "# r").unwrap();
+
+    let exact = parse_runbook_request(&file.to_string_lossy(), Path::new("/")).unwrap();
+    assert_eq!(exact.path, file);
+    assert_eq!(exact.notes, "");
+
+    let escaped = format!(
+        "{} V=158.0 go slowly",
+        file.to_string_lossy().replace(' ', "\\ ")
+    );
+    let request = parse_runbook_request(&escaped, Path::new("/")).unwrap();
+    assert_eq!(request.path, file);
+    assert_eq!(request.notes, "V=158.0 go slowly");
+    assert_eq!(request.facts, facts(&[("V", "158.0")]));
+
+    let relative = parse_runbook_request("please run 'with space/rb.md'", &dir).unwrap();
+    assert_eq!(relative.path, file);
+    assert_eq!(relative.notes, "please run");
+
+    assert!(parse_runbook_request("no file here", &dir).is_none());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn reads_the_judges_verdict_through_prose_and_fences() {
+    let verdict = parse_verdict(
+        "Here you go:\n```json\n{\"verdict\": \"Pass\", \"reason\": \"printed false\", \
+         \"facts\": {\"V\": \"158.0\", \"N\": 3, \"lower\": \"x\", \"EMPTY\": \"\"}}\n```",
+    )
+    .unwrap();
+    assert_eq!(verdict.kind, VerdictKind::Pass);
+    assert_eq!(verdict.reason, "printed false");
+    assert_eq!(verdict.facts, facts(&[("N", "3"), ("V", "158.0")]));
+
+    assert_eq!(
+        parse_verdict("{\"verdict\":\"skipped\",\"reason\":\"tags exist\"}")
+            .unwrap()
+            .kind,
+        VerdictKind::Skip
+    );
+    assert_eq!(
+        parse_verdict("{\"verdict\":\"done\"}").unwrap().kind,
+        VerdictKind::Done
+    );
+    assert_eq!(
+        parse_verdict("{\"verdict\":\"failed\"}").unwrap().kind,
+        VerdictKind::Stop
+    );
+    assert!(parse_verdict("{\"verdict\":\"maybe\"}").is_none());
+    assert!(parse_verdict("no json at all").is_none());
+}
+
+#[test]
+fn picks_a_preferred_judge_that_is_installed_and_switched_on() {
+    let installed: Vec<String> = ["qwen2.5-coder:14b", "qwen3:14b", "deepseek-r1:14b"]
+        .iter()
+        .map(|tag| tag.to_string())
+        .collect();
+    assert_eq!(
+        pick_judge(&installed, "qwen2.5-coder:14b", &[]),
+        "deepseek-r1:14b"
+    );
+    assert_eq!(
+        pick_judge(
+            &installed,
+            "qwen2.5-coder:14b",
+            &["deepseek-r1:14b".to_string()]
+        ),
+        "qwen3:14b"
+    );
+    assert_eq!(
+        pick_judge(&["llama3.1:8b".to_string()], "llama3.1:8b", &[]),
+        "llama3.1:8b",
+        "with nothing preferred installed, the worker judges itself"
+    );
+}
+
+#[test]
+fn the_judge_setting_round_trips_and_cycles() {
+    assert_eq!(
+        RunbookConfig::from_settings_json(None),
+        RunbookConfig::default()
+    );
+    assert_eq!(
+        RunbookConfig::from_settings_json(Some("{\"judge\":\"auto\"}")).judge,
+        None
+    );
+    let chosen = RunbookConfig {
+        judge: Some("qwen3:14b".to_string()),
+    };
+    assert_eq!(
+        RunbookConfig::from_settings_json(Some(&chosen.to_settings_json())),
+        chosen
+    );
+    assert_eq!(
+        RunbookConfig::from_settings_json(Some("not json")),
+        RunbookConfig::default()
+    );
+
+    let installed = vec!["a:1b".to_string(), "b:2b".to_string()];
+    let mut config = RunbookConfig::default();
+    cycle_judge(&mut config, &installed);
+    assert_eq!(config.judge.as_deref(), Some("a:1b"));
+    cycle_judge(&mut config, &installed);
+    assert_eq!(config.judge.as_deref(), Some("b:2b"));
+    cycle_judge(&mut config, &installed);
+    assert_eq!(config.judge, None, "past the last model comes back to auto");
+}
+
+#[test]
+fn long_output_keeps_its_head_and_tail() {
+    let text = format!("{}{}", "h".repeat(5_000), "TAIL");
+    let clipped = clip_output(&text);
+    assert!(clipped.ends_with("TAIL"));
+    assert!(clipped.starts_with("hhh"));
+    assert!(clipped.contains("characters omitted"));
+    assert_eq!(clip_output("short"), "short");
+}
+
+/// A whole run, live: a two-step runbook in a throwaway repository whose
+/// only remote is a local bare repo, worked by a real 14B model and judged by
+/// a real one. Asserts the plan, the commands, the verdicts and the effect.
+#[test]
+#[ignore = "hits the live local Ollama service and loads real models"]
+fn a_toy_runbook_runs_end_to_end_against_live_ollama() {
+    let dir = std::env::temp_dir().join(format!("runbook-live-{}", Uuid::new_v4()));
+    let repo = dir.join("repo");
+    std::fs::create_dir_all(&repo).unwrap();
+    let path = std::env::var("PATH").unwrap_or_default();
+    let sh = |script: &str, cwd: &Path| {
+        let execution = block_on(execute_shell(script, cwd, &path));
+        assert_eq!(execution.exit_code, 0, "{script}: {}", execution.stderr);
+    };
+    sh(
+        "git init -q --bare ../remote.git && git init -q && git commit -q --allow-empty -m init \
+        && git remote add origin ../remote.git && git push -q origin HEAD:refs/heads/main",
+        &repo,
+    );
+    let runbook_path = dir.join("runbook.md");
+    std::fs::write(
+        &runbook_path,
+        "# Toy release\n\n## Hard rules\n\n- Never push anything but the tag.\n\n\
+         ## Step 1: choose the version\n\n```bash\nV=0.0.0      # placeholder\necho \"version is $V\"\n```\n\n\
+         Run block 1 with V set to 1.4.2. It must print `version is 1.4.2`.\n\n\
+         ## Step 2: tag it\n\n```bash\ngit tag \"v$V\"\ngit tag -l 'v*'\n```\n\n\
+         The tag list must show `v1.4.2`; if not, STOP.\n",
+    )
+    .unwrap();
+
+    let mut events = Vec::new();
+    block_on(run_ollama_runbook(
+        &runbook_path.to_string_lossy(),
+        &Uuid::new_v4(),
+        &repo,
+        &path,
+        "qwen2.5-coder:14b",
+        RunbookConfig::default(),
+        Vec::new(),
+        |event| events.push(event),
+    ))
+    .unwrap();
+
+    let texts: Vec<&str> = events
+        .iter()
+        .filter_map(|event| match event {
+            TurnEvent::Text { text } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    let transcript = texts.join("\n\n");
+    assert!(
+        events.iter().any(|event| matches!(
+            event,
+            TurnEvent::PlanUpdated { update: PlanUpdate::Create(items) } if items.len() == 2
+        )),
+        "the plan is shown up front"
+    );
+    let completed: Vec<String> = events
+        .iter()
+        .filter_map(|event| match event {
+            TurnEvent::PlanUpdated {
+                update: PlanUpdate::Complete(ids),
+            } => Some(ids.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect();
+    assert_eq!(completed, ["step-1", "step-2"], "transcript:\n{transcript}");
+    assert!(events.iter().any(|event| matches!(
+        event,
+        TurnEvent::ToolCallResult {
+            outcome: ToolCallOutcome::Success(_),
+            ..
+        }
+    )));
+    let tags = block_on(execute_shell("git tag -l", &repo, &path));
+    assert_eq!(tags.stdout.trim(), "v1.4.2", "transcript:\n{transcript}");
+    assert!(matches!(
+        events.last(),
+        Some(TurnEvent::TurnCompleted {
+            is_error: false,
+            ..
+        })
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+}

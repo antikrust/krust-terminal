@@ -55,6 +55,32 @@ pub enum TurnEvent {
         model: Option<String>,
         cwd: Option<String>,
     },
+
+    /// The run's step-by-step plan changed. Renders as the conversation's
+    /// checklist, the same one a cloud agent's plan uses, ticking items off
+    /// as the run completes them.
+    PlanUpdated { update: PlanUpdate },
+}
+
+/// One change to a run's plan checklist. Mirrors the conversation's own
+/// todo operations, so a local run's plan renders and restores exactly like
+/// a cloud one.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PlanUpdate {
+    /// Start a new checklist with these items, all pending. The first
+    /// pending item is the one shown as in progress.
+    Create(Vec<PlanItem>),
+    /// Mark the items with these ids done.
+    Complete(Vec<String>),
+}
+
+/// One item on a plan checklist.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlanItem {
+    /// Stable within the run; `PlanUpdate::Complete` refers to items by it.
+    pub id: String,
+    pub title: String,
+    pub description: String,
 }
 
 /// The outcome of a tool call, as reported by the CLI.

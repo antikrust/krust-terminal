@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use ai::agent::{ToolCallOutcome, TurnEvent};
+use ai::agent::{PlanUpdate, ToolCallOutcome, TurnEvent};
 use uuid::Uuid;
 use krust_multi_agent_api as api;
 
@@ -118,10 +118,47 @@ pub(crate) fn turn_event_to_messages(
                 format!("**⚠ Error:** {detail}"),
             )]
         }
+        TurnEvent::PlanUpdated { update } => plan_update_messages(task_id, request_id, update),
         // Session metadata and the successful completion marker carry no
         // renderable content of their own.
         TurnEvent::SessionInit { .. } | TurnEvent::TurnCompleted { .. } => Vec::new(),
     }
+}
+
+/// A plan change as the conversation's own `UpdateTodos` message — the shape
+/// the cloud agent sends — so the checklist renders live and is rebuilt on
+/// restore (`derive_todo_lists_from_root_task` replays these). A completion
+/// naming no items would convert to nothing, so none is sent.
+fn plan_update_messages(task_id: &str, request_id: &str, update: &PlanUpdate) -> Vec<api::Message> {
+    use api::message::update_todos::Operation;
+
+    let operation = match update {
+        PlanUpdate::Create(items) => Operation::CreateTodoList(api::CreateTodoList {
+            initial_todos: items
+                .iter()
+                .map(|item| api::TodoItem {
+                    id: item.id.clone(),
+                    title: item.title.clone(),
+                    description: item.description.clone(),
+                })
+                .collect(),
+        }),
+        PlanUpdate::Complete(ids) if ids.is_empty() => return Vec::new(),
+        PlanUpdate::Complete(ids) => Operation::MarkTodosCompleted(api::MarkTodosCompleted {
+            todo_ids: ids.clone(),
+        }),
+    };
+    vec![api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_string(),
+        request_id: request_id.to_string(),
+        message: Some(api::message::Message::UpdateTodos(
+            api::message::UpdateTodos {
+                operation: Some(operation),
+            },
+        )),
+        ..Default::default()
+    }]
 }
 
 /// The user's prompt as a task message — the local analogue of the cloud

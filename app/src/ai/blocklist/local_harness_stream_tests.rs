@@ -9,7 +9,7 @@
 //! effect), and every subsequent injection and the final completion report
 //! `TaskNotFound`.
 
-use ai::agent::{TurnEvent, TurnUsage};
+use ai::agent::{PlanItem, PlanUpdate, TurnEvent, TurnUsage};
 use krust_multi_agent_api as api;
 use krustui::{App, EntityId};
 
@@ -519,4 +519,97 @@ fn thinking_deltas_grow_one_reasoning_section() {
             );
         });
     });
+}
+
+/// A local run's plan must drive the conversation's real checklist through
+/// the same `AddMessagesToTask` path a cloud plan takes — and must not wedge
+/// the conversation: a malformed injected message removes the root task, so
+/// the text after it and the final completion would fail. Asserting both the
+/// mid-run checklist and the clean completion covers that.
+#[test]
+fn plan_updates_drive_the_conversation_checklist_without_wedging_it() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+        let stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "run the runbook", ctx));
+
+        let item = |id: &str, title: &str| PlanItem {
+            id: id.to_string(),
+            title: title.to_string(),
+            description: String::new(),
+        };
+        let events = vec![
+            TurnEvent::PlanUpdated {
+                update: PlanUpdate::Create(vec![
+                    item("step-0", "Step 0: anything to do?"),
+                    item("step-b", "Step B: bootstrap"),
+                    item("step-1", "Step 1: import"),
+                ]),
+            },
+            TurnEvent::Text {
+                text: "step 0 ran".to_string(),
+            },
+            TurnEvent::PlanUpdated {
+                update: PlanUpdate::Complete(vec!["step-0".to_string()]),
+            },
+        ];
+        let mut shell_commands = std::collections::HashMap::new();
+        for event in &events {
+            let messages = stream_messages(&stream, event, &mut shell_commands);
+            app.update(|ctx| stream.apply_messages(messages, ctx));
+        }
+
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            let list = conversation
+                .active_todo_list()
+                .expect("the plan became the conversation's checklist");
+            let completed: Vec<&str> = list
+                .completed_items()
+                .iter()
+                .map(|todo| todo.id.as_ref())
+                .collect();
+            assert_eq!(completed, ["step-0"]);
+            assert_eq!(
+                list.in_progress_item().map(|todo| todo.id.as_ref()),
+                Some("step-b"),
+                "the first pending step reads as in progress",
+            );
+            assert_eq!(list.len(), 3);
+        });
+
+        // The run must still land normally after plan messages.
+        let messages = stream_messages(
+            &stream,
+            &TurnEvent::Text {
+                text: "all steps done".to_string(),
+            },
+            &mut shell_commands,
+        );
+        app.update(|ctx| stream.apply_messages(messages, ctx));
+        app.update(|ctx| stream.complete(ctx));
+        history_model.read(&app, |model, _| {
+            let conversation = model
+                .conversation(&stream.conversation_id())
+                .expect("conversation exists");
+            assert!(matches!(conversation.status(), ConversationStatus::Success));
+        });
+    });
+}
+
+fn stream_messages(
+    stream: &LocalHarnessStream,
+    event: &TurnEvent,
+    shell_commands: &mut std::collections::HashMap<String, String>,
+) -> Vec<api::Message> {
+    turn_event_to_messages(
+        stream.root_task_id(),
+        stream.request_id(),
+        event,
+        shell_commands,
+    )
 }

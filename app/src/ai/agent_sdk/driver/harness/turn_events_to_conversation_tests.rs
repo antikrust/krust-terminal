@@ -1,7 +1,7 @@
 //! Tests that a stream of `TurnEvent`s maps to the expected sequence of
 //! renderable conversation messages.
 
-use ai::agent::{ToolCallOutcome, TurnEvent};
+use ai::agent::{PlanItem, PlanUpdate, ToolCallOutcome, TurnEvent};
 use serde_json::json;
 use krust_multi_agent_api as api;
 
@@ -275,4 +275,70 @@ fn session_init_and_turn_completed_produce_no_messages() {
     let convo = turn_events_to_conversation("q", &events);
     // Only the user query — bookkeeping events render nothing.
     assert_eq!(convo.tasks[0].messages.len(), 1);
+}
+
+fn plan_item(id: &str, title: &str) -> PlanItem {
+    PlanItem {
+        id: id.to_string(),
+        title: title.to_string(),
+        description: format!("{title}, in detail"),
+    }
+}
+
+#[test]
+fn a_new_plan_becomes_a_create_todo_list_message() {
+    let events = vec![TurnEvent::PlanUpdated {
+        update: PlanUpdate::Create(vec![
+            plan_item("step-0", "Step 0: anything to do?"),
+            plan_item("step-1", "Step 1: import"),
+        ]),
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    let messages = &convo.tasks[0].messages;
+    assert_eq!(messages.len(), 2, "user query + the plan");
+    // Same task and request as the rest of the run, or the conversation
+    // files the checklist under an exchange that does not exist.
+    assert_eq!(messages[1].task_id, convo.tasks[0].id);
+    assert_eq!(messages[1].request_id, messages[0].request_id);
+    match body(&messages[1]) {
+        api::message::Message::UpdateTodos(update) => match &update.operation {
+            Some(api::message::update_todos::Operation::CreateTodoList(list)) => {
+                let ids: Vec<&str> = list.initial_todos.iter().map(|t| t.id.as_str()).collect();
+                assert_eq!(ids, ["step-0", "step-1"]);
+                assert_eq!(list.initial_todos[1].title, "Step 1: import");
+                assert_eq!(
+                    list.initial_todos[1].description,
+                    "Step 1: import, in detail"
+                );
+            }
+            other => panic!("expected CreateTodoList, got {other:?}"),
+        },
+        other => panic!("expected UpdateTodos, got {other:?}"),
+    }
+}
+
+#[test]
+fn completing_plan_items_becomes_a_mark_completed_message() {
+    let events = vec![TurnEvent::PlanUpdated {
+        update: PlanUpdate::Complete(vec!["step-0".to_string()]),
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    match body(&convo.tasks[0].messages[1]) {
+        api::message::Message::UpdateTodos(update) => match &update.operation {
+            Some(api::message::update_todos::Operation::MarkTodosCompleted(done)) => {
+                assert_eq!(done.todo_ids, ["step-0"]);
+            }
+            other => panic!("expected MarkTodosCompleted, got {other:?}"),
+        },
+        other => panic!("expected UpdateTodos, got {other:?}"),
+    }
+}
+
+#[test]
+fn completing_nothing_sends_nothing() {
+    let events = vec![TurnEvent::PlanUpdated {
+        update: PlanUpdate::Complete(Vec::new()),
+    }];
+    let convo = turn_events_to_conversation("q", &events);
+    assert_eq!(convo.tasks[0].messages.len(), 1, "only the user query");
 }

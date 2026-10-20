@@ -1834,6 +1834,35 @@ define_settings_group!(AISettings, settings: [
         description: "Ollama committee settings, as a JSON object with \"reviewers\" and \"max_loaded\" counts and a \"panel_plan\" round list.",
     },
 
+    // Fork: runbook mode. With an Ollama model selected, a prompt naming a
+    // markdown runbook runs it step by step — the selected model works each
+    // step and a judge model checks it — instead of chatting. Toggled from
+    // the agent input footer.
+    ollama_runbook_mode: OllamaRunbookMode {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.krust_agent.other.ollama_runbook_mode",
+        description: "Whether prompts to an Ollama model run a named runbook step by step.",
+    },
+
+    // Fork: runbook settings, as JSON parsed by
+    // `ollama_runbook::RunbookConfig`; absent or malformed values fall back
+    // to defaults. Names locally installed models, so never synced.
+    ollama_runbook_config: OllamaRunbookConfig {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.krust_agent.other.ollama_runbook_config",
+        description: "Ollama runbook settings, as a JSON object with a \"judge\" model tag or \"auto\".",
+    },
+
     // Fork: Ollama instances on other machines. Holds each host's address
     // alongside the models it had when last checked — the model menu is built
     // synchronously and cannot wait on a machine that may be asleep, so the

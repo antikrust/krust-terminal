@@ -17,7 +17,6 @@ use chrono::{DateTime, Local};
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-#[cfg(feature = "voice_input")]
 use settings::Setting;
 use settings::ToggleableSetting;
 #[cfg(not(target_family = "wasm"))]
@@ -53,6 +52,7 @@ pub(crate) use self::environment_selector::{
     EnvironmentSelector, EnvironmentSelectorEvent, EnvironmentSelectorTarget,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_committee::OLLAMA_COMMITTEE_MODEL_ID;
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::OLLAMA_MODEL_ID_PREFIX;
 use crate::ai::blocklist::agent_view::is_in_cloud_context;
 use crate::ai::blocklist::history_model::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};
 use crate::ai::blocklist::prompt::prompt_alert::{PromptAlertEvent, PromptAlertView};
@@ -120,6 +120,14 @@ use committee_rounds_selector::{CommitteeRoundsSelector, CommitteeRoundsSelector
 
 const ENABLE_NLD_TOOLTIP: &str = "Enable terminal command autodetection";
 const DISABLE_NLD_TOOLTIP: &str = "Disable terminal command autodetection";
+
+fn runbook_mode_tooltip(is_on: bool) -> &'static str {
+    if is_on {
+        "Runbook mode is on: send a runbook's path to run it step by step here. Click to turn off"
+    } else {
+        "Runbook mode: send a markdown runbook's path and it runs step by step in this folder"
+    }
+}
 
 const FAST_FORWARD_ON_TOOLTIP: &str = "Turn off auto-approve all agent actions";
 const FAST_FORWARD_OFF_TOOLTIP: &str = "Auto-approve all agent actions for this task";
@@ -219,6 +227,9 @@ pub struct AgentInputFooter {
     handoff_environment_selector: ViewHandle<EnvironmentSelector>,
     /// The committee's round plan, beside the model picker it applies to.
     committee_rounds_selector: ViewHandle<CommitteeRoundsSelector>,
+    /// Runbook mode on/off, beside the model picker while an Ollama model is
+    /// selected.
+    runbook_mode_button: ViewHandle<ActionButton>,
     prompt_alert: ViewHandle<PromptAlertView>,
     ambient_agent_view_model: Option<ModelHandle<AmbientAgentViewModel>>,
     handoff_compose_state: ModelHandle<HandoffComposeState>,
@@ -756,6 +767,32 @@ impl AgentInputFooter {
             }
         });
 
+        // Shown only while a single Ollama model is selected: runbook mode
+        // turns that model's next prompt into a step-by-step runbook run.
+        let runbook_mode_button = ctx.add_typed_action_view(|ctx| {
+            let is_on = *AISettings::as_ref(ctx).ollama_runbook_mode.value();
+            let mut button = ActionButton::new("Runbook", AgentInputButtonTheme)
+                .with_icon(Icon::TaskListBlock)
+                .with_size(button_size)
+                .with_tooltip_alignment(TooltipAlignment::Left)
+                .on_click(|ctx| {
+                    ctx.dispatch_typed_action(AgentInputFooterAction::ToggleRunbookMode);
+                });
+            button.set_active(is_on, ctx);
+            button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
+            button
+        });
+        ctx.subscribe_to_model(&AISettings::handle(ctx), |me, settings, event, ctx| {
+            let AISettingsChangedEvent::OllamaRunbookMode { .. } = event else {
+                return;
+            };
+            let is_on = *settings.as_ref(ctx).ollama_runbook_mode.value();
+            me.runbook_mode_button.update(ctx, |button, ctx| {
+                button.set_active(is_on, ctx);
+                button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
+            });
+        });
+
         ctx.subscribe_to_view(
             &handoff_environment_selector,
             |_, _, event, ctx| match event {
@@ -939,6 +976,7 @@ impl AgentInputFooter {
             environment_selector,
             handoff_environment_selector,
             committee_rounds_selector,
+            runbook_mode_button,
             prompt_alert,
             terminal_model,
             handoff_compose_state,
@@ -1716,6 +1754,17 @@ impl AgentInputFooter {
             == Some(OLLAMA_COMMITTEE_MODEL_ID)
     }
 
+    /// Whether a single Ollama model (not the committee) is selected — the
+    /// only kind of model runbook mode drives.
+    fn single_ollama_model_is_selected(&self, app: &AppContext) -> bool {
+        self.ambient_agent_view_model
+            .as_ref()
+            .and_then(|model| model.as_ref(app).selected_harness_model_id())
+            .is_some_and(|id| {
+                id.starts_with(OLLAMA_MODEL_ID_PREFIX) && id != OLLAMA_COMMITTEE_MODEL_ID
+            })
+    }
+
     pub fn has_open_chip_menu(&self, app: &AppContext) -> bool {
         let has_open_display_chip = self
             .all_display_chips()
@@ -2399,6 +2448,9 @@ impl View for AgentInputFooter {
         if self.committee_is_selected(app) {
             left_buttons.add_child(ChildView::new(&self.committee_rounds_selector).finish());
         }
+        if self.single_ollama_model_is_selected(app) {
+            left_buttons.add_child(ChildView::new(&self.runbook_mode_button).finish());
+        }
 
         let mut right_buttons = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
@@ -2462,6 +2514,8 @@ pub enum AgentInputFooterAction {
     ToggleFileExplorer,
     ToggleRichInput,
     ToggleAutodetectionSetting,
+    /// Turn Ollama runbook mode on or off.
+    ToggleRunbookMode,
     InstallPlugin,
     UpdatePlugin,
     OpenPluginInstallInstructionsPane,
@@ -2547,6 +2601,11 @@ impl TypedActionView for AgentInputFooter {
                     report_if_error!(settings
                         .ai_autodetection_enabled_internal
                         .toggle_and_save_value(ctx));
+                });
+            }
+            AgentInputFooterAction::ToggleRunbookMode => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.ollama_runbook_mode.toggle_and_save_value(ctx));
                 });
             }
             AgentInputFooterAction::InstallPlugin => {

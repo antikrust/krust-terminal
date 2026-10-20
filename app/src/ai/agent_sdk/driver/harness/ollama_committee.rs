@@ -659,7 +659,7 @@ fn parse_installed_model_names(body: &[u8]) -> Option<Vec<String>> {
 /// app startup, and a user-run `ollama serve` has whatever its shell had),
 /// in which case a disk read misses every installed model. Curl rather than
 /// reqwest for the same non-Tokio-executor reason as [`probe_model_caps`].
-async fn fetch_installed_model_names(path: &str) -> Option<Vec<String>> {
+pub(crate) async fn fetch_installed_model_names(path: &str) -> Option<Vec<String>> {
     let mut command = Command::new("/usr/bin/curl");
     command.args([
         "--silent",
@@ -3031,13 +3031,13 @@ fn committee_usage() -> TurnUsage {
 /// cross-platform (ExitStatusExt::from_raw exists on both, just via
 /// different traits/raw-code types), so it's kept compiling on Windows too.
 #[cfg(unix)]
-fn success_status() -> ExitStatus {
+pub(crate) fn success_status() -> ExitStatus {
     use std::os::unix::process::ExitStatusExt;
     ExitStatus::from_raw(0)
 }
 
 #[cfg(windows)]
-fn success_status() -> ExitStatus {
+pub(crate) fn success_status() -> ExitStatus {
     use std::os::windows::process::ExitStatusExt;
     ExitStatus::from_raw(0)
 }

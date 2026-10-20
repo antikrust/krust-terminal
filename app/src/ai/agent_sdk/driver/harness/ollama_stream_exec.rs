@@ -230,7 +230,7 @@ pub(crate) struct McpToolSpec {
 }
 
 impl McpToolSpec {
-    fn to_ollama_tool_json(&self) -> Value {
+    pub(crate) fn to_ollama_tool_json(&self) -> Value {
         json!({
             "type": "function",
             "function": {
@@ -365,7 +365,7 @@ fn is_builtin_local_tool(name: &str) -> bool {
 
 /// Tool specs for the built-in file/code tools, advertised over `/api/chat`
 /// alongside any exposed MCP servers.
-fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
+pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
     vec![
         McpToolSpec {
             name: BUILTIN_READ_FILE.to_string(),
@@ -432,7 +432,7 @@ fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
 /// back to the model (`Ok`) or an error string (`Err`). Mirrors the shell/text
 /// protocol's `read_file`/`write_file`/`shell` actions so both Ollama paths
 /// expose the same file and code capabilities.
-async fn dispatch_builtin_tool(
+pub(crate) async fn dispatch_builtin_tool(
     name: &str,
     arguments: &Value,
     working_dir: &Path,
@@ -809,7 +809,7 @@ pub(crate) struct ShellExecution {
 }
 
 impl ShellExecution {
-    fn outcome(&self) -> ToolCallOutcome {
+    pub(crate) fn outcome(&self) -> ToolCallOutcome {
         if self.exit_code == 0 {
             ToolCallOutcome::Success(json!({
                 "stdout": self.stdout,
@@ -1907,9 +1907,9 @@ async fn run_ollama_chat_with_tools(
 }
 
 #[derive(Clone, Debug)]
-struct OllamaToolCall {
-    name: String,
-    arguments: Value,
+pub(crate) struct OllamaToolCall {
+    pub(crate) name: String,
+    pub(crate) arguments: Value,
 }
 
 /// Recovers a tool call that a model emitted as JSON text in its message
@@ -1920,7 +1920,7 @@ struct OllamaToolCall {
 /// Scans for the outermost `{...}` object in `content`, tolerating a code fence
 /// or a little surrounding prose, and only accepts it when `name` matches one
 /// of the advertised tools (so an ordinary JSON answer isn't mistaken for one).
-fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaToolCall> {
+pub(crate) fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaToolCall> {
     let start = content.find('{')?;
     let end = content.rfind('}')?;
     if end <= start {
@@ -1943,7 +1943,7 @@ fn parse_text_tool_call(content: &str, tools: &[McpToolSpec]) -> Option<OllamaTo
 
 pub(crate) struct OllamaChatResult {
     pub(crate) content: String,
-    tool_calls: Vec<OllamaToolCall>,
+    pub(crate) tool_calls: Vec<OllamaToolCall>,
     pub(crate) usage: TurnUsage,
 }
 

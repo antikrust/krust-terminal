@@ -51,6 +51,7 @@ pub(crate) mod ollama_committee;
 #[cfg(test)]
 mod ollama_committee_bench;
 pub(crate) mod ollama_committee_proof;
+pub(crate) mod ollama_runbook;
 pub(crate) mod ollama_stream_exec;
 mod telemetry;
 pub(crate) mod turn_events_to_conversation;

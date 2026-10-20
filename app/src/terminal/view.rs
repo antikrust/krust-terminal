@@ -227,6 +227,7 @@ use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, 
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
+use crate::ai::agent_sdk::driver::harness::ollama_runbook::{run_ollama_runbook, RunbookConfig};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream,
 };
@@ -23651,6 +23652,23 @@ impl TerminalView {
                 }
                 config
             });
+        // Runbook mode drives a single Ollama model through a runbook step by
+        // step; its judge choice and the switched-off models are snapshotted
+        // here for the same no-`ctx`-in-the-pump reason.
+        let ollama_runbook = (ollama_model.is_some()
+            && ollama_committee_config.is_none()
+            && *AISettings::as_ref(ctx).ollama_runbook_mode.value())
+        .then(|| {
+            (
+                RunbookConfig::from_settings_json(
+                    AISettings::as_ref(ctx)
+                        .ollama_runbook_config
+                        .value()
+                        .as_deref(),
+                ),
+                crate::ai::ollama::service::disabled_models_for(ctx),
+            )
+        });
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
@@ -23992,6 +24010,19 @@ impl TerminalView {
                                 &pump_path,
                                 config,
                                 ollama_remote_models,
+                                on_event,
+                            )
+                            .await
+                        } else if let Some((config, disabled)) = ollama_runbook {
+                            let model = ollama_model.unwrap_or_default();
+                            run_ollama_runbook(
+                                &pump_prompt,
+                                &session_id,
+                                &pump_working_dir,
+                                &pump_path,
+                                &model,
+                                config,
+                                disabled,
                                 on_event,
                             )
                             .await

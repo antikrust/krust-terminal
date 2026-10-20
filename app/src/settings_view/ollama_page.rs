@@ -32,6 +32,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS,
     MAX_REVIEWERS,
 };
+use crate::ai::agent_sdk::driver::harness::ollama_runbook::{self, cycle_judge, RunbookConfig};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
@@ -111,6 +112,8 @@ pub enum OllamaPageAction {
     ToggleCommitteeAudit,
     /// Switch between committee personas and plain model tags.
     ToggleCommitteePersonas,
+    /// Cycle runbook mode's judge: auto, then each installed model.
+    CycleRunbookJudge,
     /// Add whatever address is in the remote-host field, then check it.
     AddRemoteHost,
     /// Re-ask a known host what models it has.
@@ -244,6 +247,7 @@ struct StateHandles {
     committee_second_opinion_link: MouseStateHandle,
     committee_audit_link: MouseStateHandle,
     committee_personas_link: MouseStateHandle,
+    runbook_judge_link: MouseStateHandle,
     add_remote_link: MouseStateHandle,
     /// Per-remote-host check links, keyed by base URL. Stable handles so the
     /// click registers (see the install-button note).
@@ -263,6 +267,7 @@ impl OllamaPageView {
             Box::new(CatalogWidget),
             Box::new(RemoteHostsWidget),
             Box::new(CommitteeWidget),
+            Box::new(RunbookWidget),
         ];
 
         let model_input = ctx.add_typed_action_view(|ctx| {
@@ -462,6 +467,16 @@ impl OllamaPageView {
             availability.refresh_ollama_models(ctx)
         });
         ctx.notify();
+    }
+
+    /// The installed models' tags, without the committee pseudo-model.
+    fn installed_model_names(&self) -> Vec<String> {
+        self.installed
+            .iter()
+            .flatten()
+            .filter(|model| model.name != COMMITTEE_MODEL_NAME)
+            .map(|model| model.name.clone())
+            .collect()
     }
 
     /// Reads the committee config, applies one change, and persists it —
@@ -929,6 +944,22 @@ impl TypedActionView for OllamaPageView {
                 self.update_committee_config(ctx, |config| {
                     config.personas = !config.personas;
                 });
+            }
+            OllamaPageAction::CycleRunbookJudge => {
+                let installed = self.installed_model_names();
+                let mut config = RunbookConfig::from_settings_json(
+                    AISettings::as_ref(ctx)
+                        .ollama_runbook_config
+                        .value()
+                        .as_deref(),
+                );
+                cycle_judge(&mut config, &installed);
+                report_if_error!(AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    settings
+                        .ollama_runbook_config
+                        .set_value(Some(config.to_settings_json()), ctx)
+                }));
+                ctx.notify();
             }
             OllamaPageAction::AddRemoteHost => self.add_remote_host(ctx),
             OllamaPageAction::CheckRemoteHost { url } => self.check_remote_host(url.clone(), ctx),
@@ -2228,6 +2259,108 @@ impl SettingsWidget for CommitteeWidget {
                 );
             }
         }
+
+        Container::new(column.finish())
+            .with_margin_top(VERTICAL_MARGIN)
+            .finish()
+    }
+}
+
+struct RunbookWidget;
+
+impl SettingsWidget for RunbookWidget {
+    type View = OllamaPageView;
+
+    fn search_terms(&self) -> &str {
+        "ollama runbook mode step by step plan checklist judge worker sandbox"
+    }
+
+    fn should_render(&self, _app: &AppContext) -> bool {
+        service::is_installed()
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let config = RunbookConfig::from_settings_json(
+            AISettings::as_ref(app)
+                .ollama_runbook_config
+                .value()
+                .as_deref(),
+        );
+
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        column.add_child(section_break(appearance));
+        column.add_child(
+            Container::new(render_sub_header(appearance, "Runbooks", None))
+                .with_margin_top(VERTICAL_MARGIN)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(body_text(
+                "Turn on Runbook in the agent input with an Ollama model selected, then \
+                 send a markdown runbook's path from the folder it should work in. Each \
+                 \"Step\" section becomes a checklist item: the selected model runs that \
+                 step's commands in a fresh conversation, and a judge model checks the \
+                 output before the next step starts. Values a step works out are carried \
+                 forward, so no model has to remember the whole runbook.",
+                appearance,
+            ))
+            .with_margin_top(8.)
+            .finish(),
+        );
+
+        let label = match &config.judge {
+            Some(judge) => format!("Judge: {judge}"),
+            None => {
+                let installed = view.installed_model_names();
+                if installed.is_empty() {
+                    "Judge: auto".to_string()
+                } else {
+                    let disabled = service::disabled_models_for(app);
+                    let picked = ollama_runbook::pick_judge(&installed, "", &disabled);
+                    if picked.is_empty() {
+                        "Judge: auto (the selected model checks its own work)".to_string()
+                    } else {
+                        format!("Judge: auto ({picked})")
+                    }
+                }
+            }
+        };
+        let handles = view.state_handles.borrow();
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .link(
+                        label,
+                        None,
+                        Some(Box::new(|ctx| {
+                            ctx.dispatch_typed_action(OllamaPageAction::CycleRunbookJudge);
+                        })),
+                        handles.runbook_judge_link.clone(),
+                    )
+                    .soft_wrap(false)
+                    .build()
+                    .finish(),
+            )
+            .with_margin_top(12.)
+            .finish(),
+        );
+        column.add_child(
+            Container::new(sub_text(
+                "The judge reads each step's output and decides whether the step passed. \
+                 Auto picks the first installed reasoning model from deepseek-r1:14b, \
+                 qwen3:14b and phi4:14b. A run refuses to start in a git repository that \
+                 can push anywhere but a local folder, so try a runbook on a sandbox copy.",
+                appearance,
+            ))
+            .with_margin_top(2.)
+            .finish(),
+        );
 
         Container::new(column.finish())
             .with_margin_top(VERTICAL_MARGIN)
