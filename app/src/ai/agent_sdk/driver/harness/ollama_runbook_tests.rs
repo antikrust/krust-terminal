@@ -428,6 +428,65 @@ fn a_model_that_was_slow_to_load_is_tried_again_but_a_real_refusal_is_not() {
 }
 
 #[test]
+fn a_runbook_path_that_is_not_there_gets_a_suggestion() {
+    let root = std::env::temp_dir().join(format!("runbook-missing-{}", Uuid::new_v4()));
+    let work = root.join("sandbox").join("bork-runtime");
+    std::fs::create_dir_all(&work).unwrap();
+    let runbook = root.join("sandbox").join("update.sandbox.md");
+    std::fs::write(&runbook, "# x\n").unwrap();
+
+    let missing = missing_runbook_paths("/agent /Volumes/DATA/github/update.sandbox.md", &work);
+    assert_eq!(
+        missing,
+        vec![(
+            "/Volumes/DATA/github/update.sandbox.md".to_string(),
+            Some(runbook.clone())
+        )]
+    );
+    assert_eq!(path_from(&work, &runbook), "../update.sandbox.md");
+    assert_eq!(
+        missing_runbook_paths("nowhere/else.md", &work),
+        vec![("nowhere/else.md".to_string(), None)]
+    );
+    assert!(missing_runbook_paths("just some words", &work).is_empty());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+fn tool_call(name: &str, arguments: serde_json::Value) -> OllamaToolCall {
+    OllamaToolCall {
+        name: name.to_string(),
+        arguments,
+    }
+}
+
+#[test]
+fn the_same_block_called_twice_is_recognized_as_one_call() {
+    let one = tool_call("run_block", serde_json::json!({ "block": 1 }));
+    let one_as_text = tool_call("run_block", serde_json::json!({ "block": "1" }));
+    let one_with_value = tool_call(
+        "run_block",
+        serde_json::json!({ "block": 1, "set": { "V": "158.0" } }),
+    );
+    let two = tool_call("run_block", serde_json::json!({ "block": 2 }));
+    assert_eq!(call_signature(&one), call_signature(&one_as_text));
+    assert_ne!(call_signature(&one), call_signature(&one_with_value));
+    assert_ne!(call_signature(&one), call_signature(&two));
+    assert_eq!(run_block_number(&two), Some(2));
+    let shell = tool_call("shell", serde_json::json!({ "command": "git status" }));
+    assert_eq!(run_block_number(&shell), None);
+    assert!(call_signature(&shell).starts_with("shell "));
+
+    let runbook = parse_runbook(RUNBOOK);
+    let step_1 = &runbook.steps[2];
+    assert_eq!(
+        offered_block_numbers(step_1)
+            .into_iter()
+            .collect::<Vec<_>>(),
+        vec![1]
+    );
+}
+
+#[test]
 fn picks_a_small_helper_that_is_installed_and_switched_on() {
     let installed: Vec<String> = ["qwen2.5-coder:14b", "granite4:7b-a1b-h", "qwen3.5:9b"]
         .iter()

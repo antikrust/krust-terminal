@@ -107,7 +107,8 @@ use crate::terminal::ShellLaunchData;
 use crate::terminal::{CLIAgent, TerminalModel};
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
-    ActionButton, ActionButtonTheme, AdjoinedSide, ButtonSize, KeystrokeSource, TooltipAlignment,
+    ActionButton, ActionButtonTheme, AdjoinedSide, ButtonSize, KeystrokeSource, PrimaryTheme,
+    TooltipAlignment,
 };
 use crate::view_components::DismissibleToast;
 #[cfg(not(target_family = "wasm"))]
@@ -121,6 +122,19 @@ use committee_rounds_selector::{CommitteeRoundsSelector, CommitteeRoundsSelector
 
 const ENABLE_NLD_TOOLTIP: &str = "Enable terminal command autodetection";
 const DISABLE_NLD_TOOLTIP: &str = "Disable terminal command autodetection";
+
+/// Runbook mode on reads as a filled accent button and off as an ordinary
+/// footer chip. The on state is its own theme, not `set_active`, which draws a
+/// button exactly as hovered: a click with the pointer still on the button
+/// would show no change until the pointer moved away.
+fn show_runbook_mode(button: &mut ActionButton, is_on: bool, ctx: &mut ViewContext<ActionButton>) {
+    if is_on {
+        button.set_theme(PrimaryTheme, ctx);
+    } else {
+        button.set_theme(AgentInputButtonTheme, ctx);
+    }
+    button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
+}
 
 fn runbook_mode_tooltip(is_on: bool) -> &'static str {
     if is_on {
@@ -772,15 +786,14 @@ impl AgentInputFooter {
         // turns that model's next prompt into a step-by-step runbook run.
         let runbook_mode_button = ctx.add_typed_action_view(|ctx| {
             let is_on = *AISettings::as_ref(ctx).ollama_runbook_mode.value();
-            let mut button = ActionButton::new("Runbook", NLDButtonTheme)
+            let mut button = ActionButton::new("Runbook", AgentInputButtonTheme)
                 .with_icon(Icon::TaskListBlock)
                 .with_size(button_size)
                 .with_tooltip_alignment(TooltipAlignment::Left)
                 .on_click(|ctx| {
                     ctx.dispatch_typed_action(AgentInputFooterAction::ToggleRunbookMode);
                 });
-            button.set_active(is_on, ctx);
-            button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
+            show_runbook_mode(&mut button, is_on, ctx);
             button
         });
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, settings, event, ctx| {
@@ -789,8 +802,7 @@ impl AgentInputFooter {
             };
             let is_on = *settings.as_ref(ctx).ollama_runbook_mode.value();
             me.runbook_mode_button.update(ctx, |button, ctx| {
-                button.set_active(is_on, ctx);
-                button.set_tooltip(Some(runbook_mode_tooltip(is_on)), ctx);
+                show_runbook_mode(button, is_on, ctx);
             });
         });
         // Whether the button shows depends on the local model selection and
@@ -3032,8 +3044,7 @@ impl ActionButtonTheme for FastForwardLockedTheme {
     }
 }
 
-/// Same as `AgentInputButtonTheme`, except with the footer toggles' active styling: blue when
-/// on, dimmed when off. Used by the NLD and runbook-mode buttons.
+/// Same as `AgentInputButtonTheme`, except with one-off special active styling for the NLD button.
 struct NLDButtonTheme;
 
 impl ActionButtonTheme for NLDButtonTheme {

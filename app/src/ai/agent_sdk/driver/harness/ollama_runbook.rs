@@ -27,7 +27,7 @@
 //! command that would `cd` to, or recursively delete, an absolute path outside
 //! the target directory is refused before it runs.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
 use std::process::ExitStatus;
@@ -548,6 +548,51 @@ pub(crate) fn parse_runbook_request(prompt: &str, working_dir: &Path) -> Option<
     Some(RunbookRequest { path, notes, facts })
 }
 
+/// The markdown paths a prompt names that aren't files, each with a file of
+/// the same name found in the target directory or one or two levels above
+/// it — so a mistyped or misplaced path gets "did you mean" instead of the
+/// bare usage text.
+pub(crate) fn missing_runbook_paths(
+    prompt: &str,
+    working_dir: &Path,
+) -> Vec<(String, Option<PathBuf>)> {
+    prompt_words(prompt)
+        .into_iter()
+        .map(|(_, word)| word)
+        .filter(|word| {
+            let lower = word.to_ascii_lowercase();
+            lower.ends_with(".md") || lower.ends_with(".markdown")
+        })
+        .map(|word| {
+            let suggestion = Path::new(&word).file_name().and_then(|name| {
+                working_dir
+                    .ancestors()
+                    .take(3)
+                    .map(|dir| dir.join(name))
+                    .find(|candidate| candidate.is_file())
+            });
+            (word, suggestion)
+        })
+        .collect()
+}
+
+/// How to name `path` from `working_dir`: `../name` style when it sits in an
+/// ancestor a level or two up, else the absolute path.
+fn path_from(working_dir: &Path, path: &Path) -> String {
+    let Some(name) = path.file_name().map(|name| name.to_string_lossy()) else {
+        return path.display().to_string();
+    };
+    match working_dir
+        .ancestors()
+        .take(3)
+        .position(|dir| Some(dir) == path.parent())
+    {
+        Some(0) => name.into_owned(),
+        Some(levels) => format!("{}{name}", "../".repeat(levels)),
+        None => path.display().to_string(),
+    }
+}
+
 /// Words of a prompt with shell-style quoting and `\ ` escapes undone, each
 /// with the byte range it came from.
 fn prompt_words(prompt: &str) -> Vec<(Range<usize>, String)> {
@@ -1002,7 +1047,9 @@ step asks you to supply a value (for example a version, V=…), pass it in run_b
 - If a check the step states fails, or the step says STOP, stop at once — run nothing further.
 - If resolving something would mean rewriting a large file, do not attempt it: do what the step says for that case \
 (usually abort and STOP).
-- When you are done, reply in plain text: what you ran and what the output showed. Do not start another step.";
+- Run each block once. Never run a block again unless the step tells you to.
+- When the blocks the step needs have run, stop calling tools and reply in plain text: what you ran and what the \
+output showed. Do not start another step.";
 
 const JUDGE_SYSTEM_PROMPT: &str = "You check one step of a runbook run. Another model ran it; you only read \
 what happened. Decide from the step's own success criteria and the actual command output below — never from what \
@@ -1217,14 +1264,27 @@ pub(crate) async fn run_ollama_runbook(
     });
 
     let Some(request) = parse_runbook_request(prompt, working_dir) else {
-        finish_with_text(
-            &mut on_event,
-            format!(
-                "**Runbook mode** — give me the runbook file to follow, as a path (absolute, `~/…`, or relative to \
-                 `{}`). The runbook runs in the folder this terminal is in, so `cd` into the sandbox first.",
+        let missing = missing_runbook_paths(prompt, working_dir);
+        let text = match missing.first() {
+            Some((word, Some(found))) => format!(
+                "**Runbook mode** — there's no file at `{word}`. Did you mean `{}` (`{}`)? Send that path to \
+                 run it here, in `{}`.",
+                path_from(working_dir, found),
+                found.display(),
                 working_dir.display()
             ),
-        );
+            Some((word, None)) => format!(
+                "**Runbook mode** — there's no file at `{word}`. Check the path: it can be absolute, `~/…`, or \
+                 relative to `{}`, where the runbook will run.",
+                working_dir.display()
+            ),
+            None => format!(
+                "**Runbook mode** — give me the runbook file to follow, as a path (absolute, `~/…`, or relative \
+                 to `{}`). The runbook runs in the folder this terminal is in, so `cd` into the sandbox first.",
+                working_dir.display()
+            ),
+        };
+        finish_with_text(&mut on_event, text);
         return Ok(success_status());
     };
     let markdown = match std::fs::read_to_string(&request.path) {
@@ -1549,6 +1609,13 @@ async fn run_worker(
     ];
     let mut run = WorkerRun::default();
     let mut nudged = false;
+    // Calls that already succeeded this step, with what they returned: a
+    // small model that has run every block sometimes starts over from block
+    // 1 rather than answer, and would loop until it ran out of calls.
+    let mut succeeded: BTreeMap<String, String> = BTreeMap::new();
+    let mut repeats = 0;
+    let offered = offered_block_numbers(step);
+    let mut ran_blocks: BTreeSet<usize> = BTreeSet::new();
 
     for call_index in 0..=MAX_WORKER_CALLS {
         if context.cancelled() {
@@ -1600,9 +1667,10 @@ async fn run_worker(
             return Ok(run);
         };
         if call_index == MAX_WORKER_CALLS {
-            run.failure = Some(format!(
-                "the worker made {MAX_WORKER_CALLS} calls on this step without finishing it"
-            ));
+            // What ran is still on record; the judge decides from it.
+            run.summary = format!(
+                "(The worker made {MAX_WORKER_CALLS} calls on this step without giving its summary.)"
+            );
             return Ok(run);
         }
 
@@ -1619,12 +1687,41 @@ async fn run_worker(
             }));
         }
         for call in &calls {
-            let Some((record, reply)) = execute_call(context, step, facts, call, on_event).await
-            else {
-                run.cancelled = true;
-                return Ok(run);
+            let signature = call_signature(call);
+            let reply = if let Some(earlier) = succeeded.get(&signature) {
+                repeats += 1;
+                if repeats > 2 {
+                    run.summary =
+                        "(The worker kept repeating calls it had already made.)".to_string();
+                    return Ok(run);
+                }
+                format!(
+                    "Not run again: this exact call already ran and succeeded. Its result was:\n{earlier}\n\n\
+                     If the blocks this step needs have run, stop calling tools and reply with your summary."
+                )
+            } else {
+                let Some((record, reply)) =
+                    execute_call(context, step, facts, call, on_event).await
+                else {
+                    run.cancelled = true;
+                    return Ok(run);
+                };
+                if record.exit_code == Some(0) {
+                    succeeded.insert(signature, reply.clone());
+                }
+                run.records.push(record);
+                if let Some(number) = run_block_number(call) {
+                    ran_blocks.insert(number);
+                }
+                if !offered.is_empty() && offered.is_subset(&ran_blocks) {
+                    format!(
+                        "{reply}\n\nEvery block in this step has now run. Unless the step asks for something \
+                         more, reply with your summary instead of another tool call."
+                    )
+                } else {
+                    reply
+                }
             };
-            run.records.push(record);
             // A model that ignores native tool calls ignores the `tool` role
             // too, but always reads a user message.
             if recovered {
@@ -1902,6 +1999,40 @@ fn refusal(
         },
         error,
     )
+}
+
+/// The block numbers `run_block` accepts in `step`.
+fn offered_block_numbers(step: &RunbookStep) -> BTreeSet<usize> {
+    step.blocks
+        .iter()
+        .enumerate()
+        .filter(|(_, block)| block.offered())
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// The block a `run_block` call names, if it is one.
+fn run_block_number(call: &OllamaToolCall) -> Option<usize> {
+    if call.name != RUN_BLOCK {
+        return None;
+    }
+    let block = call.arguments.get("block")?;
+    block
+        .as_u64()
+        .or_else(|| block.as_str().and_then(|text| text.trim().parse().ok()))
+        .and_then(|number| usize::try_from(number).ok())
+}
+
+/// What makes two calls the same call: for `run_block`, the block and the
+/// values given; for anything else, the tool and its arguments.
+fn call_signature(call: &OllamaToolCall) -> String {
+    match run_block_number(call) {
+        Some(number) => format!(
+            "{RUN_BLOCK} {number} {:?}",
+            string_map(call.arguments.get("set"))
+        ),
+        None => format!("{} {}", call.name, call.arguments),
+    }
 }
 
 fn runnable_block_numbers(step: &RunbookStep) -> String {
