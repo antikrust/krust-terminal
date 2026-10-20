@@ -70,11 +70,14 @@ pub fn reconstruct_response_events_from_conversations(
         // Use the server conversation token if it's available.
         // Otherwise, fall back to the id that this conversation was forked from.
         // This ensures viewers can properly group historical exchanges together.
+        // A local-harness conversation has neither; its live runs stream to
+        // viewers under the local conversation id (see `LocalHarnessStream`),
+        // so its history replays under the same one.
         let token = conversation
             .server_conversation_token()
             .or_else(|| conversation.forked_from_server_conversation_token())
             .map(|t| t.as_str().to_string())
-            .unwrap_or_default();
+            .unwrap_or_else(|| conversation.id().to_string());
         let request_id = exchange_messages
             .first()
             .map(|(_, msg)| msg.request_id.clone())

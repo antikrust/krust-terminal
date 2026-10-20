@@ -10,6 +10,7 @@
 //! (`controller::shared_session`), this does NOT mark the conversation
 //! view-only or as "viewing a shared session" — the user owns and drives it.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ai::agent::{TurnEvent, TurnUsage};
@@ -55,6 +56,12 @@ pub(crate) struct LocalHarnessStream {
     /// any non-thinking event so a post-tool thinking run opens a new
     /// section.
     streaming_reasoning_message_id: Option<String>,
+    /// This same stream as the response events a shared session's viewers
+    /// rebuild it from: its init, every client action applied, its finish.
+    /// The terminal view drains it after each event and, while the session is
+    /// shared (Remote control), sends it to the viewers — the local-harness
+    /// counterpart of the cloud stream's forwarding. Unwatched runs discard it.
+    shared_events: RefCell<Vec<api::ResponseEvent>>,
 }
 
 impl LocalHarnessStream {
@@ -93,7 +100,9 @@ impl LocalHarnessStream {
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
             streaming_reasoning_message_id: None,
+            shared_events: RefCell::new(Vec::new()),
         };
+        this.share_init();
 
         let request_input = this.request_input(prompt);
         history.update(ctx, |history, ctx| {
@@ -135,6 +144,7 @@ impl LocalHarnessStream {
                     },
                 )),
             };
+            this.share_actions(std::slice::from_ref(&create_root_task));
             if let Err(error) = history.apply_client_actions(
                 &this.stream_id,
                 vec![create_root_task],
@@ -207,7 +217,9 @@ impl LocalHarnessStream {
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
             streaming_reasoning_message_id: None,
+            shared_events: RefCell::new(Vec::new()),
         };
+        this.share_init();
 
         let request_input = this.request_input(prompt);
         history.update(ctx, |history, ctx| {
@@ -320,18 +332,20 @@ impl LocalHarnessStream {
         if messages.is_empty() {
             return;
         }
+        let action = api::ClientAction {
+            action: Some(api::client_action::Action::AddMessagesToTask(
+                api::client_action::AddMessagesToTask {
+                    task_id: self.root_task_id.to_string(),
+                    messages,
+                },
+            )),
+        };
+        self.share_actions(std::slice::from_ref(&action));
         let history = BlocklistAIHistoryModel::handle(ctx);
         history.update(ctx, |history, ctx| {
             if let Err(error) = history.apply_client_actions(
                 &self.stream_id,
-                vec![api::ClientAction {
-                    action: Some(api::client_action::Action::AddMessagesToTask(
-                        api::client_action::AddMessagesToTask {
-                            task_id: self.root_task_id.to_string(),
-                            messages,
-                        },
-                    )),
-                }],
+                vec![action],
                 self.conversation_id,
                 self.terminal_surface_id,
                 &self.skill_path_origin,
@@ -392,13 +406,15 @@ impl LocalHarnessStream {
             )
         };
 
+        let action = api::ClientAction {
+            action: Some(action),
+        };
+        self.share_actions(std::slice::from_ref(&action));
         let history = BlocklistAIHistoryModel::handle(ctx);
         history.update(ctx, |history, ctx| {
             if let Err(error) = history.apply_client_actions(
                 &self.stream_id,
-                vec![api::ClientAction {
-                    action: Some(action),
-                }],
+                vec![action],
                 self.conversation_id,
                 self.terminal_surface_id,
                 &self.skill_path_origin,
@@ -456,13 +472,15 @@ impl LocalHarnessStream {
             )
         };
 
+        let action = api::ClientAction {
+            action: Some(action),
+        };
+        self.share_actions(std::slice::from_ref(&action));
         let history = BlocklistAIHistoryModel::handle(ctx);
         history.update(ctx, |history, ctx| {
             if let Err(error) = history.apply_client_actions(
                 &self.stream_id,
-                vec![api::ClientAction {
-                    action: Some(action),
-                }],
+                vec![action],
                 self.conversation_id,
                 self.terminal_surface_id,
                 &self.skill_path_origin,
@@ -587,6 +605,7 @@ impl LocalHarnessStream {
 
     /// Marks the exchange finished, clearing the in-progress spinner.
     pub(crate) fn complete(&self, ctx: &mut AppContext) {
+        self.share_finished();
         let history = BlocklistAIHistoryModel::handle(ctx);
         history.update(ctx, |history, ctx| {
             history.mark_response_stream_completed_successfully(
@@ -640,6 +659,7 @@ impl LocalHarnessStream {
             );
         });
 
+        self.share_finished();
         let request_id = uuid::Uuid::new_v4().to_string();
         let stream_init = api::response_event::StreamInit {
             request_id: request_id.clone(),
@@ -657,7 +677,11 @@ impl LocalHarnessStream {
             streaming_text_message_id: None,
             shown_texts: Vec::new(),
             streaming_reasoning_message_id: None,
+            // Events not yet drained belong to this exchange; keep them ahead
+            // of the continuation's.
+            shared_events: RefCell::new(self.shared_events.take()),
         };
+        next.share_init();
 
         let request_input = next.request_input_with(
             results
@@ -698,6 +722,50 @@ impl LocalHarnessStream {
         });
 
         next
+    }
+
+    /// The response events recorded since the last call, for a shared
+    /// session's viewers; see [`Self::shared_events`].
+    pub(crate) fn take_shared_events(&self) -> Vec<api::ResponseEvent> {
+        self.shared_events.take()
+    }
+
+    fn share(&self, kind: api::response_event::Type) {
+        self.shared_events
+            .borrow_mut()
+            .push(api::ResponseEvent { r#type: Some(kind) });
+    }
+
+    /// Opens this exchange for viewers. A local run has no server
+    /// conversation; viewers key a conversation by this token, so the local
+    /// conversation id stands in for it and every exchange of the thread —
+    /// follow-ups and tool continuations — lands in the same one.
+    fn share_init(&self) {
+        self.share(api::response_event::Type::Init(
+            api::response_event::StreamInit {
+                conversation_id: self.conversation_id.to_string(),
+                request_id: self.request_id.clone(),
+                run_id: String::new(),
+            },
+        ));
+    }
+
+    fn share_actions(&self, actions: &[api::ClientAction]) {
+        self.share(api::response_event::Type::ClientActions(
+            api::response_event::ClientActions {
+                actions: actions.to_vec(),
+            },
+        ));
+    }
+
+    fn share_finished(&self) {
+        use api::response_event::stream_finished;
+        self.share(api::response_event::Type::Finished(
+            api::response_event::StreamFinished {
+                reason: Some(stream_finished::Reason::Done(stream_finished::Done {})),
+                ..Default::default()
+            },
+        ));
     }
 
     fn request_input(&self, prompt: &str) -> RequestInput {

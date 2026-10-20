@@ -44,3 +44,16 @@ fn empty_values_are_treated_as_absent() {
     assert_eq!(non_empty(Some(String::new())), None);
     assert_eq!(non_empty(Some(" tok ".to_owned())), Some("tok".to_owned()));
 }
+
+#[test]
+fn session_sharing_rides_the_same_host_over_websockets() {
+    assert_eq!(
+        session_sharing_url("https://192.168.1.50:10102").as_deref(),
+        Some("wss://192.168.1.50:10102")
+    );
+    assert_eq!(
+        session_sharing_url("http://127.0.0.1:10102").as_deref(),
+        Some("ws://127.0.0.1:10102")
+    );
+    assert_eq!(session_sharing_url("ftp://example.com"), None);
+}

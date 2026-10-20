@@ -4040,6 +4040,25 @@ impl Input {
             .map(AmbientAgentViewState::view_model)
     }
 
+    /// The local harness, model and reasoning level an agent prompt from this
+    /// input runs on: the agent view's picker when there is one, else the
+    /// default harness with its configured model.
+    pub(crate) fn local_harness_selection(
+        &self,
+        ctx: &AppContext,
+    ) -> (Harness, Option<String>, Option<String>) {
+        self.ambient_agent_view_model()
+            .map(|vm| {
+                let model = vm.as_ref(ctx);
+                (
+                    model.selected_harness(),
+                    model.selected_harness_model_id().map(str::to_owned),
+                    model.selected_harness_reasoning_level().map(str::to_owned),
+                )
+            })
+            .unwrap_or_else(|| crate::ai::harness_availability::selected_local_harness(ctx))
+    }
+
     /// Shows a transient error toast for a follow-up submission that was blocked or redirected.
     fn show_ephemeral_error_toast(&self, message: &str, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
@@ -14311,17 +14330,7 @@ impl Input {
         // requires a Krust account and 401s here. Harness/model/reasoning come
         // from the ambient view model when present (the picker), else the
         // default harness with its CLI-configured model.
-        let (harness, model_id, reasoning_level) = self
-            .ambient_agent_view_model()
-            .map(|vm| {
-                let model = vm.as_ref(ctx);
-                (
-                    model.selected_harness(),
-                    model.selected_harness_model_id().map(str::to_owned),
-                    model.selected_harness_reasoning_level().map(str::to_owned),
-                )
-            })
-            .unwrap_or_else(|| crate::ai::harness_availability::selected_local_harness(ctx));
+        let (harness, model_id, reasoning_level) = self.local_harness_selection(ctx);
         log::info!("fork: routing agent prompt to local harness {harness:?}");
         ctx.emit(Event::RunLocalClaudeQuery {
             prompt: ai_query,

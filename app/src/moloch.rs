@@ -118,6 +118,26 @@ pub fn apply_server_url_override() {
             config.url
         ),
     }
+    // Moloch is also the session-sharing server (Share session, Remote
+    // control): same host, WebSocket scheme. Without this the app keeps its
+    // built-in sharing host, which is not ours and does not answer.
+    if let Some(url) = session_sharing_url(&config.url) {
+        match krust_core::channel::ChannelState::override_session_sharing_server_url(url.clone()) {
+            Ok(()) => log::info!("MOLOCH: session sharing pointed at {url}"),
+            Err(e) => eprintln!("Error: invalid session-sharing URL ({url}): {e:#}"),
+        }
+    }
+}
+
+/// Moloch's session-sharing address: its base URL with the WebSocket scheme
+/// (`https` → `wss`, `http` → `ws`). `None` for anything else.
+fn session_sharing_url(url: &str) -> Option<String> {
+    if let Some(rest) = url.strip_prefix("https://") {
+        Some(format!("wss://{rest}"))
+    } else {
+        url.strip_prefix("http://")
+            .map(|rest| format!("ws://{rest}"))
+    }
 }
 
 /// The token to authenticate with, if Moloch is configured with one. Fed into

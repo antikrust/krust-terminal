@@ -613,3 +613,104 @@ fn stream_messages(
         shell_commands,
     )
 }
+
+fn event_kinds(events: &[api::ResponseEvent]) -> Vec<&'static str> {
+    use api::response_event::Type;
+    events
+        .iter()
+        .map(|event| match &event.r#type {
+            Some(Type::Init(_)) => "init",
+            Some(Type::ClientActions(_)) => "actions",
+            Some(Type::Finished(_)) => "finished",
+            None => "none",
+        })
+        .collect()
+}
+
+fn init_of(event: &api::ResponseEvent) -> &api::response_event::StreamInit {
+    match &event.r#type {
+        Some(api::response_event::Type::Init(init)) => init,
+        _ => panic!("expected a stream init"),
+    }
+}
+
+/// What a shared session's viewers (Remote control) receive for a local run:
+/// the stream as response events, keyed by the local conversation so the
+/// whole thread lands in one conversation on the viewer.
+#[test]
+fn a_local_run_records_the_response_events_a_shared_session_viewer_rebuilds() {
+    use api::client_action::Action;
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "run the tests", ctx));
+        app.update(|ctx| stream.apply_text_delta("All ", ctx));
+        app.update(|ctx| stream.apply_text_delta("green.", ctx));
+        app.update(|ctx| stream.complete(ctx));
+
+        let events = stream.take_shared_events();
+        assert_eq!(
+            event_kinds(&events),
+            ["init", "actions", "actions", "actions", "actions", "finished"]
+        );
+        let init = init_of(&events[0]);
+        assert_eq!(init.conversation_id, stream.conversation_id().to_string());
+        assert_eq!(init.request_id, stream.request_id());
+
+        let actions: Vec<&str> = events[1..5]
+            .iter()
+            .flat_map(|event| match &event.r#type {
+                Some(api::response_event::Type::ClientActions(batch)) => batch
+                    .actions
+                    .iter()
+                    .map(|action| match &action.action {
+                        Some(Action::CreateTask(_)) => "create_task",
+                        Some(Action::AddMessagesToTask(_)) => "add_messages",
+                        Some(Action::AppendToMessageContent(_)) => "append",
+                        _ => "other",
+                    })
+                    .collect::<Vec<_>>(),
+                _ => Vec::new(),
+            })
+            .collect();
+        // The root-task upgrade, the echoed prompt, the first delta, then the
+        // second delta appended in place — what the viewer applies.
+        assert_eq!(
+            actions,
+            ["create_task", "add_messages", "add_messages", "append"]
+        );
+        assert!(
+            stream.take_shared_events().is_empty(),
+            "draining empties the outbox"
+        );
+    });
+}
+
+#[test]
+fn a_tool_continuation_reopens_the_exchange_in_the_same_viewer_conversation() {
+    App::test((), |mut app| async move {
+        initialize_history_persistence_for_tests(&mut app);
+        let terminal_view_id = EntityId::new();
+        app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
+
+        let stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "edit the file", ctx));
+        let first_request = stream.request_id().to_owned();
+        let token = stream.conversation_id().to_string();
+        let next = app.update(|ctx| stream.continue_after_tool_results(Vec::new(), ctx));
+
+        // Undrained events carry over, the first exchange finishes, and the
+        // continuation opens under the same conversation token.
+        let events = next.take_shared_events();
+        assert_eq!(
+            event_kinds(&events),
+            ["init", "actions", "actions", "finished", "init"]
+        );
+        assert_eq!(init_of(&events[0]).request_id, first_request);
+        assert_eq!(init_of(&events[4]).request_id, next.request_id());
+        assert_eq!(init_of(&events[4]).conversation_id, token);
+    });
+}

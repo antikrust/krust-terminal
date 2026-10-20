@@ -1374,23 +1374,21 @@ impl TerminalManager<TerminalView> {
                     return;
                 }
 
-                // Execute the agent prompt in the Oz-harness case
+                // This fork runs every agent prompt on a local harness — the
+                // cloud controller's shared-session path would send it to a
+                // server that is not there. Run it on this terminal's local
+                // harness instead; the response streams back to the viewers.
                 terminal_view.update(ctx, |view, ctx| {
-                    // Restore the sharer's frozen visual state. The buffer is cleared by
-                    // system_clear_buffer when SentRequest fires from execute_agent_prompt_for_shared_session.
+                    // Restore the sharer's frozen visual state.
                     view.input().update(ctx, |input, ctx| {
                         input.unfreeze_agent_input(false, ctx);
                     });
-
-                    view.ai_controller().update(ctx, |ai_controller, ctx| {
-                        ai_controller.execute_agent_prompt_for_shared_session(
-                            request.prompt.clone(),
-                            request.server_conversation_token,
-                            request.attachments.clone(),
-                            participant_id.clone(),
-                            ctx,
-                        );
-                    });
+                    view.run_agent_prompt_from_viewer(
+                        request.prompt.clone(),
+                        request.attachments.clone(),
+                        participant_id.clone(),
+                        ctx,
+                    );
                 });
             }
             NetworkEvent::LinkAccessLevelUpdateResponse { response } => {

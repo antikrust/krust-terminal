@@ -21649,6 +21649,7 @@ impl TerminalView {
                     *harness,
                     model_id.clone(),
                     reasoning_level.clone(),
+                    None,
                     ctx,
                 );
             }
@@ -23461,6 +23462,10 @@ impl TerminalView {
         requested_harness: Harness,
         model_id: Option<String>,
         reasoning_level: Option<String>,
+        // Who asked, when this terminal is shared: a viewer for prompts sent
+        // over Remote control, else the sharer. Stamped on what the run sends
+        // to the session's viewers.
+        share_initiator: Option<ParticipantId>,
         ctx: &mut ViewContext<Self>,
     ) {
         // Scoped here (not module-level) to avoid clashing with the
@@ -23821,6 +23826,7 @@ impl TerminalView {
                 while let Some(event) = event_rx.next().await {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
+                    let share_initiator = share_initiator.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
                             let mut stream = match taken {
@@ -23964,6 +23970,7 @@ impl TerminalView {
                             if turn_completed {
                                 stream.complete(ctx);
                             }
+                            view.share_local_harness_events(&stream, share_initiator, ctx);
                             (stream, turn_completed)
                         })
                         .await;
@@ -23978,8 +23985,9 @@ impl TerminalView {
                 if let Some(stream) = stream {
                     if !completed {
                         let _ = spawner
-                            .spawn(move |_view: &mut Self, ctx: &mut ViewContext<Self>| {
-                                stream.complete(ctx)
+                            .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
+                                stream.complete(ctx);
+                                view.share_local_harness_events(&stream, share_initiator, ctx);
                             })
                             .await;
                     }
@@ -24049,6 +24057,69 @@ impl TerminalView {
                 }
             })
             .detach();
+    }
+
+    /// Runs an agent prompt a shared session's viewer sent (Remote control).
+    /// This fork runs every agent prompt on a local harness, so it goes to the
+    /// harness and model this terminal's own input would use, continuing the
+    /// thread on screen, and its response streams back to the viewers.
+    /// Plain-text attachments ride along in the prompt; block and file
+    /// references are cloud-side constructs a local harness cannot resolve.
+    pub(crate) fn run_agent_prompt_from_viewer(
+        &mut self,
+        mut prompt: String,
+        attachments: Vec<AgentAttachment>,
+        participant_id: ParticipantId,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        for attachment in attachments {
+            match attachment {
+                AgentAttachment::PlainText { content } => {
+                    prompt.push_str("\n\n");
+                    prompt.push_str(&content);
+                }
+                AgentAttachment::BlockReference { .. } | AgentAttachment::FileReference { .. } => {
+                    log::info!("fork: dropping a viewer attachment a local harness cannot resolve");
+                }
+            }
+        }
+        let (harness, model_id, reasoning_level) =
+            self.input.as_ref(ctx).local_harness_selection(ctx);
+        log::info!("fork: running a shared-session viewer's prompt on local harness {harness:?}");
+        self.run_local_claude_query(
+            prompt,
+            harness,
+            model_id,
+            reasoning_level,
+            Some(participant_id),
+            ctx,
+        );
+    }
+
+    /// Sends what a local harness run just did to this terminal's shared
+    /// session, if it has one: the run's recorded response events, stamped
+    /// with who asked (the sharer unless a viewer did). Viewers rebuild the
+    /// conversation from them exactly as they do a cloud agent's stream.
+    fn share_local_harness_events(
+        &mut self,
+        stream: &LocalHarnessStream,
+        initiator: Option<ParticipantId>,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let events = stream.take_shared_events();
+        if events.is_empty() {
+            return;
+        }
+        // Only a shared session has a presence manager; skip the model lock
+        // for the common, unshared case.
+        let Some(presence) = self.shared_session_presence_manager() else {
+            return;
+        };
+        let initiator = initiator.or_else(|| Some(presence.as_ref(ctx).sharer_id()));
+        let mut model = self.model.lock();
+        for event in &events {
+            model.send_agent_response_for_shared_session(event, initiator.clone(), None);
+        }
     }
 
     pub fn pwd_if_local(&self, ctx: &AppContext) -> Option<String> {

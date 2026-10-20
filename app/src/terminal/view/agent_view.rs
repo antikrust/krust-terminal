@@ -347,7 +347,7 @@ impl TerminalView {
                             crate::ai::harness_availability::selected_local_harness(ctx);
                         (harness, model_id)
                     });
-                self.run_local_claude_query(initial_prompt, harness, model_id, None, ctx);
+                self.run_local_claude_query(initial_prompt, harness, model_id, None, None, ctx);
                 did_auto_trigger_request = true;
             } else {
                 let appearance = Appearance::handle(ctx).as_ref(ctx);
