@@ -73,10 +73,14 @@ in order. Answer from the notes alone and cite their line numbers. If the notes 
 missing. Be brief: at most fifteen lines.";
 
 /// llama3.1:8b answered a broken source file with a line "missing a
-/// semicolon" that had one; shown the line, a model can tell.
-const CHECK_SYSTEM_PROMPT: &str = "You check one claim about a text against the lines it is about, each shown \
-with its label. Reply FALSE if those lines plainly contradict the claim — for example, it says a line lacks \
-something the line has, or shows something it doesn't. Otherwise reply TRUE: when the lines bear it out, and when \
+/// semicolon" that had one; shown the line, a model can tell. The check is
+/// framed by the question: bonsai-2:27b, asked only whether "the line that
+/// matters is L6197" held, read "matters" as "is correct" and said FALSE of
+/// the very typo it had found.
+const CHECK_SYSTEM_PROMPT: &str = "You check one line an answer rests on. The answer to the question below says \
+this line (with those near it) shows what the question asks about. The lines are shown with their labels. Reply \
+FALSE only if they plainly show otherwise — for example, the answer says a line lacks something the line has, or \
+has a problem it doesn't. Otherwise reply TRUE: when the lines bear the answer out, however it is worded, and when \
 they can't settle it. Then give one short reason.";
 
 /// One part of the text: its lines, numbered from 1 in the whole text.
@@ -461,14 +465,19 @@ impl WorkNotes {
                 claims, verdicts, ..
             } => {
                 let claim = claims.get(verdicts.len())?;
-                let (from, to) = excerpt_range(claim.first, claim.last, self.total_lines);
+                // The lines around every line the answer cites, not just
+                // this claim's: a claim about one of them may speak of
+                // another (the misspelled name at L6197, defined at L6170).
+                let cited: Vec<(usize, usize)> = claims
+                    .iter()
+                    .map(|claim| (claim.first, claim.last))
+                    .collect();
+                let (which, excerpt) = self.excerpt_around(&cited);
                 Some(NextCall {
                     system: CHECK_SYSTEM_PROMPT,
                     user: format!(
-                        "Claim: {}\n\nLines {from}–{to} of {}:\n```\n{}\n```",
-                        claim.text,
-                        self.title,
-                        self.excerpt(from, to)
+                        "Question: {}\n\nThe answer's claim: {}\n\n{which} of {}:\n```\n{excerpt}\n```",
+                        self.question, claim.text, self.title,
                     ),
                     label: format!(
                         "checking the answer against the text ({} of {})",

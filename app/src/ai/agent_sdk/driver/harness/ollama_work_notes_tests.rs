@@ -119,7 +119,9 @@ fn reads_each_part_then_answers_from_the_notes() {
     // The line the answer rests on is checked against the text.
     let check = notes.next_call().unwrap();
     assert_eq!(check.label, "checking the answer against the text (1 of 1)");
-    assert!(check.user.starts_with("Claim: It failed: see [L8]."));
+    assert!(check
+        .user
+        .starts_with("Question: did it fail?\n\nThe answer's claim: It failed: see [L8]."));
     assert!(check.user.contains("L8| line 8 of a long log"));
     assert!(check.user.contains("L4| line 4"));
     assert!(!check.user.contains("L13|"));
@@ -243,11 +245,14 @@ fn an_answer_the_text_contradicts_is_dropped_and_given_again() {
         "checking the answer against the text (1 of 2)"
     );
     notes.accept(Some("FALSE — line 2 ends as it should."));
-    assert!(notes
-        .next_call()
-        .unwrap()
-        .user
-        .contains("Claim: Also see [L8]."));
+    // Each claim is checked against the lines around all the answer cites.
+    let second = notes.next_call().unwrap();
+    assert!(second.user.contains("The answer's claim: Also see [L8]."));
+    assert!(
+        second.user.contains("L2| line 2") && second.user.contains("L8| line 8"),
+        "{}",
+        second.user
+    );
     notes.accept(Some("TRUE"));
 
     // Answered again, without the note on line 2.
