@@ -2879,16 +2879,7 @@ async fn run_really_ends(
         truncate_chars(&step.body, 4_000),
         printed_digest(&run.records)
     );
-    let reply = ask_fresh(
-        context,
-        context.judge,
-        context.judge_thinks.then_some(true),
-        CONDITION_MAX_TOKENS,
-        DONE_CHECK_SYSTEM_PROMPT,
-        &user,
-        on_event,
-    )
-    .await?;
+    let reply = ask_judge_yes_or_no(context, DONE_CHECK_SYSTEM_PROMPT, &user, on_event).await?;
     Ok(!reply.is_some_and(|reply| answers_no(&reply)))
 }
 
@@ -3055,33 +3046,7 @@ async fn check_case(
         truncate_chars(&block.code, 1_500),
         last_chars(&records_text(records), 6_000),
     );
-    let mut reply = ask_fresh(
-        context,
-        context.judge,
-        context.judge_thinks.then_some(true),
-        CONDITION_MAX_TOKENS,
-        CONDITION_SYSTEM_PROMPT,
-        &user,
-        on_event,
-    )
-    .await?;
-    // An answer without its YES or NO is asked for once more, in one word:
-    // a 4B judge's unclear answer let step B's "Otherwise … push" go unrun.
-    if reply
-        .as_deref()
-        .is_some_and(|reply| yes_or_no(reply).is_none())
-    {
-        reply = ask_fresh(
-            context,
-            context.judge,
-            context.judge_thinks.then_some(true),
-            CONDITION_MAX_TOKENS,
-            CONDITION_SYSTEM_PROMPT,
-            &format!("{user}\n\nStart your reply with the one word YES or NO."),
-            on_event,
-        )
-        .await?;
-    }
+    let reply = ask_judge_yes_or_no(context, CONDITION_SYSTEM_PROMPT, &user, on_event).await?;
     let said = reply
         .as_deref()
         .map(|reply| truncate_chars(&reply.split_whitespace().collect::<Vec<_>>().join(" "), 240))
@@ -3107,6 +3072,41 @@ async fn check_case(
         )),
         None => CaseCheck::Unknown,
     })
+}
+
+/// Puts a YES-or-NO question to the judge in a fresh conversation. An answer
+/// without its YES or NO — or none at all, a thinking judge having spent its
+/// cap thinking (qwen3.5:4b did, twice, on step B's "Otherwise … push") — is
+/// asked for once more, without thinking, in one word.
+async fn ask_judge_yes_or_no(
+    context: &RunContext<'_>,
+    system: &str,
+    user: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Option<String>> {
+    let reply = ask_fresh(
+        context,
+        context.judge,
+        context.judge_thinks.then_some(true),
+        CONDITION_MAX_TOKENS,
+        system,
+        user,
+        on_event,
+    )
+    .await?;
+    if reply.as_deref().and_then(yes_or_no).is_some() {
+        return Ok(reply);
+    }
+    ask_fresh(
+        context,
+        context.judge,
+        context.judge_thinks.then_some(false),
+        SHORT_REPLY_MAX_TOKENS,
+        system,
+        &format!("{user}\n\nStart your reply with the one word YES or NO."),
+        on_event,
+    )
+    .await
 }
 
 /// A reply's first YES or NO: `Some(true)` for yes.
