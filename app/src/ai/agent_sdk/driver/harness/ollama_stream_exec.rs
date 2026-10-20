@@ -1946,6 +1946,10 @@ async fn read_in_parts(
         format!("The user asked: {request}\n\nWhat in this output of `{title}` matters for that?");
     let dir = krust_core::paths::state_dir().join("work-notes");
     let mut notes = WorkNotes::new(&title, &question, text, &dir);
+    let think = probe_model_caps_checked(model, path)
+        .await
+        .is_some_and(|caps| caps.thinking)
+        .then_some(false);
     let call_id = format!("ollama-notes-{}", Uuid::new_v4());
     on_event(TurnEvent::ToolCallStarted {
         call_id: call_id.clone(),
@@ -1962,6 +1966,7 @@ async fn read_in_parts(
         }
         let reply = ask_fresh(
             model,
+            think,
             next.system,
             &next.user,
             session_id,
@@ -1998,24 +2003,31 @@ async fn read_in_parts(
 
 /// One `/api/chat` call in a fresh conversation, with no tools; its stream
 /// events are not shown. `None` when it failed or was stopped.
+/// Reading a part or answering from notes needs a short reply, so a model
+/// that thinks is told not to (`think: Some(false)`), and every reply is
+/// capped: a thinking model left to it once reasoned for half an hour.
 pub(crate) async fn ask_fresh(
     model: &str,
+    think: Option<bool>,
     system: &str,
     user: &str,
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
 ) -> std::io::Result<Option<String>> {
-    let request = json!({
+    let mut request = json!({
         "model": wire_name(model),
         "messages": [
             { "role": "system", "content": system },
             { "role": "user", "content": user },
         ],
         "stream": true,
-        "options": { "temperature": 0, "num_ctx": 8192 },
-    })
-    .to_string();
+        "options": { "temperature": 0, "num_ctx": 8192, "num_predict": 1024 },
+    });
+    if let Some(think) = think {
+        request["think"] = json!(think);
+    }
+    let request = request.to_string();
     let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
     let parser_accumulator = Arc::clone(&accumulator);
     let status = run_jsonl_stream_cancellable(

@@ -65,6 +65,14 @@ const KEEP_ALIVE: &str = "10m";
 /// longer tail, because that is where errors land.
 const OUTPUT_HEAD_CHARS: usize = 1_200;
 const OUTPUT_TAIL_CHARS: usize = 2_400;
+/// The most a model may generate in one call, by job. Without a cap a model
+/// can loop — a thinking model reasoning in circles held one reading call for
+/// half an hour — and the run waits forever. Thinking counts against the cap.
+const WORKER_MAX_TOKENS: u32 = 2_048;
+const JUDGE_MAX_TOKENS: u32 = 8_192;
+const ANALYST_MAX_TOKENS: u32 = 6_144;
+const REPORT_MAX_TOKENS: u32 = 4_096;
+pub(crate) const SHORT_REPLY_MAX_TOKENS: u32 = 1_024;
 /// Judges tried, in order, when none is chosen: reasoning models that fit
 /// beside a 14B worker on a 24GB machine.
 const JUDGE_PREFERENCE: &[&str] = &[
@@ -488,6 +496,93 @@ fn unique_step_id(heading: &str, index: usize, existing: &[RunbookStep]) -> Stri
         suffix += 1;
     }
     id
+}
+
+/// Whether the runbook refers to a value named `name` — as `$NAME`, `${NAME`,
+/// `NAME=` or `` `NAME` `` — so a judge can't invent a value nothing reads.
+fn runbook_uses_name(runbook: &Runbook, name: &str) -> bool {
+    if !is_fact_name(name) {
+        return false;
+    }
+    let forms = [
+        format!("${name}"),
+        format!("${{{name}"),
+        format!("{name}="),
+        format!("`{name}`"),
+    ];
+    std::iter::once(runbook.preamble.as_str())
+        .chain(runbook.steps.iter().map(|step| step.body.as_str()))
+        .any(|text| forms.iter().any(|form| text.contains(form.as_str())))
+}
+
+/// A `# must print X` comment on an `echo "label: …"` line: the driver finds
+/// the output line starting with the label and compares the rest with X.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct PrintCheck {
+    pub(crate) label: String,
+    /// The value, or an UPPERCASE name whose known value is meant.
+    pub(crate) expected: String,
+}
+
+/// The `# must print` checks a block states.
+pub(crate) fn print_checks(code: &str) -> Vec<PrintCheck> {
+    code.lines()
+        .filter_map(|line| {
+            let comment_at = comment_start(line)?;
+            let comment = line[comment_at..].trim_start_matches('#').trim();
+            let expected = comment
+                .strip_prefix("must print")?
+                .trim()
+                .trim_matches(['`', '"', '\''])
+                .to_string();
+            let command = line[..comment_at].trim();
+            let quoted = command.strip_prefix("echo \"")?;
+            let label: String = quoted
+                .chars()
+                .take_while(|c| *c != '$' && *c != '"')
+                .collect();
+            let label = label.trim_end().to_string();
+            (label.len() >= 3 && !expected.is_empty()).then_some(PrintCheck { label, expected })
+        })
+        .collect()
+}
+
+/// Each check's verdict against what the block printed, as lines the judge
+/// reads; empty when the block states none.
+pub(crate) fn run_print_checks(checks: &[PrintCheck], stdout: &str, facts: &Facts) -> Vec<String> {
+    checks
+        .iter()
+        .map(|check| {
+            let wanted = check
+                .expected
+                .trim_start_matches('$')
+                .trim_start_matches('{')
+                .trim_end_matches('}');
+            let expected = if is_fact_name(wanted) {
+                facts.get(wanted).cloned().unwrap_or_else(|| check.expected.clone())
+            } else {
+                check.expected.clone()
+            };
+            let printed = stdout
+                .lines()
+                .find_map(|line| line.trim_start().strip_prefix(check.label.as_str()))
+                .map(str::trim);
+            match printed {
+                Some(printed) if printed == expected => format!(
+                    "✓ checked by the driver: \"{}\" printed {printed}, as the step requires",
+                    check.label
+                ),
+                Some(printed) => format!(
+                    "✗ checked by the driver: \"{}\" printed {printed}, but the step requires {expected}",
+                    check.label
+                ),
+                None => format!(
+                    "✗ checked by the driver: no \"{}\" line was printed (the step requires {expected})",
+                    check.label
+                ),
+            }
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -1058,7 +1153,12 @@ the worker says it did.
 
 Reply with one JSON object and nothing else:
 {\"verdict\": \"pass\" | \"skip\" | \"done\" | \"stop\", \"reason\": \"one or two sentences quoting the output \
-that decided it\", \"facts\": {\"NAME\": \"value\"}}
+that decided it\", \"facts\": {}}
+
+Judge the step by its own text. The values it names itself — a version it sets, a number it says a command must \
+print — are what its checks mean. Values known from earlier steps are context, not targets: a step may rightly \
+work on a different version than the one an earlier step found. Lines marked \"checked by the driver\" were \
+compared with the real output by the program running the step; trust them.
 
 - pass: every check this step states holds in the output.
 - skip: the step says it does not apply in this situation, and the output proves that.
@@ -1066,8 +1166,8 @@ that decided it\", \"facts\": {\"NAME\": \"value\"}}
 successfully.
 - stop: a check failed, the step says to STOP, a command failed in a way the step does not expect, or the output \
 you would need is missing. When in doubt, stop.
-- facts: UPPERCASE values that a later step will need and that this step established (for example, the version it \
-found). Leave out values already known.";
+- facts: values a later step will need that this step established, under the variable name the runbook itself \
+uses (for example V). Usually empty; leave out anything already known.";
 
 const REPORT_SYSTEM_PROMPT: &str = "You write the final report of a runbook run by filling in the runbook's own \
 reporting template from the run record. Use only what the record shows; write n/a for anything the run did not \
@@ -1500,6 +1600,7 @@ pub(crate) async fn run_ollama_runbook(
             .facts
             .iter()
             .filter(|(name, value)| facts.get(*name) != Some(*value))
+            .filter(|(name, _)| runbook_uses_name(&runbook, name))
             .map(|(name, value)| (name.clone(), value.clone()))
             .collect();
         let reason = if verdict.reason.is_empty() {
@@ -1629,7 +1730,11 @@ async fn run_worker(
             "tools": tool_defs,
             "stream": true,
             "keep_alive": KEEP_ALIVE,
-            "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
+            "options": {
+                "temperature": 0,
+                "num_ctx": RUNBOOK_NUM_CTX,
+                "num_predict": WORKER_MAX_TOKENS,
+            },
         })
         .to_string();
         let response = match chat_call(context, context.worker, &request, on_event).await? {
@@ -1973,6 +2078,14 @@ async fn run_shell_card(
     } else {
         clip_output(&output)
     };
+    // `# must print` lines are checked here, against the real output, so a
+    // judge reads a verdict instead of having to match values itself.
+    let verdicts = run_print_checks(&print_checks(display), &shown.stdout, facts);
+    let output = if verdicts.is_empty() {
+        output
+    } else {
+        format!("{output}\n\n{}", verdicts.join("\n"))
+    };
     let reply = format!("exit {}\n{output}", shown.exit_code);
     Some((
         CallRecord {
@@ -2019,6 +2132,7 @@ async fn read_output_in_parts(
             context,
             context.helper,
             think,
+            SHORT_REPLY_MAX_TOKENS,
             next.system,
             &next.user,
             on_event,
@@ -2043,10 +2157,12 @@ async fn read_output_in_parts(
 
 /// One model call in a fresh conversation, holding only `system` and `user`;
 /// `None` when it failed or the user stopped the run.
+#[allow(clippy::too_many_arguments)]
 async fn ask_fresh(
     context: &RunContext<'_>,
     model: &str,
     think: Option<bool>,
+    max_tokens: u32,
     system: &str,
     user: &str,
     on_event: &mut impl FnMut(TurnEvent),
@@ -2059,7 +2175,11 @@ async fn ask_fresh(
         ],
         "stream": true,
         "keep_alive": KEEP_ALIVE,
-        "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
+        "options": {
+            "temperature": 0,
+            "num_ctx": RUNBOOK_NUM_CTX,
+            "num_predict": max_tokens,
+        },
     });
     if let Some(think) = think {
         request["think"] = json!(think);
@@ -2313,7 +2433,11 @@ async fn judge_step(
             "messages": messages,
             "stream": true,
             "keep_alive": KEEP_ALIVE,
-            "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
+            "options": {
+                "temperature": 0,
+                "num_ctx": RUNBOOK_NUM_CTX,
+                "num_predict": JUDGE_MAX_TOKENS,
+            },
         });
         if context.judge_thinks {
             request["think"] = json!(true);
@@ -2379,7 +2503,11 @@ async fn write_report(
         ],
         "stream": true,
         "keep_alive": KEEP_ALIVE,
-        "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
+        "options": {
+            "temperature": 0,
+            "num_ctx": RUNBOOK_NUM_CTX,
+            "num_predict": REPORT_MAX_TOKENS,
+        },
     })
     .to_string();
     match chat_call(context, context.judge, &request, on_event).await? {

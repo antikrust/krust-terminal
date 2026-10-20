@@ -34,8 +34,10 @@ const MAX_REDUCE_ROUNDS: usize = 4;
 const NOTHING: &str = "NOTHING";
 
 const READ_SYSTEM_PROMPT: &str = "You read one part of a long text for someone who can't hold all of it at \
-once. Note only what bears on the question, citing line numbers like [L120] or [L120-L134]. At most eight short \
-lines, no preamble. If nothing in this part bears on the question, reply with the single word NOTHING.";
+once. Each line starts with its label, like L612|. Note only lines that bear directly on the question — a problem, \
+a failure, or the thing asked about — citing them by label, like [L612] or [L120-L134], copied exactly. At most \
+eight short lines, no preamble. If this part only shows things going normally, or nothing in it bears on the \
+question, reply with the single word NOTHING.";
 
 const REDUCE_SYSTEM_PROMPT: &str = "You condense notes taken on one stretch of a long text. Keep everything that \
 bears on the question and every line number cited; drop repeats and anything off the question. Reply with the \
@@ -50,8 +52,11 @@ missing. Be brief: at most fifteen lines.";
 pub(crate) struct Part {
     pub(crate) first_line: usize,
     pub(crate) last_line: usize,
-    /// The part's lines, each prefixed with its line number.
+    /// The part's lines, each prefixed with its label (`L612| …`).
     pub(crate) numbered: String,
+    /// The part's lines as they are, with their numbers, for checking what a
+    /// reader cites.
+    pub(crate) lines: Vec<(usize, String)>,
 }
 
 /// Splits `text` into parts of at most `max_chars`, ending a part at a blank
@@ -76,14 +81,14 @@ pub(crate) fn split_into_parts(text: &str, max_chars: usize) -> Vec<Part> {
             rest = &rest[cut..];
         }
     }
-    let width = lines.last().map(|(n, _)| n.to_string().len()).unwrap_or(1);
+    let width = lines.last().map(|(n, _)| n.to_string().len()).unwrap_or(1) + 3;
     let mut parts = Vec::new();
     let mut start = 0;
     while start < lines.len() {
         let mut end = start;
         let mut size = 0;
         while end < lines.len() {
-            let cost = lines[end].1.len() + width + 3;
+            let cost = lines[end].1.len() + width;
             if end > start && size + cost > max_chars {
                 break;
             }
@@ -102,13 +107,17 @@ pub(crate) fn split_into_parts(text: &str, max_chars: usize) -> Vec<Part> {
         }
         let numbered = lines[start..end]
             .iter()
-            .map(|(number, line)| format!("{number:>width$}  {line}"))
+            .map(|(number, line)| format!("L{number}| {line}"))
             .collect::<Vec<_>>()
             .join("\n");
         parts.push(Part {
             first_line: lines[start].0,
             last_line: lines[end - 1].0,
             numbered,
+            lines: lines[start..end]
+                .iter()
+                .map(|(number, line)| (*number, line.to_string()))
+                .collect(),
         });
         start = end;
     }
@@ -347,8 +356,8 @@ impl WorkNotes {
             Stage::Reading => {
                 if let Some(index) = self.saved.notes.iter().position(Option::is_none) {
                     let note = match reply {
-                        Some(reply) if is_nothing(reply) => String::new(),
-                        Some(reply) => reply.to_string(),
+                        Some(reply) if is_nothing(reply) || only_citations(reply) => String::new(),
+                        Some(reply) => ground_citations(reply, &self.parts[index].lines),
                         None => "(this part could not be read)".to_string(),
                     };
                     self.saved.notes[index] = Some(note);
@@ -518,6 +527,126 @@ impl WorkNotes {
         ));
         out
     }
+}
+
+/// Each `L<n>` a note cites: where the number sits in the note, and the number.
+fn citations(note: &str) -> Vec<(std::ops::Range<usize>, usize)> {
+    let bytes = note.as_bytes();
+    let mut found = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        let starts = bytes[index] == b'L'
+            && (index == 0 || !bytes[index - 1].is_ascii_alphanumeric())
+            && bytes.get(index + 1).is_some_and(u8::is_ascii_digit);
+        if !starts {
+            index += 1;
+            continue;
+        }
+        let digits_start = index + 1;
+        let mut end = digits_start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+        if let Ok(number) = note[digits_start..end].parse() {
+            found.push((digits_start..end, number));
+        }
+        index = end;
+    }
+    found
+}
+
+/// The words in `text` that say something: four or more letters or digits,
+/// lowercased.
+fn telling_words(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|word| word.len() >= 4 && word.chars().any(|c| c.is_ascii_alphabetic()))
+        .map(str::to_ascii_lowercase)
+        .collect()
+}
+
+/// A note that is only citations (`[L120-L173]`) says nothing.
+fn only_citations(note: &str) -> bool {
+    let mut rest = note.to_string();
+    for (range, _) in citations(note).into_iter().rev() {
+        rest.replace_range(range.start - 1..range.end, "");
+    }
+    rest.chars().filter(|c| c.is_ascii_alphabetic()).count() < 3
+}
+
+/// Checks each line a note cites against the text: a cited line that shares
+/// no telling word with the note, when a line within three of it does, is
+/// moved to that line. Small readers cite the line before or after the one
+/// they mean; the text itself says which one it was.
+pub(crate) fn ground_citations(note: &str, lines: &[(usize, String)]) -> String {
+    let words = telling_words(&note.replace(['[', ']'], " "));
+    let shared = |line: &str| {
+        let line = line.to_ascii_lowercase();
+        words
+            .iter()
+            .filter(|word| line.contains(word.as_str()))
+            .count()
+    };
+    let score = |number: usize| {
+        lines
+            .iter()
+            .find(|(n, _)| *n == number)
+            .map_or(0, |(_, line)| shared(line))
+    };
+    // Citations, with `L610-L613` taken as one range.
+    let cited = citations(note);
+    let mut spans: Vec<(
+        std::ops::Range<usize>,
+        usize,
+        Option<(std::ops::Range<usize>, usize)>,
+    )> = Vec::new();
+    let mut index = 0;
+    while index < cited.len() {
+        let (range, number) = cited[index].clone();
+        let pair = cited
+            .get(index + 1)
+            .filter(|(next, _)| note.get(range.end..next.start.saturating_sub(1)) == Some("-"));
+        match pair {
+            Some(end) => {
+                spans.push((range, number, Some(end.clone())));
+                index += 2;
+            }
+            None => {
+                spans.push((range, number, None));
+                index += 1;
+            }
+        }
+    }
+    let mut grounded = note.to_string();
+    for (range, first, end) in spans.into_iter().rev() {
+        let last = end.as_ref().map_or(first, |(_, last)| *last);
+        let (low, high) = (first.min(last), first.max(last));
+        if (low..=high).any(|number| score(number) > 0) {
+            continue;
+        }
+        let best = (low.saturating_sub(3)..=high + 3)
+            .map(|candidate| (candidate, score(candidate)))
+            .filter(|(_, points)| *points > 0)
+            .max_by_key(|(candidate, points)| {
+                let distance = if *candidate < low {
+                    low - candidate
+                } else {
+                    candidate.saturating_sub(high)
+                };
+                (*points, std::cmp::Reverse(distance))
+            });
+        let Some((best, _)) = best else {
+            continue;
+        };
+        match end {
+            // A range that misses the line it means is widened to reach it.
+            Some((end_range, _)) if best > high => {
+                grounded.replace_range(end_range, &best.to_string());
+            }
+            Some(_) => grounded.replace_range(range, &best.to_string()),
+            None => grounded.replace_range(range, &best.to_string()),
+        }
+    }
+    grounded
 }
 
 fn is_nothing(reply: &str) -> bool {

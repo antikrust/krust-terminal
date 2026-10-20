@@ -34,7 +34,7 @@ use ai::agent::{ToolCallOutcome, TurnEvent};
 
 use super::{
     ask_fresh, clip_output, normalize, run_script, shell_quote, truncate_chars, CallRecord,
-    RunContext, RunbookStep,
+    RunContext, RunbookStep, ANALYST_MAX_TOKENS, SHORT_REPLY_MAX_TOKENS,
 };
 
 /// Unchanged lines shown above and below a conflict.
@@ -1192,6 +1192,7 @@ pub(crate) async fn run_conflict_pass(
                             context,
                             context.judge,
                             context.judge_thinks.then_some(true),
+                            ANALYST_MAX_TOKENS,
                             ANALYST_SYSTEM_PROMPT,
                             &prompt,
                             on_event,
@@ -1260,6 +1261,7 @@ pub(crate) async fn run_conflict_pass(
                             context,
                             context.helper,
                             think,
+                            SHORT_REPLY_MAX_TOKENS,
                             HELPER_SYSTEM_PROMPT,
                             &prompt,
                             on_event,

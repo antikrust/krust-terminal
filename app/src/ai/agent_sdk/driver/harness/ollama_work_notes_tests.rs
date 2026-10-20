@@ -51,7 +51,7 @@ fn parts_cover_every_line_once_and_end_at_blank_lines() {
             part.first_line
         );
     }
-    assert!(parts[0].numbered.starts_with("  1  line 1 of a long log"));
+    assert!(parts[0].numbered.starts_with("L1| line 1 of a long log"));
 }
 
 #[test]
@@ -195,7 +195,9 @@ fn a_failed_call_is_noted_and_the_pass_goes_on() {
 fn a_buried_error_is_found_and_cited_against_live_ollama() {
     use futures_lite::future::block_on;
 
-    use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ask_fresh;
+    use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+        ask_fresh, probe_model_caps_checked,
+    };
 
     let log: String = (1..=900)
         .map(|n| {
@@ -212,9 +214,15 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(log.len() > LARGE_TEXT_CHARS);
+    // Trying a smaller reader: WORK_NOTES_LIVE_MODEL=granite4:7b-a1b-h.
+    let model =
+        std::env::var("WORK_NOTES_LIVE_MODEL").unwrap_or_else(|_| "qwen2.5-coder:14b".to_string());
     let dir = temp_dir("live");
     let path = std::env::var("PATH").unwrap_or_default();
     let session = Uuid::new_v4();
+    let think = block_on(probe_model_caps_checked(&model, &path))
+        .is_some_and(|caps| caps.thinking)
+        .then_some(false);
     let mut notes = WorkNotes::new(
         "cargo build output",
         "Did the build fail, and why?",
@@ -223,7 +231,8 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
     );
     while let Some(next) = notes.next_call() {
         let reply = block_on(ask_fresh(
-            "qwen2.5-coder:14b",
+            &model,
+            think,
             next.system,
             &next.user,
             &session,
@@ -244,4 +253,62 @@ fn a_buried_error_is_found_and_cited_against_live_ollama() {
         "the line is cited:\n{answer}\n\n{file}"
     );
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn numbered_lines(lines: &[(usize, &str)]) -> Vec<(usize, String)> {
+    lines
+        .iter()
+        .map(|(n, line)| (*n, line.to_string()))
+        .collect()
+}
+
+#[test]
+fn a_citation_one_line_off_is_moved_to_the_line_it_means() {
+    let lines = numbered_lines(&[
+        (611, "   Compiling crate_611 v0.611.0"),
+        (
+            612,
+            "error[E0308]: mismatched types: expected `i32`, found `f64` at src/scroll.rs:41",
+        ),
+        (613, "   Compiling crate_613 v0.613.0"),
+    ]);
+    assert_eq!(
+        ground_citations(
+            "The build failed: mismatched types at [L613], error[E0308].",
+            &lines
+        ),
+        "The build failed: mismatched types at [L612], error[E0308]."
+    );
+    // A range that holds the line is fine; one that misses it is widened.
+    assert_eq!(
+        ground_citations("[L610-L613] mismatched types", &lines),
+        "[L610-L613] mismatched types"
+    );
+    let wider = numbered_lines(&[
+        (608, "   Compiling crate_608 v0.608.0"),
+        (609, "   Compiling crate_609 v0.609.0"),
+        (610, "   Compiling crate_610 v0.610.0"),
+        (611, "   Compiling crate_611 v0.611.0"),
+        (612, "error[E0308]: mismatched types at src/scroll.rs:41"),
+    ]);
+    assert_eq!(
+        ground_citations("[L608-L610] mismatched types", &wider),
+        "[L608-L612] mismatched types"
+    );
+    assert_eq!(
+        ground_citations("E0308 at [L612]", &lines),
+        "E0308 at [L612]"
+    );
+    // Nothing nearby matches: the citation stays as the reader wrote it.
+    assert_eq!(
+        ground_citations("disk full at [L40]", &lines),
+        "disk full at [L40]"
+    );
+}
+
+#[test]
+fn a_note_of_bare_citations_counts_as_nothing() {
+    assert!(only_citations("[L120-L173]"));
+    assert!(only_citations("[L340]-[L341]"));
+    assert!(!only_citations("[L612] mismatched types"));
 }

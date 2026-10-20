@@ -487,6 +487,59 @@ fn the_same_block_called_twice_is_recognized_as_one_call() {
 }
 
 #[test]
+fn must_print_comments_become_checks_the_driver_runs() {
+    let block = r#"echo "shallow: $(git rev-parse --is-shallow-repository)"              # must print false
+echo "snapshot version: $(git show "firefox-${V}:browser/config/version.txt")"   # must print V
+echo "files changed by the merge: $(git diff HEAD~1 HEAD --name-only | wc -l)"   # must print 0
+echo "main still ships: $(cat browser/config/version.txt)"              # the OLD version
+git rev-parse --is-shallow-repository           # must print false"#;
+    let checks = print_checks(block);
+    assert_eq!(
+        checks,
+        vec![
+            PrintCheck {
+                label: "shallow:".into(),
+                expected: "false".into()
+            },
+            PrintCheck {
+                label: "snapshot version:".into(),
+                expected: "V".into()
+            },
+            PrintCheck {
+                label: "files changed by the merge:".into(),
+                expected: "0".into()
+            },
+        ]
+    );
+
+    let facts = facts(&[("V", "153.0.4")]);
+    let stdout =
+        "shallow: false\nsnapshot version: 152.0.6\nfiles changed by the merge:        0\n";
+    let verdicts = run_print_checks(&checks, stdout, &facts);
+    assert!(verdicts[0].starts_with("✓") && verdicts[0].contains("printed false"));
+    assert!(
+        verdicts[1].starts_with("✗") && verdicts[1].contains("requires 153.0.4"),
+        "{}",
+        verdicts[1]
+    );
+    assert!(
+        verdicts[2].starts_with("✓"),
+        "wc's padding is trimmed: {}",
+        verdicts[2]
+    );
+    let missing = run_print_checks(&checks[..1], "nothing here", &facts);
+    assert!(missing[0].contains("no \"shallow:\" line was printed"));
+}
+
+#[test]
+fn the_judge_can_only_carry_values_the_runbook_uses() {
+    let runbook = parse_runbook(RUNBOOK);
+    assert!(runbook_uses_name(&runbook, "V"));
+    assert!(!runbook_uses_name(&runbook, "NAME"));
+    assert!(!runbook_uses_name(&runbook, "lowercase"));
+}
+
+#[test]
 fn picks_a_small_helper_that_is_installed_and_switched_on() {
     let installed: Vec<String> = ["qwen2.5-coder:14b", "granite4:7b-a1b-h", "qwen3.5:9b"]
         .iter()
@@ -622,4 +675,91 @@ fn a_toy_runbook_runs_end_to_end_against_live_ollama() {
         })
     ));
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Runs the runbook at `RUNBOOK_RUN_PATH` in `RUNBOOK_RUN_DIR` on live models,
+/// appending a timestamped transcript to `RUNBOOK_RUN_LOG` as it goes: the
+/// driver the app runs, without the app around it. A tool for trying runbooks
+/// and models (`RUNBOOK_RUN_WORKER`, `_JUDGE`, `_HELPER`), not a check: it
+/// asserts nothing.
+#[test]
+#[ignore = "runs a whole runbook on live Ollama models; set RUNBOOK_RUN_PATH to use it"]
+fn run_the_runbook_named_in_the_environment() {
+    use std::io::Write;
+
+    let Ok(runbook) = std::env::var("RUNBOOK_RUN_PATH") else {
+        return;
+    };
+    let dir = PathBuf::from(std::env::var("RUNBOOK_RUN_DIR").expect("RUNBOOK_RUN_DIR"));
+    let log_path =
+        std::env::var("RUNBOOK_RUN_LOG").unwrap_or_else(|_| "/tmp/runbook-run.log".to_string());
+    let worker =
+        std::env::var("RUNBOOK_RUN_WORKER").unwrap_or_else(|_| "qwen2.5-coder:14b".to_string());
+    let config = RunbookConfig {
+        judge: std::env::var("RUNBOOK_RUN_JUDGE").ok(),
+        helper: std::env::var("RUNBOOK_RUN_HELPER").ok(),
+    };
+    let path = std::env::var("PATH").unwrap_or_default();
+    let mut log = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .unwrap();
+    let start = std::time::Instant::now();
+    let mut write = |line: String| {
+        let _ = writeln!(log, "[{:>6}s] {line}", start.elapsed().as_secs());
+        let _ = log.flush();
+    };
+    write(format!(
+        "=== {runbook} in {} — worker {worker}, judge {:?}, helper {:?}",
+        dir.display(),
+        config.judge,
+        config.helper
+    ));
+    let mut thinking = 0usize;
+    block_on(run_ollama_runbook(
+        &runbook,
+        &Uuid::new_v4(),
+        &dir,
+        &path,
+        &worker,
+        config,
+        Vec::new(),
+        |event| match event {
+            TurnEvent::Text { text } | TurnEvent::TextDelta { text } => write(text),
+            TurnEvent::Thinking { text } => thinking += text.len(),
+            TurnEvent::ToolCallStarted { name, input, .. } => write(format!(
+                "▶ {name} {}",
+                truncate_chars(&input.to_string(), 800)
+            )),
+            TurnEvent::ToolCallResult { outcome, .. } => write(match outcome {
+                ToolCallOutcome::Success(value) => {
+                    let text = value
+                        .get("result")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| value.to_string());
+                    format!("◀ {}", truncate_chars(&text, 2_000))
+                }
+                ToolCallOutcome::Error(error) => {
+                    format!("◀ ERROR {}", truncate_chars(&error, 2_000))
+                }
+                ToolCallOutcome::Cancelled => "◀ cancelled".to_string(),
+            }),
+            TurnEvent::PlanUpdated { update } => write(format!("PLAN {update:?}")),
+            TurnEvent::TurnCompleted {
+                is_error,
+                error_message,
+                ..
+            } => write(format!(
+                "=== finished (error: {is_error}) {}",
+                error_message.unwrap_or_default()
+            )),
+            TurnEvent::SessionInit { .. } => {}
+        },
+    ))
+    .unwrap();
+    write(format!(
+        "=== {thinking} characters of model thinking not shown"
+    ));
 }
