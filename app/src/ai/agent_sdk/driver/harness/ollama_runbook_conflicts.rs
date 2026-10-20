@@ -33,8 +33,8 @@ use uuid::Uuid;
 use ai::agent::{ToolCallOutcome, TurnEvent};
 
 use super::{
-    chat_call, clip_output, normalize, run_script, shell_quote, truncate_chars, wire_name,
-    CallRecord, RunContext, RunbookStep, KEEP_ALIVE, RUNBOOK_NUM_CTX,
+    ask_fresh, clip_output, normalize, run_script, shell_quote, truncate_chars, CallRecord,
+    RunContext, RunbookStep,
 };
 
 /// Unchanged lines shown above and below a conflict.
@@ -893,35 +893,6 @@ fn truncate_lines(text: &str, max: usize) -> String {
     )
 }
 
-/// One model call in a fresh conversation; `None` when it failed or the user
-/// stopped the run.
-async fn ask(
-    context: &RunContext<'_>,
-    model: &str,
-    think: Option<bool>,
-    system: &str,
-    user: &str,
-    on_event: &mut impl FnMut(TurnEvent),
-) -> std::io::Result<Option<String>> {
-    let mut request = json!({
-        "model": wire_name(model),
-        "messages": [
-            { "role": "system", "content": system },
-            { "role": "user", "content": user },
-        ],
-        "stream": true,
-        "keep_alive": KEEP_ALIVE,
-        "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
-    });
-    if let Some(think) = think {
-        request["think"] = json!(think);
-    }
-    match chat_call(context, model, &request.to_string(), on_event).await? {
-        Ok(response) => Ok(Some(response.content)),
-        Err(_) => Ok(None),
-    }
-}
-
 /// Runs a git command in the target directory; `None` when the user stopped
 /// the run, else whether it succeeded and what it printed.
 async fn git(context: &RunContext<'_>, args: &str) -> Option<(bool, String)> {
@@ -1217,7 +1188,7 @@ pub(crate) async fn run_conflict_pass(
                     let mut analysis = None;
                     entry.note = format!("`{}` gave no fix I could read", context.judge);
                     for _ in 0..2 {
-                        let content = match ask(
+                        let content = match ask_fresh(
                             context,
                             context.judge,
                             context.judge_thinks.then_some(true),
@@ -1285,7 +1256,7 @@ pub(crate) async fn run_conflict_pass(
                         // A helper that thinks by default is told not to: its job is a
                         // quick check, and the analyst already did the reasoning.
                         let think = context.helper_thinks.then_some(false);
-                        match ask(
+                        match ask_fresh(
                             context,
                             context.helper,
                             think,

@@ -28,6 +28,7 @@ use super::claude_stream_exec::{
     run_jsonl_stream_cancellable, HarnessCancel,
 };
 use super::ollama_committee_proof::{lost_ground, probe_source};
+use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -1899,11 +1900,145 @@ async fn run_ollama_chat_with_tools(
                     error
                 }
             };
+            // A result too long for a small model's window would push the
+            // user's request out of it; read it in parts against the request
+            // instead, and hand the model the answer (see `ollama_work_notes`).
+            let tool_content = if tool_content.len() > LARGE_TEXT_CHARS {
+                read_in_parts(
+                    &tool_content,
+                    call,
+                    prompt,
+                    model,
+                    session_id,
+                    working_dir,
+                    path,
+                    on_event,
+                )
+                .await?
+            } else {
+                tool_content
+            };
             messages.push(json!({ "role": "tool", "content": tool_content }));
         }
     }
 
     unreachable!("the bounded tool-call loop always returns")
+}
+
+/// Reads a tool result too long for the model in parts, against the user's
+/// request, and returns what the model reads in its place: the answer, with
+/// where the full output and the part-by-part notes are saved.
+#[allow(clippy::too_many_arguments)]
+async fn read_in_parts(
+    text: &str,
+    call: &OllamaToolCall,
+    request: &str,
+    model: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<String> {
+    let arguments: String = call.arguments.to_string().chars().take(80).collect();
+    let title = format!("{} {arguments}", call.name);
+    let request: String = request.chars().take(1_500).collect();
+    let question =
+        format!("The user asked: {request}\n\nWhat in this output of `{title}` matters for that?");
+    let dir = krust_core::paths::state_dir().join("work-notes");
+    let mut notes = WorkNotes::new(&title, &question, text, &dir);
+    let call_id = format!("ollama-notes-{}", Uuid::new_v4());
+    on_event(TurnEvent::ToolCallStarted {
+        call_id: call_id.clone(),
+        name: "read_in_parts".to_string(),
+        input: json!({
+            "output of": title,
+            "lines": notes.total_lines(),
+            "parts": notes.part_count(),
+        }),
+    });
+    while let Some(next) = notes.next_call() {
+        if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
+            break;
+        }
+        let reply = ask_fresh(
+            model,
+            next.system,
+            &next.user,
+            session_id,
+            working_dir,
+            path,
+        )
+        .await?;
+        notes.accept(reply.as_deref());
+    }
+    let Some(answer) = notes.answer() else {
+        on_event(TurnEvent::ToolCallResult {
+            call_id,
+            outcome: ToolCallOutcome::Cancelled,
+        });
+        return Ok(format!(
+            "(Stopped while reading a {}-line output in parts.)",
+            notes.total_lines()
+        ));
+    };
+    on_event(TurnEvent::ToolCallResult {
+        call_id,
+        outcome: ToolCallOutcome::Success(json!({ "result": answer })),
+    });
+    Ok(format!(
+        "This output is {} lines, too long to read whole, so it was read in {} parts against your request. \
+         What in it matters (line numbers refer to the full output, saved at {}):\n\n{answer}\n\n\
+         Notes, part by part: {}",
+        notes.total_lines(),
+        notes.part_count(),
+        notes.text_path().display(),
+        notes.notes_path().display()
+    ))
+}
+
+/// One `/api/chat` call in a fresh conversation, with no tools; its stream
+/// events are not shown. `None` when it failed or was stopped.
+pub(crate) async fn ask_fresh(
+    model: &str,
+    system: &str,
+    user: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> std::io::Result<Option<String>> {
+    let request = json!({
+        "model": wire_name(model),
+        "messages": [
+            { "role": "system", "content": system },
+            { "role": "user", "content": user },
+        ],
+        "stream": true,
+        "options": { "temperature": 0, "num_ctx": 8192 },
+    })
+    .to_string();
+    let accumulator = Arc::new(Mutex::new(OllamaChatAccumulator::default()));
+    let parser_accumulator = Arc::clone(&accumulator);
+    let status = run_jsonl_stream_cancellable(
+        new_ollama_chat_command(working_dir, path, base_url_of(model)),
+        &request,
+        harness_cancel_for(session_id),
+        move |line| {
+            parser_accumulator
+                .lock()
+                .map(|mut accumulator| accumulator.push_line(line))
+                .unwrap_or_default()
+        },
+        |_event: TurnEvent| {},
+    )
+    .await?;
+    if !status.success() {
+        return Ok(None);
+    }
+    Ok(accumulator
+        .lock()
+        .ok()
+        .and_then(|accumulator| accumulator.clone().finish(model).ok())
+        .map(|response| response.content))
 }
 
 #[derive(Clone, Debug)]

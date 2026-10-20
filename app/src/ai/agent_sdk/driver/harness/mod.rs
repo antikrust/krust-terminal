@@ -53,6 +53,7 @@ mod ollama_committee_bench;
 pub(crate) mod ollama_committee_proof;
 pub(crate) mod ollama_runbook;
 pub(crate) mod ollama_stream_exec;
+pub(crate) mod ollama_work_notes;
 mod telemetry;
 pub(crate) mod turn_events_to_conversation;
 pub(crate) use claude_code::ClaudeHarness;

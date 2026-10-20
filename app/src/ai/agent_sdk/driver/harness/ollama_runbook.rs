@@ -51,6 +51,7 @@ use super::ollama_stream_exec::{
     probe_model_caps_checked, wire_name, McpToolSpec, OllamaChatAccumulator, OllamaChatResult,
     OllamaToolCall, ShellExecution,
 };
+use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 
 /// Model calls a worker may make on one step before the step is called off.
 const MAX_WORKER_CALLS: usize = 16;
@@ -1822,6 +1823,7 @@ async fn execute_call(
             let label = format!("block {}", number.unwrap_or_default());
             run_shell_card(
                 context,
+                step,
                 facts,
                 &call_id,
                 label,
@@ -1851,6 +1853,7 @@ async fn execute_call(
             let script = wrap_script(&command, facts, &assigned_names(&command));
             run_shell_card(
                 context,
+                step,
                 facts,
                 &call_id,
                 format!("shell: {}", truncate_chars(&command, 160)),
@@ -1914,6 +1917,7 @@ async fn execute_call(
 #[allow(clippy::too_many_arguments)]
 async fn run_shell_card(
     context: &RunContext<'_>,
+    step: &RunbookStep,
     facts: &mut Facts,
     call_id: &str,
     label: String,
@@ -1964,7 +1968,11 @@ async fn run_shell_card(
         }
         output.push_str(&shown.stderr);
     }
-    let output = clip_output(&output);
+    let output = if output.len() > LARGE_TEXT_CHARS {
+        read_output_in_parts(context, step, &label, &output, on_event).await
+    } else {
+        clip_output(&output)
+    };
     let reply = format!("exit {}\n{output}", shown.exit_code);
     Some((
         CallRecord {
@@ -1974,6 +1982,92 @@ async fn run_shell_card(
         },
         reply,
     ))
+}
+
+/// A block's output too long for the worker and judge to read whole: the
+/// helper reads it in parts against the step's checks (see
+/// `ollama_work_notes`), and the models get the answer with the output's
+/// first and last lines.
+async fn read_output_in_parts(
+    context: &RunContext<'_>,
+    step: &RunbookStep,
+    label: &str,
+    output: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> String {
+    let checks = step.stated_checks();
+    let checks = if checks.is_empty() {
+        String::new()
+    } else {
+        format!(
+            " The step's checks: {}.",
+            truncate_chars(&checks.join("; "), 1_200)
+        )
+    };
+    let question = format!(
+        "This is the output of {label} in the runbook step \"{}\".{checks} What in it bears on those checks, \
+         and did anything fail or warn?",
+        step.title
+    );
+    let mut notes = WorkNotes::new(label, &question, output, &context.work_dir.join("notes"));
+    while let Some(next) = notes.next_call() {
+        if context.cancelled() {
+            break;
+        }
+        let think = context.helper_thinks.then_some(false);
+        let reply = ask_fresh(
+            context,
+            context.helper,
+            think,
+            next.system,
+            &next.user,
+            on_event,
+        )
+        .await
+        .ok()
+        .flatten();
+        notes.accept(reply.as_deref());
+    }
+    match notes.answer() {
+        Some(answer) => format!(
+            "[{} lines, read in {} parts by `{}`; notes in {}]\n{answer}\n\n[The output's first and last lines:]\n{}",
+            notes.total_lines(),
+            notes.part_count(),
+            context.helper,
+            notes.notes_path().display(),
+            clip_output(output)
+        ),
+        None => clip_output(output),
+    }
+}
+
+/// One model call in a fresh conversation, holding only `system` and `user`;
+/// `None` when it failed or the user stopped the run.
+async fn ask_fresh(
+    context: &RunContext<'_>,
+    model: &str,
+    think: Option<bool>,
+    system: &str,
+    user: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Option<String>> {
+    let mut request = json!({
+        "model": wire_name(model),
+        "messages": [
+            { "role": "system", "content": system },
+            { "role": "user", "content": user },
+        ],
+        "stream": true,
+        "keep_alive": KEEP_ALIVE,
+        "options": { "temperature": 0, "num_ctx": RUNBOOK_NUM_CTX },
+    });
+    if let Some(think) = think {
+        request["think"] = json!(think);
+    }
+    match chat_call(context, model, &request.to_string(), on_event).await? {
+        Ok(response) => Ok(Some(response.content)),
+        Err(_) => Ok(None),
+    }
 }
 
 fn refusal(
