@@ -514,6 +514,8 @@ fn a_small_workers_loose_calls_are_read_as_the_blocks_they_mean() {
     assert!(answers_no("NO — the pass left nothing for you"));
     assert!(!answers_no("Yes: the count is 37, not in the hundreds"));
     assert!(!answers_no("The case holds."));
+    assert!(step.blocks[3].is_otherwise());
+    assert!(!step.blocks[2].is_otherwise());
     // Only the block the runbook stops after says STOP as an order.
     assert!(step.blocks[2].says_stop());
     assert!(!step.blocks[3].says_stop());

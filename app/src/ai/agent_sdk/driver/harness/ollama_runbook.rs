@@ -283,6 +283,16 @@ impl RunbookBlock {
             || opening.contains(" means ")
     }
 
+    /// Whether the block is the alternative to the conditional block before
+    /// it: its lead-in opens with "Otherwise".
+    pub(crate) fn is_otherwise(&self) -> bool {
+        self.lead_in
+            .trim_start()
+            .trim_start_matches(['*', '_', '>', ' '])
+            .to_ascii_lowercase()
+            .starts_with("otherwise")
+    }
+
     /// Whether the runbook says to stop once this block has run: "abort the
     /// merge and STOP", "delete the tag and STOP:" — STOP as an order, not a
     /// mention ("the table's STOP rows are never touched").
@@ -1436,7 +1446,9 @@ uses (for example V). Usually empty; leave out anything already known.";
 
 const CONDITION_SYSTEM_PROMPT: &str = "You decide whether one block of a runbook step runs now. The runbook runs \
 it only in the case it states just before the block. From what the step's commands have printed so far, does that \
-case hold? Reply YES or NO, then one short reason quoting the output that decides it.";
+case hold? Decide this block's own case, as stated before it, not another block's: that an earlier block was not \
+run because its own case failed says nothing about this one. Reply YES or NO, then one short reason quoting the \
+output that decides it.";
 
 const DONE_CHECK_SYSTEM_PROMPT: &str = "You check one decision about a runbook run. A step was judged to end the \
 whole run, as if the steps after it weren't needed. That is right only when the step's own text or output says \
@@ -1558,13 +1570,20 @@ fn judge_user_prompt(
     };
     let ruled_out: String = worker_run
         .rulings
-        .keys()
-        .filter(|number| ruled_out_now(worker_run, **number).is_some())
-        .map(|number| {
-            format!(
-                "\n\nChecked by the driver: block {number} was not run, as a check found the case it runs in \
-                 doesn't hold (the record above says why)."
-            )
+        .iter()
+        .filter(|(number, ruling)| !ruling.holds && ruled_out_now(worker_run, **number).is_some())
+        .map(|(number, ruling)| {
+            if ruling.unclear {
+                format!(
+                    "\n\nChecked by the driver: block {number} was not run: the check of its case gave no clear \
+                     answer, and the block ends the step (the record above says so)."
+                )
+            } else {
+                format!(
+                    "\n\nChecked by the driver: block {number} was not run, as a check found the case it runs \
+                     in doesn't hold (the record above says why)."
+                )
+            }
         })
         .collect();
     let checks = step.stated_checks();
@@ -1665,6 +1684,9 @@ struct WorkerRun {
 #[derive(Debug, Clone, Default, PartialEq)]
 struct CaseRuling {
     holds: bool,
+    /// A refusal because the check gave no clear answer, for a block that
+    /// ends the step — not a finding that the case fails.
+    unclear: bool,
     /// For a refusal, the reply the worker got.
     why: String,
     ran_before: BTreeSet<usize>,
@@ -3011,6 +3033,7 @@ fn record_holds(run: &mut WorkerRun, number: usize) {
         number,
         CaseRuling {
             holds: true,
+            unclear: false,
             why: String::new(),
             ran_before: run.ran_blocks.range(..number).copied().collect(),
         },
@@ -3040,6 +3063,7 @@ fn rule_out(
         number,
         CaseRuling {
             holds: false,
+            unclear: false,
             why: reply.clone(),
             ran_before: run.ran_blocks.range(..number).copied().collect(),
         },
@@ -3063,6 +3087,28 @@ async fn case_holds(
     }
     if let Some(why) = ruled_out_now(run, number) {
         return Ok(CaseCheck::Fails(why.to_string()));
+    }
+    // "Otherwise" is the alternative to the conditional block before it, so
+    // that block's ruling decides this one and no judge is asked. Asked,
+    // qwen3.5:4b echoed the NO it had just given the block before.
+    if block.is_otherwise() {
+        if let Some(previous) = step.blocks[..number - 1]
+            .iter()
+            .rposition(RunbookBlock::has_condition)
+            .map(|index| index + 1)
+        {
+            if ruling_now(run, previous).is_some_and(|ruling| !ruling.holds && !ruling.unclear) {
+                record_holds(run, number);
+                return Ok(CaseCheck::Holds);
+            }
+            if run.ran_blocks.contains(&previous) || held_now(run, previous) {
+                let why = format!(
+                    "block {previous}, which this block is the alternative to, is the one that applies"
+                );
+                rule_out(run, number, block, &why, on_event);
+                return Ok(CaseCheck::Fails(why));
+            }
+        }
     }
     let check = check_case(context, step, number, block, &run.records, on_event).await?;
     match &check {
@@ -3098,23 +3144,31 @@ async fn gate(
     if !block.offered() || !block.has_condition() || run.ran_blocks.contains(&number) {
         return Ok(None);
     }
-    Ok(match case_holds(context, step, run, number, block, on_event).await? {
-        CaseCheck::Holds => None,
-        CaseCheck::Fails(_) => Some(
-            ruled_out_now(run, number)
-                .map(str::to_string)
-                .unwrap_or_default(),
-        ),
-        CaseCheck::Unknown if block.says_stop() => Some(rule_out(
-            run,
-            number,
-            block,
-            "the check gave no clear answer, and this block ends the step (the runbook says STOP), so it does \
-             not run on a guess. If its case holds, say so in your summary.",
-            on_event,
-        )),
-        CaseCheck::Unknown => None,
-    })
+    Ok(
+        match case_holds(context, step, run, number, block, on_event).await? {
+            CaseCheck::Holds => None,
+            CaseCheck::Fails(_) => Some(
+                ruled_out_now(run, number)
+                    .map(str::to_string)
+                    .unwrap_or_default(),
+            ),
+            CaseCheck::Unknown if block.says_stop() => {
+                let reply = rule_out(
+                run,
+                number,
+                block,
+                "the check gave no clear answer, and this block ends the step (the runbook says STOP), so it \
+                 does not run on a guess. If its case holds, say so in your summary.",
+                on_event,
+            );
+                if let Some(ruling) = run.rulings.get_mut(&number) {
+                    ruling.unclear = true;
+                }
+                Some(reply)
+            }
+            CaseCheck::Unknown => None,
+        },
+    )
 }
 
 /// The block a worker that stopped should run next, if any: one it skipped
@@ -3222,7 +3276,7 @@ async fn check_case(
         truncate_chars(&step.body, 5_000),
         block.lead_in,
         truncate_chars(&block.code, 1_500),
-        last_chars(&records_text(records), 6_000),
+        last_chars(&records_text(&records_for_case_check(records)), 6_000),
     );
     let reply = ask_judge_yes_or_no(context, CONDITION_SYSTEM_PROMPT, &user, on_event).await?;
     let said = reply
@@ -3250,6 +3304,30 @@ async fn check_case(
         )),
         None => CaseCheck::Unknown,
     })
+}
+
+/// The step's records as a case check sees them: a block refused on its own
+/// case shows as that, without the words of the verdict that refused it —
+/// a small judge, shown "NO" in the record, gave the next block the same.
+fn records_for_case_check(records: &[CallRecord]) -> Vec<CallRecord> {
+    records
+        .iter()
+        .map(|record| {
+            let output = match record.output.split_once(" — ") {
+                Some((before, _))
+                    if record.exit_code.is_none() && before.starts_with("Not run:") =>
+                {
+                    format!("{before}.")
+                }
+                _ => record.output.clone(),
+            };
+            CallRecord {
+                label: record.label.clone(),
+                exit_code: record.exit_code,
+                output,
+            }
+        })
+        .collect()
 }
 
 /// Puts a YES-or-NO question to the judge in a fresh conversation. An answer

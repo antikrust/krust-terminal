@@ -442,9 +442,9 @@ fn a_worker_that_stops_early_is_sent_to_the_block_whose_case_holds() {
     assert!(transcript.contains("count: 3\ntag: v1"), "{transcript}");
 }
 
-/// qwen3.5:4b (attempt 13), judging, thought its whole cap away on block
-/// 3's case and answered nothing, twice; the block went unrun. An empty or
-/// unclear answer is now asked for again, in one word, without thinking.
+/// qwen3.5:4b (attempt 13), judging, thought its whole cap away on a
+/// block's case and answered nothing, twice; the block went unrun. An empty
+/// or unclear answer is now asked for again, in one word, without thinking.
 #[test]
 fn a_case_check_that_comes_back_empty_is_asked_again_plainly() {
     let mut asked = 0;
@@ -460,12 +460,12 @@ fn a_case_check_that_comes_back_empty_is_asked_again_plainly() {
                 text("Tagged."),
             ],
             move |kind, request| match kind {
-                Kind::Case if case_block(request) == 3 => {
+                Kind::Case if case_block(request) == 2 => {
                     asked += 1;
                     if asked == 1 {
                         text("")
                     } else {
-                        text("YES")
+                        text("NO — the count printed was 3, not in the hundreds")
                     }
                 }
                 Kind::Case => text(count_is_three(case_block(request))),
@@ -477,18 +477,58 @@ fn a_case_check_that_comes_back_empty_is_asked_again_plainly() {
     );
     let transcript = run.transcript();
     assert!(run.printed("recorded: 3"), "{transcript}");
+    assert!(!run.printed("deleted: yes"), "{transcript}");
     let checks: Vec<Value> = run
         .requests_of(Kind::Case)
         .into_iter()
-        .filter(|request| case_block(request) == 3)
+        .filter(|request| case_block(request) == 2)
         .collect();
     assert_eq!(checks.len(), 2, "asked once more");
     assert_eq!(checks[0]["think"], json!(true));
     assert_eq!(checks[1]["think"], json!(false));
     assert!(last_of(&checks[1]).ends_with("Start your reply with the one word YES or NO."));
-    assert!(transcript.contains("↳ Block 3's case, checked: it holds — YES"));
     // A thinking judge doesn't think while filling in the report.
     assert_eq!(run.requests_of(Kind::Report)[0]["think"], json!(false));
+}
+
+/// qwen3.5:4b (attempt 15), asked whether "Otherwise record the snapshot
+/// … and push" applied, read the refusal of the block before it in the
+/// record and answered NO to this one too; the push was skipped and the
+/// step passed. An "Otherwise" block is the alternative to the conditional
+/// block before it: that block's ruling decides it, and no judge is asked.
+#[test]
+fn an_otherwise_block_runs_on_the_ruling_of_the_block_before_it() {
+    let run = replay(
+        "judge",
+        script(
+            vec![
+                block(1),
+                block(2),
+                block(3),
+                text("Recorded."),
+                block(1),
+                text("Tagged."),
+            ],
+            |kind, _| match kind {
+                // A judge that says NO to everything, block 3 included.
+                Kind::Case => text("NO — the count printed was 3, not in the hundreds"),
+                Kind::Verdict => verdict("pass"),
+                Kind::Report => text("count: 3\ntag: v1"),
+                Kind::Done | Kind::Worker | Kind::Other => text("NO"),
+            },
+        ),
+    );
+    let transcript = run.transcript();
+    assert!(!run.printed("deleted: yes"), "{transcript}");
+    assert!(run.printed("recorded: 3"), "{transcript}");
+    assert!(
+        run.requests_of(Kind::Case)
+            .iter()
+            .all(|request| case_block(request) == 2),
+        "block 3 was never put to the judge"
+    );
+    assert_eq!(run.completed(), ["step-1", "step-2"], "{transcript}");
+    assert!(system_of(&run.requests_of(Kind::Case)[0]).contains("Decide this block's own case"));
 }
 
 /// qwen3.5:9b (attempts 5–7) ran "abort the merge and STOP" after a pass
