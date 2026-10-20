@@ -408,6 +408,26 @@ fn the_judge_setting_round_trips_and_cycles() {
 }
 
 #[test]
+fn a_model_that_was_slow_to_load_is_tried_again_but_a_real_refusal_is_not() {
+    assert!(is_transient_failure(
+        "timed out waiting for llama-server to start - "
+    ));
+    assert!(is_transient_failure(
+        "llama runner process has terminated: exit status 2"
+    ));
+    assert!(is_transient_failure(
+        "could not reach Ollama for `qwen3:14b` at http://127.0.0.1:11434"
+    ));
+    assert!(!is_transient_failure(
+        "model \"nope:1b\" not found, try pulling it first"
+    ));
+    assert!(!is_transient_failure(
+        "\"qwen2.5-coder:14b\" does not support thinking"
+    ));
+    assert!(!is_transient_failure("stopped"));
+}
+
+#[test]
 fn picks_a_small_helper_that_is_installed_and_switched_on() {
     let installed: Vec<String> = ["qwen2.5-coder:14b", "granite4:7b-a1b-h", "qwen3.5:9b"]
         .iter()

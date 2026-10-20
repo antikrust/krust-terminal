@@ -1959,10 +1959,74 @@ async fn wait_for_cancel(cancel: HarnessCancel) {
     }
 }
 
-/// One streamed `/api/chat` call. Thinking streams live as Thinking events;
-/// content is buffered. Outer error: curl could not run. Inner: the call
-/// failed, with a message worth showing.
+/// Seconds to wait before each retry of a call that failed to load its model.
+const LOAD_RETRY_WAITS: [u64; 2] = [5, 20];
+
+/// Whether a failed call is the kind that passes: Ollama taking too long to
+/// start a model's runner, or its service restarting. A worker, a judge and a
+/// helper rarely fit in memory together, so models swap in and out all run
+/// long, and a swap on a busy machine sometimes times out.
+fn is_transient_failure(error: &str) -> bool {
+    let error = error.to_ascii_lowercase();
+    [
+        "timed out waiting",
+        "llama-server",
+        "runner",
+        "unexpectedly stopped",
+        "terminated",
+        "could not reach ollama",
+        "unexpected eof",
+    ]
+    .iter()
+    .any(|needle| error.contains(needle))
+}
+
+/// One streamed `/api/chat` call, tried again after a pause when the model
+/// fails to load. Thinking streams live as Thinking events; content is
+/// buffered. Outer error: curl could not run. Inner: the call failed, with a
+/// message worth showing.
 async fn chat_call(
+    context: &RunContext<'_>,
+    model: &str,
+    request: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<Result<OllamaChatResult, String>> {
+    let mut retries = 0;
+    loop {
+        let result = chat_call_once(context, model, request, on_event).await?;
+        let Err(error) = &result else {
+            return Ok(result);
+        };
+        if retries >= LOAD_RETRY_WAITS.len() || context.cancelled() || !is_transient_failure(error)
+        {
+            return Ok(result);
+        }
+        let wait = LOAD_RETRY_WAITS[retries];
+        retries += 1;
+        on_event(TurnEvent::Text {
+            text: format!(
+                "_Ollama was slow to load `{model}` ({}); trying again in {wait}s._",
+                truncate_chars(error.trim(), 120)
+            ),
+        });
+        match context.cancel.clone() {
+            Some(cancel) => {
+                let pause = Timer::after(Duration::from_secs(wait));
+                futures::pin_mut!(pause);
+                if let Either::Right(_) =
+                    futures::future::select(pause, Box::pin(wait_for_cancel(cancel))).await
+                {
+                    return Ok(Err("stopped".to_string()));
+                }
+            }
+            None => {
+                Timer::after(Duration::from_secs(wait)).await;
+            }
+        }
+    }
+}
+
+async fn chat_call_once(
     context: &RunContext<'_>,
     model: &str,
     request: &str,
