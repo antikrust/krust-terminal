@@ -1,4 +1,7 @@
-use super::{format_results_as_text, parse_duckduckgo_html, resolve_result_url, SearchResult};
+use super::{
+    classify, format_results_as_text, parse_bing_html, parse_duckduckgo_html, resolve_bing_url,
+    resolve_result_url, Engine_, SearchOutcome, SearchResult,
+};
 
 const SAMPLE_HTML: &str = r#"
 <div class="results_links results_links_deep web-result">
@@ -61,10 +64,8 @@ fn parses_titles_snippets_and_unwraps_ddg_redirect_urls() {
     assert_eq!(results.len(), 2);
 
     assert_eq!(results[0].title, "Set up Ollama | Krust");
-    assert_eq!(
-        results[0].url,
-        "https://therob.lol/krust-terminal/help/guides/ollama"
-    );
+    // Matches the `uddg=` payload in SAMPLE_HTML once decoded.
+    assert_eq!(results[0].url, "https://docs.krust.dev/guides/ollama");
     assert_eq!(
         results[0].snippet,
         "Install Ollama, run LLMs locally, and integrate them into Krust."
@@ -117,4 +118,61 @@ fn formats_no_results_message() {
         format_results_as_text("nothing here", &[]),
         "No results found for \"nothing here\"."
     );
+}
+
+const BING_HTML: &str = r#"
+<ol id="b_results">
+  <li class="b_algo"><h2><a href="https://www.bing.com/ck/a?!&amp;&amp;u=a1aHR0cHM6Ly90b2tpby5ycy8&amp;ntb=1">Tokio — Rust runtime</a></h2>
+    <p class="b_lineclamp2">An asynchronous <strong>runtime</strong> for Rust.</p></li>
+  <li class="b_algo"><h2><a href="https://doc.rust-lang.org/">The Rust Programming Language</a></h2>
+    <p class="b_lineclamp3">Official docs.</p></li>
+  <li class="b_algo"><h2><a href="https://www.bing.com/search?q=rust">rust - Bing</a></h2>
+    <p class="b_lineclamp2">A navigational Bing link that should be dropped.</p></li>
+</ol>
+"#;
+
+#[test]
+fn parses_bing_results_and_decodes_ck_redirect() {
+    let results = parse_bing_html(BING_HTML, 5);
+    // The bing.com navigational link is dropped; the ck/a redirect is decoded.
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].title, "Tokio — Rust runtime");
+    assert_eq!(results[0].url, "https://tokio.rs/");
+    assert_eq!(results[0].snippet, "An asynchronous runtime for Rust.");
+    assert_eq!(results[1].url, "https://doc.rust-lang.org/");
+}
+
+#[test]
+fn resolves_bing_ck_redirect_and_leaves_direct_urls_alone() {
+    assert_eq!(
+        resolve_bing_url("https://www.bing.com/ck/a?!&&u=a1aHR0cHM6Ly90b2tpby5ycy8&ntb=1"),
+        "https://tokio.rs/"
+    );
+    assert_eq!(
+        resolve_bing_url("https://doc.rust-lang.org/"),
+        "https://doc.rust-lang.org/"
+    );
+}
+
+#[test]
+fn classify_distinguishes_results_empty_and_blocked() {
+    // A page that parses to results.
+    assert!(matches!(
+        classify(Engine_::Bing, BING_HTML, 5),
+        SearchOutcome::Results(_)
+    ));
+    // A real page with no result markers is empty, not blocked.
+    assert!(matches!(
+        classify(Engine_::DuckDuckGo, "<html><body>no results</body></html>", 5),
+        SearchOutcome::Empty
+    ));
+    // DuckDuckGo's bot challenge carries anomaly.js and no results.
+    assert!(matches!(
+        classify(
+            Engine_::DuckDuckGo,
+            "<html><script src=\"anomaly.js\"></script></html>",
+            5
+        ),
+        SearchOutcome::Blocked
+    ));
 }

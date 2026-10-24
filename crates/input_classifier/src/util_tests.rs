@@ -111,6 +111,32 @@ async fn file_path_in_nl_prompt_is_shell() -> bool {
     is_likely_shell_command(&token, word_tokens_count).await
 }
 
+/// A natural-language sentence whose FIRST word is not a command must not be
+/// classified as shell even when later words match filenames/history (so they
+/// carry a token description). This is the agent-mode regression: "change the
+/// readme file" (first word "change" not a command) was flipping to shell and
+/// running as a command because "readme"/"file" matched the working directory.
+async fn sentence_with_non_command_first_token_is_not_shell() -> bool {
+    let command_token = mock_parsed_input_token("cargo --version".to_string()).await;
+    let command_description = command_token
+        .parsed_tokens
+        .first()
+        .and_then(|token| token.token_description.clone())
+        .expect("test input should include a described command token");
+
+    let mut token = mock_parsed_input_token("change the readme file now".to_string()).await;
+    let word_tokens_count = token.parsed_tokens.len();
+    // Clear everything, then give a MAJORITY of the later tokens a
+    // description — but leave the first token ("change") undescribed.
+    clear_all_token_descriptions(&mut token);
+    for (idx, parsed) in token.parsed_tokens.iter_mut().enumerate() {
+        if idx != 0 {
+            parsed.token_description = Some(command_description.clone());
+        }
+    }
+    is_likely_shell_command(&token, word_tokens_count).await
+}
+
 async fn majority_described_tokens_returns_true() {
     let token =
         mock_parsed_input_token("cargo build --release --workspace --all-features".to_string())
@@ -234,6 +260,22 @@ fn test_is_likely_shell_command_downloads_log_path_true_for_nld_heuristic_v1() {
 fn test_is_likely_shell_command_downloads_log_path_false_for_nld_heuristic_v2() {
     futures::executor::block_on(async move {
         assert!(!downloads_log_path_in_nl_prompt_is_shell().await);
+    });
+}
+
+#[cfg(all(feature = "nld_heuristic_v1", not(feature = "nld_heuristic_v2")))]
+#[test]
+fn test_is_likely_shell_command_sentence_non_command_first_token_false_for_nld_heuristic_v1() {
+    futures::executor::block_on(async move {
+        assert!(!sentence_with_non_command_first_token_is_not_shell().await);
+    });
+}
+
+#[cfg(feature = "nld_heuristic_v2")]
+#[test]
+fn test_is_likely_shell_command_sentence_non_command_first_token_false_for_nld_heuristic_v2() {
+    futures::executor::block_on(async move {
+        assert!(!sentence_with_non_command_first_token_is_not_shell().await);
     });
 }
 

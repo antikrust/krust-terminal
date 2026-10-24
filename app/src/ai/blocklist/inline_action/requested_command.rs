@@ -16,12 +16,13 @@ use krustui::clipboard::ClipboardContent;
 use krustui::elements::new_scrollable::{NewScrollable, ScrollableAppearance, SingleAxisConfig};
 use krustui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox,
-    Container, CornerRadius, CrossAxisAlignment, Dismiss, Empty, Expanded, Flex, MainAxisSize,
-    MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
+    Container, CornerRadius, CrossAxisAlignment, Dismiss, Empty, Expanded, Flex, Hoverable,
+    MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
     PositionedElementOffsetBounds, Radius, ScrollbarWidth, SelectableArea, SelectionHandle, Stack,
     Text,
 };
 use krustui::keymap::{Context, EditableBinding, FixedBinding, Keystroke};
+use krustui::platform::Cursor;
 use krustui::ui_components::components::UiComponent as _;
 use krustui::{
     AppContext, Element, Entity, EntityId, EventContext, ModelHandle, SingletonEntity,
@@ -425,6 +426,8 @@ pub struct RequestedCommandView {
     mcp_response_tree_state: JsonTreeState,
     // Scroll state for the MCP JSON tree body, shared across renders to preserve scroll position.
     mcp_scroll_state: ClippedScrollStateHandle,
+    // Hover state for the inline copy button on a plain-text tool result.
+    mcp_copy_mouse_state: MouseStateHandle,
     // Right-click context menu for MCP JSON tree rows (Copy / Copy JSON items).
     mcp_context_menu: ViewHandle<Menu<RequestedCommandViewAction>>,
     mcp_context_menu_open: bool,
@@ -684,6 +687,7 @@ impl RequestedCommandView {
             mcp_request_tree_state: Default::default(),
             mcp_response_tree_state: Default::default(),
             mcp_scroll_state: Default::default(),
+            mcp_copy_mouse_state: Default::default(),
             mcp_context_menu,
             mcp_context_menu_open: false,
             mcp_context_menu_anchor_id: None,
@@ -1753,6 +1757,7 @@ impl View for RequestedCommandView {
                 } else {
                     output
                 };
+                let copy_text = output.clone();
                 let text_element = Text::new(
                     output,
                     appearance.monospace_font_family(),
@@ -1761,6 +1766,25 @@ impl View for RequestedCommandView {
                 .with_color(blended_colors::text_main(theme, theme.background()))
                 .with_selectable(true)
                 .finish();
+                // Cap the height and scroll long output, the same way the JSON
+                // tree view below does — otherwise a long tool result (file
+                // contents, command output) grows the card unbounded and
+                // nests awkwardly inside the conversation's own scroll.
+                let scrollable = NewScrollable::vertical(
+                    SingleAxisConfig::Clipped {
+                        handle: self.mcp_scroll_state.clone(),
+                        child: text_element,
+                    },
+                    theme.nonactive_ui_detail().into(),
+                    theme.active_ui_detail().into(),
+                    krustui::elements::Fill::None,
+                )
+                .with_vertical_scrollbar(ScrollableAppearance::new(ScrollbarWidth::Auto, false))
+                .with_propagate_mousewheel_if_not_handled(true)
+                .finish();
+                let constrained = ConstrainedBox::new(scrollable)
+                    .with_max_height(MAX_EDITOR_HEIGHT)
+                    .finish();
                 let selected_text = self.mcp_content_selected_text.clone();
                 let selectable_text = SelectableArea::new(
                     self.mcp_content_selection_handle.clone(),
@@ -1768,20 +1792,50 @@ impl View for RequestedCommandView {
                     move |selection_args, _, _| {
                         *selected_text.write().unwrap() = selection_args.selection;
                     },
-                    text_element,
+                    constrained,
                 )
                 .on_selection_updated(|ctx, _| {
                     ctx.dispatch_typed_action(RequestedCommandViewAction::SelectText);
                 })
                 .finish();
-                content.add_child(
-                    Container::new(selectable_text)
-                        .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
-                        .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
-                        .with_background(theme.background())
-                        .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
+                let body = Container::new(selectable_text)
+                    .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
+                    .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
+                    .with_background(theme.background())
+                    .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
+                    .finish();
+                // A copy button overlaid at the top-right of the result, so a
+                // tool call's output (there's no inline copy anywhere else —
+                // only a right-click menu) can be lifted in one click.
+                let idle_color = blended_colors::text_disabled(theme, theme.background());
+                let hover_color = blended_colors::text_main(theme, theme.background());
+                let icon_px = icon_size(app);
+                let copy_button = Hoverable::new(self.mcp_copy_mouse_state.clone(), move |state| {
+                    let color = if state.is_hovered() {
+                        hover_color
+                    } else {
+                        idle_color
+                    };
+                    ConstrainedBox::new(Icon::Copy.to_krustui_icon(color.into()).finish())
+                        .with_width(icon_px)
+                        .with_height(icon_px)
+                        .finish()
+                })
+                .with_cursor(Cursor::PointingHand)
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(RequestedCommandViewAction::CopyJsonToClipboard {
+                        text: copy_text.clone(),
+                    });
+                });
+                let overlay = Align::new(
+                    Container::new(copy_button.finish())
+                        .with_margin_top(6.)
+                        .with_margin_right(10.)
                         .finish(),
-                );
+                )
+                .top_right()
+                .finish();
+                content.add_child(Stack::new().with_child(body).with_child(overlay).finish());
             } else if FeatureFlag::McpJsonTreeView.is_enabled() {
                 let colors = JsonTreeColors::from_theme(theme);
                 let font_family = appearance.monospace_font_family();

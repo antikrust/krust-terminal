@@ -42,7 +42,12 @@ pub const CODELLAMA_OLLAMA_MODEL_ID: &str = "ollama/codellama:13b";
 #[allow(dead_code)]
 pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
-const MAX_TOOL_CALLS_PER_TURN: usize = 8;
+/// How many tool calls one turn may make before the harness stops it. A real
+/// task (read a few files, run a build, fix, re-run) needs well more than a
+/// handful; the old limit of 8 ended useful work mid-stream with a red error.
+/// This is a safety rail against a runaway loop, not a work budget — hitting
+/// it is a graceful stop the user can continue from, not a failure.
+const MAX_TOOL_CALLS_PER_TURN: usize = 40;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside krust terminal.
@@ -53,6 +58,7 @@ Return exactly one JSON object and no markdown.
 To run a command: {"type":"shell","command":"the exact shell command"}
 To search the web (for current events, prices, docs, anything you don't know): {"type":"search","query":"the search query"}
 To read a file: {"type":"read_file","path":"path/to/file"}
+To read part of a large file, add line bounds: {"type":"read_file","path":"path/to/file","offset":900,"limit":300} — the result says how many lines there are and the next offset; use a large offset to see the end.
 To create or overwrite a file: {"type":"write_file","path":"path/to/file","content":"the full file contents"}
 To answer the user: {"type":"text","text":"your answer"}
 After an action result, either request another action or answer the user."#;
@@ -149,33 +155,104 @@ async fn probe_model_caps_once(
         })
 }
 
-/// Runs a web search via DuckDuckGo's HTML endpoint (curl, to stay off the
-/// Tokio reactor like the rest of this harness) and returns the results as
-/// formatted text, reusing the built-in web-search server's parser. `None`
-/// on any failure — callers proceed without results rather than erroring.
+/// A mainstream desktop-Chrome User-Agent. An obviously-automated agent string
+/// gets a bot challenge (DuckDuckGo's empty `anomaly.js` page) far sooner,
+/// which is what made searches come back empty; a browser string gets results.
+const WEB_SEARCH_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+
+/// Runs a web search (curl, to stay off the Tokio reactor like the rest of
+/// this harness), trying DuckDuckGo and falling back to Bing when it's blocked
+/// or empty, reusing the built-in web-search server's parsers. `None` only
+/// when both engines are blocked/unreachable — callers then show a transient
+/// failure rather than a misleading "no results".
 async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
+    use crate::ai::mcp::web_search_server::{
+        format_results_as_text, parse_bing_html, parse_duckduckgo_html,
+    };
+
+    // DuckDuckGo's HTML endpoint only answers POST; Bing's answers GET.
+    let ddg = curl_fetch(
+        "https://html.duckduckgo.com/html/",
+        &[("q", query)],
+        CurlMethod::Post,
+        path,
+    )
+    .await;
+    if let Some(html) = &ddg {
+        let results = parse_duckduckgo_html(html, 5);
+        if !results.is_empty() {
+            return Some(format_results_as_text(query, &results));
+        }
+    }
+
+    let bing = curl_fetch(
+        "https://www.bing.com/search",
+        &[("q", query)],
+        CurlMethod::Get,
+        path,
+    )
+    .await;
+    if let Some(html) = &bing {
+        let results = parse_bing_html(html, 5);
+        if !results.is_empty() {
+            return Some(format_results_as_text(query, &results));
+        }
+    }
+
+    // Neither engine returned results. A page that loaded but carried a bot
+    // challenge (or no page at all) is "blocked" — report that as a failure so
+    // the model retries instead of treating it as a factual empty result.
+    let ddg_blocked = ddg.as_deref().is_none_or(|html| html.contains("anomaly.js"));
+    let bing_blocked = bing
+        .as_deref()
+        .is_none_or(|html| html.contains("sorry your network") || html.contains("/sorry/"));
+    if ddg_blocked && bing_blocked {
+        None
+    } else {
+        Some(format_results_as_text(query, &[]))
+    }
+}
+
+/// Whether a curl fetch sends its parameters as a GET query string or a POST
+/// form body.
+#[derive(Clone, Copy)]
+enum CurlMethod {
+    Get,
+    Post,
+}
+
+/// Fetches `url` with the given parameters through curl, returning the body on
+/// a successful fetch. `None` on any curl failure. `--data-urlencode` with
+/// `--get` builds a query string; without it, a POST form body.
+async fn curl_fetch(
+    url: &str,
+    params: &[(&str, &str)],
+    method: CurlMethod,
+    path: &str,
+) -> Option<String> {
     let mut command = Command::new("/usr/bin/curl");
     command.args([
         "--silent",
-        "--fail",
+        "--location",
         "--max-time",
         "20",
         "--user-agent",
-        "Mozilla/5.0 (compatible; KrustWebSearch/1.0)",
-        "--data-urlencode",
-        &format!("q={query}"),
-        "https://html.duckduckgo.com/html/",
+        WEB_SEARCH_USER_AGENT,
     ]);
+    if matches!(method, CurlMethod::Get) {
+        command.arg("--get");
+    }
+    for (key, value) in params {
+        command.args(["--data-urlencode", &format!("{key}={value}")]);
+    }
+    command.arg(url);
     command.env("PATH", path);
     let output = command.output().await.ok()?;
     if !output.status.success() {
         return None;
     }
-    let html = String::from_utf8_lossy(&output.stdout);
-    let results = crate::ai::mcp::web_search_server::parse_duckduckgo_html(&html, 5);
-    Some(crate::ai::mcp::web_search_server::format_results_as_text(
-        query, &results,
-    ))
+    Some(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 /// Heuristic: does this prompt look like it wants live web information? Used
@@ -371,7 +448,10 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
         McpToolSpec {
             name: BUILTIN_READ_FILE.to_string(),
             description: "Read a UTF-8 text file from the user's machine and return its contents. \
-                Paths may be absolute or relative to the current working directory."
+                Paths may be absolute or relative to the current working directory. For a large \
+                file, read a window of lines with `offset` and `limit`, and read further windows \
+                by increasing `offset` — the result tells you how many lines there are and the \
+                next offset to use. To see the end of a file, pass an `offset` near its line count."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -379,6 +459,14 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     "path": {
                         "type": "string",
                         "description": "File path, absolute or relative to the working directory."
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "0-based line number to start reading from (optional)."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of lines to return from `offset` (optional)."
                     }
                 },
                 "required": ["path"]
@@ -448,7 +536,9 @@ pub(crate) async fn dispatch_builtin_tool(
     match name {
         BUILTIN_READ_FILE => {
             let file = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
-            read_path_bounded(&resolve_under(working_dir, file))
+            let offset = arguments.get("offset").and_then(Value::as_u64).map(|n| n as usize);
+            let limit = arguments.get("limit").and_then(Value::as_u64).map(|n| n as usize);
+            read_path_windowed(&resolve_under(working_dir, file), offset, limit)
         }
         BUILTIN_WRITE_FILE => {
             let file = arg_str("path").ok_or("write_file requires a non-empty string `path`")?;
@@ -785,6 +875,10 @@ enum OllamaAgentReply {
     #[serde(rename = "read_file")]
     ReadFile {
         path: String,
+        #[serde(default)]
+        offset: Option<usize>,
+        #[serde(default)]
+        limit: Option<usize>,
     },
     #[serde(rename = "write_file")]
     WriteFile {
@@ -946,9 +1040,50 @@ async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) ->
     command.args(["-lc", run.as_str(), "krust-run-code", &*script_arg]);
     command.current_dir(working_dir);
     command.env("PATH", path);
-    let execution = run_captured(command).await;
+    let mut execution = run_captured(command).await;
     let _ = std::fs::remove_file(&script);
+
+    // Exit 127 from the shell means `program` wasn't found on PATH. Without
+    // this, the model gets a bare "exit 127" it doesn't understand and keeps
+    // re-running the same missing interpreter. Say plainly what's missing so
+    // it switches approach (e.g. bash) instead of retrying.
+    if execution.exit_code == 127 {
+        execution.stderr = format!(
+            "`{program}` is not installed on this machine (command not found). \
+             Don't retry {language}; use a `bash` run_code call, or another language that is \
+             available ({}).\n{}",
+            available_run_code_languages(path).join(", "),
+            execution.stderr.trim(),
+        );
+    }
     execution
+}
+
+/// Which `run_code` interpreters are actually on this machine's PATH, so a
+/// 127 "not installed" message can point the model at one that exists instead
+/// of guessing. `bash` is always listed — it's the shell the harness runs in.
+fn available_run_code_languages(path: &str) -> Vec<&'static str> {
+    let mut available = vec!["bash"];
+    for (language, program) in [("python", "python3"), ("javascript", "node"), ("ruby", "ruby")] {
+        if which_on_path(program, path) {
+            available.push(language);
+        }
+    }
+    available
+}
+
+/// Whether `program` resolves on `path` (a plain `which`, no shell spawn).
+fn which_on_path(program: &str, path: &str) -> bool {
+    std::env::split_paths(path).any(|dir| {
+        let candidate = dir.join(program);
+        candidate.is_file()
+            && std::fs::metadata(&candidate)
+                .map(|meta| {
+                    use std::os::unix::fs::PermissionsExt;
+                    meta.permissions().mode() & 0o111 != 0
+                })
+                .unwrap_or(false)
+    })
 }
 
 /// Spawns `command` with stdin closed and both pipes captured under hard byte
@@ -1052,6 +1187,24 @@ pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: im
         usage: None,
         is_error: true,
         error_message: Some(message.into()),
+    });
+}
+
+/// Ends the turn gracefully after the tool-call limit, as a normal completion
+/// with a plain-text note rather than a red error. Hitting the step cap means
+/// the model was still working, not that anything broke, so the user gets a
+/// message they can continue from instead of a failure.
+fn emit_step_limit_reached(on_event: &mut impl FnMut(TurnEvent)) {
+    on_event(TurnEvent::Text {
+        text: format!(
+            "I've reached the limit of {MAX_TOOL_CALLS_PER_TURN} actions in a single turn and \
+             stopped here. Tell me to continue if you'd like me to keep going."
+        ),
+    });
+    on_event(TurnEvent::TurnCompleted {
+        usage: None,
+        is_error: false,
+        error_message: None,
     });
 }
 
@@ -1474,10 +1627,7 @@ async fn run_ollama_generate_loop(
                     return Ok(status);
                 }
                 if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_failed_turn(
-                        &mut on_event,
-                        "Ollama reached the limit of eight shell commands in one turn",
-                    );
+                    emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
 
@@ -1500,10 +1650,7 @@ async fn run_ollama_generate_loop(
                     return Ok(status);
                 }
                 if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_failed_turn(
-                        &mut on_event,
-                        "Ollama reached the limit of eight actions in one turn",
-                    );
+                    emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
 
@@ -1525,12 +1672,13 @@ async fn run_ollama_generate_loop(
                      Use these to answer, or request another action.",
                 );
             }
-            OllamaAgentReply::ReadFile { path: file_path } => {
+            OllamaAgentReply::ReadFile {
+                path: file_path,
+                offset,
+                limit,
+            } => {
                 if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_failed_turn(
-                        &mut on_event,
-                        "Ollama reached the limit of eight actions in one turn",
-                    );
+                    emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
                 let resolved = resolve_under(working_dir, &file_path);
@@ -1538,9 +1686,9 @@ async fn run_ollama_generate_loop(
                 on_event(TurnEvent::ToolCallStarted {
                     call_id: call_id.clone(),
                     name: "ReadFile".to_string(),
-                    input: json!({ "path": file_path }),
+                    input: json!({ "path": file_path, "offset": offset, "limit": limit }),
                 });
-                next_prompt = match read_path_bounded(&resolved) {
+                next_prompt = match read_path_windowed(&resolved, offset, limit) {
                     Ok(contents) => {
                         on_event(TurnEvent::ToolCallResult {
                             call_id,
@@ -1565,10 +1713,7 @@ async fn run_ollama_generate_loop(
                 content,
             } => {
                 if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_failed_turn(
-                        &mut on_event,
-                        "Ollama reached the limit of eight actions in one turn",
-                    );
+                    emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
                 let resolved = resolve_under(working_dir, &file_path);
@@ -1631,11 +1776,21 @@ fn resolve_under(working_dir: &Path, path: &str) -> std::path::PathBuf {
 /// read a directory, its listing. Models regularly conflate files and
 /// directories ("read my .ssh folder"); answering with the listing keeps the
 /// turn moving instead of burning the tool call on an "Is a directory" error.
-fn read_path_bounded(path: &Path) -> std::result::Result<String, String> {
+///
+/// A file read may be a line window: `offset` is a 0-based start line and
+/// `limit` a line count. This is what lets a model page through a file too
+/// large to return whole (and reach its end), instead of re-reading the same
+/// truncated head over and over — the previous `read_file` had no way to ask
+/// for anything past the first 64 KB.
+fn read_path_windowed(
+    path: &Path,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> std::result::Result<String, String> {
     if path.is_dir() {
         return list_directory(path);
     }
-    read_file_bounded(path)
+    read_file_windowed(path, offset, limit)
 }
 
 /// A sorted, bounded listing of `path`'s entries, directories marked with a
@@ -1667,15 +1822,64 @@ fn list_directory(path: &Path) -> std::result::Result<String, String> {
     Ok(text)
 }
 
-/// Reads a file as UTF-8, capped at [`MAX_TOOL_OUTPUT_BYTES`] so a huge file
-/// can't blow up the prompt fed back to the model.
-fn read_file_bounded(path: &Path) -> std::result::Result<String, String> {
+/// The most lines one `read_file` window returns when the model gives no
+/// explicit `limit` — enough to read most source files whole, small enough
+/// that a giant file is paged rather than dumped past the model's context.
+const DEFAULT_READ_WINDOW_LINES: usize = 900;
+
+/// Reads a file as UTF-8, optionally as a window of lines (`offset`/`limit`).
+///
+/// A small file read with no window is returned verbatim, exactly as before,
+/// so ordinary reads are unchanged. Otherwise the content is returned with a
+/// one-line header saying which lines these are of how many, and — when more
+/// lines remain — the exact next call to continue, so the model can page
+/// through a large file (or jump to its end) instead of re-reading the head.
+/// Each window is still capped at [`MAX_TOOL_OUTPUT_BYTES`].
+fn read_file_windowed(
+    path: &Path,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> std::result::Result<String, String> {
     let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
-    let truncated = bytes.len() > MAX_TOOL_OUTPUT_BYTES;
-    let slice = &bytes[..bytes.len().min(MAX_TOOL_OUTPUT_BYTES)];
-    let mut text = String::from_utf8_lossy(slice).into_owned();
-    if truncated {
-        text.push_str("\n[truncated by krust's Ollama harness]");
+    let content = String::from_utf8_lossy(&bytes);
+    let lines: Vec<&str> = content.lines().collect();
+    let total = lines.len();
+
+    let windowed = offset.is_some() || limit.is_some();
+    // A small whole-file read stays byte-for-byte what it always was.
+    if !windowed && bytes.len() <= MAX_TOOL_OUTPUT_BYTES {
+        return Ok(content.into_owned());
+    }
+
+    let start = offset.unwrap_or(0).min(total);
+    let window = limit.unwrap_or(DEFAULT_READ_WINDOW_LINES).max(1);
+    let mut end = (start + window).min(total);
+
+    // Hold each window under the byte cap, trimming the end rather than
+    // slicing mid-line, so the model always gets whole lines.
+    let mut body = lines[start..end].join("\n");
+    while body.len() > MAX_TOOL_OUTPUT_BYTES && end > start + 1 {
+        end -= (end - start) / 2 + 1;
+        end = end.max(start + 1);
+        body = lines[start..end].join("\n");
+    }
+    if body.len() > MAX_TOOL_OUTPUT_BYTES {
+        body.truncate(MAX_TOOL_OUTPUT_BYTES);
+    }
+
+    let mut text = format!(
+        "{} (lines {}-{} of {})\n{body}",
+        path.display(),
+        start + 1,
+        end,
+        total
+    );
+    if end < total {
+        text.push_str(&format!(
+            "\n\n[{} more line(s). To continue, call read_file with offset={end}{}.]",
+            total - end,
+            limit.map(|limit| format!(" limit={limit}")).unwrap_or_default()
+        ));
     }
     Ok(text)
 }
@@ -1850,10 +2054,7 @@ async fn run_ollama_chat_with_tools(
         };
 
         if call_index == MAX_TOOL_CALLS_PER_TURN {
-            emit_failed_turn(
-                on_event,
-                "Ollama reached the limit of eight tool calls in one turn",
-            );
+            emit_step_limit_reached(on_event);
             return Ok(ToolChatOutcome::Completed(status));
         }
 

@@ -3455,6 +3455,36 @@ fn render_response_footer(props: Props, app: &AppContext) -> Option<Box<dyn Elem
         flex.add_child(continue_button);
     }
 
+    // Copy-the-response button: one click to lift the whole AI answer, which
+    // was otherwise only reachable through the right-click menu.
+    if !props.shared_session_status.is_viewer() {
+        let ui_builder = appearance.ui_builder().clone();
+        let copy_button = icon_button(
+            appearance,
+            Icon::Copy,
+            false,
+            props.state_handles.copy_output_handle.clone(),
+        )
+        .with_tooltip(move || {
+            ui_builder
+                .tool_tip("Copy response".to_string())
+                .build()
+                .finish()
+        })
+        .with_style(style_override)
+        .with_hovered_styles(style_override_with_background)
+        .with_active_styles(style_override_with_background)
+        .build()
+        .on_click(|ctx, _, _| ctx.dispatch_typed_action(AIBlockAction::CopyOutput))
+        .finish();
+
+        flex.add_child(
+            Container::new(copy_button)
+                .with_margin_left(4.)
+                .finish(),
+        );
+    }
+
     // Review changes button.
     if props.has_accepted_edits && !props.shared_session_status.is_viewer() {
         // Only show Review Changes button if we're in a git repository

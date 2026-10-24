@@ -11,18 +11,29 @@
 //! JSON into the MCP Servers page.
 //!
 //! The backend is a keyless scrape of DuckDuckGo's HTML results page, the
-//! same approach several open-source "search MCP servers" use. Fragile to
-//! DDG markup changes and not meant for high request volume — a "rules of
-//! thumb" integration in the same spirit as the Ollama catalog scraper.
+//! same approach several open-source "search MCP servers" use, with a Bing
+//! HTML fallback when DuckDuckGo returns nothing or rate-limits us. Fragile to
+//! either engine's markup changes and not meant for high request volume — a
+//! "rules of thumb" integration in the same spirit as the Ollama catalog
+//! scraper.
 
 use std::io::{BufRead, Write};
 
+use base64::Engine;
 use regex::Regex;
 use serde_json::{json, Value};
 
 const WEB_SEARCH_TOOL_NAME: &str = "web_search";
 const PROTOCOL_VERSION: &str = "2024-11-05";
 const SERVER_NAME: &str = "krust-web-search";
+
+/// A real browser User-Agent. Both engines serve a bot-challenge (an empty
+/// `anomaly.js` page from DuckDuckGo, a 403 from others) much more readily to
+/// an obviously-automated agent string like the old `KrustWebSearchMcp/1.0`,
+/// which is why searches were coming back empty. A mainstream desktop Chrome
+/// string gets ordinary results.
+const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 /// Runs the server until stdin closes (the MCP client disconnects), then
 /// returns. Called from the `web-search-mcp-server` worker subcommand (see
@@ -138,9 +149,123 @@ async fn call_tool(client: &reqwest::Client, params: &Value, id: Value) -> Value
         .unwrap_or(5)
         .clamp(1, 10) as usize;
 
-    match search_duckduckgo(client, &query, max_results).await {
-        Ok(results) => tool_result(id, false, format_results_as_text(&query, &results)),
-        Err(error) => tool_result(id, true, format!("Search failed: {error}")),
+    let (text, is_error) = run_search(client, &query, max_results).await;
+    tool_result(id, is_error, text)
+}
+
+/// The three ways a single engine query can turn out. Kept distinct so the
+/// model is told the truth: a blocked search ("retry shortly") must not read
+/// as a genuinely empty one ("there is nothing"), or a weak model fires the
+/// same query again and again (eight times, in one observed session) treating
+/// a rate-limit as a dead end.
+enum SearchOutcome {
+    /// The engine answered and we parsed results.
+    Results(Vec<SearchResult>),
+    /// The engine answered normally but with no matches.
+    Empty,
+    /// The engine refused, rate-limited, or served a bot challenge.
+    Blocked,
+}
+
+/// Searches DuckDuckGo, falling back to Bing when DuckDuckGo returns nothing
+/// or blocks us. Returns the text to hand the model and whether to flag it as
+/// an error (true only when both engines were blocked/unreachable, never for a
+/// genuine no-results).
+async fn run_search(
+    client: &reqwest::Client,
+    query: &str,
+    max_results: usize,
+) -> (String, bool) {
+    let primary = fetch_engine(client, Engine_::DuckDuckGo, query, max_results).await;
+    if let SearchOutcome::Results(results) = &primary {
+        return (format_results_as_text(query, results), false);
+    }
+
+    let fallback = fetch_engine(client, Engine_::Bing, query, max_results).await;
+    if let SearchOutcome::Results(results) = &fallback {
+        return (format_results_as_text(query, results), false);
+    }
+
+    // Neither engine returned results. If either was merely empty (a real
+    // search that matched nothing), say so plainly; only if both were blocked
+    // do we report a transient failure the model should retry rather than
+    // treat as fact.
+    let any_empty = matches!(primary, SearchOutcome::Empty)
+        || matches!(fallback, SearchOutcome::Empty);
+    if any_empty {
+        (format!("No results found for \"{query}\"."), false)
+    } else {
+        (
+            format!(
+                "Web search is temporarily unavailable (the search engines rate-limited this \
+                 request). This is not a result about \"{query}\" — wait a few seconds and try the \
+                 same search again, or answer from what you already know."
+            ),
+            true,
+        )
+    }
+}
+
+/// Which search engine a fetch targets.
+#[derive(Clone, Copy)]
+enum Engine_ {
+    DuckDuckGo,
+    Bing,
+}
+
+/// Runs one engine query and classifies the outcome. A network error or a
+/// non-success HTTP status is [`SearchOutcome::Blocked`] (the caller treats it
+/// the same as a bot challenge); a 2xx page that parses to no results is
+/// [`SearchOutcome::Empty`] unless it carries a challenge marker.
+async fn fetch_engine(
+    client: &reqwest::Client,
+    engine: Engine_,
+    query: &str,
+    max_results: usize,
+) -> SearchOutcome {
+    let request = match engine {
+        Engine_::DuckDuckGo => client
+            .post("https://html.duckduckgo.com/html/")
+            .form(&[("q", query)]),
+        Engine_::Bing => client
+            .get("https://www.bing.com/search")
+            .query(&[("q", query)]),
+    };
+    let response = match request.header("User-Agent", BROWSER_USER_AGENT).send().await {
+        Ok(response) => response,
+        Err(_) => return SearchOutcome::Blocked,
+    };
+    if !response.status().is_success() {
+        return SearchOutcome::Blocked;
+    }
+    let html = match response.text().await {
+        Ok(html) => html,
+        Err(_) => return SearchOutcome::Blocked,
+    };
+    classify(engine, &html, max_results)
+}
+
+/// Parses a results page and classifies it. Shared by [`fetch_engine`] and the
+/// unit tests so the empty/blocked distinction is exercised directly.
+fn classify(engine: Engine_, html: &str, max_results: usize) -> SearchOutcome {
+    let (results, challenged) = match engine {
+        Engine_::DuckDuckGo => (
+            parse_duckduckgo_html(html, max_results),
+            // DuckDuckGo serves its bot challenge as a 202 (or even a 200)
+            // whose body loads `anomaly.js` and carries no results.
+            html.contains("anomaly.js"),
+        ),
+        Engine_::Bing => (
+            parse_bing_html(html, max_results),
+            html.contains("sorry your network") || html.contains("/sorry/"),
+        ),
+    };
+    if !results.is_empty() {
+        SearchOutcome::Results(results)
+    } else if challenged {
+        SearchOutcome::Blocked
+    } else {
+        SearchOutcome::Empty
     }
 }
 
@@ -179,25 +304,6 @@ pub(crate) fn format_results_as_text(query: &str, results: &[SearchResult]) -> S
         })
         .collect();
     format!("Search results for \"{query}\":\n\n{}", lines.join("\n\n"))
-}
-
-async fn search_duckduckgo(
-    client: &reqwest::Client,
-    query: &str,
-    max_results: usize,
-) -> anyhow::Result<Vec<SearchResult>> {
-    let response = client
-        .post("https://html.duckduckgo.com/html/")
-        .header(
-            "User-Agent",
-            "Mozilla/5.0 (compatible; KrustWebSearchMcp/1.0)",
-        )
-        .form(&[("q", query)])
-        .send()
-        .await?
-        .error_for_status()?;
-    let html = response.text().await?;
-    Ok(parse_duckduckgo_html(&html, max_results))
 }
 
 /// Extracts result links/titles and snippets from DuckDuckGo's HTML results
@@ -246,6 +352,63 @@ pub(crate) fn parse_duckduckgo_html(html: &str, max_results: usize) -> Vec<Searc
 /// real destination.
 fn is_ad_url(url: &str) -> bool {
     url.contains("/y.js") || url.contains("ad_domain=") || url.contains("ad_provider=")
+}
+
+/// Extracts results from Bing's HTML results page — the fallback when
+/// DuckDuckGo is blocked or empty. Each organic result is a
+/// `<li class="b_algo">` whose `<h2><a href=…>` carries the title and link and
+/// whose first `<p>` carries the snippet. Loose regex over the markup, same
+/// spirit as [`parse_duckduckgo_html`].
+pub(crate) fn parse_bing_html(html: &str, max_results: usize) -> Vec<SearchResult> {
+    let link_pattern =
+        Regex::new(r#"(?s)<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>"#).expect("valid regex");
+    let snippet_pattern = Regex::new(r#"(?s)<p[^>]*class="[^"]*b_lineclamp[^"]*"[^>]*>(.*?)</p>"#)
+        .expect("valid regex");
+
+    // Split on result items so a title and its snippet stay paired even when a
+    // result has no snippet (a shared zip would drift out of alignment).
+    html.split("<li class=\"b_algo\"")
+        .skip(1)
+        .filter_map(|block| {
+            let caps = link_pattern.captures(block)?;
+            let url = resolve_bing_url(&decode_html_entities(&caps[1]));
+            // Skip Bing's own navigational and related-search links.
+            if url.contains("bing.com") || url.contains("microsofttranslator") {
+                return None;
+            }
+            let title = strip_tags(decode_html_entities(&caps[2]));
+            if title.is_empty() {
+                return None;
+            }
+            let snippet = snippet_pattern
+                .captures(block)
+                .map(|caps| strip_tags(decode_html_entities(&caps[1])))
+                .unwrap_or_default();
+            Some(SearchResult {
+                title,
+                url,
+                snippet,
+            })
+        })
+        .take(max_results)
+        .collect()
+}
+
+/// Unwraps Bing's `bing.com/ck/a?…&u=a1<base64url>&…` click-tracking redirect
+/// to the real destination, leaving direct links untouched. The `u` parameter
+/// is the destination URL as url-safe base64 with an `a1` scheme prefix.
+fn resolve_bing_url(href: &str) -> String {
+    let Some(start) = href.find("u=a1") else {
+        return href.to_string();
+    };
+    let encoded = &href[start + 4..];
+    let encoded = encoded.split('&').next().unwrap_or(encoded);
+    base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(encoded.trim_end_matches('='))
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .filter(|decoded| decoded.starts_with("http"))
+        .unwrap_or_else(|| href.to_string())
 }
 
 /// Unwraps DuckDuckGo's `//duckduckgo.com/l/?uddg=<encoded-url>&rut=...`

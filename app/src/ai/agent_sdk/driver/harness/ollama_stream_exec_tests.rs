@@ -230,7 +230,9 @@ fn structured_file_actions_are_recognized() {
     assert_eq!(
         read.finish("codellama:13b").unwrap().reply,
         super::OllamaAgentReply::ReadFile {
-            path: "src/main.rs".to_string()
+            path: "src/main.rs".to_string(),
+            offset: None,
+            limit: None,
         }
     );
 
@@ -611,6 +613,55 @@ fn run_code_rejects_unknown_language() {
         "{}",
         execution.stderr
     );
+}
+
+#[test]
+fn read_file_returns_small_files_verbatim() {
+    use super::read_path_windowed;
+    let dir = std::env::temp_dir().join(format!("krust-read-small-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("small.txt");
+    std::fs::write(&file, "line one\nline two\n").unwrap();
+    // No window, small file: byte-for-byte, no header.
+    let text = read_path_windowed(&file, None, None).unwrap();
+    assert_eq!(text, "line one\nline two\n");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn read_file_windows_and_points_at_the_next_offset() {
+    use super::read_path_windowed;
+    let dir = std::env::temp_dir().join(format!("krust-read-window-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("big.txt");
+    let body: String = (1..=100).map(|n| format!("line {n}\n")).collect();
+    std::fs::write(&file, &body).unwrap();
+
+    // A window in the middle: header names the range and the total, and the
+    // continuation hint gives the exact next offset.
+    let text = read_path_windowed(&file, Some(10), Some(5)).unwrap();
+    assert!(text.contains("(lines 11-15 of 100)"), "{text}");
+    assert!(text.contains("line 11"));
+    assert!(text.contains("line 15"));
+    assert!(!text.contains("line 16"));
+    assert!(text.contains("offset=15"), "{text}");
+
+    // A window at the end has no continuation hint.
+    let tail = read_path_windowed(&file, Some(95), Some(50)).unwrap();
+    assert!(tail.contains("(lines 96-100 of 100)"), "{tail}");
+    assert!(tail.contains("line 100"));
+    assert!(!tail.contains("more line"), "{tail}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn available_languages_always_lists_bash() {
+    use super::available_run_code_languages;
+    // An empty PATH still has bash (the harness's own shell).
+    assert_eq!(available_run_code_languages(""), vec!["bash"]);
+    // A PATH with python3 lists python too.
+    let langs = available_run_code_languages("/usr/bin:/bin");
+    assert!(langs.contains(&"bash"), "{langs:?}");
 }
 
 #[test]

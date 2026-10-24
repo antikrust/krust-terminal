@@ -444,6 +444,9 @@ pub(super) struct AIBlockStateHandles {
     /// Mouse state handle for the continue conversation button
     continue_conversation_handle: MouseStateHandle,
 
+    /// Mouse state handle for the copy-response button in the message footer
+    copy_output_handle: MouseStateHandle,
+
     /// Mouse state handle for the resume conversation button
     resume_conversation_handle: MouseStateHandle,
 

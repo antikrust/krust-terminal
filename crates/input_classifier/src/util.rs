@@ -67,6 +67,7 @@ pub async fn is_likely_shell_command(
     let mut likely_command_token_count = 0;
     let total_token_count = input.parsed_tokens.len();
     let mut is_first_token_command = false;
+    let mut first_token_is_shell_syntax = false;
     log::debug!(
         "is_likely_shell_command start: use_nld_heuristic_v2={use_nld_heuristic_v2}, total_token_count={total_token_count}, word_tokens_count={word_tokens_count}"
     );
@@ -97,6 +98,7 @@ pub async fn is_likely_shell_command(
 
         if token.token_index == 0 {
             is_first_token_command = token.token_description.is_some();
+            first_token_is_shell_syntax = check_if_token_has_shell_syntax;
         }
     }
 
@@ -110,12 +112,23 @@ pub async fn is_likely_shell_command(
         DETECT_AS_COMMAND_THRESHOLD
     };
 
-    // Classify as shell if:
-    // 1) We hit significant threshold of likely shell command tokens.
-    // 2) When there are fewer than 3 tokens, the first token is a valid top-level command.
-    let is_likely_shell_command = likely_command_token_count
-        >= (total_token_count as f32 * command_threshold) as usize
-        || (word_tokens_count < 3 && is_first_token_command);
+    // A shell command's first token is the program to run, so it must itself
+    // be a known command (or shell syntax like a pipe, redirect, `=`, or
+    // path). Without this guard an ordinary sentence whose first word is a
+    // function word ("the", "can you", "please", "how do I", "change the…")
+    // was force-classified as Shell whenever enough of its later words
+    // happened to match filenames in the working directory or entries in
+    // history — so the agent-mode input flipped to shell and the sentence ran
+    // as a command. Requiring a command-like first token lets those sentences
+    // reach the natural-language classifier instead.
+    let first_token_is_command_like = is_first_token_command || first_token_is_shell_syntax;
+
+    // Classify as shell if the first token is command-like AND either:
+    // 1) We hit a significant threshold of likely shell command tokens, or
+    // 2) There are fewer than 3 tokens (a bare command, maybe with one arg).
+    let is_likely_shell_command = first_token_is_command_like
+        && (likely_command_token_count >= (total_token_count as f32 * command_threshold) as usize
+            || word_tokens_count < 3);
     log::debug!(
         "is_likely_shell_command result={is_likely_shell_command}: use_nld_heuristic_v2={use_nld_heuristic_v2}, likely_command_token_count={likely_command_token_count}, total_token_count={total_token_count}, word_tokens_count={word_tokens_count}, command_threshold={command_threshold}, is_first_token_command={is_first_token_command}"
     );
