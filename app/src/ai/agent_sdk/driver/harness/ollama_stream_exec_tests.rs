@@ -236,6 +236,27 @@ fn structured_file_actions_are_recognized() {
         }
     );
 
+    let mut replace = OllamaResponseAccumulator::default();
+    replace.push_line(
+        &serde_json::json!({
+            "response": r#"{"type":"replace_lines","path":"a.md","start":126,"end":281,"from_path":"b.md"}"#,
+            "done": true,
+        })
+        .to_string(),
+    );
+    assert_eq!(
+        replace.finish("codellama:13b").unwrap().reply,
+        super::OllamaAgentReply::ReplaceLines {
+            path: "a.md".to_string(),
+            start: 126,
+            end: 281,
+            content: None,
+            from_path: Some("b.md".to_string()),
+            from_start: None,
+            from_end: None,
+        }
+    );
+
     let mut write = OllamaResponseAccumulator::default();
     write.push_line(
         &serde_json::json!({
@@ -509,8 +530,12 @@ fn builtin_tool_specs_cover_the_in_harness_tools() {
         .into_iter()
         .map(|tool| tool.name)
         .collect();
-    assert_eq!(names, vec!["read_file", "write_file", "run_code"]);
+    assert_eq!(
+        names,
+        vec!["read_file", "write_file", "replace_lines", "run_code"]
+    );
     assert!(is_builtin_local_tool("run_code"));
+    assert!(is_builtin_local_tool("replace_lines"));
     assert!(!is_builtin_local_tool("web_search"));
 }
 
@@ -535,7 +560,8 @@ fn builtin_file_tools_write_then_read_round_trip() {
         &dir,
         "/usr/bin:/bin",
     ));
-    assert_eq!(read, Ok("hello world".to_string()));
+    let read = read.expect("read succeeds");
+    assert!(read.ends_with("\nL1| hello world\n"), "{read}");
 
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -616,15 +642,194 @@ fn run_code_rejects_unknown_language() {
 }
 
 #[test]
-fn read_file_returns_small_files_verbatim() {
+fn read_file_labels_every_line_with_its_number() {
     use super::read_path_windowed;
     let dir = std::env::temp_dir().join(format!("krust-read-small-{}", Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("small.txt");
     std::fs::write(&file, "line one\nline two\n").unwrap();
-    // No window, small file: byte-for-byte, no header.
+    // A small file comes back whole, each line labelled as the work notes
+    // label them, so the model can name lines to replace_lines.
     let text = read_path_windowed(&file, None, None).unwrap();
-    assert_eq!(text, "line one\nline two\n");
+    assert!(text.contains("(lines 1-2 of 2;"), "{text}");
+    assert!(text.ends_with("\nL1| line one\nL2| line two\n"), "{text}");
+    assert!(!text.contains("more line"), "{text}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn read_file_without_a_window_stays_small_enough_to_reach_the_model_whole() {
+    use super::super::ollama_work_notes::LARGE_TEXT_CHARS;
+    use super::read_path_windowed;
+    let dir = std::env::temp_dir().join(format!("krust-read-large-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("runbook.md");
+    // 485 lines of ~37 bytes: an 18 KB file, over the size that would
+    // otherwise be summarised instead of shown.
+    let body: String = (1..=485)
+        .map(|n| format!("line {n:03} of a long runbook here...\n"))
+        .collect();
+    std::fs::write(&file, &body).unwrap();
+
+    let first = read_path_windowed(&file, None, None).unwrap();
+    assert!(first.len() <= LARGE_TEXT_CHARS, "{}", first.len());
+    assert!(first.contains("L1| line 001"), "{first}");
+    let next = first
+        .rsplit_once("offset=")
+        .and_then(|(_, rest)| rest.split('.').next())
+        .and_then(|offset| offset.parse::<usize>().ok())
+        .expect("a continuation offset");
+
+    // The offset given reads on from exactly the next line.
+    let second = read_path_windowed(&file, Some(next), None).unwrap();
+    assert!(second.len() <= LARGE_TEXT_CHARS, "{}", second.len());
+    let expected = format!("\nL{}| line {:03}", next + 1, next + 1);
+    assert!(second.contains(&expected), "{second}");
+    assert!(!second.contains(&format!("\nL{next}| ")), "{second}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn read_file_past_the_end_says_so() {
+    use super::read_path_windowed;
+    let dir = std::env::temp_dir().join(format!("krust-read-past-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("short.txt");
+    std::fs::write(&file, "a\nb\n").unwrap();
+    let text = read_path_windowed(&file, Some(10), None).unwrap();
+    assert!(
+        text.contains("has 2 line(s); offset 10 is past the end"),
+        "{text}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn replace_lines_in(dir: &Path, arguments: Value) -> Result<String, String> {
+    block_on(super::dispatch_builtin_tool(
+        "replace_lines",
+        &arguments,
+        dir,
+        "/usr/bin:/bin",
+    ))
+}
+
+#[test]
+fn replace_lines_swaps_a_section_for_another_files_lines() {
+    let dir = std::env::temp_dir().join(format!("krust-replace-from-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("runbook.md"),
+        "# Runbook\n## Method 1\nold a\n## Method 2\nold b\n## Notes\nkeep\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("runbook copy.md"),
+        "## Method 1\nnew a\n## Method 2\nnew b\n## Method 3\nnew c\n",
+    )
+    .unwrap();
+
+    let report = replace_lines_in(
+        &dir,
+        json!({ "path": "runbook.md", "start": 2, "end": 5, "from_path": "runbook copy.md" }),
+    )
+    .expect("replace succeeds");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("runbook.md")).unwrap(),
+        "# Runbook\n## Method 1\nnew a\n## Method 2\nnew b\n## Method 3\nnew c\n## Notes\nkeep\n"
+    );
+    // The report shows the edit with its new line numbers.
+    assert!(report.contains("with 6 line(s)"), "{report}");
+    assert!(report.contains("L8| ## Notes"), "{report}");
+
+    // Only part of the source file, numbers given as strings.
+    replace_lines_in(
+        &dir,
+        json!({
+            "path": "runbook.md", "start": "6", "end": "7",
+            "from_path": "runbook copy.md", "from_start": 1, "from_end": 2,
+        }),
+    )
+    .expect("partial copy succeeds");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("runbook.md")).unwrap(),
+        "# Runbook\n## Method 1\nnew a\n## Method 2\nnew b\n## Method 1\nnew a\n## Notes\nkeep\n"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn replace_lines_with_content_keeps_the_surrounding_lines() {
+    let dir = std::env::temp_dir().join(format!("krust-replace-content-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("notes.txt");
+    std::fs::write(&file, "one\ntwo\nthree\n").unwrap();
+
+    // Content without a trailing newline still leaves "three" on its own line.
+    replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 2, "end": 2, "content": "TWO" }),
+    )
+    .unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "one\nTWO\nthree\n");
+
+    // end = start - 1 inserts; at the end of the file it appends.
+    replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 1, "end": 0, "content": "zero" }),
+    )
+    .unwrap();
+    replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 5, "end": 4, "content": "four" }),
+    )
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "zero\none\nTWO\nthree\nfour\n"
+    );
+
+    // Empty content deletes.
+    replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 1, "end": 2, "content": "" }),
+    )
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "TWO\nthree\nfour\n"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn replace_lines_refuses_bad_ranges_and_labelled_text() {
+    let dir = std::env::temp_dir().join(format!("krust-replace-refuse-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("notes.txt");
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+
+    let past_end = replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 2, "end": 9, "content": "x" }),
+    )
+    .expect_err("a range past the end is refused");
+    assert!(past_end.contains("the file has 2 lines"), "{past_end}");
+
+    // Text pasted from a read_file result, labels and all.
+    let labelled = replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 1, "end": 1, "content": "L1| one\nL2| two" }),
+    )
+    .expect_err("labelled text is refused");
+    assert!(labelled.contains("not part of the file"), "{labelled}");
+
+    let both = replace_lines_in(
+        &dir,
+        json!({ "path": "notes.txt", "start": 1, "end": 1, "content": "x", "from_path": "notes.txt" }),
+    )
+    .expect_err("content and from_path together are refused");
+    assert!(both.contains("not both"), "{both}");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "one\ntwo\n");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -640,7 +845,7 @@ fn read_file_windows_and_points_at_the_next_offset() {
     // A window in the middle: header names the range and the total, and the
     // continuation hint gives the exact next offset.
     let text = read_path_windowed(&file, Some(10), Some(5)).unwrap();
-    assert!(text.contains("(lines 11-15 of 100)"), "{text}");
+    assert!(text.contains("(lines 11-15 of 100;"), "{text}");
     assert!(text.contains("line 11"));
     assert!(text.contains("line 15"));
     assert!(!text.contains("line 16"));
@@ -648,7 +853,7 @@ fn read_file_windows_and_points_at_the_next_offset() {
 
     // A window at the end has no continuation hint.
     let tail = read_path_windowed(&file, Some(95), Some(50)).unwrap();
-    assert!(tail.contains("(lines 96-100 of 100)"), "{tail}");
+    assert!(tail.contains("(lines 96-100 of 100;"), "{tail}");
     assert!(tail.contains("line 100"));
     assert!(!tail.contains("more line"), "{tail}");
     let _ = std::fs::remove_dir_all(&dir);
@@ -874,4 +1079,38 @@ fn write_new(dir: &std::path::Path, path: &str) -> bool {
         path,
     ))
     .is_ok()
+}
+
+#[test]
+fn spaced_names_in_the_request_are_quoted() {
+    use super::quote_spaced_names;
+    let dir = std::env::temp_dir().join(format!("krust-quote-names-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(dir.join("old notes")).unwrap();
+    std::fs::write(dir.join("memory-dump-runbook copy.md"), "x").unwrap();
+    std::fs::write(dir.join("memory-dump-runbook.md"), "x").unwrap();
+
+    assert_eq!(
+        quote_spaced_names(
+            "please take the methods from memory-dump-runbook copy.md and put them in the \
+             memory-dump-runbook.md file",
+            &dir
+        ),
+        "please take the methods from `memory-dump-runbook copy.md` and put them in the \
+         memory-dump-runbook.md file"
+    );
+    // At the end of a sentence, and as a folder at the end of a path.
+    assert_eq!(
+        quote_spaced_names("look in old notes. then ~/x/old notes", &dir),
+        "look in `old notes`. then `~/x/old notes`"
+    );
+    // Already quoted, part of a longer word, or not a real name: unchanged.
+    for unchanged in [
+        "copy `memory-dump-runbook copy.md` now",
+        "copy \"memory-dump-runbook copy.md\" now",
+        "see old notes2 and old notes.txt",
+        "a name like my file.md that is not there",
+    ] {
+        assert_eq!(quote_spaced_names(unchanged, &dir), unchanged);
+    }
+    let _ = std::fs::remove_dir_all(&dir);
 }

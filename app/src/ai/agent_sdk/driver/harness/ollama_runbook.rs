@@ -103,6 +103,7 @@ const RUN_BLOCK: &str = "run_block";
 const SHELL: &str = "shell";
 const BUILTIN_RUN_CODE: &str = "run_code";
 const BUILTIN_WRITE_FILE: &str = "write_file";
+const BUILTIN_REPLACE_LINES: &str = "replace_lines";
 
 /// Named values a run has established, e.g. `V=158.0`. UPPERCASE names only:
 /// that is how the runbooks spell their parameters, and it keeps a block's
@@ -2549,7 +2550,7 @@ async fn execute_call(
             .await
         }
         name => {
-            if name == BUILTIN_WRITE_FILE {
+            if name == BUILTIN_WRITE_FILE || name == BUILTIN_REPLACE_LINES {
                 let target = call
                     .arguments
                     .get("path")
@@ -2560,7 +2561,7 @@ async fn execute_call(
                     let error = format!("Refused: `{target}` is outside the target directory.");
                     return Some(refusal(
                         &call_id,
-                        format!("write_file {target}"),
+                        format!("{name} {target}"),
                         error,
                         on_event,
                     ));

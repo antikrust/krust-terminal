@@ -58,8 +58,10 @@ Return exactly one JSON object and no markdown.
 To run a command: {"type":"shell","command":"the exact shell command"}
 To search the web (for current events, prices, docs, anything you don't know): {"type":"search","query":"the search query"}
 To read a file: {"type":"read_file","path":"path/to/file"}
-To read part of a large file, add line bounds: {"type":"read_file","path":"path/to/file","offset":900,"limit":300} — the result says how many lines there are and the next offset; use a large offset to see the end.
+Each line read comes back labelled with its number, as `L12| text`; the label is not part of the file. A large file comes back a window at a time — the result says how many lines there are and the next offset. To read from line 126 on: {"type":"read_file","path":"path/to/file","offset":125}
 To create or overwrite a file: {"type":"write_file","path":"path/to/file","content":"the full file contents"}
+To change lines 126 to 281 of a file and leave the rest: {"type":"replace_lines","path":"path/to/file","start":126,"end":281,"content":"the new lines"}
+To put another file's lines there instead of typing them, give "from_path" in place of "content" (add "from_start"/"from_end" to copy only some of its lines). Empty content deletes the lines; end = start - 1 inserts without removing any.
 To answer the user: {"type":"text","text":"your answer"}
 After an action result, either request another action or answer the user."#;
 
@@ -410,7 +412,11 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
          stdout, stderr and exit code; use bash for ordinary shell commands like ls, cat, git, or \
          build/test commands.\n\
          - read_file and write_file read and create files; paths may be absolute or relative to \
-         the working directory.\n\
+         the working directory. read_file labels each line with its number, as `L12| text` (the \
+         label is not part of the file).\n\
+         - replace_lines changes lines start to end of a file in place, with new `content` or with \
+         lines copied from another file via `from_path`; use it to edit part of an existing file \
+         instead of retyping the whole file with write_file.\n\
          - a web_search tool, when present, is for current events, prices, docs, or anything that \
          may have changed since you were trained.\n\
          Each run_code call runs in a fresh process — nothing persists between calls, so re-import \
@@ -430,6 +436,7 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
 /// "Identifier 'fs' has already been declared".
 const BUILTIN_READ_FILE: &str = "read_file";
 const BUILTIN_WRITE_FILE: &str = "write_file";
+const BUILTIN_REPLACE_LINES: &str = "replace_lines";
 const BUILTIN_RUN_CODE: &str = "run_code";
 
 /// Whether `name` is one of the in-harness built-in tools (dispatched locally)
@@ -437,7 +444,7 @@ const BUILTIN_RUN_CODE: &str = "run_code";
 pub(crate) fn is_builtin_local_tool(name: &str) -> bool {
     matches!(
         name,
-        BUILTIN_READ_FILE | BUILTIN_WRITE_FILE | BUILTIN_RUN_CODE
+        BUILTIN_READ_FILE | BUILTIN_WRITE_FILE | BUILTIN_REPLACE_LINES | BUILTIN_RUN_CODE
     )
 }
 
@@ -448,10 +455,11 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
         McpToolSpec {
             name: BUILTIN_READ_FILE.to_string(),
             description: "Read a UTF-8 text file from the user's machine and return its contents. \
-                Paths may be absolute or relative to the current working directory. For a large \
-                file, read a window of lines with `offset` and `limit`, and read further windows \
-                by increasing `offset` — the result tells you how many lines there are and the \
-                next offset to use. To see the end of a file, pass an `offset` near its line count."
+                Paths may be absolute or relative to the current working directory. Each line \
+                comes back labelled with its number, as `L12| text` — the label is not part of \
+                the file. A large file comes back a window of lines at a time; the result tells \
+                you how many lines there are and the `offset` that reads the next window. To \
+                read from a given line, pass `offset` (lines to skip: offset 125 starts at L126)."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -462,7 +470,7 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     },
                     "offset": {
                         "type": "integer",
-                        "description": "0-based line number to start reading from (optional)."
+                        "description": "Lines to skip before reading: 0 starts at L1, 125 at L126 (optional)."
                     },
                     "limit": {
                         "type": "integer",
@@ -490,6 +498,50 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     }
                 },
                 "required": ["path", "content"]
+            }),
+        },
+        McpToolSpec {
+            name: BUILTIN_REPLACE_LINES.to_string(),
+            description: "Replace lines `start` to `end` (inclusive, numbered as read_file labels \
+                them) of an existing file, leaving the rest of the file untouched. The new lines \
+                are either `content`, or copied from another file with `from_path` — the whole \
+                file, or its lines `from_start` to `from_end` — so large text is never retyped. \
+                Empty `content` deletes the lines. To insert without removing anything, set \
+                `end` to `start - 1`."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File to edit, absolute or relative to the working directory."
+                    },
+                    "start": {
+                        "type": "integer",
+                        "description": "First line to replace (L-number from read_file)."
+                    },
+                    "end": {
+                        "type": "integer",
+                        "description": "Last line to replace (L-number from read_file)."
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The new lines (optional when `from_path` is given)."
+                    },
+                    "from_path": {
+                        "type": "string",
+                        "description": "Copy the new lines from this file instead of `content` (optional)."
+                    },
+                    "from_start": {
+                        "type": "integer",
+                        "description": "First line of `from_path` to copy; default its first line (optional)."
+                    },
+                    "from_end": {
+                        "type": "integer",
+                        "description": "Last line of `from_path` to copy; default its last line (optional)."
+                    }
+                },
+                "required": ["path", "start", "end"]
             }),
         },
         McpToolSpec {
@@ -546,46 +598,71 @@ pub(crate) async fn dispatch_builtin_tool(
                 .get("content")
                 .and_then(Value::as_str)
                 .ok_or("write_file requires a string `content`")?;
+            refuse_line_labels(content)?;
             let target = resolve_under(working_dir, file);
-            // Overwriting a working python file is where a model quietly
-            // loses what it did not understand. Measured on a panel told
-            // precisely which case to fix: it fixed that case and broke five
-            // others, taking a draft from 7 of 8 to 3 of 8. A whole-file
-            // rewrite is the same operation with nobody watching.
-            //
-            // So a rewrite has to keep what it replaced working. Same
-            // functions, same generic battery, compared by value — a call
-            // that answered before and raises now, or returned something and
-            // returns nothing now, is behaviour going backwards, and the old
-            // file goes back. Nothing else is judged: the model is free to
-            // restructure, rename locals, change anything it likes, as long
-            // as the code still does what it did.
-            let previous = target
-                .extension()
-                .is_some_and(|extension| extension == "py")
-                .then(|| std::fs::read_to_string(&target).ok())
-                .flatten();
-            let before = match &previous {
-                Some(source) => probe_source(source, &[], working_dir, path).await,
-                None => None,
-            };
-            let bytes = write_file(&target, content)?;
-            if let (Some(before), Some(source)) = (before, previous) {
-                let after = probe_source(content, &[], working_dir, path).await;
-                if let Some(loss) = after
-                    .as_deref()
-                    .and_then(|after| lost_ground(&before, after))
-                {
-                    write_file(&target, &source)?;
-                    return Err(format!(
-                        "Refused: that rewrite loses behaviour the file already had — {loss}. \
-                         {} is unchanged. Make the smallest change that fixes what you meant to \
-                         fix, and leave the rest working.",
-                        target.display()
-                    ));
-                }
-            }
+            let bytes = write_keeping_behaviour(&target, content, working_dir, path).await?;
             Ok(format!("Wrote {bytes} bytes to {}", target.display()))
+        }
+        BUILTIN_REPLACE_LINES => {
+            let file = arg_str("path").ok_or("replace_lines requires a non-empty string `path`")?;
+            let line_arg = |key: &str| {
+                // Small models often send numbers as strings ("126").
+                arguments.get(key).and_then(|value| {
+                    value
+                        .as_u64()
+                        .or_else(|| value.as_str().and_then(|text| text.trim().parse().ok()))
+                        .map(|n| n as usize)
+                })
+            };
+            let start = line_arg("start").ok_or("replace_lines requires an integer `start`")?;
+            let end = line_arg("end").ok_or("replace_lines requires an integer `end`")?;
+            let content = arguments.get("content").and_then(Value::as_str);
+            let replacement = match (content, arg_str("from_path")) {
+                (Some(content), None) => {
+                    refuse_line_labels(content)?;
+                    content.to_string()
+                }
+                (None, Some(from_path)) => {
+                    let source = resolve_under(working_dir, from_path);
+                    let text = std::fs::read_to_string(&source)
+                        .map_err(|error| format!("Could not read {from_path}: {error}"))?;
+                    let total = text.split_inclusive('\n').count();
+                    let from_start = line_arg("from_start").unwrap_or(1);
+                    let from_end = line_arg("from_end").unwrap_or(total);
+                    if from_start == 0 || from_end < from_start || from_end > total {
+                        return Err(format!(
+                            "from_start and from_end must satisfy 1 <= from_start <= from_end <= \
+                             {total} ({from_path} has {total} lines)."
+                        ));
+                    }
+                    text.split_inclusive('\n')
+                        .skip(from_start - 1)
+                        .take(from_end - from_start + 1)
+                        .collect()
+                }
+                (Some(_), Some(_)) => {
+                    return Err(
+                        "Give replace_lines either `content` or `from_path`, not both.".to_string(),
+                    )
+                }
+                (None, None) => {
+                    return Err("replace_lines requires `content` or `from_path`.".to_string())
+                }
+            };
+            let target = resolve_under(working_dir, file);
+            let original = std::fs::read_to_string(&target)
+                .map_err(|error| format!("Could not read {file}: {error}"))?;
+            let edited = splice_lines(&original, start, end, &replacement)?;
+            write_keeping_behaviour(&target, &edited, working_dir, path).await?;
+            let removed = (end + 1).saturating_sub(start);
+            let added = replacement.split_inclusive('\n').count();
+            Ok(format!(
+                "Replaced {removed} line(s) (L{start}-L{end}) of {} with {added} line(s); it now \
+                 has {} lines. Around the edit:\n{}",
+                target.display(),
+                edited.split_inclusive('\n').count(),
+                lines_around_edit(&edited, start, added)
+            ))
         }
         BUILTIN_RUN_CODE => {
             let language =
@@ -884,6 +961,20 @@ enum OllamaAgentReply {
     WriteFile {
         path: String,
         content: String,
+    },
+    #[serde(rename = "replace_lines")]
+    ReplaceLines {
+        path: String,
+        start: usize,
+        end: usize,
+        #[serde(default)]
+        content: Option<String>,
+        #[serde(default)]
+        from_path: Option<String>,
+        #[serde(default)]
+        from_start: Option<usize>,
+        #[serde(default)]
+        from_end: Option<usize>,
     },
     Text {
         text: String,
@@ -1269,6 +1360,77 @@ async fn run_ollama_stream_without_service_start(
     .await
 }
 
+/// The user's request with each name in `working_dir` that contains a space
+/// wrapped in backticks wherever it appears bare. A small model reads "the
+/// methods from memory-dump-runbook copy.md" as a file `copy.md` (and a folder
+/// `memory-dump-runbook`); quoted, the name is one thing. Only names that
+/// exist are quoted, and nothing else in the request changes.
+fn quote_spaced_names(prompt: &str, working_dir: &Path) -> String {
+    let Ok(entries) = std::fs::read_dir(working_dir) else {
+        return prompt.to_string();
+    };
+    let mut names: Vec<String> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.contains(' '))
+        .collect();
+    // Longest first, so a name that contains another is quoted whole.
+    names.sort_by_key(|name| std::cmp::Reverse(name.len()));
+    names.iter().fold(prompt.to_string(), |text, name| {
+        quote_bare_name(&text, name)
+    })
+}
+
+/// `text` with each bare whole-word occurrence of `name` in backticks. An
+/// occurrence at the end of a path (`backup/my file.md`) quotes the whole
+/// path; one already quoted or inside a code span is left alone.
+fn quote_bare_name(text: &str, name: &str) -> String {
+    const QUOTES: &str = "`\"'";
+    let mut quoted = String::with_capacity(text.len() + 8);
+    let mut copied = 0;
+    for (at, _) in text.match_indices(name) {
+        let end = at + name.len();
+        let mut start = at;
+        match text[..at].chars().next_back() {
+            Some('/') => {
+                start = text[..at]
+                    .char_indices()
+                    .rev()
+                    .find(|(_, c)| c.is_whitespace())
+                    .map_or(0, |(index, c)| index + c.len_utf8());
+            }
+            Some(c) if !(c.is_whitespace() || "([{<,;:".contains(c)) => continue,
+            _ => {}
+        }
+        if start < copied
+            || text[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|c| QUOTES.contains(c))
+            || text[..start].matches('`').count() % 2 == 1
+        {
+            continue;
+        }
+        let mut after = text[end..].chars();
+        let ends_word = match after.next() {
+            None => true,
+            // "my file." ends a sentence; "my file.md" is another name.
+            Some('.') => !after.next().is_some_and(char::is_alphanumeric),
+            Some(c) => !(c.is_alphanumeric() || "_-/".contains(c) || QUOTES.contains(c)),
+        };
+        if !ends_word {
+            continue;
+        }
+        quoted.push_str(&text[copied..start]);
+        quoted.push('`');
+        quoted.push_str(&text[start..end]);
+        quoted.push('`');
+        copied = end;
+    }
+    quoted.push_str(&text[copied..]);
+    quoted
+}
+
 #[allow(clippy::too_many_arguments)]
 
 /// Deregisters a harness session however the turn ends — normally, on an early return, or
@@ -1299,6 +1461,7 @@ async fn run_ollama_stream_inner(
     // the model is streaming.
     register_harness_session(*session_id);
     let _session_guard = HarnessSessionGuard(*session_id);
+    let prompt = &quote_spaced_names(prompt, working_dir);
 
     // Open the Krust exchange before a cold model has loaded. This metadata
     // event is intentionally non-rendering: it makes the user's message and
@@ -1716,6 +1879,12 @@ async fn run_ollama_generate_loop(
                     emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
+                if let Err(error) = refuse_line_labels(&content) {
+                    next_prompt = format!(
+                        "Could not write {file_path}: {error} Request another action or answer."
+                    );
+                    continue;
+                }
                 let resolved = resolve_under(working_dir, &file_path);
                 let call_id = format!("ollama-write-{}", Uuid::new_v4());
                 on_event(TurnEvent::ToolCallStarted {
@@ -1739,6 +1908,58 @@ async fn run_ollama_generate_loop(
                             outcome: ToolCallOutcome::Error(error.clone()),
                         });
                         format!("Could not write {file_path}: {error}. Request another action or answer.")
+                    }
+                };
+            }
+            OllamaAgentReply::ReplaceLines {
+                path: file_path,
+                start,
+                end,
+                content,
+                from_path,
+                from_start,
+                from_end,
+            } => {
+                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
+                    emit_step_limit_reached(&mut on_event);
+                    return Ok(status);
+                }
+                let arguments = json!({
+                    "path": file_path,
+                    "start": start,
+                    "end": end,
+                    "content": content,
+                    "from_path": from_path,
+                    "from_start": from_start,
+                    "from_end": from_end,
+                });
+                let call_id = format!("ollama-replace-{}", Uuid::new_v4());
+                on_event(TurnEvent::ToolCallStarted {
+                    call_id: call_id.clone(),
+                    name: "ReplaceLines".to_string(),
+                    input: arguments.clone(),
+                });
+                // The same tool the tool-calling path runs, so both protocols
+                // edit files identically.
+                let result =
+                    dispatch_builtin_tool(BUILTIN_REPLACE_LINES, &arguments, working_dir, path)
+                        .await;
+                next_prompt = match result {
+                    Ok(report) => {
+                        on_event(TurnEvent::ToolCallResult {
+                            call_id,
+                            outcome: ToolCallOutcome::Success(json!({ "result": report })),
+                        });
+                        format!("{report}\nRequest another action or answer the user.")
+                    }
+                    Err(error) => {
+                        on_event(TurnEvent::ToolCallResult {
+                            call_id,
+                            outcome: ToolCallOutcome::Error(error.clone()),
+                        });
+                        format!(
+                            "Could not edit {file_path}: {error} Request another action or answer."
+                        )
                     }
                 };
             }
@@ -1777,7 +1998,7 @@ fn resolve_under(working_dir: &Path, path: &str) -> std::path::PathBuf {
 /// directories ("read my .ssh folder"); answering with the listing keeps the
 /// turn moving instead of burning the tool call on an "Is a directory" error.
 ///
-/// A file read may be a line window: `offset` is a 0-based start line and
+/// A file read may be a line window: `offset` is how many lines to skip and
 /// `limit` a line count. This is what lets a model page through a file too
 /// large to return whole (and reach its end), instead of re-reading the same
 /// truncated head over and over — the previous `read_file` had no way to ask
@@ -1822,19 +2043,20 @@ fn list_directory(path: &Path) -> std::result::Result<String, String> {
     Ok(text)
 }
 
-/// The most lines one `read_file` window returns when the model gives no
-/// explicit `limit` — enough to read most source files whole, small enough
-/// that a giant file is paged rather than dumped past the model's context.
-const DEFAULT_READ_WINDOW_LINES: usize = 900;
+/// The most one `read_file` result holds, header and footer included. Kept
+/// under [`LARGE_TEXT_CHARS`] so a read never goes to `read_in_parts`: the
+/// model gets the file's exact lines, which it needs to copy or edit them. A
+/// summary of a file is no use for changing it.
+const READ_WINDOW_BYTES: usize = LARGE_TEXT_CHARS - 1_000;
 
 /// Reads a file as UTF-8, optionally as a window of lines (`offset`/`limit`).
 ///
-/// A small file read with no window is returned verbatim, exactly as before,
-/// so ordinary reads are unchanged. Otherwise the content is returned with a
-/// one-line header saying which lines these are of how many, and — when more
-/// lines remain — the exact next call to continue, so the model can page
-/// through a large file (or jump to its end) instead of re-reading the head.
-/// Each window is still capped at [`MAX_TOOL_OUTPUT_BYTES`].
+/// Every line is labelled with its 1-based number, `L12| text`, the same
+/// labels the work notes use, so the model can name lines to `replace_lines`.
+/// A header says which lines these are of how many. The window stops at
+/// [`READ_WINDOW_BYTES`] on a whole line, and when lines remain a footer
+/// gives the exact next call to continue, so the model can page through a
+/// large file (or jump to its end) instead of re-reading the head.
 fn read_file_windowed(
     path: &Path,
     offset: Option<usize>,
@@ -1845,43 +2067,187 @@ fn read_file_windowed(
     let lines: Vec<&str> = content.lines().collect();
     let total = lines.len();
 
-    let windowed = offset.is_some() || limit.is_some();
-    // A small whole-file read stays byte-for-byte what it always was.
-    if !windowed && bytes.len() <= MAX_TOOL_OUTPUT_BYTES {
-        return Ok(content.into_owned());
+    let start = offset.unwrap_or(0);
+    if start >= total {
+        return Ok(format!(
+            "{} has {total} line(s); offset {start} is past the end.",
+            path.display()
+        ));
     }
+    let last = limit.map_or(total, |limit| (start + limit.max(1)).min(total));
 
-    let start = offset.unwrap_or(0).min(total);
-    let window = limit.unwrap_or(DEFAULT_READ_WINDOW_LINES).max(1);
-    let mut end = (start + window).min(total);
-
-    // Hold each window under the byte cap, trimming the end rather than
-    // slicing mid-line, so the model always gets whole lines.
-    let mut body = lines[start..end].join("\n");
-    while body.len() > MAX_TOOL_OUTPUT_BYTES && end > start + 1 {
-        end -= (end - start) / 2 + 1;
-        end = end.max(start + 1);
-        body = lines[start..end].join("\n");
-    }
-    if body.len() > MAX_TOOL_OUTPUT_BYTES {
-        body.truncate(MAX_TOOL_OUTPUT_BYTES);
+    let mut body = String::new();
+    let mut end = start;
+    while end < last {
+        let numbered = format!("L{}| {}\n", end + 1, lines[end]);
+        if body.len() + numbered.len() > READ_WINDOW_BYTES {
+            if end == start {
+                // One line longer than a whole window: its start, not nothing.
+                let cut = numbered.floor_char_boundary(READ_WINDOW_BYTES);
+                body.push_str(&numbered[..cut]);
+                body.push_str(" … [rest of this line cut]\n");
+                end += 1;
+            }
+            break;
+        }
+        body.push_str(&numbered);
+        end += 1;
     }
 
     let mut text = format!(
-        "{} (lines {}-{} of {})\n{body}",
+        "{} (lines {}-{end} of {total}; each line starts with its number, `L<n>| `, which \
+         is not part of the file)\n{body}",
         path.display(),
         start + 1,
-        end,
-        total
     );
     if end < total {
         text.push_str(&format!(
-            "\n\n[{} more line(s). To continue, call read_file with offset={end}{}.]",
+            "\n[{} more line(s). To continue, call read_file with offset={end}{}.]",
             total - end,
             limit.map(|limit| format!(" limit={limit}")).unwrap_or_default()
         ));
     }
     Ok(text)
+}
+
+/// Refuses text copied out of a `read_file` result with its `L<n>| ` labels
+/// still on: written to disk they would corrupt every line.
+fn refuse_line_labels(content: &str) -> std::result::Result<(), String> {
+    let has_label = |line: &str| {
+        line.strip_prefix('L')
+            .and_then(|rest| rest.split_once('|'))
+            .is_some_and(|(number, _)| {
+                !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
+            })
+    };
+    let mut lines = content
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .peekable();
+    if lines.peek().is_some() && lines.all(has_label) {
+        return Err(
+            "Refused: every line starts with a read_file label like `L12| `. Those labels are \
+             not part of the file — send the text without them."
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// `original` with its lines `start..=end` (1-based) replaced by
+/// `replacement`. `end == start - 1` inserts before `start` without removing
+/// anything. The lines after the edit stay on lines of their own, and the
+/// file keeps (or keeps lacking) its final newline.
+fn splice_lines(
+    original: &str,
+    start: usize,
+    end: usize,
+    replacement: &str,
+) -> std::result::Result<String, String> {
+    let lines: Vec<&str> = original.split_inclusive('\n').collect();
+    let total = lines.len();
+    if start == 0 || start > total + 1 || end + 1 < start || end > total {
+        return Err(format!(
+            "start and end must satisfy 1 <= start <= end <= {total} (the file has {total} \
+             lines; use the L numbers read_file shows). To insert without removing lines, set \
+             end to start - 1."
+        ));
+    }
+    let newline = if original.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let before = lines[..start - 1].concat();
+    let after = lines[end..].concat();
+    let mut edited = before;
+    if !replacement.is_empty() {
+        // Appending after a last line that has no newline of its own.
+        if !edited.is_empty() && !edited.ends_with('\n') {
+            edited.push_str(newline);
+        }
+        edited.push_str(replacement);
+        if !replacement.ends_with('\n') && (!after.is_empty() || original.ends_with('\n')) {
+            edited.push_str(newline);
+        }
+    }
+    edited.push_str(&after);
+    Ok(edited)
+}
+
+/// The edited stretch of `text` with its new line numbers — the first and
+/// last few new lines and a line or two either side — so the model can see
+/// the edit landed where it meant without reading the file again.
+fn lines_around_edit(text: &str, start: usize, added: usize) -> String {
+    const CONTEXT: usize = 2;
+    const EDGE: usize = 3;
+    let lines: Vec<&str> = text.lines().collect();
+    let first = start.saturating_sub(CONTEXT).max(1);
+    let last = (start + added + CONTEXT).saturating_sub(1).min(lines.len());
+    let head_end = start + EDGE;
+    let tail_start = (start + added).saturating_sub(EDGE);
+    let mut shown = String::new();
+    let mut skipped = false;
+    for number in first..=last {
+        if number >= head_end && number < tail_start {
+            if !skipped {
+                shown.push_str("…\n");
+                skipped = true;
+            }
+            continue;
+        }
+        shown.push_str(&format!("L{number}| {}\n", lines[number - 1]));
+    }
+    shown
+}
+
+/// Writes `content` over `target`, refusing (and restoring the old file) when
+/// a python file loses behaviour it had. Returns the number of bytes written.
+async fn write_keeping_behaviour(
+    target: &Path,
+    content: &str,
+    working_dir: &Path,
+    path: &str,
+) -> std::result::Result<usize, String> {
+    // Overwriting a working python file is where a model quietly
+    // loses what it did not understand. Measured on a panel told
+    // precisely which case to fix: it fixed that case and broke five
+    // others, taking a draft from 7 of 8 to 3 of 8. A whole-file
+    // rewrite is the same operation with nobody watching.
+    //
+    // So a rewrite has to keep what it replaced working. Same
+    // functions, same generic battery, compared by value — a call
+    // that answered before and raises now, or returned something and
+    // returns nothing now, is behaviour going backwards, and the old
+    // file goes back. Nothing else is judged: the model is free to
+    // restructure, rename locals, change anything it likes, as long
+    // as the code still does what it did.
+    let previous = target
+        .extension()
+        .is_some_and(|extension| extension == "py")
+        .then(|| std::fs::read_to_string(target).ok())
+        .flatten();
+    let before = match &previous {
+        Some(source) => probe_source(source, &[], working_dir, path).await,
+        None => None,
+    };
+    let bytes = write_file(target, content)?;
+    if let (Some(before), Some(source)) = (before, previous) {
+        let after = probe_source(content, &[], working_dir, path).await;
+        if let Some(loss) = after
+            .as_deref()
+            .and_then(|after| lost_ground(&before, after))
+        {
+            write_file(target, &source)?;
+            return Err(format!(
+                "Refused: that rewrite loses behaviour the file already had — {loss}. \
+                 {} is unchanged. Make the smallest change that fixes what you meant to \
+                 fix, and leave the rest working.",
+                target.display()
+            ));
+        }
+    }
+    Ok(bytes)
 }
 
 /// Writes `content` to `path`, creating parent directories as needed.
@@ -2104,21 +2470,24 @@ async fn run_ollama_chat_with_tools(
             // A result too long for a small model's window would push the
             // user's request out of it; read it in parts against the request
             // instead, and hand the model the answer (see `ollama_work_notes`).
-            let tool_content = if tool_content.len() > LARGE_TEXT_CHARS {
-                read_in_parts(
-                    &tool_content,
-                    call,
-                    prompt,
-                    model,
-                    session_id,
-                    working_dir,
-                    path,
-                    on_event,
-                )
-                .await?
-            } else {
-                tool_content
-            };
+            // Never a file read: the model asked for the exact lines (to copy
+            // or edit them), and `read_file` already pages to fit.
+            let tool_content =
+                if tool_content.len() > LARGE_TEXT_CHARS && call.name != BUILTIN_READ_FILE {
+                    read_in_parts(
+                        &tool_content,
+                        call,
+                        prompt,
+                        model,
+                        session_id,
+                        working_dir,
+                        path,
+                        on_event,
+                    )
+                    .await?
+                } else {
+                    tool_content
+                };
             messages.push(json!({ "role": "tool", "content": tool_content }));
         }
     }
