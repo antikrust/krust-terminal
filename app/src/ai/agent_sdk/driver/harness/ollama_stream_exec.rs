@@ -49,6 +49,12 @@ pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 /// it is a graceful stop the user can continue from, not a failure.
 pub(crate) const MAX_TOOL_CALLS_PER_TURN: usize = 40;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
+/// The context window asked for on the tool-calling loop. Left unset, a
+/// model runs at its own default — 4096 tokens for glm-4.7-flash — and one
+/// `read_file` window plus the system prompt and tool definitions overflows
+/// it: Ollama shifts the context, the user's request falls out, and the model
+/// generates without end. 16K holds a turn that reads two files.
+const TOOL_CHAT_NUM_CTX: usize = 16_384;
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside krust terminal.
 You can inspect and modify the user's computer by requesting one shell command at a time.
@@ -2337,7 +2343,7 @@ async fn run_ollama_chat_with_tools(
             "messages": messages,
             "tools": tool_defs,
             "stream": true,
-            "options": { "temperature": 0 },
+            "options": { "temperature": 0, "num_ctx": TOOL_CHAT_NUM_CTX },
         })
         .to_string();
 
