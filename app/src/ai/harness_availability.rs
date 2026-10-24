@@ -18,6 +18,10 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
+use crate::ai::api_providers::{
+    api_model_parts, ApiProviderKeys, ApiProviderKeysEvent, API_HARNESS_CONFIG_NAME,
+    API_MODEL_ID_PREFIX,
+};
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
@@ -194,6 +198,17 @@ fn append_available_ollama_models_from(
     models
 }
 
+/// The Codex row's models with the cloud API models (those whose provider
+/// has a key) re-appended, replacing any listed before. Like Ollama's, they
+/// ride on the Codex-shaped storage row and are split out by id prefix in the
+/// picker; every rebuild of that row goes through here, or a catalog refresh
+/// would silently drop them.
+fn with_api_models(mut models: Vec<HarnessModelInfo>, ctx: &AppContext) -> Vec<HarnessModelInfo> {
+    models.retain(|model| !model.id.starts_with(API_MODEL_ID_PREFIX));
+    models.extend(ApiProviderKeys::as_ref(ctx).available_models());
+    models
+}
+
 /// Parses `codex debug models` JSON into picker entries: listed-visibility
 /// models only, ordered by the catalog's priority.
 fn parse_codex_catalog(raw: &[u8]) -> Vec<HarnessModelInfo> {
@@ -340,7 +355,18 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
                     .iter()
                     .any(|model| ollama_model_name(&model.id).is_some())
             });
-    let harness = ollama_selected
+    // Cloud API models ride the Codex row the same way, under their own
+    // provider key.
+    let api_selected = selected_name == Some(API_HARNESS_CONFIG_NAME)
+        && availability.is_harness_enabled(Harness::Codex)
+        && availability
+            .models_for(Harness::Codex)
+            .is_some_and(|models| {
+                models
+                    .iter()
+                    .any(|model| api_model_parts(&model.id).is_some())
+            });
+    let harness = (ollama_selected || api_selected)
         .then_some(Harness::Codex)
         .or_else(|| {
             selected_name
@@ -357,6 +383,8 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
         .unwrap_or(Harness::Claude);
     let (model_id, reasoning_level) = if ollama_selected {
         persisted_ollama_model_for(ctx)
+    } else if api_selected {
+        persisted_api_model_for(ctx)
     } else {
         persisted_model_for(harness, ctx)
     };
@@ -370,6 +398,10 @@ pub fn persisted_model_for(harness: Harness, ctx: &AppContext) -> (Option<String
 
 pub fn persisted_ollama_model_for(ctx: &AppContext) -> (Option<String>, Option<String>) {
     persisted_model_for_key(OLLAMA_HARNESS_CONFIG_NAME, ctx)
+}
+
+pub fn persisted_api_model_for(ctx: &AppContext) -> (Option<String>, Option<String>) {
+    persisted_model_for_key(API_HARNESS_CONFIG_NAME, ctx)
 }
 
 fn persisted_model_for_key(key: &str, ctx: &AppContext) -> (Option<String>, Option<String>) {
@@ -485,7 +517,18 @@ impl HarnessAvailabilityModel {
         crate::ai::ollama::service::apply_models_dir_override(ctx);
         // Availability is derived locally from PATH detection on every
         // launch; the old server-list cache could only serve stale data.
-        let harnesses = default_harnesses(&crate::ai::ollama::service::disabled_models_for(ctx));
+        let mut harnesses =
+            default_harnesses(&crate::ai::ollama::service::disabled_models_for(ctx));
+        if let Some(row) = harnesses.iter_mut().find(|h| h.harness == Harness::Codex) {
+            row.available_models = with_api_models(std::mem::take(&mut row.available_models), ctx);
+        }
+
+        // A key added or removed on the settings page shows or hides that
+        // provider's models straight away.
+        ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |me, _, event, ctx| {
+            let ApiProviderKeysEvent::Changed = event;
+            me.refresh_api_models(ctx);
+        });
 
         ctx.subscribe_to_model(&NetworkStatus::handle(ctx), |me, _, event, ctx| {
             if let NetworkStatusEvent::NetworkStatusChanged {
@@ -547,10 +590,13 @@ impl HarnessAvailabilityModel {
                 };
                 let remotes = crate::ai::ollama::remote::configured(ctx);
                 let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
-                let models = append_available_ollama_models(
-                    parse_codex_catalog(&output),
-                    &remotes,
-                    &disabled,
+                let models = with_api_models(
+                    append_available_ollama_models(
+                        parse_codex_catalog(&output),
+                        &remotes,
+                        &disabled,
+                    ),
+                    ctx,
                 );
                 if models.is_empty() {
                     return;
@@ -588,12 +634,18 @@ impl HarnessAvailabilityModel {
         let codex_only: Vec<HarnessModelInfo> = row
             .available_models
             .iter()
-            .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
+            .filter(|model| {
+                !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX)
+                    && !model.id.starts_with(API_MODEL_ID_PREFIX)
+            })
             .cloned()
             .collect();
         let remotes = crate::ai::ollama::remote::configured(ctx);
         let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
-        let rebuilt = append_available_ollama_models(codex_only, &remotes, &disabled);
+        let rebuilt = with_api_models(
+            append_available_ollama_models(codex_only, &remotes, &disabled),
+            ctx,
+        );
         if row.available_models != rebuilt {
             row.available_models = rebuilt;
             ctx.emit(HarnessAvailabilityEvent::Changed);
@@ -629,17 +681,39 @@ impl HarnessAvailabilityModel {
                 let codex_only: Vec<HarnessModelInfo> = row
                     .available_models
                     .iter()
-                    .filter(|model| !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX))
+                    .filter(|model| {
+                        !model.id.starts_with(OLLAMA_MODEL_ID_PREFIX)
+                            && !model.id.starts_with(API_MODEL_ID_PREFIX)
+                    })
                     .cloned()
                     .collect();
-                let rebuilt =
-                    append_available_ollama_models_from(codex_only, installed, &remotes, &disabled);
+                let rebuilt = with_api_models(
+                    append_available_ollama_models_from(codex_only, installed, &remotes, &disabled),
+                    ctx,
+                );
                 if row.available_models != rebuilt {
                     row.available_models = rebuilt;
                     ctx.emit(HarnessAvailabilityEvent::Changed);
                 }
             },
         );
+    }
+
+    /// Re-lists the cloud API models after a key changed (see
+    /// [`with_api_models`]).
+    fn refresh_api_models(&mut self, ctx: &mut ModelContext<Self>) {
+        let Some(row) = self
+            .harnesses
+            .iter_mut()
+            .find(|h| h.harness == Harness::Codex)
+        else {
+            return;
+        };
+        let rebuilt = with_api_models(row.available_models.clone(), ctx);
+        if row.available_models != rebuilt {
+            row.available_models = rebuilt;
+            ctx.emit(HarnessAvailabilityEvent::Changed);
+        }
     }
 
     pub fn available_harnesses(&self) -> &[HarnessAvailability] {

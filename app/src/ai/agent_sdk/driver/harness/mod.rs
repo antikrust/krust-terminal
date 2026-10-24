@@ -36,6 +36,7 @@ use crate::terminal::model::block::{BlockId, SerializedBlock};
 use crate::terminal::CLIAgent;
 use crate::util::path::resolve_executable;
 
+pub(crate) mod api_stream_exec;
 pub(crate) mod claude_code;
 pub(crate) mod claude_stream;
 pub(crate) mod claude_stream_exec;
@@ -74,6 +75,9 @@ pub(crate) enum LocalHarnessKind {
     Claude,
     Codex,
     Ollama,
+    /// A cloud model over the OpenAI chat-completions API (Z.ai, Groq,
+    /// Gemini), run directly with the user's own key — see `api_stream_exec`.
+    Api,
 }
 
 impl LocalHarnessKind {

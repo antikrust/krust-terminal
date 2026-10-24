@@ -47,7 +47,7 @@ pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 /// handful; the old limit of 8 ended useful work mid-stream with a red error.
 /// This is a safety rail against a runaway loop, not a work budget — hitting
 /// it is a graceful stop the user can continue from, not a failure.
-const MAX_TOOL_CALLS_PER_TURN: usize = 40;
+pub(crate) const MAX_TOOL_CALLS_PER_TURN: usize = 40;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside krust terminal.
@@ -396,7 +396,7 @@ fn call_tool_result_to_text(result: &rmcp::model::CallToolResult) -> String {
 /// Kept separate from [`OLLAMA_SYSTEM_PROMPT`] because native tool-calling
 /// models are prompted through the `/api/chat` `tools` field instead of the
 /// constrained shell/text JSON contract.
-fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
+pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
     let tool_names = tools
         .iter()
         .map(|tool| tool.name.as_str())
@@ -434,7 +434,7 @@ const BUILTIN_RUN_CODE: &str = "run_code";
 
 /// Whether `name` is one of the in-harness built-in tools (dispatched locally)
 /// rather than a name that must be routed to an MCP server.
-fn is_builtin_local_tool(name: &str) -> bool {
+pub(crate) fn is_builtin_local_tool(name: &str) -> bool {
     matches!(
         name,
         BUILTIN_READ_FILE | BUILTIN_WRITE_FILE | BUILTIN_RUN_CODE
@@ -1194,7 +1194,7 @@ pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: im
 /// with a plain-text note rather than a red error. Hitting the step cap means
 /// the model was still working, not that anything broke, so the user gets a
 /// message they can continue from instead of a failure.
-fn emit_step_limit_reached(on_event: &mut impl FnMut(TurnEvent)) {
+pub(crate) fn emit_step_limit_reached(on_event: &mut impl FnMut(TurnEvent)) {
     on_event(TurnEvent::Text {
         text: format!(
             "I've reached the limit of {MAX_TOOL_CALLS_PER_TURN} actions in a single turn and \

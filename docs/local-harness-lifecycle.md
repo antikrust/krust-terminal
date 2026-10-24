@@ -58,6 +58,17 @@ new harness by writing a parser + exec module, not by touching the drain.
   as a headless background process and waits for `/api/version` before sending
   the turn. It never opens `Ollama.app`, so Ollama has no separate window,
   Dock activation, or visible startup step in the integrated flow.
+- Cloud API models (`LocalHarnessKind::Api`, `api_stream_exec.rs`) are Z.ai,
+  Groq, and Gemini over the OpenAI chat-completions API, run with the user's
+  own key (`ai/api_providers.rs`; keys in the keychain under
+  `ApiProviderKeys`, set on Settings → AI → Bring your own key). Model ids are
+  `api/<provider>/<model>`; like Ollama's they ride the Codex picker row and
+  are split out by prefix, and a provider's models are listed only once its
+  key is set. The runner is the Ollama tool loop's twin — same built-in tools
+  and exposed MCP servers, same `TurnEvent`s — over curl with SSE parsing.
+  The key reaches curl through its environment (`--variable` +
+  `--expand-header`, curl 8.3+), never its argv. Nothing goes through Krust's
+  cloud.
 - Conversation ↔ CLI-session bindings persist in
   `local_harness_threads.rs` (state_dir/local_harness_threads.json) so
   follow-ups resume across app restarts. **`lookup(conversation_id)` is also

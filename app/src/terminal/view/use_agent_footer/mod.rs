@@ -181,7 +181,7 @@ fn can_ask_local_agent_about_running_command(
     match harness {
         None => false,
         Some(_) if is_in_progress => false,
-        Some(LocalHarnessKind::Claude | LocalHarnessKind::Codex) => true,
+        Some(LocalHarnessKind::Claude | LocalHarnessKind::Codex | LocalHarnessKind::Api) => true,
         Some(LocalHarnessKind::Ollama) => ollama_answers_questions,
     }
 }

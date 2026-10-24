@@ -54,6 +54,7 @@ use super::{
     editor_text_colors, flags, SettingActionPairContexts, SettingActionPairDescriptions,
     SettingsAction, SettingsSection, ToggleSettingActionPair,
 };
+use crate::ai::api_providers::{self, ApiProvider, ApiProviderKeys};
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::aws_credentials::refresh_aws_credentials;
 use crate::ai::blocklist::agent_view::agent_input_footer::editor::{
@@ -2912,6 +2913,7 @@ impl AISettingsPageView {
                 // Manager page. ApiKeysWidget draws its own leading separator,
                 // so the title doesn't add a second one.
                 widgets.push(Box::new(PageTitleWidget::new("Bring your own key", false)));
+                widgets.push(Box::new(CloudModelKeysWidget::new(ctx)));
                 widgets.push(Box::new(ApiKeysWidget::new(ctx)));
             }
         }
@@ -8128,6 +8130,173 @@ impl SettingsWidget for CloudHandoffWidget {
             ));
         }
 
+        column.finish()
+    }
+}
+
+/// Keys for the cloud models the local harness calls directly — Z.ai's GLM,
+/// Groq, Gemini (see `ai::api_providers`). Unlike the provider keys in
+/// [`ApiKeysWidget`], these never go to Krust's server and need no Krust plan,
+/// so the fields are always editable. A provider's models appear in the model
+/// menu once its key is set.
+struct CloudModelKeysWidget {
+    editors: Vec<(&'static ApiProvider, ViewHandle<EditorView>)>,
+}
+
+impl CloudModelKeysWidget {
+    fn new(ctx: &mut ViewContext<<Self as SettingsWidget>::View>) -> Self {
+        let editors = api_providers::PROVIDERS
+            .iter()
+            .map(|provider| {
+                let existing = ApiProviderKeys::as_ref(ctx)
+                    .key_for(provider.id)
+                    .map(str::to_owned);
+                let editor = ctx.add_typed_action_view(move |ctx| {
+                    let appearance = Appearance::handle(ctx).as_ref(ctx);
+                    let options = SingleLineEditorOptions {
+                        is_password: true,
+                        propagate_and_no_op_vertical_navigation_keys:
+                            PropagateAndNoOpNavigationKeys::Always,
+                        text: TextOptions {
+                            font_size_override: Some(appearance.ui_font_size()),
+                            font_family_override: Some(appearance.monospace_font_family()),
+                            text_colors_override: Some(TextColors {
+                                default_color: appearance.theme().active_ui_text_color(),
+                                disabled_color: appearance.theme().disabled_ui_text_color(),
+                                hint_color: appearance.theme().disabled_ui_text_color(),
+                            }),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    let mut editor = EditorView::single_line(options, ctx);
+                    editor.set_placeholder_text(
+                        format!("Paste your {} API key", provider.display_name),
+                        ctx,
+                    );
+                    if let Some(key) = &existing {
+                        editor.set_buffer_text(key, ctx);
+                    }
+                    editor
+                });
+                let provider_id = provider.id;
+                ctx.subscribe_to_view(&editor, move |_, editor, event, ctx| {
+                    if matches!(event, EditorEvent::Blurred | EditorEvent::Enter) {
+                        let key = editor.as_ref(ctx).buffer_text(ctx);
+                        ApiProviderKeys::handle(ctx).update(ctx, |keys, ctx| {
+                            keys.set_key(provider_id, Some(key), ctx);
+                        });
+                    }
+                });
+                (provider, editor)
+            })
+            .collect();
+        Self { editors }
+    }
+
+    fn render_provider(
+        provider: &ApiProvider,
+        editor: &ViewHandle<EditorView>,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let label = Text::new_inline(
+            format!("{} API key", provider.display_name),
+            appearance.ui_font_family(),
+            CONTENT_FONT_SIZE,
+        )
+        .with_color(appearance.theme().active_ui_text_color().into())
+        .finish();
+        let input = appearance
+            .ui_builder()
+            .text_input(editor.clone())
+            .with_style(UiComponentStyles {
+                padding: Some(Coords {
+                    top: 10.,
+                    bottom: 10.,
+                    left: 16.,
+                    right: 16.,
+                }),
+                background: Some(appearance.theme().surface_2().into()),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+        let note = appearance
+            .ui_builder()
+            .wrappable_text(
+                format!(
+                    "{} Get a key at {}.",
+                    provider.free_tier_note, provider.key_url
+                ),
+                true,
+            )
+            .with_style(UiComponentStyles {
+                font_size: Some(CONTENT_FONT_SIZE),
+                font_color: Some(
+                    appearance
+                        .theme()
+                        .sub_text_color(appearance.theme().background())
+                        .into(),
+                ),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+        Flex::column()
+            .with_spacing(8.)
+            .with_child(label)
+            .with_child(input)
+            .with_child(note)
+            .finish()
+    }
+}
+
+impl SettingsWidget for CloudModelKeysWidget {
+    type View = AISettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "cloud models api key free z.ai zai zhipu glm groq gemini google llama gpt-oss"
+    }
+
+    fn render(
+        &self,
+        _view: &Self::View,
+        appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        let description = appearance
+            .ui_builder()
+            .wrappable_text(
+                "Run the agent on a cloud model with your own key. Krust calls the provider \
+                 directly — the key stays in your keychain and never goes to Krust's servers. \
+                 Once a key is set, that provider's models appear in the model menu.",
+                true,
+            )
+            .with_style(UiComponentStyles {
+                font_size: Some(CONTENT_FONT_SIZE),
+                font_color: Some(
+                    appearance
+                        .theme()
+                        .sub_text_color(appearance.theme().background())
+                        .into(),
+                ),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+        let mut column = Flex::column()
+            .with_child(render_separator(appearance))
+            .with_child(build_sub_header(appearance, "Cloud models", None).finish())
+            .with_child(
+                Container::new(description)
+                    .with_margin_bottom(16.)
+                    .finish(),
+            );
+        let mut providers = Flex::column().with_spacing(16.);
+        for (provider, editor) in &self.editors {
+            providers.add_child(Self::render_provider(provider, editor, appearance));
+        }
+        column.add_child(providers.finish());
         column.finish()
     }
 }

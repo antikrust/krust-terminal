@@ -223,6 +223,9 @@ use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environme
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
+use crate::ai::agent_sdk::driver::harness::api_stream_exec::{
+    api_curl_args, run_api_stream, API_KEY_ENV,
+};
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
@@ -233,6 +236,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 };
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
+use crate::ai::api_providers::{api_model_parts, ApiProviderKeys};
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
 };
@@ -23494,6 +23498,9 @@ impl TerminalView {
         // the harness their thread started with — the session belongs to
         // that engine — even if the picker changed since.
         let requested_kind = match requested_harness {
+            Harness::Codex if model_id.as_deref().and_then(api_model_parts).is_some() => {
+                LocalHarnessKind::Api
+            }
             Harness::Codex if model_id.as_deref().and_then(ollama_model_name).is_some() => {
                 LocalHarnessKind::Ollama
             }
@@ -23565,7 +23572,49 @@ impl TerminalView {
                 LocalHarnessKind::Ollama => {
                     crate::ai::harness_availability::persisted_ollama_model_for(ctx)
                 }
+                LocalHarnessKind::Api => {
+                    crate::ai::harness_availability::persisted_api_model_for(ctx)
+                }
             }
+        };
+
+        // A cloud model runs on its provider's key, read here while `ctx` is
+        // available (the background pump has none). Without one there is
+        // nothing to run, so say where to add it rather than failing in the
+        // conversation.
+        let api_key = if harness == LocalHarnessKind::Api {
+            let provider = model_id
+                .as_deref()
+                .and_then(api_model_parts)
+                .map(|(provider, _)| provider);
+            let key = provider.and_then(|provider| {
+                ApiProviderKeys::as_ref(ctx)
+                    .key_for(provider.id)
+                    .map(str::to_owned)
+            });
+            match (provider, key) {
+                (Some(_), Some(key)) => Some(key),
+                (provider, _) => {
+                    let message = match provider {
+                        Some(provider) => format!(
+                            "No API key for {}. Add one in Settings → AI → Bring your own key.",
+                            provider.display_name
+                        ),
+                        None => "Pick a cloud model in the model menu first.".to_owned(),
+                    };
+                    let window_id = ctx.window_id();
+                    ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+                        toast_stack.add_ephemeral_toast(
+                            DismissibleToast::error(message),
+                            window_id,
+                            ctx,
+                        );
+                    });
+                    return;
+                }
+            }
+        } else {
+            None
         };
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
@@ -23725,6 +23774,17 @@ impl TerminalView {
                 ));
                 command
             }
+            LocalHarnessKind::Api => {
+                let mut command = command::r#async::Command::new("/usr/bin/curl");
+                if let Some((provider, _)) = model_id.as_deref().and_then(api_model_parts) {
+                    command.args(api_curl_args(provider));
+                }
+                // The key travels in curl's environment, never its arguments.
+                if let Some(key) = &api_key {
+                    command.env(API_KEY_ENV, key);
+                }
+                command
+            }
         };
         command.current_dir(&working_dir);
         let mut path = krust_util::path::krust_shell_path()
@@ -23760,7 +23820,7 @@ impl TerminalView {
         let (ollama_mcp_tools, ollama_tool_caller): (
             Vec<ollama_stream_exec::McpToolSpec>,
             Option<Arc<dyn ollama_stream_exec::McpToolCaller>>,
-        ) = if harness == LocalHarnessKind::Ollama {
+        ) = if harness == LocalHarnessKind::Ollama || harness == LocalHarnessKind::Api {
             // First run in this session: installs and starts Krust's
             // built-in web search server so it's available below. A no-op
             // on every call after the first.
@@ -23815,6 +23875,8 @@ impl TerminalView {
         let pump_mcp_tools = ollama_mcp_tools;
         let pump_tool_caller = ollama_tool_caller;
         let pump_agent_override = ollama_agent_override;
+        let pump_api_model = model_id.clone().unwrap_or_default();
+        let pump_api_key = api_key.unwrap_or_default();
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -24008,6 +24070,21 @@ impl TerminalView {
                     }
                     LocalHarnessKind::Codex => {
                         run_codex_stream(command, &pump_prompt, on_event).await
+                    }
+                    LocalHarnessKind::Api => {
+                        run_api_stream(
+                            command,
+                            &pump_prompt,
+                            &pump_api_model,
+                            &pump_api_key,
+                            &session_id,
+                            &pump_working_dir,
+                            &pump_path,
+                            &pump_mcp_tools,
+                            pump_tool_caller,
+                            on_event,
+                        )
+                        .await
                     }
                     LocalHarnessKind::Ollama => {
                         if let Some(config) = ollama_committee_config {

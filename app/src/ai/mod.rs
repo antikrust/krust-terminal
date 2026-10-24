@@ -10,6 +10,7 @@ pub(crate) mod agent_management;
 pub(crate) mod agent_tips;
 pub(crate) mod ai_document_view;
 pub mod ambient_agents;
+pub mod api_providers;
 pub(crate) mod artifact_download;
 pub mod artifacts;
 pub(crate) mod attachment_utils;

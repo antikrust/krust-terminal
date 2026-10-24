@@ -39,6 +39,7 @@ use krust_core::ui::theme::Fill;
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME,
 };
+use crate::ai::api_providers::{api_model_parts, API_HARNESS_CONFIG_NAME, PROVIDERS};
 use crate::ai::blocklist::prompt::PromptIconButtonTheme;
 use crate::ai::blocklist::{
     BlocklistAIController, BlocklistAIControllerEvent, BlocklistAIInputEvent, BlocklistAIInputModel,
@@ -52,8 +53,8 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    persisted_model_for, persisted_ollama_model_for, selected_local_harness,
-    HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
+    persisted_api_model_for, persisted_model_for, persisted_ollama_model_for,
+    selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -108,6 +109,28 @@ const HARNESS_REASONING_LEVELS: [(Option<&str>, &str); 4] = [
     (Some("medium"), "Medium"),
     (Some("high"), "High"),
 ];
+
+/// What a group in the local-harness model menu holds. Ollama models and
+/// cloud API models share the Codex row's storage, but each is its own
+/// provider in the menu: no "default" row, no reasoning levels, and its own
+/// persisted selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ModelGroupKind {
+    /// A CLI harness's own models (Claude, Codex).
+    Harness,
+    Ollama,
+    Api,
+}
+
+impl ModelGroupKind {
+    fn of(model_id: Option<&str>) -> Self {
+        match model_id {
+            Some(id) if api_model_parts(id).is_some() => Self::Api,
+            Some(id) if ollama_model_name(id).is_some() => Self::Ollama,
+            _ => Self::Harness,
+        }
+    }
+}
 
 pub fn calculate_scaled_font_size(appearance: &krust_core::ui::appearance::Appearance) -> f32 {
     if FeatureFlag::AgentView.is_enabled() {
@@ -964,7 +987,14 @@ impl ProfileModelSelector {
         // is chosen, else the harness's own name.
         let (harness, model_id, reasoning) = selected_local_harness(app);
         let availability = HarnessAvailabilityModel::as_ref(app);
-        let ollama_selected = model_id.as_deref().and_then(ollama_model_name).is_some();
+        let provider_prefix = match model_id.as_deref() {
+            Some(id) => match api_model_parts(id) {
+                Some((provider, _)) => format!("{} · ", provider.display_name),
+                None if ollama_model_name(id).is_some() => "Ollama · ".to_owned(),
+                None => String::new(),
+            },
+            None => String::new(),
+        };
         let base = model_id
             .and_then(|id| {
                 availability
@@ -974,7 +1004,6 @@ impl ProfileModelSelector {
             })
             .map(|info| info.display_name.clone())
             .unwrap_or_else(|| availability.display_name_for(harness).to_string());
-        let provider_prefix = if ollama_selected { "Ollama · " } else { "" };
         format!(
             "{provider_prefix}{base}{}",
             Self::reasoning_suffix(reasoning.as_deref())
@@ -1051,7 +1080,7 @@ impl ProfileModelSelector {
         // Ollama is a peer provider in the picker. Its model records share the
         // Codex-shaped storage row, but selection and execution are kept
         // separate so users get three clear choices: Claude, Codex, Ollama.
-        let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>, bool)> = {
+        let harness_groups: Vec<(Harness, String, Vec<HarnessModelInfo>, ModelGroupKind)> = {
             let availability = HarnessAvailabilityModel::as_ref(ctx);
             // Local models are opt-in: when "Use local models" is off, Ollama
             // models stay out of the picker entirely.
@@ -1064,16 +1093,26 @@ impl ProfileModelSelector {
                     .filter(|h| h.enabled)
                 {
                     if available.harness == Harness::Codex {
-                        let (ollama_models, codex_models): (Vec<_>, Vec<_>) = available
+                        let model_kind = |model: &HarnessModelInfo| {
+                            ModelGroupKind::of(Some(model.id.as_str()))
+                        };
+                        let codex_models: Vec<HarnessModelInfo> = available
                             .available_models
                             .iter()
+                            .filter(|model| model_kind(model) == ModelGroupKind::Harness)
                             .cloned()
-                            .partition(|model| ollama_model_name(&model.id).is_some());
+                            .collect();
+                        let ollama_models: Vec<HarnessModelInfo> = available
+                            .available_models
+                            .iter()
+                            .filter(|model| model_kind(model) == ModelGroupKind::Ollama)
+                            .cloned()
+                            .collect();
                         groups.push((
                             available.harness,
                             available.display_name.clone(),
                             codex_models,
-                            false,
+                            ModelGroupKind::Harness,
                         ));
                         if ollama_enabled && !ollama_models.is_empty() {
                             // One heading per machine. Pooled into a single
@@ -1082,7 +1121,33 @@ impl ProfileModelSelector {
                             for (label, models) in
                                 Self::group_ollama_models_by_machine(&ollama_models, ctx)
                             {
-                                groups.push((available.harness, label, models, true));
+                                groups.push((
+                                    available.harness,
+                                    label,
+                                    models,
+                                    ModelGroupKind::Ollama,
+                                ));
+                            }
+                        }
+                        // One heading per cloud provider that has a key (the
+                        // row only lists those).
+                        for provider in PROVIDERS {
+                            let models: Vec<HarnessModelInfo> = available
+                                .available_models
+                                .iter()
+                                .filter(|model| {
+                                    api_model_parts(&model.id)
+                                        .is_some_and(|(owner, _)| owner.id == provider.id)
+                                })
+                                .cloned()
+                                .collect();
+                            if !models.is_empty() {
+                                groups.push((
+                                    available.harness,
+                                    provider.display_name.to_owned(),
+                                    models,
+                                    ModelGroupKind::Api,
+                                ));
                             }
                         }
                     } else {
@@ -1090,7 +1155,7 @@ impl ProfileModelSelector {
                             available.harness,
                             available.display_name.clone(),
                             available.available_models.clone(),
-                            false,
+                            ModelGroupKind::Harness,
                         ));
                     }
                 }
@@ -1100,37 +1165,35 @@ impl ProfileModelSelector {
                     .models_for(selected_harness)
                     .map(<[HarnessModelInfo]>::to_vec)
                     .unwrap_or_default();
-                let ollama_selected = selected_model_id
-                    .as_deref()
-                    .and_then(ollama_model_name)
-                    .is_some();
+                let selected_kind = ModelGroupKind::of(selected_model_id.as_deref());
                 if selected_harness == Harness::Codex {
                     models.retain(|model| {
-                        let is_ollama = ollama_model_name(&model.id).is_some();
-                        if ollama_enabled {
-                            is_ollama == ollama_selected
-                        } else {
-                            // Local models off: never surface Ollama, only Codex.
-                            !is_ollama
+                        let kind = ModelGroupKind::of(Some(model.id.as_str()));
+                        if kind == ModelGroupKind::Ollama && !ollama_enabled {
+                            // Local models off: never surface Ollama.
+                            return false;
                         }
+                        kind == selected_kind
                     });
                 }
-                vec![(
-                    selected_harness,
-                    if ollama_selected {
-                        "Ollama".to_string()
-                    } else {
+                let label = match selected_kind {
+                    ModelGroupKind::Ollama => "Ollama".to_string(),
+                    ModelGroupKind::Api => selected_model_id
+                        .as_deref()
+                        .and_then(api_model_parts)
+                        .map(|(provider, _)| provider.display_name.to_string())
+                        .unwrap_or_default(),
+                    ModelGroupKind::Harness => {
                         availability.display_name_for(selected_harness).to_string()
-                    },
-                    models,
-                    ollama_selected,
-                )]
+                    }
+                };
+                vec![(selected_harness, label, models, selected_kind)]
             }
         };
 
         let mut items: Vec<MenuItem<ProfileModelSelectorAction>> = Vec::new();
         let mut selected_index = 0;
-        for (harness, display_name, models, ollama_group) in harness_groups {
+        for (harness, display_name, models, group_kind) in harness_groups {
             if group_harnesses {
                 items.push(
                     MenuItemFields::new(display_name)
@@ -1143,21 +1206,20 @@ impl ProfileModelSelector {
             // for the harness the picker points at, persisted selection
             // otherwise — so switching model or harness never silently
             // drops the reasoning level.
-            let selected_is_ollama = selected_model_id
-                .as_deref()
-                .and_then(ollama_model_name)
-                .is_some();
+            let selected_kind = ModelGroupKind::of(selected_model_id.as_deref());
             let group_is_selected = harness == selected_harness
-                && (harness != Harness::Codex || selected_is_ollama == ollama_group);
+                && (harness != Harness::Codex || selected_kind == group_kind);
             let (current_model_id, current_reasoning) = if group_is_selected {
                 (selected_model_id.clone(), selected_reasoning.clone())
-            } else if ollama_group {
-                persisted_ollama_model_for(ctx)
             } else {
-                persisted_model_for(harness, ctx)
+                match group_kind {
+                    ModelGroupKind::Ollama => persisted_ollama_model_for(ctx),
+                    ModelGroupKind::Api => persisted_api_model_for(ctx),
+                    ModelGroupKind::Harness => persisted_model_for(harness, ctx),
+                }
             };
 
-            if !ollama_group {
+            if group_kind == ModelGroupKind::Harness {
                 let default_selected = group_is_selected && selected_model_id.is_none();
                 let mut default_fields = MenuItemFields::new(HARNESS_DEFAULT_MODEL_LABEL)
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
@@ -1181,10 +1243,11 @@ impl ProfileModelSelector {
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
                         model_id: model.id.clone(),
-                        reasoning_level: if ollama_model_name(&model.id).is_some() {
-                            None
-                        } else {
-                            current_reasoning.clone()
+                        // Ollama and cloud API models have no reasoning
+                        // levels to carry over.
+                        reasoning_level: match ModelGroupKind::of(Some(model.id.as_str())) {
+                            ModelGroupKind::Harness => current_reasoning.clone(),
+                            ModelGroupKind::Ollama | ModelGroupKind::Api => None,
                         },
                     });
                 if is_selected {
@@ -1198,7 +1261,7 @@ impl ProfileModelSelector {
 
             // Reasoning rows compose with whichever model is active for the
             // harness rather than selecting a model themselves.
-            if !ollama_group {
+            if group_kind == ModelGroupKind::Harness {
                 items.push(
                     MenuItemFields::new("Reasoning")
                         .with_disabled(true)
@@ -2438,10 +2501,10 @@ impl TypedActionView for ProfileModelSelector {
                     });
                 }
                 CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
-                    let provider_key = if ollama_model_name(model_id).is_some() {
-                        OLLAMA_HARNESS_CONFIG_NAME
-                    } else {
-                        harness.config_name()
+                    let provider_key = match ModelGroupKind::of(Some(model_id.as_str())) {
+                        ModelGroupKind::Ollama => OLLAMA_HARNESS_CONFIG_NAME,
+                        ModelGroupKind::Api => API_HARNESS_CONFIG_NAME,
+                        ModelGroupKind::Harness => harness.config_name(),
                     };
                     let _ = settings
                         .last_selected_harness
