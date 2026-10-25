@@ -328,6 +328,11 @@ pub enum WorkspaceAction {
     UndoDeleteBlock {
         terminal_view_id: EntityId,
     },
+    /// Reopens the backup saved when an agent turn was deleted in the given
+    /// terminal (dispatched by the turn-delete toast's Undo link).
+    UndoDeleteAITurn {
+        terminal_view_id: EntityId,
+    },
     /// Open the log directory in the system file explorer with the current log file selected.
     #[cfg(not(target_family = "wasm"))]
     ViewLogs,
@@ -931,6 +936,7 @@ impl WorkspaceAction {
             #[cfg(not(target_family = "wasm"))]
             ContinueThirdPartyConversationLocally { .. } => true,
             UndoDeleteBlock { .. } => true,
+            UndoDeleteAITurn { .. } => true,
             ActivateTab(_)
             | ActivateTabByNumber(_)
             | ActivatePrevTab

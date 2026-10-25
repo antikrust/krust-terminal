@@ -290,7 +290,7 @@ use crate::ai::blocklist::{
     PendingAttachment, PendingQueryState, QueuedQuery, QueuedQueryId, QueuedQueryModel,
     QueuedQueryOrigin, RequestFileEditsFormatKind, ShellCommandExecutor, ShellCommandExecutorEvent,
     SlashCommandRequest, StartAgentExecutor, StartAgentExecutorEvent, StartAgentRequest,
-    ATTACH_AS_AGENT_MODE_CONTEXT_TEXT, PRE_REWIND_PREFIX,
+    ATTACH_AS_AGENT_MODE_CONTEXT_TEXT, PRE_DELETE_PREFIX, PRE_REWIND_PREFIX,
 };
 use crate::ai::conversation_details_panel::ConversationDetailsPanelEvent;
 use crate::ai::conversation_utils;
@@ -2557,6 +2557,8 @@ pub struct TerminalView {
     block_filter_editor: ViewHandle<BlockFilterEditor>,
 
     hovered_block_index: Option<BlockIndex>,
+    /// The AI reply under the pointer, whose rewind/delete toolbar shows.
+    hovered_ai_block: Option<EntityId>,
 
     selected_blocks: SelectedBlocks,
 
@@ -2754,6 +2756,9 @@ pub struct TerminalView {
     /// The most recently deleted block(s), restorable while the undo toast
     /// is on screen (replaced by the next delete).
     pending_block_undo: Option<Vec<(BlockIndex, BlockHeight, Block)>>,
+    /// The id of the pre-delete backup conversation the undo toast reopens
+    /// after a turn was deleted. Replaced by the next delete.
+    pending_ai_turn_undo: Option<AIConversationId>,
     /// Blocks mid slide-off animation; removal happens when their slide
     /// completes.
     sliding_deletes: HashMap<BlockId, Instant>,
@@ -4361,6 +4366,7 @@ impl TerminalView {
             hovered_secret: None,
             open_secret_tool_tip: None,
             hovered_block_index: None,
+            hovered_ai_block: None,
             selected_blocks: Default::default(),
             block_list_mouse_states,
             any_session_contains_remote_blocks: false,
@@ -4430,6 +4436,7 @@ impl TerminalView {
             local_harness_pending_tool_calls: HashSet::new(),
             local_harness_phase_results: Vec::new(),
             pending_block_undo: None,
+            pending_ai_turn_undo: None,
             sliding_deletes: HashMap::new(),
             block_onboarding_active: false,
             onboarding_prompt_block: None,
@@ -17216,9 +17223,13 @@ impl TerminalView {
                             }
                         }
 
-                        // We can't revert restored blocks since we don't restore the full diff
+                        // We can't revert restored blocks since we don't restore the full diff.
+                        // A local harness turn has no tracked diffs to begin with, so its
+                        // restored blocks rewind fine.
                         if FeatureFlag::RevertToCheckpoints.is_enabled()
-                            && !ai_metadata.ai_block_handle.as_ref(ctx).is_restored()
+                            && (!ai_metadata.ai_block_handle.as_ref(ctx).is_restored()
+                                || local_harness_threads::lookup(ai_metadata.conversation_id)
+                                    .is_some())
                         {
                             items.push(
                                 MenuItemFields::new("Rewind to before here")
@@ -25359,6 +25370,30 @@ impl TerminalView {
             );
         }
 
+        // The hovered AI reply's toolbar: rewind (where a rewind is possible,
+        // as in the context menu) and delete (unless its turn is running).
+        if let Some(ai_metadata) = self.hovered_ai_block.and_then(|view_id| {
+            self.rich_content_views.iter().find_map(|rich_content| {
+                rich_content
+                    .ai_block_metadata()
+                    .filter(|metadata| metadata.ai_block_handle.id() == view_id)
+            })
+        }) {
+            let can_rewind = FeatureFlag::RevertToCheckpoints.is_enabled()
+                && (!ai_metadata.ai_block_handle.as_ref(app).is_restored()
+                    || local_harness_threads::lookup(ai_metadata.conversation_id).is_some());
+            let can_delete = !BlocklistAIHistoryModel::as_ref(app)
+                .conversation(&ai_metadata.conversation_id)
+                .is_some_and(|conversation| conversation.status().is_in_progress());
+            element = element.with_hovered_ai_block(
+                ai_metadata.ai_block_handle.id(),
+                ai_metadata.conversation_id,
+                ai_metadata.exchange_id,
+                can_rewind,
+                can_delete,
+            );
+        }
+
         if let Some(shared_session) = &self.shared_session {
             let presence_avatars = shared_session.presence_avatars(app);
             let presence_manager = shared_session.presence_manager().clone();
@@ -26091,7 +26126,40 @@ impl TerminalView {
             self.user_write_ctrl_c_to_pty(ctx);
         }
 
-        // Iterate from end backwards, reverting all diffs in each AIBlock from this conversation until the block the user clicked on (inclusive)
+        // Rewind to the start of the clicked block's turn, like Claude: the
+        // prompt and every reply to it go together (no tool call is left
+        // without its result), and the prompt goes back into the input.
+        let (rewind_from, prompt, turn_request_id) = BlocklistAIHistoryModel::as_ref(ctx)
+            .conversation(&conversation_id)
+            .and_then(|conversation| {
+                let exchanges: Vec<_> = conversation.root_task_exchanges().collect();
+                let clicked = exchanges.iter().position(|exchange| exchange.id == exchange_id)?;
+                let start = exchanges[..=clicked]
+                    .iter()
+                    .rposition(|exchange| exchange.has_user_query())
+                    .unwrap_or(clicked);
+                let opening = exchanges[start];
+                Some((
+                    opening.id,
+                    opening.input.iter().find_map(|input| input.user_query()),
+                    opening
+                        .output_status
+                        .server_output_id()
+                        .map(|id| id.to_string()),
+                ))
+            })
+            .unwrap_or((exchange_id, None, None));
+        // Revert back to the turn's first block when it has one on screen,
+        // else to the clicked block.
+        let turn_start_has_block = rewind_from != exchange_id
+            && self.rich_content_views.iter().any(|rich_content| {
+                rich_content.ai_block_metadata().is_some_and(|metadata| {
+                    metadata.conversation_id == conversation_id
+                        && metadata.exchange_id == rewind_from
+                })
+            });
+
+        // Iterate from end backwards, reverting all diffs in each AIBlock from this conversation until the rewind point (inclusive)
         let mut num_blocks_reverted = 0;
         for rich_content in self.rich_content_views.iter().rev() {
             if let Some(ai_metadata) = rich_content.ai_block_metadata() {
@@ -26101,7 +26169,12 @@ impl TerminalView {
                         block.revert_all_diffs(ctx);
                     });
                     num_blocks_reverted += 1;
-                    if ai_metadata.ai_block_handle.id() == ai_block_view_id {
+                    let reached = if turn_start_has_block {
+                        ai_metadata.exchange_id == rewind_from
+                    } else {
+                        ai_metadata.ai_block_handle.id() == ai_block_view_id
+                    };
+                    if reached {
                         break;
                     }
                 }
@@ -26128,7 +26201,7 @@ impl TerminalView {
         // Truncate the conversation history
         let removed_exchange_ids =
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
-                history_model.truncate_conversation_from_exchange(conversation_id, exchange_id, ctx)
+                history_model.truncate_conversation_from_exchange(conversation_id, rewind_from, ctx)
             });
 
         // Truncate the blocklist UI
@@ -26145,6 +26218,23 @@ impl TerminalView {
         self.ai_controller.update(ctx, |controller, ctx| {
             controller.clear_finished_action_results(conversation_id, ctx);
         });
+
+        // A local harness that keeps its own history forgets the rewound
+        // turns too, so the model doesn't still remember them.
+        if let (Some((harness, session_id)), Some(request_id)) = (
+            local_harness_threads::lookup(conversation_id),
+            turn_request_id.as_deref(),
+        ) {
+            harness.forget_from_turn(&session_id, request_id);
+        }
+
+        // The rewound prompt comes back, ready to edit and send again.
+        if let Some(prompt) = prompt {
+            self.input.update(ctx, |input, ctx| {
+                input.set_input_mode_agent(/* ensure_input_is_focused */ true, ctx);
+                input.replace_buffer_content(&prompt, ctx);
+            });
+        }
 
         send_telemetry_from_ctx!(
             TelemetryEvent::AgentModeRewindExecuted {
@@ -26176,6 +26266,33 @@ impl TerminalView {
             return;
         }
 
+        // Back up the whole conversation first, so a delete — including an
+        // accidental ⌘+swipe — is never permanent: the undo toast reopens this
+        // backup. Mirrors the pre-rewind backup.
+        let backup_id: Option<AIConversationId> =
+            BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
+                let conversation = match history_model.conversation(&conversation_id).cloned() {
+                    Some(conversation) => conversation,
+                    None => {
+                        log::warn!("Failed to save pre-delete backup: conversation {conversation_id} not found in memory");
+                        return None;
+                    }
+                };
+                match history_model.fork_conversation(
+                    &conversation,
+                    PRE_DELETE_PREFIX,
+                    false, /* preserve_task_ids */
+                    None,
+                    ctx,
+                ) {
+                    Ok(backup) => Some(backup.id()),
+                    Err(e) => {
+                        log::warn!("Failed to save pre-delete backup of conversation {conversation_id}: {e}");
+                        None
+                    }
+                }
+            });
+
         let removed = BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
             history_model.remove_conversation_turn(conversation_id, exchange_id, ctx)
         });
@@ -26199,6 +26316,39 @@ impl TerminalView {
         ) {
             harness.forget_turn(&session_id, request_id);
         }
+
+        // Offer a one-click undo: reopen the pre-delete backup, like the
+        // block-delete toast restores a block.
+        self.pending_ai_turn_undo = backup_id;
+        let window_id = ctx.window_id();
+        let view_id = self.view_id;
+        let has_undo = backup_id.is_some();
+        ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+            let mut toast = DismissibleToast::default("Turn deleted".to_string());
+            if has_undo {
+                toast = toast.with_link(ToastLink::new("Undo".to_string()).with_onclick_action(
+                    WorkspaceAction::UndoDeleteAITurn {
+                        terminal_view_id: view_id,
+                    },
+                ));
+            }
+            toast_stack.add_ephemeral_toast(toast, window_id, ctx);
+        });
+        ctx.notify();
+    }
+
+    /// Reopens the pre-delete backup conversation a turn-delete saved, while
+    /// its undo toast is still on screen. The block-delete analogue is
+    /// [`Self::undo_delete_block`].
+    pub fn undo_delete_ai_turn(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(backup_id) = self.pending_ai_turn_undo.take() else {
+            return;
+        };
+        let view_id = self.view_id;
+        BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, model_ctx| {
+            history.set_active_conversation_id(backup_id, view_id, model_ctx);
+        });
+        ctx.notify();
     }
 
     fn handle_input_context_menu_action(
@@ -27287,6 +27437,7 @@ impl TypedActionView for TerminalView {
 
         match action {
             BlockHover(_)
+            | AIBlockHover(_)
             | BlockSnackbarHover { .. }
             | BlockNearSnackbarHover { .. }
             | MaybeLinkHover { .. } => Empty,
@@ -27651,6 +27802,12 @@ impl TypedActionView for TerminalView {
                 should_redetermine_focus,
             } => self.block_select(action, *should_redetermine_focus, ctx),
             BlockHover(hover_action) => self.block_hover(hover_action, ctx),
+            AIBlockHover(view_id) => {
+                if self.hovered_ai_block != *view_id {
+                    self.hovered_ai_block = *view_id;
+                    ctx.notify();
+                }
+            }
             BlockSnackbarHover { is_hovered } => self.block_snackbar_hover(*is_hovered, ctx),
             BlockNearSnackbarHover { is_hovered } => {
                 self.block_near_snackbar_hover(*is_hovered, ctx)

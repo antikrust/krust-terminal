@@ -24208,6 +24208,12 @@ impl TypedActionView for Workspace {
                     view.update(ctx, |view, ctx| view.undo_delete_block(ctx));
                 }
             }
+            UndoDeleteAITurn { terminal_view_id } => {
+                let window_id = ctx.window_id();
+                if let Some(view) = ctx.view_with_id::<TerminalView>(window_id, *terminal_view_id) {
+                    view.update(ctx, |view, ctx| view.undo_delete_ai_turn(ctx));
+                }
+            }
             #[cfg(not(target_family = "wasm"))]
             ViewLogs => self.view_logs(ctx),
             ChangeCursor(cursor) => self.change_cursor(*cursor, ctx),

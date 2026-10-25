@@ -1214,6 +1214,30 @@ pub(crate) fn forget_turn(session_id: &Uuid, turn_id: &str) {
     }
 }
 
+/// Makes the model forget a turn and every turn after it, for a rewind: the
+/// history is cut back to just before the user message stamped `turn_id`.
+pub(crate) fn forget_from_turn(session_id: &Uuid, turn_id: &str) {
+    if let Ok(mut histories) = chat_histories().lock() {
+        if let Some((_, messages)) = histories.get_mut(session_id) {
+            truncate_from_turn(messages, turn_id);
+        }
+    }
+}
+
+/// Cuts a chat history back to just before the user message stamped
+/// `turn_id`, dropping that turn and all that follow. A turn without a stamp
+/// is left alone. Returns whether anything was cut.
+pub(crate) fn truncate_from_turn(messages: &mut Vec<Value>, turn_id: &str) -> bool {
+    let Some(start) = messages
+        .iter()
+        .position(|message| message.get(TURN_ID_FIELD).and_then(Value::as_str) == Some(turn_id))
+    else {
+        return false;
+    };
+    messages.truncate(start);
+    true
+}
+
 /// Removes one turn from a chat history: the user message stamped with
 /// `turn_id` and every message after it up to the next user message. A turn
 /// without a stamp (saved before turns had one, or never saved) is left

@@ -3514,6 +3514,10 @@ pub const FORK_PREFIX: &str = "(Fork) ";
 /// The prefix used when saving a conversation before a rewind operation.
 pub const PRE_REWIND_PREFIX: &str = "(Pre-Rewind) ";
 
+/// The prefix used when saving a conversation before a turn is deleted, so a
+/// delete (including an accidental ⌘+swipe) is always recoverable.
+pub const PRE_DELETE_PREFIX: &str = "(Pre-Delete) ";
+
 #[cfg(test)]
 #[path = "history_model_tests.rs"]
 mod tests;

@@ -115,6 +115,9 @@ pub enum TerminalAction {
         should_redetermine_focus: bool,
     },
     BlockHover(BlockHoverAction),
+    /// The pointer moved onto (`Some`) or off (`None`) an AI reply, which
+    /// shows its rewind/delete toolbar while hovered.
+    AIBlockHover(Option<EntityId>),
     BlockSnackbarHover {
         is_hovered: bool,
     },
@@ -505,6 +508,7 @@ impl fmt::Debug for TerminalAction {
             BlockTextSelect(action) => write!(f, "BlockTextSelect({action:?})"),
             BlockSelect { action, .. } => write!(f, "BlockSelect({action:?})"),
             BlockHover(action) => write!(f, "BlockHover({action:?})"),
+            AIBlockHover(view_id) => write!(f, "AIBlockHover({view_id:?})"),
             BlockSnackbarHover { is_hovered } => {
                 write!(f, "BlockSnackbarHover{{ is_hovered {is_hovered} }}")
             }

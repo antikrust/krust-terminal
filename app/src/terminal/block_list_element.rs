@@ -61,10 +61,13 @@ use super::view::{
 };
 use super::krustify::render::{draw_flag_pole, render_subshell_flag};
 use super::{heights_approx_eq, TerminalModel, HEIGHT_FUDGE_FACTOR_LINES};
+use crate::ai::agent::conversation::AIConversationId;
+use crate::ai::agent::AIAgentExchangeId;
 use crate::ai::blocklist::{ai_brand_color, ATTACH_AS_AGENT_MODE_CONTEXT_TEXT};
 use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::Appearance;
 use crate::features::FeatureFlag;
+use crate::server::telemetry::AgentModeRewindEntrypoint;
 use crate::pane_group::SplitPaneState;
 use crate::settings::{AISettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing};
 use crate::terminal::alt_screen::{should_intercept_mouse, should_intercept_scroll};
@@ -172,8 +175,13 @@ enum SelectionCursorRenderLocation {
 
 const OVERFLOW_BUTTON_ICON_PATH: &str = "bundled/svg/overflow.svg";
 const DELETE_BLOCK_ICON_PATH: &str = "bundled/svg/trash-02.svg";
+const REWIND_ICON_PATH: &str = "bundled/svg/refresh-ccw-01.svg";
 /// Minimum leftward ⌘+drag distance (px) for a block swipe-delete.
 const SWIPE_DELETE_DRAG_DISTANCE: f32 = 120.;
+/// Leftward ⌘+drag distance (px), mostly horizontal, after which the drag is
+/// a swipe: the block follows the pointer (so the user sees it going and can
+/// let go early to keep it) instead of selecting.
+const SWIPE_DELETE_FOLLOW_SLOP: f32 = 8.;
 
 /// What a ⌘+drag swipe-delete removes.
 #[derive(Clone, Copy, Debug)]
@@ -182,6 +190,19 @@ pub enum SwipeDeleteTarget {
     Block(BlockIndex),
     /// A rich content view; an AI block's whole agent turn is deleted.
     RichContent(EntityId),
+}
+
+/// How far left the block `matches_target` picks out is drawn while it
+/// follows a ⌘+drag swipe (see `BlockListElement::follow_swipe_drag`). Takes
+/// the state alone, so painting can call it amid other borrows of the element.
+fn swipe_follow_offset(
+    swipe_delete_state: &Mutex<Option<(SwipeDeleteTarget, Vector2F, f32)>>,
+    matches_target: impl Fn(&SwipeDeleteTarget) -> bool,
+) -> Vector2F {
+    match *swipe_delete_state.lock().unwrap() {
+        Some((target, _, follow)) if follow > 0. && matches_target(&target) => vec2f(follow, 0.),
+        _ => Vector2F::zero(),
+    }
 }
 
 /// How long a deleting block takes to slide off screen.
@@ -654,6 +675,11 @@ pub struct BlockListElement {
     ask_ai_assistant_button: Option<Box<dyn Element>>,
     save_as_workflow_button: Option<Box<dyn Element>>,
     delete_block_button: Option<Box<dyn Element>>,
+    /// The AI reply under the pointer, and its toolbar's buttons (see
+    /// [`Self::with_hovered_ai_block`]).
+    hovered_ai_block: Option<EntityId>,
+    ai_block_rewind_button: Option<Box<dyn Element>>,
+    ai_block_delete_button: Option<Box<dyn Element>>,
     /// Blocks currently sliding off screen before deletion, keyed by id with
     /// their animation start time.
     sliding_deletes: HashMap<BlockId, Instant>,
@@ -881,10 +907,12 @@ pub struct BlockListMouseStates {
     pub ai_assistant_button_mouse_state: MouseStateHandle,
     pub save_as_workflow_button_mouse_state: MouseStateHandle,
     pub delete_block_button_mouse_state: MouseStateHandle,
+    pub ai_block_rewind_button_mouse_state: MouseStateHandle,
+    pub ai_block_delete_button_mouse_state: MouseStateHandle,
     /// ⌘+drag-to-delete gesture origin: the block under the pointer and the
     /// press position when a ⌘+left-click began. Shared across the per-frame
     /// element clones the same way the mouse-state handles are.
-    pub swipe_delete_state: Arc<Mutex<Option<(SwipeDeleteTarget, Vector2F)>>>,
+    pub swipe_delete_state: Arc<Mutex<Option<(SwipeDeleteTarget, Vector2F, f32)>>>,
     pub filter_mouse_states: HashMap<BlockIndex, MouseStateHandle>,
     pub snackbar_toggle_button_mouse_state: MouseStateHandle,
 }
@@ -954,6 +982,9 @@ impl BlockListElement {
             ask_ai_assistant_button: None,
             save_as_workflow_button: None,
             delete_block_button: None,
+            hovered_ai_block: None,
+            ai_block_rewind_button: None,
+            ai_block_delete_button: None,
             sliding_deletes: HashMap::new(),
             snackbar_toggle_button: None,
             restored_session_separator: None,
@@ -1082,6 +1113,75 @@ impl BlockListElement {
         active_filter_editor_block_index: BlockIndex,
     ) -> Self {
         self.active_filter_editor_block_index = Some(active_filter_editor_block_index);
+        self
+    }
+
+    /// Returns an updated version of the [`BlockListElement`] that renders the
+    /// rewind/delete toolbar on top of the hovered AI reply — the AI-reply
+    /// counterpart of the command-block toolbelt ([`Self::with_hovered_index`]).
+    pub fn with_hovered_ai_block(
+        mut self,
+        ai_block_view_id: EntityId,
+        conversation_id: AIConversationId,
+        exchange_id: AIAgentExchangeId,
+        can_rewind: bool,
+        can_delete: bool,
+    ) -> Self {
+        self.hovered_ai_block = Some(ai_block_view_id);
+        let icon_color = self
+            .krust_theme
+            .sub_text_color(self.krust_theme.surface_2())
+            .into_solid();
+        let icon = |path: &'static str| {
+            Container::new(
+                ConstrainedBox::new(Icon::new(path, icon_color).finish())
+                    .with_height(16.)
+                    .with_width(16.)
+                    .finish(),
+            )
+            .with_uniform_padding(4.)
+        };
+        if can_rewind {
+            self.ai_block_rewind_button = Some(render_hoverable_block_button(
+                icon(REWIND_ICON_PATH),
+                Some(ToolbeltButtonTooltip {
+                    label: "Rewind to before this prompt".to_owned(),
+                    tool_tip_below_button: true,
+                }),
+                false,
+                true,
+                self.mouse_states.ai_block_rewind_button_mouse_state.clone(),
+                &self.krust_theme,
+                &self.ui_builder,
+                move |ctx: &mut EventContext, _, _| {
+                    ctx.dispatch_typed_action(TerminalAction::RewindAIConversation {
+                        ai_block_view_id,
+                        exchange_id,
+                        conversation_id,
+                        entrypoint: AgentModeRewindEntrypoint::Button,
+                    });
+                },
+            ));
+        }
+        if can_delete {
+            self.ai_block_delete_button = Some(render_hoverable_block_button(
+                icon(DELETE_BLOCK_ICON_PATH),
+                Some(ToolbeltButtonTooltip {
+                    label: "Delete this turn".to_owned(),
+                    tool_tip_below_button: true,
+                }),
+                false,
+                true,
+                self.mouse_states.ai_block_delete_button_mouse_state.clone(),
+                &self.krust_theme,
+                &self.ui_builder,
+                move |ctx: &mut EventContext, _, _| {
+                    ctx.dispatch_typed_action(TerminalAction::DeleteAIBlockTurn {
+                        ai_block_view_id,
+                    });
+                },
+            ));
+        }
         self
     }
 
@@ -1468,6 +1568,37 @@ impl BlockListElement {
     }
 
     /// The rich content view (such as an AI block) under `position`, if any.
+    /// Updates an armed ⌘+drag swipe with the pointer at `position`, and
+    /// returns whether the drag is a swipe — leftward past
+    /// [`SWIPE_DELETE_FOLLOW_SLOP`], mostly horizontal — so the block follows
+    /// the pointer. Any other drag (a vertical ⌘+drag selecting blocks) has no
+    /// follow offset and goes on as a selection.
+    fn follow_swipe_drag(&self, position: Vector2F) -> bool {
+        let mut swipe = self.mouse_states.swipe_delete_state.lock().unwrap();
+        let Some((_, start, follow)) = swipe.as_mut() else {
+            return false;
+        };
+        let dx = position.x() - start.x();
+        let dy = position.y() - start.y();
+        let is_swipe = dx < -SWIPE_DELETE_FOLLOW_SLOP && dx.abs() > dy.abs();
+        *follow = if is_swipe { -dx } else { 0. };
+        is_swipe
+    }
+
+    /// Tells the view which AI reply, if any, is under the pointer, so it
+    /// shows that reply's toolbar. Only a change is reported.
+    fn report_ai_block_hover(&self, position: Vector2F, ctx: &mut EventContext) {
+        let hovered = self.rich_content_view_at(position).filter(|view_id| {
+            matches!(
+                self.rich_content_metadata.get(view_id),
+                Some(RichContentMetadata::AIBlock(_))
+            )
+        });
+        if hovered != self.hovered_ai_block {
+            ctx.dispatch_typed_action(TerminalAction::AIBlockHover(hovered));
+        }
+    }
+
     fn rich_content_view_at(&self, position: Vector2F) -> Option<EntityId> {
         if !self.is_mouse_position_within_bounds(position) {
             return None;
@@ -3234,6 +3365,23 @@ impl Element for BlockListElement {
                 app,
             );
         }
+        for button in [
+            &mut self.ai_block_rewind_button,
+            &mut self.ai_block_delete_button,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            button.layout(
+                // Big enough to cover the tooltip when rendered.
+                SizeConstraint::new(
+                    vec2f(BLOCK_HOVER_BUTTON_HEIGHT, BLOCK_HOVER_BUTTON_HEIGHT),
+                    vec2f(240., 64.),
+                ),
+                ctx,
+                app,
+            );
+        }
         if let Some(cursor_hint_text) = &mut self.cursor_hint_text_element {
             cursor_hint_text.layout(constraint, ctx, app);
         }
@@ -3940,6 +4088,12 @@ impl Element for BlockListElement {
                         }
                         None => Vector2F::zero(),
                     };
+                    // A block being swiped follows the pointer, on the same
+                    // shift-and-revert path as the slide-off.
+                    let slide_offset = slide_offset
+                        + swipe_follow_offset(&self.mouse_states.swipe_delete_state, |target| {
+                            matches!(target, SwipeDeleteTarget::Block(index) if index == block_index)
+                        });
                     grid_origin -= slide_offset;
 
                     let header_origin = snackbar_header
@@ -4447,9 +4601,48 @@ impl Element for BlockListElement {
                 VisibleItem::RichContent {
                     view_id, height_px, ..
                 } => {
-                    let block_origin = grid_origin;
+                    // An AI block being swiped follows the pointer. Only its
+                    // own paint origin moves; the shared grid origin doesn't.
+                    let follow = swipe_follow_offset(&self.mouse_states.swipe_delete_state, |target| {
+                        matches!(target, SwipeDeleteTarget::RichContent(id) if id == view_id)
+                    });
+                    let block_origin = grid_origin - follow;
                     if let Some(rich_content) = self.rich_content_elements.get_mut(view_id) {
-                        rich_content.paint(grid_origin, ctx, app);
+                        rich_content.paint(block_origin, ctx, app);
+                    }
+
+                    // The hovered AI reply's rewind/delete toolbar, at its
+                    // top right like the command-block toolbelt, over a
+                    // background so the reply's text doesn't show through.
+                    if self.hovered_ai_block == Some(*view_id) {
+                        let buttons = [
+                            self.ai_block_rewind_button.as_mut(),
+                            self.ai_block_delete_button.as_mut(),
+                        ];
+                        let count = buttons.iter().filter(|button| button.is_some()).count();
+                        if count > 0 {
+                            // Each icon takes 26px plus a 4px gap; 12px keeps
+                            // clear of the right edge and the scrollbar.
+                            let toolbar_width = count as f32 * 30. - 4.;
+                            let toolbar_origin = block_origin
+                                + vec2f(
+                                    self.size_info.pane_width_px().as_f32() - toolbar_width - 12.
+                                        + self.horizontal_clipped_scroll_state.scroll_start().as_f32(),
+                                    6.,
+                                );
+                            ctx.scene.start_layer(ClipBounds::ActiveLayer);
+                            ctx.scene
+                                .draw_rect_with_hit_recording(RectF::new(
+                                    toolbar_origin - vec2f(4., 4.),
+                                    vec2f(toolbar_width + 8., 34.),
+                                ))
+                                .with_background(self.krust_theme.surface_1())
+                                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
+                            for (slot, button) in buttons.into_iter().flatten().enumerate() {
+                                button.paint(toolbar_origin + vec2f(slot as f32 * 30., 0.), ctx, app);
+                            }
+                            ctx.scene.stop_layer();
+                        }
                     }
 
                     if !FeatureFlag::AgentView.is_enabled() {
@@ -4645,6 +4838,16 @@ impl Element for BlockListElement {
                 handled_by_floating_button |= delete_block_button.dispatch_event(event, ctx, app);
             }
 
+            for button in [
+                &mut self.ai_block_rewind_button,
+                &mut self.ai_block_delete_button,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                handled_by_floating_button |= button.dispatch_event(event, ctx, app);
+            }
+
             for bookmark_element in self.bookmark_elements.values_mut() {
                 handled_by_floating_button |= bookmark_element.dispatch_event(event, ctx, app);
             }
@@ -4714,7 +4917,7 @@ impl Element for BlockListElement {
                     .map(SwipeDeleteTarget::RichContent)
             };
             *self.mouse_states.swipe_delete_state.lock().unwrap() =
-                target.map(|target| (target, *position));
+                target.map(|target| (target, *position, 0.));
         }
 
         handled |= match event_at_z_index {
@@ -4796,11 +4999,16 @@ impl Element for BlockListElement {
                 // A ⌘+drag released far enough to the left, mostly
                 // horizontally, swipes the pressed block away (undoable via
                 // the delete toast).
-                if let Some((target, start)) =
+                if let Some((target, start, follow)) =
                     self.mouse_states.swipe_delete_state.lock().unwrap().take()
                 {
                     let dx = position.x() - start.x();
                     let dy = position.y() - start.y();
+                    // Let go short of the threshold: the block, which was
+                    // following the pointer, goes back to its place.
+                    if follow > 0. {
+                        ctx.notify();
+                    }
                     if dx <= -SWIPE_DELETE_DRAG_DISTANCE && dx.abs() > dy.abs() {
                         log::info!("fork: swipe-delete drag triggered on {target:?} (dx {dx})");
                         ctx.dispatch_typed_action(match target {
@@ -4818,6 +5026,11 @@ impl Element for BlockListElement {
                 }
                 self.mouse_up(*position, modifiers, ctx, app)
             }
+            Event::LeftMouseDragged { position, .. } if self.follow_swipe_drag(*position) => {
+                // The swiped block follows the pointer; no selection meanwhile.
+                ctx.notify();
+                true
+            }
             Event::LeftMouseDragged {
                 position,
                 modifiers,
@@ -4831,7 +5044,10 @@ impl Element for BlockListElement {
                 };
                 self.mouse_dragged(*position, is_selecting_blocks, modifiers, ctx, app)
             }
-            Event::MouseMoved { position, .. } => self.mouse_moved(*position, app, ctx),
+            Event::MouseMoved { position, .. } => {
+                self.report_ai_block_hover(*position, ctx);
+                self.mouse_moved(*position, app, ctx)
+            }
             Event::TypedCharacters { chars } => self.typed_characters(chars, ctx),
             Event::MiddleMouseDown { position, .. } => self.middle_mouse_down(*position, ctx),
             Event::SetMarkedText {

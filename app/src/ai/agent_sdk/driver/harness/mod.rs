@@ -102,6 +102,17 @@ impl LocalHarnessKind {
             Self::Claude | Self::Codex => {}
         }
     }
+
+    /// Makes the model forget a turn and all turns after it — what a rewind
+    /// removes. As with [`Self::forget_turn`], Claude and Codex keep their
+    /// sessions in their own CLIs, so there it does nothing.
+    pub(crate) fn forget_from_turn(self, session_id: &Uuid, turn_id: &str) {
+        match self {
+            Self::Api => api_stream_exec::forget_from_turn(session_id, turn_id),
+            Self::Ollama => ollama_stream_exec::forget_from_turn(session_id, turn_id),
+            Self::Claude | Self::Codex => {}
+        }
+    }
 }
 
 /// Harness-agnostic payload describing how to resume an existing conversation.

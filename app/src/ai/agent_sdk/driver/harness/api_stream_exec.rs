@@ -27,8 +27,8 @@ use super::claude_stream_exec::{
 use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
-    remove_turn_from_messages, todo_list_entries, todo_list_reply, turn_user_message,
-    without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
+    remove_turn_from_messages, todo_list_entries, todo_list_reply, truncate_from_turn,
+    turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
 };
 use super::plan_tracker::PlanTracker;
 use crate::ai::api_providers::{
@@ -1078,6 +1078,16 @@ pub(crate) fn forget_turn(session_id: &Uuid, turn_id: &str) {
         return;
     };
     if remove_turn_from_messages(&mut messages, turn_id) {
+        save_history(session_id, &messages);
+    }
+}
+
+/// Makes the model forget a turn and every turn after it, for a rewind.
+pub(crate) fn forget_from_turn(session_id: &Uuid, turn_id: &str) {
+    let Some(mut messages) = load_history(session_id) else {
+        return;
+    };
+    if truncate_from_turn(&mut messages, turn_id) {
         save_history(session_id, &messages);
     }
 }
