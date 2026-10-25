@@ -352,6 +352,7 @@ impl TemplatableMCPServerManager {
         };
 
         me.fetch_cloud_servers(ctx);
+        let duplicates = me.delete_duplicate_installations(&running_server_uuids, ctx);
 
         // If we're not in a test, try to load credentials from secure storage.
         if !cfg!(test) {
@@ -371,7 +372,9 @@ impl TemplatableMCPServerManager {
 
         if AppExecutionMode::as_ref(ctx).can_autostart_mcp_servers() {
             for installation_uuid in running_server_uuids {
-                me.spawn_server(installation_uuid, ctx)
+                if !duplicates.contains(&installation_uuid) {
+                    me.spawn_server(installation_uuid, ctx)
+                }
             }
         }
 
@@ -381,6 +384,43 @@ impl TemplatableMCPServerManager {
         me.convert_all_legacy_to_templatable(servers_to_restart, ctx);
 
         me
+    }
+
+    /// Deletes all but one installation of each template, and returns the
+    /// ones deleted. Installing replaces any existing installation of the
+    /// template, yet copies of the built-in Web Search server still piled up
+    /// in the database (15 in one), each listed under My MCPs and each set to
+    /// start its own process. The one set to restore running is kept.
+    fn delete_duplicate_installations(
+        &mut self,
+        running_server_uuids: &[Uuid],
+        ctx: &mut ModelContext<Self>,
+    ) -> Vec<Uuid> {
+        let mut installations: Vec<(Uuid, Uuid)> = self
+            .locally_installed_servers
+            .iter()
+            .map(|(installation_uuid, installation)| {
+                (*installation_uuid, installation.template_uuid())
+            })
+            .collect();
+        // Running ones first, so they're the ones kept.
+        installations.sort_by_key(|(installation_uuid, _)| {
+            !running_server_uuids.contains(installation_uuid)
+        });
+        let mut seen_templates = HashSet::new();
+        let duplicates: Vec<Uuid> = installations
+            .into_iter()
+            .filter(|(_, template_uuid)| !seen_templates.insert(*template_uuid))
+            .map(|(installation_uuid, _)| installation_uuid)
+            .collect();
+        if !duplicates.is_empty() {
+            log::info!(
+                "Deleting {} duplicate MCP server installations",
+                duplicates.len()
+            );
+            self.delete_templatable_mcp_server_installations(duplicates.clone(), ctx);
+        }
+        duplicates
     }
 
     fn delete_orphaned_installations(&mut self, ctx: &mut ModelContext<Self>) {
@@ -1108,16 +1148,21 @@ impl TemplatableMCPServerManager {
         let installation_uuid = Uuid::new_v4();
 
         // Idempotent safety checks
-        // If the server is already installed, we delete the existing installation
-        let existing_installation =
-            self.get_installation_by_template_uuid(templatable_mcp_server.uuid);
-        if let Some(existing_installation) = existing_installation {
+        // If the server is already installed, we delete the existing installations
+        // — every one, so a duplicate can't survive a reinstall.
+        let existing_installations: Vec<Uuid> = self
+            .locally_installed_servers
+            .values()
+            .filter(|installation| installation.template_uuid() == templatable_mcp_server.uuid)
+            .map(|installation| installation.uuid())
+            .collect();
+        if !existing_installations.is_empty() {
             log::warn!(
-                "A server with template uuid {} is already installed. The existing installation with uuid {} will be deleted.",
+                "A server with template uuid {} is already installed. The existing installations ({}) will be deleted.",
                 templatable_mcp_server.uuid,
-                existing_installation.uuid()
+                existing_installations.len()
             );
-            self.delete_templatable_mcp_server_installation(existing_installation.uuid(), ctx);
+            self.delete_templatable_mcp_server_installations(existing_installations, ctx);
         }
 
         let mcp_server_installation = TemplatableMCPServerInstallation::new(
