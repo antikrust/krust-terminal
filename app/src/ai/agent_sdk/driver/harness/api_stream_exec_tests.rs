@@ -3,8 +3,8 @@ use serde_json::{json, Value};
 
 use super::{
     api_curl_args, assistant_tool_call_message, clip_for_model, compact_old_tool_results,
-    error_from_body, remove_turn_from_messages, ApiChatAccumulator, ApiToolCall, API_KEY_ENV,
-    DROPPED_RESULT_PREFIX,
+    error_from_body, remove_turn_from_messages, without_turn_ids, ApiChatAccumulator, ApiToolCall,
+    API_KEY_ENV, DROPPED_RESULT_PREFIX,
 };
 use crate::ai::api_providers::provider;
 
@@ -321,31 +321,38 @@ fn tool_output_over_budget_is_dropped_but_the_latest_stays() {
 
 #[test]
 fn a_deleted_turn_leaves_the_history_with_its_tool_calls() {
-    let user = |prompt: &str| {
-        let content = format!("Current working directory: /x\n\nUser request:\n{prompt}");
-        json!({ "role": "user", "content": content })
+    let user = |prompt: &str, turn_id: Option<&str>| {
+        let mut message = json!({ "role": "user", "content": prompt });
+        if let Some(turn_id) = turn_id {
+            message["krust_turn"] = json!(turn_id);
+        }
+        message
     };
     let mut messages = vec![
         json!({ "role": "system", "content": "s" }),
-        user("continue"),
-        json!({ "role": "assistant", "content": "first" }),
-        user("read it"),
-        json!({ "role": "assistant", "tool_calls": [{ "id": "a" }] }),
-        json!({ "role": "tool", "tool_call_id": "a", "content": "file" }),
+        user("continue", None),
+        json!({ "role": "assistant", "content": "saved before turns had IDs" }),
+        user("continue", Some("a")),
+        json!({ "role": "assistant", "tool_calls": [{ "id": "call" }] }),
+        json!({ "role": "tool", "tool_call_id": "call", "content": "file" }),
         json!({ "role": "assistant", "content": "done" }),
-        user("continue"),
+        user("continue", Some("b")),
         json!({ "role": "assistant", "content": "second" }),
     ];
 
-    assert!(remove_turn_from_messages(&mut messages, "read it", 0));
+    // Found by its ID, whatever its text: the tool call and its result go too.
+    assert!(remove_turn_from_messages(&mut messages, "a"));
     assert_eq!(messages.len(), 5);
     assert!(messages.iter().all(|message| message["role"] != "tool"));
+    assert_eq!(messages[4]["content"], "second");
 
-    // A repeated prompt is picked counting back from the newest: with one
-    // later "continue", it's the first one that goes.
-    assert!(remove_turn_from_messages(&mut messages, "continue", 1));
-    assert_eq!(messages.len(), 3);
-    assert_eq!(messages[2]["content"], "second");
+    // A turn the history never saved is not there to remove, and nothing
+    // else goes in its place.
+    assert!(!remove_turn_from_messages(&mut messages, "never saved"));
+    assert_eq!(messages.len(), 5);
 
-    assert!(!remove_turn_from_messages(&mut messages, "never asked", 0));
+    // The IDs are Krust's own and never reach the provider.
+    let sent = without_turn_ids(&messages);
+    assert!(sent.iter().all(|message| message.get("krust_turn").is_none()));
+    assert_eq!(sent[3]["content"], "continue");
 }

@@ -1066,52 +1066,81 @@ fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
     HISTORIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// The field that stamps a turn's ID on the user message opening it, in a
+/// saved chat history. Taken off again before a history is sent.
+const TURN_ID_FIELD: &str = "krust_turn";
+
+/// The ID of the turn each session is running, recorded before its runner
+/// starts. It is Krust's request ID for the turn's exchange, so a turn the
+/// user deletes is found in the history by ID, never by its text.
+fn current_turn_ids() -> &'static Mutex<HashMap<Uuid, String>> {
+    static TURN_IDS: OnceLock<Mutex<HashMap<Uuid, String>>> = OnceLock::new();
+    TURN_IDS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Records the turn `session_id` is about to run.
+pub(crate) fn set_current_turn_id(session_id: &Uuid, turn_id: &str) {
+    if let Ok(mut turn_ids) = current_turn_ids().lock() {
+        turn_ids.insert(*session_id, turn_id.to_string());
+    }
+}
+
+/// The user message opening a turn, stamped with the session's current
+/// turn ID when one was recorded.
+pub(crate) fn turn_user_message(session_id: &Uuid, content: String) -> Value {
+    let mut message = json!({ "role": "user", "content": content });
+    let turn_id = current_turn_ids()
+        .lock()
+        .ok()
+        .and_then(|turn_ids| turn_ids.get(session_id).cloned());
+    if let Some(turn_id) = turn_id {
+        message[TURN_ID_FIELD] = Value::String(turn_id);
+    }
+    message
+}
+
+/// A history as it is sent: without the turn IDs, which are Krust's own.
+pub(crate) fn without_turn_ids(messages: &[Value]) -> Vec<Value> {
+    messages
+        .iter()
+        .map(|message| match message.get(TURN_ID_FIELD) {
+            Some(_) => {
+                let mut message = message.clone();
+                if let Some(fields) = message.as_object_mut() {
+                    fields.remove(TURN_ID_FIELD);
+                }
+                message
+            }
+            None => message.clone(),
+        })
+        .collect()
+}
+
 /// Makes the model forget a turn the user deleted, by dropping it from this
 /// session's chat history. The `/api/generate` path keeps an opaque token
 /// context instead, which can't have one turn taken out.
-pub(crate) fn forget_turn(session_id: &Uuid, prompt: &str, later_turns_with_same_prompt: usize) {
+pub(crate) fn forget_turn(session_id: &Uuid, turn_id: &str) {
     if let Ok(mut histories) = chat_histories().lock() {
         if let Some((_, messages)) = histories.get_mut(session_id) {
-            remove_turn_from_messages(messages, prompt, later_turns_with_same_prompt);
+            remove_turn_from_messages(messages, turn_id);
         }
     }
 }
 
-/// Removes one turn from a chat history: the user message carrying `prompt`
-/// and every message after it up to the next user message. When the same
-/// prompt opened several turns, `later_turns_with_same_prompt` picks which,
-/// counting back from the newest. Returns whether a turn was removed.
-pub(crate) fn remove_turn_from_messages(
-    messages: &mut Vec<Value>,
-    prompt: &str,
-    later_turns_with_same_prompt: usize,
-) -> bool {
-    let is_user = |message: &Value| message.get("role").and_then(Value::as_str) == Some("user");
-    // The ways the runners wrap a prompt before sending it.
-    let opens_turn = |message: &Value| {
-        is_user(message)
-            && message
-                .get("content")
-                .and_then(Value::as_str)
-                .is_some_and(|content| {
-                    content == prompt
-                        || content.ends_with(&format!("User request:\n{prompt}"))
-                        || content.ends_with(&format!("User question: {prompt}"))
-                })
-    };
+/// Removes one turn from a chat history: the user message stamped with
+/// `turn_id` and every message after it up to the next user message. A turn
+/// without a stamp (saved before turns had one, or never saved) is left
+/// alone. Returns whether a turn was removed.
+pub(crate) fn remove_turn_from_messages(messages: &mut Vec<Value>, turn_id: &str) -> bool {
     let Some(start) = messages
         .iter()
-        .enumerate()
-        .filter(|(_, message)| opens_turn(*message))
-        .map(|(index, _)| index)
-        .rev()
-        .nth(later_turns_with_same_prompt)
+        .position(|message| message.get(TURN_ID_FIELD).and_then(Value::as_str) == Some(turn_id))
     else {
         return false;
     };
     let end = messages[start + 1..]
         .iter()
-        .position(is_user)
+        .position(|message| message.get("role").and_then(Value::as_str) == Some("user"))
         .map_or(messages.len(), |offset| start + 1 + offset);
     messages.drain(start..end);
     true
@@ -1692,11 +1721,11 @@ async fn run_ollama_chat(
     } else {
         prompt.to_string()
     };
-    messages.push(json!({ "role": "user", "content": user_content }));
+    messages.push(turn_user_message(session_id, user_content));
 
     let mut request = json!({
         "model": wire_name(model),
-        "messages": messages,
+        "messages": without_turn_ids(&messages),
         "stream": true,
         "options": { "temperature": 0, "num_ctx": 8192 },
     });
@@ -2386,13 +2415,13 @@ async fn run_ollama_chat_with_tools(
                 "content": ollama_tool_system_prompt(&all_tools, &model_description),
             })]
         });
-    messages.push(json!({
-        "role": "user",
-        "content": format!(
+    messages.push(turn_user_message(
+        session_id,
+        format!(
             "Current working directory: {}\n\nUser request:\n{prompt}",
             working_dir.display()
         ),
-    }));
+    ));
 
     // Every request in this loop hits `/api/chat` — never `/api/generate`,
     // which silently returns an empty completion for a chat-shaped body.
@@ -2400,7 +2429,7 @@ async fn run_ollama_chat_with_tools(
     for call_index in 0.. {
         let request = json!({
             "model": wire_name(model),
-            "messages": messages,
+            "messages": without_turn_ids(&messages),
             "tools": tool_defs,
             "stream": true,
             "options": { "temperature": 0, "num_ctx": TOOL_CHAT_NUM_CTX },

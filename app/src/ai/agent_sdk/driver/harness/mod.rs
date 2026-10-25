@@ -93,19 +93,10 @@ impl LocalHarnessKind {
     /// Makes `session_id` forget a turn the user deleted, so the model stops
     /// seeing it. Claude and Codex keep their sessions in their own CLIs,
     /// which can't drop a turn, so there the turn is only hidden.
-    pub(crate) fn forget_turn(
-        self,
-        session_id: &Uuid,
-        prompt: &str,
-        later_turns_with_same_prompt: usize,
-    ) {
+    pub(crate) fn forget_turn(self, session_id: &Uuid, turn_id: &str) {
         match self {
-            Self::Api => {
-                api_stream_exec::forget_turn(session_id, prompt, later_turns_with_same_prompt)
-            }
-            Self::Ollama => {
-                ollama_stream_exec::forget_turn(session_id, prompt, later_turns_with_same_prompt)
-            }
+            Self::Api => api_stream_exec::forget_turn(session_id, turn_id),
+            Self::Ollama => ollama_stream_exec::forget_turn(session_id, turn_id),
             Self::Claude | Self::Codex => {}
         }
     }

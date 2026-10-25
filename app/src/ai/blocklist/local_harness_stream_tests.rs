@@ -12,6 +12,7 @@
 use ai::agent::{PlanItem, PlanUpdate, TurnEvent, TurnUsage};
 use krust_multi_agent_api as api;
 use krustui::{App, EntityId};
+use uuid::Uuid;
 
 use super::LocalHarnessStream;
 use crate::ai::agent::conversation::ConversationStatus;
@@ -22,6 +23,11 @@ use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::test_util::settings::initialize_history_persistence_for_tests;
 
+/// A fresh ID for each turn a test begins.
+fn turn_id() -> String {
+    Uuid::new_v4().to_string()
+}
+
 #[test]
 fn back_to_back_runs_each_land_their_own_completed_conversation() {
     App::test((), |mut app| async move {
@@ -31,8 +37,9 @@ fn back_to_back_runs_each_land_their_own_completed_conversation() {
 
         for turn in 0..2 {
             let prompt = format!("prompt {turn}");
-            let stream =
-                app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, &prompt, ctx));
+            let stream = app.update(|ctx| {
+                LocalHarnessStream::begin(terminal_view_id, &prompt, &turn_id(), ctx)
+            });
             let messages = turn_event_to_messages(
                 stream.root_task_id(),
                 stream.request_id(),
@@ -64,14 +71,16 @@ fn exchanges_carry_the_user_query_as_renderable_input() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let first =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "first prompt", ctx));
+        let first = app.update(|ctx| {
+            LocalHarnessStream::begin(terminal_view_id, "first prompt", &turn_id(), ctx)
+        });
         let second = app
             .update(|ctx| {
                 LocalHarnessStream::begin_follow_up(
                     terminal_view_id,
                     first.conversation_id(),
                     "second prompt",
+                    &turn_id(),
                     ctx,
                 )
             })
@@ -136,7 +145,8 @@ fn turn_usage_populates_context_meter_and_accumulates_token_totals() {
         app.add_singleton_model(crate::auth::auth_manager::AuthManager::new_for_test);
         app.add_singleton_model(crate::ai::llms::LLMPreferences::new);
 
-        let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "prompt", ctx));
+        let stream = app
+            .update(|ctx| LocalHarnessStream::begin(terminal_view_id, "prompt", &turn_id(), ctx));
         let usage = TurnUsage {
             input_tokens: 10,
             output_tokens: 90,
@@ -185,7 +195,8 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let first = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "first", ctx));
+        let first =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "first", &turn_id(), ctx));
         let conversation_id = first.conversation_id();
         let messages = turn_event_to_messages(
             first.root_task_id(),
@@ -204,6 +215,7 @@ fn follow_up_appends_a_second_exchange_to_the_same_conversation() {
                     terminal_view_id,
                     conversation_id,
                     "second",
+                    &turn_id(),
                     ctx,
                 )
             })
@@ -248,7 +260,8 @@ fn stream_round_trip_lands_a_completed_exchange_with_output() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "say hi", ctx));
+        let stream = app
+            .update(|ctx| LocalHarnessStream::begin(terminal_view_id, "say hi", &turn_id(), ctx));
 
         let messages = turn_event_to_messages(
             stream.root_task_id(),
@@ -302,8 +315,9 @@ fn text_deltas_append_to_one_message_without_inventing_line_breaks() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let mut stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "stream it", ctx));
+        let mut stream = app.update(|ctx| {
+            LocalHarnessStream::begin(terminal_view_id, "stream it", &turn_id(), ctx)
+        });
         app.update(|ctx| {
             stream.apply_text_delta("alpha beta", ctx);
             stream.apply_text_delta(" gamma\nreal line", ctx);
@@ -336,7 +350,8 @@ fn tool_result_split_lands_a_continuation_exchange_in_the_same_conversation() {
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "list it", ctx));
+        let stream = app
+            .update(|ctx| LocalHarnessStream::begin(terminal_view_id, "list it", &turn_id(), ctx));
         let conversation_id = stream.conversation_id();
 
         // The exchange output ends with a shell tool call...
@@ -424,7 +439,8 @@ fn failed_turn_error_that_repeats_shown_text_is_dropped() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", &turn_id(), ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // The harness surfaces a session limit as normal text first...
@@ -456,7 +472,8 @@ fn failed_turn_error_with_no_prior_output_still_renders() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let _history = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", &turn_id(), ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // A run that fails before producing any output must still show its
@@ -479,7 +496,8 @@ fn thinking_deltas_grow_one_reasoning_section() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let mut stream = app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", ctx));
+        let mut stream =
+            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "hi", &turn_id(), ctx));
         let mut shell_commands = std::collections::HashMap::new();
 
         // qwen3-style word-by-word reasoning deltas…
@@ -532,8 +550,9 @@ fn plan_updates_drive_the_conversation_checklist_without_wedging_it() {
         initialize_history_persistence_for_tests(&mut app);
         let terminal_view_id = EntityId::new();
         let history_model = app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
-        let stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "run the runbook", ctx));
+        let stream = app.update(|ctx| {
+            LocalHarnessStream::begin(terminal_view_id, "run the runbook", &turn_id(), ctx)
+        });
 
         let item = |id: &str, title: &str| PlanItem {
             id: id.to_string(),
@@ -645,8 +664,9 @@ fn a_local_run_records_the_response_events_a_shared_session_viewer_rebuilds() {
         let terminal_view_id = EntityId::new();
         app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let mut stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "run the tests", ctx));
+        let mut stream = app.update(|ctx| {
+            LocalHarnessStream::begin(terminal_view_id, "run the tests", &turn_id(), ctx)
+        });
         app.update(|ctx| stream.apply_text_delta("All ", ctx));
         app.update(|ctx| stream.apply_text_delta("green.", ctx));
         app.update(|ctx| stream.complete(ctx));
@@ -696,8 +716,9 @@ fn a_tool_continuation_reopens_the_exchange_in_the_same_viewer_conversation() {
         let terminal_view_id = EntityId::new();
         app.add_singleton_model(|_| BlocklistAIHistoryModel::new_for_test());
 
-        let stream =
-            app.update(|ctx| LocalHarnessStream::begin(terminal_view_id, "edit the file", ctx));
+        let stream = app.update(|ctx| {
+            LocalHarnessStream::begin(terminal_view_id, "edit the file", &turn_id(), ctx)
+        });
         let first_request = stream.request_id().to_owned();
         let token = stream.conversation_id().to_string();
         let next = app.update(|ctx| stream.continue_after_tool_results(Vec::new(), ctx));

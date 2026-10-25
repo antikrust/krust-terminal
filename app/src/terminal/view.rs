@@ -23892,6 +23892,11 @@ impl TerminalView {
         let spawner = ctx.spawner();
         let background = ctx.background_executor().clone();
         let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<ai::agent::TurnEvent>();
+        // This turn's ID: the request ID of its exchange, and the stamp the
+        // runner puts on the turn in its own history, so deleting the turn
+        // later finds it there exactly.
+        let turn_id = Uuid::new_v4().to_string();
+        ollama_stream_exec::set_current_turn_id(&session_id, &turn_id);
         let begin_prompt = prompt.clone();
         let pump_prompt = prompt;
         let pump_working_dir = working_dir;
@@ -23912,6 +23917,7 @@ impl TerminalView {
                 while let Some(event) = event_rx.next().await {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
+                    let turn_id = turn_id.clone();
                     let share_initiator = share_initiator.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
@@ -23927,6 +23933,7 @@ impl TerminalView {
                                                 terminal_surface_id,
                                                 conversation_id,
                                                 &begin_prompt,
+                                                &turn_id,
                                                 ctx,
                                             )
                                         });
@@ -23936,6 +23943,7 @@ impl TerminalView {
                                             let stream = LocalHarnessStream::begin(
                                                 terminal_surface_id,
                                                 &begin_prompt,
+                                                &turn_id,
                                                 ctx,
                                             );
                                             // Bind the agent view to the fresh
@@ -26066,11 +26074,11 @@ impl TerminalView {
             controller.clear_finished_action_results(conversation_id, ctx);
         });
 
-        if let (Some((harness, session_id)), Some(query)) = (
+        if let (Some((harness, session_id)), Some(request_id)) = (
             local_harness_threads::lookup(conversation_id),
-            turn.query.as_deref(),
+            turn.request_id.as_deref(),
         ) {
-            harness.forget_turn(&session_id, query, turn.later_turns_with_same_query);
+            harness.forget_turn(&session_id, request_id);
         }
     }
 

@@ -66,9 +66,14 @@ pub(crate) struct LocalHarnessStream {
 
 impl LocalHarnessStream {
     /// Starts a fresh conversation on `terminal_surface_id`, registers an
-    /// exchange for the user's `prompt`, and returns a handle for streaming the
-    /// response into it.
-    pub(crate) fn begin(terminal_surface_id: EntityId, prompt: &str, ctx: &mut AppContext) -> Self {
+    /// exchange for the user's `prompt` under `request_id` (the turn's ID),
+    /// and returns a handle for streaming the response into it.
+    pub(crate) fn begin(
+        terminal_surface_id: EntityId,
+        prompt: &str,
+        request_id: &str,
+        ctx: &mut AppContext,
+    ) -> Self {
         let history = BlocklistAIHistoryModel::handle(ctx);
 
         let conversation_id = history.update(ctx, |history, ctx| {
@@ -82,7 +87,7 @@ impl LocalHarnessStream {
             .map(|conversation| conversation.get_root_task_id().clone())
             .unwrap_or_else(|| TaskId::new(String::new()));
 
-        let request_id = uuid::Uuid::new_v4().to_string();
+        let request_id = request_id.to_string();
         let stream_init = api::response_event::StreamInit {
             request_id: request_id.clone(),
             conversation_id: String::new(),
@@ -191,6 +196,7 @@ impl LocalHarnessStream {
         terminal_surface_id: EntityId,
         conversation_id: AIConversationId,
         prompt: &str,
+        request_id: &str,
         ctx: &mut AppContext,
     ) -> Option<Self> {
         let history = BlocklistAIHistoryModel::handle(ctx);
@@ -199,7 +205,7 @@ impl LocalHarnessStream {
             .conversation(&conversation_id)
             .map(|conversation| conversation.get_root_task_id().clone())?;
 
-        let request_id = uuid::Uuid::new_v4().to_string();
+        let request_id = request_id.to_string();
         let stream_init = api::response_event::StreamInit {
             request_id: request_id.clone(),
             conversation_id: String::new(),

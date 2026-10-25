@@ -27,7 +27,7 @@ use super::claude_stream_exec::{
 use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
-    remove_turn_from_messages, McpToolCaller, McpToolSpec,
+    remove_turn_from_messages, turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec,
 };
 use crate::ai::api_providers::{
     api_model_parts, model_context_window, model_display_name, model_price, ApiProvider,
@@ -205,13 +205,13 @@ pub async fn run_api_stream(
         }
         _ => messages.insert(0, system),
     }
-    messages.push(json!({
-        "role": "user",
-        "content": format!(
+    messages.push(turn_user_message(
+        session_id,
+        format!(
             "Current working directory: {}\n\nUser request:\n{prompt}",
             working_dir.display()
         ),
-    }));
+    ));
 
     let mut price = model_price(provider, model);
     let mut listed_window = model_context_window(provider, model);
@@ -223,7 +223,7 @@ pub async fn run_api_stream(
         compact_old_tool_results(&mut messages, tool_output_budget_chars(context_window));
         let request = json!({
             "model": model,
-            "messages": messages,
+            "messages": without_turn_ids(&messages),
             "tools": tool_defs,
             "stream": true,
         })
@@ -487,11 +487,11 @@ fn save_history(session_id: &Uuid, messages: &[Value]) {
 
 /// Makes the model forget a turn the user deleted, by dropping it from this
 /// session's saved history.
-pub(crate) fn forget_turn(session_id: &Uuid, prompt: &str, later_turns_with_same_prompt: usize) {
+pub(crate) fn forget_turn(session_id: &Uuid, turn_id: &str) {
     let Some(mut messages) = load_history(session_id) else {
         return;
     };
-    if remove_turn_from_messages(&mut messages, prompt, later_turns_with_same_prompt) {
+    if remove_turn_from_messages(&mut messages, turn_id) {
         save_history(session_id, &messages);
     }
 }

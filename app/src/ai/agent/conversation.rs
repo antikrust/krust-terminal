@@ -4151,19 +4151,10 @@ impl AIConversation {
             .position(|exchange| exchange.has_user_query())
             .map_or(root_exchanges.len(), |offset| idx + 1 + offset);
 
-        let query_of = |exchange: &AIAgentExchange| {
-            exchange
-                .input
-                .iter()
-                .find_map(|input| input.user_query())
-        };
-        let query = query_of(root_exchanges[start]);
-        let later_turns_with_same_query = query.as_ref().map_or(0, |query| {
-            root_exchanges[end..]
-                .iter()
-                .filter(|&&exchange| query_of(exchange).as_ref() == Some(query))
-                .count()
-        });
+        let request_id = root_exchanges[start]
+            .output_status
+            .server_output_id()
+            .map(|id| id.to_string());
         let exchange_ids: HashSet<AIAgentExchangeId> = root_exchanges[start..end]
             .iter()
             .map(|exchange| exchange.id)
@@ -4173,8 +4164,7 @@ impl AIConversation {
 
         Ok(RemovedTurn {
             exchange_ids,
-            query,
-            later_turns_with_same_query,
+            request_id,
         })
     }
 
@@ -4274,11 +4264,9 @@ impl AIConversation {
 /// What [`AIConversation::remove_turn`] removed.
 pub struct RemovedTurn {
     pub exchange_ids: HashSet<AIAgentExchangeId>,
-    /// The user's query that opened the turn.
-    pub query: Option<String>,
-    /// How many later turns opened with the same query, so a local harness
-    /// can find this turn's copy in its own history.
-    pub later_turns_with_same_query: usize,
+    /// The request ID of the exchange that opened the turn. A local harness
+    /// stamps it on the turn in its own history, so it can drop it from there.
+    pub request_id: Option<String>,
 }
 
 /// Computes the additional message ids to remove during a rewind so that no
