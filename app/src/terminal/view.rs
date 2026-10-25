@@ -223,7 +223,9 @@ use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environme
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
-use crate::ai::agent_sdk::driver::harness::api_stream_exec::{run_api_stream, ApiTurnEnd};
+use crate::ai::agent_sdk::driver::harness::api_stream_exec::{
+    run_api_stream, ApiTurnEnd, COMPACT_COMMAND,
+};
 use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
@@ -14208,10 +14210,19 @@ impl TerminalView {
     }
 
     fn summarize_conversation(&mut self, ctx: &mut ViewContext<Self>) {
-        self.ai_controller.update(ctx, |controller, ctx| {
-            controller
-                .send_slash_command_request(SlashCommandRequest::Summarize { prompt: None }, ctx);
-        });
+        // This fork runs every agent turn on a local harness, so compacting
+        // does too: the cloud summarizer would 401. `/compact` is the turn a
+        // BYOR conversation compacts its history with, on its own model.
+        let (harness, model_id, reasoning_level) =
+            self.input.as_ref(ctx).local_harness_selection(ctx);
+        self.run_local_claude_query(
+            COMPACT_COMMAND.to_string(),
+            harness,
+            model_id,
+            reasoning_level,
+            None,
+            ctx,
+        );
     }
 
     fn init_project(

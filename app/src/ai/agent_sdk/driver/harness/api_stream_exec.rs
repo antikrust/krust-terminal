@@ -224,6 +224,21 @@ pub async fn run_api_stream(
         }
         _ => messages.insert(0, system),
     }
+    // `/compact` (the slash command, or the agent footer's compact button):
+    // this turn compacts the conversation instead of answering a prompt.
+    if let Some(focus) = compact_instructions(prompt) {
+        compact_on_request(
+            &route,
+            &mut messages,
+            focus,
+            session_id,
+            working_dir,
+            path,
+            &mut on_event,
+        )
+        .await;
+        return Ok(ApiTurnEnd::Finished);
+    }
     messages.push(turn_user_message(
         session_id,
         format!(
@@ -603,17 +618,134 @@ async fn summarize_for_compaction(
     path: &str,
 ) -> Option<String> {
     let mut summary_messages = without_turn_ids(messages);
-    summary_messages.push(json!({
-        "role": "user",
-        "content": "Summarize this conversation so the work can continue in a fresh context. \
-            Briefly cover what has been done, what was found (exact file paths, names, values, \
-            decisions), and what the next step needs. Leave out tool mechanics and anything not \
-            needed to carry on. Reply with only the summary.",
-    }));
+    summary_messages.push(json!({ "role": "user", "content": SUMMARY_REQUEST }));
     let text = ask_once(route, summary_messages, session_id, working_dir, path)
         .await
         .ok()?;
     (!text.trim().is_empty()).then_some(text)
+}
+
+/// What a compaction asks the model for.
+const SUMMARY_REQUEST: &str = "Summarize this conversation so the work can continue in a fresh \
+    context. Briefly cover what has been done, what was found (exact file paths, names, values, \
+    decisions), and what the next step needs. Leave out tool mechanics and anything not needed \
+    to carry on. Reply with only the summary.";
+
+/// A history's size in characters, as sent (a token is about four).
+fn history_chars(messages: &[Value]) -> usize {
+    messages.iter().map(|message| message.to_string().len()).sum()
+}
+
+/// The command a turn compacts the conversation with, as in Claude Code:
+/// `/compact`, optionally followed by what the summary should focus on.
+pub(crate) const COMPACT_COMMAND: &str = "/compact";
+
+/// What to focus the summary on (empty for nothing in particular), when
+/// `prompt` is the compact command.
+fn compact_instructions(prompt: &str) -> Option<&str> {
+    let rest = prompt.trim().strip_prefix(COMPACT_COMMAND)?;
+    (rest.is_empty() || rest.starts_with(char::is_whitespace)).then(|| rest.trim())
+}
+
+/// Compacts the whole conversation on request, on the turn's model: it
+/// summarises the conversation — half at a time when that is too long for
+/// one request — and the model's history becomes that summary. The
+/// conversation on screen is untouched.
+async fn compact_on_request(
+    route: &ApiRoute,
+    messages: &mut Vec<Value>,
+    focus: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) {
+    if messages.len() < 2 {
+        on_event(TurnEvent::Text {
+            text: "Nothing to compact yet.".to_string(),
+        });
+        on_event(TurnEvent::TurnCompleted {
+            usage: None,
+            is_error: false,
+            error_message: None,
+        });
+        return;
+    }
+    let before = history_chars(messages);
+    on_event(TurnEvent::Text {
+        text: format!("_Compacting the conversation on {}…_", route.model_name),
+    });
+
+    let mut request = without_turn_ids(messages);
+    request.push(json!({
+        "role": "user",
+        "content": if focus.is_empty() {
+            SUMMARY_REQUEST.to_string()
+        } else {
+            format!("{SUMMARY_REQUEST} Focus the summary on: {focus}")
+        },
+    }));
+    let summary = match ask_once(route, request, session_id, working_dir, path).await {
+        Ok(text) if !text.trim().is_empty() => Some((text, 1)),
+        // Too long to summarise in one go: in halves, like an input the
+        // model refused.
+        Err(error) if is_too_long_error(&error) => {
+            summarise_in_parts(
+                route,
+                &transcript_text(&messages[1..]),
+                session_id,
+                working_dir,
+                path,
+            )
+            .await
+        }
+        Ok(_) | Err(_) => None,
+    };
+    let Some((summary, parts)) = summary else {
+        emit_failed_turn(
+            on_event,
+            format!(
+                "Couldn't compact the conversation: {} didn't return a summary.",
+                route.model_name
+            ),
+        );
+        return;
+    };
+
+    let system = messages[0].clone();
+    *messages = vec![
+        system,
+        json!({
+            "role": "user",
+            "content": format!(
+                "[Our conversation so far, compacted on request. Carry on from this \
+                 summary.]\n\n{summary}"
+            ),
+        }),
+        json!({
+            "role": "assistant",
+            "content": "Understood — I'll carry on from this summary.",
+        }),
+    ];
+    save_history(session_id, messages);
+    let in_parts = if parts > 1 {
+        format!(", summarised in {parts} parts")
+    } else {
+        String::new()
+    };
+    on_event(TurnEvent::Text {
+        text: format!(
+            "Compacted the conversation: about {} tokens of history are now a {}-token \
+             summary{in_parts}.",
+            before / 4,
+            history_chars(messages) / 4
+        ),
+    });
+    on_event(TurnEvent::TurnCompleted {
+        usage: None,
+        is_error: false,
+        error_message: None,
+    });
 }
 
 /// Sends one tools-free request to the turn's model, apart from the
@@ -687,8 +819,35 @@ async fn compact_oversized_input(
         .iter()
         .rposition(|message| message.get("role").and_then(Value::as_str) == Some("user"))?;
     let system = messages.first().cloned()?;
-    let text = transcript_text(&messages[1..]);
-    let mut queue: VecDeque<String> = split_in_half(&text).into();
+    let (summary, parts) = summarise_in_parts(
+        route,
+        &transcript_text(&messages[1..]),
+        session_id,
+        working_dir,
+        path,
+    )
+    .await?;
+    let mut opening = messages[last_user].clone();
+    opening["content"] = Value::String(format!(
+        "[This conversation, the latest request included, was longer than this model accepts, \
+         so it was compacted into the summary below. Carry on the work from it, starting with \
+         the latest request.]\n\n{summary}"
+    ));
+    *messages = vec![system, opening];
+    Some(parts)
+}
+
+/// Summarises `text` half at a time in background requests — a half still
+/// too long for the model is halved again, up to [`MAX_SUMMARY_PARTS`] — and
+/// returns the parts' summaries joined, with how many parts there were.
+async fn summarise_in_parts(
+    route: &ApiRoute,
+    text: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> Option<(String, usize)> {
+    let mut queue: VecDeque<String> = split_in_half(text).into();
     if queue.is_empty() {
         return None;
     }
@@ -710,15 +869,8 @@ async fn compact_oversized_input(
             PartSummary::TooLong | PartSummary::Failed => return None,
         }
     }
-    let mut opening = messages[last_user].clone();
-    opening["content"] = Value::String(format!(
-        "[This conversation, the latest request included, was longer than this model accepts, \
-         so it was compacted into the summary below. Carry on the work from it, starting with \
-         the latest request.]\n\n{}",
-        summaries.join("\n\n")
-    ));
-    *messages = vec![system, opening];
-    Some(summaries.len())
+    let count = summaries.len();
+    Some((summaries.join("\n\n"), count))
 }
 
 /// The outcome of summarising one part of an over-long input.

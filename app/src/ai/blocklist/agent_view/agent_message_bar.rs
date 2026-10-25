@@ -22,9 +22,10 @@ use crate::ai::blocklist::agent_view::zero_state_block::render_ambient_credits_b
 use crate::ai::blocklist::agent_view::{
     is_in_cloud_context, AgentViewController, AgentViewControllerEvent,
 };
+use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::blocklist::{
-    ai_brand_color, BlocklistAIContextEvent, BlocklistAIContextModel, BlocklistAIHistoryEvent,
-    BlocklistAIInputEvent, BlocklistAIInputModel,
+    ai_brand_color, local_harness_threads, BlocklistAIContextEvent, BlocklistAIContextModel,
+    BlocklistAIHistoryEvent, BlocklistAIInputEvent, BlocklistAIInputModel,
 };
 use crate::ai::document::ai_document_model::{AIDocumentModel, AIDocumentModelEvent};
 use crate::ai::mcp::templatable_manager::{FigmaMcpStatus, TemplatableMCPServerManagerEvent};
@@ -66,6 +67,8 @@ pub struct AgentMessageBarMouseStates {
     pub fork_from_last_known_good_state: MouseStateHandle,
     pub toggle_shortcuts: MouseStateHandle,
     pub toggle_slash_commands: MouseStateHandle,
+    /// Mouse state handle for the "compact" item (a BYOR conversation's `/compact`).
+    pub compact_conversation: MouseStateHandle,
     pub toggle_plan: MouseStateHandle,
     pub toggle_conversation_menu: MouseStateHandle,
     pub toggle_code_review: MouseStateHandle,
@@ -601,6 +604,23 @@ impl MessageProvider<AgentMessageArgs<'_>> for ZeroStateMessageProducer {
             )
             .with_is_disabled(!is_buffer_empty),
         );
+
+        // A BYOR conversation can compact its history on its own model — what
+        // `/compact` does — once it has some and isn't mid-turn.
+        let is_byor_conversation = local_harness_threads::lookup(active_conversation.id())
+            .is_some_and(|(harness, _)| harness == LocalHarnessKind::Api);
+        if is_byor_conversation && !active_conversation.status().is_in_progress() {
+            items.push(MessageItem::clickable(
+                vec![MessageItem::Text {
+                    content: "compact".into(),
+                    color: None,
+                }],
+                |ctx| {
+                    ctx.dispatch_typed_action(TerminalAction::SummarizeConversation);
+                },
+                mouse_states.compact_conversation.clone(),
+            ));
+        }
 
         let is_cloud_agent = is_in_cloud_context(terminal_model);
         let ai_settings = AISettings::as_ref(app);
