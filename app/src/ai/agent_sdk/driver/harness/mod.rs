@@ -43,6 +43,7 @@ pub(crate) mod claude_stream;
 pub(crate) mod claude_stream_exec;
 pub(crate) mod claude_stream_runner;
 pub(crate) mod claude_transcript;
+pub(crate) mod cli_failover;
 mod codex;
 pub(crate) mod codex_stream;
 pub(crate) mod codex_stream_exec;

@@ -29,7 +29,9 @@ use super::ollama_stream_exec::{
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
     remove_turn_from_messages, turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec,
 };
-use crate::ai::api_providers::{model_context_window, model_price, ApiRoute};
+use crate::ai::api_providers::{
+    model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
+};
 
 /// The environment variable curl reads the key from.
 pub const API_KEY_ENV: &str = "KRUST_API_KEY";
@@ -131,6 +133,20 @@ impl Drop for SessionGuard {
     }
 }
 
+/// How an API turn ended.
+pub enum ApiTurnEnd {
+    /// Answered, failed or stopped: every event of the turn has been sent.
+    Finished,
+    /// Failover reached a local agent app: the caller runs the turn on the
+    /// first of `targets` (the rest stand by should it fail) in a fresh
+    /// session, with `recap` — the request and what the turn already did — as
+    /// its prompt. The turn has sent no `TurnCompleted`.
+    HandOff {
+        targets: Vec<CliRoute>,
+        recap: String,
+    },
+}
+
 /// Runs one turn on `route`: a cloud model, or a local Ollama model over
 /// Ollama's OpenAI-compatible endpoint. Every request builds its own curl
 /// command, with the key in [`API_KEY_ENV`].
@@ -143,6 +159,10 @@ impl Drop for SessionGuard {
 /// once; the turn fails only when none is left. The model that answered is
 /// reported in the turn's usage, so the caller can make it the selected one.
 ///
+/// When the next in `failover` is a local agent app (Claude Code, Codex),
+/// the turn is handed back to the caller to run there ([`ApiTurnEnd::HandOff`]).
+/// That app can't hand it back, so API models listed after it are left out.
+///
 /// There is no step limit: the turn runs until the model answers or the user
 /// stops it.
 #[allow(clippy::too_many_arguments)]
@@ -154,9 +174,9 @@ pub async fn run_api_stream(
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
-    failover: Vec<ApiRoute>,
+    failover: Vec<FailoverTarget>,
     mut on_event: impl FnMut(TurnEvent),
-) -> std::io::Result<ExitStatus> {
+) -> std::io::Result<ApiTurnEnd> {
     register_harness_session(*session_id);
     let _session_guard = SessionGuard(*session_id);
 
@@ -257,7 +277,7 @@ pub async fn run_api_stream(
         // asked for.
         if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
             log::info!("api_stream: turn cancelled");
-            return Ok(status);
+            return Ok(ApiTurnEnd::Finished);
         }
 
         let response = if status.success() {
@@ -282,12 +302,40 @@ pub async fn run_api_stream(
                 if failure.scope == FailureScope::Provider {
                     failed_accounts.push(route.account.clone());
                 }
-                let next = failover
-                    .by_ref()
-                    .find(|next| !failed_accounts.contains(&next.account));
-                let Some(next) = next else {
-                    emit_failed_turn(&mut on_event, failure.detail);
-                    return Ok(status);
+                let next = failover.by_ref().find(|next| match next {
+                    FailoverTarget::Api(next) => !failed_accounts.contains(&next.account),
+                    FailoverTarget::Cli(_) => true,
+                });
+                let next = match next {
+                    None => {
+                        emit_failed_turn(&mut on_event, failure.detail);
+                        return Ok(ApiTurnEnd::Finished);
+                    }
+                    Some(FailoverTarget::Cli(app)) => {
+                        on_event(TurnEvent::Text {
+                            text: format!(
+                                "{} — switching to {} on {}.",
+                                failure.reason, app.model_name, app.app_name
+                            ),
+                        });
+                        log::info!(
+                            "api_stream: {} failed ({}); handing the turn to {}",
+                            route.model_id,
+                            failure.detail,
+                            app.model_id
+                        );
+                        let targets = std::iter::once(app)
+                            .chain(failover.filter_map(|next| match next {
+                                FailoverTarget::Cli(app) => Some(app),
+                                FailoverTarget::Api(_) => None,
+                            }))
+                            .collect();
+                        return Ok(ApiTurnEnd::HandOff {
+                            targets,
+                            recap: cli_recap(prompt, &messages),
+                        });
+                    }
+                    Some(FailoverTarget::Api(next)) => next,
                 };
                 // The failed request added nothing to `messages`, so the
                 // next model gets exactly the same one.
@@ -352,7 +400,7 @@ pub async fn run_api_stream(
                 is_error: false,
                 error_message: None,
             });
-            return Ok(status);
+            return Ok(ApiTurnEnd::Finished);
         };
 
         // What the model said before calling its tools ("Let me check the
@@ -452,6 +500,110 @@ impl RouteModel {
             read_window: read_window_chars(context_window),
         }
     }
+}
+
+/// How many earlier exchanges a handed-off turn's recap carries.
+const RECAP_EARLIER_EXCHANGES: usize = 3;
+
+/// The prompt a local agent app takes a turn over with, in a session of its
+/// own that has seen none of this conversation: the last few exchanges, the
+/// request word for word, and what this turn already did — what the model
+/// said, and each tool call with the start of its result.
+fn cli_recap(prompt: &str, messages: &[Value]) -> String {
+    let role = |message: &Value| message.get("role").and_then(Value::as_str).map(str::to_owned);
+    let text = |message: &Value| {
+        message
+            .get("content")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .trim()
+            .to_owned()
+    };
+    let turn_start = messages
+        .iter()
+        .rposition(|message| role(message).as_deref() == Some("user"))
+        .unwrap_or(messages.len());
+
+    // Earlier exchanges: each request, with the last thing said in answer.
+    let mut exchanges: Vec<(String, String)> = Vec::new();
+    for message in &messages[..turn_start] {
+        match role(message).as_deref() {
+            Some("user") => {
+                let request = text(message);
+                // The runner's own wrapping of the request.
+                let request = request
+                    .split_once("User request:\n")
+                    .map_or(request.as_str(), |(_, request)| request)
+                    .to_owned();
+                exchanges.push((request, String::new()));
+            }
+            Some("assistant") => {
+                let said = text(message);
+                if let Some(last) = exchanges.last_mut().filter(|_| !said.is_empty()) {
+                    last.1 = said;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut recap = String::from(
+        "You are taking over a request another model was working on in this terminal; it \
+         stopped partway. Carry on from where it left off rather than starting over, and check \
+         the current state of anything it changed.\n",
+    );
+    let earlier = &exchanges[exchanges.len().saturating_sub(RECAP_EARLIER_EXCHANGES)..];
+    if !earlier.is_empty() {
+        recap.push_str("\nEarlier in this conversation:\n");
+        for (request, answer) in earlier {
+            recap.push_str(&format!("- User: {}\n", recap_line(request, 600)));
+            if !answer.is_empty() {
+                recap.push_str(&format!("  Answer: {}\n", recap_line(answer, 1_200)));
+            }
+        }
+    }
+    recap.push_str(&format!("\nThe request:\n{prompt}\n\nWhat was already done for it:\n"));
+    let mut done = 0;
+    for message in messages.iter().skip(turn_start + 1) {
+        match role(message).as_deref() {
+            Some("assistant") => {
+                let said = text(message);
+                if !said.is_empty() {
+                    recap.push_str(&format!("- Said: {}\n", recap_line(&said, 600)));
+                    done += 1;
+                }
+                let calls = message
+                    .get("tool_calls")
+                    .and_then(Value::as_array)
+                    .map(Vec::as_slice)
+                    .unwrap_or_default();
+                for call in calls {
+                    let name = call["function"]["name"].as_str().unwrap_or("a tool");
+                    let arguments = call["function"]["arguments"].as_str().unwrap_or_default();
+                    recap.push_str(&format!("- Ran {name} {}\n", recap_line(arguments, 200)));
+                    done += 1;
+                }
+            }
+            Some("tool") => {
+                recap.push_str(&format!("  Result: {}\n", recap_line(&text(message), 300)));
+            }
+            _ => {}
+        }
+    }
+    if done == 0 {
+        recap.push_str("Nothing yet.\n");
+    }
+    recap
+}
+
+/// `text` on one line, cut to `limit` characters.
+fn recap_line(text: &str, limit: usize) -> String {
+    let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if line.chars().count() <= limit {
+        return line;
+    }
+    let cut: String = line.chars().take(limit).collect();
+    format!("{cut}…")
 }
 
 /// What a local model is sent: the system message, noting that earlier turns

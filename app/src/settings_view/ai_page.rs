@@ -8770,8 +8770,11 @@ impl ByorFailoverRow {
             index,
             provider_id: source.key.clone(),
         });
-        // Every local model is free; marking them all says nothing.
-        let mark_free = current.is_some_and(|source| source.key != LOCAL_OLLAMA.id);
+        // Every local model, and every local app's (Claude Code, Codex), is
+        // free; marking them all says nothing.
+        let mark_free = current.is_some_and(|source| {
+            source.key != LOCAL_OLLAMA.id && !source.key.starts_with("cli:")
+        });
         let mut choices = current.map(|source| source.models.clone()).unwrap_or_default();
         if !choices.iter().any(|(choice, _)| choice == model_id) {
             choices.push((model_id.to_owned(), model_id.to_owned()));

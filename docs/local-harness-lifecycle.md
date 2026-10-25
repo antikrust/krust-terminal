@@ -76,6 +76,17 @@ new harness by writing a parser + exec module, not by touching the drain.
 - A continued thread keeps its own harness even if the picker changed;
   model/reasoning are re-read from that harness's persisted selection
   (codex 400s on claude model ids and vice versa).
+- **BYOR failover can hand an API turn to a local app** (a `cli/<harness>/<model>`
+  row: the user's `claude` or `codex`, no key). `run_api_stream` returns
+  `ApiTurnEnd::HandOff` with a recap prompt (recent exchanges, the request,
+  what the turn already did), and the pump runs it in a fresh CLI session
+  (`cli_failover.rs`), still feeding the same drain and the same
+  `LocalHarnessStream`. Events from the app arrive tagged with it. Its
+  `SessionInit` is held, and only when it answers successfully is the
+  thread **rebound** to `(Claude|Codex, that session)` and the app adopted
+  as the selection; a turn that fails there too stays bound to the API
+  session. The API runner emits no `TurnCompleted` on handing off, so the
+  stream still completes exactly once.
 
 ## Message mapping (turn_events_to_conversation.rs)
 

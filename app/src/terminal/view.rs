@@ -223,7 +223,8 @@ use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environme
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
-use crate::ai::agent_sdk::driver::harness::api_stream_exec::run_api_stream;
+use crate::ai::agent_sdk::driver::harness::api_stream_exec::{run_api_stream, ApiTurnEnd};
+use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
@@ -235,7 +236,8 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::api_providers::{
-    api_model_parts, failover_routes, is_api_runner_model, route_for, API_HARNESS_CONFIG_NAME,
+    api_model_parts, failover_routes, is_api_runner_model, route_for, CliRoute,
+    API_HARNESS_CONFIG_NAME,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::ambient_agents::{
@@ -23502,6 +23504,25 @@ impl TerminalView {
         }
     }
 
+    /// Makes `app`, the local agent app BYOR failover handed a turn to and
+    /// that answered, the selected harness and model, as picking it in the
+    /// model menu would, so new conversations start there too.
+    fn adopt_failover_app(&mut self, app: &CliRoute, ctx: &mut ViewContext<Self>) {
+        let key = app.harness.config_name();
+        CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+            let _ = settings
+                .last_selected_harness
+                .set_value(Some(key.to_string()), ctx);
+            settings.persist_harness_model_selection_for_key(key, &app.model, None, ctx);
+        });
+        if let Some(ambient_agent_view_model) = self.ambient_agent_view_model.clone() {
+            ambient_agent_view_model.update(ctx, |model, ctx| {
+                model.set_harness(app.harness, ctx);
+                model.set_harness_model_selection(Some(app.model.clone()), None, ctx);
+            });
+        }
+    }
+
     /// Routes a terminal agent prompt to the local Claude Code streaming harness,
     /// rendering the response inline in this terminal. Runs `claude` headless and
     /// injects each parsed event into this terminal's conversation via
@@ -23917,7 +23938,12 @@ impl TerminalView {
 
         let spawner = ctx.spawner();
         let background = ctx.background_executor().clone();
-        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<ai::agent::TurnEvent>();
+        // Each event comes with the local agent app that produced it when BYOR
+        // failover handed the turn to one (`None`: this run's own harness).
+        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<(
+            Option<(LocalHarnessKind, CliRoute)>,
+            ai::agent::TurnEvent,
+        )>();
         // This turn's ID: the request ID of its exchange, and the stamp the
         // runner puts on the turn in its own history, so deleting the turn
         // later finds it there exactly.
@@ -23943,7 +23969,11 @@ impl TerminalView {
             .spawn(async move {
                 let mut stream: Option<LocalHarnessStream> = None;
                 let mut completed = false;
-                while let Some(event) = event_rx.next().await {
+                // The session of the app a handed-off turn is running in. The
+                // conversation moves to it only once that app answers: a
+                // turn that fails there too stays where it was.
+                let mut handed_off_session: Option<uuid::Uuid> = None;
+                while let Some((handed_to, event)) = event_rx.next().await {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();
@@ -24011,7 +24041,9 @@ impl TerminalView {
                             } = &event
                             {
                                 if let Ok(reported) = uuid::Uuid::parse_str(reported) {
-                                    if let Some(thread) = view.local_claude_thread.as_mut() {
+                                    if handed_to.is_some() {
+                                        handed_off_session = Some(reported);
+                                    } else if let Some(thread) = view.local_claude_thread.as_mut() {
                                         thread.1 = reported;
                                         local_harness_threads::record(thread.2, thread.0, reported);
                                     }
@@ -24027,18 +24059,39 @@ impl TerminalView {
                             // so waiting for EOF leaves the shimmer running
                             // past the answer.
                             let mut turn_completed = false;
-                            if let ai::agent::TurnEvent::TurnCompleted { usage, .. } = &event {
+                            if let ai::agent::TurnEvent::TurnCompleted {
+                                usage, is_error, ..
+                            } = &event
+                            {
                                 if let Some(usage) = usage {
                                     stream.apply_turn_usage(usage, ctx);
                                     // BYOR failover moved the turn to another
                                     // model, and that one answered.
-                                    if let (Some(requested), Some(answered)) =
-                                        (&requested_api_model, &usage.model_id)
+                                    if let (None, Some(requested), Some(answered)) =
+                                        (&handed_to, &requested_api_model, &usage.model_id)
                                     {
                                         if requested != answered {
                                             view.adopt_failover_model(answered, ctx);
                                         }
                                     }
+                                }
+                                // BYOR failover handed the turn to a local
+                                // app, and it answered: the conversation goes
+                                // on in that app's session, and the app
+                                // becomes the selection.
+                                if let (Some((app_harness, app)), Some(app_session), false) =
+                                    (&handed_to, handed_off_session, *is_error)
+                                {
+                                    if let Some(thread) = view.local_claude_thread.as_mut() {
+                                        thread.0 = *app_harness;
+                                        thread.1 = app_session;
+                                        local_harness_threads::record(
+                                            thread.2,
+                                            *app_harness,
+                                            app_session,
+                                        );
+                                    }
+                                    view.adopt_failover_app(app, ctx);
                                 }
                                 turn_completed = true;
                             }
@@ -24104,12 +24157,13 @@ impl TerminalView {
                                 stream.complete(ctx);
                             }
                             view.share_local_harness_events(&stream, share_initiator, ctx);
-                            (stream, turn_completed)
+                            (stream, turn_completed, handed_off_session)
                         })
                         .await;
                     match result {
-                        Ok((returned_stream, turn_completed)) => {
+                        Ok((returned_stream, turn_completed, session)) => {
                             completed |= turn_completed;
+                            handed_off_session = session;
                             stream = Some(returned_stream);
                         }
                         Err(_) => stream = None,
@@ -24132,19 +24186,22 @@ impl TerminalView {
         // the drain.
         background
             .spawn(async move {
-                let on_event = move |event| {
-                    let _ = event_tx.unbounded_send(event);
+                let on_event = {
+                    let event_tx = event_tx.clone();
+                    move |event| {
+                        let _ = event_tx.unbounded_send((None, event));
+                    }
                 };
                 let result = match harness {
-                    LocalHarnessKind::Claude => {
-                        run_claude_stream(command, &pump_prompt, on_event).await
-                    }
-                    LocalHarnessKind::Codex => {
-                        run_codex_stream(command, &pump_prompt, on_event).await
-                    }
+                    LocalHarnessKind::Claude => run_claude_stream(command, &pump_prompt, on_event)
+                        .await
+                        .map(drop),
+                    LocalHarnessKind::Codex => run_codex_stream(command, &pump_prompt, on_event)
+                        .await
+                        .map(drop),
                     LocalHarnessKind::Api => match api_route {
                         Some(route) => {
-                            run_api_stream(
+                            let end = run_api_stream(
                                 &pump_prompt,
                                 route,
                                 &session_id,
@@ -24155,13 +24212,33 @@ impl TerminalView {
                                 api_failover,
                                 on_event,
                             )
-                            .await
+                            .await;
+                            match end {
+                                // Every API model failed, or the failover list
+                                // reached a local agent app: the turn goes on
+                                // there.
+                                Ok(ApiTurnEnd::HandOff { targets, recap }) => {
+                                    run_handed_off_turn(
+                                        targets,
+                                        &recap,
+                                        &pump_working_dir,
+                                        &pump_path,
+                                        |app, kind, event| {
+                                            let _ = event_tx
+                                                .unbounded_send((Some((kind, app.clone())), event));
+                                        },
+                                    )
+                                    .await
+                                }
+                                Ok(ApiTurnEnd::Finished) => Ok(()),
+                                Err(error) => Err(error),
+                            }
                         }
                         // Checked before the run began: an API run has a route.
                         None => Err(std::io::Error::other("no cloud model to run")),
                     },
                     LocalHarnessKind::Ollama => {
-                        if let Some(config) = ollama_committee_config {
+                        let ran = if let Some(config) = ollama_committee_config {
                             run_ollama_committee(
                                 &pump_prompt,
                                 &session_id,
@@ -24200,7 +24277,8 @@ impl TerminalView {
                                 on_event,
                             )
                             .await
-                        }
+                        };
+                        ran.map(drop)
                     }
                 };
                 if let Err(error) = result {

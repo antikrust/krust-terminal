@@ -390,9 +390,10 @@ pub fn model_price(provider: &ApiProvider, model: &str) -> Option<(f64, f64)> {
 }
 
 /// Whether `model_id` costs nothing to run: a local Ollama model, a model
-/// listed at no cost, or an OpenRouter `:free` one.
+/// listed at no cost, an OpenRouter `:free` one, or a local Claude Code or
+/// Codex app (which runs on the user's own subscription, not per token).
 pub fn is_free_model(model_id: &str) -> bool {
-    if ollama_model_name(model_id).is_some() {
+    if ollama_model_name(model_id).is_some() || cli_model_parts(model_id).is_some() {
         return true;
     }
     api_model_parts(model_id).and_then(|(provider, model)| model_price(provider, model))
@@ -415,6 +416,100 @@ pub fn local_failover_models(app: &AppContext) -> Vec<String> {
         })
         .map(|model| model.id.clone())
         .collect()
+}
+
+/// A BYOR failover row that hands the turn to a local agent app — Claude
+/// Code or Codex, run as their own CLIs with no API key:
+/// `cli/<harness>/<model>`, the model as that harness's model menu names it.
+pub const CLI_MODEL_ID_PREFIX: &str = "cli/";
+
+/// The local agent apps BYOR failover can hand a turn to.
+const FAILOVER_CLIS: [Harness; 2] = [Harness::Claude, Harness::Codex];
+
+pub fn cli_model_id_for(harness: Harness, model: &str) -> String {
+    format!("{CLI_MODEL_ID_PREFIX}{}/{model}", harness.config_name())
+}
+
+/// The local app and its model a `cli/…` id refers to.
+pub fn cli_model_parts(model_id: &str) -> Option<(Harness, &str)> {
+    let rest = model_id.strip_prefix(CLI_MODEL_ID_PREFIX)?;
+    let (name, model) = rest.split_once('/')?;
+    let harness = FAILOVER_CLIS
+        .into_iter()
+        .find(|harness| harness.config_name() == name)?;
+    (!model.is_empty()).then_some((harness, model))
+}
+
+/// A local app's models for the failover list, as `(model, label)`: its own
+/// models from the model menu (the Codex row's Ollama and API models are
+/// other runners'). None while the app isn't installed.
+fn cli_failover_models(harness: Harness, app: &AppContext) -> Vec<(String, String)> {
+    let availability = HarnessAvailabilityModel::as_ref(app);
+    if !availability.is_harness_enabled(harness) {
+        return Vec::new();
+    }
+    let mut models: Vec<(String, String)> = Vec::new();
+    for model in availability.models_for(harness).unwrap_or_default() {
+        if is_api_runner_model(&model.id)
+            || ollama_model_name(&model.id).is_some()
+            || models.iter().any(|(listed, _)| *listed == model.id)
+        {
+            continue;
+        }
+        models.push((model.id.clone(), model.display_name.clone()));
+    }
+    models
+}
+
+/// A local agent app BYOR failover can hand a turn to, with the model to run.
+#[derive(Clone, Debug)]
+pub struct CliRoute {
+    /// The failover row's id: `cli/<harness>/<model>`.
+    pub model_id: String,
+    pub harness: Harness,
+    /// The model as the app (and its model menu) names it.
+    pub model: String,
+    /// The model as the user knows it.
+    pub model_name: String,
+    /// "Claude Code", "Codex".
+    pub app_name: String,
+}
+
+/// The route for a `cli/…` row while its app is installed. A model the menu
+/// doesn't list (yet — Codex's catalog loads late) is still run by its id.
+pub fn cli_route_for(model_id: &str, app: &AppContext) -> Option<CliRoute> {
+    let (harness, model) = cli_model_parts(model_id)?;
+    if !HarnessAvailabilityModel::as_ref(app).is_harness_enabled(harness) {
+        return None;
+    }
+    let model_name = cli_failover_models(harness, app)
+        .into_iter()
+        .find(|(listed, _)| listed == model)
+        .map_or_else(|| model.to_owned(), |(_, label)| label);
+    Some(CliRoute {
+        model_id: model_id.to_owned(),
+        harness,
+        model: model.to_owned(),
+        model_name,
+        app_name: harness.display_name().to_owned(),
+    })
+}
+
+/// Where BYOR failover can move a turn: another model on the API runner, or
+/// a local agent app that takes the turn over.
+#[derive(Clone)]
+pub enum FailoverTarget {
+    Api(ApiRoute),
+    Cli(CliRoute),
+}
+
+impl FailoverTarget {
+    pub fn model_id(&self) -> &str {
+        match self {
+            Self::Api(route) => &route.model_id,
+            Self::Cli(route) => &route.model_id,
+        }
+    }
 }
 
 /// Whether `model_id` is one the API runner calls: a cloud provider's model
@@ -555,11 +650,11 @@ fn custom_base_url(url: &str) -> String {
 }
 
 /// A group of models the failover list's provider menu offers: a provider
-/// with a key, a custom endpoint, or local Ollama.
+/// with a key, a custom endpoint, local Ollama, or a local agent app.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FailoverSource {
-    /// Stable while the list is shown: a provider id, `custom:<n>`, or
-    /// `ollama`.
+    /// Stable while the list is shown: a provider id, `custom:<n>`,
+    /// `ollama`, or `cli:<harness>`.
     pub key: String,
     pub name: String,
     /// `(model id, label)`, best first.
@@ -567,7 +662,8 @@ pub struct FailoverSource {
 }
 
 /// Everything the failover list can pick from, in menu order: providers with
-/// a key, then custom endpoints, then local Ollama models.
+/// a key, then custom endpoints, then local Ollama models, then the local
+/// Claude Code and Codex apps.
 pub fn failover_sources(app: &AppContext) -> Vec<FailoverSource> {
     let keys = ApiProviderKeys::as_ref(app);
     let mut sources: Vec<FailoverSource> = PROVIDERS
@@ -617,6 +713,19 @@ pub fn failover_sources(app: &AppContext) -> Vec<FailoverSource> {
                 .collect(),
         });
     }
+    for harness in FAILOVER_CLIS {
+        let models = cli_failover_models(harness, app);
+        if !models.is_empty() {
+            sources.push(FailoverSource {
+                key: format!("cli:{}", harness.config_name()),
+                name: format!("{} (local app)", harness.display_name()),
+                models: models
+                    .into_iter()
+                    .map(|(model, label)| (cli_model_id_for(harness, &model), label))
+                    .collect(),
+            });
+        }
+    }
     sources
 }
 
@@ -646,26 +755,28 @@ pub fn failover_rows(app: &AppContext) -> Vec<String> {
         })
         .filter(|model_id| match ollama_model_name(model_id) {
             Some(_) => local_models.contains(model_id),
-            None => route_for(model_id, app).is_some(),
+            None => route_for(model_id, app).is_some() || cli_route_for(model_id, app).is_some(),
         })
         .collect()
 }
 
 /// Where a turn on `model_id` goes if that model fails, in order: every
 /// failover row except `model_id` itself, each once, and only free ones when
-/// "Free models only" is on.
-pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<ApiRoute> {
+/// "Free models only" is on. A local app's row hands the turn over to that app.
+pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> {
     let free_only = *AISettings::as_ref(app).byor_failover_free_only.value();
-    let mut routes: Vec<ApiRoute> = Vec::new();
+    let mut routes: Vec<FailoverTarget> = Vec::new();
     for row in failover_rows(app) {
         if row == model_id
             || (free_only && !is_free_model(&row))
-            || routes.iter().any(|route| route.model_id == row)
+            || routes.iter().any(|route| route.model_id() == row)
         {
             continue;
         }
         if let Some(route) = route_for(&row, app) {
-            routes.push(route);
+            routes.push(FailoverTarget::Api(route));
+        } else if let Some(route) = cli_route_for(&row, app) {
+            routes.push(FailoverTarget::Cli(route));
         }
     }
     routes
