@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use command::blocking::Command;
@@ -7,7 +8,7 @@ use krust_core::features::FeatureFlag;
 use krust_errors::report_error;
 use krust_managed_secrets::client::SecretOwner;
 use krust_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
-use krustui::{AppContext, Entity, ModelContext, RequestState, SingletonEntity};
+use krustui::{AppContext, Entity, EntityId, ModelContext, RequestState, SingletonEntity};
 use instant::Instant;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
@@ -351,9 +352,118 @@ fn codex_models_from_local_state() -> Vec<HarnessModelInfo> {
 /// and reasoning selection. This is what the plain-terminal model picker
 /// shows and what prompt submission runs.
 pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Option<String>) {
-    let availability = HarnessAvailabilityModel::as_ref(ctx);
     let settings = CloudAgentSettings::as_ref(ctx);
     let selected_name = settings.last_selected_harness.value().as_deref();
+    resolve_local_harness(selected_name, |key| persisted_model_for_key(key, ctx), ctx)
+}
+
+/// One pane's own pick in the local-harness model picker: the provider key
+/// (a harness's config name, or the Ollama or API key) and that provider's
+/// model and reasoning, unresolved — resolved against what is available at
+/// each read, the way the app-wide selection is.
+#[derive(Debug, Clone, PartialEq)]
+struct PaneHarnessSelection {
+    key: Option<String>,
+    model_id: Option<String>,
+    reasoning_level: Option<String>,
+}
+
+/// Each terminal pane's pick, keyed by the pane's terminal view id, so a
+/// model picked in one tab doesn't change what another tab runs. A pane takes
+/// the app-wide selection (the last pick anywhere) the first time it is read
+/// and keeps it until a pick in that pane changes it.
+fn pane_selections() -> &'static Mutex<HashMap<EntityId, PaneHarnessSelection>> {
+    static SELECTIONS: OnceLock<Mutex<HashMap<EntityId, PaneHarnessSelection>>> = OnceLock::new();
+    SELECTIONS.get_or_init(Default::default)
+}
+
+/// The local-harness selection for one terminal pane: its own pick, else the
+/// app-wide selection as it stands now, which the pane then keeps. What that
+/// pane's model picker shows and what a prompt sent from it runs.
+pub fn selected_local_harness_for_pane(
+    terminal_view_id: EntityId,
+    ctx: &AppContext,
+) -> (Harness, Option<String>, Option<String>) {
+    let selection = {
+        let Ok(mut selections) = pane_selections().lock() else {
+            return selected_local_harness(ctx);
+        };
+        selections
+            .entry(terminal_view_id)
+            .or_insert_with(|| {
+                let key = CloudAgentSettings::as_ref(ctx)
+                    .last_selected_harness
+                    .value()
+                    .clone();
+                let (model_id, reasoning_level) = key
+                    .as_deref()
+                    .map(|key| persisted_model_for_key(key, ctx))
+                    .unwrap_or((None, None));
+                PaneHarnessSelection {
+                    key,
+                    model_id,
+                    reasoning_level,
+                }
+            })
+            .clone()
+    };
+    resolve_local_harness(
+        selection.key.as_deref(),
+        |key| {
+            if Some(key) == selection.key.as_deref() {
+                (selection.model_id.clone(), selection.reasoning_level.clone())
+            } else {
+                // The pane's provider isn't available any more: whatever it
+                // falls back to runs with its app-wide model.
+                persisted_model_for_key(key, ctx)
+            }
+        },
+        ctx,
+    )
+}
+
+/// Makes `key`'s `model_id` (and reasoning) this pane's pick. Other panes
+/// keep theirs.
+pub fn set_pane_local_harness(
+    terminal_view_id: EntityId,
+    key: &str,
+    model_id: Option<String>,
+    reasoning_level: Option<String>,
+) {
+    if let Ok(mut selections) = pane_selections().lock() {
+        selections.insert(
+            terminal_view_id,
+            PaneHarnessSelection {
+                key: Some(key.to_string()),
+                model_id: model_id.filter(|id| !id.is_empty()),
+                reasoning_level,
+            },
+        );
+    }
+}
+
+/// The provider key a model id is stored under: Ollama's or the API runner's
+/// for their models, else the harness's own.
+pub fn provider_key_for_model(harness: Harness, model_id: &str) -> &'static str {
+    if ollama_model_name(model_id).is_some() {
+        OLLAMA_HARNESS_CONFIG_NAME
+    } else if is_api_runner_model(model_id) {
+        API_HARNESS_CONFIG_NAME
+    } else {
+        harness.config_name()
+    }
+}
+
+/// Resolves a provider key and its model to what runs: the provider when it
+/// is enabled (Ollama and the API runner ride the Codex row), else the first
+/// enabled harness, with `model_for(key)` giving the model of whichever key
+/// that is.
+fn resolve_local_harness(
+    selected_name: Option<&str>,
+    model_for: impl Fn(&str) -> (Option<String>, Option<String>),
+    ctx: &AppContext,
+) -> (Harness, Option<String>, Option<String>) {
+    let availability = HarnessAvailabilityModel::as_ref(ctx);
     let ollama_selected = selected_name == Some(OLLAMA_HARNESS_CONFIG_NAME)
         && availability.is_harness_enabled(Harness::Codex)
         && availability
@@ -390,11 +500,11 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
         })
         .unwrap_or(Harness::Claude);
     let (model_id, reasoning_level) = if ollama_selected {
-        persisted_ollama_model_for(ctx)
+        model_for(OLLAMA_HARNESS_CONFIG_NAME)
     } else if api_selected {
-        persisted_api_model_for(ctx)
+        model_for(API_HARNESS_CONFIG_NAME)
     } else {
-        persisted_model_for(harness, ctx)
+        model_for(harness.config_name())
     };
     (harness, model_id, reasoning_level)
 }

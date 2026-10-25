@@ -50,7 +50,7 @@ use super::{RichContentInsertionPosition, TerminalAction, TerminalView};
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::blocklist::block::cli_controller::CLISubagentEvent;
 use crate::ai::blocklist::{local_harness_threads, BlocklistAIHistoryModel};
-use crate::ai::harness_availability::selected_local_harness;
+use crate::ai::harness_availability::selected_local_harness_for_pane;
 use crate::cmd_or_ctrl_shift;
 use crate::code_review::diff_state::GitDeltaPreference;
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
@@ -678,7 +678,7 @@ impl TerminalView {
                         .map(str::to_owned),
                 )
             })
-            .unwrap_or_else(|| selected_local_harness(ctx));
+            .unwrap_or_else(|| selected_local_harness_for_pane(self.view_id, ctx));
         log::info!("fork: asking local harness {harness:?} about a running command");
         self.handle_input_event(
             &InputEvent::RunLocalClaudeQuery {

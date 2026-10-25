@@ -35,12 +35,14 @@ use crate::ai::agent::{
     SummarizationType,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name;
+use crate::ai::agent_sdk::driver::harness::{api_stream_exec, LocalHarnessKind};
 use crate::ai::agent_tips::AITipModel;
 use crate::ai::blocklist::agent_view::shortcuts::AgentShortcutViewModel;
 use crate::ai::blocklist::agent_view::{
     is_in_cloud_context, AgentMessageBar, AgentViewController, EphemeralMessageModel,
 };
 use crate::ai::blocklist::model::AIBlockModelHelper;
+use crate::ai::blocklist::local_harness_threads;
 use crate::ai::blocklist::summarization_cancel_dialog::{
     self, SummarizationCancelDialog, SummarizationCancelDialogEvent,
 };
@@ -90,6 +92,8 @@ struct StateHandles {
 
 pub struct BlocklistAIStatusBar {
     active_exchange_model: Option<Box<dyn AIBlockModel<View = BlocklistAIStatusBar>>>,
+    /// The pane this status bar is in, whose model pick its shimmer names.
+    terminal_view_id: EntityId,
     action_model: ModelHandle<BlocklistAIActionModel>,
     controller: ModelHandle<BlocklistAIController>,
     cli_subagent_controller: ModelHandle<CLISubagentController>,
@@ -358,6 +362,7 @@ impl BlocklistAIStatusBar {
 
         let mut me = Self {
             active_exchange_model: None,
+            terminal_view_id,
             shimmering_text_handle: ShimmeringTextStateHandle::new(),
             action_model,
             context_model,
@@ -748,7 +753,10 @@ impl BlocklistAIStatusBar {
         swear_mode: bool,
         app: &AppContext,
     ) -> String {
-        let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness(app);
+        let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness_for_pane(
+            self.terminal_view_id,
+            app,
+        );
         let ollama_model = model_id.as_deref().and_then(ollama_model_name);
         let Some(model) = ollama_model else {
             return match (has_output, swear_mode) {
@@ -940,9 +948,20 @@ impl BlocklistAIStatusBar {
             .as_ref()
             .is_some_and(|output| !output.get().messages.is_empty());
         let swear_mode = AISettings::as_ref(app).is_swear_mode_enabled();
+        // A cloud model the local harness is waiting out (rate-limited,
+        // overloaded) says so, with a countdown, instead of "Thinking...".
+        let harness_waiting_note = model
+            .conversation_id(app)
+            .and_then(local_harness_threads::lookup)
+            .and_then(|(harness, session_id)| {
+                (harness == LocalHarnessKind::Api)
+                    .then(|| api_stream_exec::waiting_note(&session_id))
+                    .flatten()
+            });
         let default_krusting_text = fallback_krusting_text
             .as_deref()
             .map(str::to_owned)
+            .or(harness_waiting_note)
             .unwrap_or_else(|| self.rotating_krusting_text(has_output, swear_mode, app));
         let secondary_element = if fallback_krusting_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))

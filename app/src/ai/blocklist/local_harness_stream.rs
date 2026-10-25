@@ -18,7 +18,7 @@ use ai::skills::SkillPathOrigin;
 use chrono::Local;
 use prost_types::FieldMask;
 use krust_multi_agent_api as api;
-use krustui::{AppContext, EntityId, SingletonEntity as _};
+use krustui::{AppContext, EntityId, ModelContext, SingletonEntity as _};
 
 use super::controller::response_stream::ResponseStreamId;
 use super::controller::RequestInput;
@@ -131,35 +131,7 @@ impl LocalHarnessStream {
                 ctx,
             );
 
-            // A fresh conversation's root task is optimistic (`source: None`),
-            // and `Task::add_messages` rejects optimistic tasks with
-            // `TaskNotInitialized` — worse, the `AddMessagesToTask` handler
-            // removes the task from the store before adding and does not
-            // restore it on failure, wedging the conversation. In the cloud
-            // flow the server's first client action is a `CreateTask` that
-            // upgrades the root task in place; mimic that here, reusing the
-            // root task's id so the exchange registered above stays bound.
-            let create_root_task = api::ClientAction {
-                action: Some(api::client_action::Action::CreateTask(
-                    api::client_action::CreateTask {
-                        task: Some(api::Task {
-                            id: this.root_task_id.to_string(),
-                            ..Default::default()
-                        }),
-                    },
-                )),
-            };
-            this.share_actions(std::slice::from_ref(&create_root_task));
-            if let Err(error) = history.apply_client_actions(
-                &this.stream_id,
-                vec![create_root_task],
-                this.conversation_id,
-                terminal_surface_id,
-                &this.skill_path_origin,
-                ctx,
-            ) {
-                log::warn!("local_harness_stream: failed to initialize root task: {error}");
-            }
+            this.upgrade_optimistic_root_task(history, ctx);
 
             // Mirror the cloud controller's post-send bookkeeping: the surface's
             // "active conversation" pointer drives pane titles, the details
@@ -187,9 +159,12 @@ impl LocalHarnessStream {
     /// conversation and returns a handle for streaming the response into it.
     ///
     /// Unlike [`begin`](Self::begin) this reuses the conversation (so the
-    /// whole thread stays on screen) and skips the `CreateTask` upgrade —
-    /// the root task was already upgraded by the first run, and re-upgrading
-    /// a server-backed task fails (losing the task as a side effect).
+    /// whole thread stays on screen) and normally skips the `CreateTask`
+    /// upgrade — the root task was already upgraded by the first run, and
+    /// re-upgrading a server-backed task fails (losing the task as a side
+    /// effect). The exception is a conversation rewound to before its first
+    /// prompt: removing every exchange resets the root task to optimistic, so
+    /// it is upgraded again here, as for a fresh conversation.
     /// Returns `None` if the conversation no longer exists; callers should
     /// fall back to starting a fresh one.
     pub(crate) fn begin_follow_up(
@@ -201,9 +176,16 @@ impl LocalHarnessStream {
     ) -> Option<Self> {
         let history = BlocklistAIHistoryModel::handle(ctx);
 
-        let root_task_id = BlocklistAIHistoryModel::as_ref(ctx)
+        let (root_task_id, root_task_is_optimistic) = BlocklistAIHistoryModel::as_ref(ctx)
             .conversation(&conversation_id)
-            .map(|conversation| conversation.get_root_task_id().clone())?;
+            .map(|conversation| {
+                (
+                    conversation.get_root_task_id().clone(),
+                    conversation
+                        .get_root_task()
+                        .is_none_or(|task| task.source().is_none()),
+                )
+            })?;
 
         let request_id = request_id.to_string();
         let stream_init = api::response_event::StreamInit {
@@ -245,6 +227,10 @@ impl LocalHarnessStream {
                 stream_init,
                 ctx,
             );
+
+            if root_task_is_optimistic {
+                this.upgrade_optimistic_root_task(history, ctx);
+            }
 
             // Follow-ups re-enter progress; nothing server-side flips the
             // status back for local runs, and the input area's "Sending..."
@@ -746,6 +732,41 @@ impl LocalHarnessStream {
     /// conversation; viewers key a conversation by this token, so the local
     /// conversation id stands in for it and every exchange of the thread —
     /// follow-ups and tool continuations — lands in the same one.
+    /// Upgrades the conversation's optimistic root task (`source: None`) to a
+    /// server-backed one, as the cloud server's first `CreateTask` would.
+    /// `Task::add_messages` rejects optimistic tasks with `TaskNotInitialized`
+    /// — worse, the `AddMessagesToTask` handler removes the task from the
+    /// store before adding and does not restore it on failure, wedging the
+    /// conversation. The root task's id is reused so the exchange registered
+    /// for this turn stays bound.
+    fn upgrade_optimistic_root_task(
+        &self,
+        history: &mut BlocklistAIHistoryModel,
+        ctx: &mut ModelContext<BlocklistAIHistoryModel>,
+    ) {
+        let create_root_task = api::ClientAction {
+            action: Some(api::client_action::Action::CreateTask(
+                api::client_action::CreateTask {
+                    task: Some(api::Task {
+                        id: self.root_task_id.to_string(),
+                        ..Default::default()
+                    }),
+                },
+            )),
+        };
+        self.share_actions(std::slice::from_ref(&create_root_task));
+        if let Err(error) = history.apply_client_actions(
+            &self.stream_id,
+            vec![create_root_task],
+            self.conversation_id,
+            self.terminal_surface_id,
+            &self.skill_path_origin,
+            ctx,
+        ) {
+            log::warn!("local_harness_stream: failed to initialize root task: {error}");
+        }
+    }
+
     fn share_init(&self) {
         self.share(api::response_event::Type::Init(
             api::response_event::StreamInit {

@@ -279,6 +279,7 @@ use crate::ai::blocklist::telemetry_banner::{should_collect_ai_ugc_telemetry, Te
 use crate::ai::blocklist::usage::conversation_usage_view::{
     ConversationUsageInfo, ConversationUsageView, TimingInfo,
 };
+use crate::ai::harness_availability::set_pane_local_harness;
 use crate::ai::blocklist::{
     ai_brand_color, block_context_from_terminal_model,
     get_ai_block_overflow_menu_element_position_id, get_attached_blocks_chip_element_position_id,
@@ -3284,6 +3285,7 @@ impl TerminalView {
                                         me.model.clone(),
                                         &me.model_events_handle,
                                         should_show_init_callout,
+                                        me.view_id,
                                         ctx,
                                     )
                                 });
@@ -23494,8 +23496,9 @@ impl TerminalView {
     }
 
     /// Makes `model_id`, the model BYOR failover moved a turn to and that
-    /// answered, the selected model, as picking it in the model menu would,
-    /// so the next turn starts there instead of failing over again.
+    /// answered, this pane's selected model and its conversation's, as
+    /// picking it in the model menu would, so the next turn starts there
+    /// instead of failing over again. Other panes keep their picks.
     fn adopt_failover_model(&mut self, model_id: &str, ctx: &mut ViewContext<Self>) {
         let is_local = ollama_model_name(model_id).is_some();
         let key = if is_local {
@@ -23503,6 +23506,10 @@ impl TerminalView {
         } else {
             API_HARNESS_CONFIG_NAME
         };
+        set_pane_local_harness(self.view_id, key, Some(model_id.to_owned()), None);
+        if let Some((_, _, conversation_id)) = self.local_claude_thread {
+            local_harness_threads::record_model(conversation_id, model_id);
+        }
         CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
             let _ = settings
                 .last_selected_harness
@@ -23531,6 +23538,10 @@ impl TerminalView {
     /// model menu would, so new conversations start there too.
     fn adopt_failover_app(&mut self, app: &CliRoute, ctx: &mut ViewContext<Self>) {
         let key = app.harness.config_name();
+        set_pane_local_harness(self.view_id, key, Some(app.model.clone()), None);
+        if let Some((_, _, conversation_id)) = self.local_claude_thread {
+            local_harness_threads::record_model(conversation_id, &app.model);
+        }
         CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
             let _ = settings
                 .last_selected_harness
@@ -23651,8 +23662,13 @@ impl TerminalView {
         // points at a different harness, its model id and reasoning must not
         // leak into this run (codex 400s on claude ids and vice versa) — use
         // the thread harness's own persisted selection instead.
+        let thread_model = follow_up_conversation
+            .and_then(local_harness_threads::model)
+            .filter(|model| local_harness_kind_runs_model(harness, model));
         let (model_id, reasoning_level) = if harness == requested_kind {
             (model_id, reasoning_level)
+        } else if let Some(model) = thread_model {
+            (Some(model), None)
         } else {
             match harness {
                 LocalHarnessKind::Claude => {
@@ -23983,6 +23999,8 @@ impl TerminalView {
         let requested_api_model = (harness == LocalHarnessKind::Api)
             .then(|| model_id.clone())
             .flatten();
+        // Recorded on the conversation, so it resumes on this model.
+        let turn_model = model_id.clone();
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -24000,6 +24018,7 @@ impl TerminalView {
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();
                     let requested_api_model = requested_api_model.clone();
+                    let turn_model = turn_model.clone();
                     let share_initiator = share_initiator.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
@@ -24051,6 +24070,12 @@ impl TerminalView {
                                         harness,
                                         session_id,
                                     );
+                                    if let Some(model) = turn_model.as_deref() {
+                                        local_harness_threads::record_model(
+                                            stream.conversation_id(),
+                                            model,
+                                        );
+                                    }
                                     stream
                                 }
                             };
@@ -30113,3 +30138,16 @@ fn is_rich_input_chip_in_cli_toolbar(app: &AppContext) -> bool {
 #[cfg(test)]
 #[path = "view_tests.rs"]
 mod tests;
+
+/// Whether a conversation running on `kind` can run `model_id`: the API
+/// runner runs cloud models and, once failover has moved it to one, local
+/// ones; Ollama its own models; Claude and Codex their own ids.
+fn local_harness_kind_runs_model(kind: LocalHarnessKind, model_id: &str) -> bool {
+    let is_api = is_api_runner_model(model_id);
+    let is_ollama = ollama_model_name(model_id).is_some();
+    match kind {
+        LocalHarnessKind::Api => is_api || is_ollama,
+        LocalHarnessKind::Ollama => is_ollama,
+        LocalHarnessKind::Claude | LocalHarnessKind::Codex => !is_api && !is_ollama,
+    }
+}

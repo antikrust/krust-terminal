@@ -538,6 +538,10 @@ use crate::{
 
 /// The padding that should be applied to the workspace as a whole.
 pub const WORKSPACE_PADDING: f32 = 1.0;
+/// The code review button's label width while diff stats are on: the diff
+/// icon and a count like "+17819 -12", so switching between tabs with and
+/// without changes doesn't resize the tab bar.
+const DIFF_STATS_LABEL_MIN_WIDTH: f32 = 100.;
 
 /// The minimum font size at which terminal text will be rendered.
 const MIN_FONT_SIZE: f32 = 5.0;
@@ -20328,8 +20332,6 @@ impl Workspace {
             None
         };
 
-        let has_stats = line_changes.is_some();
-
         let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
         row.add_child(icon);
 
@@ -20348,14 +20350,26 @@ impl Workspace {
             row.add_child(stat(lc.lines_removed, "-", remove_color(appearance)));
         }
 
-        let label = row.finish();
+        // With stats on, the button keeps one width whether the active tab has
+        // changes or not: it sits in the tab bar, so a button that grew and
+        // shrank as tabs were switched resized and shifted every tab, and the
+        // next click landed on a different tab (or on the same one twice,
+        // which opens its rename field). Longer counts still widen it.
+        let label = if show_diff_stats {
+            ConstrainedBox::new(row.finish())
+                .with_min_width(DIFF_STATS_LABEL_MIN_WIDTH)
+                .finish()
+        } else {
+            row.finish()
+        };
 
         // The diff icon SVG has intrinsic horizontal whitespace in its 14px viewBox: its visible
         // paths start around x=3 and end around x=11. When stats are shown, equal container padding
         // makes the gap between the button edge and the visible icon look wider than the gap after
         // the text. Locally compensate for that artwork padding without changing the shared icon.
+        // The padding follows the setting, not whether this tab has stats, so the width holds.
         let (header_padding_left, header_padding_right) =
-            if has_stats { (5., 8.) } else { (4., 4.) };
+            if show_diff_stats { (5., 8.) } else { (4., 4.) };
         let default_styles = UiComponentStyles {
             font_color: Some(font_color.into()),
             font_size: Some(12.),

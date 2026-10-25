@@ -1785,7 +1785,11 @@ impl AgentInputFooter {
                 .as_ref(app)
                 .selected_harness_model_id()
                 .map(str::to_owned),
-            None => crate::ai::harness_availability::selected_local_harness(app).1,
+            None => crate::ai::harness_availability::selected_local_harness_for_pane(
+                self.terminal_view_id,
+                app,
+            )
+            .1,
         };
         model_id.is_some_and(|id| {
             id.starts_with(OLLAMA_MODEL_ID_PREFIX) && id != OLLAMA_COMMITTEE_MODEL_ID

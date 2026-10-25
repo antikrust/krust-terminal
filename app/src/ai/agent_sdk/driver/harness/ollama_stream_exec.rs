@@ -436,8 +436,10 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec], model_description
          request that takes one or two actions.\n\
          - a web_search tool, when present, is for current events, prices, docs, or anything that \
          may have changed since you were trained.\n\
-         Each run_code call runs in a fresh process — nothing persists between calls, so re-import \
-         or re-declare anything you need every time.\n\
+         Each run_code call runs in a fresh process that starts in the working directory given \
+         with the user's request, so don't cd into it first: use paths relative to it, and cd \
+         only to work somewhere else. Nothing else persists between calls (variables, imports, a \
+         cd made in an earlier call), so re-import or re-declare anything you need every time.\n\
          Answer the user directly in plain text once you have what you need; don't call a tool you \
          don't need."
     )
@@ -567,9 +569,9 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
         McpToolSpec {
             name: BUILTIN_RUN_CODE.to_string(),
             description: "Run a short program and return its stdout, stderr and exit code. Each \
-                call runs in a fresh process in the working directory — nothing persists between \
-                calls, so re-declare anything you need. Supported languages: bash, python, \
-                javascript (node), ruby."
+                call runs in a fresh process that starts in the working directory, so there is no \
+                need to cd into it; nothing else persists between calls, so re-declare anything \
+                you need. Supported languages: bash, python, javascript (node), ruby."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -1162,7 +1164,7 @@ fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
 
 /// The field that stamps a turn's ID on the user message opening it, in a
 /// saved chat history. Taken off again before a history is sent.
-const TURN_ID_FIELD: &str = "krust_turn";
+pub(crate) const TURN_ID_FIELD: &str = "krust_turn";
 
 /// The ID of the turn each session is running, recorded before its runner
 /// starts. It is Krust's request ID for the turn's exchange, so a turn the
@@ -1246,9 +1248,11 @@ pub(crate) fn truncate_from_turn(messages: &mut Vec<Value>, turn_id: &str) -> bo
 }
 
 /// Removes one turn from a chat history: the user message stamped with
-/// `turn_id` and every message after it up to the next user message. A turn
-/// without a stamp (saved before turns had one, or never saved) is left
-/// alone. Returns whether a turn was removed.
+/// `turn_id` and every message after it up to the next user message of
+/// another turn (a user message stamped with the same turn — the nudge after
+/// a mid-turn compaction — belongs to it). A turn without a stamp (saved
+/// before turns had one, or never saved) is left alone. Returns whether a
+/// turn was removed.
 pub(crate) fn remove_turn_from_messages(messages: &mut Vec<Value>, turn_id: &str) -> bool {
     let Some(start) = messages
         .iter()
@@ -1258,7 +1262,10 @@ pub(crate) fn remove_turn_from_messages(messages: &mut Vec<Value>, turn_id: &str
     };
     let end = messages[start + 1..]
         .iter()
-        .position(|message| message.get("role").and_then(Value::as_str) == Some("user"))
+        .position(|message| {
+            message.get("role").and_then(Value::as_str) == Some("user")
+                && message.get(TURN_ID_FIELD).and_then(Value::as_str) != Some(turn_id)
+        })
         .map_or(messages.len(), |offset| start + 1 + offset);
     messages.drain(start..end);
     true

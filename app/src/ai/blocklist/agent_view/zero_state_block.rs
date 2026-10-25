@@ -22,8 +22,8 @@ use krustui::prelude::{
 use krustui::scene::Border;
 use krustui::ui_components::components::{UiComponent as _, UiComponentStyles};
 use krustui::{
-    Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View,
-    ViewContext,
+    Action, AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView,
+    View, ViewContext,
 };
 
 use crate::ai::active_agent_views_model::{ActiveAgentViewsModel, ConversationOrTaskId};
@@ -73,6 +73,8 @@ struct StateHandles {
 /// Zero state view shown when agent view is active but the conversation has no exchanges yet.
 pub struct AgentViewZeroStateBlock {
     conversation_id: AIConversationId,
+    /// The pane this block is in, whose model pick it describes.
+    terminal_view_id: EntityId,
     origin: AgentViewEntryOrigin,
     agent_view_controller: ModelHandle<AgentViewController>,
     sessions: ModelHandle<Sessions>,
@@ -97,6 +99,7 @@ impl AgentViewZeroStateBlock {
         terminal_model: Arc<FairMutex<TerminalModel>>,
         model_events_dispatcher: &ModelHandle<ModelEventDispatcher>,
         should_show_init_callout: bool,
+        terminal_view_id: EntityId,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let cloud_agent_view_model_clone = cloud_agent_view_model.cloned();
@@ -264,6 +267,7 @@ impl AgentViewZeroStateBlock {
 
         Self {
             conversation_id,
+            terminal_view_id,
             origin,
             agent_view_controller,
             sessions: sessions.clone(),
@@ -364,10 +368,11 @@ impl AgentViewZeroStateBlock {
     }
 }
 
-/// Whether the local-harness picker currently points at the Ollama committee
-/// — the zero state swaps its copy for committee instructions when it does.
-fn committee_is_selected(app: &AppContext) -> bool {
-    let (_, model_id, _) = crate::ai::harness_availability::selected_local_harness(app);
+/// Whether the pane's local-harness picker points at the Ollama committee —
+/// the zero state swaps its copy for committee instructions when it does.
+fn committee_is_selected(terminal_view_id: EntityId, app: &AppContext) -> bool {
+    let (_, model_id, _) =
+        crate::ai::harness_availability::selected_local_harness_for_pane(terminal_view_id, app);
     model_id.as_deref()
         == Some(crate::ai::agent_sdk::driver::harness::ollama_committee::OLLAMA_COMMITTEE_MODEL_ID)
 }
@@ -410,7 +415,7 @@ impl View for AgentViewZeroStateBlock {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
 
-        let committee_selected = committee_is_selected(app);
+        let committee_selected = committee_is_selected(self.terminal_view_id, app);
         let header_props = if self.origin.is_cloud_agent() {
             HeaderProps {
                 title: "New Oz cloud agent conversation".into(),

@@ -268,6 +268,43 @@ fn first_line_ellipsized(text: &str) -> String {
 /// over the neutral surface. Deliberately NOT theme-derived — the accent may
 /// be any color (green read as "success"), and theme ANSI blues vary wildly
 /// (some are washed-out enough to render as light grey).
+/// A tool call as text for the copy button: each request argument on its own
+/// line — a string as itself, so code or a path comes out ready to paste —
+/// then the response.
+fn mcp_call_copy_text(
+    args: Option<&serde_json::Value>,
+    result: Option<&CallMCPToolResult>,
+) -> String {
+    let mut text = String::from("Request\n");
+    match args {
+        Some(serde_json::Value::Object(fields)) if !fields.is_empty() => {
+            for (key, value) in fields {
+                let value = match value {
+                    serde_json::Value::String(string) => string.clone(),
+                    other => serde_json::to_string_pretty(other).unwrap_or_default(),
+                };
+                text.push_str(&format!("{key}: {value}\n"));
+            }
+        }
+        Some(other) => {
+            text.push_str(&serde_json::to_string_pretty(other).unwrap_or_default());
+            text.push('\n');
+        }
+        None => text.push_str("(no arguments)\n"),
+    }
+    if let Some(result) = result {
+        text.push_str("\nResponse\n");
+        text.push_str(&match mcp_result_to_renderable(result) {
+            McpRenderable::Tree(value) => plain_text_from_tree(&value)
+                .unwrap_or_else(|| serde_json::to_string_pretty(&value).unwrap_or_default()),
+            McpRenderable::Error(error) => format!("Error: {error}"),
+            McpRenderable::Cancelled => "Cancelled".to_string(),
+        });
+        text.push('\n');
+    }
+    text
+}
+
 fn tool_card_fill(theme: &KrustTheme) -> Fill {
     const TOOL_BLUE: pathfinder_color::ColorU = pathfinder_color::ColorU {
         r: 59,
@@ -437,6 +474,43 @@ pub struct RequestedCommandView {
 }
 
 impl RequestedCommandView {
+    /// The copy button overlaid at the top-right of a tool call's body.
+    fn mcp_copy_overlay(
+        &self,
+        copy_text: String,
+        theme: &KrustTheme,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let idle_color = blended_colors::text_disabled(theme, theme.background());
+        let hover_color = blended_colors::text_main(theme, theme.background());
+        let icon_px = icon_size(app);
+        let copy_button = Hoverable::new(self.mcp_copy_mouse_state.clone(), move |state| {
+            let color = if state.is_hovered() {
+                hover_color
+            } else {
+                idle_color
+            };
+            ConstrainedBox::new(Icon::Copy.to_krustui_icon(color.into()).finish())
+                .with_width(icon_px)
+                .with_height(icon_px)
+                .finish()
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(move |ctx, _, _| {
+            ctx.dispatch_typed_action(RequestedCommandViewAction::CopyJsonToClipboard {
+                text: copy_text.clone(),
+            });
+        });
+        Align::new(
+            Container::new(copy_button.finish())
+                .with_margin_top(6.)
+                .with_margin_right(10.)
+                .finish(),
+        )
+        .top_right()
+        .finish()
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         action_id: AIAgentActionId,
@@ -1807,34 +1881,7 @@ impl View for RequestedCommandView {
                 // A copy button overlaid at the top-right of the result, so a
                 // tool call's output (there's no inline copy anywhere else —
                 // only a right-click menu) can be lifted in one click.
-                let idle_color = blended_colors::text_disabled(theme, theme.background());
-                let hover_color = blended_colors::text_main(theme, theme.background());
-                let icon_px = icon_size(app);
-                let copy_button = Hoverable::new(self.mcp_copy_mouse_state.clone(), move |state| {
-                    let color = if state.is_hovered() {
-                        hover_color
-                    } else {
-                        idle_color
-                    };
-                    ConstrainedBox::new(Icon::Copy.to_krustui_icon(color.into()).finish())
-                        .with_width(icon_px)
-                        .with_height(icon_px)
-                        .finish()
-                })
-                .with_cursor(Cursor::PointingHand)
-                .on_click(move |ctx, _, _| {
-                    ctx.dispatch_typed_action(RequestedCommandViewAction::CopyJsonToClipboard {
-                        text: copy_text.clone(),
-                    });
-                });
-                let overlay = Align::new(
-                    Container::new(copy_button.finish())
-                        .with_margin_top(6.)
-                        .with_margin_right(10.)
-                        .finish(),
-                )
-                .top_right()
-                .finish();
+                let overlay = self.mcp_copy_overlay(copy_text, theme, app);
                 content.add_child(Stack::new().with_child(body).with_child(overlay).finish());
             } else if FeatureFlag::McpJsonTreeView.is_enabled() {
                 let colors = JsonTreeColors::from_theme(theme);
@@ -2035,14 +2082,27 @@ impl View for RequestedCommandView {
                 })
                 .finish();
 
-                content.add_child(
-                    Container::new(selectable_content)
-                        .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
-                        .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
-                        .with_background(theme.background())
-                        .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
-                        .finish(),
+                let body = Container::new(selectable_content)
+                    .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
+                    .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
+                    .with_background(theme.background())
+                    .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(7.)))
+                    .finish();
+                // The same one-click copy as a plain-text result: the request
+                // and the response (an error included) as readable text.
+                let finished_result = match action_status
+                    .as_ref()
+                    .and_then(|status| status.finished_result().map(|result| &result.result))
+                {
+                    Some(AIAgentActionResultType::CallMCPTool(result)) => Some(result),
+                    _ => None,
+                };
+                let copy_text = mcp_call_copy_text(
+                    self.mcp_request.as_ref().map(|request| &request.args),
+                    finished_result,
                 );
+                let overlay = self.mcp_copy_overlay(copy_text, theme, app);
+                content.add_child(Stack::new().with_child(body).with_child(overlay).finish());
             } else {
                 // Fallback: flat pretty-printed JSON.
                 let command_text = self.command_text();

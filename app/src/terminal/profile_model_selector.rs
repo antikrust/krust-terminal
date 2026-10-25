@@ -57,7 +57,8 @@ use crate::ai::execution_profiles::profiles::{
 };
 use crate::ai::harness_availability::{
     persisted_api_model_for, persisted_model_for, persisted_ollama_model_for,
-    selected_local_harness, HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
+    selected_local_harness_for_pane, set_pane_local_harness, HarnessAvailabilityEvent,
+    HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -994,7 +995,8 @@ impl ProfileModelSelector {
         // No ambient model (plain terminal pane): label with the
         // persisted local selection — the model's display name when one
         // is chosen, else the harness's own name.
-        let (harness, model_id, reasoning) = selected_local_harness(app);
+        let (harness, model_id, reasoning) =
+            selected_local_harness_for_pane(self.terminal_view_id, app);
         let availability = HarnessAvailabilityModel::as_ref(app);
         let provider_prefix = match model_id.as_deref() {
             Some(id) => match api_runner_provider_name(id, app) {
@@ -1084,7 +1086,8 @@ impl ProfileModelSelector {
         });
         let group_harnesses = ambient_selection.is_none();
         let (selected_harness, selected_model_id, selected_reasoning) =
-            ambient_selection.unwrap_or_else(|| selected_local_harness(ctx));
+            ambient_selection
+                .unwrap_or_else(|| selected_local_harness_for_pane(self.terminal_view_id, ctx));
 
         // Ollama is a peer provider in the picker. Its model records share the
         // Codex-shaped storage row, but selection and execution are kept
@@ -2528,12 +2531,20 @@ impl TypedActionView for ProfileModelSelector {
                         );
                     });
                 }
+                let provider_key = match ModelGroupKind::of(Some(model_id.as_str())) {
+                    ModelGroupKind::Ollama => OLLAMA_HARNESS_CONFIG_NAME,
+                    ModelGroupKind::Api => API_HARNESS_CONFIG_NAME,
+                    ModelGroupKind::Harness => harness.config_name(),
+                };
+                // This pane's pick; other panes keep theirs. The app-wide
+                // selection below is what a new pane starts with.
+                set_pane_local_harness(
+                    self.terminal_view_id,
+                    provider_key,
+                    Some(model_id.clone()),
+                    reasoning_level.clone(),
+                );
                 CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
-                    let provider_key = match ModelGroupKind::of(Some(model_id.as_str())) {
-                        ModelGroupKind::Ollama => OLLAMA_HARNESS_CONFIG_NAME,
-                        ModelGroupKind::Api => API_HARNESS_CONFIG_NAME,
-                        ModelGroupKind::Harness => harness.config_name(),
-                    };
                     let _ = settings
                         .last_selected_harness
                         .set_value(Some(provider_key.to_string()), ctx);

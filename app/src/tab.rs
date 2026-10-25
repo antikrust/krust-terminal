@@ -1652,13 +1652,30 @@ impl<'a> TabComponent<'a> {
             (bg, border)
         };
 
+        // The close button sits over the indicator when it is on the left; a
+        // tab without an indicator keeps an empty slot of the same size there,
+        // so the button covers the slot instead of the start of the title.
+        let close_button_on_left = FeatureFlag::NewTabStyling.is_enabled()
+            && FeatureFlag::TabCloseButtonOnLeft.is_enabled()
+            && matches!(self.close_button_position, TabCloseButtonPosition::Left);
         let build_full_content = |reserve_pin_space: bool| -> Box<dyn Element> {
             let mut flex_row = Flex::row()
                 .with_main_axis_size(MainAxisSize::Max)
                 .with_main_axis_alignment(MainAxisAlignment::Center)
                 .with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Center);
-            if let Some(indicator) = self.render_indicator() {
-                flex_row.add_child(indicator);
+            match self.render_indicator() {
+                Some(indicator) => flex_row.add_child(indicator),
+                None if close_button_on_left => flex_row.add_child(
+                    Container::new(
+                        ConstrainedBox::new(Empty::new().finish())
+                            .with_width(TAB_INDICATOR_HEIGHT)
+                            .with_height(TAB_INDICATOR_HEIGHT)
+                            .finish(),
+                    )
+                    .with_margin_right(4.)
+                    .finish(),
+                ),
+                None => {}
             }
             flex_row.add_child(
                 Shrinkable::new(

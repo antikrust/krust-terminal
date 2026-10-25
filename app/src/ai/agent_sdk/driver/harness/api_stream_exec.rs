@@ -13,9 +13,11 @@ use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::process::ExitStatus;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use ai::agent::{PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use command::r#async::Command;
+use krustui::r#async::Timer;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -29,6 +31,7 @@ use super::ollama_stream_exec::{
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
     remove_turn_from_messages, todo_list_entries, todo_list_reply, truncate_from_turn,
     turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
+    TURN_ID_FIELD,
 };
 use super::plan_tracker::PlanTracker;
 use crate::ai::api_providers::{
@@ -79,6 +82,10 @@ const DROPPED_RESULT_PREFIX: &str = "[An earlier tool result";
 /// How the HTTP status curl prints after the reply (`--write-out`) begins,
 /// so the parser can tell that line from the reply itself.
 const HTTP_STATUS_MARKER: &str = "krust-http-status:";
+/// Marks the line curl prints after the reply with the rate-limit headers
+/// that say when a limit lifts: `Retry-After`, `x-ratelimit-reset-requests`
+/// (OpenAI, Groq) and `X-RateLimit-Reset` (OpenRouter), `|`-separated.
+const RATE_LIMIT_RESET_MARKER: &str = "krust-rate-limit-reset:";
 
 /// The context window a local Ollama model is asked for: the one Krust's own
 /// Ollama tool loop uses.
@@ -100,7 +107,11 @@ fn api_curl_args(base_url: &str) -> Vec<String> {
         "--data-binary".to_string(),
         "@-".to_string(),
         "--write-out".to_string(),
-        format!("\n{HTTP_STATUS_MARKER}%{{http_code}}\n"),
+        format!(
+            "\n{HTTP_STATUS_MARKER}%{{http_code}}\n{RATE_LIMIT_RESET_MARKER}\
+             %header{{retry-after}}|%header{{x-ratelimit-reset-requests}}|\
+             %header{{x-ratelimit-reset}}\n"
+        ),
         format!("{base_url}/chat/completions"),
     ]
 }
@@ -159,7 +170,10 @@ pub enum ApiTurnEnd {
 /// A failure of the whole account (no credit, a rejected key, the host
 /// unreachable) also rules out that provider's other failover models; one
 /// confined to the model (rate-limited, overloaded) doesn't. Each is tried
-/// once; the turn fails only when none is left. The model that answered is
+/// once; the turn fails only when none is left — except for a model that is
+/// only busy (rate-limited, overloaded): with nothing left to switch to, the
+/// turn waits and sends the same request again, so a free tier's per-minute
+/// limit pauses the turn instead of ending it. The model that answered is
 /// reported in the turn's usage, so the caller can make it the selected one.
 ///
 /// When the next in `failover` is a local agent app (Claude Code, Codex),
@@ -256,6 +270,9 @@ pub async fn run_api_stream(
     let mut compact_next = false;
     // Times this turn compacted an input the model refused as too long.
     let mut input_compactions = 0;
+    // Waits in a row for a busy model, and the seconds they have taken.
+    let mut busy_waits = 0;
+    let mut busy_waited_secs = 0;
     loop {
         // A local model's window is a fraction of a cloud model's: it is sent
         // this turn only, trimmed on a copy so the saved history stays whole.
@@ -304,6 +321,10 @@ pub async fn run_api_stream(
             return Ok(ApiTurnEnd::Finished);
         }
 
+        let rate_limit_reset = accumulator
+            .lock()
+            .ok()
+            .and_then(|accumulator| accumulator.rate_limit_reset_secs);
         let response = if status.success() {
             let finished = accumulator
                 .lock()
@@ -371,6 +392,32 @@ pub async fn run_api_stream(
                     FailoverTarget::Cli(_) => true,
                 });
                 let next = match next {
+                    // Nothing to switch to, but the model is only busy: wait
+                    // and send the same request again.
+                    None if failure.busy && busy_waited_secs < MAX_BUSY_WAIT_SECS => {
+                        // The provider's own word on when the limit lifts,
+                        // else a growing guess.
+                        let wait = rate_limit_reset.unwrap_or(
+                            BUSY_RETRY_WAITS[busy_waits.min(BUSY_RETRY_WAITS.len() - 1)],
+                        );
+                        if busy_waits == 0 {
+                            on_event(TurnEvent::Text {
+                                text: format!("_{} — waiting, then carrying on._", failure.reason),
+                            });
+                        }
+                        log::info!(
+                            "api_stream: {} busy ({}); retrying in {wait}s{}",
+                            route.model_id,
+                            failure.detail,
+                            if rate_limit_reset.is_some() { " (from its headers)" } else { "" }
+                        );
+                        busy_waits += 1;
+                        busy_waited_secs += wait;
+                        if !wait_unless_cancelled(session_id, &failure.reason, wait).await {
+                            return Ok(ApiTurnEnd::Finished);
+                        }
+                        continue;
+                    }
                     None => {
                         emit_failed_turn(&mut on_event, failure.detail);
                         return Ok(ApiTurnEnd::Finished);
@@ -422,6 +469,8 @@ pub async fn run_api_stream(
             }
         };
         failover_health::record(&route.model_id, &route.account, Health::Good, false);
+        busy_waits = 0;
+        busy_waited_secs = 0;
         if let Some((input_price, output_price)) = model.price {
             turn_cost_usd += (response.prompt_tokens as f64 * input_price
                 + response.completion_tokens as f64 * output_price)
@@ -600,7 +649,7 @@ async fn compact_conversation(
     else {
         return;
     };
-    apply_compaction(messages, &summary, &plan.remaining());
+    apply_compaction(messages, &summary, &plan.remaining(), session_id);
     save_history(session_id, messages);
     on_event(TurnEvent::Text {
         text: "_Compacted the conversation to free up context._".to_string(),
@@ -954,19 +1003,37 @@ fn split_in_half(text: &str) -> Vec<String> {
 }
 
 /// Replaces the turn's accumulated steps with `summary`: keeps the system
-/// message and every user turn, drops everything after the last user message,
-/// and appends the summary as the assistant's word. `remaining` (the plan not
-/// yet done) is appended so compaction never loses the checklist. The chat
-/// history is the model's own; the conversation the user sees is built from
-/// events separately, so this does not touch it.
-fn apply_compaction(messages: &mut Vec<Value>, summary: &str, remaining: &[String]) {
+/// message and every earlier turn, drops everything after the current turn's
+/// opening request (an earlier compaction's summary included — the new one
+/// covers it), and appends the summary as the assistant's word. `remaining`
+/// (the plan not yet done) is appended so compaction never loses the
+/// checklist. Then a user message, stamped as part of this turn, tells the
+/// model to carry on: a history ending on the model's own summary reads as a
+/// finished answer, and models reply with text and no tool call — which ends
+/// the turn. The chat history is the model's own; the conversation the user
+/// sees is built from events separately, so this does not touch it.
+fn apply_compaction(
+    messages: &mut Vec<Value>,
+    summary: &str,
+    remaining: &[String],
+    session_id: &Uuid,
+) {
     let Some(last_user) = messages
         .iter()
         .rposition(|message| message.get("role").and_then(Value::as_str) == Some("user"))
     else {
         return;
     };
-    messages.truncate(last_user + 1);
+    let opening = messages[last_user]
+        .get(TURN_ID_FIELD)
+        .and_then(Value::as_str)
+        .and_then(|turn_id| {
+            messages.iter().position(|message| {
+                message.get(TURN_ID_FIELD).and_then(Value::as_str) == Some(turn_id)
+            })
+        })
+        .unwrap_or(last_user);
+    messages.truncate(opening + 1);
     let mut content = summary.to_string();
     if !remaining.is_empty() {
         content.push_str("\n\nStill to do:");
@@ -975,6 +1042,13 @@ fn apply_compaction(messages: &mut Vec<Value>, summary: &str, remaining: &[Strin
         }
     }
     messages.push(json!({ "role": "assistant", "content": content }));
+    messages.push(turn_user_message(
+        session_id,
+        "[The context was compacted into the summary above to free up space; the task is not \
+         finished. Carry on now from where the summary leaves off: take the next step with your \
+         tools, and keep going until every step is done.]"
+            .to_string(),
+    ));
 }
 
 /// What the turn's current model sizes: its price, its window, and how much
@@ -1265,6 +1339,110 @@ fn curl_failure_message(provider: &str, status: ExitStatus) -> String {
     }
 }
 
+/// Seconds to wait before each retry of a busy model; the last repeats.
+const BUSY_RETRY_WAITS: [u64; 5] = [5, 10, 20, 30, 60];
+
+/// How long one stall on a busy model may last before the turn gives up: long
+/// enough for a per-minute limit, not for a daily quota that is used up.
+const MAX_BUSY_WAIT_SECS: u64 = 30 * 60;
+
+/// Turns waiting out a busy model: why, and when the wait ends. The agent's
+/// status line reads it (see [`waiting_note`]) in place of "Thinking...".
+fn busy_waits() -> &'static Mutex<HashMap<Uuid, (String, Instant)>> {
+    static WAITS: OnceLock<Mutex<HashMap<Uuid, (String, Instant)>>> = OnceLock::new();
+    WAITS.get_or_init(Default::default)
+}
+
+/// What the status line shows while a turn waits out a busy model, counting
+/// down: "GLM-4.7 Flash is rate-limited — carrying on in 12s".
+pub(crate) fn waiting_note(session_id: &Uuid) -> Option<String> {
+    let waits = busy_waits().lock().ok()?;
+    let (reason, until) = waits.get(session_id)?;
+    let secs = until.saturating_duration_since(Instant::now()).as_secs() + 1;
+    Some(format!("{reason} — carrying on in {secs}s"))
+}
+
+/// Clears a turn's waiting note however its wait ends.
+struct WaitingNoteGuard(Uuid);
+
+impl Drop for WaitingNoteGuard {
+    fn drop(&mut self) {
+        if let Ok(mut waits) = busy_waits().lock() {
+            waits.remove(&self.0);
+        }
+    }
+}
+
+/// Waits `secs` seconds, or less if the user stops the turn, showing
+/// `reason` and a countdown on the status line. Returns false when it was
+/// stopped.
+async fn wait_unless_cancelled(session_id: &Uuid, reason: &str, secs: u64) -> bool {
+    let cancel = harness_cancel_for(session_id);
+    let deadline = Instant::now() + Duration::from_secs(secs);
+    if let Ok(mut waits) = busy_waits().lock() {
+        waits.insert(*session_id, (reason.to_string(), deadline));
+    }
+    let _note = WaitingNoteGuard(*session_id);
+    while Instant::now() < deadline {
+        if cancel.as_ref().is_some_and(|cancel| cancel.is_cancelled()) {
+            return false;
+        }
+        Timer::after(Duration::from_millis(250)).await;
+    }
+    !cancel.is_some_and(|cancel| cancel.is_cancelled())
+}
+
+/// Seconds until a rate limit lifts, from the headers curl printed after the
+/// reply (see [`RATE_LIMIT_RESET_MARKER`]): `Retry-After` in seconds, a reset
+/// duration like `1m2.5s` or `250ms`, or a reset time as a Unix timestamp in
+/// seconds or milliseconds. The first that reads is used, kept to 1s-15min.
+fn rate_limit_reset_secs(headers: &str) -> Option<u64> {
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_millis() as f64;
+    let secs = headers.split('|').map(str::trim).find_map(|value| {
+        if value.is_empty() {
+            return None;
+        }
+        if let Ok(number) = value.parse::<f64>() {
+            return Some(if number > 1e12 {
+                (number - now_ms) / 1000.0
+            } else if number > 1e9 {
+                number - now_ms / 1000.0
+            } else {
+                number
+            });
+        }
+        go_duration_secs(value)
+    })?;
+    Some((secs.ceil().max(1.0) as u64).min(15 * 60))
+}
+
+/// A Go-style duration ("1m2.5s", "59.56s", "250ms") in seconds.
+fn go_duration_secs(text: &str) -> Option<f64> {
+    let mut total = 0.0;
+    let mut rest = text;
+    while !rest.is_empty() {
+        let digits = rest
+            .find(|c: char| !(c.is_ascii_digit() || c == '.'))
+            .unwrap_or(rest.len());
+        let number: f64 = rest[..digits].parse().ok()?;
+        rest = &rest[digits..];
+        let unit = rest.find(|c: char| c.is_ascii_digit()).unwrap_or(rest.len());
+        total += number
+            * match &rest[..unit] {
+                "h" => 3600.0,
+                "m" => 60.0,
+                "s" => 1.0,
+                "ms" => 0.001,
+                _ => return None,
+            };
+        rest = &rest[unit..];
+    }
+    Some(total)
+}
+
 /// How far a failed request's failure reaches, for failover.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum FailureScope {
@@ -1290,6 +1468,9 @@ struct RequestFailure {
     /// The request was longer than the model accepts (Z.ai's code 1261, a
     /// context-length error): compacting the input can rescue it.
     too_long: bool,
+    /// The model is rate-limited or overloaded, which passes: the same
+    /// request can be sent again after a wait.
+    busy: bool,
 }
 
 /// Whether a provider's error says the request was too long for the model:
@@ -1370,12 +1551,16 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
             )
         }
     };
+    let busy = !out_of_credit
+        && !too_long
+        && (matches!(http_status, Some(429 | 503 | 529)) || lower.contains("overloaded"));
     RequestFailure {
         scope,
         health,
         reason,
         detail: format!("{provider}: {error}"),
         too_long,
+        busy,
     }
 }
 
@@ -1405,6 +1590,7 @@ fn curl_failure(route: &ApiRoute, status: ExitStatus) -> RequestFailure {
         reason,
         detail: curl_failure_message(&route.provider_name, status),
         too_long: false,
+        busy: false,
     }
 }
 
@@ -1511,6 +1697,9 @@ struct ApiChatAccumulator {
     /// The HTTP status curl printed after the reply (see
     /// [`HTTP_STATUS_MARKER`]).
     http_status: Option<u16>,
+    /// Seconds until a rate limit lifts, when the reply's headers said (see
+    /// [`RATE_LIMIT_RESET_MARKER`]).
+    rate_limit_reset_secs: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -1568,6 +1757,10 @@ impl ApiChatAccumulator {
         }
         if let Some(code) = line.strip_prefix(HTTP_STATUS_MARKER) {
             self.http_status = code.trim().parse().ok();
+            return Vec::new();
+        }
+        if let Some(headers) = line.strip_prefix(RATE_LIMIT_RESET_MARKER) {
+            self.rate_limit_reset_secs = rate_limit_reset_secs(headers);
             return Vec::new();
         }
         let Some(data) = line.strip_prefix("data:") else {

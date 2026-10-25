@@ -4056,7 +4056,12 @@ impl Input {
                     model.selected_harness_reasoning_level().map(str::to_owned),
                 )
             })
-            .unwrap_or_else(|| crate::ai::harness_availability::selected_local_harness(ctx))
+            .unwrap_or_else(|| {
+                crate::ai::harness_availability::selected_local_harness_for_pane(
+                    self.terminal_view_id,
+                    ctx,
+                )
+            })
     }
 
     /// Shows a transient error toast for a follow-up submission that was blocked or redirected.

@@ -3,6 +3,7 @@ use krust_core::send_telemetry_from_ctx;
 use krust_core::ui::appearance::Appearance;
 use krust_errors::report_error;
 use krustui::keymap::Keystroke;
+use krust_cli::agent::Harness;
 use krustui::{EntityId, SingletonEntity, ViewContext};
 
 use crate::ai::agent::conversation::AIConversationId;
@@ -12,7 +13,9 @@ use crate::ai::blocklist::agent_view::{
     ENTER_OR_EXIT_CONFIRMATION_WINDOW,
 };
 use crate::ai::blocklist::history_model::CloudConversationData;
-use crate::ai::blocklist::BlocklistAIHistoryModel;
+use crate::ai::blocklist::{local_harness_threads, BlocklistAIHistoryModel};
+use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
+use crate::ai::harness_availability::{provider_key_for_model, set_pane_local_harness};
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
 use crate::persistence::ModelEvent;
 use crate::server::telemetry::TelemetryAgentViewEntryOrigin;
@@ -156,6 +159,26 @@ impl TerminalView {
         conversation_id: AIConversationId,
         ctx: &mut ViewContext<Self>,
     ) {
+        // A conversation resumes on the model it last ran on, whatever this
+        // pane picked for the one before.
+        if let (Some((kind, _)), Some(model)) = (
+            local_harness_threads::lookup(conversation_id),
+            local_harness_threads::model(conversation_id),
+        ) {
+            let harness = match kind {
+                LocalHarnessKind::Claude => Harness::Claude,
+                LocalHarnessKind::Codex | LocalHarnessKind::Ollama | LocalHarnessKind::Api => {
+                    Harness::Codex
+                }
+            };
+            set_pane_local_harness(
+                self.view_id,
+                provider_key_for_model(harness, &model),
+                Some(model),
+                None,
+            );
+        }
+
         let history_model = BlocklistAIHistoryModel::handle(ctx);
         let (in_memory_conversation, is_live) = {
             let history_model_ref = history_model.as_ref(ctx);
@@ -344,7 +367,10 @@ impl TerminalView {
                     })
                     .unwrap_or_else(|| {
                         let (harness, model_id, _reasoning) =
-                            crate::ai::harness_availability::selected_local_harness(ctx);
+                            crate::ai::harness_availability::selected_local_harness_for_pane(
+                                self.view_id,
+                                ctx,
+                            );
                         (harness, model_id)
                     });
                 self.run_local_claude_query(initial_prompt, harness, model_id, None, None, ctx);

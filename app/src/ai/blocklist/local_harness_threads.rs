@@ -25,10 +25,14 @@ use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 
 const FILE_NAME: &str = "local_harness_threads.json";
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ThreadBinding {
     harness: LocalHarnessKind,
     session_id: Uuid,
+    /// The model the conversation last ran on, so it resumes on that model
+    /// whatever the pane's picker shows (absent in older registries).
+    #[serde(default)]
+    model_id: Option<String>,
 }
 
 static REGISTRY: Mutex<Option<HashMap<String, ThreadBinding>>> = Mutex::new(None);
@@ -90,17 +94,49 @@ pub(crate) fn record(
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let bindings = registry.get_or_insert_with(load);
+    let key = conversation_id.to_string();
+    let model_id = bindings
+        .get(&key)
+        .and_then(|previous| previous.model_id.clone());
     let entry = bindings.insert(
-        conversation_id.to_string(),
+        key,
         ThreadBinding {
             harness,
             session_id,
+            model_id,
         },
     );
     let changed = entry
         .map(|previous| previous.session_id != session_id || previous.harness != harness)
         .unwrap_or(true);
     if changed {
+        persist(bindings);
+    }
+}
+
+/// The model `conversation_id` last ran on, if one was recorded.
+pub(crate) fn model(conversation_id: AIConversationId) -> Option<String> {
+    let mut registry = REGISTRY
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let bindings = registry.get_or_insert_with(load);
+    bindings
+        .get(&conversation_id.to_string())
+        .and_then(|binding| binding.model_id.clone())
+}
+
+/// Records the model `conversation_id` runs on (a turn's model, or the one
+/// failover moved it to). Needs the conversation's binding to exist.
+pub(crate) fn record_model(conversation_id: AIConversationId, model_id: &str) {
+    let mut registry = REGISTRY
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let bindings = registry.get_or_insert_with(load);
+    let Some(binding) = bindings.get_mut(&conversation_id.to_string()) else {
+        return;
+    };
+    if binding.model_id.as_deref() != Some(model_id) {
+        binding.model_id = Some(model_id.to_string());
         persist(bindings);
     }
 }
