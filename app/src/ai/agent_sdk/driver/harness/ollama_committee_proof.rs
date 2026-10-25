@@ -881,18 +881,116 @@ pub(crate) async fn probe_source(
         return None;
     }
     targets.truncate(MAX_PROBE_FUNCTIONS);
+    probe_targets(source, &targets, calls, working_dir, path).await
+}
 
+/// Probes the given functions of `source` (see [`probe_source`]).
+async fn probe_targets(
+    source: &str,
+    targets: &[ProbeTarget],
+    calls: &[String],
+    working_dir: &Path,
+    path: &str,
+) -> Option<String> {
     // Staged beside the repository so anything it imports resolves the same
     // way it will once saved, and removed afterwards — a round must not
     // leave files in a directory the user did not ask it to write to.
     let draft = working_dir.join(format!("committee-draft-{}.py", Uuid::new_v4()));
     std::fs::write(&draft, source).ok()?;
-    let script = behavior_probe_script(&draft.to_string_lossy(), &targets, calls);
+    let script = behavior_probe_script(&draft.to_string_lossy(), targets, calls);
     let execution = run_proof_script(&script, PROOF_TIMEOUT_SECS, working_dir, path).await;
     let _ = std::fs::remove_file(&draft);
 
     let observations = execution.stdout.trim();
     (!observations.is_empty()).then(|| observations.to_string())
+}
+
+/// The functions a write guard probes in `source`: its public top-level
+/// `def`s, but not `main`. Calling `main` runs the program — for a script
+/// that drives tools, on every edit — and its answer says nothing about
+/// whether an edit broke a computation.
+fn guard_targets(source: &str) -> Vec<ProbeTarget> {
+    let mut targets: Vec<ProbeTarget> = Vec::new();
+    for line in source.lines() {
+        let Some((function, arity)) = parse_def(line) else {
+            continue;
+        };
+        if function != "main" && !targets.iter().any(|target| target.function == function) {
+            targets.push(ProbeTarget {
+                file: String::new(),
+                function,
+                arity,
+            });
+        }
+    }
+    targets
+}
+
+/// Whether rewriting a python file from `before` to `after` loses behaviour
+/// it had: the file stops loading, a function goes, or a call that answered
+/// now raises or answers nothing. Both sides are probed on the same
+/// functions — the first [`MAX_PROBE_FUNCTIONS`] of `before`'s — because when
+/// each side took its own first eight, a function added above them pushed
+/// one out of the sample and it read as lost. A call the probe of `after`
+/// never reached (it timed out) proves nothing and isn't counted.
+pub(crate) async fn rewrite_loss(
+    before: &str,
+    after: &str,
+    working_dir: &Path,
+    path: &str,
+) -> Option<String> {
+    let mut sample = guard_targets(before);
+    sample.truncate(MAX_PROBE_FUNCTIONS);
+    if sample.is_empty() {
+        return None;
+    }
+    let kept: Vec<ProbeTarget> = guard_targets(after)
+        .into_iter()
+        .filter(|target| sample.iter().any(|sampled| sampled.function == target.function))
+        .collect();
+    if let Some(gone) = sample
+        .iter()
+        .find(|sampled| !kept.iter().any(|target| target.function == sampled.function))
+    {
+        return Some(format!("{}() was removed or renamed", gone.function));
+    }
+
+    let before_report = probe_targets(before, &sample, &[], working_dir, path).await?;
+    let after_report = probe_targets(after, &kept, &[], working_dir, path)
+        .await
+        .unwrap_or_default();
+    if let Some(failure) = after_report
+        .lines()
+        .find(|line| line.starts_with("module load failed"))
+    {
+        if !before_report.contains("module load failed") {
+            return Some(format!(
+                "the file no longer loads ({})",
+                failure.trim_start_matches("module load failed: ")
+            ));
+        }
+    }
+
+    let is_empty = |value: &str| matches!(value, "[]" | "{}" | "''" | "\"\"" | "None" | "0");
+    for line in before_report.lines() {
+        let Some((call, was)) = line.trim().split_once(" -> ") else {
+            continue;
+        };
+        let answered = format!("{call} -> ");
+        let raised = format!("{call} !! ");
+        for now in after_report.lines().map(str::trim) {
+            if let Some(is) = now.strip_prefix(&answered) {
+                if is_empty(is.trim()) && !is_empty(was.trim()) {
+                    return Some(format!("{call} used to answer {was} and now answers {is}"));
+                }
+                break;
+            }
+            if let Some(error) = now.strip_prefix(&raised) {
+                return Some(format!("{call} used to answer {was} and now raises {error}"));
+            }
+        }
+    }
+    None
 }
 
 /// Whether a revised draft lost ground against the one it replaced.

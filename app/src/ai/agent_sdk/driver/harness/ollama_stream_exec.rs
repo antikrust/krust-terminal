@@ -27,7 +27,7 @@ use super::claude_stream_exec::{
     finish_harness_session, harness_cancel_for, register_harness_session, run_jsonl_stream,
     run_jsonl_stream_cancellable, HarnessCancel,
 };
-use super::ollama_committee_proof::{lost_ground, probe_source};
+use super::ollama_committee_proof::rewrite_loss;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use super::plan_tracker::PlanTracker;
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
@@ -768,7 +768,14 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
             let original = std::fs::read_to_string(&target)
                 .map_err(|error| format!("Could not read {file}: {error}"))?;
             let edited = splice_lines(&original, start, end, &replacement)?;
-            write_keeping_behaviour(&target, &edited, working_dir, path).await?;
+            // No behaviour guard here, unlike write_file. It probes only the
+            // first eight functions in file order, so a function inserted
+            // above `main` pushed `main` out of the sample and the edit was
+            // refused as having "lost" it. And it runs the script's functions
+            // — `main` included — on every edit, which for a script that
+            // drives tools means running them. An edit to named lines is not
+            // the unwatched whole-file rewrite the guard was made for.
+            write_file(&target, &edited)?;
             let removed = (end + 1).saturating_sub(start);
             let added = replacement.split_inclusive('\n').count();
             Ok(format!(
@@ -2431,27 +2438,18 @@ async fn write_keeping_behaviour(
     // So a rewrite has to keep what it replaced working. Same
     // functions, same generic battery, compared by value — a call
     // that answered before and raises now, or returned something and
-    // returns nothing now, is behaviour going backwards, and the old
-    // file goes back. Nothing else is judged: the model is free to
-    // restructure, rename locals, change anything it likes, as long
-    // as the code still does what it did.
+    // returns nothing now, is behaviour going backwards, and the rewrite
+    // is refused before anything is written. Nothing else is judged: the
+    // model is free to restructure, rename locals, change anything it
+    // likes, as long as the code still does what it did. (`main` is never
+    // called — see `rewrite_loss`.)
     let previous = target
         .extension()
         .is_some_and(|extension| extension == "py")
         .then(|| std::fs::read_to_string(target).ok())
         .flatten();
-    let before = match &previous {
-        Some(source) => probe_source(source, &[], working_dir, path).await,
-        None => None,
-    };
-    let bytes = write_file(target, content)?;
-    if let (Some(before), Some(source)) = (before, previous) {
-        let after = probe_source(content, &[], working_dir, path).await;
-        if let Some(loss) = after
-            .as_deref()
-            .and_then(|after| lost_ground(&before, after))
-        {
-            write_file(target, &source)?;
+    if let Some(source) = &previous {
+        if let Some(loss) = rewrite_loss(source, content, working_dir, path).await {
             return Err(format!(
                 "Refused: that rewrite loses behaviour the file already had — {loss}. \
                  {} is unchanged. Make the smallest change that fixes what you meant to \
@@ -2460,7 +2458,7 @@ async fn write_keeping_behaviour(
             ));
         }
     }
-    Ok(bytes)
+    write_file(target, content)
 }
 
 /// Writes `content` to `path`, creating parent directories as needed.
