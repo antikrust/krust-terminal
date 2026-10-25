@@ -17,7 +17,7 @@ use krust_core::ui::theme::Fill as ThemeFill;
 use krust_editor::editor::NavigationKey;
 use krustui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
-    Dismiss, Empty, Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable,
+    Dismiss, Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable,
     HyperlinkLens, HyperlinkUrl, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Text,
@@ -54,7 +54,11 @@ use super::{
     editor_text_colors, flags, SettingActionPairContexts, SettingActionPairDescriptions,
     SettingsAction, SettingsSection, ToggleSettingActionPair,
 };
-use crate::ai::api_providers::{self, ApiProvider, ApiProviderKeys};
+use crate::ai::api_providers::{
+    self, failover_rows, failover_sources, is_free_model, ApiProvider, ApiProviderKeys,
+    FailoverSource, LOCAL_OLLAMA,
+};
+use crate::ai::harness_availability::HarnessAvailabilityModel;
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::aws_credentials::refresh_aws_credentials;
 use crate::ai::blocklist::agent_view::agent_input_footer::editor::{
@@ -90,7 +94,7 @@ use crate::settings::{
     AIAutoDetectionEnabled, AICommandDenylist, AISettingsChangedEvent,
     AgentModeCodingPermissionsType, AgentModeCommandExecutionDenylist,
     AgentModeCommandExecutionPredicate, AgentModeQuerySuggestionsEnabled, AwsBedrockAutoLogin,
-    AwsBedrockCredentialsEnabled, ByorFailoverEnabled, CodeSettings,
+    AwsBedrockCredentialsEnabled, ByorFailoverEnabled, ByorFailoverFreeOnly, CodeSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
     LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
@@ -616,6 +620,15 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             )
             .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
+                "BYOR failover to free models only",
+                builder(SettingsAction::AI(
+                    AISettingsPageAction::ToggleByorFailoverFreeOnly,
+                )),
+                &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
+                flags::BYOR_FAILOVER_FREE_ONLY_FLAG,
+            )
+            .with_group(bindings::BindingGroup::KrustAi),
+            ToggleSettingActionPair::new(
                 "auto show or hide Rich Input based on agent status",
                 builder(SettingsAction::AI(
                     AISettingsPageAction::ToggleAutoToggleRichInput,
@@ -686,6 +699,13 @@ pub struct AISettingsPageView {
     cli_agent_footer_command_editor: ViewHandle<SubmittableTextInput>,
     cli_agent_footer_command_mouse_state_handles: Vec<MouseStateHandle>,
     cli_agent_footer_command_agent_dropdowns: Vec<ViewHandle<Dropdown<AISettingsPageAction>>>,
+    /// The BYOR failover list's rows, rebuilt whenever the list, the keys or
+    /// the local models change.
+    byor_failover_rows: Vec<ByorFailoverRow>,
+    /// What the rows' menus offer (providers with keys, custom endpoints,
+    /// local models), so a refresh that changes none of it doesn't rebuild
+    /// (and close) them.
+    byor_failover_sources: Vec<FailoverSource>,
     agent_toolbar_inline_editor: ViewHandle<AgentToolbarInlineEditor>,
 
     apply_code_diffs_dropdown_menu: ViewHandle<Dropdown<AISettingsPageAction>>,
@@ -744,6 +764,8 @@ pub struct AISettingsPageView {
     pending_remove_custom_endpoint_index: Option<usize>,
     custom_inference_add_button: ViewHandle<ActionButton>,
     custom_endpoint_edit_buttons: Vec<ViewHandle<ActionButton>>,
+    /// Each saved endpoint's Remove button, beside its Edit button.
+    custom_endpoint_remove_buttons: Vec<ViewHandle<ActionButton>>,
 
     // Prompt offering to switch the default Agent Mode model after a BYO key or
     // custom endpoint is saved while the default isn't backed by a credential.
@@ -1311,6 +1333,11 @@ impl AISettingsPageView {
                         .map(|_| Default::default())
                         .collect();
                 }
+                AISettingsChangedEvent::ByorFailoverOrder { .. }
+                | AISettingsChangedEvent::ByorFailoverFreeOnly { .. }
+                | AISettingsChangedEvent::OllamaEnabled { .. } => {
+                    me.rebuild_byor_failover_rows(ctx);
+                }
                 AISettingsChangedEvent::CLIAgentToolbarEnabledCommands { .. } => {
                     me.cli_agent_footer_command_mouse_state_handles = AISettings::as_ref(ctx)
                         .cli_agent_footer_enabled_commands
@@ -1858,6 +1885,11 @@ impl AISettingsPageView {
             custom_inference_controls_enabled,
             ctx,
         );
+        let custom_endpoint_remove_buttons = Self::create_custom_endpoint_remove_buttons(
+            ApiKeyManager::as_ref(ctx).keys().custom_endpoints.len(),
+            custom_inference_controls_enabled,
+            ctx,
+        );
 
         let agent_toolbar_inline_editor = ctx.add_typed_action_view(|ctx| {
             AgentToolbarInlineEditor::new(AgentToolbarEditorMode::AgentView, ctx)
@@ -1932,6 +1964,8 @@ impl AISettingsPageView {
             },
         );
 
+        let (byor_failover_rows, byor_failover_sources) = Self::create_byor_failover_rows(ctx);
+
         Self {
             page: Self::build_page(None, ctx),
             active_subpage: None,
@@ -1973,6 +2007,8 @@ impl AISettingsPageView {
             mcp_allowlist_mouse_state_handles,
             mcp_denylist_dropdown,
             mcp_denylist_mouse_state_handles,
+            byor_failover_rows,
+            byor_failover_sources,
             thinking_display_mode_dropdown,
             orchestration_message_display_mode_dropdown,
             default_prompt_submission_mode_dropdown,
@@ -1990,6 +2026,7 @@ impl AISettingsPageView {
             pending_remove_custom_endpoint_index: None,
             custom_inference_add_button,
             custom_endpoint_edit_buttons,
+            custom_endpoint_remove_buttons,
             set_default_model_modal,
             last_seen_provider_keys,
             #[cfg(not(target_family = "wasm"))]
@@ -2258,13 +2295,46 @@ impl AISettingsPageView {
         if self.custom_endpoint_edit_buttons.len() != endpoint_count {
             self.custom_endpoint_edit_buttons =
                 Self::create_custom_endpoint_edit_buttons(endpoint_count, enabled, ctx);
+            self.custom_endpoint_remove_buttons =
+                Self::create_custom_endpoint_remove_buttons(endpoint_count, enabled, ctx);
         } else {
-            for button in &self.custom_endpoint_edit_buttons {
+            for button in self
+                .custom_endpoint_edit_buttons
+                .iter()
+                .chain(&self.custom_endpoint_remove_buttons)
+            {
                 button.update(ctx, |button, ctx| {
                     button.set_disabled(!enabled, ctx);
                 });
             }
         }
+    }
+
+    /// One Remove button per saved endpoint; each asks for confirmation
+    /// first, as the Remove button in the endpoint's edit dialog does.
+    fn create_custom_endpoint_remove_buttons(
+        count: usize,
+        enabled: bool,
+        ctx: &mut ViewContext<Self>,
+    ) -> Vec<ViewHandle<ActionButton>> {
+        (0..count)
+            .map(|index| {
+                let button = ctx.add_typed_action_view(move |_| {
+                    ActionButton::new("Remove", DangerSecondaryTheme)
+                        .with_icon(Icon::Trash)
+                        .with_size(ButtonSize::Small)
+                        .on_click(move |ctx| {
+                            ctx.dispatch_typed_action(
+                                AISettingsPageAction::RemoveCustomEndpoint(index),
+                            );
+                        })
+                });
+                button.update(ctx, |button, ctx| {
+                    button.set_disabled(!enabled, ctx);
+                });
+                button
+            })
+            .collect()
     }
 
     fn create_custom_endpoint_edit_buttons(
@@ -3498,6 +3568,25 @@ impl AISettingsPageView {
         Self::refresh_menu_dropdown(menu, AISettingsPageAction::AddToMCPDenylist, ctx);
     }
 
+    /// The BYOR failover list's rows, and what their menus offer.
+    fn create_byor_failover_rows(
+        ctx: &mut ViewContext<Self>,
+    ) -> (Vec<ByorFailoverRow>, Vec<FailoverSource>) {
+        let sources = failover_sources(ctx);
+        let rows = failover_rows(ctx)
+            .into_iter()
+            .enumerate()
+            .map(|(index, model_id)| ByorFailoverRow::new(index, &model_id, &sources, ctx))
+            .collect();
+        (rows, sources)
+    }
+
+    fn rebuild_byor_failover_rows(&mut self, ctx: &mut ViewContext<Self>) {
+        (self.byor_failover_rows, self.byor_failover_sources) =
+            Self::create_byor_failover_rows(ctx);
+        ctx.notify();
+    }
+
     fn create_cli_agent_dropdowns(
         ctx: &mut ViewContext<Self>,
     ) -> Vec<ViewHandle<Dropdown<AISettingsPageAction>>> {
@@ -3623,9 +3712,23 @@ pub enum AISettingsPageAction {
     ToggleUseAgentToolbar,
     ToggleVoiceInput,
     ToggleByorFailover,
-    /// Moves the provider at this position in the failover list up or down.
+    ToggleByorFailoverFreeOnly,
+    /// Moves the row at this position in the failover list up or down.
     MoveByorFailoverUp(usize),
     MoveByorFailoverDown(usize),
+    /// Adds a row below this one, on the same provider's next model that
+    /// isn't listed yet.
+    DuplicateByorFailoverRow(usize),
+    RemoveByorFailoverRow(usize),
+    /// Puts a row on another provider, at that provider's first model.
+    SetByorFailoverProvider {
+        index: usize,
+        provider_id: String,
+    },
+    SetByorFailoverModel {
+        index: usize,
+        model_id: String,
+    },
     HyperlinkClick(HyperlinkUrl),
     ToggleCodebaseContext,
     ToggleShowInputHintText,
@@ -3691,6 +3794,8 @@ pub enum AISettingsPageAction {
     // Custom inference
     OpenAddCustomEndpointModal,
     OpenEditCustomEndpointModal(usize),
+    /// Asks to confirm removing this saved endpoint.
+    RemoveCustomEndpoint(usize),
     ConnectGrokSubscription,
     DisconnectGrokSubscription,
 
@@ -4037,13 +4142,72 @@ impl TypedActionView for AISettingsPageView {
                 });
                 ctx.notify();
             }
+            AISettingsPageAction::ToggleByorFailoverFreeOnly => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.byor_failover_free_only.toggle_and_save_value(ctx));
+                });
+                ctx.notify();
+            }
             AISettingsPageAction::MoveByorFailoverUp(index) => {
-                if let Some(target) = index.checked_sub(1) {
-                    move_byor_failover_provider(*index, target, ctx);
+                let mut rows = shown_byor_failover_rows(ctx);
+                if *index > 0 && *index < rows.len() {
+                    rows.swap(*index, *index - 1);
+                    save_byor_failover_rows(rows, ctx);
                 }
             }
             AISettingsPageAction::MoveByorFailoverDown(index) => {
-                move_byor_failover_provider(*index, *index + 1, ctx);
+                let mut rows = shown_byor_failover_rows(ctx);
+                if *index + 1 < rows.len() {
+                    rows.swap(*index, *index + 1);
+                    save_byor_failover_rows(rows, ctx);
+                }
+            }
+            AISettingsPageAction::DuplicateByorFailoverRow(index) => {
+                let mut rows = shown_byor_failover_rows(ctx);
+                if let Some(model_id) = rows.get(*index).cloned() {
+                    // The provider's next model not already listed, so the
+                    // new row is one more model to fall back to.
+                    let sources = failover_sources(ctx);
+                    let next = failover_source_of(&model_id, &sources).and_then(|source| {
+                        source
+                            .models
+                            .iter()
+                            .map(|(choice, _)| choice)
+                            .find(|choice| !rows.contains(choice))
+                            .cloned()
+                    });
+                    if let Some(next) = next {
+                        rows.insert(*index + 1, next);
+                        save_byor_failover_rows(rows, ctx);
+                    }
+                }
+            }
+            AISettingsPageAction::RemoveByorFailoverRow(index) => {
+                let mut rows = shown_byor_failover_rows(ctx);
+                // The last row stays: an empty list means "one row per
+                // provider", which would bring them all back.
+                if rows.len() > 1 && *index < rows.len() {
+                    rows.remove(*index);
+                    save_byor_failover_rows(rows, ctx);
+                }
+            }
+            AISettingsPageAction::SetByorFailoverProvider { index, provider_id } => {
+                let first = failover_sources(ctx)
+                    .into_iter()
+                    .find(|source| &source.key == provider_id)
+                    .and_then(|source| source.models.into_iter().next());
+                let mut rows = shown_byor_failover_rows(ctx);
+                if let (Some((model_id, _)), Some(row)) = (first, rows.get_mut(*index)) {
+                    *row = model_id;
+                    save_byor_failover_rows(rows, ctx);
+                }
+            }
+            AISettingsPageAction::SetByorFailoverModel { index, model_id } => {
+                let mut rows = shown_byor_failover_rows(ctx);
+                if let Some(row) = rows.get_mut(*index) {
+                    *row = model_id.clone();
+                    save_byor_failover_rows(rows, ctx);
+                }
             }
             AISettingsPageAction::HyperlinkClick(hyperlink) => {
                 ctx.notify();
@@ -4493,6 +4657,9 @@ impl TypedActionView for AISettingsPageView {
             }
             AISettingsPageAction::OpenEditCustomEndpointModal(index) => {
                 self.show_edit_custom_endpoint_modal(*index, ctx);
+            }
+            AISettingsPageAction::RemoveCustomEndpoint(index) => {
+                self.show_remove_custom_endpoint_confirmation_dialog(*index, ctx);
             }
             AISettingsPageAction::ToggleCloudHandoff => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
@@ -8150,9 +8317,7 @@ struct CloudModelKeysWidget {
     /// link — created once here so the link's clicks register.
     providers: Vec<(&'static ApiProvider, ViewHandle<EditorView>, MouseStateHandle)>,
     failover_switch: SwitchStateHandle,
-    /// The up and down buttons of each row of the failover list, one pair
-    /// per provider (the list never has more rows than there are providers).
-    failover_move_buttons: Vec<(MouseStateHandle, MouseStateHandle)>,
+    free_only_switch: SwitchStateHandle,
 }
 
 impl CloudModelKeysWidget {
@@ -8203,96 +8368,211 @@ impl CloudModelKeysWidget {
                 (provider, editor, MouseStateHandle::default())
             })
             .collect();
-        // The failover list shows only providers with a key, so it changes
-        // as keys are added or removed.
-        ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |_, _, _, ctx| ctx.notify());
+        // The failover rows offer the providers with a key, the custom
+        // endpoints and the local models, so they're rebuilt when any of
+        // those changes.
+        ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_byor_failover_rows(ctx);
+        });
+        ctx.subscribe_to_model(&ApiKeyManager::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_byor_failover_rows(ctx);
+        });
+        ctx.subscribe_to_model(&HarnessAvailabilityModel::handle(ctx), |me, _, _, ctx| {
+            if failover_sources(ctx) != me.byor_failover_sources {
+                me.rebuild_byor_failover_rows(ctx);
+            }
+        });
         Self {
             providers,
             failover_switch: Default::default(),
-            failover_move_buttons: api_providers::PROVIDERS
-                .iter()
-                .map(|_| Default::default())
-                .collect(),
+            free_only_switch: Default::default(),
         }
     }
 
-    /// The BYOR failover toggle and, while it's on, the providers it moves
-    /// through, first choice first, each with buttons to move it.
+    /// "Custom endpoints": the "+ Add custom model" button and the saved
+    /// endpoints, under the same workspace switches as before they moved
+    /// here. `None` when those switches hide custom inference.
+    fn render_custom_endpoints(
+        view: &AISettingsPageView,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Option<Box<dyn Element>> {
+        let visibility = CustomInferenceVisibility::compute(app);
+        if !visibility.show_custom_inference {
+            return None;
+        }
+        let enabled = visibility.custom_inference_controls_enabled;
+        let header = Flex::row()
+            .with_main_axis_size(MainAxisSize::Max)
+            .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(
+                Text::new_inline("Custom endpoints", appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                    .with_color(styles::header_font_color(enabled, app).into())
+                    .with_style(Properties::default().weight(Weight::Semibold))
+                    .finish(),
+            )
+            .with_child(view.custom_inference_add_button.as_ref(app).render(app))
+            .finish();
+        let mut column = Flex::column().with_child(header);
+        if !ApiKeyManager::as_ref(app).keys().custom_endpoints.is_empty() {
+            column.add_child(
+                Container::new(ApiKeysWidget::render_custom_endpoints_list(
+                    view, appearance, enabled, app,
+                ))
+                .with_margin_top(8.)
+                .finish(),
+            );
+        }
+        Some(column.finish())
+    }
+
+    /// The BYOR failover toggles and, while failover is on, the models it
+    /// moves through, first choice first: a provider and a model per row,
+    /// each row movable, duplicable and removable.
     fn render_failover(&self, view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
         let ai_settings = AISettings::as_ref(app);
+        let is_any_ai_enabled = ai_settings.is_any_ai_enabled(app);
         let is_enabled = *ai_settings.byor_failover_enabled;
         let mut column = Flex::column()
             .with_child(render_ai_setting_toggle::<ByorFailoverEnabled>(
                 "BYOR failover",
                 AISettingsPageAction::ToggleByorFailover,
                 is_enabled,
-                ai_settings.is_any_ai_enabled(app),
+                is_any_ai_enabled,
                 self.failover_switch.clone(),
                 &view.local_only_icon_tooltip_states,
                 app,
             ))
             .with_child(render_ai_setting_description(
-                "When a provider can't answer — out of credit, rate limited, or overloaded — \
-                 the agent sends the same request to the first other provider in this list, \
-                 on that provider's first model, and stays there for the rest of the turn. \
-                 Each provider is tried once.",
-                ai_settings.is_any_ai_enabled(app),
+                "When a model can't answer, the agent sends the same request to the next \
+                 model in this list and stays there. Out of credit or a rejected key skips \
+                 the rest of that provider; a busy or rate-limited model only skips that \
+                 model. The model that answers becomes the selected one.",
+                is_any_ai_enabled,
                 app,
             ));
         if !is_enabled {
             return column.finish();
         }
 
-        let appearance = Appearance::as_ref(app);
-        let providers =
-            ApiProviderKeys::as_ref(app).failover_providers(ai_settings.byor_failover_order.value());
-        if providers.is_empty() {
+        let free_only = *ai_settings.byor_failover_free_only;
+        column.add_child(render_ai_setting_toggle::<ByorFailoverFreeOnly>(
+            "Free models only",
+            AISettingsPageAction::ToggleByorFailoverFreeOnly,
+            free_only,
+            is_any_ai_enabled,
+            self.free_only_switch.clone(),
+            &view.local_only_icon_tooltip_states,
+            app,
+        ));
+        column.add_child(render_ai_setting_description(
+            "Fail over only to models that cost nothing: those listed as free, OpenRouter's \
+             free models, and local Ollama models. Paid rows are skipped. Some free tiers, \
+             Google's among them, use your prompts to improve their products.",
+            is_any_ai_enabled,
+            app,
+        ));
+
+        let rows = &view.byor_failover_rows;
+        if rows.is_empty() {
             return column
                 .with_child(render_ai_setting_description(
-                    "Add a key above to put that provider in the list.",
+                    "Add a key above, or install an Ollama model, to fill this list.",
                     true,
                     app,
                 ))
                 .finish();
         }
+        let appearance = Appearance::as_ref(app);
+        let shown = shown_byor_failover_rows(app);
         let mut list = Flex::column().with_spacing(8.);
-        for (index, (provider, (up, down))) in
-            providers.iter().zip(&self.failover_move_buttons).enumerate()
-        {
-            let label = Text::new_inline(
-                format!("{}. {}", index + 1, provider.display_name),
-                appearance.ui_font_family(),
-                CONTENT_FONT_SIZE,
-            )
-            .with_color(appearance.theme().active_ui_text_color().into())
-            .finish();
-            list.add_child(
-                Flex::row()
-                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                    .with_child(failover_move_button(
-                        Icon::ChevronUp,
-                        index > 0,
-                        up.clone(),
-                        AISettingsPageAction::MoveByorFailoverUp(index),
-                        appearance,
-                    ))
-                    .with_child(
-                        Container::new(failover_move_button(
-                            Icon::ChevronDown,
-                            index + 1 < providers.len(),
-                            down.clone(),
-                            AISettingsPageAction::MoveByorFailoverDown(index),
-                            appearance,
-                        ))
-                        .with_margin_left(6.)
-                        .with_margin_right(12.)
+        for (index, row) in rows.iter().enumerate() {
+            let skipped = free_only && shown.get(index).is_some_and(|id| !is_free_model(id));
+            // "+" needs a model of this row's provider that isn't listed yet.
+            let can_add = shown.get(index).is_some_and(|id| {
+                failover_source_of(id, &view.byor_failover_sources).is_some_and(|source| {
+                    source.models.iter().any(|(choice, _)| !shown.contains(choice))
+                })
+            });
+            let mut fields = Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    Text::new_inline(
+                        format!("{}.", index + 1),
+                        appearance.ui_font_family(),
+                        CONTENT_FONT_SIZE,
+                    )
+                    .with_color(appearance.theme().active_ui_text_color().into())
+                    .finish(),
+                )
+                .with_child(
+                    Container::new(ChildView::new(&row.provider_dropdown).finish())
+                        .with_margin_left(8.)
+                        .finish(),
+                )
+                .with_child(
+                    Container::new(ChildView::new(&row.model_dropdown).finish())
+                        .with_margin_left(8.)
+                        .finish(),
+                );
+            if skipped {
+                fields.add_child(
+                    Container::new(
+                        Text::new_inline(
+                            "paid — skipped",
+                            appearance.ui_font_family(),
+                            CONTENT_FONT_SIZE,
+                        )
+                        .with_color(appearance.theme().disabled_ui_text_color().into())
                         .finish(),
                     )
-                    .with_child(label)
+                    .with_margin_left(8.)
                     .finish(),
-            );
+                );
+            }
+            let buttons = [
+                (
+                    Icon::ChevronUp,
+                    index > 0,
+                    &row.move_up,
+                    AISettingsPageAction::MoveByorFailoverUp(index),
+                ),
+                (
+                    Icon::ChevronDown,
+                    index + 1 < rows.len(),
+                    &row.move_down,
+                    AISettingsPageAction::MoveByorFailoverDown(index),
+                ),
+                (
+                    Icon::Plus,
+                    can_add,
+                    &row.duplicate,
+                    AISettingsPageAction::DuplicateByorFailoverRow(index),
+                ),
+                (
+                    Icon::Minus,
+                    rows.len() > 1,
+                    &row.remove,
+                    AISettingsPageAction::RemoveByorFailoverRow(index),
+                ),
+            ];
+            for (icon, enabled, mouse_state, action) in buttons {
+                fields.add_child(
+                    Container::new(failover_icon_button(
+                        icon,
+                        enabled,
+                        mouse_state.clone(),
+                        action,
+                        appearance,
+                    ))
+                    .with_margin_left(8.)
+                    .finish(),
+                );
+            }
+            list.add_child(fields.finish());
         }
-        column.add_child(list.finish());
+        column.add_child(Container::new(list.finish()).with_margin_top(8.).finish());
         column.finish()
     }
 
@@ -8406,6 +8686,9 @@ impl SettingsWidget for CloudModelKeysWidget {
             providers.add_child(Self::render_provider(provider, editor, key_link, appearance));
         }
         column.add_child(providers.finish());
+        if let Some(custom_endpoints) = Self::render_custom_endpoints(view, appearance, app) {
+            column.add_child(Container::new(custom_endpoints).with_margin_top(24.).finish());
+        }
         column.add_child(
             Container::new(self.render_failover(view, app))
                 .with_margin_top(24.)
@@ -8415,10 +8698,9 @@ impl SettingsWidget for CloudModelKeysWidget {
     }
 }
 
-/// One of the up/down buttons of the BYOR failover list (after
-/// `rule_icon_button` in the router editor): greyed out and inert when
-/// `enabled` is false.
-fn failover_move_button(
+/// One of a BYOR failover row's buttons (after `rule_icon_button` in the
+/// router editor): greyed out and inert when `enabled` is false.
+fn failover_icon_button(
     icon: Icon,
     enabled: bool,
     mouse_state: MouseStateHandle,
@@ -8452,31 +8734,129 @@ fn failover_move_button(
     }
 }
 
-/// Swaps the providers at `from` and `to` in the BYOR failover list as it's
-/// shown (see [`ApiProviderKeys::failover_providers`]) and saves the order.
-/// Providers whose key was removed keep their place after the listed ones.
-fn move_byor_failover_provider(
-    from: usize,
-    to: usize,
-    ctx: &mut ViewContext<AISettingsPageView>,
-) {
-    let saved = AISettings::as_ref(ctx).byor_failover_order.value().clone();
-    let mut order: Vec<String> = ApiProviderKeys::as_ref(ctx)
-        .failover_providers(&saved)
-        .iter()
-        .map(|provider| provider.id.to_owned())
-        .collect();
-    if from >= order.len() || to >= order.len() {
-        return;
+/// One row of the BYOR failover list: its provider and model menus, and the
+/// mouse states of its buttons (made here, never while rendering): up, down,
+/// "+" (another model of this provider below) and "−" (remove the row).
+struct ByorFailoverRow {
+    provider_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
+    model_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
+    move_up: MouseStateHandle,
+    move_down: MouseStateHandle,
+    duplicate: MouseStateHandle,
+    remove: MouseStateHandle,
+}
+
+impl ByorFailoverRow {
+    fn new(
+        index: usize,
+        model_id: &str,
+        sources: &[FailoverSource],
+        ctx: &mut ViewContext<AISettingsPageView>,
+    ) -> Self {
+        let current = failover_source_of(model_id, sources);
+        let provider_items: Vec<_> = sources
+            .iter()
+            .map(|source| {
+                DropdownItem::new(
+                    source.name.clone(),
+                    AISettingsPageAction::SetByorFailoverProvider {
+                        index,
+                        provider_id: source.key.clone(),
+                    },
+                )
+            })
+            .collect();
+        let provider_selected = current.map(|source| AISettingsPageAction::SetByorFailoverProvider {
+            index,
+            provider_id: source.key.clone(),
+        });
+        // Every local model is free; marking them all says nothing.
+        let mark_free = current.is_some_and(|source| source.key != LOCAL_OLLAMA.id);
+        let mut choices = current.map(|source| source.models.clone()).unwrap_or_default();
+        if !choices.iter().any(|(choice, _)| choice == model_id) {
+            choices.push((model_id.to_owned(), model_id.to_owned()));
+        }
+        let model_items: Vec<_> = choices
+            .into_iter()
+            .map(|(choice, label)| {
+                let label = if mark_free && is_free_model(&choice) {
+                    format!("{label} · free")
+                } else {
+                    label
+                };
+                DropdownItem::new(
+                    label,
+                    AISettingsPageAction::SetByorFailoverModel {
+                        index,
+                        model_id: choice,
+                    },
+                )
+            })
+            .collect();
+        let model_selected = AISettingsPageAction::SetByorFailoverModel {
+            index,
+            model_id: model_id.to_owned(),
+        };
+        let provider_dropdown = ctx.add_typed_action_view(move |ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_top_bar_max_width(160.);
+            dropdown.set_menu_width(180., ctx);
+            dropdown.set_main_axis_size(MainAxisSize::Min, ctx);
+            dropdown.set_items(provider_items, ctx);
+            if let Some(selected) = provider_selected {
+                dropdown.set_selected_by_action(selected, ctx);
+            }
+            dropdown
+        });
+        let model_dropdown = ctx.add_typed_action_view(move |ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_top_bar_max_width(240.);
+            dropdown.set_menu_width(280., ctx);
+            dropdown.set_main_axis_size(MainAxisSize::Min, ctx);
+            dropdown.set_items(model_items, ctx);
+            dropdown.set_selected_by_action(model_selected, ctx);
+            dropdown
+        });
+        Self {
+            provider_dropdown,
+            model_dropdown,
+            move_up: Default::default(),
+            move_down: Default::default(),
+            duplicate: Default::default(),
+            remove: Default::default(),
+        }
     }
-    order.swap(from, to);
-    for id in saved {
-        if !order.contains(&id) {
-            order.push(id);
+}
+
+/// The source (provider, custom endpoint, or local Ollama) a failover row's
+/// model belongs to.
+fn failover_source_of<'a>(
+    model_id: &str,
+    sources: &'a [FailoverSource],
+) -> Option<&'a FailoverSource> {
+    sources
+        .iter()
+        .find(|source| source.models.iter().any(|(choice, _)| choice == model_id))
+}
+
+/// The BYOR failover list as it's shown: the models the rows hold, first
+/// choice first. Edit it and save it with [`save_byor_failover_rows`].
+fn shown_byor_failover_rows(app: &AppContext) -> Vec<String> {
+    failover_rows(app)
+}
+
+/// Saves an edited failover list. Saved models that aren't shown (their
+/// provider's key was removed, say) keep their place after the shown ones.
+fn save_byor_failover_rows(mut rows: Vec<String>, ctx: &mut ViewContext<AISettingsPageView>) {
+    let saved = AISettings::as_ref(ctx).byor_failover_order.value().clone();
+    let shown = shown_byor_failover_rows(ctx);
+    for entry in saved {
+        if entry.contains('/') && !shown.contains(&entry) && !rows.contains(&entry) {
+            rows.push(entry);
         }
     }
     AISettings::handle(ctx).update(ctx, |settings, ctx| {
-        report_if_error!(settings.byor_failover_order.set_value(order, ctx));
+        report_if_error!(settings.byor_failover_order.set_value(rows, ctx));
     });
     ctx.notify();
 }
@@ -9055,8 +9435,9 @@ impl ApiKeysWidget {
             .finish()
     }
 
+    /// The saved custom endpoints, one card each with an Edit button. Also
+    /// shown on the Bring your own key page (see `CloudModelKeysWidget`).
     fn render_custom_endpoints_list(
-        &self,
         view: &AISettingsPageView,
         appearance: &Appearance,
         is_enabled: bool,
@@ -9092,11 +9473,19 @@ impl ApiKeysWidget {
                 .with_child(chips)
                 .finish();
 
-            let edit_button = view
-                .custom_endpoint_edit_buttons
-                .get(index)
-                .map(|button| button.as_ref(app).render(app))
-                .unwrap_or_else(|| Empty::new().finish());
+            let mut buttons = Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center);
+            for button in [
+                view.custom_endpoint_edit_buttons.get(index),
+                view.custom_endpoint_remove_buttons.get(index),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                buttons.add_child(button.as_ref(app).render(app));
+            }
+            let edit_button = buttons.finish();
 
             let row = Flex::row()
                 .with_main_axis_size(MainAxisSize::Max)
@@ -9518,7 +9907,7 @@ impl SettingsWidget for ApiKeysWidget {
                     .with_margin_bottom(8.)
                     .finish(),
                 );
-                let endpoints_list = self.render_custom_endpoints_list(
+                let endpoints_list = Self::render_custom_endpoints_list(
                     view,
                     appearance,
                     custom_inference_controls_enabled,

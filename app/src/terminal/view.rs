@@ -223,20 +223,21 @@ use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environme
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
     run_claude_stream, stream_json_args,
 };
-use crate::ai::agent_sdk::driver::harness::api_stream_exec::{
-    api_curl_args, run_api_stream, API_KEY_ENV,
-};
+use crate::ai::agent_sdk::driver::harness::api_stream_exec::run_api_stream;
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_runbook::{run_ollama_runbook, RunbookConfig};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
-    self, ollama_curl_args, ollama_model_name, run_ollama_stream,
+    self, ollama_curl_args, ollama_model_name, run_ollama_stream, OLLAMA_HARNESS_CONFIG_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
-use crate::ai::api_providers::{api_model_parts, ApiProviderKeys};
+use crate::ai::api_providers::{
+    api_model_parts, failover_routes, is_api_runner_model, route_for, API_HARNESS_CONFIG_NAME,
+};
+use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
 };
@@ -23468,6 +23469,39 @@ impl TerminalView {
             .map(|pwd| pwd.to_string())
     }
 
+    /// Makes `model_id`, the model BYOR failover moved a turn to and that
+    /// answered, the selected model, as picking it in the model menu would,
+    /// so the next turn starts there instead of failing over again.
+    fn adopt_failover_model(&mut self, model_id: &str, ctx: &mut ViewContext<Self>) {
+        let is_local = ollama_model_name(model_id).is_some();
+        let key = if is_local {
+            OLLAMA_HARNESS_CONFIG_NAME
+        } else {
+            API_HARNESS_CONFIG_NAME
+        };
+        CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
+            let _ = settings
+                .last_selected_harness
+                .set_value(Some(key.to_string()), ctx);
+            settings.persist_harness_model_selection_for_key(key, model_id, None, ctx);
+            // The conversation stays on the API runner, which reads its model
+            // from the API selection: a local model goes there too.
+            if is_local {
+                settings.persist_harness_model_selection_for_key(
+                    API_HARNESS_CONFIG_NAME,
+                    model_id,
+                    None,
+                    ctx,
+                );
+            }
+        });
+        if let Some(ambient_agent_view_model) = self.ambient_agent_view_model.clone() {
+            ambient_agent_view_model.update(ctx, |model, ctx| {
+                model.set_harness_model_selection(Some(model_id.to_owned()), None, ctx);
+            });
+        }
+    }
+
     /// Routes a terminal agent prompt to the local Claude Code streaming harness,
     /// rendering the response inline in this terminal. Runs `claude` headless and
     /// injects each parsed event into this terminal's conversation via
@@ -23511,7 +23545,9 @@ impl TerminalView {
         // the harness their thread started with — the session belongs to
         // that engine — even if the picker changed since.
         let requested_kind = match requested_harness {
-            Harness::Codex if model_id.as_deref().and_then(api_model_parts).is_some() => {
+            // Cloud providers' models and custom endpoints' both run on the
+            // API runner.
+            Harness::Codex if model_id.as_deref().is_some_and(is_api_runner_model) => {
                 LocalHarnessKind::Api
             }
             Harness::Codex if model_id.as_deref().and_then(ollama_model_name).is_some() => {
@@ -23594,20 +23630,19 @@ impl TerminalView {
         // A cloud model runs on its provider's key, read here while `ctx` is
         // available (the background pump has none). Without one there is
         // nothing to run, so say where to add it rather than failing in the
-        // conversation.
-        let api_key = if harness == LocalHarnessKind::Api {
+        // conversation. (A local model lands here too once BYOR failover has
+        // moved this conversation to one; it needs no key.)
+        let api_route = if harness == LocalHarnessKind::Api {
+            let route = model_id
+                .as_deref()
+                .and_then(|model_id| route_for(model_id, ctx));
             let provider = model_id
                 .as_deref()
                 .and_then(api_model_parts)
                 .map(|(provider, _)| provider);
-            let key = provider.and_then(|provider| {
-                ApiProviderKeys::as_ref(ctx)
-                    .key_for(provider.id)
-                    .map(str::to_owned)
-            });
-            match (provider, key) {
-                (Some(_), Some(key)) => Some(key),
-                (provider, _) => {
+            match (route, provider) {
+                (Some(route), _) => Some(route),
+                (None, provider) => {
                     let message = match provider {
                         Some(provider) => format!(
                             "No API key for {}. Add one in Settings → AI → Bring your own key.",
@@ -23629,14 +23664,13 @@ impl TerminalView {
         } else {
             None
         };
-        // Where a cloud-model turn goes if its provider fails, when BYOR
+        // Where a cloud-model turn goes if its model fails, when BYOR
         // failover is on (Settings → AI → Bring your own key).
         let api_failover = match (harness, model_id.as_deref()) {
             (LocalHarnessKind::Api, Some(model_id))
                 if *AISettings::as_ref(ctx).byor_failover_enabled.value() =>
             {
-                let order = AISettings::as_ref(ctx).byor_failover_order.value();
-                ApiProviderKeys::as_ref(ctx).failover_targets(model_id, order)
+                failover_routes(model_id, ctx)
             }
             _ => Vec::new(),
         };
@@ -23798,17 +23832,9 @@ impl TerminalView {
                 ));
                 command
             }
-            LocalHarnessKind::Api => {
-                let mut command = command::r#async::Command::new("/usr/bin/curl");
-                if let Some((provider, _)) = model_id.as_deref().and_then(api_model_parts) {
-                    command.args(api_curl_args(provider));
-                }
-                // The key travels in curl's environment, never its arguments.
-                if let Some(key) = &api_key {
-                    command.env(API_KEY_ENV, key);
-                }
-                command
-            }
+            // Unused: the API runner builds a curl command per request, for
+            // whichever model the turn is on by then.
+            LocalHarnessKind::Api => command::r#async::Command::new("/usr/bin/curl"),
         };
         command.current_dir(&working_dir);
         let mut path = krust_util::path::krust_shell_path()
@@ -23904,8 +23930,11 @@ impl TerminalView {
         let pump_mcp_tools = ollama_mcp_tools;
         let pump_tool_caller = ollama_tool_caller;
         let pump_agent_override = ollama_agent_override;
-        let pump_api_model = model_id.clone().unwrap_or_default();
-        let pump_api_key = api_key.unwrap_or_default();
+        // The model a cloud-model turn asked for. A finished turn reporting
+        // another one means failover moved it (see the drain below).
+        let requested_api_model = (harness == LocalHarnessKind::Api)
+            .then(|| model_id.clone())
+            .flatten();
 
         // Drain: begin the exchange on the first event, inject each event's
         // messages, complete at EOF — all on the main thread via the view
@@ -23918,6 +23947,7 @@ impl TerminalView {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();
+                    let requested_api_model = requested_api_model.clone();
                     let share_initiator = share_initiator.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
@@ -24000,6 +24030,15 @@ impl TerminalView {
                             if let ai::agent::TurnEvent::TurnCompleted { usage, .. } = &event {
                                 if let Some(usage) = usage {
                                     stream.apply_turn_usage(usage, ctx);
+                                    // BYOR failover moved the turn to another
+                                    // model, and that one answered.
+                                    if let (Some(requested), Some(answered)) =
+                                        (&requested_api_model, &usage.model_id)
+                                    {
+                                        if requested != answered {
+                                            view.adopt_failover_model(answered, ctx);
+                                        }
+                                    }
                                 }
                                 turn_completed = true;
                             }
@@ -24103,22 +24142,24 @@ impl TerminalView {
                     LocalHarnessKind::Codex => {
                         run_codex_stream(command, &pump_prompt, on_event).await
                     }
-                    LocalHarnessKind::Api => {
-                        run_api_stream(
-                            command,
-                            &pump_prompt,
-                            &pump_api_model,
-                            &pump_api_key,
-                            &session_id,
-                            &pump_working_dir,
-                            &pump_path,
-                            &pump_mcp_tools,
-                            pump_tool_caller,
-                            &api_failover,
-                            on_event,
-                        )
-                        .await
-                    }
+                    LocalHarnessKind::Api => match api_route {
+                        Some(route) => {
+                            run_api_stream(
+                                &pump_prompt,
+                                route,
+                                &session_id,
+                                &pump_working_dir,
+                                &pump_path,
+                                &pump_mcp_tools,
+                                pump_tool_caller,
+                                api_failover,
+                                on_event,
+                            )
+                            .await
+                        }
+                        // Checked before the run began: an API run has a route.
+                        None => Err(std::io::Error::other("no cloud model to run")),
+                    },
                     LocalHarnessKind::Ollama => {
                         if let Some(config) = ollama_committee_config {
                             run_ollama_committee(

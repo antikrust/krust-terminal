@@ -18,12 +18,20 @@
 
 use std::collections::HashMap;
 
+use ai::api_keys::{ApiKeyManager, CustomEndpoint};
+use krust_cli::agent::Harness;
 use krust_errors::report_error;
-use krustui::{Entity, ModelContext, SingletonEntity};
+use krustui::{AppContext, Entity, ModelContext, SingletonEntity};
 use krustui_extras::secure_storage::{self, AppContextExt};
 use serde::Deserialize;
+use settings::Setting as _;
 
-use crate::ai::harness_availability::HarnessModelInfo;
+use crate::ai::agent_sdk::driver::harness::ollama_committee::COMMITTEE_MODEL_NAME;
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
+    base_url_of, ollama_model_name, wire_name,
+};
+use crate::ai::harness_availability::{HarnessAvailabilityModel, HarnessModelInfo};
+use crate::settings::AISettings;
 
 pub const API_MODEL_ID_PREFIX: &str = "api/";
 /// The provider key under which the picker persists the last API model.
@@ -300,6 +308,38 @@ pub const PROVIDERS: &[ApiProvider] = &[
     },
 ];
 
+/// Local Ollama as the API runner reaches it: over Ollama's OpenAI-compatible
+/// endpoint, with no key. Not in [`PROVIDERS`], so it never shows on the key
+/// page or among the cloud models; BYOR failover can still move to it.
+pub static LOCAL_OLLAMA: ApiProvider = ApiProvider {
+    id: "ollama",
+    display_name: "Ollama (local)",
+    base_url: "http://127.0.0.1:11434/v1",
+    key_url: "",
+    pricing_note: "",
+    models: &[],
+    live_free_models_url: None,
+};
+
+/// What goes in the Authorization header for Ollama, which ignores it.
+const LOCAL_OLLAMA_KEY: &str = "ollama";
+
+/// A model on one of the user's custom endpoints (Settings → AI → Bring your
+/// own key → Custom endpoints): `custom/<config_key>`.
+pub const CUSTOM_MODEL_ID_PREFIX: &str = "custom/";
+
+/// Custom endpoints as the API runner sees them: OpenAI-compatible servers
+/// the user added, each with its own URL and key (carried on the route).
+pub static CUSTOM_ENDPOINT: ApiProvider = ApiProvider {
+    id: "custom",
+    display_name: "Custom endpoint",
+    base_url: "",
+    key_url: "",
+    pricing_note: "",
+    models: &[],
+    live_free_models_url: None,
+};
+
 pub fn provider(id: &str) -> Option<&'static ApiProvider> {
     PROVIDERS.iter().find(|provider| provider.id == id)
 }
@@ -347,6 +387,288 @@ pub fn model_price(provider: &ApiProvider, model: &str) -> Option<(f64, f64)> {
         .find(|listed| listed.id == model)
         .map(|listed| listed.price_per_million)
         .or_else(|| model.ends_with(":free").then_some((0.0, 0.0)))
+}
+
+/// Whether `model_id` costs nothing to run: a local Ollama model, a model
+/// listed at no cost, or an OpenRouter `:free` one.
+pub fn is_free_model(model_id: &str) -> bool {
+    if ollama_model_name(model_id).is_some() {
+        return true;
+    }
+    api_model_parts(model_id).and_then(|(provider, model)| model_price(provider, model))
+        == Some((0.0, 0.0))
+}
+
+/// The local Ollama models BYOR failover can use, as model ids: the ones the
+/// model menu offers (models switched off on the Ollama page are already left
+/// out). None while local models are switched off.
+pub fn local_failover_models(app: &AppContext) -> Vec<String> {
+    if !*AISettings::as_ref(app).ollama_enabled.value() {
+        return Vec::new();
+    }
+    HarnessAvailabilityModel::as_ref(app)
+        .models_for(Harness::Codex)
+        .unwrap_or_default()
+        .iter()
+        .filter(|model| {
+            ollama_model_name(&model.id).is_some_and(|tag| tag != COMMITTEE_MODEL_NAME)
+        })
+        .map(|model| model.id.clone())
+        .collect()
+}
+
+/// Whether `model_id` is one the API runner calls: a cloud provider's model
+/// or a custom endpoint's.
+pub fn is_api_runner_model(model_id: &str) -> bool {
+    api_model_parts(model_id).is_some() || model_id.starts_with(CUSTOM_MODEL_ID_PREFIX)
+}
+
+/// One model the API runner can call: where the request goes, the model it
+/// names, and the key. Not `Debug`, so the key can't end up in a log.
+#[derive(Clone)]
+pub struct ApiRoute {
+    /// The picker's id: `api/<provider>/<model>`, `custom/<config_key>` or
+    /// `ollama/<tag>`.
+    pub model_id: String,
+    /// [`LOCAL_OLLAMA`] for a local model, [`CUSTOM_ENDPOINT`] for a custom
+    /// endpoint's.
+    pub provider: &'static ApiProvider,
+    /// Who serves it, as the user knows them: the provider, or the custom
+    /// endpoint's name.
+    pub provider_name: String,
+    /// What a failure of the whole account rules out: a provider, or one
+    /// custom endpoint.
+    pub account: String,
+    /// The model as the provider names it in a request.
+    pub model: String,
+    /// The model as the user knows it.
+    pub model_name: String,
+    /// The OpenAI-compatible base; `/chat/completions` is appended.
+    pub base_url: String,
+    pub api_key: String,
+}
+
+impl ApiRoute {
+    pub fn is_local(&self) -> bool {
+        std::ptr::eq(self.provider, &LOCAL_OLLAMA)
+    }
+}
+
+/// The route for `model_id`: a cloud model with its provider's key, a custom
+/// endpoint's model, or a local Ollama model. `None` for an unknown model, a
+/// provider with no key, or the Ollama committee (which isn't one model).
+pub fn route_for(model_id: &str, app: &AppContext) -> Option<ApiRoute> {
+    if let Some(config_key) = model_id.strip_prefix(CUSTOM_MODEL_ID_PREFIX) {
+        return usable_custom_endpoints(app).find_map(|endpoint| {
+            let model = endpoint
+                .models
+                .iter()
+                .find(|model| model.config_key == config_key)?;
+            Some(ApiRoute {
+                model_id: model_id.to_owned(),
+                provider: &CUSTOM_ENDPOINT,
+                provider_name: endpoint.name.clone(),
+                account: format!("{CUSTOM_MODEL_ID_PREFIX}{}", endpoint.url),
+                model: model.name.clone(),
+                model_name: model.display_label().to_owned(),
+                base_url: custom_base_url(&endpoint.url),
+                api_key: endpoint.api_key.clone(),
+            })
+        });
+    }
+    if let Some(tag) = ollama_model_name(model_id) {
+        if tag == COMMITTEE_MODEL_NAME {
+            return None;
+        }
+        return Some(ApiRoute {
+            model_id: model_id.to_owned(),
+            provider: &LOCAL_OLLAMA,
+            provider_name: LOCAL_OLLAMA.display_name.to_owned(),
+            account: LOCAL_OLLAMA.id.to_owned(),
+            model: wire_name(tag).to_owned(),
+            model_name: tag.to_owned(),
+            base_url: format!("{}/v1", base_url_of(tag)),
+            api_key: LOCAL_OLLAMA_KEY.to_owned(),
+        });
+    }
+    let (provider, model) = api_model_parts(model_id)?;
+    Some(ApiRoute {
+        model_id: model_id.to_owned(),
+        provider,
+        provider_name: provider.display_name.to_owned(),
+        account: provider.id.to_owned(),
+        model: model.to_owned(),
+        model_name: model_display_name(provider, model),
+        base_url: provider.base_url.to_owned(),
+        api_key: ApiProviderKeys::as_ref(app).key_for(provider.id)?.to_owned(),
+    })
+}
+
+/// The custom endpoints set up enough to call: a URL and a key.
+fn usable_custom_endpoints(app: &AppContext) -> impl Iterator<Item = &CustomEndpoint> {
+    ApiKeyManager::as_ref(app)
+        .keys()
+        .custom_endpoints
+        .iter()
+        .filter(|endpoint| !endpoint.url.trim().is_empty() && !endpoint.api_key.is_empty())
+}
+
+/// The custom endpoints by name, each with its models for the model menu
+/// (`custom/<config_key>` ids, labelled with the alias or model name). An
+/// endpoint with no usable model is left out.
+pub fn custom_endpoint_groups(app: &AppContext) -> Vec<(String, Vec<HarnessModelInfo>)> {
+    usable_custom_endpoints(app)
+        .map(|endpoint| {
+            let models = endpoint
+                .models
+                .iter()
+                .filter(|model| !model.name.trim().is_empty() && !model.config_key.is_empty())
+                .map(|model| HarnessModelInfo {
+                    id: format!("{CUSTOM_MODEL_ID_PREFIX}{}", model.config_key),
+                    display_name: model.display_label().to_owned(),
+                    reasoning_level: None,
+                })
+                .collect::<Vec<_>>();
+            (endpoint.name.clone(), models)
+        })
+        .filter(|(_, models)| !models.is_empty())
+        .collect()
+}
+
+/// Who serves an API-runner model, by the name the user knows: the cloud
+/// provider, or the custom endpoint.
+pub fn api_runner_provider_name(model_id: &str, app: &AppContext) -> Option<String> {
+    if let Some((provider, _)) = api_model_parts(model_id) {
+        return Some(provider.display_name.to_owned());
+    }
+    custom_endpoint_groups(app)
+        .into_iter()
+        .find(|(_, models)| models.iter().any(|model| model.id == model_id))
+        .map(|(name, _)| name)
+}
+
+/// A custom endpoint's URL as an OpenAI-compatible base: as entered, less a
+/// trailing slash or a pasted `/chat/completions`.
+fn custom_base_url(url: &str) -> String {
+    let url = url.trim().trim_end_matches('/');
+    url.strip_suffix("/chat/completions").unwrap_or(url).to_owned()
+}
+
+/// A group of models the failover list's provider menu offers: a provider
+/// with a key, a custom endpoint, or local Ollama.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FailoverSource {
+    /// Stable while the list is shown: a provider id, `custom:<n>`, or
+    /// `ollama`.
+    pub key: String,
+    pub name: String,
+    /// `(model id, label)`, best first.
+    pub models: Vec<(String, String)>,
+}
+
+/// Everything the failover list can pick from, in menu order: providers with
+/// a key, then custom endpoints, then local Ollama models.
+pub fn failover_sources(app: &AppContext) -> Vec<FailoverSource> {
+    let keys = ApiProviderKeys::as_ref(app);
+    let mut sources: Vec<FailoverSource> = PROVIDERS
+        .iter()
+        .filter(|provider| keys.key_for(provider.id).is_some())
+        .map(|provider| FailoverSource {
+            key: provider.id.to_owned(),
+            name: provider.display_name.to_owned(),
+            models: keys
+                .models_for(provider)
+                .into_iter()
+                .map(|(model, label)| (model_id_for(provider, &model), label))
+                .collect(),
+        })
+        .collect();
+    for (index, endpoint) in usable_custom_endpoints(app).enumerate() {
+        let models: Vec<(String, String)> = endpoint
+            .models
+            .iter()
+            .filter(|model| !model.name.trim().is_empty() && !model.config_key.is_empty())
+            .map(|model| {
+                (
+                    format!("{CUSTOM_MODEL_ID_PREFIX}{}", model.config_key),
+                    model.display_label().to_owned(),
+                )
+            })
+            .collect();
+        if !models.is_empty() {
+            sources.push(FailoverSource {
+                key: format!("custom:{index}"),
+                name: endpoint.name.clone(),
+                models,
+            });
+        }
+    }
+    let local_models = local_failover_models(app);
+    if !local_models.is_empty() {
+        sources.push(FailoverSource {
+            key: LOCAL_OLLAMA.id.to_owned(),
+            name: LOCAL_OLLAMA.display_name.to_owned(),
+            models: local_models
+                .into_iter()
+                .map(|model_id| {
+                    let label = ollama_model_name(&model_id).unwrap_or_default().to_owned();
+                    (model_id, label)
+                })
+                .collect(),
+        });
+    }
+    sources
+}
+
+/// The BYOR failover list as model ids, first choice first: the saved order,
+/// with a bare provider id (saved by an earlier build) read as that
+/// provider's first model, leaving out models that can't be called now (no
+/// key, a removed endpoint, local models switched off or gone). With nothing
+/// saved: each provider with a key, on its first model.
+pub fn failover_rows(app: &AppContext) -> Vec<String> {
+    let order = AISettings::as_ref(app).byor_failover_order.value();
+    let saved: Vec<String> = if order.is_empty() {
+        PROVIDERS.iter().map(|provider| provider.id.to_owned()).collect()
+    } else {
+        order.clone()
+    };
+    let keys = ApiProviderKeys::as_ref(app);
+    let local_models = local_failover_models(app);
+    saved
+        .into_iter()
+        .filter_map(|entry| {
+            if entry.contains('/') {
+                return Some(entry);
+            }
+            let provider = provider(&entry)?;
+            let (model, _) = keys.models_for(provider).into_iter().next()?;
+            Some(model_id_for(provider, &model))
+        })
+        .filter(|model_id| match ollama_model_name(model_id) {
+            Some(_) => local_models.contains(model_id),
+            None => route_for(model_id, app).is_some(),
+        })
+        .collect()
+}
+
+/// Where a turn on `model_id` goes if that model fails, in order: every
+/// failover row except `model_id` itself, each once, and only free ones when
+/// "Free models only" is on.
+pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<ApiRoute> {
+    let free_only = *AISettings::as_ref(app).byor_failover_free_only.value();
+    let mut routes: Vec<ApiRoute> = Vec::new();
+    for row in failover_rows(app) {
+        if row == model_id
+            || (free_only && !is_free_model(&row))
+            || routes.iter().any(|route| route.model_id == row)
+        {
+            continue;
+        }
+        if let Some(route) = route_for(&row, app) {
+            routes.push(route);
+        }
+    }
+    routes
 }
 
 /// A model read from a provider's live list: `(id, display name)`.
@@ -529,9 +851,9 @@ impl ApiProviderKeys {
         );
     }
 
-    /// One provider's models, best first: its live free list when it has
-    /// one, else the curated list.
-    fn models_for(&self, provider: &'static ApiProvider) -> Vec<LiveModel> {
+    /// One provider's models as `(id, display name)`, best first: its live
+    /// free list when it has one, else the curated list.
+    pub fn models_for(&self, provider: &'static ApiProvider) -> Vec<LiveModel> {
         match self.live_models.get(provider.id) {
             Some(live) => live.clone(),
             None => provider
@@ -558,47 +880,6 @@ impl ApiProviderKeys {
             })
             .collect()
     }
-
-    /// The providers BYOR failover can use, first choice first: every
-    /// provider with a key, those named in `order` in that order, the rest
-    /// after in [`PROVIDERS`] order.
-    pub fn failover_providers(&self, order: &[String]) -> Vec<&'static ApiProvider> {
-        let mut providers: Vec<&'static ApiProvider> = Vec::new();
-        let named = order.iter().filter_map(|id| provider(id));
-        for provider in named.chain(PROVIDERS) {
-            if self.key_for(provider.id).is_some()
-                && !providers.iter().any(|listed| listed.id == provider.id)
-            {
-                providers.push(provider);
-            }
-        }
-        providers
-    }
-
-    /// Where a turn on `model_id` goes if its provider fails: every other
-    /// failover provider, first choice first, each on its best model.
-    pub fn failover_targets(&self, model_id: &str, order: &[String]) -> Vec<FailoverTarget> {
-        let current = api_model_parts(model_id).map(|(provider, _)| provider.id);
-        self.failover_providers(order)
-            .into_iter()
-            .filter(|provider| Some(provider.id) != current)
-            .filter_map(|provider| {
-                let (model, _) = self.models_for(provider).into_iter().next()?;
-                Some(FailoverTarget {
-                    model_id: model_id_for(provider, &model),
-                    api_key: self.key_for(provider.id)?.to_owned(),
-                })
-            })
-            .collect()
-    }
-}
-
-/// A provider a failed cloud-model turn can move to: the model to use there
-/// and the key it runs on. Not `Debug`, so the key can't end up in a log.
-#[derive(Clone)]
-pub struct FailoverTarget {
-    pub model_id: String,
-    pub api_key: String,
 }
 
 #[derive(Deserialize)]

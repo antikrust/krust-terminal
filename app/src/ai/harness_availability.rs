@@ -19,8 +19,8 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
 use crate::ai::api_providers::{
-    api_model_parts, ApiProviderKeys, ApiProviderKeysEvent, API_HARNESS_CONFIG_NAME,
-    API_MODEL_ID_PREFIX,
+    custom_endpoint_groups, is_api_runner_model, ApiProviderKeys, ApiProviderKeysEvent,
+    API_HARNESS_CONFIG_NAME, API_MODEL_ID_PREFIX, CUSTOM_MODEL_ID_PREFIX,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
@@ -204,8 +204,16 @@ fn append_available_ollama_models_from(
 /// picker; every rebuild of that row goes through here, or a catalog refresh
 /// would silently drop them.
 fn with_api_models(mut models: Vec<HarnessModelInfo>, ctx: &AppContext) -> Vec<HarnessModelInfo> {
-    models.retain(|model| !model.id.starts_with(API_MODEL_ID_PREFIX));
+    models.retain(|model| {
+        !model.id.starts_with(API_MODEL_ID_PREFIX) && !model.id.starts_with(CUSTOM_MODEL_ID_PREFIX)
+    });
     models.extend(ApiProviderKeys::as_ref(ctx).available_models());
+    // The custom endpoints' models run on the same API runner.
+    models.extend(
+        custom_endpoint_groups(ctx)
+            .into_iter()
+            .flat_map(|(_, models)| models),
+    );
     models
 }
 
@@ -364,7 +372,7 @@ pub fn selected_local_harness(ctx: &AppContext) -> (Harness, Option<String>, Opt
             .is_some_and(|models| {
                 models
                     .iter()
-                    .any(|model| api_model_parts(&model.id).is_some())
+                    .any(|model| is_api_runner_model(&model.id))
             });
     let harness = (ollama_selected || api_selected)
         .then_some(Harness::Codex)
@@ -527,6 +535,10 @@ impl HarnessAvailabilityModel {
         // provider's models straight away.
         ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |me, _, event, ctx| {
             let ApiProviderKeysEvent::Changed = event;
+            me.refresh_api_models(ctx);
+        });
+        // Likewise a custom endpoint added, edited or removed.
+        ctx.subscribe_to_model(&::ai::api_keys::ApiKeyManager::handle(ctx), |me, _, _, ctx| {
             me.refresh_api_models(ctx);
         });
 

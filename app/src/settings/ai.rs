@@ -1425,8 +1425,10 @@ define_settings_group!(AISettings, settings: [
         description: "Whether a failed cloud-model request moves on to the next provider that has a key.",
     }
 
-    // The provider ids BYOR failover tries, first choice first. Providers with
-    // a key that aren't listed follow in the built-in order.
+    // The models BYOR failover tries, first choice first, as model ids
+    // (`api/<provider>/<model>` or `ollama/<tag>`). Empty means each provider
+    // with a key, on its first model. A bare provider id (saved by an earlier
+    // build) stands for that provider's first model.
     byor_failover_order: ByorFailoverOrder {
         type: Vec<String>,
         default: vec![],
@@ -1435,7 +1437,20 @@ define_settings_group!(AISettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "cloud_platform.third_party_api_keys.byor_failover_order",
-        description: "The order BYOR failover tries providers in, as provider ids.",
+        description: "The models BYOR failover tries, first choice first, as model ids.",
+    }
+
+    // Whether BYOR failover only moves to free models: models listed at no
+    // cost, OpenRouter's `:free` ones, and local Ollama models.
+    byor_failover_free_only: ByorFailoverFreeOnly {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_failover_free_only",
+        description: "Whether BYOR failover only moves to free and local models.",
     }
 
     should_render_use_agent_footer_for_user_commands: ShouldRenderUseAgentToolbarForUserCommands {

@@ -21,7 +21,7 @@ fn feed(lines: &[&str]) -> (ApiChatAccumulator, Vec<TurnEvent>) {
 #[test]
 fn curl_args_take_the_key_from_the_environment_not_the_arguments() {
     let zai = provider("zai").expect("Z.ai is a provider");
-    let args = api_curl_args(zai);
+    let args = api_curl_args(zai.base_url);
     // The key is never an argument — only the variable that names it.
     assert!(args.contains(&format!("%{API_KEY_ENV}")), "{args:?}");
     let header = args

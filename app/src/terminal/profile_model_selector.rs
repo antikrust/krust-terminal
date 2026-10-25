@@ -39,7 +39,10 @@ use krust_core::ui::theme::Fill;
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME,
 };
-use crate::ai::api_providers::{api_model_parts, API_HARNESS_CONFIG_NAME, PROVIDERS};
+use crate::ai::api_providers::{
+    api_model_parts, api_runner_provider_name, custom_endpoint_groups, is_api_runner_model,
+    API_HARNESS_CONFIG_NAME, PROVIDERS,
+};
 use crate::ai::blocklist::prompt::PromptIconButtonTheme;
 use crate::ai::blocklist::{
     BlocklistAIController, BlocklistAIControllerEvent, BlocklistAIInputEvent, BlocklistAIInputModel,
@@ -125,7 +128,7 @@ enum ModelGroupKind {
 impl ModelGroupKind {
     fn of(model_id: Option<&str>) -> Self {
         match model_id {
-            Some(id) if api_model_parts(id).is_some() => Self::Api,
+            Some(id) if is_api_runner_model(id) => Self::Api,
             Some(id) if ollama_model_name(id).is_some() => Self::Ollama,
             _ => Self::Harness,
         }
@@ -574,6 +577,12 @@ impl ProfileModelSelector {
             },
         );
 
+        // The selection can change without this menu: BYOR failover makes the
+        // model that answered the selected one. Keep the label on it.
+        ctx.subscribe_to_model(&CloudAgentSettings::handle(ctx), |me, _, _, ctx| {
+            me.refresh_state(ctx);
+        });
+
         // "Use local models" gates whether Ollama models appear in this menu,
         // so rebuild it when that switch flips — otherwise turning local
         // models off would leave the Ollama group sitting in the picker.
@@ -988,8 +997,8 @@ impl ProfileModelSelector {
         let (harness, model_id, reasoning) = selected_local_harness(app);
         let availability = HarnessAvailabilityModel::as_ref(app);
         let provider_prefix = match model_id.as_deref() {
-            Some(id) => match api_model_parts(id) {
-                Some((provider, _)) => format!("{} · ", provider.display_name),
+            Some(id) => match api_runner_provider_name(id, app) {
+                Some(provider) => format!("{provider} · "),
                 None if ollama_model_name(id).is_some() => "Ollama · ".to_owned(),
                 None => String::new(),
             },
@@ -1150,6 +1159,26 @@ impl ProfileModelSelector {
                                 ));
                             }
                         }
+                        // Then one heading per custom endpoint.
+                        for (name, models) in custom_endpoint_groups(ctx) {
+                            let models: Vec<HarnessModelInfo> = models
+                                .into_iter()
+                                .filter(|model| {
+                                    available
+                                        .available_models
+                                        .iter()
+                                        .any(|listed| listed.id == model.id)
+                                })
+                                .collect();
+                            if !models.is_empty() {
+                                groups.push((
+                                    available.harness,
+                                    name,
+                                    models,
+                                    ModelGroupKind::Api,
+                                ));
+                            }
+                        }
                     } else {
                         groups.push((
                             available.harness,
@@ -1180,8 +1209,7 @@ impl ProfileModelSelector {
                     ModelGroupKind::Ollama => "Ollama".to_string(),
                     ModelGroupKind::Api => selected_model_id
                         .as_deref()
-                        .and_then(api_model_parts)
-                        .map(|(provider, _)| provider.display_name.to_string())
+                        .and_then(|id| api_runner_provider_name(id, ctx))
                         .unwrap_or_default(),
                     ModelGroupKind::Harness => {
                         availability.display_name_for(selected_harness).to_string()

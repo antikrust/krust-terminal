@@ -29,10 +29,7 @@ use super::ollama_stream_exec::{
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
     remove_turn_from_messages, turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec,
 };
-use crate::ai::api_providers::{
-    api_model_parts, model_context_window, model_display_name, model_price, ApiProvider,
-    FailoverTarget,
-};
+use crate::ai::api_providers::{model_context_window, model_price, ApiRoute};
 
 /// The environment variable curl reads the key from.
 pub const API_KEY_ENV: &str = "KRUST_API_KEY";
@@ -59,12 +56,6 @@ fn read_window_chars(context_window: u64) -> usize {
     (context_window as usize).clamp(MIN_READ_CHARS, MAX_READ_CHARS)
 }
 
-/// How much of one tool result the model is sent: a whole read window and
-/// its header. Anything bigger (a huge command dump) keeps head and tail.
-fn max_tool_result_chars(context_window: u64) -> usize {
-    read_window_chars(context_window) + 2_000
-}
-
 /// How much tool output the conversation carries in full: about half the
 /// window (half of N tokens is about 2N characters), leaving the rest for the
 /// conversation itself and the reply.
@@ -80,8 +71,17 @@ const STALE_RESULT_MIN_CHARS: usize = 2_000;
 /// never replaced twice.
 const DROPPED_RESULT_PREFIX: &str = "[An earlier tool result";
 
-/// curl arguments for one streamed chat-completions request to `provider`.
-pub fn api_curl_args(provider: &ApiProvider) -> Vec<String> {
+/// How the HTTP status curl prints after the reply (`--write-out`) begins,
+/// so the parser can tell that line from the reply itself.
+const HTTP_STATUS_MARKER: &str = "krust-http-status:";
+
+/// The context window a local Ollama model is asked for: the one Krust's own
+/// Ollama tool loop uses.
+const LOCAL_NUM_CTX: u64 = 16_384;
+
+/// curl arguments for one streamed chat-completions request to the
+/// OpenAI-compatible API at `base_url`.
+fn api_curl_args(base_url: &str) -> Vec<String> {
     vec![
         "--silent".to_string(),
         "--show-error".to_string(),
@@ -94,14 +94,16 @@ pub fn api_curl_args(provider: &ApiProvider) -> Vec<String> {
         "Content-Type: application/json".to_string(),
         "--data-binary".to_string(),
         "@-".to_string(),
-        format!("{}/chat/completions", provider.base_url),
+        "--write-out".to_string(),
+        format!("\n{HTTP_STATUS_MARKER}%{{http_code}}\n"),
+        format!("{base_url}/chat/completions"),
     ]
 }
 
-fn new_api_command(provider: &ApiProvider, api_key: &str, working_dir: &Path, path: &str) -> Command {
+fn new_api_command(route: &ApiRoute, working_dir: &Path, path: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
-    command.args(api_curl_args(provider));
-    command.env(API_KEY_ENV, api_key);
+    command.args(api_curl_args(&route.base_url));
+    command.env(API_KEY_ENV, &route.api_key);
     command.current_dir(working_dir);
     command.env("PATH", path);
     command
@@ -129,29 +131,30 @@ impl Drop for SessionGuard {
     }
 }
 
-/// Runs one turn against a cloud model. `first_command` is the curl command
-/// for the first request (built by the caller with [`api_curl_args`] and the
-/// key in [`API_KEY_ENV`]); later requests in the turn build their own.
+/// Runs one turn on `route`: a cloud model, or a local Ollama model over
+/// Ollama's OpenAI-compatible endpoint. Every request builds its own curl
+/// command, with the key in [`API_KEY_ENV`].
 ///
-/// When a request fails — out of credit, rate limited, the provider down —
-/// the same request goes to the next of `failover` (empty when BYOR failover
-/// is off), and the rest of the turn stays there. Each is tried once; the
-/// turn fails only when none is left.
+/// When a request fails, the same request goes to the next of `failover`
+/// (empty when BYOR failover is off), and the rest of the turn stays there.
+/// A failure of the whole account (no credit, a rejected key, the host
+/// unreachable) also rules out that provider's other failover models; one
+/// confined to the model (rate-limited, overloaded) doesn't. Each is tried
+/// once; the turn fails only when none is left. The model that answered is
+/// reported in the turn's usage, so the caller can make it the selected one.
 ///
 /// There is no step limit: the turn runs until the model answers or the user
 /// stops it.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_api_stream(
-    first_command: Command,
     prompt: &str,
-    model_id: &str,
-    api_key: &str,
+    route: ApiRoute,
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
-    failover: &[FailoverTarget],
+    failover: Vec<ApiRoute>,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     register_harness_session(*session_id);
@@ -161,20 +164,14 @@ pub async fn run_api_stream(
     // shimmer show while the first request is in flight.
     on_event(TurnEvent::SessionInit {
         session_id: session_id.to_string(),
-        model: Some(model_id.to_string()),
+        model: Some(route.model_id.clone()),
         cwd: Some(working_dir.to_string_lossy().into_owned()),
     });
 
-    let Some((mut provider, mut model)) = api_model_parts(model_id) else {
-        let message = format!("'{model_id}' is not a cloud model this build knows");
-        emit_failed_turn(&mut on_event, message.clone());
-        return Err(std::io::Error::other(message));
-    };
-    let mut model_id = model_id;
-    let mut api_key = api_key;
-    let mut failover = failover.iter().filter_map(|target| {
-        api_model_parts(&target.model_id).map(|(provider, model)| (target, provider, model))
-    });
+    let mut route = route;
+    let mut failover = failover.into_iter();
+    // Accounts (providers, custom endpoints) that failed as a whole this turn.
+    let mut failed_accounts: Vec<String> = Vec::new();
 
     let tools: Vec<McpToolSpec> = builtin_local_tool_specs()
         .into_iter()
@@ -184,20 +181,19 @@ pub async fn run_api_stream(
 
     // Rebuilt every turn, so its opening line names the model now in use —
     // the conversation may have started on another one.
-    let system_for = |provider: &ApiProvider, model: &str| {
+    let system_for = |route: &ApiRoute| {
         json!({
             "role": "system",
             "content": ollama_tool_system_prompt(
                 &tools,
                 &format!(
-                    "{} ({model}) from {}",
-                    model_display_name(provider, model),
-                    provider.display_name
+                    "{} ({}) from {}",
+                    route.model_name, route.model, route.provider_name
                 ),
             ),
         })
     };
-    let system = system_for(provider, model);
+    let system = system_for(&route);
     let mut messages = load_history(session_id).unwrap_or_default();
     match messages.first_mut() {
         Some(first) if first.get("role").and_then(Value::as_str) == Some("system") => {
@@ -213,25 +209,34 @@ pub async fn run_api_stream(
         ),
     ));
 
-    let mut price = model_price(provider, model);
-    let mut listed_window = model_context_window(provider, model);
-    let mut context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
-    // What every request of this turn cost, at the model's listed price.
+    let mut model = RouteModel::of(&route);
+    // What every request of this turn cost, at each model's listed price.
     let mut turn_cost_usd = 0.0;
-    let mut next_command = Some(first_command);
     loop {
-        compact_old_tool_results(&mut messages, tool_output_budget_chars(context_window));
-        let request = json!({
-            "model": model,
-            "messages": without_turn_ids(&messages),
+        // A local model's window is a fraction of a cloud model's: it is sent
+        // this turn only, trimmed on a copy so the saved history stays whole.
+        let local_view;
+        let sent: &[Value] = if route.is_local() {
+            let mut view = local_turn_messages(&messages);
+            compact_old_tool_results(&mut view, tool_output_budget_chars(model.context_window));
+            local_view = view;
+            &local_view
+        } else {
+            compact_old_tool_results(&mut messages, tool_output_budget_chars(model.context_window));
+            &messages
+        };
+        let mut request = json!({
+            "model": route.model,
+            "messages": without_turn_ids(sent),
             "tools": tool_defs,
             "stream": true,
-        })
-        .to_string();
+        });
+        if route.is_local() {
+            request["options"] = json!({ "num_ctx": LOCAL_NUM_CTX });
+        }
+        let request = request.to_string();
 
-        let command = next_command
-            .take()
-            .unwrap_or_else(|| new_api_command(provider, api_key, working_dir, path));
+        let command = new_api_command(&route, working_dir, path);
         let accumulator = Arc::new(Mutex::new(ApiChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
         let status = run_jsonl_stream_cancellable(
@@ -256,47 +261,55 @@ pub async fn run_api_stream(
         }
 
         let response = if status.success() {
-            accumulator
+            let finished = accumulator
                 .lock()
-                .map(|accumulator| accumulator.clone().finish())
-                .unwrap_or_else(|_| Err("the response state became unavailable".to_string()))
-                .map_err(|error| format!("{}: {error}", provider.display_name))
+                .map(|accumulator| (accumulator.http_status, accumulator.clone().finish()));
+            match finished {
+                Ok((_, Ok(response))) => Ok(response),
+                Ok((http_status, Err(error))) => Err(request_failure(&route, http_status, &error)),
+                Err(_) => Err(request_failure(
+                    &route,
+                    None,
+                    "the response state became unavailable",
+                )),
+            }
         } else {
-            Err(curl_failure_message(provider, status))
+            Err(curl_failure(&route, status))
         };
         let response = match response {
             Ok(response) => response,
-            Err(error) => {
-                let Some((target, next_provider, next_model)) = failover.next() else {
-                    emit_failed_turn(&mut on_event, error);
+            Err(failure) => {
+                if failure.scope == FailureScope::Provider {
+                    failed_accounts.push(route.account.clone());
+                }
+                let next = failover
+                    .by_ref()
+                    .find(|next| !failed_accounts.contains(&next.account));
+                let Some(next) = next else {
+                    emit_failed_turn(&mut on_event, failure.detail);
                     return Ok(status);
                 };
                 // The failed request added nothing to `messages`, so the
-                // next provider gets exactly the same one.
+                // next model gets exactly the same one.
                 on_event(TurnEvent::Text {
                     text: format!(
-                        "{error} — switching to {} on {}.",
-                        model_display_name(next_provider, next_model),
-                        next_provider.display_name
+                        "{} — switching to {} on {}.",
+                        failure.reason, next.model_name, next.provider_name
                     ),
                 });
                 log::info!(
-                    "api_stream: {} failed; failing over to {}",
-                    provider.display_name,
-                    next_provider.display_name
+                    "api_stream: {} failed ({}); failing over to {}",
+                    route.model_id,
+                    failure.detail,
+                    next.model_id
                 );
-                provider = next_provider;
-                model = next_model;
-                model_id = &target.model_id;
-                api_key = &target.api_key;
-                price = model_price(provider, model);
-                listed_window = model_context_window(provider, model);
-                context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
-                messages[0] = system_for(provider, model);
+                route = next;
+                model = RouteModel::of(&route);
+                messages[0] = system_for(&route);
                 continue;
             }
         };
-        if let Some((input_price, output_price)) = price {
+        if let Some((input_price, output_price)) = model.price {
             turn_cost_usd += (response.prompt_tokens as f64 * input_price
                 + response.completion_tokens as f64 * output_price)
                 / 1_000_000.0;
@@ -306,9 +319,9 @@ pub async fn run_api_stream(
         let usage = TurnUsage {
             input_tokens: response.prompt_tokens,
             output_tokens: response.completion_tokens,
-            model_id: Some(model_id.to_string()),
-            cost_usd: price.map(|_| turn_cost_usd),
-            context_window: listed_window,
+            model_id: Some(route.model_id.clone()),
+            cost_usd: model.price.map(|_| turn_cost_usd),
+            context_window: model.listed_window,
             ..Default::default()
         };
 
@@ -368,7 +381,7 @@ pub async fn run_api_stream(
                         arguments,
                         working_dir,
                         path,
-                        read_window_chars(context_window),
+                        model.read_window,
                     )
                     .await
                 }
@@ -396,13 +409,75 @@ pub async fn run_api_stream(
             messages.push(json!({
                 "role": "tool",
                 "tool_call_id": call.id,
-                "content": clip_for_model(&tool_content, max_tool_result_chars(context_window)),
+                "content": clip_for_model(&tool_content, model.read_window + 2_000),
             }));
         }
         // Every call has its result now, so the history is a valid
         // conversation to resume from — keep it, in case the turn ends here.
         save_history(session_id, &messages);
     }
+}
+
+/// What the turn's current model sizes: its price, its window, and how much
+/// of a file one read returns to it.
+struct RouteModel {
+    /// USD per million (input, output) tokens; `None` when not known.
+    price: Option<(f64, f64)>,
+    /// The window as listed, for the context meter.
+    listed_window: Option<u64>,
+    /// The window the conversation is sized against.
+    context_window: u64,
+    /// How much one `read_file` returns. A tool result is clipped to this
+    /// and its header (anything bigger keeps head and tail).
+    read_window: usize,
+}
+
+impl RouteModel {
+    fn of(route: &ApiRoute) -> Self {
+        if route.is_local() {
+            // Free, and asked for a 16K window: a read takes about a quarter.
+            return Self {
+                price: Some((0.0, 0.0)),
+                listed_window: Some(LOCAL_NUM_CTX),
+                context_window: LOCAL_NUM_CTX,
+                read_window: LOCAL_NUM_CTX as usize,
+            };
+        }
+        let listed_window = model_context_window(route.provider, &route.model);
+        let context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
+        Self {
+            price: model_price(route.provider, &route.model),
+            listed_window,
+            context_window,
+            read_window: read_window_chars(context_window),
+        }
+    }
+}
+
+/// What a local model is sent: the system message, noting that earlier turns
+/// are left out, and this turn's messages (from its user request on).
+fn local_turn_messages(messages: &[Value]) -> Vec<Value> {
+    let turn_start = messages
+        .iter()
+        .rposition(|message| message.get("role").and_then(Value::as_str) == Some("user"))
+        .unwrap_or(0);
+    let mut sent = Vec::new();
+    if let Some(system) = messages
+        .first()
+        .filter(|first| first.get("role").and_then(Value::as_str) == Some("system"))
+    {
+        let mut system = system.clone();
+        if turn_start > 1 {
+            let content = system["content"].as_str().unwrap_or_default();
+            system["content"] = Value::String(format!(
+                "{content}\n\nThis conversation had earlier turns; they are left out here to \
+                 fit your context window. Work from the request below."
+            ));
+        }
+        sent.push(system);
+    }
+    sent.extend(messages[turn_start..].iter().cloned());
+    sent
 }
 
 /// Swaps the content of the oldest long tool results for a one-line note
@@ -498,25 +573,100 @@ pub(crate) fn forget_turn(session_id: &Uuid, turn_id: &str) {
 
 /// Why curl itself failed (as opposed to the provider answering with an
 /// error, which arrives as a body and is reported from the parse).
-fn curl_failure_message(provider: &ApiProvider, status: ExitStatus) -> String {
+fn curl_failure_message(provider: &str, status: ExitStatus) -> String {
     match status.code() {
         // An option this curl doesn't know: `--variable` and
         // `--expand-header` arrived in curl 8.3.
         Some(2) => format!(
-            "Could not call {}: this machine's curl is too old (cloud models need curl 8.3 or \
-             newer)",
-            provider.display_name
+            "Could not call {provider}: this machine's curl is too old (cloud models need curl \
+             8.3 or newer)"
         ),
-        Some(6) | Some(7) => format!(
-            "Could not reach {} — check the internet connection",
-            provider.display_name
-        ),
-        Some(28) => format!("{} took too long to answer", provider.display_name),
+        Some(6) | Some(7) => {
+            format!("Could not reach {provider} — check the internet connection")
+        }
+        Some(28) => format!("{provider} took too long to answer"),
         code => format!(
-            "Could not reach {} (curl exited with {})",
-            provider.display_name,
+            "Could not reach {provider} (curl exited with {})",
             code.map_or_else(|| "a signal".to_string(), |code| code.to_string())
         ),
+    }
+}
+
+/// How far a failed request's failure reaches, for failover.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum FailureScope {
+    /// The account or the provider itself — no credit, a rejected key, the
+    /// host unreachable. Its other models would fail the same way.
+    Provider,
+    /// This one model — rate-limited, overloaded, missing, or the
+    /// conversation too long for it. Another model, even on the same
+    /// provider, may answer.
+    Model,
+}
+
+/// A failed request, as failover and the user see it.
+struct RequestFailure {
+    scope: FailureScope,
+    /// What the user is told on switching: "Gemini Flash is overloaded".
+    reason: String,
+    /// The full error, for the banner when no model is left.
+    detail: String,
+}
+
+/// Classifies a request the provider answered with an error. `http_status`
+/// is what curl reported; `error` the provider's own message.
+fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> RequestFailure {
+    let provider = &route.provider_name;
+    let model = &route.model_name;
+    let lower = error.to_lowercase();
+    // "Insufficient balance / credits / funds", OpenAI's `insufficient_quota`:
+    // the account, not the model. (A 429 that only says "quota" is usually a
+    // free tier's per-model limit, so it isn't counted here.)
+    let out_of_credit = lower.contains("insufficient") || lower.contains("balance");
+    let too_long = lower.contains("context")
+        && (lower.contains("length") || lower.contains("window") || lower.contains("too long"));
+    let (scope, reason) = match http_status {
+        Some(401 | 403) => (FailureScope::Provider, format!("{provider} rejected the key")),
+        Some(402) => (FailureScope::Provider, format!("{provider} is out of credit")),
+        _ if out_of_credit => (FailureScope::Provider, format!("{provider} is out of credit")),
+        _ if too_long => (
+            FailureScope::Model,
+            format!("The conversation is too long for {model}"),
+        ),
+        Some(429) => (FailureScope::Model, format!("{model} is rate-limited")),
+        Some(503 | 529) => (FailureScope::Model, format!("{model} is overloaded")),
+        _ if lower.contains("overloaded") => {
+            (FailureScope::Model, format!("{model} is overloaded"))
+        }
+        Some(404) => (FailureScope::Model, format!("{model} isn't available")),
+        Some(500..=599) => (FailureScope::Model, format!("{model} had a server error")),
+        _ => {
+            let shown: String = error.chars().take(160).collect();
+            (FailureScope::Model, format!("{model} failed ({shown})"))
+        }
+    };
+    RequestFailure {
+        scope,
+        reason,
+        detail: format!("{provider}: {error}"),
+    }
+}
+
+/// Classifies a request curl itself couldn't complete.
+fn curl_failure(route: &ApiRoute, status: ExitStatus) -> RequestFailure {
+    let provider = &route.provider_name;
+    let (scope, reason) = match status.code() {
+        Some(28) => (
+            FailureScope::Model,
+            format!("{} took too long to answer", route.model_name),
+        ),
+        Some(6) | Some(7) => (FailureScope::Provider, format!("{provider} can't be reached")),
+        _ => (FailureScope::Provider, format!("{provider} couldn't be called")),
+    };
+    RequestFailure {
+        scope,
+        reason,
+        detail: curl_failure_message(&route.provider_name, status),
     }
 }
 
@@ -620,6 +770,9 @@ struct ApiChatAccumulator {
     error: Option<String>,
     prompt_tokens: u64,
     completion_tokens: u64,
+    /// The HTTP status curl printed after the reply (see
+    /// [`HTTP_STATUS_MARKER`]).
+    http_status: Option<u16>,
 }
 
 #[derive(Deserialize)]
@@ -673,6 +826,10 @@ impl ApiChatAccumulator {
     fn push_line(&mut self, line: &str) -> Vec<TurnEvent> {
         let line = line.trim();
         if line.is_empty() || line.starts_with(':') || line.starts_with("event:") {
+            return Vec::new();
+        }
+        if let Some(code) = line.strip_prefix(HTTP_STATUS_MARKER) {
+            self.http_status = code.trim().parse().ok();
             return Vec::new();
         }
         let Some(data) = line.strip_prefix("data:") else {
