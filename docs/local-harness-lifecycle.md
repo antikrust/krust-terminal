@@ -59,7 +59,7 @@ new harness by writing a parser + exec module, not by touching the drain.
   the turn. It never opens `Ollama.app`, so Ollama has no separate window,
   Dock activation, or visible startup step in the integrated flow.
 - Cloud API models (`LocalHarnessKind::Api`, `api_stream_exec.rs`) are Z.ai,
-  Groq, and Gemini over the OpenAI chat-completions API, run with the user's
+  Groq, Gemini, OpenRouter, and Venice over the OpenAI chat-completions API, run with the user's
   own key (`ai/api_providers.rs`; keys in the keychain under
   `ApiProviderKeys`, set on Settings → AI → Bring your own key). Model ids are
   `api/<provider>/<model>`; like Ollama's they ride the Codex picker row and

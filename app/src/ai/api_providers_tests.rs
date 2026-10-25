@@ -1,4 +1,4 @@
-use super::{api_model_parts, model_id_for, provider, PROVIDERS};
+use super::{api_model_parts, model_id_for, parse_live_free_models, provider, PROVIDERS};
 
 #[test]
 fn model_ids_round_trip_for_every_listed_model() {
@@ -36,4 +36,46 @@ fn zai_is_listed_with_its_free_models() {
     assert_eq!(zai.base_url, "https://api.z.ai/api/paas/v4");
     let models: Vec<&str> = zai.models.iter().map(|model| model.id).collect();
     assert_eq!(models, vec!["glm-4.7-flash", "glm-4.5-flash"]);
+}
+
+#[test]
+fn every_provider_links_to_an_https_key_page_and_lists_models() {
+    for provider in PROVIDERS {
+        assert!(
+            provider.key_url.starts_with("https://"),
+            "{} key link: {}",
+            provider.id,
+            provider.key_url
+        );
+        assert!(provider.base_url.starts_with("https://"), "{}", provider.id);
+        assert!(!provider.models.is_empty(), "{} has no models", provider.id);
+    }
+}
+
+#[test]
+fn live_free_list_keeps_free_models_curated_first() {
+    let openrouter = provider("openrouter").expect("OpenRouter is a provider");
+    let body = r#"{"data":[
+        {"id":"acme/big-model:free","name":"Acme: Big Model (free)","context_length":1000000},
+        {"id":"acme/paid-model","name":"Acme: Paid Model","context_length":2000000},
+        {"id":"google/gemma-4-31b-it:free","name":"Google: Gemma 4 31B (free)","context_length":262144},
+        {"id":"nvidia/nemotron-3-super-120b-a12b:free","name":"NVIDIA: Nemotron 3 Super (free)","context_length":1000000}
+    ]}"#;
+    let models = parse_live_free_models(body, openrouter);
+    let ids: Vec<&str> = models.iter().map(|(id, _)| id.as_str()).collect();
+    // Paid models are dropped; curated ones lead in curated order, then the
+    // rest by context window.
+    assert_eq!(
+        ids,
+        vec![
+            "nvidia/nemotron-3-super-120b-a12b:free",
+            "google/gemma-4-31b-it:free",
+            "acme/big-model:free",
+        ]
+    );
+    // Curated names are kept; others lose the "(free)" suffix.
+    assert_eq!(models[0].1, "Nemotron 3 Super 120B (NVIDIA)");
+    assert_eq!(models[2].1, "Acme: Big Model");
+    // An unreadable body yields nothing, so the curated list stays.
+    assert!(parse_live_free_models("not json", openrouter).is_empty());
 }

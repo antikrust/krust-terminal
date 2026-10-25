@@ -8135,17 +8135,19 @@ impl SettingsWidget for CloudHandoffWidget {
 }
 
 /// Keys for the cloud models the local harness calls directly — Z.ai's GLM,
-/// Groq, Gemini (see `ai::api_providers`). Unlike the provider keys in
+/// Groq, Gemini, Venice (see `ai::api_providers`). Unlike the provider keys in
 /// [`ApiKeysWidget`], these never go to Krust's server and need no Krust plan,
 /// so the fields are always editable. A provider's models appear in the model
 /// menu once its key is set.
 struct CloudModelKeysWidget {
-    editors: Vec<(&'static ApiProvider, ViewHandle<EditorView>)>,
+    /// Per provider: its key field, and the mouse state of its "Get a key"
+    /// link — created once here so the link's clicks register.
+    providers: Vec<(&'static ApiProvider, ViewHandle<EditorView>, MouseStateHandle)>,
 }
 
 impl CloudModelKeysWidget {
     fn new(ctx: &mut ViewContext<<Self as SettingsWidget>::View>) -> Self {
-        let editors = api_providers::PROVIDERS
+        let providers = api_providers::PROVIDERS
             .iter()
             .map(|provider| {
                 let existing = ApiProviderKeys::as_ref(ctx)
@@ -8188,15 +8190,16 @@ impl CloudModelKeysWidget {
                         });
                     }
                 });
-                (provider, editor)
+                (provider, editor, MouseStateHandle::default())
             })
             .collect();
-        Self { editors }
+        Self { providers }
     }
 
     fn render_provider(
         provider: &ApiProvider,
         editor: &ViewHandle<EditorView>,
+        key_link: &MouseStateHandle,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let label = Text::new_inline(
@@ -8223,13 +8226,7 @@ impl CloudModelKeysWidget {
             .finish();
         let note = appearance
             .ui_builder()
-            .wrappable_text(
-                format!(
-                    "{} Get a key at {}.",
-                    provider.free_tier_note, provider.key_url
-                ),
-                true,
-            )
+            .wrappable_text(provider.pricing_note, true)
             .with_style(UiComponentStyles {
                 font_size: Some(CONTENT_FONT_SIZE),
                 font_color: Some(
@@ -8242,11 +8239,23 @@ impl CloudModelKeysWidget {
             })
             .build()
             .finish();
+        let link = appearance
+            .ui_builder()
+            .link(
+                format!("Get a {} API key", provider.display_name),
+                Some(provider.key_url.to_string()),
+                None,
+                key_link.clone(),
+            )
+            .soft_wrap(false)
+            .build()
+            .finish();
         Flex::column()
             .with_spacing(8.)
             .with_child(label)
             .with_child(input)
             .with_child(note)
+            .with_child(link)
             .finish()
     }
 }
@@ -8255,7 +8264,7 @@ impl SettingsWidget for CloudModelKeysWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "cloud models api key free z.ai zai zhipu glm groq gemini google llama gpt-oss"
+        "cloud models api key free z.ai zai zhipu glm groq gemini google venice private uncensored llama gpt-oss deepseek qwen"
     }
 
     fn render(
@@ -8293,8 +8302,8 @@ impl SettingsWidget for CloudModelKeysWidget {
                     .finish(),
             );
         let mut providers = Flex::column().with_spacing(16.);
-        for (provider, editor) in &self.editors {
-            providers.add_child(Self::render_provider(provider, editor, appearance));
+        for (provider, editor, key_link) in &self.providers {
+            providers.add_child(Self::render_provider(provider, editor, key_link, appearance));
         }
         column.add_child(providers.finish());
         column.finish()
