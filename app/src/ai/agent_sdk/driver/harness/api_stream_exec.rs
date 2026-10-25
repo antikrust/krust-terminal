@@ -71,12 +71,6 @@ fn tool_output_budget_chars(context_window: u64) -> usize {
     context_window as usize * 2
 }
 
-/// At most this many of the latest long tool results go to the model in full.
-/// Every request resends the whole conversation and is billed for it, so older
-/// long results — file contents read twenty calls ago — are swapped for a
-/// one-line note (see [`compact_old_tool_results`]).
-const KEEP_RECENT_TOOL_RESULTS: usize = 6;
-
 /// A tool result shorter than this is kept whatever its age: the note that
 /// would replace it saves next to nothing.
 const STALE_RESULT_MIN_CHARS: usize = 2_000;
@@ -211,11 +205,7 @@ pub async fn run_api_stream(
     let mut turn_cost_usd = 0.0;
     let mut next_command = Some(first_command);
     loop {
-        compact_old_tool_results(
-            &mut messages,
-            KEEP_RECENT_TOOL_RESULTS,
-            tool_output_budget_chars(context_window),
-        );
+        compact_old_tool_results(&mut messages, tool_output_budget_chars(context_window));
         let request = json!({
             "model": model,
             "messages": messages,
@@ -375,38 +365,44 @@ pub async fn run_api_stream(
     }
 }
 
-/// Swaps the content of older long tool results for a one-line note, keeping
-/// in full only the `keep_recent` latest that fit in `budget_chars` together
-/// (the very latest always stays). Each request resends the whole
-/// conversation, so a file read early in a long turn was otherwise paid for
-/// again on every call after it — and a few whole-file reads on a small model
-/// would overflow its window. The result's message stays (its `tool_call_id`
-/// must still answer the assistant's call); only its text shrinks. The model
-/// can run the tool again if it needs the output back.
-fn compact_old_tool_results(messages: &mut [Value], keep_recent: usize, budget_chars: usize) {
-    let mut seen = 0;
-    let mut kept_chars = 0;
-    for message in messages.iter_mut().rev() {
+/// Swaps the content of the oldest long tool results for a one-line note
+/// until the tool output still carried in full fits in `budget_chars` (the
+/// very latest result always stays). Until then nothing is dropped: a model
+/// that forgets what it read a few calls ago reads it again, and again. Each
+/// request resends the whole conversation, so on a small model a few
+/// whole-file reads would otherwise overflow its window. The result's message
+/// stays (its `tool_call_id` must still answer the assistant's call); only its
+/// text shrinks. The model can run the tool again if it needs the output back.
+fn compact_old_tool_results(messages: &mut [Value], budget_chars: usize) {
+    let full_length = |message: &Value| {
         if message.get("role").and_then(Value::as_str) != Some("tool") {
-            continue;
+            return None;
         }
-        seen += 1;
-        let Some(content) = message.get("content").and_then(Value::as_str) else {
+        let content = message.get("content").and_then(Value::as_str)?;
+        (!content.starts_with(DROPPED_RESULT_PREFIX)).then(|| content.chars().count())
+    };
+    let mut total_chars: usize = messages.iter().filter_map(full_length).sum();
+    let Some(latest) = messages
+        .iter()
+        .rposition(|message| message.get("role").and_then(Value::as_str) == Some("tool"))
+    else {
+        return;
+    };
+    for message in &mut messages[..latest] {
+        if total_chars <= budget_chars {
+            break;
+        }
+        let Some(length) = full_length(message) else {
             continue;
         };
-        if content.starts_with(DROPPED_RESULT_PREFIX) {
-            continue;
-        }
-        let length = content.chars().count();
-        let fits = seen == 1 || (seen <= keep_recent && kept_chars + length <= budget_chars);
-        if fits || length < STALE_RESULT_MIN_CHARS {
-            kept_chars += length;
+        if length < STALE_RESULT_MIN_CHARS {
             continue;
         }
         message["content"] = Value::String(format!(
             "{DROPPED_RESULT_PREFIX} ({length} characters) was dropped to keep the conversation \
              small. Run the tool again if you need it.]"
         ));
+        total_chars -= length;
     }
 }
 

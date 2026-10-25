@@ -227,18 +227,18 @@ fn tool_message(content: &str) -> Value {
 }
 
 #[test]
-fn old_long_tool_results_are_dropped_and_recent_ones_kept() {
+fn old_long_tool_results_are_dropped_oldest_first_once_over_budget() {
     let long = "x".repeat(5_000);
     let mut messages = vec![
         json!({ "role": "system", "content": "system" }),
         json!({ "role": "user", "content": "do it" }),
-        tool_message(&long), // oldest: dropped
+        tool_message(&long),   // oldest: dropped
         tool_message("short"), // old but short: kept
-        tool_message(&long), // within the two latest: kept
+        tool_message(&long),   // fits once the oldest is gone: kept
         json!({ "role": "assistant", "content": null }),
         tool_message(&long), // latest: kept
     ];
-    compact_old_tool_results(&mut messages, 2, usize::MAX);
+    compact_old_tool_results(&mut messages, 12_000);
 
     let content = |index: usize| messages[index]["content"].as_str().unwrap_or("").to_string();
     assert!(content(2).starts_with(DROPPED_RESULT_PREFIX), "{}", content(2));
@@ -252,7 +252,18 @@ fn old_long_tool_results_are_dropped_and_recent_ones_kept() {
 
     // A second pass changes nothing more.
     let before = messages.clone();
-    compact_old_tool_results(&mut messages, 2, usize::MAX);
+    compact_old_tool_results(&mut messages, 12_000);
+    assert_eq!(messages, before);
+}
+
+#[test]
+fn tool_results_within_budget_are_all_kept() {
+    // A long turn on a large-window model: hundreds of reads, none dropped
+    // while they fit.
+    let long = "x".repeat(5_000);
+    let mut messages: Vec<Value> = (0..300).map(|_| tool_message(&long)).collect();
+    let before = messages.clone();
+    compact_old_tool_results(&mut messages, 1_500_000);
     assert_eq!(messages, before);
 }
 
@@ -285,8 +296,8 @@ fn gemini_thought_signature_goes_back_with_its_call() {
 fn tool_output_over_budget_is_dropped_but_the_latest_stays() {
     let big = "y".repeat(10_000);
     let mut messages = vec![tool_message(&big), tool_message(&big), tool_message(&big)];
-    // Room for one result: only the latest stays, though three are "recent".
-    compact_old_tool_results(&mut messages, 6, 15_000);
+    // Room for one result: only the latest stays.
+    compact_old_tool_results(&mut messages, 15_000);
     let dropped = |index: usize| {
         messages[index]["content"]
             .as_str()
@@ -296,4 +307,13 @@ fn tool_output_over_budget_is_dropped_but_the_latest_stays() {
     assert!(dropped(0));
     assert!(dropped(1));
     assert!(!dropped(2));
+
+    // The latest stays even when it alone is over budget.
+    let mut messages = vec![tool_message(&big), tool_message(&big)];
+    compact_old_tool_results(&mut messages, 5_000);
+    assert!(messages[0]["content"]
+        .as_str()
+        .unwrap_or("")
+        .starts_with(DROPPED_RESULT_PREFIX));
+    assert_eq!(messages[1]["content"], big);
 }
