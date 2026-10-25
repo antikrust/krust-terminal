@@ -83,7 +83,7 @@ app afterwards.
      - a bare `{"message":…}`
    - Sizes scale with the model's context window (`context_window` on each `ApiModel`; `DEFAULT_CONTEXT_WINDOW` when unlisted). `read_file` returns about a quarter of the window per call (`read_window_chars`: ~128 KB on a 128K model, up to 1 MB), so most files come back whole; local Ollama models keep their small window (`READ_WINDOW_BYTES`).
    - A tool result is clipped (head and tail kept) only past a whole read window (`max_tool_result_chars`).
-   - Every request resends the whole conversation, so before each one `compact_old_tool_results` keeps in full only the 6 latest long tool results that fit in about half the window (`tool_output_budget_chars`), and swaps older ones for a one-line note.
+   - Every request resends the whole conversation. Before each one, `compact_old_tool_results` checks whether the tool output carried in full is over about half the window (`tool_output_budget_chars`); only then does it swap the oldest long results for a one-line note, until the rest fits. The latest result always stays, and a large-window model keeps everything it read until it nears that budget.
    - There is no step limit (for Ollama either): a turn runs until the model answers or the user stops it.
    - `TurnUsage` token counts are the last request's and `context_window` is the model's real window (together they drive the context meter); `cost_usd` adds up every request in the turn at the model's `price_per_million` (see `model_price`).
 8. **`LocalHarnessKind::Api`** is defined in `app/src/ai/agent_sdk/driver/harness/mod.rs` and serialised as `"api"` in `local_harness_threads.json`. Every exhaustive match on the kind needs an arm, including `view.rs` and `terminal/view/use_agent_footer/mod.rs`.
