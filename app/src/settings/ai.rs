@@ -91,6 +91,31 @@ impl Entity for FocusedTerminalInfo {
 
 impl SingletonEntity for FocusedTerminalInfo {}
 
+/// A saved BYOR failover list, named by the user ("Light work", "Heavy
+/// coding"): picking it loads its rows, which are off, and free-only.
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[serde(default)]
+#[schemars(description = "A saved BYOR failover list.")]
+pub struct ByorFailoverPreset {
+    #[schemars(description = "The preset's name.")]
+    pub name: String,
+    #[schemars(description = "The models, first choice first, as model ids.")]
+    pub order: Vec<String>,
+    #[schemars(description = "The models in the list that are switched off.")]
+    pub disabled: Vec<String>,
+    #[schemars(description = "Whether failover only moves to free models.")]
+    pub free_only: bool,
+}
+
 #[derive(
     Default,
     Debug,
@@ -1438,6 +1463,32 @@ define_settings_group!(AISettings, settings: [
         private: false,
         toml_path: "cloud_platform.third_party_api_keys.byor_failover_order",
         description: "The models BYOR failover tries, first choice first, as model ids.",
+    }
+
+    // Failover rows switched off, as model ids: kept in the list, greyed out,
+    // and skipped.
+    byor_failover_disabled: ByorFailoverDisabled {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_failover_disabled",
+        description: "BYOR failover rows switched off, as model ids.",
+    }
+
+    // Saved BYOR failover lists the user can switch between ("Light work",
+    // "Heavy coding").
+    byor_failover_presets: ByorFailoverPresets {
+        type: Vec<ByorFailoverPreset>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_failover_presets",
+        description: "Saved BYOR failover lists.",
     }
 
     // Whether BYOR failover only moves to free models: models listed at no

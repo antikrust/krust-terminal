@@ -30,6 +30,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::COMMITTEE_MODEL_NAM
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     base_url_of, ollama_model_name, wire_name,
 };
+use crate::ai::failover_health::FailoverHealth;
 use crate::ai::harness_availability::{HarnessAvailabilityModel, HarnessModelInfo};
 use crate::settings::AISettings;
 
@@ -761,13 +762,20 @@ pub fn failover_rows(app: &AppContext) -> Vec<String> {
 }
 
 /// Where a turn on `model_id` goes if that model fails, in order: every
-/// failover row except `model_id` itself, each once, and only free ones when
-/// "Free models only" is on. A local app's row hands the turn over to that app.
+/// failover row except `model_id` itself, rows switched off and models
+/// OpenRouter reports down, each once, and only free ones when "Free models
+/// only" is on. A local app's row hands the turn over to that app.
 pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> {
-    let free_only = *AISettings::as_ref(app).byor_failover_free_only.value();
+    let settings = AISettings::as_ref(app);
+    let free_only = *settings.byor_failover_free_only.value();
+    let disabled = settings.byor_failover_disabled.value();
     let mut routes: Vec<FailoverTarget> = Vec::new();
+    let health = FailoverHealth::as_ref(app);
     for row in failover_rows(app) {
         if row == model_id
+            || disabled.contains(&row)
+            // OpenRouter says it has no working endpoint right now.
+            || health.is_known_down(&row)
             || (free_only && !is_free_model(&row))
             || routes.iter().any(|route| route.model_id() == row)
         {

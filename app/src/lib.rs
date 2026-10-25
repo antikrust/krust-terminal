@@ -2287,6 +2287,7 @@ pub(crate) fn initialize_app(
     // Before HarnessAvailabilityModel, which lists the models of every
     // provider that has a key.
     ctx.add_singleton_model(crate::ai::api_providers::ApiProviderKeys::new);
+    ctx.add_singleton_model(|_| crate::ai::failover_health::FailoverHealth::new());
     ctx.add_singleton_model(HarnessAvailabilityModel::new);
     ctx.add_singleton_model(ConnectedSelfHostedWorkersModel::new);
 

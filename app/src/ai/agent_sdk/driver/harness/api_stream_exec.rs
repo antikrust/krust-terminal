@@ -32,6 +32,7 @@ use super::ollama_stream_exec::{
 use crate::ai::api_providers::{
     model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
 };
+use crate::ai::failover_health::{self, Health};
 
 /// The environment variable curl reads the key from.
 pub const API_KEY_ENV: &str = "KRUST_API_KEY";
@@ -299,6 +300,14 @@ pub async fn run_api_stream(
         let response = match response {
             Ok(response) => response,
             Err(failure) => {
+                // The failover list's light for this row (and, for a failure
+                // of the whole account, every row of that account).
+                failover_health::record(
+                    &route.model_id,
+                    &route.account,
+                    failure.health,
+                    failure.scope == FailureScope::Provider,
+                );
                 if failure.scope == FailureScope::Provider {
                     failed_accounts.push(route.account.clone());
                 }
@@ -357,6 +366,7 @@ pub async fn run_api_stream(
                 continue;
             }
         };
+        failover_health::record(&route.model_id, &route.account, Health::Good, false);
         if let Some((input_price, output_price)) = model.price {
             turn_cost_usd += (response.prompt_tokens as f64 * input_price
                 + response.completion_tokens as f64 * output_price)
@@ -759,6 +769,9 @@ enum FailureScope {
 /// A failed request, as failover and the user see it.
 struct RequestFailure {
     scope: FailureScope,
+    /// The light it leaves on the failover row: red for a failure that will
+    /// last, amber for a busy or flaky model.
+    health: Health,
     /// What the user is told on switching: "Gemini Flash is overloaded".
     reason: String,
     /// The full error, for the banner when no model is left.
@@ -777,28 +790,65 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
     let out_of_credit = lower.contains("insufficient") || lower.contains("balance");
     let too_long = lower.contains("context")
         && (lower.contains("length") || lower.contains("window") || lower.contains("too long"));
-    let (scope, reason) = match http_status {
-        Some(401 | 403) => (FailureScope::Provider, format!("{provider} rejected the key")),
-        Some(402) => (FailureScope::Provider, format!("{provider} is out of credit")),
-        _ if out_of_credit => (FailureScope::Provider, format!("{provider} is out of credit")),
+    let (scope, health, reason) = match http_status {
+        Some(401 | 403) => (
+            FailureScope::Provider,
+            Health::Down,
+            format!("{provider} rejected the key"),
+        ),
+        Some(402) => (
+            FailureScope::Provider,
+            Health::Down,
+            format!("{provider} is out of credit"),
+        ),
+        _ if out_of_credit => (
+            FailureScope::Provider,
+            Health::Down,
+            format!("{provider} is out of credit"),
+        ),
+        // Says nothing about the model's health.
         _ if too_long => (
             FailureScope::Model,
+            Health::Unknown,
             format!("The conversation is too long for {model}"),
         ),
-        Some(429) => (FailureScope::Model, format!("{model} is rate-limited")),
-        Some(503 | 529) => (FailureScope::Model, format!("{model} is overloaded")),
-        _ if lower.contains("overloaded") => {
-            (FailureScope::Model, format!("{model} is overloaded"))
-        }
-        Some(404) => (FailureScope::Model, format!("{model} isn't available")),
-        Some(500..=599) => (FailureScope::Model, format!("{model} had a server error")),
+        Some(429) => (
+            FailureScope::Model,
+            Health::Degraded,
+            format!("{model} is rate-limited"),
+        ),
+        Some(503 | 529) => (
+            FailureScope::Model,
+            Health::Degraded,
+            format!("{model} is overloaded"),
+        ),
+        _ if lower.contains("overloaded") => (
+            FailureScope::Model,
+            Health::Degraded,
+            format!("{model} is overloaded"),
+        ),
+        Some(404) => (
+            FailureScope::Model,
+            Health::Down,
+            format!("{model} isn't available"),
+        ),
+        Some(500..=599) => (
+            FailureScope::Model,
+            Health::Degraded,
+            format!("{model} had a server error"),
+        ),
         _ => {
             let shown: String = error.chars().take(160).collect();
-            (FailureScope::Model, format!("{model} failed ({shown})"))
+            (
+                FailureScope::Model,
+                Health::Down,
+                format!("{model} failed ({shown})"),
+            )
         }
     };
     RequestFailure {
         scope,
+        health,
         reason,
         detail: format!("{provider}: {error}"),
     }
@@ -807,16 +857,26 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
 /// Classifies a request curl itself couldn't complete.
 fn curl_failure(route: &ApiRoute, status: ExitStatus) -> RequestFailure {
     let provider = &route.provider_name;
-    let (scope, reason) = match status.code() {
+    let (scope, health, reason) = match status.code() {
         Some(28) => (
             FailureScope::Model,
+            Health::Degraded,
             format!("{} took too long to answer", route.model_name),
         ),
-        Some(6) | Some(7) => (FailureScope::Provider, format!("{provider} can't be reached")),
-        _ => (FailureScope::Provider, format!("{provider} couldn't be called")),
+        Some(6) | Some(7) => (
+            FailureScope::Provider,
+            Health::Down,
+            format!("{provider} can't be reached"),
+        ),
+        _ => (
+            FailureScope::Provider,
+            Health::Down,
+            format!("{provider} couldn't be called"),
+        ),
     };
     RequestFailure {
         scope,
+        health,
         reason,
         detail: curl_failure_message(&route.provider_name, status),
     }
