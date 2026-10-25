@@ -38,6 +38,12 @@ impl PlanTracker {
         }
     }
 
+    /// The pending items, in order — the steps still to do. Empty until a
+    /// checklist has been stated this turn.
+    pub(crate) fn remaining(&self) -> Vec<String> {
+        self.pending.clone()
+    }
+
     /// The operations that bring the checklist to `entries`.
     pub(crate) fn updates(&mut self, entries: &[PlanEntry]) -> Vec<PlanUpdate> {
         let items = with_ids(entries);

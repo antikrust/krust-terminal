@@ -9,12 +9,12 @@
 //! through its environment (`--variable` + `--expand-header`, curl 8.3+),
 //! never its arguments, so it is not visible in `ps` and never touches disk.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::process::ExitStatus;
 use std::sync::{Arc, Mutex, OnceLock};
 
-use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
+use ai::agent::{PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use command::r#async::Command;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -236,6 +236,11 @@ pub async fn run_api_stream(
     // What every request of this turn cost, at each model's listed price.
     let mut turn_cost_usd = 0.0;
     let mut plan = PlanTracker::default();
+    // Set when the context is near full or a task just finished; acted on once
+    // the round's tool calls all have their results, a clean point to compact.
+    let mut compact_next = false;
+    // Times this turn compacted an input the model refused as too long.
+    let mut input_compactions = 0;
     loop {
         // A local model's window is a fraction of a cloud model's: it is sent
         // this turn only, trimmed on a copy so the saved history stays whole.
@@ -303,6 +308,38 @@ pub async fn run_api_stream(
         let response = match response {
             Ok(response) => response,
             Err(failure) => {
+                // Longer than the model takes (Z.ai's 1261): compact the input
+                // in the background and retry on the same model, instead of
+                // failing over to models that would refuse it just the same.
+                if failure.too_long && input_compactions < MAX_INPUT_COMPACTIONS {
+                    input_compactions += 1;
+                    on_event(TurnEvent::Text {
+                        text: format!(
+                            "_The input is over {}'s max length — compacting it in the \
+                             background…_",
+                            route.model_name
+                        ),
+                    });
+                    if let Some(parts) = compact_oversized_input(
+                        &route,
+                        &mut messages,
+                        session_id,
+                        working_dir,
+                        path,
+                    )
+                    .await
+                    {
+                        save_history(session_id, &messages);
+                        on_event(TurnEvent::Text {
+                            text: format!(
+                                "_Compacted the input into a summary ({parts} part{}); \
+                                 continuing._",
+                                if parts == 1 { "" } else { "s" }
+                            ),
+                        });
+                        continue;
+                    }
+                }
                 // The failover list's light for this row (and, for a failure
                 // of the whole account, every row of that account).
                 failover_health::record(
@@ -386,6 +423,15 @@ pub async fn run_api_stream(
             ..Default::default()
         };
 
+        // Near the model's window: compact before it fills and the provider
+        // rejects the request. Measured on the real prompt-token count the
+        // provider just reported, against the model's own window.
+        if let Some(window) = model.listed_window {
+            if response.prompt_tokens as f64 >= window as f64 * COMPACT_AT_FILL {
+                compact_next = true;
+            }
+        }
+
         // Structured calls first; otherwise a call some models write as JSON
         // text in their answer.
         let (content, tool_calls) = if !response.tool_calls.is_empty() {
@@ -434,7 +480,15 @@ pub async fn run_api_stream(
                     .and_then(|arguments| todo_list_entries(&arguments));
                 let reply = match entries {
                     Ok(entries) => {
-                        for update in plan.updates(&entries) {
+                        let updates = plan.updates(&entries);
+                        // A finished step is a natural point to compact: the
+                        // work it produced is done with.
+                        if updates.iter().any(|update| {
+                            matches!(update, PlanUpdate::Complete(ids) if !ids.is_empty())
+                        }) {
+                            compact_next = true;
+                        }
+                        for update in updates {
                             on_event(TurnEvent::PlanUpdated { update });
                         }
                         todo_list_reply(&entries)
@@ -498,7 +552,277 @@ pub async fn run_api_stream(
         // Every call has its result now, so the history is a valid
         // conversation to resume from — keep it, in case the turn ends here.
         save_history(session_id, &messages);
+
+        if compact_next {
+            compact_next = false;
+            compact_conversation(&route, &mut messages, &plan, session_id, working_dir, path, &mut on_event)
+                .await;
+        }
     }
+}
+
+/// The share of the model's window at which a run is compacted — summarized,
+/// and the step-by-step chatter dropped — so one model working a long task
+/// doesn't grow the request until the provider rejects it.
+const COMPACT_AT_FILL: f64 = 0.90;
+
+/// Summarizes the work so far and replaces the turn's accumulated steps with
+/// that summary, on the same model. A failed summary request leaves the
+/// history untouched (the run goes on, uncompacted) rather than ending the
+/// turn. The summary is the model's, so the model carries forward what the
+/// next step needs; the plan still to do is appended so it is never lost.
+async fn compact_conversation(
+    route: &ApiRoute,
+    messages: &mut Vec<Value>,
+    plan: &PlanTracker,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    on_event: &mut impl FnMut(TurnEvent),
+) {
+    let Some(summary) =
+        summarize_for_compaction(route, messages, session_id, working_dir, path).await
+    else {
+        return;
+    };
+    apply_compaction(messages, &summary, &plan.remaining());
+    save_history(session_id, messages);
+    on_event(TurnEvent::Text {
+        text: "_Compacted the conversation to free up context._".to_string(),
+    });
+}
+
+/// Asks the model to summarize the conversation for carrying into a fresh
+/// context. Sends no tools, so the reply is prose; returns None (compaction
+/// skipped) if the request fails or comes back empty.
+async fn summarize_for_compaction(
+    route: &ApiRoute,
+    messages: &[Value],
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> Option<String> {
+    let mut summary_messages = without_turn_ids(messages);
+    summary_messages.push(json!({
+        "role": "user",
+        "content": "Summarize this conversation so the work can continue in a fresh context. \
+            Briefly cover what has been done, what was found (exact file paths, names, values, \
+            decisions), and what the next step needs. Leave out tool mechanics and anything not \
+            needed to carry on. Reply with only the summary.",
+    }));
+    let text = ask_once(route, summary_messages, session_id, working_dir, path)
+        .await
+        .ok()?;
+    (!text.trim().is_empty()).then_some(text)
+}
+
+/// Sends one tools-free request to the turn's model, apart from the
+/// conversation, and returns the reply's text, or the provider's error.
+/// Nothing is shown to the user: it is for background work like summarising.
+async fn ask_once(
+    route: &ApiRoute,
+    messages: Vec<Value>,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> Result<String, String> {
+    let mut request = json!({
+        "model": route.model,
+        "messages": messages,
+        "stream": true,
+    });
+    if route.is_local() {
+        request["options"] = json!({ "num_ctx": LOCAL_NUM_CTX });
+    }
+    let request = request.to_string();
+
+    let command = new_api_command(route, working_dir, path);
+    let accumulator = Arc::new(Mutex::new(ApiChatAccumulator::default()));
+    let parser_accumulator = Arc::clone(&accumulator);
+    let mut sink = |_event: TurnEvent| {};
+    let status = run_jsonl_stream_cancellable(
+        command,
+        &request,
+        harness_cancel_for(session_id),
+        move |line| {
+            parser_accumulator
+                .lock()
+                .map(|mut accumulator| accumulator.push_line(line))
+                .unwrap_or_default()
+        },
+        &mut sink,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+    if !status.success() {
+        return Err(curl_failure_message(&route.provider_name, status));
+    }
+    let accumulator = accumulator
+        .lock()
+        .map_err(|_| "the response state became unavailable".to_string())?
+        .clone();
+    accumulator.finish().map(|response| response.content)
+}
+
+/// How many times one turn compacts an input the model refused as too long
+/// before failing over as before.
+const MAX_INPUT_COMPACTIONS: usize = 2;
+/// The most parts an over-long input is cut into for summarising.
+const MAX_SUMMARY_PARTS: usize = 32;
+
+/// Compacts a conversation the model refused as too long (Z.ai's 1261). All
+/// of it, the latest request included, is summarised half at a time in
+/// separate background requests — a half still too long is halved again —
+/// and the history becomes the turn's own opening message carrying the
+/// joined summary, so the turn keeps its ID. Returns how many parts were
+/// summarised, or None if it couldn't be done (the caller then fails over).
+async fn compact_oversized_input(
+    route: &ApiRoute,
+    messages: &mut Vec<Value>,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> Option<usize> {
+    let last_user = messages
+        .iter()
+        .rposition(|message| message.get("role").and_then(Value::as_str) == Some("user"))?;
+    let system = messages.first().cloned()?;
+    let text = transcript_text(&messages[1..]);
+    let mut queue: VecDeque<String> = split_in_half(&text).into();
+    if queue.is_empty() {
+        return None;
+    }
+    let mut parts = queue.len();
+    let mut summaries = Vec::new();
+    while let Some(part) = queue.pop_front() {
+        match summarise_part(route, &part, session_id, working_dir, path).await {
+            PartSummary::Done(summary) => summaries.push(summary),
+            PartSummary::TooLong if parts < MAX_SUMMARY_PARTS => {
+                let halves = split_in_half(&part);
+                if halves.len() < 2 {
+                    return None;
+                }
+                parts += halves.len() - 1;
+                for half in halves.into_iter().rev() {
+                    queue.push_front(half);
+                }
+            }
+            PartSummary::TooLong | PartSummary::Failed => return None,
+        }
+    }
+    let mut opening = messages[last_user].clone();
+    opening["content"] = Value::String(format!(
+        "[This conversation, the latest request included, was longer than this model accepts, \
+         so it was compacted into the summary below. Carry on the work from it, starting with \
+         the latest request.]\n\n{}",
+        summaries.join("\n\n")
+    ));
+    *messages = vec![system, opening];
+    Some(summaries.len())
+}
+
+/// The outcome of summarising one part of an over-long input.
+enum PartSummary {
+    Done(String),
+    /// Still too long for the model: halve it and try again.
+    TooLong,
+    Failed,
+}
+
+async fn summarise_part(
+    route: &ApiRoute,
+    part: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+) -> PartSummary {
+    let request = vec![json!({
+        "role": "user",
+        "content": format!(
+            "Summarise this part of a long conversation so the work can continue from the \
+             summary alone. Keep everything needed to carry on: the user's instructions and \
+             requests, exact file paths, names, values, code that matters, decisions and \
+             findings. Leave out tool mechanics. Reply with only the summary.\n\n---\n\n{part}"
+        ),
+    })];
+    match ask_once(route, request, session_id, working_dir, path).await {
+        Ok(text) if !text.trim().is_empty() => PartSummary::Done(text),
+        Err(error) if is_too_long_error(&error) => PartSummary::TooLong,
+        Ok(_) | Err(_) => PartSummary::Failed,
+    }
+}
+
+/// A chat history as plain text to summarise: each message as `role: text`,
+/// with the tool calls an assistant made.
+fn transcript_text(messages: &[Value]) -> String {
+    messages
+        .iter()
+        .filter_map(|message| {
+            let role = message.get("role")?.as_str()?;
+            let mut text = message
+                .get("content")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            for call in message
+                .get("tool_calls")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
+                let function = &call["function"];
+                text.push_str(&format!(
+                    "\n[called {} with {}]",
+                    function["name"].as_str().unwrap_or("a tool"),
+                    function["arguments"]
+                ));
+            }
+            (!text.trim().is_empty()).then(|| format!("{role}: {text}"))
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+/// `text` in two halves, cut at a paragraph or line break near the middle
+/// when there is one, so a message isn't split mid-line. Empty halves are
+/// left out.
+fn split_in_half(text: &str) -> Vec<String> {
+    let mid = text.floor_char_boundary(text.len() / 2);
+    let cut = text[..mid]
+        .rfind("\n\n")
+        .or_else(|| text[..mid].rfind('\n'))
+        .filter(|&at| at > mid / 2)
+        .map_or(mid, |at| at + 1);
+    let (first, second) = text.split_at(cut);
+    [first, second]
+        .into_iter()
+        .filter(|part| !part.trim().is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Replaces the turn's accumulated steps with `summary`: keeps the system
+/// message and every user turn, drops everything after the last user message,
+/// and appends the summary as the assistant's word. `remaining` (the plan not
+/// yet done) is appended so compaction never loses the checklist. The chat
+/// history is the model's own; the conversation the user sees is built from
+/// events separately, so this does not touch it.
+fn apply_compaction(messages: &mut Vec<Value>, summary: &str, remaining: &[String]) {
+    let Some(last_user) = messages
+        .iter()
+        .rposition(|message| message.get("role").and_then(Value::as_str) == Some("user"))
+    else {
+        return;
+    };
+    messages.truncate(last_user + 1);
+    let mut content = summary.to_string();
+    if !remaining.is_empty() {
+        content.push_str("\n\nStill to do:");
+        for item in remaining {
+            content.push_str(&format!("\n- {item}"));
+        }
+    }
+    messages.push(json!({ "role": "assistant", "content": content }));
 }
 
 /// What the turn's current model sizes: its price, its window, and how much
@@ -801,6 +1125,20 @@ struct RequestFailure {
     reason: String,
     /// The full error, for the banner when no model is left.
     detail: String,
+    /// The request was longer than the model accepts (Z.ai's code 1261, a
+    /// context-length error): compacting the input can rescue it.
+    too_long: bool,
+}
+
+/// Whether a provider's error says the request was too long for the model:
+/// Z.ai's "Prompt exceeds max length (code 1261)", or a context-length error.
+fn is_too_long_error(error: &str) -> bool {
+    let lower = error.to_lowercase();
+    lower.contains("(code 1261)")
+        || lower.contains("exceeds max length")
+        || lower.contains("prompt is too long")
+        || (lower.contains("context")
+            && (lower.contains("length") || lower.contains("window") || lower.contains("too long")))
 }
 
 /// Classifies a request the provider answered with an error. `http_status`
@@ -813,8 +1151,7 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
     // the account, not the model. (A 429 that only says "quota" is usually a
     // free tier's per-model limit, so it isn't counted here.)
     let out_of_credit = lower.contains("insufficient") || lower.contains("balance");
-    let too_long = lower.contains("context")
-        && (lower.contains("length") || lower.contains("window") || lower.contains("too long"));
+    let too_long = is_too_long_error(error);
     let (scope, health, reason) = match http_status {
         Some(401 | 403) => (
             FailureScope::Provider,
@@ -876,6 +1213,7 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
         health,
         reason,
         detail: format!("{provider}: {error}"),
+        too_long,
     }
 }
 
@@ -904,6 +1242,7 @@ fn curl_failure(route: &ApiRoute, status: ExitStatus) -> RequestFailure {
         health,
         reason,
         detail: curl_failure_message(&route.provider_name, status),
+        too_long: false,
     }
 }
 
