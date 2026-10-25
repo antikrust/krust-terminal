@@ -1411,17 +1411,31 @@ define_settings_group!(AISettings, settings: [
         description: "Whether the \"What's new\" section is shown in the agent view.",
     }
 
-    // Whether or not the user has enabled fallback to Krust credits for user-provided models.
-    can_use_krust_credits_for_fallback: CanUseKrustCreditsForFallback {
+    // Whether a cloud-model turn whose request fails (out of credit, rate
+    // limited, the provider overloaded) moves on to the next provider with a
+    // key, in `byor_failover_order`.
+    byor_failover_enabled: ByorFailoverEnabled {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
         private: false,
-        storage_key: "CanUseKrustCreditsWithByok",
-        toml_path: "cloud_platform.third_party_api_keys.can_use_krust_credits_with_byok",
-        description: "Whether Krust credits can be used as a fallback for user-provided models.",
+        toml_path: "cloud_platform.third_party_api_keys.byor_failover_enabled",
+        description: "Whether a failed cloud-model request moves on to the next provider that has a key.",
+    }
+
+    // The provider ids BYOR failover tries, first choice first. Providers with
+    // a key that aren't listed follow in the built-in order.
+    byor_failover_order: ByorFailoverOrder {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_failover_order",
+        description: "The order BYOR failover tries providers in, as provider ids.",
     }
 
     should_render_use_agent_footer_for_user_commands: ShouldRenderUseAgentToolbarForUserCommands {

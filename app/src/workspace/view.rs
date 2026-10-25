@@ -23193,8 +23193,8 @@ impl Workspace {
         if *ai_settings.file_based_mcp_enabled.value() {
             context.set.insert(flags::FILE_BASED_MCP_FLAG);
         }
-        if *ai_settings.can_use_krust_credits_for_fallback.value() {
-            context.set.insert(flags::KRUST_CREDIT_FALLBACK_FLAG);
+        if *ai_settings.byor_failover_enabled.value() {
+            context.set.insert(flags::BYOR_FAILOVER_FLAG);
         }
         if *session_settings.show_model_selectors_in_prompt.value() {
             context

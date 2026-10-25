@@ -121,7 +121,6 @@ pub struct RequestParams {
     /// `custom_model_providers`: the selected model's `config_key` indexes into this
     /// registry. `None` when no custom router is selected.
     pub custom_model_routers: Option<krust_multi_agent_api::request::settings::CustomModelRouters>,
-    pub allow_use_of_krust_credits: bool,
     pub autonomy_level: krust_multi_agent_api::AutonomyLevel,
     pub isolation_level: krust_multi_agent_api::IsolationLevel,
     pub web_search_enabled: bool,
@@ -182,7 +181,6 @@ impl RequestParams {
             api_keys: None,
             custom_model_providers: None,
             custom_model_routers: None,
-            allow_use_of_krust_credits: false,
             autonomy_level: Default::default(),
             isolation_level: Default::default(),
             web_search_enabled: false,
@@ -297,8 +295,6 @@ impl RequestParams {
                 &request_input.coding_model_id,
             )
         });
-        let allow_use_of_krust_credits = *AISettings::as_ref(app).can_use_krust_credits_for_fallback;
-
         let app_execution_mode = AppExecutionMode::as_ref(app);
         let autonomy_level = if app_execution_mode.is_autonomous() {
             krust_multi_agent_api::AutonomyLevel::Unsupervised
@@ -374,7 +370,6 @@ impl RequestParams {
             api_keys,
             custom_model_providers,
             custom_model_routers,
-            allow_use_of_krust_credits,
             autonomy_level,
             isolation_level,
             web_search_enabled,

@@ -23629,6 +23629,17 @@ impl TerminalView {
         } else {
             None
         };
+        // Where a cloud-model turn goes if its provider fails, when BYOR
+        // failover is on (Settings → AI → Bring your own key).
+        let api_failover = match (harness, model_id.as_deref()) {
+            (LocalHarnessKind::Api, Some(model_id))
+                if *AISettings::as_ref(ctx).byor_failover_enabled.value() =>
+            {
+                let order = AISettings::as_ref(ctx).byor_failover_order.value();
+                ApiProviderKeys::as_ref(ctx).failover_targets(model_id, order)
+            }
+            _ => Vec::new(),
+        };
 
         log::info!("fork: run_local_claude_query starting (harness: {harness:?})");
 
@@ -24095,6 +24106,7 @@ impl TerminalView {
                             &pump_path,
                             &pump_mcp_tools,
                             pump_tool_caller,
+                            &api_failover,
                             on_event,
                         )
                         .await

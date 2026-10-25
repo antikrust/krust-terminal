@@ -53,11 +53,6 @@ pub async fn generate_multi_agent_output(
         redaction::redact_inputs(&mut params.input);
     }
 
-    let api_keys = api_keys_with_krust_credit_fallback_setting(
-        params.api_keys,
-        params.allow_use_of_krust_credits,
-    );
-
     let request = api::Request {
         task_context: Some(api::request::TaskContext {
             tasks: params.tasks,
@@ -87,7 +82,7 @@ pub async fn generate_multi_agent_output(
             supports_suggest_prompt: true,
             supports_read_image_files: FeatureFlag::ReadImageFiles.is_enabled(),
             supports_reasoning_message: true,
-            api_keys,
+            api_keys: params.api_keys,
             autonomy_level: params.autonomy_level.into(),
             isolation_level: params.isolation_level.into(),
             web_search_enabled: params.web_search_enabled,
@@ -177,23 +172,6 @@ async fn convert_multi_agent_client_error(
         }
     };
     Arc::new(error)
-}
-
-fn api_keys_with_krust_credit_fallback_setting(
-    api_keys: Option<api::request::settings::ApiKeys>,
-    allow_use_of_krust_credits: bool,
-) -> Option<api::request::settings::ApiKeys> {
-    match api_keys {
-        Some(mut api_keys) => {
-            api_keys.allow_use_of_krust_credits = allow_use_of_krust_credits;
-            Some(api_keys)
-        }
-        None if allow_use_of_krust_credits => Some(api::request::settings::ApiKeys {
-            allow_use_of_krust_credits: true,
-            ..Default::default()
-        }),
-        None => None,
-    }
 }
 
 fn supports_orchestration_v2(orchestration_enabled: bool) -> bool {

@@ -90,7 +90,7 @@ use crate::settings::{
     AIAutoDetectionEnabled, AICommandDenylist, AISettingsChangedEvent,
     AgentModeCodingPermissionsType, AgentModeCommandExecutionDenylist,
     AgentModeCommandExecutionPredicate, AgentModeQuerySuggestionsEnabled, AwsBedrockAutoLogin,
-    AwsBedrockCredentialsEnabled, CanUseKrustCreditsForFallback, CodeSettings,
+    AwsBedrockCredentialsEnabled, ByorFailoverEnabled, CodeSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
     LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
@@ -609,18 +609,12 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
         vec![
             ToggleSettingActionPair::new(
-                "Krust credit fallback",
-                builder(SettingsAction::AI(
-                    AISettingsPageAction::ToggleCanUseKrustCreditsForFallback,
-                )),
+                "BYOR failover",
+                builder(SettingsAction::AI(AISettingsPageAction::ToggleByorFailover)),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
-                flags::KRUST_CREDIT_FALLBACK_FLAG,
+                flags::BYOR_FAILOVER_FLAG,
             )
-            .with_group(bindings::BindingGroup::KrustAi)
-            .is_supported_on_current_platform(
-                UserWorkspaces::as_ref(app).is_byo_api_key_enabled(app)
-                    || UserWorkspaces::as_ref(app).is_custom_inference_enabled(app),
-            ),
+            .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
                 "auto show or hide Rich Input based on agent status",
                 builder(SettingsAction::AI(
@@ -3628,7 +3622,10 @@ pub enum AISettingsPageAction {
     ToggleCLIAgentToolbar,
     ToggleUseAgentToolbar,
     ToggleVoiceInput,
-    ToggleCanUseKrustCreditsForFallback,
+    ToggleByorFailover,
+    /// Moves the provider at this position in the failover list up or down.
+    MoveByorFailoverUp(usize),
+    MoveByorFailoverDown(usize),
     HyperlinkClick(HyperlinkUrl),
     ToggleCodebaseContext,
     ToggleShowInputHintText,
@@ -4034,13 +4031,19 @@ impl TypedActionView for AISettingsPageView {
                 }
                 ctx.notify();
             }
-            AISettingsPageAction::ToggleCanUseKrustCreditsForFallback => {
+            AISettingsPageAction::ToggleByorFailover => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
-                    report_if_error!(settings
-                        .can_use_krust_credits_for_fallback
-                        .toggle_and_save_value(ctx));
+                    report_if_error!(settings.byor_failover_enabled.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
+            }
+            AISettingsPageAction::MoveByorFailoverUp(index) => {
+                if let Some(target) = index.checked_sub(1) {
+                    move_byor_failover_provider(*index, target, ctx);
+                }
+            }
+            AISettingsPageAction::MoveByorFailoverDown(index) => {
+                move_byor_failover_provider(*index, *index + 1, ctx);
             }
             AISettingsPageAction::HyperlinkClick(hyperlink) => {
                 ctx.notify();
@@ -8146,6 +8149,10 @@ struct CloudModelKeysWidget {
     /// Per provider: its key field, and the mouse state of its "Get a key"
     /// link — created once here so the link's clicks register.
     providers: Vec<(&'static ApiProvider, ViewHandle<EditorView>, MouseStateHandle)>,
+    failover_switch: SwitchStateHandle,
+    /// The up and down buttons of each row of the failover list, one pair
+    /// per provider (the list never has more rows than there are providers).
+    failover_move_buttons: Vec<(MouseStateHandle, MouseStateHandle)>,
 }
 
 impl CloudModelKeysWidget {
@@ -8196,7 +8203,97 @@ impl CloudModelKeysWidget {
                 (provider, editor, MouseStateHandle::default())
             })
             .collect();
-        Self { providers }
+        // The failover list shows only providers with a key, so it changes
+        // as keys are added or removed.
+        ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |_, _, _, ctx| ctx.notify());
+        Self {
+            providers,
+            failover_switch: Default::default(),
+            failover_move_buttons: api_providers::PROVIDERS
+                .iter()
+                .map(|_| Default::default())
+                .collect(),
+        }
+    }
+
+    /// The BYOR failover toggle and, while it's on, the providers it moves
+    /// through, first choice first, each with buttons to move it.
+    fn render_failover(&self, view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
+        let ai_settings = AISettings::as_ref(app);
+        let is_enabled = *ai_settings.byor_failover_enabled;
+        let mut column = Flex::column()
+            .with_child(render_ai_setting_toggle::<ByorFailoverEnabled>(
+                "BYOR failover",
+                AISettingsPageAction::ToggleByorFailover,
+                is_enabled,
+                ai_settings.is_any_ai_enabled(app),
+                self.failover_switch.clone(),
+                &view.local_only_icon_tooltip_states,
+                app,
+            ))
+            .with_child(render_ai_setting_description(
+                "When a provider can't answer — out of credit, rate limited, or overloaded — \
+                 the agent sends the same request to the first other provider in this list, \
+                 on that provider's first model, and stays there for the rest of the turn. \
+                 Each provider is tried once.",
+                ai_settings.is_any_ai_enabled(app),
+                app,
+            ));
+        if !is_enabled {
+            return column.finish();
+        }
+
+        let appearance = Appearance::as_ref(app);
+        let providers =
+            ApiProviderKeys::as_ref(app).failover_providers(ai_settings.byor_failover_order.value());
+        if providers.is_empty() {
+            return column
+                .with_child(render_ai_setting_description(
+                    "Add a key above to put that provider in the list.",
+                    true,
+                    app,
+                ))
+                .finish();
+        }
+        let mut list = Flex::column().with_spacing(8.);
+        for (index, (provider, (up, down))) in
+            providers.iter().zip(&self.failover_move_buttons).enumerate()
+        {
+            let label = Text::new_inline(
+                format!("{}. {}", index + 1, provider.display_name),
+                appearance.ui_font_family(),
+                CONTENT_FONT_SIZE,
+            )
+            .with_color(appearance.theme().active_ui_text_color().into())
+            .finish();
+            list.add_child(
+                Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(failover_move_button(
+                        Icon::ChevronUp,
+                        index > 0,
+                        up.clone(),
+                        AISettingsPageAction::MoveByorFailoverUp(index),
+                        appearance,
+                    ))
+                    .with_child(
+                        Container::new(failover_move_button(
+                            Icon::ChevronDown,
+                            index + 1 < providers.len(),
+                            down.clone(),
+                            AISettingsPageAction::MoveByorFailoverDown(index),
+                            appearance,
+                        ))
+                        .with_margin_left(6.)
+                        .with_margin_right(12.)
+                        .finish(),
+                    )
+                    .with_child(label)
+                    .finish(),
+            );
+        }
+        column.add_child(list.finish());
+        column.finish()
     }
 
     fn render_provider(
@@ -8272,9 +8369,9 @@ impl SettingsWidget for CloudModelKeysWidget {
 
     fn render(
         &self,
-        _view: &Self::View,
+        view: &Self::View,
         appearance: &Appearance,
-        _app: &AppContext,
+        app: &AppContext,
     ) -> Box<dyn Element> {
         let description = appearance
             .ui_builder()
@@ -8309,8 +8406,79 @@ impl SettingsWidget for CloudModelKeysWidget {
             providers.add_child(Self::render_provider(provider, editor, key_link, appearance));
         }
         column.add_child(providers.finish());
+        column.add_child(
+            Container::new(self.render_failover(view, app))
+                .with_margin_top(24.)
+                .finish(),
+        );
         column.finish()
     }
+}
+
+/// One of the up/down buttons of the BYOR failover list (after
+/// `rule_icon_button` in the router editor): greyed out and inert when
+/// `enabled` is false.
+fn failover_move_button(
+    icon: Icon,
+    enabled: bool,
+    mouse_state: MouseStateHandle,
+    action: AISettingsPageAction,
+    appearance: &Appearance,
+) -> Box<dyn Element> {
+    let color = if enabled {
+        appearance
+            .theme()
+            .sub_text_color(appearance.theme().surface_1())
+    } else {
+        appearance.theme().disabled_ui_text_color()
+    };
+    // Inline the builder closure (rather than binding it to a `let`) so the
+    // compiler infers the higher-ranked closure lifetime `Hoverable` requires.
+    let hoverable = Hoverable::new(mouse_state, move |_| {
+        ConstrainedBox::new(icon.to_krustui_icon(color).finish())
+            .with_width(14.)
+            .with_height(14.)
+            .finish()
+    });
+    if enabled {
+        hoverable
+            .with_cursor(Cursor::PointingHand)
+            .on_click(move |ctx, _app, _pos| {
+                ctx.dispatch_typed_action(action.clone());
+            })
+            .finish()
+    } else {
+        hoverable.finish()
+    }
+}
+
+/// Swaps the providers at `from` and `to` in the BYOR failover list as it's
+/// shown (see [`ApiProviderKeys::failover_providers`]) and saves the order.
+/// Providers whose key was removed keep their place after the listed ones.
+fn move_byor_failover_provider(
+    from: usize,
+    to: usize,
+    ctx: &mut ViewContext<AISettingsPageView>,
+) {
+    let saved = AISettings::as_ref(ctx).byor_failover_order.value().clone();
+    let mut order: Vec<String> = ApiProviderKeys::as_ref(ctx)
+        .failover_providers(&saved)
+        .iter()
+        .map(|provider| provider.id.to_owned())
+        .collect();
+    if from >= order.len() || to >= order.len() {
+        return;
+    }
+    order.swap(from, to);
+    for id in saved {
+        if !order.contains(&id) {
+            order.push(id);
+        }
+    }
+    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+        report_if_error!(settings.byor_failover_order.set_value(order, ctx));
+    });
+    ctx.notify();
 }
 
 struct ApiKeysWidget {
@@ -8324,7 +8492,6 @@ struct ApiKeysWidget {
     grok_connecting_button: ViewHandle<ActionButton>,
     grok_disconnect_button: ViewHandle<ActionButton>,
 
-    can_use_krust_credits_for_fallback: SwitchStateHandle,
     upgrade_highlight_index: HighlightedHyperlink,
     openai_team_key_info_tooltip: MouseStateHandle,
     anthropic_team_key_info_tooltip: MouseStateHandle,
@@ -8559,7 +8726,6 @@ impl ApiKeysWidget {
             grok_connecting_button,
             grok_disconnect_button,
 
-            can_use_krust_credits_for_fallback: Default::default(),
             upgrade_highlight_index: Default::default(),
             openai_team_key_info_tooltip: Default::default(),
             anthropic_team_key_info_tooltip: Default::default(),
@@ -9153,35 +9319,6 @@ impl ApiKeysWidget {
             .with_child(row)
             .finish()
     }
-
-    fn render_krust_credit_fallback_toggle(
-        &self,
-        view: &AISettingsPageView,
-        app: &AppContext,
-    ) -> Box<dyn Element> {
-        let ai_settings = AISettings::as_ref(app);
-
-        let toggle = render_ai_setting_toggle::<CanUseKrustCreditsForFallback>(
-            "Krust credit fallback",
-            AISettingsPageAction::ToggleCanUseKrustCreditsForFallback,
-            *ai_settings.can_use_krust_credits_for_fallback,
-            ai_settings.is_any_ai_enabled(app),
-            self.can_use_krust_credits_for_fallback.clone(),
-            &view.local_only_icon_tooltip_states,
-            app,
-        );
-
-        let description = render_ai_setting_description(
-            "When enabled, agent requests may be routed to one of Krust's provided models in the event of an error. Krust will prioritize using your API keys over your Krust credits.",
-            ai_settings.is_any_ai_enabled(app),
-            app,
-        );
-
-        Flex::column()
-            .with_child(toggle)
-            .with_child(description)
-            .finish()
-    }
 }
 
 /// Visibility and enabled-state rules for the member-facing Custom Inference
@@ -9402,15 +9539,6 @@ impl SettingsWidget for ApiKeysWidget {
 
         // Grok's connect row used to live here; it now has its own subpage
         // (rendered by render_grok_page via the early return above).
-
-        // Krust credit fallback applies to member-provided API keys, not custom endpoints.
-        if is_byo_enabled && show_provider_keys {
-            column.add_child(
-                Container::new(self.render_krust_credit_fallback_toggle(view, app))
-                    .with_margin_top(16.)
-                    .finish(),
-            );
-        }
 
         // Upgrade CTA if BYOK not enabled
         if !is_byo_enabled && show_provider_keys {

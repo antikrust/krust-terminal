@@ -31,6 +31,7 @@ use super::ollama_stream_exec::{
 };
 use crate::ai::api_providers::{
     api_model_parts, model_context_window, model_display_name, model_price, ApiProvider,
+    FailoverTarget,
 };
 
 /// The environment variable curl reads the key from.
@@ -132,6 +133,11 @@ impl Drop for SessionGuard {
 /// for the first request (built by the caller with [`api_curl_args`] and the
 /// key in [`API_KEY_ENV`]); later requests in the turn build their own.
 ///
+/// When a request fails — out of credit, rate limited, the provider down —
+/// the same request goes to the next of `failover` (empty when BYOR failover
+/// is off), and the rest of the turn stays there. Each is tried once; the
+/// turn fails only when none is left.
+///
 /// There is no step limit: the turn runs until the model answers or the user
 /// stops it.
 #[allow(clippy::too_many_arguments)]
@@ -145,6 +151,7 @@ pub async fn run_api_stream(
     path: &str,
     mcp_tools: &[McpToolSpec],
     tool_caller: Option<Arc<dyn McpToolCaller>>,
+    failover: &[FailoverTarget],
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     register_harness_session(*session_id);
@@ -158,11 +165,16 @@ pub async fn run_api_stream(
         cwd: Some(working_dir.to_string_lossy().into_owned()),
     });
 
-    let Some((provider, model)) = api_model_parts(model_id) else {
+    let Some((mut provider, mut model)) = api_model_parts(model_id) else {
         let message = format!("'{model_id}' is not a cloud model this build knows");
         emit_failed_turn(&mut on_event, message.clone());
         return Err(std::io::Error::other(message));
     };
+    let mut model_id = model_id;
+    let mut api_key = api_key;
+    let mut failover = failover.iter().filter_map(|target| {
+        api_model_parts(&target.model_id).map(|(provider, model)| (target, provider, model))
+    });
 
     let tools: Vec<McpToolSpec> = builtin_local_tool_specs()
         .into_iter()
@@ -172,17 +184,20 @@ pub async fn run_api_stream(
 
     // Rebuilt every turn, so its opening line names the model now in use —
     // the conversation may have started on another one.
-    let system = json!({
-        "role": "system",
-        "content": ollama_tool_system_prompt(
-            &tools,
-            &format!(
-                "{} ({model}) from {}",
-                model_display_name(provider, model),
-                provider.display_name
+    let system_for = |provider: &ApiProvider, model: &str| {
+        json!({
+            "role": "system",
+            "content": ollama_tool_system_prompt(
+                &tools,
+                &format!(
+                    "{} ({model}) from {}",
+                    model_display_name(provider, model),
+                    provider.display_name
+                ),
             ),
-        ),
-    });
+        })
+    };
+    let system = system_for(provider, model);
     let mut messages = load_history(session_id).unwrap_or_default();
     match messages.first_mut() {
         Some(first) if first.get("role").and_then(Value::as_str) == Some("system") => {
@@ -198,9 +213,9 @@ pub async fn run_api_stream(
         ),
     }));
 
-    let price = model_price(provider, model);
-    let listed_window = model_context_window(provider, model);
-    let context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
+    let mut price = model_price(provider, model);
+    let mut listed_window = model_context_window(provider, model);
+    let mut context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
     // What every request of this turn cost, at the model's listed price.
     let mut turn_cost_usd = 0.0;
     let mut next_command = Some(first_command);
@@ -240,20 +255,45 @@ pub async fn run_api_stream(
             return Ok(status);
         }
 
-        if !status.success() {
-            emit_failed_turn(&mut on_event, curl_failure_message(provider, status));
-            return Ok(status);
-        }
-
-        let response = accumulator
-            .lock()
-            .map(|accumulator| accumulator.clone().finish())
-            .unwrap_or_else(|_| Err("the response state became unavailable".to_string()));
+        let response = if status.success() {
+            accumulator
+                .lock()
+                .map(|accumulator| accumulator.clone().finish())
+                .unwrap_or_else(|_| Err("the response state became unavailable".to_string()))
+                .map_err(|error| format!("{}: {error}", provider.display_name))
+        } else {
+            Err(curl_failure_message(provider, status))
+        };
         let response = match response {
             Ok(response) => response,
             Err(error) => {
-                emit_failed_turn(&mut on_event, format!("{}: {error}", provider.display_name));
-                return Ok(status);
+                let Some((target, next_provider, next_model)) = failover.next() else {
+                    emit_failed_turn(&mut on_event, error);
+                    return Ok(status);
+                };
+                // The failed request added nothing to `messages`, so the
+                // next provider gets exactly the same one.
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "{error} — switching to {} on {}.",
+                        model_display_name(next_provider, next_model),
+                        next_provider.display_name
+                    ),
+                });
+                log::info!(
+                    "api_stream: {} failed; failing over to {}",
+                    provider.display_name,
+                    next_provider.display_name
+                );
+                provider = next_provider;
+                model = next_model;
+                model_id = &target.model_id;
+                api_key = &target.api_key;
+                price = model_price(provider, model);
+                listed_window = model_context_window(provider, model);
+                context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
+                messages[0] = system_for(provider, model);
+                continue;
             }
         };
         if let Some((input_price, output_price)) = price {

@@ -661,7 +661,7 @@ pub mod flags {
     pub const SUGGESTED_RULES_FLAG: &str = "Suggested_Rules";
     pub const KRUST_DRIVE_CONTEXT_FLAG: &str = "Krust_Drive_Context";
     pub const FILE_BASED_MCP_FLAG: &str = "File_Based_MCP";
-    pub const KRUST_CREDIT_FALLBACK_FLAG: &str = "Krust_Credit_Fallback";
+    pub const BYOR_FAILOVER_FLAG: &str = "BYOR_Failover";
     pub const SHOW_BASE_MODEL_PICKER_IN_PROMPT_FLAG: &str = "Show_Base_Model_Picker_In_Prompt";
     pub const ALLOW_NATIVE_WAYLAND: &str = "Allow_Native_Wayland";
     pub const IS_ANY_AI_ENABLED: &str = "IsAnyAIEnabled";

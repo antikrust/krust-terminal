@@ -558,6 +558,47 @@ impl ApiProviderKeys {
             })
             .collect()
     }
+
+    /// The providers BYOR failover can use, first choice first: every
+    /// provider with a key, those named in `order` in that order, the rest
+    /// after in [`PROVIDERS`] order.
+    pub fn failover_providers(&self, order: &[String]) -> Vec<&'static ApiProvider> {
+        let mut providers: Vec<&'static ApiProvider> = Vec::new();
+        let named = order.iter().filter_map(|id| provider(id));
+        for provider in named.chain(PROVIDERS) {
+            if self.key_for(provider.id).is_some()
+                && !providers.iter().any(|listed| listed.id == provider.id)
+            {
+                providers.push(provider);
+            }
+        }
+        providers
+    }
+
+    /// Where a turn on `model_id` goes if its provider fails: every other
+    /// failover provider, first choice first, each on its best model.
+    pub fn failover_targets(&self, model_id: &str, order: &[String]) -> Vec<FailoverTarget> {
+        let current = api_model_parts(model_id).map(|(provider, _)| provider.id);
+        self.failover_providers(order)
+            .into_iter()
+            .filter(|provider| Some(provider.id) != current)
+            .filter_map(|provider| {
+                let (model, _) = self.models_for(provider).into_iter().next()?;
+                Some(FailoverTarget {
+                    model_id: model_id_for(provider, &model),
+                    api_key: self.key_for(provider.id)?.to_owned(),
+                })
+            })
+            .collect()
+    }
+}
+
+/// A provider a failed cloud-model turn can move to: the model to use there
+/// and the key it runs on. Not `Debug`, so the key can't end up in a log.
+#[derive(Clone)]
+pub struct FailoverTarget {
+    pub model_id: String,
+    pub api_key: String,
 }
 
 #[derive(Deserialize)]
