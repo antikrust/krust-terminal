@@ -31,7 +31,7 @@ use super::ollama_stream_exec::{
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
     remove_turn_from_messages, todo_list_entries, todo_list_reply, truncate_from_turn,
     turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
-    TURN_ID_FIELD,
+    TURN_ID_FIELD, completed_ids, todo_reply_message, truncate_after_checkpoint,
 };
 use super::plan_tracker::PlanTracker;
 use crate::ai::api_providers::{
@@ -542,9 +542,11 @@ pub async fn run_api_stream(
                     .arguments
                     .clone()
                     .and_then(|arguments| todo_list_entries(&arguments));
+                let mut completed = Vec::new();
                 let reply = match entries {
                     Ok(entries) => {
                         let updates = plan.updates(&entries);
+                        completed = completed_ids(&updates);
                         // A finished step is a natural point to compact: the
                         // work it produced is done with.
                         if updates.iter().any(|update| {
@@ -559,11 +561,14 @@ pub async fn run_api_stream(
                     }
                     Err(error) => error,
                 };
-                messages.push(json!({
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": reply,
-                }));
+                messages.push(todo_reply_message(
+                    json!({
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": reply,
+                    }),
+                    &completed,
+                ));
                 continue;
             }
             // The card's id is ours: provider ids are only unique within one
@@ -1318,6 +1323,20 @@ pub(crate) fn forget_from_turn(session_id: &Uuid, turn_id: &str) {
     }
 }
 
+/// Makes the model forget everything after `todo_id` was ticked off in the
+/// turn `turn_id`, for a rewind to that point. False when the saved history
+/// has no such point (a compaction since has folded it into a summary).
+pub(crate) fn forget_after_checkpoint(session_id: &Uuid, turn_id: &str, todo_id: &str) -> bool {
+    let Some(mut messages) = load_history(session_id) else {
+        return false;
+    };
+    if !truncate_after_checkpoint(&mut messages, turn_id, todo_id) {
+        return false;
+    }
+    save_history(session_id, &messages);
+    true
+}
+
 /// Why curl itself failed (as opposed to the provider answering with an
 /// error, which arrives as a body and is reported from the parse).
 fn curl_failure_message(provider: &str, status: ExitStatus) -> String {
@@ -1551,9 +1570,15 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
             )
         }
     };
+    // Busy, or failing for now: rate limits, overload, the provider's own
+    // server and network errors ("Network error ... please try again later",
+    // Z.ai's code 1234). These pass, so the same request is worth sending again.
     let busy = !out_of_credit
         && !too_long
-        && (matches!(http_status, Some(429 | 503 | 529)) || lower.contains("overloaded"));
+        && (matches!(http_status, Some(429 | 500..=599))
+            || lower.contains("overloaded")
+            || lower.contains("try again later")
+            || lower.contains("(code 1234)"));
     RequestFailure {
         scope,
         health,

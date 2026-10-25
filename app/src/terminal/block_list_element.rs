@@ -1124,7 +1124,7 @@ impl BlockListElement {
         ai_block_view_id: EntityId,
         conversation_id: AIConversationId,
         exchange_id: AIAgentExchangeId,
-        can_rewind: bool,
+        rewind_label: Option<String>,
         can_delete: bool,
     ) -> Self {
         self.hovered_ai_block = Some(ai_block_view_id);
@@ -1141,11 +1141,11 @@ impl BlockListElement {
             )
             .with_uniform_padding(4.)
         };
-        if can_rewind {
+        if let Some(label) = rewind_label {
             self.ai_block_rewind_button = Some(render_hoverable_block_button(
                 icon(REWIND_ICON_PATH),
                 Some(ToolbeltButtonTooltip {
-                    label: "Rewind to before this prompt".to_owned(),
+                    label,
                     tool_tip_below_button: true,
                 }),
                 false,

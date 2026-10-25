@@ -23894,6 +23894,18 @@ impl TypedActionView for Workspace {
                 self.add_tab_with_shell(shell.clone(), *source, ctx)
             }
             AddGetStartedTab => self.add_get_started_tab(ctx),
+            RunCommandInNewTab { command } => {
+                self.add_terminal_tab(true, ctx);
+                if let Some(terminal_view) = self
+                    .active_tab_pane_group()
+                    .as_ref(ctx)
+                    .focused_session_view(ctx)
+                {
+                    terminal_view.update(ctx, |terminal, ctx| {
+                        terminal.execute_command_or_set_pending(command, ctx);
+                    });
+                }
+            }
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
             AddCommitteeAgentTab => self.add_committee_agent_tab(ctx),

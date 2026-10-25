@@ -113,6 +113,34 @@ impl LocalHarnessKind {
             Self::Claude | Self::Codex => {}
         }
     }
+
+    /// Whether a rewind can stop part way through a turn, at the point a todo
+    /// item was ticked off: only where Krust keeps the model's history.
+    pub(crate) fn can_rewind_within_turn(self) -> bool {
+        match self {
+            Self::Api | Self::Ollama => true,
+            Self::Claude | Self::Codex => false,
+        }
+    }
+
+    /// Makes the model forget everything after `todo_id` was ticked off in
+    /// turn `turn_id` — what a rewind to that point removes. False when there
+    /// is no such point to cut at, and for Claude and Codex, whose sessions
+    /// live in their own CLIs.
+    pub(crate) fn forget_after_checkpoint(
+        self,
+        session_id: &Uuid,
+        turn_id: &str,
+        todo_id: &str,
+    ) -> bool {
+        match self {
+            Self::Api => api_stream_exec::forget_after_checkpoint(session_id, turn_id, todo_id),
+            Self::Ollama => {
+                ollama_stream_exec::forget_after_checkpoint(session_id, turn_id, todo_id)
+            }
+            Self::Claude | Self::Codex => false,
+        }
+    }
 }
 
 /// Harness-agnostic payload describing how to resume an existing conversation.

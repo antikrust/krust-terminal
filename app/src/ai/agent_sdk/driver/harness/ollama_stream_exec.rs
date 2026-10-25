@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use ai::agent::{PlanEntry, ToolCallOutcome, TurnEvent, TurnUsage};
+use ai::agent::{PlanEntry, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use async_trait::async_trait;
 use command::r#async::Command;
 use futures::io::{AsyncRead, AsyncReadExt};
@@ -529,7 +529,11 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                 are either `content`, or copied from another file with `from_path` — the whole \
                 file, or its lines `from_start` to `from_end` — so large text is never retyped. \
                 Empty `content` deletes the lines. To insert without removing anything, set \
-                `end` to `start - 1`."
+                `end` to `start - 1`. Give `first_line`, the current text of line `start`: the \
+                edit is refused if that line isn't it. Line numbers shift after every edit, so \
+                read the lines again (read_file with `offset`) before the next one. In brace \
+                languages the replaced lines and the new ones must open and close the same \
+                number of braces, so a block is never cut in half."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -545,6 +549,14 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     "end": {
                         "type": "integer",
                         "description": "Last line to replace (L-number from read_file)."
+                    },
+                    "first_line": {
+                        "type": "string",
+                        "description": "The current text of line `start`, as read_file shows it after its `L<n>| ` label (surrounding spaces don't matter). For an insertion, the line the new lines go before; empty at the end of the file."
+                    },
+                    "allow_unbalanced": {
+                        "type": "boolean",
+                        "description": "Allow an edit whose replaced and new lines open and close different numbers of braces, when that is intended (optional)."
                     },
                     "content": {
                         "type": "string",
@@ -563,7 +575,7 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                         "description": "Last line of `from_path` to copy; default its last line (optional)."
                     }
                 },
-                "required": ["path", "start", "end"]
+                "required": ["path", "start", "end", "first_line"]
             }),
         },
         McpToolSpec {
@@ -769,6 +781,19 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
             let target = resolve_under(working_dir, file);
             let original = std::fs::read_to_string(&target)
                 .map_err(|error| format!("Could not read {file}: {error}"))?;
+            let first_line = arguments.get("first_line").and_then(Value::as_str).ok_or(
+                "replace_lines requires `first_line`, the current text of line `start` (read the \
+                 lines first: read_file with `offset`).",
+            )?;
+            check_first_line(&original, start, first_line)?;
+            if !arguments
+                .get("allow_unbalanced")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+                && is_brace_language(&target)
+            {
+                check_brace_balance(&original, start, end, &replacement)?;
+            }
             let edited = splice_lines(&original, start, end, &replacement)?;
             // No behaviour guard here, unlike write_file. It probes only the
             // first eight functions in file order, so a function inserted
@@ -824,6 +849,134 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
         BUILTIN_TODO_LIST => Err("todo_list is not available here.".to_string()),
         other => Err(format!("unknown built-in tool '{other}'")),
     }
+}
+
+/// Refuses an edit whose line `start` isn't `expected` (compared without
+/// surrounding spaces, and without a `L<n>| ` label the model copied along):
+/// a line number that went stale after an earlier edit would otherwise cut the
+/// wrong lines. Says where the expected text is, when it's in the file.
+fn check_first_line(original: &str, start: usize, expected: &str) -> Result<(), String> {
+    let expected = expected.trim();
+    let expected = match expected.split_once("| ") {
+        Some((label, rest))
+            if label.starts_with('L') && label[1..].chars().all(|c| c.is_ascii_digit()) =>
+        {
+            rest.trim()
+        }
+        _ => expected,
+    };
+    let lines: Vec<&str> = original.lines().collect();
+    let actual = lines.get(start.wrapping_sub(1)).map(|line| line.trim());
+    if actual.unwrap_or("") == expected {
+        return Ok(());
+    }
+    let mut found: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| !expected.is_empty() && line.trim() == expected)
+        .map(|(index, _)| index + 1)
+        .collect();
+    found.sort_by_key(|line| line.abs_diff(start));
+    found.truncate(3);
+    let at = match actual {
+        Some(actual) => format!("Line {start} is `{actual}`"),
+        None => format!("The file has {} lines, so there is no line {start}", lines.len()),
+    };
+    let elsewhere = if found.is_empty() {
+        "That text isn't in the file.".to_string()
+    } else {
+        format!(
+            "That text is at line {}.",
+            found.iter().map(usize::to_string).collect::<Vec<_>>().join(", ")
+        )
+    };
+    Err(format!(
+        "Not edited: {at}, not `{expected}`. {elsewhere} Line numbers shift after every edit: \
+         read the lines again (read_file with `offset`), then retry with the right `start`, \
+         `end` and `first_line`."
+    ))
+}
+
+/// Files whose blocks are delimited by braces, where an edit that cuts a block
+/// in half breaks the file.
+fn is_brace_language(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|extension| extension.to_str()),
+        Some(
+            "c" | "cc" | "cpp" | "cxx" | "h" | "hh" | "hpp" | "hxx" | "m" | "mm" | "rs" | "js"
+                | "jsx" | "ts" | "tsx" | "java" | "kt" | "swift" | "go" | "cs" | "css" | "scss"
+                | "php" | "dart" | "scala" | "zig"
+        )
+    )
+}
+
+/// Refuses an edit whose replaced lines and new lines leave a different net
+/// number of braces open: the edit would leave a block unclosed or close one
+/// twice.
+fn check_brace_balance(
+    original: &str,
+    start: usize,
+    end: usize,
+    replacement: &str,
+) -> Result<(), String> {
+    let replaced: String = original
+        .split_inclusive('\n')
+        .skip(start.saturating_sub(1))
+        .take((end + 1).saturating_sub(start))
+        .collect();
+    let (old, new) = (brace_balance(&replaced), brace_balance(replacement));
+    if old == new {
+        return Ok(());
+    }
+    Err(format!(
+        "Not edited: lines {start}-{end} leave {old:+} brace(s) open, the new content {new:+}, \
+         so the file would end up with a block cut in half or closed twice. Make `start` and \
+         `end` cover whole blocks (read the lines again first, as line numbers shift after every \
+         edit), or pass allow_unbalanced: true if this is intended."
+    ))
+}
+
+/// `{` minus `}`, outside strings, character literals and comments.
+fn brace_balance(text: &str) -> i64 {
+    let chars: Vec<char> = text.chars().collect();
+    let (mut balance, mut i) = (0i64, 0);
+    while i < chars.len() {
+        match chars[i] {
+            '/' if chars.get(i + 1) == Some(&'/') => {
+                while i < chars.len() && chars[i] != '\n' {
+                    i += 1;
+                }
+            }
+            '/' if chars.get(i + 1) == Some(&'*') => {
+                i += 2;
+                while i + 1 < chars.len() && !(chars[i] == '*' && chars[i + 1] == '/') {
+                    i += 1;
+                }
+                i += 1;
+            }
+            '"' | '`' => {
+                let quote = chars[i];
+                i += 1;
+                while i < chars.len() && chars[i] != quote && chars[i] != '\n' {
+                    if chars[i] == '\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+            }
+            // A character literal ('{', '\n'); a lone ' (a Rust lifetime) is skipped.
+            '\'' => {
+                if let Some(close) = (i + 2..(i + 5).min(chars.len())).find(|&j| chars[j] == '\'') {
+                    i = close;
+                }
+            }
+            '{' => balance += 1,
+            '}' => balance -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    balance
 }
 
 /// The model an `ollama/…` id refers to. May carry a host suffix when the
@@ -1165,6 +1318,10 @@ fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
 /// The field that stamps a turn's ID on the user message opening it, in a
 /// saved chat history. Taken off again before a history is sent.
 pub(crate) const TURN_ID_FIELD: &str = "krust_turn";
+/// Marks the `todo_list` reply that ticked items off, with their ids, so a
+/// rewind to the end of one of them can cut the history just after it.
+/// Krust's own, like [`TURN_ID_FIELD`]: taken off before a history is sent.
+pub(crate) const CHECKPOINT_FIELD: &str = "krust_done";
 
 /// The ID of the turn each session is running, recorded before its runner
 /// starts. It is Krust's request ID for the turn's exchange, so a turn the
@@ -1195,21 +1352,79 @@ pub(crate) fn turn_user_message(session_id: &Uuid, content: String) -> Value {
     message
 }
 
-/// A history as it is sent: without the turn IDs, which are Krust's own.
+/// A history as it is sent: without the turn IDs and checkpoint marks, which
+/// are Krust's own.
 pub(crate) fn without_turn_ids(messages: &[Value]) -> Vec<Value> {
     messages
         .iter()
-        .map(|message| match message.get(TURN_ID_FIELD) {
-            Some(_) => {
-                let mut message = message.clone();
-                if let Some(fields) = message.as_object_mut() {
-                    fields.remove(TURN_ID_FIELD);
-                }
-                message
+        .map(|message| {
+            if message.get(TURN_ID_FIELD).is_none() && message.get(CHECKPOINT_FIELD).is_none() {
+                return message.clone();
             }
-            None => message.clone(),
+            let mut message = message.clone();
+            if let Some(fields) = message.as_object_mut() {
+                fields.remove(TURN_ID_FIELD);
+                fields.remove(CHECKPOINT_FIELD);
+            }
+            message
         })
         .collect()
+}
+
+/// The ids a plan's updates tick off, for [`CHECKPOINT_FIELD`].
+pub(crate) fn completed_ids(updates: &[PlanUpdate]) -> Vec<String> {
+    updates
+        .iter()
+        .flat_map(|update| match update {
+            PlanUpdate::Complete(ids) => ids.clone(),
+            PlanUpdate::Create(_) | PlanUpdate::UpdatePending(_) | PlanUpdate::Snapshot(_) => {
+                Vec::new()
+            }
+        })
+        .collect()
+}
+
+/// A `todo_list` tool reply, marked with the items it ticked off.
+pub(crate) fn todo_reply_message(mut message: Value, completed: &[String]) -> Value {
+    if !completed.is_empty() {
+        message[CHECKPOINT_FIELD] = json!(completed);
+    }
+    message
+}
+
+/// Cuts a chat history back to just after `todo_id` was ticked off in the
+/// turn stamped `turn_id`: the `todo_list` reply that did it, and the other
+/// replies to the same round of calls (every call keeps its result), stay;
+/// everything after goes. Returns false — and changes nothing — when there
+/// is no such point, e.g. a compaction has since folded it into a summary.
+pub(crate) fn truncate_after_checkpoint(
+    messages: &mut Vec<Value>,
+    turn_id: &str,
+    todo_id: &str,
+) -> bool {
+    let Some(start) = messages
+        .iter()
+        .position(|message| message.get(TURN_ID_FIELD).and_then(Value::as_str) == Some(turn_id))
+    else {
+        return false;
+    };
+    let Some(checkpoint) = messages[start..].iter().rposition(|message| {
+        message
+            .get(CHECKPOINT_FIELD)
+            .and_then(Value::as_array)
+            .is_some_and(|ids| ids.iter().any(|id| id.as_str() == Some(todo_id)))
+    }) else {
+        return false;
+    };
+    let mut end = start + checkpoint + 1;
+    while messages
+        .get(end)
+        .is_some_and(|message| message.get("role").and_then(Value::as_str) == Some("tool"))
+    {
+        end += 1;
+    }
+    messages.truncate(end);
+    true
 }
 
 /// Makes the model forget a turn the user deleted, by dropping it from this
@@ -1231,6 +1446,21 @@ pub(crate) fn forget_from_turn(session_id: &Uuid, turn_id: &str) {
             truncate_from_turn(messages, turn_id);
         }
     }
+}
+
+/// Makes the model forget everything after `todo_id` was ticked off in the
+/// turn `turn_id`, for a rewind to that point. False when the history has no
+/// such point (see [`truncate_after_checkpoint`]).
+pub(crate) fn forget_after_checkpoint(session_id: &Uuid, turn_id: &str, todo_id: &str) -> bool {
+    chat_histories()
+        .lock()
+        .ok()
+        .and_then(|mut histories| {
+            histories
+                .get_mut(session_id)
+                .map(|(_, messages)| truncate_after_checkpoint(messages, turn_id, todo_id))
+        })
+        .unwrap_or(false)
 }
 
 /// Cuts a chat history back to just before the user message stamped
@@ -2661,16 +2891,22 @@ async fn run_ollama_chat_with_tools(
         for call in &tool_calls {
             // The checklist is this call's whole display: no tool card.
             if call.name == BUILTIN_TODO_LIST {
+                let mut completed = Vec::new();
                 let reply = match todo_list_entries(&call.arguments) {
                     Ok(entries) => {
-                        for update in plan.updates(&entries) {
+                        let updates = plan.updates(&entries);
+                        completed = completed_ids(&updates);
+                        for update in updates {
                             on_event(TurnEvent::PlanUpdated { update });
                         }
                         todo_list_reply(&entries)
                     }
                     Err(error) => error,
                 };
-                messages.push(json!({ "role": "tool", "content": reply }));
+                messages.push(todo_reply_message(
+                    json!({ "role": "tool", "content": reply }),
+                    &completed,
+                ));
                 continue;
             }
             let call_id = format!("ollama-tool-{}", Uuid::new_v4());

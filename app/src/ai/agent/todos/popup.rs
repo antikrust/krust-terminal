@@ -13,7 +13,7 @@ use krustui::{
     ViewContext,
 };
 
-use crate::ai::agent::icons::{in_progress_icon, pending_icon, succeeded_icon};
+use crate::ai::agent::icons::{gray_stop_icon, in_progress_icon, pending_icon, succeeded_icon};
 use crate::ai::agent::todos::AIAgentTodoList;
 use crate::ai::blocklist::{
     BlocklistAIContextEvent, BlocklistAIContextModel, BlocklistAIHistoryEvent,
@@ -184,6 +184,15 @@ impl View for AgentTodosPopupView {
             .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
             .with_spacing(12.);
 
+        // The first pending item is the one being worked on while the run is
+        // going, and stopped once it isn't — as the conversation's own
+        // checklist shows it.
+        let is_running = self
+            .ai_context_model
+            .as_ref(app)
+            .selected_conversation(app)
+            .is_some_and(|conversation| conversation.status().is_in_progress());
+
         let items_with_icons = todo_list
             .completed_items()
             .iter()
@@ -196,8 +205,10 @@ impl View for AgentTodosPopupView {
                     .map(|(i, item)| {
                         (
                             item,
-                            if i == 0 {
+                            if i == 0 && is_running {
                                 in_progress_icon(appearance)
+                            } else if i == 0 {
+                                gray_stop_icon(appearance)
                             } else {
                                 pending_icon(appearance)
                             },

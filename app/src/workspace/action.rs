@@ -267,6 +267,11 @@ pub enum WorkspaceAction {
     AddTerminalTab {
         hide_homepage: bool,
     },
+    /// Opens a new terminal tab and runs `command` in it once its shell is
+    /// ready (e.g. `claude auth login` from a sign-in error).
+    RunCommandInNewTab {
+        command: String,
+    },
     AddTabWithShell {
         shell: AvailableShell,
         source: AddTabWithShellSource,
@@ -994,6 +999,7 @@ impl WorkspaceAction {
             | ToggleTabGroupColor { .. }
             | AddDefaultTab
             | AddTerminalTab { .. }
+            | RunCommandInNewTab { .. }
             | AddTabWithShell { .. }
             | AddGetStartedTab
             | AddAgentTab

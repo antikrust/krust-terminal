@@ -210,8 +210,9 @@ use crate::ai::agent::todos::popup::{AgentTodosPopupEvent, AgentTodosPopupView};
 #[cfg(any(test, feature = "integration_tests"))]
 use crate::ai::agent::UserQueryMode;
 use crate::ai::agent::{
-    AIAgentActionId, AIAgentActionType, AIAgentCitation, AIAgentContext, AIAgentExchangeId,
-    AIAgentInput, AIAgentOutputStatus, AIAgentPtyWriteMode, AIAgentTextSection,
+    AIAgentActionId, AIAgentActionType, AIAgentCitation, AIAgentContext, AIAgentExchange,
+    AIAgentExchangeId, AIAgentInput, AIAgentOutputMessageType, AIAgentOutputStatus,
+    TodoOperation, AIAgentPtyWriteMode, AIAgentTextSection,
     AgentReviewCommentBatch, CancellationReason, FileLocations, FinishedAIAgentOutput,
     PassiveCodeDiffEntry, PassiveSuggestionResultType, PassiveSuggestionTrigger, RenderableAIError,
     ServerOutputId, ShellCommandCompletedTrigger,
@@ -20582,6 +20583,19 @@ impl TerminalView {
                     layout: *layout,
                 });
             }
+            AIBlockEvent::ThinkingCollapsedChanged { collapsed } => {
+                let collapsed = *collapsed;
+                let others: Vec<_> = self
+                    .rich_content_views
+                    .iter()
+                    .filter_map(|rich_content| rich_content.ai_block_metadata())
+                    .map(|metadata| metadata.ai_block_handle.clone())
+                    .filter(|other| other.id() != block.id())
+                    .collect();
+                for other in others {
+                    other.update(ctx, |other, ctx| other.set_thinking_collapsed(collapsed, ctx));
+                }
+            }
             AIBlockEvent::ToggleCodeReviewPane { entrypoint } => {
                 self.toggle_code_review_pane(
                     GitDeltaPreference::Always,
@@ -23495,6 +23509,24 @@ impl TerminalView {
             .map(|pwd| pwd.to_string())
     }
 
+    /// Offers to sign Claude Code back in, after a turn failed because its
+    /// sign-in ran out: a toast whose link opens a tab running
+    /// `claude auth login` (which opens the browser to sign in).
+    fn offer_claude_sign_in(&mut self, ctx: &mut ViewContext<Self>) {
+        let window_id = ctx.window_id();
+        ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+            let toast = DismissibleToast::error(
+                "Claude Code is signed out, so it can't run turns.".to_owned(),
+            )
+            .with_link(ToastLink::new("Sign in to Claude Code".to_owned()).with_onclick_action(
+                WorkspaceAction::RunCommandInNewTab {
+                    command: "claude auth login".to_owned(),
+                },
+            ));
+            toast_stack.add_persistent_toast(toast, window_id, ctx);
+        });
+    }
+
     /// Makes `model_id`, the model BYOR failover moved a turn to and that
     /// answered, this pane's selected model and its conversation's, as
     /// picking it in the model menu would, so the next turn starts there
@@ -24106,6 +24138,20 @@ impl TerminalView {
                             // so waiting for EOF leaves the shimmer running
                             // past the answer.
                             let mut turn_completed = false;
+                            // Claude Code signed out (its OAuth session ran
+                            // out): offer to sign in again, from a new tab.
+                            if let ai::agent::TurnEvent::TurnCompleted {
+                                is_error: true,
+                                error_message: Some(message),
+                                ..
+                            } = &event
+                            {
+                                let ran_on_claude = harness == LocalHarnessKind::Claude
+                                    || matches!(&handed_to, Some((LocalHarnessKind::Claude, _)));
+                                if ran_on_claude && is_claude_sign_in_error(message) {
+                                    view.offer_claude_sign_in(ctx);
+                                }
+                            }
                             if let ai::agent::TurnEvent::TurnCompleted {
                                 usage, is_error, ..
                             } = &event
@@ -25415,18 +25461,40 @@ impl TerminalView {
                     .filter(|metadata| metadata.ai_block_handle.id() == view_id)
             })
         }) {
-            let can_rewind = FeatureFlag::RevertToCheckpoints.is_enabled()
-                && (!ai_metadata.ai_block_handle.as_ref(app).is_restored()
-                    || local_harness_threads::lookup(ai_metadata.conversation_id).is_some());
-            let can_delete = !BlocklistAIHistoryModel::as_ref(app)
-                .conversation(&ai_metadata.conversation_id)
+            let conversation =
+                BlocklistAIHistoryModel::as_ref(app).conversation(&ai_metadata.conversation_id);
+            let exchange = conversation
+                .and_then(|conversation| conversation.exchange_with_id(ai_metadata.exchange_id));
+            let is_running = conversation
                 .is_some_and(|conversation| conversation.status().is_in_progress());
+            // Rewind is offered where a prompt was sent, and where a todo item
+            // was ticked off: a turn's tool rounds each have a block of their
+            // own, and every other one would only rewind to the same prompt.
+            // The point after a todo item needs the model's history in Krust's
+            // hands (a cloud or Ollama model) and the run stopped.
+            let rewind_label = if !FeatureFlag::RevertToCheckpoints.is_enabled()
+                || (ai_metadata.ai_block_handle.as_ref(app).is_restored()
+                    && local_harness_threads::lookup(ai_metadata.conversation_id).is_none())
+            {
+                None
+            } else if exchange.is_some_and(|exchange| exchange.has_user_query()) {
+                Some("Rewind to before this prompt".to_owned())
+            } else if !is_running
+                && local_harness_threads::lookup(ai_metadata.conversation_id)
+                    .is_some_and(|(kind, _)| kind.can_rewind_within_turn())
+            {
+                exchange
+                    .and_then(last_completed_todo)
+                    .map(|(_, title)| format!("Rewind to just after \u{201c}{}\u{201d}", clip_title(&title)))
+            } else {
+                None
+            };
             element = element.with_hovered_ai_block(
                 ai_metadata.ai_block_handle.id(),
                 ai_metadata.conversation_id,
                 ai_metadata.exchange_id,
-                can_rewind,
-                can_delete,
+                rewind_label,
+                !is_running,
             );
         }
 
@@ -26162,6 +26230,12 @@ impl TerminalView {
             self.user_write_ctrl_c_to_pty(ctx);
         }
 
+        // A block that ticked off a todo item, and opens no turn, rewinds to
+        // just after that item instead.
+        if self.rewind_ai_conversation_to_todo(ai_block_view_id, exchange_id, conversation_id, ctx) {
+            return;
+        }
+
         // Rewind to the start of the clicked block's turn, like Claude: the
         // prompt and every reply to it go together (no tool call is left
         // without its result), and the prompt goes back into the input.
@@ -26278,6 +26352,114 @@ impl TerminalView {
             },
             ctx
         );
+    }
+
+    /// Rewinds to just after the todo item the clicked block ticked off: the
+    /// model's history is cut just after that `todo_list` reply, and every
+    /// block after the clicked one leaves the conversation. Returns false —
+    /// leaving the ordinary turn rewind to run — when the clicked block opens
+    /// a turn or ticks nothing off, or the conversation's model history isn't
+    /// Krust's. Returns true, having told the user, when it can't be done.
+    fn rewind_ai_conversation_to_todo(
+        &mut self,
+        ai_block_view_id: EntityId,
+        exchange_id: AIAgentExchangeId,
+        conversation_id: AIConversationId,
+        ctx: &mut ViewContext<Self>,
+    ) -> bool {
+        let Some((kind, session_id)) = local_harness_threads::lookup(conversation_id) else {
+            return false;
+        };
+        if !kind.can_rewind_within_turn() {
+            return false;
+        }
+        let Some((todo_id, turn_id, next_exchange, is_running)) =
+            BlocklistAIHistoryModel::as_ref(ctx)
+                .conversation(&conversation_id)
+                .and_then(|conversation| {
+                    let exchanges: Vec<_> = conversation.root_task_exchanges().collect();
+                    let clicked = exchanges.iter().position(|exchange| exchange.id == exchange_id)?;
+                    if exchanges[clicked].has_user_query() {
+                        return None;
+                    }
+                    let (todo_id, _) = last_completed_todo(exchanges[clicked])?;
+                    let opening = exchanges[..=clicked]
+                        .iter()
+                        .rposition(|exchange| exchange.has_user_query())?;
+                    let turn_id = exchanges[opening]
+                        .output_status
+                        .server_output_id()?
+                        .to_string();
+                    Some((
+                        todo_id,
+                        turn_id,
+                        exchanges.get(clicked + 1).map(|exchange| exchange.id),
+                        conversation.status().is_in_progress(),
+                    ))
+                })
+        else {
+            return false;
+        };
+        if is_running {
+            self.show_error_toast("Stop the run before rewinding to a todo item.".to_owned(), ctx);
+            return true;
+        }
+        let Some(next_exchange) = next_exchange else {
+            // Nothing came after this point.
+            return true;
+        };
+
+        // Back the conversation up first, as the turn rewind does.
+        BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
+            if let Some(conversation) = history_model.conversation(&conversation_id).cloned() {
+                if let Err(e) = history_model.fork_conversation(
+                    &conversation,
+                    PRE_REWIND_PREFIX,
+                    false, /* preserve_task_ids */
+                    None,
+                    ctx,
+                ) {
+                    log::warn!("Failed to save pre-rewind backup of conversation {conversation_id}: {e}");
+                }
+            }
+        });
+
+        // The model's history first: if it has no such point any more (a
+        // compaction folded it into a summary), nothing is changed.
+        if !kind.forget_after_checkpoint(&session_id, &turn_id, &todo_id) {
+            self.show_error_toast(
+                "Can't rewind to that todo item: the conversation was compacted after it, so the \
+                 model's history no longer has that point."
+                    .to_owned(),
+                ctx,
+            );
+            return true;
+        }
+
+        for rich_content in self.rich_content_views.iter().rev() {
+            if let Some(ai_metadata) = rich_content.ai_block_metadata() {
+                if ai_metadata.conversation_id == conversation_id {
+                    if ai_metadata.ai_block_handle.id() == ai_block_view_id {
+                        break;
+                    }
+                    ai_metadata.ai_block_handle.update(ctx, |block, ctx| {
+                        block.revert_all_diffs(ctx);
+                    });
+                }
+            }
+        }
+        let removed_exchange_ids =
+            BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
+                history_model.truncate_conversation_from_exchange(conversation_id, next_exchange, ctx)
+            });
+        match removed_exchange_ids {
+            Ok(removed_ids) => self.remove_ai_blocks_for_exchanges(&conversation_id, &removed_ids, ctx),
+            Err(e) => log::warn!("Failed to truncate conversation: {e}"),
+        }
+        self.ai_controller.update(ctx, |controller, ctx| {
+            controller.clear_finished_action_results(conversation_id, ctx);
+        });
+        true
     }
 
     /// Deletes the agent turn an AI block belongs to: its blocks leave the
@@ -30150,4 +30332,44 @@ fn local_harness_kind_runs_model(kind: LocalHarnessKind, model_id: &str) -> bool
         LocalHarnessKind::Ollama => is_ollama,
         LocalHarnessKind::Claude | LocalHarnessKind::Codex => !is_api && !is_ollama,
     }
+}
+
+/// The last todo item an exchange ticked off — its id and title — if any.
+fn last_completed_todo(exchange: &AIAgentExchange) -> Option<(String, String)> {
+    exchange
+        .output_status
+        .output()?
+        .get()
+        .messages
+        .iter()
+        .rev()
+        .find_map(|message| match &message.message {
+            AIAgentOutputMessageType::TodoOperation(TodoOperation::MarkAsCompleted {
+                completed_todos,
+            }) => completed_todos
+                .last()
+                .map(|todo| (todo.id.to_string(), todo.title.clone())),
+            _ => None,
+        })
+}
+
+/// A todo title cut to fit a tooltip.
+fn clip_title(title: &str) -> String {
+    const LIMIT: usize = 48;
+    if title.chars().count() <= LIMIT {
+        title.to_owned()
+    } else {
+        format!("{}…", title.chars().take(LIMIT).collect::<String>())
+    }
+}
+
+/// Whether a Claude Code failure is about its sign-in (an expired, revoked or
+/// missing OAuth session), which signing in again fixes.
+fn is_claude_sign_in_error(message: &str) -> bool {
+    let lower = message.to_lowercase();
+    lower.contains("oauth")
+        || lower.contains("not logged in")
+        || lower.contains("failed to authenticate")
+        || lower.contains("authentication_error")
+        || lower.contains("/login")
 }

@@ -21,7 +21,9 @@ use std::path::Path;
 #[cfg(feature = "local_fs")]
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+
+use krustui::elements::shimmering_text::ShimmeringTextStateHandle;
 
 use ai::agent::action::{AskUserQuestionItem, InsertReviewComment, RunAgentsRequest};
 use base64::Engine as _;
@@ -750,6 +752,8 @@ pub struct CollapsibleElementState {
     pub copy_mouse_state: MouseStateHandle,
     pub expansion_state: CollapsibleExpansionState,
     pub scroll_state: ClippedScrollStateHandle,
+    /// The header's shimmer while a collapsed section is still streaming.
+    pub shimmer_handle: ShimmeringTextStateHandle,
     last_known_is_finished: bool,
     user_toggled_while_streaming: bool,
 }
@@ -764,6 +768,7 @@ impl Default for CollapsibleElementState {
                 scroll_pinned_to_bottom: true,
             },
             scroll_state: ClippedScrollStateHandle::new(),
+            shimmer_handle: ShimmeringTextStateHandle::new(),
             last_known_is_finished: false,
             user_toggled_while_streaming: false,
         }
@@ -872,6 +877,22 @@ impl CollapsibleElementState {
                 }
             )
     }
+}
+
+/// The last collapse choice made on a "Thinking" section in each pane, by
+/// terminal view id: collapsing or expanding one applies to every Thinking
+/// section in that pane, and new ones start that way, so a steered run's
+/// second section doesn't undo what the user chose for the first.
+fn thinking_collapsed_by_pane() -> &'static Mutex<HashMap<EntityId, bool>> {
+    static CHOICES: OnceLock<Mutex<HashMap<EntityId, bool>>> = OnceLock::new();
+    CHOICES.get_or_init(Default::default)
+}
+
+fn pane_thinking_collapsed(terminal_view_id: EntityId) -> Option<bool> {
+    thinking_collapsed_by_pane()
+        .lock()
+        .get(&terminal_view_id)
+        .copied()
 }
 
 const RECEIVED_MESSAGE_COLLAPSIBLE_ID_PREFIX: &str = "received-message:";
@@ -2271,15 +2292,27 @@ impl AIBlock {
         }
 
         // Register element state for reasoning messages and track summarization timing.
+        let pane_thinking_collapsed = pane_thinking_collapsed(self.terminal_view_id);
         for message in &output.messages {
             if let AIAgentOutputMessageType::Reasoning {
                 finished_duration, ..
             } = &message.message
             {
+                // A new section starts the way the user last left one in this pane.
                 let entry = self
                     .collapsible_block_states
                     .entry(message.id.clone())
-                    .or_default();
+                    .or_insert_with(|| match pane_thinking_collapsed {
+                        Some(true) => CollapsibleElementState {
+                            user_toggled_while_streaming: true,
+                            ..CollapsibleElementState::collapsed()
+                        },
+                        Some(false) => CollapsibleElementState {
+                            user_toggled_while_streaming: true,
+                            ..Default::default()
+                        },
+                        None => Default::default(),
+                    });
                 if finished_duration.is_some() {
                     entry.finish_reasoning(ctx);
                 } else {
@@ -4437,6 +4470,47 @@ impl AIBlock {
 }
 
 impl AIBlock {
+    /// Whether `id` is one of this block's "Thinking" (reasoning) messages.
+    fn is_reasoning_message(&self, id: &MessageId, app: &AppContext) -> bool {
+        self.model.status(app).output_to_render().is_some_and(|output| {
+            output.get().messages.iter().any(|message| {
+                &message.id == id
+                    && matches!(message.message, AIAgentOutputMessageType::Reasoning { .. })
+            })
+        })
+    }
+
+    /// Collapses or expands every "Thinking" section in this block, as the
+    /// user just did to one in the same pane.
+    pub fn set_thinking_collapsed(&mut self, collapsed: bool, ctx: &mut ViewContext<Self>) {
+        let reasoning_ids: Vec<MessageId> = self
+            .model
+            .status(ctx)
+            .output_to_render()
+            .map(|output| {
+                output
+                    .get()
+                    .messages
+                    .iter()
+                    .filter(|message| {
+                        matches!(message.message, AIAgentOutputMessageType::Reasoning { .. })
+                    })
+                    .map(|message| message.id.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        for id in reasoning_ids {
+            if let Some(state) = self.collapsible_block_states.get_mut(&id) {
+                let is_collapsed =
+                    matches!(state.expansion_state, CollapsibleExpansionState::Collapsed);
+                if is_collapsed != collapsed {
+                    state.toggle_expansion();
+                }
+            }
+        }
+        ctx.notify();
+    }
+
     pub fn conversation_id(&self) -> AIConversationId {
         self.client_ids.conversation_id
     }
@@ -6159,6 +6233,11 @@ pub enum AIBlockEvent {
     ToggleCodeReviewPane {
         entrypoint: CodeReviewPaneEntrypoint,
     },
+    /// The user collapsed or expanded a "Thinking" section; the pane applies
+    /// the same to its other blocks' Thinking sections.
+    ThinkingCollapsedChanged {
+        collapsed: bool,
+    },
     DismissedPassiveBlock,
     OpenAIDocumentPane {
         document_id: AIDocumentId,
@@ -6854,8 +6933,21 @@ impl TypedActionView for AIBlock {
                 }
             }
             AIBlockAction::ToggleCollapsibleBlockExpanded(id) => {
+                let is_thinking = self.is_reasoning_message(id, ctx);
                 if let Some(state) = self.collapsible_block_states.get_mut(id) {
                     state.toggle_expansion();
+                    // A Thinking section's choice goes to every Thinking
+                    // section in the pane (see `thinking_collapsed_by_pane`).
+                    if is_thinking {
+                        let collapsed = matches!(
+                            state.expansion_state,
+                            CollapsibleExpansionState::Collapsed
+                        );
+                        thinking_collapsed_by_pane()
+                            .lock()
+                            .insert(self.terminal_view_id, collapsed);
+                        ctx.emit(AIBlockEvent::ThinkingCollapsedChanged { collapsed });
+                    }
                 }
             }
             AIBlockAction::ToggleCodeReviewPane => {

@@ -1,6 +1,7 @@
 //! Renders the AI output portion of the AI block.
 //!
 //! This includes text, code snippets, suggested commands, and interactive inline action UX.
+use krustui::elements::shimmering_text::{ShimmerConfig, ShimmeringTextElement};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 #[allow(unused_imports)]
@@ -3605,20 +3606,39 @@ fn render_collapsible_header(
     };
     let message_id_clone = message_id.clone();
     let toggle_mouse_state = element_state.expansion_toggle_mouse_state.clone();
+    // Collapsed while still streaming, the header shimmers like the waiting
+    // text, so a closed "Thinking" still shows it's at work.
+    let shimmer = (!is_expanded && !element_state.last_known_is_finished)
+        .then(|| element_state.shimmer_handle.clone());
+    let shimmer_color = appearance
+        .theme()
+        .main_text_color(appearance.theme().surface_2())
+        .into_solid();
 
     let expandable = Hoverable::new(toggle_mouse_state, move |_is_hovered| {
+        let header: Box<dyn Element> = match &shimmer {
+            Some(handle) => ShimmeringTextElement::new(
+                header_text.clone(),
+                appearance.ai_font_family(),
+                appearance.monospace_font_size(),
+                text_color,
+                shimmer_color,
+                ShimmerConfig::default(),
+                handle.clone(),
+            )
+            .finish(),
+            None => Text::new(
+                header_text.clone(),
+                appearance.ai_font_family(),
+                appearance.monospace_font_size(),
+            )
+            .with_color(text_color)
+            .with_selectable(false)
+            .finish(),
+        };
         Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
-            .with_child(
-                Text::new(
-                    header_text.clone(),
-                    appearance.ai_font_family(),
-                    appearance.monospace_font_size(),
-                )
-                .with_color(text_color)
-                .with_selectable(false)
-                .finish(),
-            )
+            .with_child(header)
             .with_child(
                 Container::new(
                     ConstrainedBox::new(chevron_icon.to_krustui_icon(text_color.into()).finish())
