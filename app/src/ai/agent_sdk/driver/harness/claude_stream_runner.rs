@@ -246,6 +246,7 @@ impl HarnessRunner for ClaudeStreamHarnessRunner {
                                         LocalHarnessStream::begin(
                                             terminal_surface_id,
                                             &begin_prompt,
+                                            &Uuid::new_v4().to_string(),
                                             app,
                                         )
                                     });
