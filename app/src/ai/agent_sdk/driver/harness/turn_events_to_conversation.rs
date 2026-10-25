@@ -13,12 +13,14 @@
 
 use std::collections::HashMap;
 
-use ai::agent::{PlanUpdate, ToolCallOutcome, TurnEvent};
+use ai::agent::{PlanItem, PlanUpdate, ToolCallOutcome, TurnEvent};
 use uuid::Uuid;
 use krust_multi_agent_api as api;
 
 use crate::ai::agent::task::TaskId;
 use crate::ai::agent::{AIAgentActionResult, AIAgentActionResultType, CallMCPToolResult};
+
+use super::plan_tracker::PlanTracker;
 
 /// Tool output longer than this is truncated in the rendered block; the CLI's
 /// own transcript remains the source of truth for full output.
@@ -134,19 +136,27 @@ fn plan_update_messages(task_id: &str, request_id: &str, update: &PlanUpdate) ->
 
     let operation = match update {
         PlanUpdate::Create(items) => Operation::CreateTodoList(api::CreateTodoList {
-            initial_todos: items
-                .iter()
-                .map(|item| api::TodoItem {
-                    id: item.id.clone(),
-                    title: item.title.clone(),
-                    description: item.description.clone(),
-                })
-                .collect(),
+            initial_todos: to_todos(items),
         }),
         PlanUpdate::Complete(ids) if ids.is_empty() => return Vec::new(),
         PlanUpdate::Complete(ids) => Operation::MarkTodosCompleted(api::MarkTodosCompleted {
             todo_ids: ids.clone(),
         }),
+        PlanUpdate::UpdatePending(items) => {
+            Operation::UpdatePendingTodos(api::UpdatePendingTodos {
+                updated_pending_todos: to_todos(items),
+            })
+        }
+        // Harnesses turn snapshots into operations as they stream (see
+        // `PlanTracker`). One that arrives here unconverted starts a list of
+        // its own rather than being lost.
+        PlanUpdate::Snapshot(entries) => {
+            return PlanTracker::default()
+                .updates(entries)
+                .iter()
+                .flat_map(|update| plan_update_messages(task_id, request_id, update))
+                .collect();
+        }
     };
     vec![api::Message {
         id: Uuid::new_v4().to_string(),
@@ -159,6 +169,18 @@ fn plan_update_messages(task_id: &str, request_id: &str, update: &PlanUpdate) ->
         )),
         ..Default::default()
     }]
+}
+
+/// Plan items as the conversation's todo items.
+fn to_todos(items: &[PlanItem]) -> Vec<api::TodoItem> {
+    items
+        .iter()
+        .map(|item| api::TodoItem {
+            id: item.id.clone(),
+            title: item.title.clone(),
+            description: item.description.clone(),
+        })
+        .collect()
 }
 
 /// The user's prompt as a task message — the local analogue of the cloud

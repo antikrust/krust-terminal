@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
+use ai::agent::{PlanEntry, ToolCallOutcome, TurnEvent, TurnUsage};
 use async_trait::async_trait;
 use command::r#async::Command;
 use futures::io::{AsyncRead, AsyncReadExt};
@@ -29,6 +29,7 @@ use super::claude_stream_exec::{
 };
 use super::ollama_committee_proof::{lost_ground, probe_source};
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
+use super::plan_tracker::PlanTracker;
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -62,6 +63,7 @@ Each line read comes back labelled with its number, as `L12| text`; the label is
 To create or overwrite a file: {"type":"write_file","path":"path/to/file","content":"the full file contents"}
 To change lines 126 to 281 of a file and leave the rest: {"type":"replace_lines","path":"path/to/file","start":126,"end":281,"content":"the new lines"}
 To put another file's lines there instead of typing them, give "from_path" in place of "content" (add "from_start"/"from_end" to copy only some of its lines). Empty content deletes the lines; end = start - 1 inserts without removing any.
+For a task of several steps, show the user a checklist — the whole list each time, again whenever you finish a step: {"type":"todo_list","items":[{"title":"Read the config","done":true},{"title":"Fix the parser","done":false}]}
 To answer the user: {"type":"text","text":"your answer"}
 After an action result, either request another action or answer the user."#;
 
@@ -429,6 +431,9 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec], model_description
          - replace_lines changes lines start to end of a file in place, with new `content` or with \
          lines copied from another file via `from_path`; use it to edit part of an existing file \
          instead of retyping the whole file with write_file.\n\
+         - todo_list shows the user a checklist for a task of several steps: send the whole list, \
+         in order, once you know the steps, and again each time you finish one. Skip it for a \
+         request that takes one or two actions.\n\
          - a web_search tool, when present, is for current events, prices, docs, or anything that \
          may have changed since you were trained.\n\
          Each run_code call runs in a fresh process — nothing persists between calls, so re-import \
@@ -450,6 +455,9 @@ const BUILTIN_READ_FILE: &str = "read_file";
 const BUILTIN_WRITE_FILE: &str = "write_file";
 const BUILTIN_REPLACE_LINES: &str = "replace_lines";
 const BUILTIN_RUN_CODE: &str = "run_code";
+/// Not run by [`dispatch_builtin_tool`]: a turn loop handles it itself, since
+/// its result is the conversation's checklist (see [`todo_list_entries`]).
+pub(crate) const BUILTIN_TODO_LIST: &str = "todo_list";
 
 /// Whether `name` is one of the in-harness built-in tools (dispatched locally)
 /// rather than a name that must be routed to an MCP server.
@@ -578,7 +586,80 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                 "required": ["language", "code"]
             }),
         },
+        McpToolSpec {
+            name: BUILTIN_TODO_LIST.to_string(),
+            description: "Show the user a checklist of the steps of a task that takes several \
+                steps. Each call gives the whole list, in order, with `done` true for the steps \
+                finished so far: call it once you know the steps, and again each time you finish \
+                one. Skip it for a request that takes one or two actions."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "description": "Every step of the task, in order.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {
+                                    "type": "string",
+                                    "description": "The step, in a few words."
+                                },
+                                "done": {
+                                    "type": "boolean",
+                                    "description": "Whether the step is finished."
+                                }
+                            },
+                            "required": ["title", "done"]
+                        }
+                    }
+                },
+                "required": ["items"]
+            }),
+        },
     ]
+}
+
+/// The checklist in a `todo_list` call's arguments. Small models stray from
+/// the schema, so an item may also be a bare string (not done), and `done`
+/// may arrive as a string.
+pub(crate) fn todo_list_entries(arguments: &Value) -> Result<Vec<PlanEntry>, String> {
+    let items = arguments
+        .get("items")
+        .and_then(Value::as_array)
+        .ok_or("todo_list requires `items`: a list of {\"title\", \"done\"} steps")?;
+    Ok(items
+        .iter()
+        .filter_map(|item| {
+            let (title, done) = match item {
+                Value::String(title) => (title.clone(), false),
+                item => {
+                    let title = item.get("title")?.as_str()?.to_string();
+                    let done = match item.get("done") {
+                        Some(Value::Bool(done)) => *done,
+                        Some(Value::String(done)) => done.eq_ignore_ascii_case("true"),
+                        _ => false,
+                    };
+                    (title, done)
+                }
+            };
+            Some(PlanEntry {
+                title,
+                description: String::new(),
+                done,
+            })
+        })
+        .collect())
+}
+
+/// What a `todo_list` call tells the model back.
+pub(crate) fn todo_list_reply(entries: &[PlanEntry]) -> String {
+    let done = entries.iter().filter(|entry| entry.done).count();
+    format!(
+        "Checklist shown to the user: {done} of {} steps done.",
+        entries.len()
+    )
 }
 
 /// Executes a built-in file/code tool in-process, returning the text to feed
@@ -731,6 +812,7 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
                 ))
             }
         }
+        BUILTIN_TODO_LIST => Err("todo_list is not available here.".to_string()),
         other => Err(format!("unknown built-in tool '{other}'")),
     }
 }
@@ -1009,6 +1091,11 @@ enum OllamaAgentReply {
         from_start: Option<usize>,
         #[serde(default)]
         from_end: Option<usize>,
+    },
+    #[serde(rename = "todo_list")]
+    TodoList {
+        #[serde(default)]
+        items: Value,
     },
     Text {
         text: String,
@@ -1825,6 +1912,7 @@ async fn run_ollama_generate_loop(
         working_dir.display()
     );
     let mut next_command = first_command;
+    let mut plan = PlanTracker::default();
 
     loop {
         let request = ollama_generate_request(model, &next_prompt, context.as_deref(), system);
@@ -2037,6 +2125,21 @@ async fn run_ollama_generate_loop(
                             "Could not edit {file_path}: {error} Request another action or answer."
                         )
                     }
+                };
+            }
+            OllamaAgentReply::TodoList { items } => {
+                // The same checklist the tool-calling path keeps.
+                next_prompt = match todo_list_entries(&json!({ "items": items })) {
+                    Ok(entries) => {
+                        for update in plan.updates(&entries) {
+                            on_event(TurnEvent::PlanUpdated { update });
+                        }
+                        format!(
+                            "{} Request another action or answer the user.",
+                            todo_list_reply(&entries)
+                        )
+                    }
+                    Err(error) => format!("{error}. Request another action or answer."),
                 };
             }
         }
@@ -2426,6 +2529,7 @@ async fn run_ollama_chat_with_tools(
     // Every request in this loop hits `/api/chat` — never `/api/generate`,
     // which silently returns an empty completion for a chat-shaped body.
     let mut next_command = Some(first_command);
+    let mut plan = PlanTracker::default();
     for call_index in 0.. {
         let request = json!({
             "model": wire_name(model),
@@ -2526,6 +2630,20 @@ async fn run_ollama_chat_with_tools(
         }));
 
         for call in &tool_calls {
+            // The checklist is this call's whole display: no tool card.
+            if call.name == BUILTIN_TODO_LIST {
+                let reply = match todo_list_entries(&call.arguments) {
+                    Ok(entries) => {
+                        for update in plan.updates(&entries) {
+                            on_event(TurnEvent::PlanUpdated { update });
+                        }
+                        todo_list_reply(&entries)
+                    }
+                    Err(error) => error,
+                };
+                messages.push(json!({ "role": "tool", "content": reply }));
+                continue;
+            }
             let call_id = format!("ollama-tool-{}", Uuid::new_v4());
             on_event(TurnEvent::ToolCallStarted {
                 call_id: call_id.clone(),

@@ -27,8 +27,10 @@ use super::claude_stream_exec::{
 use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
-    remove_turn_from_messages, turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec,
+    remove_turn_from_messages, todo_list_entries, todo_list_reply, turn_user_message,
+    without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
 };
+use super::plan_tracker::PlanTracker;
 use crate::ai::api_providers::{
     model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
 };
@@ -233,6 +235,7 @@ pub async fn run_api_stream(
     let mut model = RouteModel::of(&route);
     // What every request of this turn cost, at each model's listed price.
     let mut turn_cost_usd = 0.0;
+    let mut plan = PlanTracker::default();
     loop {
         // A local model's window is a fraction of a cloud model's: it is sent
         // this turn only, trimmed on a copy so the saved history stays whole.
@@ -423,6 +426,28 @@ pub async fn run_api_stream(
         messages.push(assistant_tool_call_message(&content, &tool_calls));
 
         for call in tool_calls {
+            // The checklist is this call's whole display: no tool card.
+            if call.name == BUILTIN_TODO_LIST {
+                let entries = call
+                    .arguments
+                    .clone()
+                    .and_then(|arguments| todo_list_entries(&arguments));
+                let reply = match entries {
+                    Ok(entries) => {
+                        for update in plan.updates(&entries) {
+                            on_event(TurnEvent::PlanUpdated { update });
+                        }
+                        todo_list_reply(&entries)
+                    }
+                    Err(error) => error,
+                };
+                messages.push(json!({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": reply,
+                }));
+                continue;
+            }
             // The card's id is ours: provider ids are only unique within one
             // response, and a card id must be unique in the conversation.
             let card_id = format!("api-tool-{}", Uuid::new_v4());

@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::run_jsonl_stream;
 use super::codex_stream::parse_codex_jsonl_line;
+use super::plan_tracker::PlanTracker;
 
 /// Builds the argument vector for a headless streaming `codex exec` run.
 ///
@@ -56,9 +57,15 @@ pub fn codex_exec_args(
 pub async fn run_codex_stream(
     command: Command,
     prompt: &str,
-    on_event: impl FnMut(TurnEvent),
+    mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
-    run_jsonl_stream(command, prompt, parse_codex_jsonl_line, on_event).await
+    // `todo_list` plans arrive whole; the tracker turns them into checklist
+    // changes for this turn.
+    let mut plan = PlanTracker::default();
+    run_jsonl_stream(command, prompt, parse_codex_jsonl_line, |event| {
+        plan.forward(event, &mut on_event)
+    })
+    .await
 }
 
 #[cfg(test)]

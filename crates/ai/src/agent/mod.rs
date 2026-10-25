@@ -8,4 +8,4 @@ pub mod turn_event;
 
 pub use citation::{AIAgentCitation, UnknownCitationTypeError};
 pub use file_locations::{group_file_contexts_for_display, FileLocations};
-pub use turn_event::{PlanItem, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
+pub use turn_event::{PlanEntry, PlanItem, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};

@@ -104,6 +104,7 @@ const SHELL: &str = "shell";
 const BUILTIN_RUN_CODE: &str = "run_code";
 const BUILTIN_WRITE_FILE: &str = "write_file";
 const BUILTIN_REPLACE_LINES: &str = "replace_lines";
+const BUILTIN_TODO_LIST: &str = "todo_list";
 
 /// Named values a run has established, e.g. `V=158.0`. UPPERCASE names only:
 /// that is how the runbooks spell their parameters, and it keeps a block's
@@ -2442,7 +2443,8 @@ fn worker_tools() -> Vec<McpToolSpec> {
     tools.extend(
         builtin_local_tool_specs()
             .into_iter()
-            .filter(|tool| tool.name != BUILTIN_RUN_CODE),
+            // The run keeps its own checklist, of the runbook's steps.
+            .filter(|tool| tool.name != BUILTIN_RUN_CODE && tool.name != BUILTIN_TODO_LIST),
     );
     tools
 }

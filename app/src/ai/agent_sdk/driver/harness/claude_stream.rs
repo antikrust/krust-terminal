@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
+use ai::agent::{PlanEntry, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use serde::Deserialize;
 
 /// Parses one ndjson line into zero or more [`TurnEvent`]s.
@@ -62,20 +62,56 @@ fn system_events(system: SystemLine) -> Vec<TurnEvent> {
 fn content_block_events(blocks: Vec<ContentBlock>) -> Vec<TurnEvent> {
     blocks
         .into_iter()
-        .filter_map(|block| match block {
-            ContentBlock::Text { text } => Some(TurnEvent::Text { text }),
-            ContentBlock::Thinking { thinking } => Some(TurnEvent::Thinking { text: thinking }),
-            ContentBlock::ToolUse { id, name, input } => Some(TurnEvent::ToolCallStarted {
-                call_id: id,
-                name,
-                input,
-            }),
+        .flat_map(|block| match block {
+            ContentBlock::Text { text } => vec![TurnEvent::Text { text }],
+            ContentBlock::Thinking { thinking } => vec![TurnEvent::Thinking { text: thinking }],
+            ContentBlock::ToolUse { id, name, input } => {
+                // `TodoWrite` states Claude's whole plan; it also becomes the
+                // conversation's checklist. Its card stays, so the call's
+                // result still has a card to land on.
+                let plan = (name == TODO_WRITE)
+                    .then(|| todo_write_entries(&input))
+                    .flatten()
+                    .map(|entries| TurnEvent::PlanUpdated {
+                        update: PlanUpdate::Snapshot(entries),
+                    });
+                std::iter::once(TurnEvent::ToolCallStarted {
+                    call_id: id,
+                    name,
+                    input,
+                })
+                .chain(plan)
+                .collect()
+            }
             // Tool results only ever appear on `user` lines, never
             // `assistant` ones, but the content-block enum is shared.
-            ContentBlock::ToolResult { .. } => None,
-            ContentBlock::Unknown => None,
+            ContentBlock::ToolResult { .. } => Vec::new(),
+            ContentBlock::Unknown => Vec::new(),
         })
         .collect()
+}
+
+/// Claude Code's plan tool.
+const TODO_WRITE: &str = "TodoWrite";
+
+/// The plan in a `TodoWrite` call's input: `todos`, each with `content`,
+/// `status` (`pending` / `in_progress` / `completed`) and `activeForm`.
+fn todo_write_entries(input: &serde_json::Value) -> Option<Vec<PlanEntry>> {
+    let todos = input.get("todos")?.as_array()?;
+    Some(
+        todos
+            .iter()
+            .filter_map(|todo| {
+                let title = todo.get("content")?.as_str()?.to_string();
+                let text = |key: &str| todo.get(key).and_then(serde_json::Value::as_str);
+                Some(PlanEntry {
+                    title,
+                    description: text("activeForm").unwrap_or_default().to_string(),
+                    done: text("status") == Some("completed"),
+                })
+            })
+            .collect(),
+    )
 }
 
 fn tool_result_events(

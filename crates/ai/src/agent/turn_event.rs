@@ -72,6 +72,21 @@ pub enum PlanUpdate {
     Create(Vec<PlanItem>),
     /// Mark the items with these ids done.
     Complete(Vec<String>),
+    /// Replace the pending items with these; items already done stay done.
+    UpdatePending(Vec<PlanItem>),
+    /// The whole checklist as the agent states it now, each item done or not.
+    /// It is how Claude's `TodoWrite`, Codex's `todo_list` and the local
+    /// `todo_list` tool report a plan; the harness's plan tracker turns it
+    /// into the operations above before it is rendered.
+    Snapshot(Vec<PlanEntry>),
+}
+
+/// One item of a [`PlanUpdate::Snapshot`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlanEntry {
+    pub title: String,
+    pub description: String,
+    pub done: bool,
 }
 
 /// One item on a plan checklist.

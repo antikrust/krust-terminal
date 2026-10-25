@@ -8,17 +8,18 @@
 //! `error`. Items carry their own `type` (`agent_message`, `reasoning`,
 //! `command_execution`, `file_change`, `mcp_tool_call`, `web_search`,
 //! `todo_list`, `error`, ...). Only *completed* items are rendered —
-//! `item.started`/`item.updated` would duplicate them — and stderr is plain
+//! `item.started`/`item.updated` would duplicate them — except a `todo_list`,
+//! whose updates are the plan's progress; and stderr is plain
 //! `tracing` log text (never JSON), so callers must only parse stdout.
 
-use ai::agent::{ToolCallOutcome, TurnEvent, TurnUsage};
+use ai::agent::{PlanEntry, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use serde::Deserialize;
 use serde_json::json;
 
 /// Parses one JSONL line into zero or more [`TurnEvent`]s.
 ///
 /// Returns an empty vec for lines that are recognized-but-not-renderable
-/// (`turn.started`, in-progress item updates, todo-list chatter) and for
+/// (`turn.started`, in-progress updates of items other than a todo list) and for
 /// lines that fail to parse (logged, not fatal — one malformed line must
 /// not kill the run).
 pub fn parse_codex_jsonl_line(line: &str) -> Vec<TurnEvent> {
@@ -42,6 +43,15 @@ pub fn parse_codex_jsonl_line(line: &str) -> Vec<TurnEvent> {
             cwd: None,
         }],
         RawEvent::ItemCompleted { item } => item_events(*item),
+        // Other items render once, completed; a plan is worth showing as it
+        // changes, so a todo list's progress is read as it goes.
+        RawEvent::ItemStarted { item } | RawEvent::ItemUpdated { item } => {
+            if item.item_type == TODO_LIST {
+                item_events(*item)
+            } else {
+                Vec::new()
+            }
+        }
         RawEvent::TurnCompleted { usage } => vec![TurnEvent::TurnCompleted {
             usage: usage.map(turn_usage),
             is_error: false,
@@ -172,10 +182,29 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
             })
             .into_iter()
             .collect(),
-        // todo_list and anything unrecognized: bookkeeping, not renderable.
+        TODO_LIST => item
+            .items
+            .map(|items| TurnEvent::PlanUpdated {
+                update: PlanUpdate::Snapshot(
+                    items
+                        .into_iter()
+                        .map(|todo| PlanEntry {
+                            title: todo.text,
+                            description: String::new(),
+                            done: todo.completed,
+                        })
+                        .collect(),
+                ),
+            })
+            .into_iter()
+            .collect(),
+        // Anything unrecognized: bookkeeping, not renderable.
         _ => Vec::new(),
     }
 }
+
+/// Codex's plan item: `items`, each with `text` and `completed`.
+const TODO_LIST: &str = "todo_list";
 
 // --- Wire format (loosely typed: only fields we actually use) ---
 
@@ -184,6 +213,10 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
 enum RawEvent {
     #[serde(rename = "thread.started")]
     ThreadStarted { thread_id: String },
+    #[serde(rename = "item.started")]
+    ItemStarted { item: Box<RawItem> },
+    #[serde(rename = "item.updated")]
+    ItemUpdated { item: Box<RawItem> },
     #[serde(rename = "item.completed")]
     ItemCompleted { item: Box<RawItem> },
     #[serde(rename = "turn.completed")]
@@ -215,6 +248,15 @@ struct RawItem {
     server: Option<String>,
     tool: Option<String>,
     query: Option<String>,
+    items: Option<Vec<RawTodo>>,
+}
+
+#[derive(Deserialize)]
+struct RawTodo {
+    #[serde(default)]
+    text: String,
+    #[serde(default)]
+    completed: bool,
 }
 
 #[derive(Deserialize)]

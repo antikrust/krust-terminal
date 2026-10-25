@@ -23,6 +23,7 @@ use uuid::Uuid;
 use krust_core::safe_warn;
 
 use super::claude_stream::parse_stream_json_line;
+use super::plan_tracker::PlanTracker;
 
 
 // ---------------------------------------------------------------------------
@@ -156,9 +157,15 @@ pub fn stream_json_args(
 pub async fn run_claude_stream(
     command: Command,
     prompt: &str,
-    on_event: impl FnMut(TurnEvent),
+    mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
-    run_jsonl_stream(command, prompt, parse_stream_json_line, on_event).await
+    // `TodoWrite` plans arrive whole; the tracker turns them into checklist
+    // changes for this turn.
+    let mut plan = PlanTracker::default();
+    run_jsonl_stream(command, prompt, parse_stream_json_line, |event| {
+        plan.forward(event, &mut on_event)
+    })
+    .await
 }
 
 /// Provider-agnostic core of the headless runners: spawns `command`, delivers
