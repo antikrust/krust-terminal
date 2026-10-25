@@ -9,6 +9,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use tempfile::NamedTempFile;
+use uuid::Uuid;
 use krust_cli::agent::Harness;
 use krust_cli::{
     OZ_CLI_ENV, OZ_HARNESS_ENV, OZ_PARENT_RUN_ID_ENV, OZ_RUN_ID_ENV, SERVER_ROOT_URL_OVERRIDE_ENV,
@@ -86,6 +87,26 @@ impl LocalHarnessKind {
             Some("codex") => Self::Codex,
             Some("ollama") => Self::Ollama,
             _ => Self::Claude,
+        }
+    }
+
+    /// Makes `session_id` forget a turn the user deleted, so the model stops
+    /// seeing it. Claude and Codex keep their sessions in their own CLIs,
+    /// which can't drop a turn, so there the turn is only hidden.
+    pub(crate) fn forget_turn(
+        self,
+        session_id: &Uuid,
+        prompt: &str,
+        later_turns_with_same_prompt: usize,
+    ) {
+        match self {
+            Self::Api => {
+                api_stream_exec::forget_turn(session_id, prompt, later_turns_with_same_prompt)
+            }
+            Self::Ollama => {
+                ollama_stream_exec::forget_turn(session_id, prompt, later_turns_with_same_prompt)
+            }
+            Self::Claude | Self::Codex => {}
         }
     }
 }

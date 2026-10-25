@@ -1,6 +1,6 @@
 //! Cloud model providers reached over the OpenAI chat-completions API with
-//! the user's own key: Z.ai (Zhipu's GLM), Groq, Gemini, OpenRouter, and
-//! Venice.
+//! the user's own key: OpenAI, Anthropic, Google Gemini, Z.ai (Zhipu's GLM),
+//! Groq, OpenRouter, and Venice.
 //!
 //! The local harness calls these directly (see
 //! `agent_sdk::driver::harness::api_stream_exec`); nothing goes through
@@ -68,6 +68,97 @@ pub struct ApiModel {
 
 pub const PROVIDERS: &[ApiProvider] = &[
     ApiProvider {
+        id: "openai",
+        display_name: "OpenAI",
+        base_url: "https://api.openai.com/v1",
+        key_url: "https://platform.openai.com/api-keys",
+        pricing_note: "Paid per token: GPT-6 Luna from $0.10 per million input tokens, GPT-6.1 \
+            Sol $2, GPT-6 Astra $10.",
+        models: &[
+            ApiModel {
+                id: "gpt-6.1-sol",
+                display_name: "GPT-6.1 Sol",
+                price_per_million: (2.0, 10.0),
+                context_window: 1_050_000,
+            },
+            ApiModel {
+                id: "gpt-6-luna",
+                display_name: "GPT-6 Luna",
+                price_per_million: (0.10, 0.50),
+                context_window: 1_050_000,
+            },
+            ApiModel {
+                id: "gpt-6-astra",
+                display_name: "GPT-6 Astra",
+                price_per_million: (10.0, 50.0),
+                context_window: 1_050_000,
+            },
+        ],
+        live_free_models_url: None,
+    },
+    ApiProvider {
+        id: "anthropic",
+        display_name: "Anthropic",
+        // Anthropic's OpenAI-compatible endpoint. It returns no thinking, and
+        // Anthropic describes it as for testing and comparison.
+        base_url: "https://api.anthropic.com/v1",
+        key_url: "https://platform.claude.com/settings/keys",
+        pricing_note: "Paid per token: Claude Haiku 5.5 from $0.10 per million input tokens, \
+            Sonnet 5.5 $2, Opus 5.5 $4, Fable 5.1 $10.",
+        models: &[
+            ApiModel {
+                id: "claude-sonnet-5-5",
+                display_name: "Claude Sonnet 5.5",
+                price_per_million: (2.0, 10.0),
+                context_window: 1_000_000,
+            },
+            ApiModel {
+                id: "claude-opus-5-5",
+                display_name: "Claude Opus 5.5",
+                price_per_million: (4.0, 20.0),
+                context_window: 1_000_000,
+            },
+            ApiModel {
+                id: "claude-haiku-5-5",
+                display_name: "Claude Haiku 5.5",
+                price_per_million: (0.10, 0.50),
+                context_window: 1_000_000,
+            },
+            ApiModel {
+                id: "claude-fable-5-1",
+                display_name: "Claude Fable 5.1",
+                price_per_million: (10.0, 50.0),
+                context_window: 1_000_000,
+            },
+        ],
+        live_free_models_url: None,
+    },
+    ApiProvider {
+        id: "gemini",
+        display_name: "Google Gemini",
+        base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+        key_url: "https://aistudio.google.com/apikey",
+        pricing_note: "Flash models are free with low daily limits. Google uses free-tier \
+            prompts to improve its products.",
+        // Google's rolling aliases: they follow the newest Flash models, so
+        // the list doesn't go stale every few months.
+        models: &[
+            ApiModel {
+                id: "gemini-flash-latest",
+                display_name: "Gemini Flash",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_048_576,
+            },
+            ApiModel {
+                id: "gemini-flash-lite-latest",
+                display_name: "Gemini Flash-Lite",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_048_576,
+            },
+        ],
+        live_free_models_url: None,
+    },
+    ApiProvider {
         id: "zai",
         display_name: "Z.ai",
         base_url: "https://api.z.ai/api/paas/v4",
@@ -114,31 +205,6 @@ pub const PROVIDERS: &[ApiProvider] = &[
                 display_name: "GPT-OSS 20B",
                 price_per_million: (0.0, 0.0),
                 context_window: 131_072,
-            },
-        ],
-        live_free_models_url: None,
-    },
-    ApiProvider {
-        id: "gemini",
-        display_name: "Gemini",
-        base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
-        key_url: "https://aistudio.google.com/apikey",
-        pricing_note: "Flash models are free with low daily limits. Google uses free-tier \
-            prompts to improve its products.",
-        // Google's rolling aliases: they follow the newest Flash models, so
-        // the list doesn't go stale every few months.
-        models: &[
-            ApiModel {
-                id: "gemini-flash-latest",
-                display_name: "Gemini Flash",
-                price_per_million: (0.0, 0.0),
-                context_window: 1_048_576,
-            },
-            ApiModel {
-                id: "gemini-flash-lite-latest",
-                display_name: "Gemini Flash-Lite",
-                price_per_million: (0.0, 0.0),
-                context_window: 1_048_576,
             },
         ],
         live_free_models_url: None,
@@ -296,6 +362,10 @@ pub struct ApiProviderKeys {
     /// Guards the deferred keychain write against an older write landing
     /// after a newer one (see `set_key`).
     write_version: u64,
+    /// The stored keys exist but couldn't be read — the keychain prompt was
+    /// denied, say. Saving then would replace every stored key with just the
+    /// ones typed since, so nothing is written until a read succeeds.
+    unreadable: bool,
 }
 
 pub enum ApiProviderKeysEvent {
@@ -310,6 +380,7 @@ impl SingletonEntity for ApiProviderKeys {}
 
 impl ApiProviderKeys {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
+        let mut unreadable = false;
         let keys = match ctx.secure_storage().read_value(SECURE_STORAGE_KEY) {
             Ok(json) => serde_json::from_str(&json).unwrap_or_else(|error| {
                 report_error!(
@@ -319,13 +390,13 @@ impl ApiProviderKeys {
             }),
             Err(secure_storage::Error::NotFound) => HashMap::new(),
             Err(error) => {
-                report_error!(
-                    anyhow::Error::new(error).context("Failed to read the API provider keys")
-                );
+                log::warn!("api_providers: could not read the stored keys: {error}");
+                unreadable = true;
                 HashMap::new()
             }
         };
         let me = Self {
+            unreadable,
             keys,
             live_models: HashMap::new(),
             write_version: 0,
@@ -345,6 +416,7 @@ impl ApiProviderKeys {
             keys: HashMap::new(),
             live_models: HashMap::new(),
             write_version: 0,
+            unreadable: false,
         }
     }
 
@@ -357,6 +429,22 @@ impl ApiProviderKeys {
 
     /// Sets (or, with `None`, clears) one provider's key.
     pub fn set_key(&mut self, provider_id: &str, key: Option<String>, ctx: &mut ModelContext<Self>) {
+        // Keys that couldn't be read at startup: try again now, so the change
+        // lands on top of them rather than replacing them.
+        if self.unreadable {
+            match ctx.secure_storage().read_value(SECURE_STORAGE_KEY) {
+                Ok(json) => {
+                    if let Ok(stored) = serde_json::from_str::<HashMap<String, String>>(&json) {
+                        self.keys = stored;
+                    }
+                    self.unreadable = false;
+                }
+                Err(secure_storage::Error::NotFound) => self.unreadable = false,
+                Err(error) => {
+                    log::warn!("api_providers: still could not read the stored keys: {error}");
+                }
+            }
+        }
         let key = key
             .map(|key| key.trim().to_string())
             .filter(|key| !key.is_empty());
@@ -373,6 +461,14 @@ impl ApiProviderKeys {
             if let Some(provider) = provider(provider_id) {
                 self.fetch_live_models(provider, ctx);
             }
+        }
+        if self.unreadable {
+            // Usable for this session; not saved, so the stored keys survive.
+            log::warn!(
+                "api_providers: not saving keys: the stored ones couldn't be read and would be \
+                 overwritten"
+            );
+            return;
         }
 
         let json = match serde_json::to_string(&self.keys) {

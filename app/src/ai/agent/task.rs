@@ -819,15 +819,10 @@ impl Task {
         }
     }
 
-    /// Truncates all exchanges starting from the given exchange ID (inclusive).
-    pub(super) fn truncate_exchanges_from(&mut self, from_exchange_id: AIAgentExchangeId) {
-        if let Some(index) = self
-            .exchanges
-            .iter()
-            .position(|exchange| exchange.id == from_exchange_id)
-        {
-            self.exchanges.truncate(index);
-        }
+    /// Removes the exchanges with the given IDs.
+    pub(super) fn remove_exchanges(&mut self, exchange_ids: &HashSet<AIAgentExchangeId>) {
+        self.exchanges
+            .retain(|exchange| !exchange_ids.contains(&exchange.id));
     }
 
     /// Assigns fresh exchange IDs to all exchanges in this task.

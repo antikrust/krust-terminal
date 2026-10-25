@@ -174,6 +174,16 @@ const OVERFLOW_BUTTON_ICON_PATH: &str = "bundled/svg/overflow.svg";
 const DELETE_BLOCK_ICON_PATH: &str = "bundled/svg/trash-02.svg";
 /// Minimum leftward ⌘+drag distance (px) for a block swipe-delete.
 const SWIPE_DELETE_DRAG_DISTANCE: f32 = 120.;
+
+/// What a ⌘+drag swipe-delete removes.
+#[derive(Clone, Copy, Debug)]
+pub enum SwipeDeleteTarget {
+    /// A command block.
+    Block(BlockIndex),
+    /// A rich content view; an AI block's whole agent turn is deleted.
+    RichContent(EntityId),
+}
+
 /// How long a deleting block takes to slide off screen.
 pub const SLIDE_DELETE_DURATION: std::time::Duration = std::time::Duration::from_millis(200);
 /// The number of lines from the top of the blocklist where we should show the snackbar toggle
@@ -874,7 +884,7 @@ pub struct BlockListMouseStates {
     /// ⌘+drag-to-delete gesture origin: the block under the pointer and the
     /// press position when a ⌘+left-click began. Shared across the per-frame
     /// element clones the same way the mouse-state handles are.
-    pub swipe_delete_state: Arc<Mutex<Option<(BlockIndex, Vector2F)>>>,
+    pub swipe_delete_state: Arc<Mutex<Option<(SwipeDeleteTarget, Vector2F)>>>,
     pub filter_mouse_states: HashMap<BlockIndex, MouseStateHandle>,
     pub snackbar_toggle_button_mouse_state: MouseStateHandle,
 }
@@ -1455,6 +1465,23 @@ impl BlockListElement {
             snackbar_point,
             clamping_mode,
         )
+    }
+
+    /// The rich content view (such as an AI block) under `position`, if any.
+    fn rich_content_view_at(&self, position: Vector2F) -> Option<EntityId> {
+        if !self.is_mouse_position_within_bounds(position) {
+            return None;
+        }
+        let point = self.coord_to_point(
+            SnackbarPoint::within_snackbar(position),
+            ClampingMode::ClampToGridIfWithinBlock,
+        )?;
+        let model = self.model.lock();
+        let viewport = self.viewport_state_after_layout(model.block_list());
+        match viewport.block_height_item_from_point(point) {
+            Some(BlockHeightItem::RichContent(item)) => Some(item.view_id),
+            _ => None,
+        }
     }
 
     fn right_mouse_down(&self, position: Vector2F, ctx: &mut EventContext) -> bool {
@@ -4669,6 +4696,27 @@ impl Element for BlockListElement {
             }
         }
 
+        // Arm the ⌘+drag-to-delete gesture from the press position. Armed here
+        // rather than with the blocklist's own press handling below, which an
+        // AI block pre-empts by taking the press itself.
+        if let Event::LeftMouseDown {
+            position,
+            modifiers,
+            ..
+        } = event_at_z_index
+        {
+            let target = if !modifiers.cmd {
+                None
+            } else if let Some(index) = self.hovered_block_index.filter(|_| !handled) {
+                Some(SwipeDeleteTarget::Block(index))
+            } else {
+                self.rich_content_view_at(*position)
+                    .map(SwipeDeleteTarget::RichContent)
+            };
+            *self.mouse_states.swipe_delete_state.lock().unwrap() =
+                target.map(|target| (target, *position));
+        }
+
         handled |= match event_at_z_index {
             Event::KeyDown {
                 keystroke,
@@ -4729,12 +4777,6 @@ impl Element for BlockListElement {
                 modifiers,
                 ..
             } if !handled => {
-                // Arm the ⌘+drag-to-delete gesture from the press position.
-                *self.mouse_states.swipe_delete_state.lock().unwrap() = if modifiers.cmd {
-                    self.hovered_block_index.map(|index| (index, *position))
-                } else {
-                    None
-                };
                 self.mouse_down(
                     *position,
                     *click_count,
@@ -4754,16 +4796,23 @@ impl Element for BlockListElement {
                 // A ⌘+drag released far enough to the left, mostly
                 // horizontally, swipes the pressed block away (undoable via
                 // the delete toast).
-                if let Some((block_index, start)) =
+                if let Some((target, start)) =
                     self.mouse_states.swipe_delete_state.lock().unwrap().take()
                 {
                     let dx = position.x() - start.x();
                     let dy = position.y() - start.y();
                     if dx <= -SWIPE_DELETE_DRAG_DISTANCE && dx.abs() > dy.abs() {
-                        log::info!(
-                            "fork: swipe-delete drag triggered on {block_index:?} (dx {dx})"
-                        );
-                        ctx.dispatch_typed_action(TerminalAction::DeleteBlockAtIndex(block_index));
+                        log::info!("fork: swipe-delete drag triggered on {target:?} (dx {dx})");
+                        ctx.dispatch_typed_action(match target {
+                            SwipeDeleteTarget::Block(block_index) => {
+                                TerminalAction::DeleteBlockAtIndex(block_index)
+                            }
+                            SwipeDeleteTarget::RichContent(view_id) => {
+                                TerminalAction::DeleteAIBlockTurn {
+                                    ai_block_view_id: view_id,
+                                }
+                            }
+                        });
                         return true;
                     }
                 }

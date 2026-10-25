@@ -283,6 +283,12 @@ pub enum TerminalAction {
     ToggleAIBlockUsageDetails {
         ai_block_view_id: EntityId,
     },
+    /// Deletes the agent turn the given AI block belongs to, from the screen
+    /// and from what the model remembers (the overflow menu's Delete, or a
+    /// ⌘+swipe on the block).
+    DeleteAIBlockTurn {
+        ai_block_view_id: EntityId,
+    },
     OpenWorkflowModalWithCloudWorkflow(SyncId),
     AskAIAssistant {
         block_index: BlockIndex,
@@ -619,6 +625,7 @@ impl fmt::Debug for TerminalAction {
                 write!(f, "DeleteBlockAtIndex({block_index:?})")
             }
             ToggleAIBlockUsageDetails { .. } => write!(f, "ToggleAIBlockUsageDetails"),
+            DeleteAIBlockTurn { .. } => write!(f, "DeleteAIBlockTurn"),
             OpenWorkflowModalWithCloudWorkflow(_) => {
                 f.write_str("OpenWorkflowModalWithCloudWorkflow")
             }

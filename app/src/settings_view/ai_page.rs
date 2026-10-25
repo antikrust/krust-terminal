@@ -2913,8 +2913,12 @@ impl AISettingsPageView {
                 // Manager page. ApiKeysWidget draws its own leading separator,
                 // so the title doesn't add a second one.
                 widgets.push(Box::new(PageTitleWidget::new("Bring your own key", false)));
+                // One section: a key per provider, used directly by the
+                // local agent. Upstream's provider keys and custom endpoints
+                // (`ApiKeysWidget`) only ever went to Warp's cloud backend, so
+                // they're not shown here; that widget still serves the Grok
+                // page.
                 widgets.push(Box::new(CloudModelKeysWidget::new(ctx)));
-                widgets.push(Box::new(ApiKeysWidget::new(ctx)));
             }
         }
 
@@ -8134,11 +8138,10 @@ impl SettingsWidget for CloudHandoffWidget {
     }
 }
 
-/// Keys for the cloud models the local harness calls directly — Z.ai's GLM,
-/// Groq, Gemini, Venice (see `ai::api_providers`). Unlike the provider keys in
-/// [`ApiKeysWidget`], these never go to Krust's server and need no Krust plan,
-/// so the fields are always editable. A provider's models appear in the model
-/// menu once its key is set.
+/// "Custom inference": a key per provider the local agent calls directly —
+/// OpenAI, Anthropic, Google Gemini, Z.ai, Groq, OpenRouter, Venice (see
+/// `ai::api_providers`). The fields are always editable. A provider's models
+/// appear in the model menu once its key is set.
 struct CloudModelKeysWidget {
     /// Per provider: its key field, and the mouse state of its "Get a key"
     /// link — created once here so the link's clicks register.
@@ -8264,7 +8267,7 @@ impl SettingsWidget for CloudModelKeysWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "cloud models api key free z.ai zai zhipu glm groq gemini google venice private uncensored llama gpt-oss deepseek qwen"
+        "custom inference api key openai gpt anthropic claude google gemini z.ai zai zhipu glm groq openrouter venice free private uncensored gpt-oss deepseek qwen"
     }
 
     fn render(
@@ -8276,9 +8279,9 @@ impl SettingsWidget for CloudModelKeysWidget {
         let description = appearance
             .ui_builder()
             .wrappable_text(
-                "Run the agent on a cloud model with your own key. Krust calls the provider \
-                 directly — the key stays in your keychain and never goes to Krust's servers. \
-                 Once a key is set, that provider's models appear in the model menu.",
+                "Run the agent on a provider's models with your own key. Each key is kept in \
+                 your macOS keychain and sent only to its provider. Once a key is set, that \
+                 provider's models appear in the model menu.",
                 true,
             )
             .with_style(UiComponentStyles {
@@ -8295,7 +8298,7 @@ impl SettingsWidget for CloudModelKeysWidget {
             .finish();
         let mut column = Flex::column()
             .with_child(render_separator(appearance))
-            .with_child(build_sub_header(appearance, "Cloud models", None).finish())
+            .with_child(build_sub_header(appearance, "Custom inference", None).finish())
             .with_child(
                 Container::new(description)
                     .with_margin_bottom(16.)

@@ -26,8 +26,8 @@ use super::claude_stream_exec::{
 };
 use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
-    is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call, McpToolCaller,
-    McpToolSpec,
+    is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
+    remove_turn_from_messages, McpToolCaller, McpToolSpec,
 };
 use crate::ai::api_providers::{
     api_model_parts, model_context_window, model_display_name, model_price, ApiProvider,
@@ -442,6 +442,17 @@ fn save_history(session_id: &Uuid, messages: &[Value]) {
         });
     if let Err(error) = written {
         log::warn!("api_stream: could not save the conversation history: {error}");
+    }
+}
+
+/// Makes the model forget a turn the user deleted, by dropping it from this
+/// session's saved history.
+pub(crate) fn forget_turn(session_id: &Uuid, prompt: &str, later_turns_with_same_prompt: usize) {
+    let Some(mut messages) = load_history(session_id) else {
+        return;
+    };
+    if remove_turn_from_messages(&mut messages, prompt, later_turns_with_same_prompt) {
+        save_history(session_id, &messages);
     }
 }
 

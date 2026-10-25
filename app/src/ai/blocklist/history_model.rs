@@ -26,8 +26,8 @@ use super::persistence::{PersistedAIInput, PersistedAIInputType};
 use super::RequestInput;
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{
-    AIConversation, AIConversationId, ConversationStatus, ServerAIConversationMetadata, TodoStatus,
-    UpdateConversationError,
+    AIConversation, AIConversationId, ConversationStatus, RemovedTurn,
+    ServerAIConversationMetadata, TodoStatus, UpdateConversationError,
 };
 use crate::ai::agent::task::helper::{MessageExt, ToolCallExt};
 use crate::ai::agent::task::TaskId;
@@ -2459,6 +2459,22 @@ impl BlocklistAIHistoryModel {
         let removed_exchange_ids = conversation.truncate_from_exchange(from_exchange_id, ctx)?;
 
         Ok(removed_exchange_ids)
+    }
+
+    /// Removes the turn holding the given exchange from a conversation (see
+    /// [`AIConversation::remove_turn`]). This is a lossy operation.
+    pub fn remove_conversation_turn(
+        &mut self,
+        conversation_id: AIConversationId,
+        exchange_id: AIAgentExchangeId,
+        ctx: &mut ModelContext<Self>,
+    ) -> Result<RemovedTurn, UpdateHistoryError> {
+        let conversation = self
+            .conversations_by_id
+            .get_mut(&conversation_id)
+            .ok_or(UpdateHistoryError::ConversationNotFound(conversation_id))?;
+
+        Ok(conversation.remove_turn(exchange_id, ctx)?)
     }
 
     /// Returns the latest exchange across all conversations for a terminal surface.

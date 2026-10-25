@@ -1066,6 +1066,57 @@ fn chat_histories() -> &'static Mutex<OllamaChatHistories> {
     HISTORIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Makes the model forget a turn the user deleted, by dropping it from this
+/// session's chat history. The `/api/generate` path keeps an opaque token
+/// context instead, which can't have one turn taken out.
+pub(crate) fn forget_turn(session_id: &Uuid, prompt: &str, later_turns_with_same_prompt: usize) {
+    if let Ok(mut histories) = chat_histories().lock() {
+        if let Some((_, messages)) = histories.get_mut(session_id) {
+            remove_turn_from_messages(messages, prompt, later_turns_with_same_prompt);
+        }
+    }
+}
+
+/// Removes one turn from a chat history: the user message carrying `prompt`
+/// and every message after it up to the next user message. When the same
+/// prompt opened several turns, `later_turns_with_same_prompt` picks which,
+/// counting back from the newest. Returns whether a turn was removed.
+pub(crate) fn remove_turn_from_messages(
+    messages: &mut Vec<Value>,
+    prompt: &str,
+    later_turns_with_same_prompt: usize,
+) -> bool {
+    let is_user = |message: &Value| message.get("role").and_then(Value::as_str) == Some("user");
+    // The ways the runners wrap a prompt before sending it.
+    let opens_turn = |message: &Value| {
+        is_user(message)
+            && message
+                .get("content")
+                .and_then(Value::as_str)
+                .is_some_and(|content| {
+                    content == prompt
+                        || content.ends_with(&format!("User request:\n{prompt}"))
+                        || content.ends_with(&format!("User question: {prompt}"))
+                })
+    };
+    let Some(start) = messages
+        .iter()
+        .enumerate()
+        .filter(|(_, message)| opens_turn(*message))
+        .map(|(index, _)| index)
+        .rev()
+        .nth(later_turns_with_same_prompt)
+    else {
+        return false;
+    };
+    let end = messages[start + 1..]
+        .iter()
+        .position(is_user)
+        .map_or(messages.len(), |offset| start + 1 + offset);
+    messages.drain(start..end);
+    true
+}
+
 fn new_ollama_command(working_dir: &Path, path: &str, base_url: &str) -> Command {
     let mut command = Command::new("/usr/bin/curl");
     command.args(ollama_curl_args(base_url));

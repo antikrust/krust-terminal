@@ -4122,6 +4122,69 @@ impl AIConversation {
             return Ok(exchanges_to_remove);
         }
 
+        self.remove_root_exchanges(&exchanges_to_remove, ctx);
+
+        Ok(exchanges_to_remove)
+    }
+
+    /// Removes the turn that `exchange_id` belongs to: the root-task exchange
+    /// holding the user's query and every exchange after it up to the next
+    /// query (the follow-ups that carry tool results). Removing whole turns
+    /// keeps every tool call paired with its result. This is a lossy
+    /// operation.
+    pub fn remove_turn(
+        &mut self,
+        exchange_id: AIAgentExchangeId,
+        ctx: &mut ModelContext<BlocklistAIHistoryModel>,
+    ) -> Result<RemovedTurn, UpdateConversationError> {
+        let root_exchanges: Vec<&AIAgentExchange> = self.root_task_exchanges().collect();
+        let idx = root_exchanges
+            .iter()
+            .position(|exchange| exchange.id == exchange_id)
+            .ok_or(UpdateConversationError::ExchangeNotFound)?;
+        let start = root_exchanges[..=idx]
+            .iter()
+            .rposition(|exchange| exchange.has_user_query())
+            .unwrap_or(0);
+        let end = root_exchanges[idx + 1..]
+            .iter()
+            .position(|exchange| exchange.has_user_query())
+            .map_or(root_exchanges.len(), |offset| idx + 1 + offset);
+
+        let query_of = |exchange: &AIAgentExchange| {
+            exchange
+                .input
+                .iter()
+                .find_map(|input| input.user_query())
+        };
+        let query = query_of(root_exchanges[start]);
+        let later_turns_with_same_query = query.as_ref().map_or(0, |query| {
+            root_exchanges[end..]
+                .iter()
+                .filter(|&&exchange| query_of(exchange).as_ref() == Some(query))
+                .count()
+        });
+        let exchange_ids: HashSet<AIAgentExchangeId> = root_exchanges[start..end]
+            .iter()
+            .map(|exchange| exchange.id)
+            .collect();
+
+        self.remove_root_exchanges(&exchange_ids, ctx);
+
+        Ok(RemovedTurn {
+            exchange_ids,
+            query,
+            later_turns_with_same_query,
+        })
+    }
+
+    /// Removes the given root-task exchanges and the messages they added, then
+    /// saves the conversation.
+    fn remove_root_exchanges(
+        &mut self,
+        exchanges_to_remove: &HashSet<AIAgentExchangeId>,
+        ctx: &mut ModelContext<BlocklistAIHistoryModel>,
+    ) {
         let mut message_ids_to_remove: HashSet<MessageId> = exchanges_to_remove
             .iter()
             .filter_map(|ex_id| self.exchange_with_id(*ex_id))
@@ -4139,7 +4202,7 @@ impl AIConversation {
         }
 
         if let Some(new_todo_lists) = self.task_store.modify_root_task(|root_task| {
-            root_task.truncate_exchanges_from(from_exchange_id);
+            root_task.remove_exchanges(exchanges_to_remove);
             root_task.remove_messages(&message_ids_to_remove);
 
             // Return updated todo state
@@ -4205,9 +4268,17 @@ impl AIConversation {
         }
 
         self.write_updated_conversation_state(ctx);
-
-        Ok(exchanges_to_remove)
     }
+}
+
+/// What [`AIConversation::remove_turn`] removed.
+pub struct RemovedTurn {
+    pub exchange_ids: HashSet<AIAgentExchangeId>,
+    /// The user's query that opened the turn.
+    pub query: Option<String>,
+    /// How many later turns opened with the same query, so a local harness
+    /// can find this turn's copy in its own history.
+    pub later_turns_with_same_query: usize,
 }
 
 /// Computes the additional message ids to remove during a rewind so that no

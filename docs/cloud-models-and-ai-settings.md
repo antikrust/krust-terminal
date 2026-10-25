@@ -20,15 +20,10 @@ app afterwards.
   - The enum is `SettingsSection`.
   - `ai_subpages()` gives the nav order, `parent_page_section()` gives the backing page, and `FromStr` handles deep-link names.
   - Ollama (`ollama_page.rs`) and CustomRouters are their own backing pages.
-- **Bring your own key page:** two widgets, in order.
-  1. **`CloudModelKeysWidget`** ("Cloud models"). It's this fork's own feature: one password field per provider, plus a clickable **Get a … API key** link.
-     - Keys are stored in the keychain item `ApiProviderKeys`, read through `ApiProviderKeys` in `app/src/ai/api_providers.rs`.
-     - Keys never go to Krust's server.
-     - The fields are always editable; nothing gates them behind a Krust plan.
-  2. **`ApiKeysWidget`**: upstream's OpenAI, Anthropic and Google key fields plus custom endpoints.
-     - Backed by `ApiKeyManager` in `crates/ai/src/api_keys.rs`.
-     - These keys are **forwarded to the Krust cloud server**, and the editors are gated on the BYOK workspace flags.
-     - It's mostly inert in this fork. Don't use it for local providers.
+- **Bring your own key page:** one section, **`CloudModelKeysWidget`** ("Custom inference"): one password field per provider (OpenAI, Anthropic, Google Gemini, Z.ai, Groq, OpenRouter, Venice), each with a clickable **Get a … API key** link.
+  - Keys are stored in the keychain item `ApiProviderKeys`, read through `ApiProviderKeys` in `app/src/ai/api_providers.rs`, and sent only to their provider.
+  - If the stored keys can't be read at startup (a denied keychain prompt), nothing is saved until a read succeeds, so they can't be overwritten.
+  - Upstream's `ApiKeysWidget` (OpenAI/Anthropic/Google keys and custom endpoints, backed by `ApiKeyManager` in `crates/ai/src/api_keys.rs`) is no longer shown on this page: those keys only ever went to Warp's cloud backend. The widget still serves the Grok page. Warp's request code (`api_keys_for_request`) is the natural place to hand keys to Moloch once Moloch has providers — point it at `ApiProviderKeys` then.
 - **Plain settings:** `app/src/settings/ai.rs`, inside `define_settings_group!(AISettings, …)`. Example entry:
 
   ```rust
@@ -54,7 +49,7 @@ app afterwards.
    - `models`: curated, in order of preference;
    - `live_free_models_url`: optional, for providers whose free roster rotates.
 
-   Current providers: Z.ai, Groq, Gemini, OpenRouter (live free list) and Venice (paid).
+   Current providers: OpenAI, Anthropic (its OpenAI-compatible endpoint, which returns no thinking), Google Gemini, Z.ai, Groq, OpenRouter (live free list) and Venice.
 2. **Model ids** look like `api/<provider>/<model>`, and the model part may contain `/`. Use `api_model_parts()` and `model_id_for()` to split and build them.
 3. **Keys:** the singleton `ApiProviderKeys` loads them from the keychain at startup. `set_key()` emits `Changed` and writes back deferred.
    - It's registered in `app/src/lib.rs` **before** `HarnessAvailabilityModel`, which reads it.
@@ -87,6 +82,12 @@ app afterwards.
    - There is no step limit (for Ollama either): a turn runs until the model answers or the user stops it.
    - `TurnUsage` token counts are the last request's and `context_window` is the model's real window (together they drive the context meter); `cost_usd` adds up every request in the turn at the model's `price_per_million` (see `model_price`).
 8. **`LocalHarnessKind::Api`** is defined in `app/src/ai/agent_sdk/driver/harness/mod.rs` and serialised as `"api"` in `local_harness_threads.json`. Every exhaustive match on the kind needs an arm, including `view.rs` and `terminal/view/use_agent_footer/mod.rs`.
+9. **Deleting a turn:** right-click an AI block (or open its "…" menu) and choose Delete, or ⌘+drag the block left. This is `TerminalAction::DeleteAIBlockTurn`, handled by `delete_ai_block_turn` in `terminal/view.rs`.
+   - It deletes the whole turn: the user's prompt plus every exchange up to the next prompt (the follow-ups that carry tool results). A single step can't go, because it would leave a tool call without its result.
+   - `AIConversation::remove_turn` removes the turn from the saved conversation, sharing its removal code with rewind (`remove_root_exchanges`). The blocks leave the screen through `remove_ai_blocks_for_exchanges`.
+   - `LocalHarnessKind::forget_turn` makes the model forget it. Cloud models drop the turn from the saved history (memory and disk), and Ollama from its chat history. Both use `remove_turn_from_messages`, which finds the user message carrying the prompt (counting back from the newest when a prompt repeats) and removes everything up to the next user message.
+   - Claude and Codex keep their sessions in their own CLIs, and so does Ollama's `/api/generate` token context, so there the turn is only hidden.
+   - Delete isn't offered, and does nothing, while the conversation is running.
 
 ## 3. Recipes
 **Add an OpenAI-compatible provider:**

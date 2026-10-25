@@ -17229,6 +17229,19 @@ impl TerminalView {
                             );
                         }
 
+                        if !BlocklistAIHistoryModel::as_ref(ctx)
+                            .conversation(&ai_metadata.conversation_id)
+                            .is_some_and(|conversation| conversation.status().is_in_progress())
+                        {
+                            items.push(
+                                MenuItemFields::new("Delete")
+                                    .with_on_select_action(TerminalAction::DeleteAIBlockTurn {
+                                        ai_block_view_id: *rich_content_view_id,
+                                    })
+                                    .into_item(),
+                            );
+                        }
+
                         let debugging_items = self.create_copy_debugging_menu_item(
                             ai_metadata.exchange_id,
                             ai_metadata.conversation_id,
@@ -26002,6 +26015,53 @@ impl TerminalView {
         );
     }
 
+    /// Deletes the agent turn an AI block belongs to: its blocks leave the
+    /// screen, the turn leaves the saved conversation, and a local harness
+    /// that keeps its own history drops it too, so the model forgets it.
+    fn delete_ai_block_turn(&mut self, ai_block_view_id: EntityId, ctx: &mut ViewContext<Self>) {
+        let Some((conversation_id, exchange_id)) =
+            self.rich_content_views.iter().find_map(|rich_content| {
+                let ai_metadata = rich_content.ai_block_metadata()?;
+                (ai_metadata.ai_block_handle.id() == ai_block_view_id)
+                    .then_some((ai_metadata.conversation_id, ai_metadata.exchange_id))
+            })
+        else {
+            return;
+        };
+
+        // A running turn is still writing to the conversation and its history.
+        if BlocklistAIHistoryModel::as_ref(ctx)
+            .conversation(&conversation_id)
+            .is_some_and(|conversation| conversation.status().is_in_progress())
+        {
+            return;
+        }
+
+        let removed = BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
+            history_model.remove_conversation_turn(conversation_id, exchange_id, ctx)
+        });
+        let turn = match removed {
+            Ok(turn) => turn,
+            Err(e) => {
+                log::warn!("Failed to delete a turn from conversation {conversation_id}: {e}");
+                return;
+            }
+        };
+        self.remove_ai_blocks_for_exchanges(&conversation_id, &turn.exchange_ids, ctx);
+
+        // Clear stale action results that reference the deleted tool calls.
+        self.ai_controller.update(ctx, |controller, ctx| {
+            controller.clear_finished_action_results(conversation_id, ctx);
+        });
+
+        if let (Some((harness, session_id)), Some(query)) = (
+            local_harness_threads::lookup(conversation_id),
+            turn.query.as_deref(),
+        ) {
+            harness.forget_turn(&session_id, query, turn.later_turns_with_same_query);
+        }
+    }
+
     fn handle_input_context_menu_action(
         &mut self,
         action: &InputContextMenuAction,
@@ -27348,6 +27408,7 @@ impl TypedActionView for TerminalView {
             | OpenWorkflowModalForBlock(_)
             | DeleteBlockAtIndex(_)
             | ToggleAIBlockUsageDetails { .. }
+            | DeleteAIBlockTurn { .. }
             | OpenWorkflowModalWithCloudWorkflow(_)
             | OpenShareSessionModal { .. }
             | OpenSharedSessionViewerRoleMenu
@@ -27510,6 +27571,9 @@ impl TypedActionView for TerminalView {
                         block.handle_action(&AIBlockAction::ToggleIsUsageFooterExpanded, ctx);
                     });
                 }
+            }
+            DeleteAIBlockTurn { ai_block_view_id } => {
+                self.delete_ai_block_turn(*ai_block_view_id, ctx)
             }
             RewindAIConversation {
                 ai_block_view_id,

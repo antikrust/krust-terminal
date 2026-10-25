@@ -465,6 +465,17 @@ impl TerminalView {
             );
         }
 
+        if !BlocklistAIHistoryModel::as_ref(ctx)
+            .conversation(&ai_conversation_id)
+            .is_some_and(|conversation| conversation.status().is_in_progress())
+        {
+            menu_items.push(
+                MenuItemFields::new("Delete")
+                    .with_on_select_action(TerminalAction::DeleteAIBlockTurn { ai_block_view_id })
+                    .into_item(),
+            );
+        }
+
         // Usage details moved here from the response-footer credits pill:
         // same expandable panel (tokens, context window, tool calls).
         menu_items.push(

@@ -3,7 +3,8 @@ use serde_json::{json, Value};
 
 use super::{
     api_curl_args, assistant_tool_call_message, clip_for_model, compact_old_tool_results,
-    error_from_body, ApiChatAccumulator, ApiToolCall, API_KEY_ENV, DROPPED_RESULT_PREFIX,
+    error_from_body, remove_turn_from_messages, ApiChatAccumulator, ApiToolCall, API_KEY_ENV,
+    DROPPED_RESULT_PREFIX,
 };
 use crate::ai::api_providers::provider;
 
@@ -316,4 +317,35 @@ fn tool_output_over_budget_is_dropped_but_the_latest_stays() {
         .unwrap_or("")
         .starts_with(DROPPED_RESULT_PREFIX));
     assert_eq!(messages[1]["content"], big);
+}
+
+#[test]
+fn a_deleted_turn_leaves_the_history_with_its_tool_calls() {
+    let user = |prompt: &str| {
+        let content = format!("Current working directory: /x\n\nUser request:\n{prompt}");
+        json!({ "role": "user", "content": content })
+    };
+    let mut messages = vec![
+        json!({ "role": "system", "content": "s" }),
+        user("continue"),
+        json!({ "role": "assistant", "content": "first" }),
+        user("read it"),
+        json!({ "role": "assistant", "tool_calls": [{ "id": "a" }] }),
+        json!({ "role": "tool", "tool_call_id": "a", "content": "file" }),
+        json!({ "role": "assistant", "content": "done" }),
+        user("continue"),
+        json!({ "role": "assistant", "content": "second" }),
+    ];
+
+    assert!(remove_turn_from_messages(&mut messages, "read it", 0));
+    assert_eq!(messages.len(), 5);
+    assert!(messages.iter().all(|message| message["role"] != "tool"));
+
+    // A repeated prompt is picked counting back from the newest: with one
+    // later "continue", it's the first one that goes.
+    assert!(remove_turn_from_messages(&mut messages, "continue", 1));
+    assert_eq!(messages.len(), 3);
+    assert_eq!(messages[2]["content"], "second");
+
+    assert!(!remove_turn_from_messages(&mut messages, "never asked", 0));
 }
