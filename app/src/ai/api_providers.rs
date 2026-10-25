@@ -58,6 +58,12 @@ pub struct ApiProvider {
 pub struct ApiModel {
     pub id: &'static str,
     pub display_name: &'static str,
+    /// USD per million (input, output) tokens, for adding up what a turn
+    /// cost. Free models are `(0.0, 0.0)`.
+    pub price_per_million: (f64, f64),
+    /// The model's context window in tokens: what the context meter measures
+    /// against, and what sizes the runner's file reads.
+    pub context_window: u64,
 }
 
 pub const PROVIDERS: &[ApiProvider] = &[
@@ -72,10 +78,14 @@ pub const PROVIDERS: &[ApiProvider] = &[
             ApiModel {
                 id: "glm-4.7-flash",
                 display_name: "GLM-4.7 Flash",
+                price_per_million: (0.0, 0.0),
+                context_window: 200_000,
             },
             ApiModel {
                 id: "glm-4.5-flash",
                 display_name: "GLM-4.5 Flash",
+                price_per_million: (0.0, 0.0),
+                context_window: 128_000,
             },
         ],
         live_free_models_url: None,
@@ -90,18 +100,20 @@ pub const PROVIDERS: &[ApiProvider] = &[
             ApiModel {
                 id: "openai/gpt-oss-120b",
                 display_name: "GPT-OSS 120B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
             },
             ApiModel {
-                id: "llama-3.3-70b-versatile",
-                display_name: "Llama 3.3 70B",
+                id: "qwen/qwen3.8-27b",
+                display_name: "Qwen 3.8 27B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
             },
             ApiModel {
                 id: "openai/gpt-oss-20b",
                 display_name: "GPT-OSS 20B",
-            },
-            ApiModel {
-                id: "llama-3.1-8b-instant",
-                display_name: "Llama 3.1 8B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
             },
         ],
         live_free_models_url: None,
@@ -119,10 +131,14 @@ pub const PROVIDERS: &[ApiProvider] = &[
             ApiModel {
                 id: "gemini-flash-latest",
                 display_name: "Gemini Flash",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_048_576,
             },
             ApiModel {
                 id: "gemini-flash-lite-latest",
                 display_name: "Gemini Flash-Lite",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_048_576,
             },
         ],
         live_free_models_url: None,
@@ -142,22 +158,32 @@ pub const PROVIDERS: &[ApiProvider] = &[
             ApiModel {
                 id: "nvidia/nemotron-3-super-120b-a12b:free",
                 display_name: "Nemotron 3 Super 120B (NVIDIA)",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_000_000,
             },
             ApiModel {
                 id: "google/gemma-4-31b-it:free",
                 display_name: "Gemma 4 31B (Google)",
+                price_per_million: (0.0, 0.0),
+                context_window: 262_144,
             },
             ApiModel {
                 id: "nvidia/nemotron-3-ultra-550b-a55b:free",
                 display_name: "Nemotron 3 Ultra 550B (NVIDIA)",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_000_000,
             },
             ApiModel {
                 id: "poolside/laguna-s-2.1:free",
                 display_name: "Laguna S 2.1 (Poolside)",
+                price_per_million: (0.0, 0.0),
+                context_window: 1_048_576,
             },
             ApiModel {
                 id: "cohere/north-mini-code:free",
                 display_name: "North Mini Code (Cohere)",
+                price_per_million: (0.0, 0.0),
+                context_window: 256_000,
             },
         ],
         live_free_models_url: Some("https://openrouter.ai/api/v1/models?supported_parameters=tools"),
@@ -176,22 +202,32 @@ pub const PROVIDERS: &[ApiProvider] = &[
             ApiModel {
                 id: "zai-org-glm-5-2",
                 display_name: "GLM 5.2",
+                price_per_million: (1.40, 4.40),
+                context_window: 1_000_000,
             },
             ApiModel {
                 id: "deepseek-v4-flash-0731",
                 display_name: "DeepSeek V4 Flash",
+                price_per_million: (0.13, 0.26),
+                context_window: 1_000_000,
             },
             ApiModel {
                 id: "openai-gpt-oss-120b",
                 display_name: "GPT-OSS 120B",
+                price_per_million: (0.07, 0.30),
+                context_window: 128_000,
             },
             ApiModel {
                 id: "qwen3-6-35b-a3b",
                 display_name: "Qwen 3.6 35B",
+                price_per_million: (0.10, 1.00),
+                context_window: 256_000,
             },
             ApiModel {
                 id: "venice-uncensored-1-2",
                 display_name: "Venice Uncensored 1.2",
+                price_per_million: (0.20, 0.90),
+                context_window: 128_000,
             },
         ],
         live_free_models_url: None,
@@ -214,6 +250,37 @@ pub fn api_model_parts(model_id: &str) -> Option<(&'static ApiProvider, &str)> {
 
 pub fn model_id_for(provider: &ApiProvider, model: &str) -> String {
     format!("{API_MODEL_ID_PREFIX}{}/{model}", provider.id)
+}
+
+/// The name `model` is listed under on `provider` — the model's own id when
+/// it isn't listed (a live-listed free model, say).
+pub fn model_display_name(provider: &ApiProvider, model: &str) -> String {
+    provider
+        .models
+        .iter()
+        .find(|listed| listed.id == model)
+        .map_or_else(|| model.to_string(), |listed| listed.display_name.to_string())
+}
+
+/// `model`'s context window in tokens, when it's listed.
+pub fn model_context_window(provider: &ApiProvider, model: &str) -> Option<u64> {
+    provider
+        .models
+        .iter()
+        .find(|listed| listed.id == model)
+        .map(|listed| listed.context_window)
+}
+
+/// USD per million (input, output) tokens for `model` on `provider`: its
+/// listed price, or free for an OpenRouter `:free` model from the live list.
+/// `None` when the price isn't known, so no cost is claimed.
+pub fn model_price(provider: &ApiProvider, model: &str) -> Option<(f64, f64)> {
+    provider
+        .models
+        .iter()
+        .find(|listed| listed.id == model)
+        .map(|listed| listed.price_per_million)
+        .or_else(|| model.ends_with(":free").then_some((0.0, 0.0)))
 }
 
 /// A model read from a provider's live list: `(id, display name)`.

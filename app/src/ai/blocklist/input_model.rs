@@ -82,6 +82,11 @@ pub enum InputTypeAutoDetectionSource {
     AtContextMenuInsert,
     /// Runbook mode sent a lone markdown path to the agent as the runbook to run.
     RunbookPath,
+    /// In an agent conversation, input stays with the agent unless it starts
+    /// with a directory change (`cd`, `pushd`, `popd`). Shell commands are rare
+    /// there, and misreading a prompt as one — "continue" is a shell keyword —
+    /// ran it in the shell instead of sending it to the agent.
+    AgentConversationDefault,
 }
 
 impl From<InputClassifierDecisionSource> for InputTypeAutoDetectionSource {
@@ -729,6 +734,11 @@ impl BlocklistAIInputModel {
 
         let is_udi_enabled = InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
 
+        // An agent conversation is on screen: input there goes to the agent
+        // (see `InputTypeAutoDetectionSource::AgentConversationDefault`).
+        let in_agent_conversation =
+            FeatureFlag::AgentView.is_enabled() && self.is_conversation_active(ctx);
+
         // Determine if the input is a follow-up to an AI block.
         let is_agent_follow_up = {
             let model = self.model.lock();
@@ -744,6 +754,15 @@ impl BlocklistAIInputModel {
         let handle = ctx
             .spawn(
                 async move {
+                    if in_agent_conversation
+                        && !matches!(first_token_str.as_str(), "cd" | "pushd" | "popd")
+                    {
+                        return (
+                            InputType::AI,
+                            InputTypeAutoDetectionSource::AgentConversationDefault,
+                        );
+                    }
+
                     // First check if the token is a natural language word, if current input type is AI
                     if matches!(current_input_type, InputType::AI)
                         && is_one_off_natural_language_word(first_token_str.to_lowercase().as_str())

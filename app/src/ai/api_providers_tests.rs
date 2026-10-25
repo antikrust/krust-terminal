@@ -1,4 +1,6 @@
-use super::{api_model_parts, model_id_for, parse_live_free_models, provider, PROVIDERS};
+use super::{
+    api_model_parts, model_id_for, model_price, parse_live_free_models, provider, PROVIDERS,
+};
 
 #[test]
 fn model_ids_round_trip_for_every_listed_model() {
@@ -78,4 +80,17 @@ fn live_free_list_keeps_free_models_curated_first() {
     assert_eq!(models[2].1, "Acme: Big Model");
     // An unreadable body yields nothing, so the curated list stays.
     assert!(parse_live_free_models("not json", openrouter).is_empty());
+}
+
+#[test]
+fn prices_cover_listed_models_and_free_live_ones() {
+    let venice = provider("venice").expect("Venice is a provider");
+    assert_eq!(model_price(venice, "deepseek-v4-flash-0731"), Some((0.13, 0.26)));
+    let zai = provider("zai").expect("Z.ai is a provider");
+    assert_eq!(model_price(zai, "glm-4.7-flash"), Some((0.0, 0.0)));
+    // A free model only in OpenRouter's live list is free; anything unknown
+    // claims no price.
+    let openrouter = provider("openrouter").expect("OpenRouter is a provider");
+    assert_eq!(model_price(openrouter, "acme/new-model:free"), Some((0.0, 0.0)));
+    assert_eq!(model_price(venice, "some-unlisted-model"), None);
 }

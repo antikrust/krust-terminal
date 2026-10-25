@@ -25,11 +25,13 @@ use super::claude_stream_exec::{
     run_jsonl_stream_cancellable,
 };
 use super::ollama_stream_exec::{
-    builtin_local_tool_specs, dispatch_builtin_tool, emit_failed_turn, emit_step_limit_reached,
+    builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call, McpToolCaller,
-    McpToolSpec, MAX_TOOL_CALLS_PER_TURN,
+    McpToolSpec,
 };
-use crate::ai::api_providers::{api_model_parts, ApiProvider};
+use crate::ai::api_providers::{
+    api_model_parts, model_context_window, model_display_name, model_price, ApiProvider,
+};
 
 /// The environment variable curl reads the key from.
 pub const API_KEY_ENV: &str = "KRUST_API_KEY";
@@ -38,10 +40,50 @@ pub const API_KEY_ENV: &str = "KRUST_API_KEY";
 /// `format!` because the `{{…}}` is curl's syntax, not Rust's.
 const AUTHORIZATION_HEADER: &str = "Authorization: Bearer {{KRUST_API_KEY}}";
 
-/// How much of one tool result the model is sent. These models have large
-/// windows, but free tiers count tokens per day, so a 60 KB file dump would
-/// spend a day's allowance in a few calls. The head and tail survive.
-const MAX_TOOL_RESULT_CHARS: usize = 24_000;
+/// The window assumed for a model whose context window isn't listed.
+const DEFAULT_CONTEXT_WINDOW: u64 = 128_000;
+
+/// The least and the most one `read_file` call returns to a cloud model,
+/// whatever its window.
+const MIN_READ_CHARS: usize = 48_000;
+const MAX_READ_CHARS: usize = 1_000_000;
+
+/// How much one `read_file` call returns to a model with `context_window`
+/// tokens: about a quarter of the window. A token is roughly four characters,
+/// so a quarter of N tokens is about N characters — ~128 KB (3,000 lines of
+/// code) on a 128K model, ~1 MB on a 1M one — and most files come back whole.
+/// Local models read far smaller windows (see
+/// `ollama_stream_exec::READ_WINDOW_BYTES`).
+fn read_window_chars(context_window: u64) -> usize {
+    (context_window as usize).clamp(MIN_READ_CHARS, MAX_READ_CHARS)
+}
+
+/// How much of one tool result the model is sent: a whole read window and
+/// its header. Anything bigger (a huge command dump) keeps head and tail.
+fn max_tool_result_chars(context_window: u64) -> usize {
+    read_window_chars(context_window) + 2_000
+}
+
+/// How much tool output the conversation carries in full: about half the
+/// window (half of N tokens is about 2N characters), leaving the rest for the
+/// conversation itself and the reply.
+fn tool_output_budget_chars(context_window: u64) -> usize {
+    context_window as usize * 2
+}
+
+/// At most this many of the latest long tool results go to the model in full.
+/// Every request resends the whole conversation and is billed for it, so older
+/// long results — file contents read twenty calls ago — are swapped for a
+/// one-line note (see [`compact_old_tool_results`]).
+const KEEP_RECENT_TOOL_RESULTS: usize = 6;
+
+/// A tool result shorter than this is kept whatever its age: the note that
+/// would replace it saves next to nothing.
+const STALE_RESULT_MIN_CHARS: usize = 2_000;
+
+/// How a dropped result's note begins — also how one is recognised, so it is
+/// never replaced twice.
+const DROPPED_RESULT_PREFIX: &str = "[An earlier tool result";
 
 /// curl arguments for one streamed chat-completions request to `provider`.
 pub fn api_curl_args(provider: &ApiProvider) -> Vec<String> {
@@ -70,9 +112,12 @@ fn new_api_command(provider: &ApiProvider, api_key: &str, working_dir: &Path, pa
     command
 }
 
-/// Per-session message history, so follow-ups keep their context. Kept for
-/// the life of the app, like the Ollama runner's.
-type ApiChatHistories = HashMap<Uuid, (String, Vec<Value>)>;
+/// Per-session message history, so follow-ups keep their context. Held in
+/// memory and saved to disk after every step (see [`save_history`]), so a
+/// conversation picks up where it left off after an app restart, or after a
+/// turn the user stopped. Not tied to one model: the chat-completions shape is
+/// the same for every provider.
+type ApiChatHistories = HashMap<Uuid, Vec<Value>>;
 
 fn chat_histories() -> &'static Mutex<ApiChatHistories> {
     static HISTORIES: OnceLock<Mutex<ApiChatHistories>> = OnceLock::new();
@@ -92,6 +137,9 @@ impl Drop for SessionGuard {
 /// Runs one turn against a cloud model. `first_command` is the curl command
 /// for the first request (built by the caller with [`api_curl_args`] and the
 /// key in [`API_KEY_ENV`]); later requests in the turn build their own.
+///
+/// There is no step limit: the turn runs until the model answers or the user
+/// stops it.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_api_stream(
     first_command: Command,
@@ -128,15 +176,26 @@ pub async fn run_api_stream(
         .collect();
     let tool_defs: Vec<Value> = tools.iter().map(McpToolSpec::to_ollama_tool_json).collect();
 
-    let mut messages = chat_histories()
-        .lock()
-        .ok()
-        .and_then(|histories| histories.get(session_id).cloned())
-        .filter(|(saved_model, _)| saved_model == model_id)
-        .map(|(_, messages)| messages)
-        .unwrap_or_else(|| {
-            vec![json!({ "role": "system", "content": ollama_tool_system_prompt(&tools) })]
-        });
+    // Rebuilt every turn, so its opening line names the model now in use —
+    // the conversation may have started on another one.
+    let system = json!({
+        "role": "system",
+        "content": ollama_tool_system_prompt(
+            &tools,
+            &format!(
+                "{} ({model}) from {}",
+                model_display_name(provider, model),
+                provider.display_name
+            ),
+        ),
+    });
+    let mut messages = load_history(session_id).unwrap_or_default();
+    match messages.first_mut() {
+        Some(first) if first.get("role").and_then(Value::as_str) == Some("system") => {
+            *first = system;
+        }
+        _ => messages.insert(0, system),
+    }
     messages.push(json!({
         "role": "user",
         "content": format!(
@@ -145,8 +204,18 @@ pub async fn run_api_stream(
         ),
     }));
 
+    let price = model_price(provider, model);
+    let listed_window = model_context_window(provider, model);
+    let context_window = listed_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
+    // What every request of this turn cost, at the model's listed price.
+    let mut turn_cost_usd = 0.0;
     let mut next_command = Some(first_command);
-    for call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
+    loop {
+        compact_old_tool_results(
+            &mut messages,
+            KEEP_RECENT_TOOL_RESULTS,
+            tool_output_budget_chars(context_window),
+        );
         let request = json!({
             "model": model,
             "messages": messages,
@@ -197,10 +266,19 @@ pub async fn run_api_stream(
                 return Ok(status);
             }
         };
+        if let Some((input_price, output_price)) = price {
+            turn_cost_usd += (response.prompt_tokens as f64 * input_price
+                + response.completion_tokens as f64 * output_price)
+                / 1_000_000.0;
+        }
+        // Token counts are the last request's — they say how full the
+        // context is — while the cost covers every request in the turn.
         let usage = TurnUsage {
             input_tokens: response.prompt_tokens,
             output_tokens: response.completion_tokens,
             model_id: Some(model_id.to_string()),
+            cost_usd: price.map(|_| turn_cost_usd),
+            context_window: listed_window,
             ..Default::default()
         };
 
@@ -215,6 +293,7 @@ pub async fn run_api_stream(
                     id: new_wire_call_id(),
                     name: call.name,
                     arguments: Ok(call.arguments),
+                    extra_content: None,
                 }],
             )
         } else {
@@ -224,7 +303,7 @@ pub async fn run_api_stream(
                 });
             }
             messages.push(json!({ "role": "assistant", "content": response.content }));
-            save_history(session_id, model_id, messages);
+            save_history(session_id, &messages);
             on_event(TurnEvent::TurnCompleted {
                 usage: Some(usage),
                 is_error: false,
@@ -232,12 +311,6 @@ pub async fn run_api_stream(
             });
             return Ok(status);
         };
-
-        if call_index == MAX_TOOL_CALLS_PER_TURN {
-            save_history(session_id, model_id, messages);
-            emit_step_limit_reached(&mut on_event);
-            return Ok(status);
-        }
 
         // What the model said before calling its tools ("Let me check the
         // file…") — shown, as the CLI harnesses show theirs.
@@ -260,7 +333,14 @@ pub async fn run_api_stream(
             let result = match &call.arguments {
                 Err(error) => Err(error.clone()),
                 Ok(arguments) if is_builtin_local_tool(&call.name) => {
-                    dispatch_builtin_tool(&call.name, arguments, working_dir, path).await
+                    dispatch_builtin_tool_with_read_window(
+                        &call.name,
+                        arguments,
+                        working_dir,
+                        path,
+                        read_window_chars(context_window),
+                    )
+                    .await
                 }
                 Ok(arguments) => match &tool_caller {
                     Some(tool_caller) => tool_caller.call(&call.name, arguments.clone()).await,
@@ -286,17 +366,86 @@ pub async fn run_api_stream(
             messages.push(json!({
                 "role": "tool",
                 "tool_call_id": call.id,
-                "content": clip_for_model(&tool_content),
+                "content": clip_for_model(&tool_content, max_tool_result_chars(context_window)),
             }));
         }
+        // Every call has its result now, so the history is a valid
+        // conversation to resume from — keep it, in case the turn ends here.
+        save_history(session_id, &messages);
     }
-
-    unreachable!("the bounded tool-call loop always returns")
 }
 
-fn save_history(session_id: &Uuid, model_id: &str, messages: Vec<Value>) {
+/// Swaps the content of older long tool results for a one-line note, keeping
+/// in full only the `keep_recent` latest that fit in `budget_chars` together
+/// (the very latest always stays). Each request resends the whole
+/// conversation, so a file read early in a long turn was otherwise paid for
+/// again on every call after it — and a few whole-file reads on a small model
+/// would overflow its window. The result's message stays (its `tool_call_id`
+/// must still answer the assistant's call); only its text shrinks. The model
+/// can run the tool again if it needs the output back.
+fn compact_old_tool_results(messages: &mut [Value], keep_recent: usize, budget_chars: usize) {
+    let mut seen = 0;
+    let mut kept_chars = 0;
+    for message in messages.iter_mut().rev() {
+        if message.get("role").and_then(Value::as_str) != Some("tool") {
+            continue;
+        }
+        seen += 1;
+        let Some(content) = message.get("content").and_then(Value::as_str) else {
+            continue;
+        };
+        if content.starts_with(DROPPED_RESULT_PREFIX) {
+            continue;
+        }
+        let length = content.chars().count();
+        let fits = seen == 1 || (seen <= keep_recent && kept_chars + length <= budget_chars);
+        if fits || length < STALE_RESULT_MIN_CHARS {
+            kept_chars += length;
+            continue;
+        }
+        message["content"] = Value::String(format!(
+            "{DROPPED_RESULT_PREFIX} ({length} characters) was dropped to keep the conversation \
+             small. Run the tool again if you need it.]"
+        ));
+    }
+}
+
+/// Where a session's history is saved between app runs.
+fn history_path(session_id: &Uuid) -> std::path::PathBuf {
+    krust_core::paths::state_dir()
+        .join("api-chat-histories")
+        .join(format!("{session_id}.json"))
+}
+
+/// A session's history: the in-memory copy, else the one saved to disk.
+fn load_history(session_id: &Uuid) -> Option<Vec<Value>> {
+    if let Some(messages) = chat_histories()
+        .lock()
+        .ok()
+        .and_then(|histories| histories.get(session_id).cloned())
+    {
+        return Some(messages);
+    }
+    let saved = std::fs::read_to_string(history_path(session_id)).ok()?;
+    serde_json::from_str(&saved).ok()
+}
+
+/// Keeps a session's history in memory and on disk. Only ever called when
+/// every tool call in it has its result, so what is saved can be resumed.
+fn save_history(session_id: &Uuid, messages: &[Value]) {
     if let Ok(mut histories) = chat_histories().lock() {
-        histories.insert(*session_id, (model_id.to_string(), messages));
+        histories.insert(*session_id, messages.to_vec());
+    }
+    let path = history_path(session_id);
+    let written = path
+        .parent()
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|()| {
+            let json = serde_json::to_string(messages).map_err(std::io::Error::other)?;
+            std::fs::write(&path, json)
+        });
+    if let Err(error) = written {
+        log::warn!("api_stream: could not save the conversation history: {error}");
     }
 }
 
@@ -334,28 +483,35 @@ fn assistant_tool_call_message(content: &str, tool_calls: &[ApiToolCall]) -> Val
         "content": (!content.is_empty()).then_some(content),
         "tool_calls": tool_calls
             .iter()
-            .map(|call| json!({
-                "id": call.id,
-                "type": "function",
-                "function": {
-                    "name": call.name,
-                    "arguments": match &call.arguments {
-                        Ok(arguments) => arguments.to_string(),
-                        Err(_) => "{}".to_string(),
+            .map(|call| {
+                let mut wire = json!({
+                    "id": call.id,
+                    "type": "function",
+                    "function": {
+                        "name": call.name,
+                        "arguments": match &call.arguments {
+                            Ok(arguments) => arguments.to_string(),
+                            Err(_) => "{}".to_string(),
+                        },
                     },
-                },
-            }))
+                });
+                // Sent back exactly as it came (see `ApiToolCall::extra_content`).
+                if let Some(extra) = &call.extra_content {
+                    wire["extra_content"] = extra.clone();
+                }
+                wire
+            })
             .collect::<Vec<_>>(),
     })
 }
 
-/// The head and tail of a tool result too long to send whole.
-fn clip_for_model(text: &str) -> String {
+/// The head and tail of a tool result longer than `limit` characters.
+fn clip_for_model(text: &str, limit: usize) -> String {
     let chars: Vec<char> = text.chars().collect();
-    if chars.len() <= MAX_TOOL_RESULT_CHARS {
+    if chars.len() <= limit {
         return text.to_string();
     }
-    let half = MAX_TOOL_RESULT_CHARS / 2;
+    let half = limit / 2;
     format!(
         "{}\n… [{} characters omitted — read the rest in parts, e.g. read_file with \
          offset/limit] …\n{}",
@@ -377,6 +533,10 @@ struct ApiToolCall {
     /// The parsed arguments, or why they couldn't be parsed — reported to the
     /// model as the tool's error so it can correct itself.
     arguments: Result<Value, String>,
+    /// Provider data attached to the call that must go back with it — Gemini
+    /// 3's `{"google": {"thought_signature": …}}`, without which its next
+    /// request fails ("Function call is missing a thought_signature").
+    extra_content: Option<Value>,
 }
 
 struct ApiChatResult {
@@ -393,6 +553,7 @@ struct PartialToolCall {
     id: String,
     name: String,
     arguments: String,
+    extra_content: Option<Value>,
 }
 
 /// Folds one response's server-sent events into the text, the reasoning
@@ -442,6 +603,7 @@ struct ToolCallDelta {
     index: Option<usize>,
     id: Option<String>,
     function: Option<FunctionDelta>,
+    extra_content: Option<Value>,
 }
 
 #[derive(Deserialize)]
@@ -529,6 +691,9 @@ impl ApiChatAccumulator {
         if let Some(id) = fragment.id.filter(|id| !id.is_empty()) {
             call.id = id;
         }
+        if let Some(extra) = fragment.extra_content.filter(|extra| !extra.is_null()) {
+            call.extra_content = Some(extra);
+        }
         let Some(function) = fragment.function else {
             return;
         };
@@ -599,6 +764,7 @@ impl ApiChatAccumulator {
                     },
                     name: call.name,
                     arguments,
+                    extra_content: call.extra_content,
                 }
             })
             .collect();

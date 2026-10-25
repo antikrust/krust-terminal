@@ -42,12 +42,6 @@ pub const CODELLAMA_OLLAMA_MODEL_ID: &str = "ollama/codellama:13b";
 #[allow(dead_code)]
 pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
-/// How many tool calls one turn may make before the harness stops it. A real
-/// task (read a few files, run a build, fix, re-run) needs well more than a
-/// handful; the old limit of 8 ended useful work mid-stream with a red error.
-/// This is a safety rail against a runaway loop, not a work budget — hitting
-/// it is a graceful stop the user can continue from, not a failure.
-pub(crate) const MAX_TOOL_CALLS_PER_TURN: usize = 40;
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
 /// The context window asked for on the tool-calling loop. Left unset, a
 /// model runs at its own default — 4096 tokens for glm-4.7-flash — and one
@@ -170,16 +164,22 @@ const WEB_SEARCH_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_1
     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 /// Runs a web search (curl, to stay off the Tokio reactor like the rest of
-/// this harness), trying DuckDuckGo and falling back to Bing when it's blocked
-/// or empty, reusing the built-in web-search server's parsers. `None` only
-/// when both engines are blocked/unreachable — callers then show a transient
-/// failure rather than a misleading "no results".
+/// this harness), trying DuckDuckGo and falling back to Brave when it's
+/// blocked or empty, reusing the built-in web-search server's parsers and its
+/// relevance filter. `None` only when both engines are blocked/unreachable —
+/// callers then show a transient failure rather than a misleading "no
+/// results".
 async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
     use crate::ai::mcp::web_search_server::{
-        format_results_as_text, parse_bing_html, parse_duckduckgo_html,
+        format_results_as_text, keep_relevant, parse_brave_html, parse_duckduckgo_html,
+    };
+    let relevant = |results| {
+        let mut results = keep_relevant(query, results);
+        results.truncate(5);
+        results
     };
 
-    // DuckDuckGo's HTML endpoint only answers POST; Bing's answers GET.
+    // DuckDuckGo's HTML endpoint only answers POST; Brave's answers GET.
     let ddg = curl_fetch(
         "https://html.duckduckgo.com/html/",
         &[("q", query)],
@@ -188,21 +188,21 @@ async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
     )
     .await;
     if let Some(html) = &ddg {
-        let results = parse_duckduckgo_html(html, 5);
+        let results = relevant(parse_duckduckgo_html(html, 10));
         if !results.is_empty() {
             return Some(format_results_as_text(query, &results));
         }
     }
 
-    let bing = curl_fetch(
-        "https://www.bing.com/search",
+    let brave = curl_fetch(
+        "https://search.brave.com/search",
         &[("q", query)],
         CurlMethod::Get,
         path,
     )
     .await;
-    if let Some(html) = &bing {
-        let results = parse_bing_html(html, 5);
+    if let Some(html) = &brave {
+        let results = relevant(parse_brave_html(html, 10));
         if !results.is_empty() {
             return Some(format_results_as_text(query, &results));
         }
@@ -212,10 +212,10 @@ async fn fetch_web_search(query: &str, path: &str) -> Option<String> {
     // challenge (or no page at all) is "blocked" — report that as a failure so
     // the model retries instead of treating it as a factual empty result.
     let ddg_blocked = ddg.as_deref().is_none_or(|html| html.contains("anomaly.js"));
-    let bing_blocked = bing
+    let brave_blocked = brave
         .as_deref()
-        .is_none_or(|html| html.contains("sorry your network") || html.contains("/sorry/"));
-    if ddg_blocked && bing_blocked {
+        .is_none_or(|html| html.to_lowercase().contains("captcha"));
+    if ddg_blocked && brave_blocked {
         None
     } else {
         Some(format_results_as_text(query, &[]))
@@ -247,6 +247,8 @@ async fn curl_fetch(
         "20",
         "--user-agent",
         WEB_SEARCH_USER_AGENT,
+        "--header",
+        "Accept-Language: en-GB,en;q=0.9",
     ]);
     if matches!(method, CurlMethod::Get) {
         command.arg("--get");
@@ -404,14 +406,18 @@ fn call_tool_result_to_text(result: &rmcp::model::CallToolResult) -> String {
 /// Kept separate from [`OLLAMA_SYSTEM_PROMPT`] because native tool-calling
 /// models are prompted through the `/api/chat` `tools` field instead of the
 /// constrained shell/text JSON contract.
-pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec]) -> String {
+///
+/// `model_description` names the model running the turn (say, "GLM-4.7 Flash
+/// (glm-4.7-flash) from Z.ai"): models don't know their own name, and told
+/// only that they were "the local coding agent", some claimed to be Claude.
+pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec], model_description: &str) -> String {
     let tool_names = tools
         .iter()
         .map(|tool| tool.name.as_str())
         .collect::<Vec<_>>()
         .join(", ");
     format!(
-        "You are the local coding agent inside krust terminal.\n\
+        "You are {model_description}, the coding agent inside krust terminal.\n\
          You have access to these tools: {tool_names}. Use them to actually inspect and change \
          the user's machine instead of guessing:\n\
          - run_code executes a short program (bash, python, javascript, or ruby) and returns its \
@@ -585,6 +591,23 @@ pub(crate) async fn dispatch_builtin_tool(
     working_dir: &Path,
     path: &str,
 ) -> Result<String, String> {
+    dispatch_builtin_tool_with_read_window(name, arguments, working_dir, path, READ_WINDOW_BYTES)
+        .await
+}
+
+/// As [`dispatch_builtin_tool`], with `read_file` windows of up to
+/// `read_window_bytes`. Local models get [`READ_WINDOW_BYTES`] (small enough
+/// that a read never goes to `read_in_parts`); cloud models, whose windows
+/// are far larger, read much more per call — paging a big file a sliver at a
+/// time cost them a tool call, and a resend of the whole conversation, per
+/// sliver.
+pub(crate) async fn dispatch_builtin_tool_with_read_window(
+    name: &str,
+    arguments: &Value,
+    working_dir: &Path,
+    path: &str,
+    read_window_bytes: usize,
+) -> Result<String, String> {
     let arg_str = |key: &str| {
         arguments
             .get(key)
@@ -596,7 +619,12 @@ pub(crate) async fn dispatch_builtin_tool(
             let file = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
             let offset = arguments.get("offset").and_then(Value::as_u64).map(|n| n as usize);
             let limit = arguments.get("limit").and_then(Value::as_u64).map(|n| n as usize);
-            read_path_windowed(&resolve_under(working_dir, file), offset, limit)
+            read_path_windowed_within(
+                &resolve_under(working_dir, file),
+                offset,
+                limit,
+                read_window_bytes,
+            )
         }
         BUILTIN_WRITE_FILE => {
             let file = arg_str("path").ok_or("write_file requires a non-empty string `path`")?;
@@ -1287,26 +1315,8 @@ pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: im
     });
 }
 
-/// Ends the turn gracefully after the tool-call limit, as a normal completion
-/// with a plain-text note rather than a red error. Hitting the step cap means
-/// the model was still working, not that anything broke, so the user gets a
-/// message they can continue from instead of a failure.
-pub(crate) fn emit_step_limit_reached(on_event: &mut impl FnMut(TurnEvent)) {
-    on_event(TurnEvent::Text {
-        text: format!(
-            "I've reached the limit of {MAX_TOOL_CALLS_PER_TURN} actions in a single turn and \
-             stopped here. Tell me to continue if you'd like me to keep going."
-        ),
-    });
-    on_event(TurnEvent::TurnCompleted {
-        usage: None,
-        is_error: false,
-        error_message: None,
-    });
-}
-
-/// Runs one Ollama agent turn, including up to eight structured shell calls,
-/// and converts the whole lifecycle into Krust's local-harness event stream.
+/// Runs one Ollama agent turn, including its structured shell calls, and
+/// converts the whole lifecycle into Krust's local-harness event stream.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_ollama_stream(
     first_command: Command,
@@ -1736,7 +1746,7 @@ async fn run_ollama_generate_loop(
     );
     let mut next_command = first_command;
 
-    for tool_call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
+    loop {
         let request = ollama_generate_request(model, &next_prompt, context.as_deref(), system);
         let command = next_command
             .take()
@@ -1795,10 +1805,6 @@ async fn run_ollama_generate_loop(
                     emit_failed_turn(&mut on_event, "Ollama requested an empty shell command");
                     return Ok(status);
                 }
-                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_step_limit_reached(&mut on_event);
-                    return Ok(status);
-                }
 
                 let call_id = format!("ollama-shell-{}", Uuid::new_v4());
                 on_event(TurnEvent::ToolCallStarted {
@@ -1816,10 +1822,6 @@ async fn run_ollama_generate_loop(
             OllamaAgentReply::Search { query } => {
                 if query.trim().is_empty() {
                     emit_failed_turn(&mut on_event, "Ollama requested an empty web search");
-                    return Ok(status);
-                }
-                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_step_limit_reached(&mut on_event);
                     return Ok(status);
                 }
 
@@ -1846,10 +1848,6 @@ async fn run_ollama_generate_loop(
                 offset,
                 limit,
             } => {
-                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_step_limit_reached(&mut on_event);
-                    return Ok(status);
-                }
                 let resolved = resolve_under(working_dir, &file_path);
                 let call_id = format!("ollama-read-{}", Uuid::new_v4());
                 on_event(TurnEvent::ToolCallStarted {
@@ -1881,10 +1879,6 @@ async fn run_ollama_generate_loop(
                 path: file_path,
                 content,
             } => {
-                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_step_limit_reached(&mut on_event);
-                    return Ok(status);
-                }
                 if let Err(error) = refuse_line_labels(&content) {
                     next_prompt = format!(
                         "Could not write {file_path}: {error} Request another action or answer."
@@ -1926,10 +1920,6 @@ async fn run_ollama_generate_loop(
                 from_start,
                 from_end,
             } => {
-                if tool_call_index == MAX_TOOL_CALLS_PER_TURN {
-                    emit_step_limit_reached(&mut on_event);
-                    return Ok(status);
-                }
                 let arguments = json!({
                     "path": file_path,
                     "start": start,
@@ -1972,7 +1962,6 @@ async fn run_ollama_generate_loop(
         }
     }
 
-    unreachable!("the bounded Ollama tool loop always returns")
 }
 
 /// Resolves a model-supplied path against the turn's working directory when
@@ -2014,10 +2003,20 @@ fn read_path_windowed(
     offset: Option<usize>,
     limit: Option<usize>,
 ) -> std::result::Result<String, String> {
+    read_path_windowed_within(path, offset, limit, READ_WINDOW_BYTES)
+}
+
+/// As [`read_path_windowed`], with file windows of up to `window_bytes`.
+fn read_path_windowed_within(
+    path: &Path,
+    offset: Option<usize>,
+    limit: Option<usize>,
+    window_bytes: usize,
+) -> std::result::Result<String, String> {
     if path.is_dir() {
         return list_directory(path);
     }
-    read_file_windowed(path, offset, limit)
+    read_file_windowed(path, offset, limit, window_bytes)
 }
 
 /// A sorted, bounded listing of `path`'s entries, directories marked with a
@@ -2060,13 +2059,14 @@ const READ_WINDOW_BYTES: usize = LARGE_TEXT_CHARS - 1_000;
 /// Every line is labelled with its 1-based number, `L12| text`, the same
 /// labels the work notes use, so the model can name lines to `replace_lines`.
 /// A header says which lines these are of how many. The window stops at
-/// [`READ_WINDOW_BYTES`] on a whole line, and when lines remain a footer
+/// `window_bytes` on a whole line, and when lines remain a footer
 /// gives the exact next call to continue, so the model can page through a
 /// large file (or jump to its end) instead of re-reading the head.
 fn read_file_windowed(
     path: &Path,
     offset: Option<usize>,
     limit: Option<usize>,
+    window_bytes: usize,
 ) -> std::result::Result<String, String> {
     let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
     let content = String::from_utf8_lossy(&bytes);
@@ -2086,10 +2086,10 @@ fn read_file_windowed(
     let mut end = start;
     while end < last {
         let numbered = format!("L{}| {}\n", end + 1, lines[end]);
-        if body.len() + numbered.len() > READ_WINDOW_BYTES {
+        if body.len() + numbered.len() > window_bytes {
             if end == start {
                 // One line longer than a whole window: its start, not nothing.
-                let cut = numbered.floor_char_boundary(READ_WINDOW_BYTES);
+                let cut = numbered.floor_char_boundary(window_bytes);
                 body.push_str(&numbered[..cut]);
                 body.push_str(" … [rest of this line cut]\n");
                 end += 1;
@@ -2280,7 +2280,8 @@ enum ToolChatOutcome {
 /// Runs one Ollama turn over `/api/chat` with the built-in file/code tools —
 /// plus any exposed `mcp_tools` — advertised as native tools, looping on tool
 /// calls (built-ins run in-process, the rest through `tool_caller`) until the
-/// model answers in plain text or [`MAX_TOOL_CALLS_PER_TURN`] is reached.
+/// model answers in plain text. There is no step limit: a turn runs until the
+/// model answers or the user stops it.
 ///
 /// Ollama returns a plain error (no `message` field) when `model` doesn't
 /// advertise tool support; that surfaces as
@@ -2324,7 +2325,15 @@ async fn run_ollama_chat_with_tools(
         .filter(|(saved_model, _)| saved_model == model)
         .map(|(_, messages)| messages)
         .unwrap_or_else(|| {
-            vec![json!({ "role": "system", "content": ollama_tool_system_prompt(&all_tools) })]
+            let model_description = if base_url_of(model) == crate::ai::ollama::service::API_BASE {
+                format!("{}, running locally through Ollama", wire_name(model))
+            } else {
+                format!("{}, running through Ollama on another machine", wire_name(model))
+            };
+            vec![json!({
+                "role": "system",
+                "content": ollama_tool_system_prompt(&all_tools, &model_description),
+            })]
         });
     messages.push(json!({
         "role": "user",
@@ -2337,7 +2346,7 @@ async fn run_ollama_chat_with_tools(
     // Every request in this loop hits `/api/chat` — never `/api/generate`,
     // which silently returns an empty completion for a chat-shaped body.
     let mut next_command = Some(first_command);
-    for call_index in 0..=MAX_TOOL_CALLS_PER_TURN {
+    for call_index in 0.. {
         let request = json!({
             "model": wire_name(model),
             "messages": messages,
@@ -2425,11 +2434,6 @@ async fn run_ollama_chat_with_tools(
             return Ok(ToolChatOutcome::Completed(status));
         };
 
-        if call_index == MAX_TOOL_CALLS_PER_TURN {
-            emit_step_limit_reached(on_event);
-            return Ok(ToolChatOutcome::Completed(status));
-        }
-
         messages.push(json!({
             "role": "assistant",
             "content": assistant_content,
@@ -2498,7 +2502,7 @@ async fn run_ollama_chat_with_tools(
         }
     }
 
-    unreachable!("the bounded tool-call loop always returns")
+    unreachable!("the tool-call loop only ends by returning")
 }
 
 /// Model calls failing one after another that end a reading pass.

@@ -1,5 +1,5 @@
 use super::{
-    classify, format_results_as_text, parse_bing_html, parse_duckduckgo_html, resolve_bing_url,
+    classify, format_results_as_text, keep_relevant, parse_brave_html, parse_duckduckgo_html,
     resolve_result_url, Engine_, SearchOutcome, SearchResult,
 };
 
@@ -120,50 +120,65 @@ fn formats_no_results_message() {
     );
 }
 
-const BING_HTML: &str = r#"
-<ol id="b_results">
-  <li class="b_algo"><h2><a href="https://www.bing.com/ck/a?!&amp;&amp;u=a1aHR0cHM6Ly90b2tpby5ycy8&amp;ntb=1">Tokio — Rust runtime</a></h2>
-    <p class="b_lineclamp2">An asynchronous <strong>runtime</strong> for Rust.</p></li>
-  <li class="b_algo"><h2><a href="https://doc.rust-lang.org/">The Rust Programming Language</a></h2>
-    <p class="b_lineclamp3">Official docs.</p></li>
-  <li class="b_algo"><h2><a href="https://www.bing.com/search?q=rust">rust - Bing</a></h2>
-    <p class="b_lineclamp2">A navigational Bing link that should be dropped.</p></li>
-</ol>
+const BRAVE_HTML: &str = r#"
+<div class="snippet svelte-x" data-pos="0" data-type="web" data-keynav="true"><div class="result-body"><a href="https://en.wikipedia.org/wiki/Kris_Weston" target="_self" class="l1"><div class="site-name">Wikipedia</div> <div class="title search-snippet-title line-clamp-1 svelte-y" title="Kris Weston - Wikipedia">Kris Weston - Wikipedia</div></a><div class="generic-snippet"><div class="content desktop-default-regular t-primary line-clamp-dynamic svelte-z">Kristian &quot;Kris&quot; Weston (born 1972) is a British <strong>electronic</strong> musician.</div></div></div></div>
+<div class="snippet svelte-x" data-pos="1" data-type="web" data-keynav="true"><div class="result-body"><a href="https://www.discogs.com/artist/34584-Kris-Weston" target="_self" class="l1"><div class="title search-snippet-title line-clamp-1 svelte-y" title="Kris Weston Discography | Discogs">Kris Weston Discography | Discogs</div></a></div></div>
 "#;
 
 #[test]
-fn parses_bing_results_and_decodes_ck_redirect() {
-    let results = parse_bing_html(BING_HTML, 5);
-    // The bing.com navigational link is dropped; the ck/a redirect is decoded.
+fn parses_brave_results() {
+    let results = parse_brave_html(BRAVE_HTML, 5);
     assert_eq!(results.len(), 2);
-    assert_eq!(results[0].title, "Tokio — Rust runtime");
-    assert_eq!(results[0].url, "https://tokio.rs/");
-    assert_eq!(results[0].snippet, "An asynchronous runtime for Rust.");
-    assert_eq!(results[1].url, "https://doc.rust-lang.org/");
+    assert_eq!(results[0].title, "Kris Weston - Wikipedia");
+    assert_eq!(results[0].url, "https://en.wikipedia.org/wiki/Kris_Weston");
+    assert_eq!(
+        results[0].snippet,
+        "Kristian \"Kris\" Weston (born 1972) is a British electronic musician."
+    );
+    // A result without a description still parses.
+    assert_eq!(results[1].url, "https://www.discogs.com/artist/34584-Kris-Weston");
+    assert_eq!(results[1].snippet, "");
+}
+
+fn result(title: &str, url: &str, snippet: &str) -> SearchResult {
+    SearchResult {
+        title: title.to_string(),
+        url: url.to_string(),
+        snippet: snippet.to_string(),
+    }
 }
 
 #[test]
-fn resolves_bing_ck_redirect_and_leaves_direct_urls_alone() {
+fn junk_results_that_never_mention_the_query_are_dropped() {
+    let results = vec![
+        result("Facebook – log in or sign up", "https://www.facebook.com/", "Log in"),
+        result("Kris Weston - Wikipedia", "https://en.wikipedia.org/wiki/Kris_Weston", ""),
+        result("Thrash", "https://example.com/weston-interview", "An interview"),
+    ];
+    let kept = keep_relevant("kris weston", results);
+    let urls: Vec<&str> = kept.iter().map(|result| result.url.as_str()).collect();
     assert_eq!(
-        resolve_bing_url("https://www.bing.com/ck/a?!&&u=a1aHR0cHM6Ly90b2tpby5ycy8&ntb=1"),
-        "https://tokio.rs/"
+        urls,
+        vec!["https://en.wikipedia.org/wiki/Kris_Weston", "https://example.com/weston-interview"]
     );
-    assert_eq!(
-        resolve_bing_url("https://doc.rust-lang.org/"),
-        "https://doc.rust-lang.org/"
-    );
+    // A query made only of common words can't judge relevance, so it keeps
+    // everything.
+    assert_eq!(keep_relevant("what is the", vec![result("Anything", "https://x.y/", "")]).len(), 1);
 }
 
 #[test]
 fn classify_distinguishes_results_empty_and_blocked() {
-    // A page that parses to results.
     assert!(matches!(
-        classify(Engine_::Bing, BING_HTML, 5),
+        classify(Engine_::Brave, BRAVE_HTML, "kris weston", 5),
         SearchOutcome::Results(_)
     ));
-    // A real page with no result markers is empty, not blocked.
+    // Results about something else entirely count as none.
     assert!(matches!(
-        classify(Engine_::DuckDuckGo, "<html><body>no results</body></html>", 5),
+        classify(Engine_::Brave, BRAVE_HTML, "volcano eruptions", 5),
+        SearchOutcome::Empty
+    ));
+    assert!(matches!(
+        classify(Engine_::DuckDuckGo, "<html><body>no results</body></html>", "rust", 5),
         SearchOutcome::Empty
     ));
     // DuckDuckGo's bot challenge carries anomaly.js and no results.
@@ -171,6 +186,7 @@ fn classify_distinguishes_results_empty_and_blocked() {
         classify(
             Engine_::DuckDuckGo,
             "<html><script src=\"anomaly.js\"></script></html>",
+            "rust",
             5
         ),
         SearchOutcome::Blocked

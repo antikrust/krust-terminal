@@ -2,8 +2,8 @@ use ai::agent::TurnEvent;
 use serde_json::{json, Value};
 
 use super::{
-    api_curl_args, assistant_tool_call_message, clip_for_model, error_from_body,
-    ApiChatAccumulator, ApiToolCall, API_KEY_ENV, MAX_TOOL_RESULT_CHARS,
+    api_curl_args, assistant_tool_call_message, clip_for_model, compact_old_tool_results,
+    error_from_body, ApiChatAccumulator, ApiToolCall, API_KEY_ENV, DROPPED_RESULT_PREFIX,
 };
 use crate::ai::api_providers::provider;
 
@@ -196,6 +196,7 @@ fn tool_call_turn_is_sent_back_with_ids_and_string_arguments() {
         id: "call_abc".to_string(),
         name: "read_file".to_string(),
         arguments: Ok(json!({ "path": "notes.txt" })),
+        extra_content: None,
     }];
     let message = assistant_tool_call_message("", &calls);
     assert_eq!(message["role"], "assistant");
@@ -210,12 +211,89 @@ fn tool_call_turn_is_sent_back_with_ids_and_string_arguments() {
 
 #[test]
 fn long_tool_results_keep_their_head_and_tail() {
-    let text = format!("{}MIDDLE{}", "a".repeat(20_000), "z".repeat(20_000));
-    let clipped = clip_for_model(&text);
-    assert!(clipped.chars().count() < MAX_TOOL_RESULT_CHARS + 200);
+    let limit = 60_000;
+    let text = format!("{}MIDDLE{}", "a".repeat(limit), "z".repeat(limit));
+    let clipped = clip_for_model(&text, limit);
+    assert!(clipped.chars().count() < limit + 200);
     assert!(clipped.starts_with('a'));
     assert!(clipped.ends_with('z'));
     assert!(clipped.contains("characters omitted"));
     // Short results pass through untouched.
-    assert_eq!(clip_for_model("short"), "short");
+    assert_eq!(clip_for_model("short", limit), "short");
+}
+
+fn tool_message(content: &str) -> Value {
+    json!({ "role": "tool", "tool_call_id": "call_x", "content": content })
+}
+
+#[test]
+fn old_long_tool_results_are_dropped_and_recent_ones_kept() {
+    let long = "x".repeat(5_000);
+    let mut messages = vec![
+        json!({ "role": "system", "content": "system" }),
+        json!({ "role": "user", "content": "do it" }),
+        tool_message(&long), // oldest: dropped
+        tool_message("short"), // old but short: kept
+        tool_message(&long), // within the two latest: kept
+        json!({ "role": "assistant", "content": null }),
+        tool_message(&long), // latest: kept
+    ];
+    compact_old_tool_results(&mut messages, 2, usize::MAX);
+
+    let content = |index: usize| messages[index]["content"].as_str().unwrap_or("").to_string();
+    assert!(content(2).starts_with(DROPPED_RESULT_PREFIX), "{}", content(2));
+    assert!(content(2).contains("5000 characters"), "{}", content(2));
+    assert_eq!(messages[2]["tool_call_id"], "call_x", "the message stays, only its text shrinks");
+    assert_eq!(content(3), "short");
+    assert_eq!(content(4), long);
+    assert_eq!(content(6), long);
+    // Other messages are untouched.
+    assert_eq!(content(1), "do it");
+
+    // A second pass changes nothing more.
+    let before = messages.clone();
+    compact_old_tool_results(&mut messages, 2, usize::MAX);
+    assert_eq!(messages, before);
+}
+
+#[test]
+fn gemini_thought_signature_goes_back_with_its_call() {
+    let (accumulator, _) = feed(&[
+        r#"data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_g","type":"function","extra_content":{"google":{"thought_signature":"sig-123"}},"function":{"name":"run_code","arguments":"{\"language\":\"bash\",\"code\":\"ls\"}"}}]},"finish_reason":"tool_calls"}]}"#,
+        "data: [DONE]",
+    ]);
+    let result = accumulator.finish().expect("a complete reply");
+    let message = assistant_tool_call_message("", &result.tool_calls);
+    assert_eq!(
+        message["tool_calls"][0]["extra_content"]["google"]["thought_signature"],
+        "sig-123"
+    );
+    // A call without one sends none.
+    let plain = assistant_tool_call_message(
+        "",
+        &[ApiToolCall {
+            id: "call_p".to_string(),
+            name: "read_file".to_string(),
+            arguments: Ok(json!({})),
+            extra_content: None,
+        }],
+    );
+    assert!(plain["tool_calls"][0].get("extra_content").is_none());
+}
+
+#[test]
+fn tool_output_over_budget_is_dropped_but_the_latest_stays() {
+    let big = "y".repeat(10_000);
+    let mut messages = vec![tool_message(&big), tool_message(&big), tool_message(&big)];
+    // Room for one result: only the latest stays, though three are "recent".
+    compact_old_tool_results(&mut messages, 6, 15_000);
+    let dropped = |index: usize| {
+        messages[index]["content"]
+            .as_str()
+            .unwrap_or("")
+            .starts_with(DROPPED_RESULT_PREFIX)
+    };
+    assert!(dropped(0));
+    assert!(dropped(1));
+    assert!(!dropped(2));
 }

@@ -729,12 +729,25 @@ fi
 ##############################
 
 if [[ $SELFSIGN = true ]]; then
-  SIGNING_CERT="$(security find-identity -p codesigning -v | grep "Apple Development" | awk '{print $2}' | head -1)"
+  # Sign with one fixed identity when there is one. An ad-hoc signature
+  # changes with every build, so macOS treats each build as a new app: it
+  # forgets the keychain "Always Allow" answers and the folder / Full Disk
+  # Access grants, and asks for all of them again. Prefer, in order:
+  # KRUST_SIGNING_IDENTITY, a self-signed "Krust Local Signing" certificate
+  # (Keychain Access > Certificate Assistant > Create a Certificate, type Code
+  # Signing), an Apple Development certificate, and only then ad-hoc.
+  SIGNING_CERT="${KRUST_SIGNING_IDENTITY:-}"
+  if [[ -z "$SIGNING_CERT" ]] && security find-identity -p codesigning | grep -q '"Krust Local Signing"'; then
+    SIGNING_CERT="Krust Local Signing"
+  fi
   if [[ -z "$SIGNING_CERT" ]]; then
-    echo "No Apple Development cert found, falling back to ad-hoc signing."
+    SIGNING_CERT="$(security find-identity -p codesigning -v | grep "Apple Development" | awk '{print $2}' | head -1)"
+  fi
+  if [[ -z "$SIGNING_CERT" ]]; then
+    echo "No signing certificate found, falling back to ad-hoc signing (macOS will ask for its permissions again after every build)."
     SIGNING_CERT="-"
   else
-    echo "Found Apple Development certificate"
+    echo "Signing with: $SIGNING_CERT"
   fi
   if [[ "$ARTIFACT" == app ]]; then
     echo "Self-signing $BUNDLE_DIR/$KRUST_APP_NAME.app with ${SIGNING_CERT}..."

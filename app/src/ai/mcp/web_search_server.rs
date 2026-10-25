@@ -11,15 +11,18 @@
 //! JSON into the MCP Servers page.
 //!
 //! The backend is a keyless scrape of DuckDuckGo's HTML results page, the
-//! same approach several open-source "search MCP servers" use, with a Bing
-//! HTML fallback when DuckDuckGo returns nothing or rate-limits us. Fragile to
+//! same approach several open-source "search MCP servers" use, with a Brave
+//! Search fallback when DuckDuckGo returns nothing or rate-limits us. (Bing
+//! was the fallback once: it answers scripted requests with unrelated junk —
+//! Facebook help pages in French for a person's name — which models then
+//! reported as results.) Results that mention no word of the query are
+//! dropped, so an engine's junk can't pass for an answer. Fragile to
 //! either engine's markup changes and not meant for high request volume — a
 //! "rules of thumb" integration in the same spirit as the Ollama catalog
 //! scraper.
 
 use std::io::{BufRead, Write};
 
-use base64::Engine;
 use regex::Regex;
 use serde_json::{json, Value};
 
@@ -167,7 +170,7 @@ enum SearchOutcome {
     Blocked,
 }
 
-/// Searches DuckDuckGo, falling back to Bing when DuckDuckGo returns nothing
+/// Searches DuckDuckGo, falling back to Brave when DuckDuckGo returns nothing
 /// or blocks us. Returns the text to hand the model and whether to flag it as
 /// an error (true only when both engines were blocked/unreachable, never for a
 /// genuine no-results).
@@ -181,7 +184,7 @@ async fn run_search(
         return (format_results_as_text(query, results), false);
     }
 
-    let fallback = fetch_engine(client, Engine_::Bing, query, max_results).await;
+    let fallback = fetch_engine(client, Engine_::Brave, query, max_results).await;
     if let SearchOutcome::Results(results) = &fallback {
         return (format_results_as_text(query, results), false);
     }
@@ -210,7 +213,7 @@ async fn run_search(
 #[derive(Clone, Copy)]
 enum Engine_ {
     DuckDuckGo,
-    Bing,
+    Brave,
 }
 
 /// Runs one engine query and classifies the outcome. A network error or a
@@ -227,11 +230,16 @@ async fn fetch_engine(
         Engine_::DuckDuckGo => client
             .post("https://html.duckduckgo.com/html/")
             .form(&[("q", query)]),
-        Engine_::Bing => client
-            .get("https://www.bing.com/search")
+        Engine_::Brave => client
+            .get("https://search.brave.com/search")
             .query(&[("q", query)]),
     };
-    let response = match request.header("User-Agent", BROWSER_USER_AGENT).send().await {
+    let response = match request
+        .header("User-Agent", BROWSER_USER_AGENT)
+        .header("Accept-Language", "en-GB,en;q=0.9")
+        .send()
+        .await
+    {
         Ok(response) => response,
         Err(_) => return SearchOutcome::Blocked,
     };
@@ -242,24 +250,28 @@ async fn fetch_engine(
         Ok(html) => html,
         Err(_) => return SearchOutcome::Blocked,
     };
-    classify(engine, &html, max_results)
+    classify(engine, &html, query, max_results)
 }
 
 /// Parses a results page and classifies it. Shared by [`fetch_engine`] and the
 /// unit tests so the empty/blocked distinction is exercised directly.
-fn classify(engine: Engine_, html: &str, max_results: usize) -> SearchOutcome {
+fn classify(engine: Engine_, html: &str, query: &str, max_results: usize) -> SearchOutcome {
+    // Parse a few spare results: some may be dropped as irrelevant.
+    let parse_count = max_results * 2;
     let (results, challenged) = match engine {
         Engine_::DuckDuckGo => (
-            parse_duckduckgo_html(html, max_results),
+            parse_duckduckgo_html(html, parse_count),
             // DuckDuckGo serves its bot challenge as a 202 (or even a 200)
             // whose body loads `anomaly.js` and carries no results.
             html.contains("anomaly.js"),
         ),
-        Engine_::Bing => (
-            parse_bing_html(html, max_results),
-            html.contains("sorry your network") || html.contains("/sorry/"),
+        Engine_::Brave => (
+            parse_brave_html(html, parse_count),
+            html.to_lowercase().contains("captcha"),
         ),
     };
+    let mut results = keep_relevant(query, results);
+    results.truncate(max_results);
     if !results.is_empty() {
         SearchOutcome::Results(results)
     } else if challenged {
@@ -354,29 +366,30 @@ fn is_ad_url(url: &str) -> bool {
     url.contains("/y.js") || url.contains("ad_domain=") || url.contains("ad_provider=")
 }
 
-/// Extracts results from Bing's HTML results page — the fallback when
-/// DuckDuckGo is blocked or empty. Each organic result is a
-/// `<li class="b_algo">` whose `<h2><a href=…>` carries the title and link and
-/// whose first `<p>` carries the snippet. Loose regex over the markup, same
+/// Extracts results from Brave Search's results page — the fallback when
+/// DuckDuckGo is blocked or empty. Each web result is a block marked
+/// `data-type="web"`: its first link is the result's address, its title sits
+/// in the `search-snippet-title` element's `title` attribute, and its
+/// description in a `content` element. Loose regex over the markup, same
 /// spirit as [`parse_duckduckgo_html`].
-pub(crate) fn parse_bing_html(html: &str, max_results: usize) -> Vec<SearchResult> {
-    let link_pattern =
-        Regex::new(r#"(?s)<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>"#).expect("valid regex");
-    let snippet_pattern = Regex::new(r#"(?s)<p[^>]*class="[^"]*b_lineclamp[^"]*"[^>]*>(.*?)</p>"#)
-        .expect("valid regex");
+pub(crate) fn parse_brave_html(html: &str, max_results: usize) -> Vec<SearchResult> {
+    let link_pattern = Regex::new(r#"<a href="(https?://[^"]+)""#).expect("valid regex");
+    let title_pattern =
+        Regex::new(r#"(?s)class="title search-snippet-title[^"]*"[^>]*title="([^"]*)""#)
+            .expect("valid regex");
+    let snippet_pattern =
+        Regex::new(r#"(?s)<div class="content [^"]*"[^>]*>(.*?)</div>"#).expect("valid regex");
 
-    // Split on result items so a title and its snippet stay paired even when a
-    // result has no snippet (a shared zip would drift out of alignment).
-    html.split("<li class=\"b_algo\"")
+    // One block per result, so a title and its description stay paired even
+    // when a result has no description.
+    html.split(r#"data-type="web""#)
         .skip(1)
         .filter_map(|block| {
-            let caps = link_pattern.captures(block)?;
-            let url = resolve_bing_url(&decode_html_entities(&caps[1]));
-            // Skip Bing's own navigational and related-search links.
-            if url.contains("bing.com") || url.contains("microsofttranslator") {
+            let url = decode_html_entities(&link_pattern.captures(block)?[1]);
+            if url.contains("brave.com") {
                 return None;
             }
-            let title = strip_tags(decode_html_entities(&caps[2]));
+            let title = strip_tags(decode_html_entities(&title_pattern.captures(block)?[1]));
             if title.is_empty() {
                 return None;
             }
@@ -394,21 +407,34 @@ pub(crate) fn parse_bing_html(html: &str, max_results: usize) -> Vec<SearchResul
         .collect()
 }
 
-/// Unwraps Bing's `bing.com/ck/a?…&u=a1<base64url>&…` click-tracking redirect
-/// to the real destination, leaving direct links untouched. The `u` parameter
-/// is the destination URL as url-safe base64 with an `a1` scheme prefix.
-fn resolve_bing_url(href: &str) -> String {
-    let Some(start) = href.find("u=a1") else {
-        return href.to_string();
-    };
-    let encoded = &href[start + 4..];
-    let encoded = encoded.split('&').next().unwrap_or(encoded);
-    base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(encoded.trim_end_matches('='))
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
-        .filter(|decoded| decoded.starts_with("http"))
-        .unwrap_or_else(|| href.to_string())
+/// Words too common to show that a result is about the query.
+const COMMON_WORDS: &[&str] = &[
+    "the", "and", "for", "with", "what", "who", "how", "why", "when", "where", "which", "this",
+    "that", "are", "was", "you", "your", "from", "about", "into", "does", "did", "can", "will",
+    "has", "have", "not", "but", "all", "any", "its",
+];
+
+/// The results that mention at least one significant word of the query in
+/// their title, description or address. An engine answering a scripted
+/// request with unrelated pages (Bing did, for a person's name) then yields
+/// nothing rather than junk the model would report as results. A query with
+/// no significant words keeps everything.
+pub(crate) fn keep_relevant(query: &str, results: Vec<SearchResult>) -> Vec<SearchResult> {
+    let words: Vec<String> = query
+        .split(|c: char| !c.is_alphanumeric())
+        .map(str::to_lowercase)
+        .filter(|word| word.chars().count() >= 3 && !COMMON_WORDS.contains(&word.as_str()))
+        .collect();
+    if words.is_empty() {
+        return results;
+    }
+    results
+        .into_iter()
+        .filter(|result| {
+            let text = format!("{} {} {}", result.title, result.snippet, result.url).to_lowercase();
+            words.iter().any(|word| text.contains(word.as_str()))
+        })
+        .collect()
 }
 
 /// Unwraps DuckDuckGo's `//duckduckgo.com/l/?uddg=<encoded-url>&rut=...`
