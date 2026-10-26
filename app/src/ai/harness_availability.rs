@@ -10,6 +10,7 @@ use krust_managed_secrets::client::SecretOwner;
 use krust_managed_secrets::{ManagedSecretManager, ManagedSecretValue};
 use krustui::{AppContext, Entity, EntityId, ModelContext, RequestState, SingletonEntity};
 use instant::Instant;
+use krustui::r#async::Timer;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
 
@@ -254,6 +255,45 @@ fn parse_codex_catalog(raw: &[u8]) -> Vec<HarnessModelInfo> {
     }
     models.sort_by_key(|(priority, _)| *priority);
     models.into_iter().map(|(_, model)| model).take(8).collect()
+}
+
+/// How often, and how far apart, a failed read of the Codex catalog is retried.
+const CODEX_CATALOG_RETRIES: u32 = 5;
+const CODEX_CATALOG_RETRY_DELAY: Duration = Duration::from_secs(30);
+
+/// The top-level `model = "..."` of `~/.codex/config.toml`: what Codex runs
+/// when it is given no model.
+fn codex_config_default_model() -> Option<String> {
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from)?;
+    let config = std::fs::read_to_string(home.join(".codex/config.toml")).ok()?;
+    config.lines().find_map(|line| {
+        // Exactly the `model` key; `model_provider`, `model_reasoning_effort`
+        // etc. fail the `=` check after the strip.
+        let value = line
+            .trim()
+            .strip_prefix("model")
+            .map(str::trim_start)
+            .and_then(|rest| rest.strip_prefix('='))?
+            .trim()
+            .trim_matches('"');
+        (!value.is_empty()).then(|| value.to_string())
+    })
+}
+
+/// The model a Codex turn runs: the picked one, else Codex's own default —
+/// unless the signed-in account's catalog doesn't have that default (a
+/// ChatGPT account refuses models it doesn't offer, with a 400), in which
+/// case the catalog's first model.
+pub fn codex_model_for_turn(picked: Option<String>, ctx: &AppContext) -> Option<String> {
+    if picked.is_some() {
+        return picked;
+    }
+    let catalog = HarnessAvailabilityModel::as_ref(ctx).codex_catalog.as_ref()?;
+    let default = codex_config_default_model();
+    if default.as_ref().is_some_and(|default| catalog.contains(default)) {
+        return None;
+    }
+    catalog.first().cloned()
 }
 
 /// Instant startup stand-in until the async catalog lands: the
@@ -620,6 +660,11 @@ pub struct HarnessAvailabilityModel {
     harnesses: Vec<HarnessAvailability>,
     auth_secrets: HashMap<Harness, AuthSecretFetchState>,
     auth_secret_retry_after: HashMap<Harness, Instant>,
+    /// The models the signed-in Codex account can run, from `codex debug
+    /// models`, in the catalog's order; `None` until it has been read.
+    codex_catalog: Option<Vec<String>>,
+    /// Failed reads of that catalog so far (it is retried a few times).
+    codex_catalog_failures: u32,
 }
 
 impl HarnessAvailabilityModel {
@@ -677,10 +722,12 @@ impl HarnessAvailabilityModel {
             }
         });
 
-        let me = Self {
+        let mut me = Self {
             harnesses,
             auth_secrets: HashMap::new(),
             auth_secret_retry_after: HashMap::new(),
+            codex_catalog: None,
+            codex_catalog_failures: 0,
         };
         me.refresh(ctx);
         me.refresh_codex_catalog(ctx);
@@ -691,7 +738,7 @@ impl HarnessAvailabilityModel {
     /// own catalog (`codex debug models`), asynchronously — the command takes
     /// ~0.7s, too slow to run during construction on the UI thread. The
     /// picker re-renders off the `Changed` event when the catalog lands.
-    fn refresh_codex_catalog(&self, ctx: &mut ModelContext<Self>) {
+    fn refresh_codex_catalog(&mut self, ctx: &mut ModelContext<Self>) {
         let Some(codex) = resolve_local_cli("codex") else {
             return;
         };
@@ -707,14 +754,27 @@ impl HarnessAvailabilityModel {
                     Ok(Ok(output)) if output.status.success() => output.stdout,
                     _ => {
                         log::warn!("harness_availability: codex debug models failed");
+                        // Without it the picker only knows ~/.codex's default,
+                        // which the account may not be able to run: try again.
+                        if me.codex_catalog_failures < CODEX_CATALOG_RETRIES {
+                            me.codex_catalog_failures += 1;
+                            ctx.spawn(
+                                async { Timer::after(CODEX_CATALOG_RETRY_DELAY).await },
+                                |me, _, ctx| me.refresh_codex_catalog(ctx),
+                            );
+                        }
                         return;
                     }
                 };
+                let catalog = parse_codex_catalog(&output);
+                if !catalog.is_empty() {
+                    me.codex_catalog = Some(catalog.iter().map(|model| model.id.clone()).collect());
+                }
                 let remotes = crate::ai::ollama::remote::configured(ctx);
                 let disabled = crate::ai::ollama::service::disabled_models_for(ctx);
                 let models = with_api_models(
                     append_available_ollama_models(
-                        parse_codex_catalog(&output),
+                        catalog,
                         &remotes,
                         &disabled,
                     ),

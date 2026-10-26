@@ -2747,6 +2747,10 @@ pub struct TerminalView {
     /// sync with the session id claude reports in each run's `SessionInit`
     /// (a resumed run forks a fresh session id).
     local_claude_thread: Option<(LocalHarnessKind, uuid::Uuid, AIConversationId)>,
+    /// The harness session key of the last local run started in this pane:
+    /// a new prompt stops that run first if it is still going, so two runs
+    /// never write into one conversation at once.
+    last_local_run_session: Option<uuid::Uuid>,
     /// In-flight harness shell calls (`call_id` → command text), used by the
     /// mapper to correlate the generic inline call and result cards.
     local_harness_shell_commands: HashMap<String, String>,
@@ -4437,6 +4441,7 @@ impl TerminalView {
             usage_footer_view_ids: Default::default(),
             last_local_claude_submission: None,
             local_claude_thread: None,
+            last_local_run_session: None,
             local_harness_shell_commands: HashMap::new(),
             local_harness_pending_tool_calls: HashSet::new(),
             local_harness_phase_results: Vec::new(),
@@ -23833,6 +23838,17 @@ impl TerminalView {
             .filter(|_| !switched_engine)
             .map(|(_, session_id, _)| session_id)
             .unwrap_or_else(uuid::Uuid::new_v4);
+        // A run this pane started before may still be going: a CLI can keep
+        // working after it has reported its result (background tasks). Left
+        // alone it writes into the conversation alongside this run, and the
+        // two collide. Stop it first.
+        if let Some(previous) = self.last_local_run_session.replace(session_id) {
+            if crate::ai::agent_sdk::driver::harness::claude_stream_exec::cancel_harness_session(
+                &previous,
+            ) {
+                log::info!("fork: stopped the previous local run ({previous}) before a new prompt");
+            }
+        }
         let ollama_model = model_id
             .as_deref()
             .and_then(ollama_model_name)
@@ -23927,9 +23943,13 @@ impl TerminalView {
                 // A fresh codex run mints its own thread id (reported back
                 // via `thread.started` → SessionInit); only resumes pass one.
                 let mut command = command::r#async::Command::new("codex");
+                // On "default", a model the signed-in account can run (see
+                // `codex_model_for_turn`), not a config default it can't.
+                let codex_model =
+                    crate::ai::harness_availability::codex_model_for_turn(model_id.clone(), ctx);
                 command.args(codex_exec_args(
                     resuming.then_some(&session_id),
-                    model_id.as_deref(),
+                    codex_model.as_deref(),
                     reasoning_level.as_deref(),
                 ));
                 command
@@ -24073,7 +24093,18 @@ impl TerminalView {
                 // conversation moves to it only once that app answers: a
                 // turn that fails there too stays where it was.
                 let mut handed_off_session: Option<uuid::Uuid> = None;
+                // Set once the turn has finished successfully: anything the
+                // process sends after that (a CLI still running background
+                // work) is dropped, not written into the finished output.
+                let mut finished_ok = false;
                 while let Some((handed_to, event)) = event_rx.next().await {
+                    if finished_ok {
+                        log::info!("fork: dropped a local harness event that came after the turn finished");
+                        continue;
+                    }
+                    if matches!(event, ai::agent::TurnEvent::TurnCompleted { is_error: false, .. }) {
+                        finished_ok = true;
+                    }
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();

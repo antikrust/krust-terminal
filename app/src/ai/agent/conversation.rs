@@ -2983,24 +2983,37 @@ impl AIConversation {
                 let current_todo_list = self.todo_lists.last().cloned();
 
                 // Remove the task to relinquish mutable borrow on self, we add it back later.
+                // Every early return below puts it back first: a task left out
+                // of the store on an error empties the conversation for good.
                 let mut task = self
                     .task_store
                     .remove(&task_id)
                     .ok_or(UpdateConversationError::TaskNotFound)?;
-                let added_exchanges = self
-                    .added_exchanges_by_response
-                    .get(response_stream_id)
-                    .ok_or(UpdateConversationError::NoPendingRequest)?;
+                let Some(added_exchanges) = self.added_exchanges_by_response.get(response_stream_id)
+                else {
+                    self.task_store.insert(task);
+                    return Err(UpdateConversationError::NoPendingRequest);
+                };
                 let exchange_id = if let Some(info) =
                     added_exchanges.iter().find(|info| info.task_id == task_id)
                 {
                     info.exchange_id
                 } else {
-                    let existing_exchange = self
-                        .get_task(&added_exchanges.last().task_id)
-                        .ok_or(UpdateConversationError::TaskNotFound)?
-                        .exchange(added_exchanges.last().exchange_id)
-                        .ok_or(UpdateConversationError::ExchangeNotFound)?;
+                    let existing_exchange = match self.get_task(&added_exchanges.last().task_id) {
+                        Some(existing_task) => {
+                            match existing_task.exchange(added_exchanges.last().exchange_id) {
+                                Some(exchange) => exchange,
+                                None => {
+                                    self.task_store.insert(task);
+                                    return Err(UpdateConversationError::ExchangeNotFound);
+                                }
+                            }
+                        }
+                        None => {
+                            self.task_store.insert(task);
+                            return Err(UpdateConversationError::TaskNotFound);
+                        }
+                    };
                     let new_exchange_id = task.append_new_exchange(existing_exchange);
                     if self.optimistic_cli_subagent_subtask_id.is_some() && task.is_root_task() {
                         // If we are lazily creating a new exchange at this point, this means we are updating
@@ -3022,7 +3035,7 @@ impl AIConversation {
                 };
 
                 let current_comment_state = self.code_review.as_ref().cloned();
-                task.add_messages(
+                if let Err(error) = task.add_messages(
                     messages,
                     exchange_id,
                     TaskMessageContext {
@@ -3036,7 +3049,10 @@ impl AIConversation {
                     // to mimic the normal conversation flow. (If this is not a shared session, the
                     // exchange inputs will already be populated).
                     self.is_viewing_shared_session,
-                )?;
+                ) {
+                    self.task_store.insert(task);
+                    return Err(error.into());
+                }
 
                 self.task_store.insert(task);
                 if !added_exchanges
