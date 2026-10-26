@@ -23627,9 +23627,10 @@ impl TerminalView {
         // Continue the terminal's live thread when there is one: resume the
         // same agent session (so the model keeps context) and append to the
         // same conversation (so the whole thread stays on screen). Fresh
-        // threads run the harness selected in the picker; follow-ups stay on
-        // the harness their thread started with — the session belongs to
-        // that engine — even if the picker changed since.
+        // threads run the harness selected in the picker. When the picker
+        // now names another engine than the thread's, the picker wins: one
+        // engine can't resume another's session, so the turn starts a fresh
+        // session there, still in this conversation, with a recap of it.
         let requested_kind = match requested_harness {
             // Cloud providers' models and custom endpoints' both run on the
             // API runner.
@@ -23665,11 +23666,37 @@ impl TerminalView {
                         .map(|(kind, session_id)| (kind, session_id, conversation_id))
                 })
             });
-        let resuming = thread.is_some();
+        let switched_engine = thread.is_some_and(|(kind, _, _)| kind != requested_kind);
+        let resuming = thread.is_some() && !switched_engine;
         let follow_up_conversation = thread.map(|(_, _, conversation_id)| conversation_id);
-        let harness = thread
-            .map(|(harness, _, _)| harness)
-            .unwrap_or(requested_kind);
+        let harness = if switched_engine {
+            requested_kind
+        } else {
+            thread.map(|(harness, _, _)| harness).unwrap_or(requested_kind)
+        };
+        // What the runner is sent: the prompt, or, on an engine switch, the
+        // prompt after a recap of the conversation. The conversation itself
+        // shows the prompt as typed.
+        let runner_prompt = match follow_up_conversation.filter(|_| switched_engine) {
+            Some(conversation_id) => {
+                let window_id = ctx.window_id();
+                let engine = match requested_kind {
+                    LocalHarnessKind::Claude => "Claude Code",
+                    LocalHarnessKind::Codex => "Codex",
+                    LocalHarnessKind::Ollama => "the local model",
+                    LocalHarnessKind::Api => "the cloud model",
+                };
+                ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+                    let toast = DismissibleToast::default(format!(
+                        "This conversation now runs on {engine}, as picked: it carries on from a \
+                         recap of the conversation so far."
+                    ));
+                    toast_stack.add_ephemeral_toast(toast, window_id, ctx);
+                });
+                engine_switch_prompt(conversation_id, &prompt, ctx)
+            }
+            None => prompt.clone(),
+        };
 
         // "Use local models" only hides Ollama from the picker for *new*
         // selections (see profile_model_selector.rs) — a conversation
@@ -23803,6 +23830,7 @@ impl TerminalView {
         // Build the headless streaming command with a robust PATH (the app's
         // launchd PATH may not contain the agent CLI).
         let session_id = thread
+            .filter(|_| !switched_engine)
             .map(|(_, session_id, _)| session_id)
             .unwrap_or_else(uuid::Uuid::new_v4);
         let ollama_model = model_id
@@ -24020,7 +24048,7 @@ impl TerminalView {
         let turn_id = Uuid::new_v4().to_string();
         ollama_stream_exec::set_current_turn_id(&session_id, &turn_id);
         let begin_prompt = prompt.clone();
-        let pump_prompt = prompt;
+        let pump_prompt = runner_prompt;
         let pump_working_dir = working_dir;
         let pump_path = path;
         let pump_mcp_tools = ollama_mcp_tools;
@@ -30372,4 +30400,58 @@ fn is_claude_sign_in_error(message: &str) -> bool {
         || lower.contains("failed to authenticate")
         || lower.contains("authentication_error")
         || lower.contains("/login")
+}
+
+/// How many earlier requests an engine switch's recap carries.
+const ENGINE_SWITCH_RECAP_EXCHANGES: usize = 6;
+
+/// The prompt for an engine taking a conversation over from another (the
+/// user picked a different one): the last few requests with the answer each
+/// got, from Krust's own record of the conversation, then the new request.
+fn engine_switch_prompt(conversation_id: AIConversationId, prompt: &str, ctx: &AppContext) -> String {
+    let clip = |text: &str, limit: usize| {
+        let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if line.chars().count() <= limit {
+            line
+        } else {
+            format!("{}…", line.chars().take(limit).collect::<String>())
+        }
+    };
+    let mut exchanges: Vec<(String, String)> = Vec::new();
+    if let Some(conversation) = BlocklistAIHistoryModel::as_ref(ctx).conversation(&conversation_id) {
+        for exchange in conversation.root_task_exchanges() {
+            if let Some(query) = exchange.input.iter().find_map(|input| input.user_query()) {
+                exchanges.push((query, String::new()));
+            }
+            let (Some(last), Some(output)) = (exchanges.last_mut(), exchange.output_status.output())
+            else {
+                continue;
+            };
+            for message in &output.get().messages {
+                if matches!(message.message, AIAgentOutputMessageType::Text(_)) {
+                    let said = message.to_string();
+                    if !said.trim().is_empty() {
+                        last.1 = said;
+                    }
+                }
+            }
+        }
+    }
+    let mut recap = String::from(
+        "You are taking over this conversation from another model; the user switched to you. \
+         You haven't seen it, so here is what came before. The work it did is in the files: \
+         check their current state rather than assuming.\n",
+    );
+    let earlier = &exchanges[exchanges.len().saturating_sub(ENGINE_SWITCH_RECAP_EXCHANGES)..];
+    if !earlier.is_empty() {
+        recap.push_str("\nEarlier in this conversation:\n");
+        for (request, answer) in earlier {
+            recap.push_str(&format!("- User: {}\n", clip(request, 800)));
+            if !answer.is_empty() {
+                recap.push_str(&format!("  Answer: {}\n", clip(answer, 1_500)));
+            }
+        }
+    }
+    recap.push_str(&format!("\nThe request:\n{prompt}"));
+    recap
 }
