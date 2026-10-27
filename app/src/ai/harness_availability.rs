@@ -21,7 +21,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
 use crate::ai::api_providers::{
-    custom_endpoint_groups, is_api_runner_model, ApiProviderKeys, ApiProviderKeysEvent,
+    auto_models, custom_endpoint_groups, is_api_runner_model, ApiProviderKeys, ApiProviderKeysEvent,
     API_HARNESS_CONFIG_NAME, API_MODEL_ID_PREFIX, CUSTOM_MODEL_ID_PREFIX,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
@@ -216,6 +216,14 @@ fn with_api_models(mut models: Vec<HarnessModelInfo>, ctx: &AppContext) -> Vec<H
             .into_iter()
             .flat_map(|(_, models)| models),
     );
+    // The Auto entries, first in the API runner's part of the menu: they pick among the rows
+    // above for each turn.
+    let first_api = models
+        .iter()
+        .position(|model| model.id.starts_with(API_MODEL_ID_PREFIX) || model.id.starts_with(CUSTOM_MODEL_ID_PREFIX))
+        .unwrap_or(models.len());
+    let autos = auto_models(ctx);
+    models.splice(first_api..first_api, autos);
     models
 }
 

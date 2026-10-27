@@ -2288,6 +2288,7 @@ pub(crate) fn initialize_app(
     // provider that has a key.
     ctx.add_singleton_model(crate::ai::api_providers::ApiProviderKeys::new);
     ctx.add_singleton_model(|_| crate::ai::failover_health::FailoverHealth::new());
+    ctx.add_singleton_model(|_| crate::ai::agent_queue::AgentQueue::new());
     ctx.add_singleton_model(HarnessAvailabilityModel::new);
     ctx.add_singleton_model(ConnectedSelfHostedWorkersModel::new);
 

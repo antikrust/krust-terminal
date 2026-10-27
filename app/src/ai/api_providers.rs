@@ -32,6 +32,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 };
 use crate::ai::failover_health::FailoverHealth;
 use crate::ai::harness_availability::{HarnessAvailabilityModel, HarnessModelInfo};
+use crate::ai::task_router::{choose, decide, speed, strength, Candidate, Difficulty, Policy};
 use crate::settings::AISettings;
 
 pub const API_MODEL_ID_PREFIX: &str = "api/";
@@ -516,7 +517,73 @@ impl FailoverTarget {
 /// Whether `model_id` is one the API runner calls: a cloud provider's model
 /// or a custom endpoint's.
 pub fn is_api_runner_model(model_id: &str) -> bool {
-    api_model_parts(model_id).is_some() || model_id.starts_with(CUSTOM_MODEL_ID_PREFIX)
+    api_model_parts(model_id).is_some()
+        || model_id.starts_with(CUSTOM_MODEL_ID_PREFIX)
+        || is_auto_model_id(model_id)
+}
+
+/// The picker's "Auto" entries: `api/auto/<policy>`. Not a model: each turn resolves to one of the
+/// failover rows (see [`resolve_auto_model`]), so the conversation shows the model that ran.
+pub const AUTO_MODEL_ID_PREFIX: &str = "api/auto/";
+
+pub fn is_auto_model_id(model_id: &str) -> bool {
+    model_id.starts_with(AUTO_MODEL_ID_PREFIX)
+}
+
+/// The three Auto entries, offered while at least one failover row can run.
+pub fn auto_models(app: &AppContext) -> Vec<HarnessModelInfo> {
+    let any_row = failover_routes("", app)
+        .iter()
+        .any(|target| matches!(target, FailoverTarget::Api(_)));
+    if !any_row {
+        return Vec::new();
+    }
+    [
+        (Policy::CostEfficient, "Auto (cost-efficient)"),
+        (Policy::Responsive, "Auto (responsive)"),
+        (Policy::Genius, "Auto (genius)"),
+    ]
+    .into_iter()
+    .map(|(policy, name)| HarnessModelInfo {
+        id: format!("{AUTO_MODEL_ID_PREFIX}{}", policy.label()),
+        display_name: name.to_string(),
+        reasoning_level: None,
+    })
+    .collect()
+}
+
+/// The failover row an Auto entry sends this prompt to, or `None` when no row can run: the
+/// decider rates the prompt (never below `floor`: a short follow-up in a working conversation is
+/// not easy work), and the entry's policy picks among the rows that are on, not known to be down
+/// and, with "Free models only", free.
+pub fn resolve_auto_model(
+    model_id: &str,
+    prompt: &str,
+    floor: Difficulty,
+    app: &AppContext,
+) -> Option<String> {
+    let policy = Policy::from_label(model_id.strip_prefix(AUTO_MODEL_ID_PREFIX)?)?;
+    let difficulty = decide(prompt).difficulty.max(floor);
+    let routes: Vec<ApiRoute> = failover_routes("", app)
+        .into_iter()
+        .filter_map(|target| match target {
+            FailoverTarget::Api(route) => Some(route),
+            FailoverTarget::Cli(_) => None,
+        })
+        .collect();
+    let candidates: Vec<Candidate> = routes
+        .iter()
+        .map(|route| Candidate {
+            strength: strength(
+                &route.model,
+                model_price(route.provider, &route.model),
+                model_context_window(route.provider, &route.model),
+            ),
+            speed: speed(&route.model),
+            free: is_free_model(&route.model_id),
+        })
+        .collect();
+    choose(policy, difficulty, &candidates).map(|index| routes[index].model_id.clone())
 }
 
 /// One model the API runner can call: where the request goes, the model it

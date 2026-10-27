@@ -832,6 +832,10 @@ pub enum WorkspaceAction {
         conversation_id: ServerConversationToken,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
     },
+    /// Open a task of the agent queue in a view-only tab: its transcript so far.
+    OpenQueueTaskTranscript {
+        task_id: u64,
+    },
     /// Toggle the conversation transcript details panel (WASM-only).
     #[cfg(target_family = "wasm")]
     ToggleConversationTranscriptDetailsPanel,
@@ -1200,6 +1204,7 @@ impl WorkspaceAction {
             | ExecuteDeleteConversation { .. }
             | OpenOrAttachAmbientAgentConversation { .. }
             | OpenConversationTranscriptViewer { .. }
+            | OpenQueueTaskTranscript { .. }
             | OpenLightbox { .. }
             | UpdateLightboxImage { .. }
             | StartAgentOnboardingTutorial(_)

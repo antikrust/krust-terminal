@@ -239,9 +239,12 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::api_providers::{
-    api_model_parts, failover_routes, is_api_runner_model, route_for, CliRoute,
-    API_HARNESS_CONFIG_NAME,
+    api_model_parts, failover_routes, is_api_runner_model, is_auto_model_id, resolve_auto_model,
+    route_for, CliRoute, API_HARNESS_CONFIG_NAME,
 };
+use crate::ai::agent_queue::AgentQueue;
+use crate::ai::queue_tools;
+use crate::ai::task_router::Difficulty;
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::ambient_agents::{
     conversation_output_status_from_conversation, AmbientAgentTaskId, AmbientConversationStatus,
@@ -23755,6 +23758,16 @@ impl TerminalView {
         // nothing to run, so say where to add it rather than failing in the
         // conversation. (A local model lands here too once BYOR failover has
         // moved this conversation to one; it needs no key.)
+        // An Auto entry is not a model: this turn's prompt picks the failover row it runs on
+        // (never below medium difficulty: a short follow-up in a working conversation is not easy
+        // work), and the conversation shows that model.
+        let model_id = model_id.map(|id| {
+            if is_auto_model_id(&id) {
+                resolve_auto_model(&id, &prompt, Difficulty::Medium, ctx).unwrap_or(id)
+            } else {
+                id
+            }
+        });
         let api_route = if harness == LocalHarnessKind::Api {
             let route = model_id
                 .as_deref()
@@ -24049,6 +24062,15 @@ impl TerminalView {
                 Arc::new(ollama_stream_exec::ConfiguredMcpTools::new(callers))
                     as Arc<dyn ollama_stream_exec::McpToolCaller>
             });
+            // The orchestrator's tools: plan_tasks and collect_results hand work to the agent
+            // queue and wait for it. They answer on the queue's own thread, so they carry its
+            // spawner, and pass every other call on to the MCP servers.
+            let spawner = AgentQueue::handle(ctx).update(ctx, |_, queue_ctx| queue_ctx.spawner());
+            specs.extend(queue_tools::tool_specs());
+            let caller = Some(Arc::new(queue_tools::QueueTools {
+                spawner,
+                inner: caller,
+            }) as Arc<dyn ollama_stream_exec::McpToolCaller>);
             (specs, caller)
         } else {
             (Vec::new(), None)

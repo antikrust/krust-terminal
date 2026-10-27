@@ -27,6 +27,7 @@ use krustui::{
 use super::view_model::{ConversationEntry, ConversationListViewModel};
 use crate::ai::active_agent_views_model::{ActiveAgentViewsModel, ConversationOrTaskId};
 use crate::ai::agent::conversation::AIConversationId;
+use crate::ai::agent_queue::{AgentQueue, TaskState};
 use crate::ai::agent_conversations_model::{
     AgentConversationEntryId, AgentConversationNavigationSubject, AgentConversationsModel,
 };
@@ -67,6 +68,9 @@ struct StateHandles {
     zero_state_button: MouseStateHandle,
     active_header: MouseStateHandle,
     past_header: MouseStateHandle,
+    /// The agent queue block: its header, and a row per task by its id.
+    queue_header: MouseStateHandle,
+    queue_rows: HashMap<u64, MouseStateHandle>,
 }
 
 impl Default for StateHandles {
@@ -80,6 +84,8 @@ impl Default for StateHandles {
             zero_state_button: MouseStateHandle::default(),
             active_header: MouseStateHandle::default(),
             past_header: MouseStateHandle::default(),
+            queue_header: MouseStateHandle::default(),
+            queue_rows: HashMap::new(),
         }
     }
 }
@@ -150,6 +156,11 @@ pub enum ConversationListViewAction {
     },
     FinishRename,
     CancelRename,
+    /// The agent queue block: fold it, or open a task's transcript in a tab.
+    ToggleQueueSection,
+    OpenQueueTask {
+        id: u64,
+    },
 }
 
 pub enum Event {
@@ -187,6 +198,8 @@ pub struct ConversationListView {
     /// (we use this to decide whether or not to show the view all button).
     total_past_items: usize,
     state_handles: StateHandles,
+    /// Whether the agent queue block shows only its header.
+    queue_collapsed: bool,
 }
 
 pub fn register_conversation_list_view_bindings(app: &mut AppContext) {
@@ -321,9 +334,122 @@ impl ConversationListView {
             view_all: false,
             total_past_items: 0,
             state_handles: StateHandles::default(),
+            queue_collapsed: false,
         };
+        ctx.subscribe_to_model(&AgentQueue::handle(ctx), |me, _, _, ctx| {
+            me.sync_queue_rows(ctx);
+        });
+        view.sync_queue_rows(ctx);
         view.sync_list_items(ctx);
         view
+    }
+
+    /// Gives each task of the agent queue a mouse state for its row, keeping those it had.
+    fn sync_queue_rows(&mut self, ctx: &mut ViewContext<Self>) {
+        let mut previous = std::mem::take(&mut self.state_handles.queue_rows);
+        self.state_handles.queue_rows = AgentQueue::as_ref(ctx)
+            .tasks()
+            .iter()
+            .map(|task| (task.id, previous.remove(&task.id).unwrap_or_default()))
+            .collect();
+        ctx.notify();
+    }
+
+    /// The agent queue above the conversations: a header with the counts, and a row per task that
+    /// opens its transcript in a tab. `None` when the queue is empty.
+    fn render_queue_block(&self, app: &AppContext) -> Option<Box<dyn Element>> {
+        let queue = AgentQueue::as_ref(app);
+        if queue.tasks().is_empty() {
+            return None;
+        }
+        let appearance = Appearance::as_ref(app);
+        let theme = appearance.theme();
+        let (waiting, running, _, failed) = queue.counts();
+        let chevron_icon = if self.queue_collapsed {
+            Icon::ChevronRight
+        } else {
+            Icon::ChevronDown
+        };
+        let chevron = ConstrainedBox::new(
+            chevron_icon
+                .to_krustui_icon(theme.sub_text_color(theme.background()))
+                .finish(),
+        )
+        .with_width(12.)
+        .with_height(12.);
+        let summary = format!("QUEUE  {running} running, {waiting} waiting, {failed} failed");
+        let header_row = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_spacing(4.)
+            .with_child(chevron.finish())
+            .with_child(
+                Text::new_inline(summary, appearance.ui_font_family(), 11.)
+                    .with_color(theme.sub_text_color(theme.background()).into())
+                    .finish(),
+            )
+            .finish();
+        let mut block = Flex::column().with_child(
+            Hoverable::new(self.state_handles.queue_header.clone(), move |mouse_state| {
+                let mut container = Container::new(header_row)
+                    .with_horizontal_padding(12.)
+                    .with_vertical_padding(10.);
+                if mouse_state.is_hovered() {
+                    container = container.with_background(theme.surface_overlay_1());
+                }
+                container.finish()
+            })
+            .with_cursor(Cursor::PointingHand)
+            .on_click(|ctx, _, _| {
+                ctx.dispatch_typed_action(ConversationListViewAction::ToggleQueueSection);
+            })
+            .finish(),
+        );
+        if !self.queue_collapsed {
+            for task in queue.tasks() {
+                let Some(mouse_state) = self.state_handles.queue_rows.get(&task.id) else {
+                    continue;
+                };
+                let status = match &task.state {
+                    TaskState::Waiting => "queued",
+                    TaskState::Running { .. } => "running",
+                    TaskState::Done { .. } => "done",
+                    TaskState::Failed { .. } => "failed",
+                };
+                let title: String = task.title.chars().take(44).collect();
+                let row = Flex::row()
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_spacing(8.)
+                    .with_child(
+                        Text::new_inline(status, appearance.ui_font_family(), 11.)
+                            .with_color(theme.sub_text_color(theme.background()).into())
+                            .finish(),
+                    )
+                    .with_child(
+                        Text::new_inline(title, appearance.ui_font_family(), appearance.ui_font_size())
+                            .with_color(theme.active_ui_text_color().into())
+                            .finish(),
+                    )
+                    .finish();
+                let id = task.id;
+                block.add_child(
+                    Hoverable::new(mouse_state.clone(), move |mouse_state| {
+                        let mut container = Container::new(row)
+                            .with_horizontal_padding(12.)
+                            .with_vertical_padding(6.);
+                        if mouse_state.is_hovered() {
+                            container = container.with_background(theme.surface_overlay_1());
+                        }
+                        container.finish()
+                    })
+                    .with_cursor(Cursor::PointingHand)
+                    .on_click(move |ctx, _, _| {
+                        ctx.dispatch_typed_action(ConversationListViewAction::OpenQueueTask { id });
+                    })
+                    .finish(),
+                );
+            }
+        }
+        Some(block.finish())
     }
 
     /// Rebuilds the flat list of items based on sections and collapse state.
@@ -1188,6 +1314,13 @@ impl TypedActionView for ConversationListView {
                 Self::send_open_telemetry(id, ctx);
                 ctx.dispatch_typed_action(&action);
             }
+            ConversationListViewAction::ToggleQueueSection => {
+                self.queue_collapsed = !self.queue_collapsed;
+                ctx.notify();
+            }
+            ConversationListViewAction::OpenQueueTask { id } => {
+                ctx.dispatch_typed_action(&WorkspaceAction::OpenQueueTaskTranscript { task_id: *id });
+            }
             ConversationListViewAction::ArrowUp => {
                 self.move_selection_up(ctx);
             }
@@ -1481,6 +1614,9 @@ impl View for ConversationListView {
 
         if has_conversations {
             column = column.with_child(render_search_box(&self.query_editor, app));
+        }
+        if let Some(queue_block) = self.render_queue_block(app) {
+            column = column.with_child(queue_block);
         }
 
         let column_element = column

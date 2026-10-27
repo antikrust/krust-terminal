@@ -58,6 +58,7 @@ use crate::ai::api_providers::{
     self, failover_rows, failover_sources, is_free_model, route_for, ApiProvider,
     ApiProviderKeys, FailoverSource, LOCAL_OLLAMA,
 };
+use crate::ai::agent_queue::{AgentQueue, LineKind, TaskState};
 use crate::ai::failover_health::{FailoverHealth, Health};
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 #[cfg(not(target_family = "wasm"))]
@@ -712,6 +713,17 @@ pub struct AISettingsPageView {
     byor_preset_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
     byor_preset_name_editor: ViewHandle<EditorView>,
     byor_preset_save_button: ViewHandle<ActionButton>,
+    /// The agent queue: the fields a task and a plan file's path are typed
+    /// in, their buttons, the retry and remove mouse states of each task by
+    /// its id, and what loading a plan last said.
+    queue_task_editor: ViewHandle<EditorView>,
+    queue_plan_editor: ViewHandle<EditorView>,
+    queue_add_button: ViewHandle<ActionButton>,
+    queue_load_button: ViewHandle<ActionButton>,
+    queue_task_buttons: Vec<(u64, MouseStateHandle, MouseStateHandle, MouseStateHandle)>,
+    /// Tasks whose transcript is open.
+    queue_open: std::collections::HashSet<u64>,
+    queue_message: Option<String>,
     agent_toolbar_inline_editor: ViewHandle<AgentToolbarInlineEditor>,
 
     apply_code_diffs_dropdown_menu: ViewHandle<Dropdown<AISettingsPageAction>>,
@@ -2007,6 +2019,39 @@ impl AISettingsPageView {
                 })
         });
 
+        let queue_task_editor = Self::queue_text_editor("Describe a task, then press Enter", ctx);
+        let queue_plan_editor =
+            Self::queue_text_editor("Path of a plan file (notes/plan.json), then press Enter", ctx);
+        ctx.subscribe_to_view(&queue_task_editor, |me, _, event, ctx| {
+            if matches!(event, EditorEvent::Enter) {
+                me.add_queue_task(ctx);
+            }
+        });
+        ctx.subscribe_to_view(&queue_plan_editor, |me, _, event, ctx| {
+            if matches!(event, EditorEvent::Enter) {
+                me.load_queue_plan(ctx);
+            }
+        });
+        let queue_add_button = ctx.add_typed_action_view(|_| {
+            ActionButton::new("Add", SecondaryTheme)
+                .with_size(ButtonSize::Small)
+                .on_click(|ctx| {
+                    ctx.dispatch_typed_action(AISettingsPageAction::AddQueueTask);
+                })
+        });
+        let queue_load_button = ctx.add_typed_action_view(|_| {
+            ActionButton::new("Load plan", SecondaryTheme)
+                .with_size(ButtonSize::Small)
+                .on_click(|ctx| {
+                    ctx.dispatch_typed_action(AISettingsPageAction::LoadQueuePlan);
+                })
+        });
+        let queue_task_buttons = AgentQueue::as_ref(ctx)
+            .tasks()
+            .iter()
+            .map(|task| (task.id, Default::default(), Default::default(), Default::default()))
+            .collect();
+
         Self {
             page: Self::build_page(None, ctx),
             active_subpage: None,
@@ -2053,6 +2098,13 @@ impl AISettingsPageView {
             byor_preset_dropdown,
             byor_preset_name_editor,
             byor_preset_save_button,
+            queue_task_editor,
+            queue_plan_editor,
+            queue_add_button,
+            queue_load_button,
+            queue_task_buttons,
+            queue_open: Default::default(),
+            queue_message: None,
             thinking_display_mode_dropdown,
             orchestration_message_display_mode_dropdown,
             default_prompt_submission_mode_dropdown,
@@ -3648,6 +3700,78 @@ impl AISettingsPageView {
         ctx.notify();
     }
 
+    /// A single-line field of the agent queue.
+    fn queue_text_editor(
+        placeholder: &'static str,
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<EditorView> {
+        ctx.add_typed_action_view(move |ctx| {
+            let appearance = Appearance::handle(ctx).as_ref(ctx);
+            let options = SingleLineEditorOptions {
+                text: TextOptions {
+                    font_size_override: Some(appearance.ui_font_size()),
+                    text_colors_override: Some(TextColors {
+                        default_color: appearance.theme().active_ui_text_color(),
+                        disabled_color: appearance.theme().disabled_ui_text_color(),
+                        hint_color: appearance.theme().disabled_ui_text_color(),
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let mut editor = EditorView::single_line(options, ctx);
+            editor.set_placeholder_text(placeholder, ctx);
+            editor
+        })
+    }
+
+    /// Adds the typed task to the agent queue.
+    fn add_queue_task(&mut self, ctx: &mut ViewContext<Self>) {
+        let text = self.queue_task_editor.as_ref(ctx).buffer_text(ctx);
+        let added = AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.add(&text, ctx));
+        if added {
+            self.queue_task_editor
+                .update(ctx, |editor, ctx| editor.clear_buffer(ctx));
+        }
+        ctx.notify();
+    }
+
+    /// Adds the tasks of the plan file whose path is typed.
+    fn load_queue_plan(&mut self, ctx: &mut ViewContext<Self>) {
+        let typed = self.queue_plan_editor.as_ref(ctx).buffer_text(ctx);
+        let typed = typed.trim();
+        if typed.is_empty() {
+            return;
+        }
+        let path = match (typed.strip_prefix("~/"), std::env::var_os("HOME")) {
+            (Some(rest), Some(home)) => std::path::PathBuf::from(home).join(rest),
+            _ => std::path::PathBuf::from(typed),
+        };
+        let result = AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.load_plan(&path, ctx));
+        self.queue_message = Some(match result {
+            Ok(0) => "That plan has no tasks to spawn, or they are all in the queue already.".to_string(),
+            Ok(1) => "Added 1 task.".to_string(),
+            Ok(added) => format!("Added {added} tasks."),
+            Err(error) => error,
+        });
+        ctx.notify();
+    }
+
+    /// Gives each task of the agent queue its buttons' mouse states, keeping
+    /// those it already had.
+    fn rebuild_queue_buttons(&mut self, ctx: &mut ViewContext<Self>) {
+        let mut previous = std::mem::take(&mut self.queue_task_buttons);
+        self.queue_task_buttons = AgentQueue::as_ref(ctx)
+            .tasks()
+            .iter()
+            .map(|task| match previous.iter().position(|(id, _, _, _)| *id == task.id) {
+                Some(index) => previous.swap_remove(index),
+                None => (task.id, Default::default(), Default::default(), Default::default()),
+            })
+            .collect();
+        ctx.notify();
+    }
+
     fn create_cli_agent_dropdowns(
         ctx: &mut ViewContext<Self>,
     ) -> Vec<ViewHandle<Dropdown<AISettingsPageAction>>> {
@@ -3798,6 +3922,17 @@ pub enum AISettingsPageAction {
         index: usize,
         model_id: String,
     },
+    /// The agent queue: add the typed task, load the typed plan file,
+    /// start or stop the queue, take finished tasks off it, and retry or
+    /// remove one task (by its id).
+    AddQueueTask,
+    LoadQueuePlan,
+    ToggleQueueRunning,
+    ClearFinishedQueueTasks,
+    RetryQueueTask(u64),
+    RemoveQueueTask(u64),
+    /// Opens or closes a task's transcript.
+    ToggleQueueTaskOpen(u64),
     HyperlinkClick(HyperlinkUrl),
     ToggleCodebaseContext,
     ToggleShowInputHintText,
@@ -4141,6 +4276,30 @@ impl TypedActionView for AISettingsPageView {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.submit_on_ctrl_enter.toggle_and_save_value(ctx));
                 });
+                ctx.notify();
+            }
+            AISettingsPageAction::AddQueueTask => self.add_queue_task(ctx),
+            AISettingsPageAction::LoadQueuePlan => self.load_queue_plan(ctx),
+            AISettingsPageAction::ToggleQueueRunning => {
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| {
+                    let running = !queue.is_running();
+                    queue.set_running(running, ctx);
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::ClearFinishedQueueTasks => {
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.clear_finished(ctx));
+            }
+            AISettingsPageAction::RetryQueueTask(id) => {
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.retry(*id, ctx));
+            }
+            AISettingsPageAction::RemoveQueueTask(id) => {
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.remove(*id, ctx));
+            }
+            AISettingsPageAction::ToggleQueueTaskOpen(id) => {
+                if !self.queue_open.remove(id) {
+                    self.queue_open.insert(*id);
+                }
                 ctx.notify();
             }
             AISettingsPageAction::ToggleCLIRichInputExpanded => {
@@ -8446,6 +8605,9 @@ struct CloudModelKeysWidget {
     free_only_switch: SwitchStateHandle,
     /// The preset row's delete (trash) button.
     delete_preset: MouseStateHandle,
+    /// The agent queue's Start/Stop and Clear finished buttons.
+    queue_run: MouseStateHandle,
+    queue_clear: MouseStateHandle,
 }
 
 impl CloudModelKeysWidget {
@@ -8505,6 +8667,10 @@ impl CloudModelKeysWidget {
         ctx.subscribe_to_model(&ApiKeyManager::handle(ctx), |me, _, _, ctx| {
             me.rebuild_byor_failover_rows(ctx);
         });
+        // The agent queue changed: its tasks' buttons follow.
+        ctx.subscribe_to_model(&AgentQueue::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_queue_buttons(ctx);
+        });
         // A health check came back: redraw the lights.
         ctx.subscribe_to_model(&FailoverHealth::handle(ctx), |_, _, _, ctx| ctx.notify());
         ctx.subscribe_to_model(&HarnessAvailabilityModel::handle(ctx), |me, _, _, ctx| {
@@ -8517,6 +8683,8 @@ impl CloudModelKeysWidget {
             failover_switch: Default::default(),
             free_only_switch: Default::default(),
             delete_preset: Default::default(),
+            queue_run: Default::default(),
+            queue_clear: Default::default(),
         }
     }
 
@@ -8788,6 +8956,246 @@ impl CloudModelKeysWidget {
         column.finish()
     }
 
+    /// The agent queue: tasks that run unattended, several at once, each on
+    /// the first free model of the failover list. Its controls, the fields
+    /// to add a task or load a plan, and the tasks with how each is doing.
+    fn render_queue(&self, view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
+        let appearance = Appearance::as_ref(app);
+        let queue = AgentQueue::as_ref(app);
+        let (waiting, running, done, failed) = queue.counts();
+        let mut column = Flex::column().with_spacing(8.).with_child(
+            Text::new_inline("Agent queue", appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                .with_color(appearance.theme().active_ui_text_color().into())
+                .with_style(Properties::default().weight(Weight::Semibold))
+                .finish(),
+        );
+        column.add_child(render_ai_setting_description(
+            "Tasks run unattended with the agent's own tools, several at once. Each goes to the \
+             first model of the failover list above that is on, isn't down and has no task yet, \
+             so a free tier's rate limit holds up one task, not all of them; a task that fails \
+             goes to the next model. A plan file (notes/plan.json from the reverse-lab tools) adds \
+             every task of its spawn lanes.",
+            true,
+            app,
+        ));
+
+        let run_label = if queue.is_running() { "Stop" } else { "Start" };
+        let status = format!("{waiting} waiting, {running} running, {done} done, {failed} failed");
+        column.add_child(
+            Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Secondary, self.queue_run.clone())
+                        .with_text_label(run_label.to_string())
+                        .build()
+                        .on_click(|ctx, _, _| {
+                            ctx.dispatch_typed_action(AISettingsPageAction::ToggleQueueRunning);
+                        })
+                        .finish(),
+                )
+                .with_child(
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Text, self.queue_clear.clone())
+                        .with_text_label("Clear finished".to_string())
+                        .build()
+                        .on_click(|ctx, _, _| {
+                            ctx.dispatch_typed_action(AISettingsPageAction::ClearFinishedQueueTasks);
+                        })
+                        .finish(),
+                )
+                .with_child(
+                    Text::new_inline(status, appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                        .with_color(appearance.theme().disabled_ui_text_color().into())
+                        .finish(),
+                )
+                .finish(),
+        );
+
+        let field = |editor: &ViewHandle<EditorView>, button: &ViewHandle<ActionButton>| {
+            Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    ConstrainedBox::new(
+                        appearance
+                            .ui_builder()
+                            .text_input(editor.clone())
+                            .with_style(UiComponentStyles {
+                                padding: Some(Coords {
+                                    top: 6.,
+                                    bottom: 6.,
+                                    left: 10.,
+                                    right: 10.,
+                                }),
+                                background: Some(appearance.theme().surface_2().into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .with_width(420.)
+                    .finish(),
+                )
+                .with_child(button.as_ref(app).render(app))
+                .finish()
+        };
+        column.add_child(field(&view.queue_task_editor, &view.queue_add_button));
+        column.add_child(field(&view.queue_plan_editor, &view.queue_load_button));
+        if let Some(message) = &view.queue_message {
+            column.add_child(render_ai_setting_description(message.clone(), true, app));
+        }
+
+        // What the decider rated a task, and on what.
+        let decided = |task: &crate::ai::agent_queue::QueueTask| {
+            task.difficulty.map_or_else(String::new, |difficulty| {
+                format!("{}: {}", difficulty.label(), task.reason)
+            })
+        };
+        let mut list = Flex::column().with_spacing(8.);
+        for task in queue.tasks() {
+            let (light, detail) = match &task.state {
+                TaskState::Waiting => (
+                    Health::Unknown,
+                    task.last_error
+                        .as_ref()
+                        .map_or_else(|| "waiting".to_string(), |error| format!("waiting, trying another model: {error}")),
+                ),
+                TaskState::Running { model } => (
+                    Health::Degraded,
+                    format!("running on {model} ({})", decided(task)),
+                ),
+                TaskState::Done { model, answer } => (
+                    Health::Good,
+                    format!("done on {model} ({}): {answer}", decided(task)),
+                ),
+                TaskState::Failed { error } => (Health::Down, format!("failed: {error}")),
+            };
+            // The task's transcript: the last lines it said, called and got back, when open.
+            let mut transcript_lines = Flex::column().with_spacing(4.);
+            if view.queue_open.contains(&task.id) {
+                let shown_from = task.transcript.len().saturating_sub(80);
+                if task.transcript.is_empty() {
+                    transcript_lines.add_child(render_ai_setting_description(
+                        "Nothing yet: it hasn't started, or hasn't said anything.",
+                        true,
+                        app,
+                    ));
+                }
+                for line in &task.transcript[shown_from..] {
+                    let (prefix, strong) = match line.kind {
+                        LineKind::Said => ("", true),
+                        LineKind::Tool => ("\u{25b8} ", false),
+                        LineKind::Result => ("   \u{21b3} ", false),
+                        LineKind::Error => ("! ", false),
+                    };
+                    let color = if strong {
+                        appearance.theme().active_ui_text_color()
+                    } else {
+                        appearance.theme().sub_text_color(appearance.theme().background())
+                    };
+                    transcript_lines.add_child(
+                        appearance
+                            .ui_builder()
+                            .wrappable_text(format!("{prefix}{}", line.text), true)
+                            .with_style(UiComponentStyles {
+                                font_size: Some(CONTENT_FONT_SIZE),
+                                font_color: Some(color.into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    );
+                }
+            }
+            let transcript = Container::new(transcript_lines.finish())
+                .with_margin_top(if view.queue_open.contains(&task.id) { 6. } else { 0. })
+                .finish();
+            let mut row = Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_child(
+                    Container::new(health_light(light, appearance))
+                        .with_margin_top(5.)
+                        .finish(),
+                )
+                .with_child(
+                    Shrinkable::new(
+                        1.,
+                        Flex::column()
+                            .with_child(
+                                Text::new_inline(
+                                    task.title.clone(),
+                                    appearance.ui_font_family(),
+                                    CONTENT_FONT_SIZE,
+                                )
+                                .with_color(appearance.theme().active_ui_text_color().into())
+                                .finish(),
+                            )
+                            .with_child(
+                                appearance
+                                    .ui_builder()
+                                    .wrappable_text(detail, true)
+                                    .with_style(UiComponentStyles {
+                                        font_size: Some(CONTENT_FONT_SIZE),
+                                        font_color: Some(
+                                            appearance
+                                                .theme()
+                                                .sub_text_color(appearance.theme().background())
+                                                .into(),
+                                        ),
+                                        ..Default::default()
+                                    })
+                                    .build()
+                                    .finish(),
+                            )
+                            .with_child(transcript)
+                            .finish(),
+                    )
+                    .finish(),
+                );
+            if let Some((_, retry, remove, toggle)) = view
+                .queue_task_buttons
+                .iter()
+                .find(|(id, _, _, _)| *id == task.id)
+            {
+                row.add_child(small_icon_button(
+                    if view.queue_open.contains(&task.id) {
+                        Icon::ChevronUp
+                    } else {
+                        Icon::ChevronDown
+                    },
+                    true,
+                    toggle.clone(),
+                    AISettingsPageAction::ToggleQueueTaskOpen(task.id),
+                    appearance,
+                ));
+                if matches!(task.state, TaskState::Failed { .. }) {
+                    row.add_child(small_icon_button(
+                        Icon::Refresh,
+                        true,
+                        retry.clone(),
+                        AISettingsPageAction::RetryQueueTask(task.id),
+                        appearance,
+                    ));
+                }
+                row.add_child(small_icon_button(
+                    Icon::X,
+                    !matches!(task.state, TaskState::Running { .. }),
+                    remove.clone(),
+                    AISettingsPageAction::RemoveQueueTask(task.id),
+                    appearance,
+                ));
+            }
+            list.add_child(row.finish());
+        }
+        column.add_child(list.finish());
+        column.finish()
+    }
+
     fn render_provider(
         provider: &ApiProvider,
         editor: &ViewHandle<EditorView>,
@@ -8903,6 +9311,11 @@ impl SettingsWidget for CloudModelKeysWidget {
         }
         column.add_child(
             Container::new(self.render_failover(view, app))
+                .with_margin_top(24.)
+                .finish(),
+        );
+        column.add_child(
+            Container::new(self.render_queue(view, app))
                 .with_margin_top(24.)
                 .finish(),
         );

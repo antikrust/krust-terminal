@@ -195,6 +195,7 @@ use crate::ai::blocklist::handoff;
 use crate::ai::blocklist::handoff::touched_repos::extract_paths_from_conversation;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 use crate::ai::blocklist::handoff::{HandoffLaunchAttachments, PendingCloudLaunch};
+use crate::ai::agent_queue::AgentQueue;
 use crate::ai::blocklist::history_model::{load_conversation_from_server, CloudConversationData};
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
 use crate::ai::blocklist::suggested_agent_mode_workflow_modal::{
@@ -4346,6 +4347,46 @@ impl Workspace {
     }
 
     /// Load the conversation into a transcript viewer in a new tab (with no input/backing shell)
+    /// Opens a task of the agent queue in a new view-only tab: what it has said and done so far,
+    /// built in memory and not saved with the user's conversations.
+    fn open_queue_task_transcript(&mut self, task_id: u64, ctx: &mut ViewContext<Self>) {
+        let Some(conversation) = AgentQueue::as_ref(ctx).transcript_conversation(task_id) else {
+            self.toast_stack.update(ctx, |view, ctx| {
+                view.add_ephemeral_toast(
+                    DismissibleToast::error("That task is no longer in the queue.".to_string()),
+                    ctx,
+                );
+            });
+            return;
+        };
+        // The tab first, with a loading viewer, then its data: the order the cloud loader uses.
+        let new_pane_group = ctx.add_typed_action_view(|ctx| {
+            PaneGroup::new_for_conversation_transcript_viewer_loading(
+                self.tips_completed.clone(),
+                self.user_default_shell_unsupported_banner_model_handle
+                    .clone(),
+                self.server_api.clone(),
+                self.model_event_sender.clone(),
+                ctx,
+            )
+        });
+        ctx.subscribe_to_view(&new_pane_group, move |me, pane_group, event, ctx| {
+            me.handle_file_tree_event(pane_group, event, ctx)
+        });
+        self.tabs.push(TabData::new(new_pane_group.clone()));
+        let new_tab_index = self.tab_count() - 1;
+        self.tab_mru_order
+            .push(self.tabs[new_tab_index].pane_group.id());
+        self.activate_tab_internal(new_tab_index, ctx);
+        new_pane_group.update(ctx, |pane_group, ctx| {
+            pane_group.load_data_into_conversation_transcript_viewer(
+                CloudConversationData::Oz(Box::new(conversation)),
+                None,
+                ctx,
+            );
+        });
+    }
+
     pub fn load_cloud_conversation_into_new_transcript_viewer(
         &mut self,
         conversation_id: ServerConversationToken,
@@ -25409,6 +25450,9 @@ impl TypedActionView for Workspace {
                     // Attaching to a known ambient run: build the pane in ambient mode.
                     self.add_tab_for_joining_shared_session(*session_id, true, ctx);
                 }
+            }
+            OpenQueueTaskTranscript { task_id } => {
+                self.open_queue_task_transcript(*task_id, ctx);
             }
             OpenConversationTranscriptViewer {
                 conversation_id,

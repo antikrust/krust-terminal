@@ -1,0 +1,44 @@
+# Agent queue, Auto models, and the chooser
+
+Several agents at once, spread over the free models you have: on this Mac (Ollama and BYOR keys),
+on other machines' Ollama, and, through Moloch, on machines running acolyte. One chooser decides
+which model takes which task, and the same algorithm runs in the app and in Moloch.
+
+**Status:** written, not yet compiled. Nothing here has been through a build; `task_router.rs` and
+the pure parts of Moloch's code were checked with standalone `rustc`. Build, then test by hand.
+
+## The pieces
+
+| | Where | What it does |
+|---|---|---|
+| Chooser | `app/src/ai/task_router.rs`, Moloch `chooser.rs` | `decide(task)` rates difficulty (an explicit `difficulty:` line wins, else signals in the text); `strength(model)` and `speed(model)` rate a model from its name, price and context; `choose(policy, difficulty, candidates)` is the one entry point. Golden cases: `docs/chooser-golden.json`, the same file in Moloch; both must give the same answers. |
+| Auto models | `api_providers.rs` (`auto_models`, `resolve_auto_model`), `harness_availability.rs`, `terminal/view.rs` | "Auto (cost-efficient / responsive / genius)" in the model picker. Each turn resolves to one failover row and the conversation shows the model that ran. Never below medium difficulty (a short follow-up is not easy work). |
+| Queue | `app/src/ai/agent_queue.rs` | Headless tasks, one running per account, each to the model the chooser picks; a failed task retries a tier up on another model (3 attempts). Saved between runs. Transcripts live in memory. |
+| Panels | `settings_view/ai_page.rs` (Agent queue, under the failover list), `workspace/view/conversation_list/view.rs` (QUEUE block in the left panel) | Add tasks, load a plan, start/stop; click a task in the left panel for a view-only tab (`WorkspaceAction::OpenQueueTaskTranscript`, built in memory, not saved with conversations). |
+| Orchestrator | `app/src/ai/queue_tools.rs` | `plan_tasks` and `collect_results` tools for the API and Ollama tool loops: a model splits a goal into independent tasks, the queue runs them, the model collects the answers. The local counterpart of Warp's `run_agents`. |
+| Plans | reverse-lab `tools/plan.py` | `notes/plan.json`: lanes (mechanical, exceptions, gui, serial); load it in the queue panel. |
+
+## Local and Moloch
+
+The task format is the same in both: title, prompt, difficulty (a `difficulty:` line in the prompt),
+workspaces. With no Moloch the app's queue runs tasks on the failover rows. With Moloch, a run is
+sent as `/agent/run` with `model_id: "auto"` (or `auto/<policy>`); Moloch's assignment picks among
+the models its connected workers advertise (`resolve_auto_model` in Moloch `lib.rs`) and the run
+carries the model it was given. Runs show in the left panel as cloud runs do.
+
+## Workspaces
+
+A run can carry files: `config.workspaces = [{id: <sha256>, name}]`. Bundles are `.tar.gz`, stored by
+hash in Moloch (`PUT/GET /api/v1/workspaces/{sha256}`, quota with least-recently-used eviction,
+`MOLOCH_WORKSPACE_DIR`, `MOLOCH_WORKSPACE_QUOTA_GB`), unpacked by acolyte into the guest at
+`/work/<name>` and `/work/.orig/<name>`; the run's changes come back as a patch, stored the same
+way, named in the transcript. `scripts/moloch-run.py` in the Moloch repo builds bundles (git's file
+list, no secrets, size cap), uploads, submits, waits and applies the patch. Repositories (a remote
+and a commit) are a separate task.
+
+## Not done
+
+- Building and testing any of the Rust above.
+- The app sending runs to Moloch with workspaces from its own UI (the script does it).
+- `/mnt/terra` on sentience as the workspace store and its quota; the guest image needing the
+  toolchains.
