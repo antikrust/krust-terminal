@@ -31,6 +31,7 @@ use super::ollama_committee_proof::rewrite_loss;
 use super::ollama_context;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use super::plan_tracker::PlanTracker;
+use super::read_headings;
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -438,7 +439,9 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec], model_description
          build/test commands.\n\
          - read_file and write_file read and create files; paths may be absolute or relative to \
          the working directory. read_file labels each line with its number, as `L12| text` (the \
-         label is not part of the file).\n\
+         label is not part of the file). A long document is read by its headings: headings=true \
+         lists them (before/after add context lines, like grep -B/-A), and path#Heading or \
+         section reads one section.\n\
          - replace_lines changes lines start to end of a file in place, with new `content` or with \
          lines copied from another file via `from_path`; use it to edit part of an existing file \
          instead of retyping the whole file with write_file.\n\
@@ -492,7 +495,11 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                 comes back labelled with its number, as `L12| text` — the label is not part of \
                 the file. A large file comes back a window of lines at a time; the result tells \
                 you how many lines there are and the `offset` that reads the next window. To \
-                read from a given line, pass `offset` (lines to skip: offset 125 starts at L126)."
+                read from a given line, pass `offset` (lines to skip: offset 125 starts at L126). \
+                A markdown document can be read by its headings instead: `headings` true lists \
+                them with their line numbers and section lengths (`before`/`after` add that many \
+                lines of context around each, like grep -B/-A), and `section` (or `path#Heading`) \
+                reads one section whole: its text, or a number like 3.7, or a line like L140."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -508,6 +515,22 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     "limit": {
                         "type": "integer",
                         "description": "Maximum number of lines to return from `offset` (optional)."
+                    },
+                    "headings": {
+                        "type": "boolean",
+                        "description": "List the document's headings with line numbers instead of its text (optional)."
+                    },
+                    "section": {
+                        "type": "string",
+                        "description": "Read one section: a heading's text, its leading number (3.7), or its line (L140). `path#Heading` does the same (optional)."
+                    },
+                    "before": {
+                        "type": "integer",
+                        "description": "Lines of context before each heading, or before the section (optional)."
+                    },
+                    "after": {
+                        "type": "integer",
+                        "description": "Lines of context after each heading, or after the section (optional)."
                     }
                 },
                 "required": ["path"]
@@ -722,15 +745,58 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
     };
     match name {
         BUILTIN_READ_FILE => {
-            let file = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
-            let offset = arguments.get("offset").and_then(Value::as_u64).map(|n| n as usize);
-            let limit = arguments.get("limit").and_then(Value::as_u64).map(|n| n as usize);
-            read_path_windowed_within(
-                &resolve_under(working_dir, file),
-                offset,
-                limit,
-                read_window_bytes,
-            )
+            let spec = arg_str("path").ok_or("read_file requires a non-empty string `path`")?;
+            // Small models often send numbers and flags as strings ("126", "true").
+            let count = |key: &str| {
+                arguments.get(key).and_then(|value| {
+                    value
+                        .as_u64()
+                        .or_else(|| value.as_str().and_then(|text| text.trim().parse().ok()))
+                        .map(|n| n as usize)
+                })
+            };
+            let flag = |key: &str| {
+                arguments.get(key).is_some_and(|value| {
+                    value.as_bool().unwrap_or_else(|| {
+                        value.as_str().is_some_and(|text| text.eq_ignore_ascii_case("true"))
+                    })
+                })
+            };
+            let (offset, limit) = (count("offset"), count("limit"));
+            // `path#Heading` (or `path:Heading`) reads that section of the file.
+            let (file, section_in_path) = read_headings::split_section_path(spec, |candidate| {
+                resolve_under(working_dir, candidate).is_file()
+            });
+            let section = arg_str("section").map(str::to_string).or(section_in_path);
+            let target = resolve_under(working_dir, &file);
+            if (section.is_some() || flag("headings")) && target.is_file() {
+                let bytes = std::fs::read(&target).map_err(|error| error.to_string())?;
+                let content = String::from_utf8_lossy(&bytes);
+                let lines: Vec<&str> = content.lines().collect();
+                let shown = target.display().to_string();
+                let (before, after) = (count("before").unwrap_or(0), count("after").unwrap_or(0));
+                return match section {
+                    Some(selector) => read_headings::section(
+                        &shown,
+                        &lines,
+                        &selector,
+                        before,
+                        after,
+                        offset.unwrap_or(0),
+                        limit,
+                        read_window_bytes,
+                    ),
+                    None => Ok(read_headings::outline(
+                        &shown,
+                        &lines,
+                        before,
+                        after,
+                        offset.unwrap_or(0),
+                        read_window_bytes,
+                    )),
+                };
+            }
+            read_path_windowed_within(&target, offset, limit, read_window_bytes)
         }
         BUILTIN_WRITE_FILE => {
             let file = arg_str("path").ok_or("write_file requires a non-empty string `path`")?;

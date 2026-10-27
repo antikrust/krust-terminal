@@ -75,6 +75,8 @@ pub(crate) const MEMORY_PROMPT: &str = "Your memory is poor, and your context is
     The remember tool saves notes to a file of your own: an exact path, address, constant, \
     result or decision, or what the next step is, as short lines, one fact each. If the request \
     names a notes file of its own, keep that one up too.\n\
+    - Read a long document a section at a time, not from the top: read_file with headings=true \
+    lists its headings, then read_file path#Heading reads the one you need.\n\
     - Never write out notes or a summary of your progress as text in your answers: that spends \
     the context twice. The notes are for you, not the user.";
 

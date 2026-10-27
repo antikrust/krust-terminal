@@ -59,6 +59,7 @@ pub(crate) mod ollama_runbook;
 pub(crate) mod ollama_stream_exec;
 pub(crate) mod ollama_work_notes;
 pub(crate) mod plan_tracker;
+mod read_headings;
 mod telemetry;
 pub(crate) mod turn_events_to_conversation;
 pub(crate) use claude_code::ClaudeHarness;
