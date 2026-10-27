@@ -624,7 +624,7 @@ pub async fn run_api_stream(
 
         if compact_next {
             compact_next = false;
-            compact_conversation(&route, &mut messages, &plan, session_id, working_dir, path, &mut on_event)
+            compact_conversation(&route, &mut messages, &plan, session_id, working_dir, path)
                 .await;
         }
     }
@@ -647,7 +647,6 @@ async fn compact_conversation(
     session_id: &Uuid,
     working_dir: &Path,
     path: &str,
-    on_event: &mut impl FnMut(TurnEvent),
 ) {
     let Some(summary) =
         summarize_for_compaction(route, messages, session_id, working_dir, path).await
@@ -656,9 +655,6 @@ async fn compact_conversation(
     };
     apply_compaction(messages, &summary, &plan.remaining(), session_id);
     save_history(session_id, messages);
-    on_event(TurnEvent::Text {
-        text: "_Compacted the conversation to free up context._".to_string(),
-    });
 }
 
 /// Asks the model to summarize the conversation for carrying into a fresh
@@ -680,10 +676,11 @@ async fn summarize_for_compaction(
 }
 
 /// What a compaction asks the model for.
-const SUMMARY_REQUEST: &str = "Summarize this conversation so the work can continue in a fresh \
-    context. Briefly cover what has been done, what was found (exact file paths, names, values, \
-    decisions), and what the next step needs. Leave out tool mechanics and anything not needed \
-    to carry on. Reply with only the summary.";
+const SUMMARY_REQUEST: &str = "Write down what is needed to carry on this task in a fresh \
+    context, as working notes, not a narrative: the task itself, what is done and what is left, \
+    and every exact file path, name, address, value and decision the next step relies on. Leave \
+    out the story of how you got here, tool mechanics, and anything the next step does not need. \
+    Reply with only the notes.";
 
 /// A history's size in characters, as sent (a token is about four).
 fn history_chars(messages: &[Value]) -> usize {

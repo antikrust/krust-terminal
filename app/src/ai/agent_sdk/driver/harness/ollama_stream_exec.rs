@@ -28,6 +28,7 @@ use super::claude_stream_exec::{
     run_jsonl_stream_cancellable, HarnessCancel,
 };
 use super::ollama_committee_proof::rewrite_loss;
+use super::ollama_context;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use super::plan_tracker::PlanTracker;
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
@@ -44,12 +45,6 @@ pub const CODELLAMA_OLLAMA_MODEL_ID: &str = "ollama/codellama:13b";
 pub const DEEPSEEK_CODER_OLLAMA_MODEL_ID: &str = "ollama/deepseek-coder:6.7b";
 
 const MAX_TOOL_OUTPUT_BYTES: usize = 64 * 1024;
-/// The context window asked for on the tool-calling loop. Left unset, a
-/// model runs at its own default — 4096 tokens for glm-4.7-flash — and one
-/// `read_file` window plus the system prompt and tool definitions overflows
-/// it: Ollama shifts the context, the user's request falls out, and the model
-/// generates without end. 16K holds a turn that reads two files.
-const TOOL_CHAT_NUM_CTX: usize = 16_384;
 const OLLAMA_VERSION_URL: &str = "http://127.0.0.1:11434/api/version";
 const OLLAMA_SYSTEM_PROMPT: &str = r#"You are the local coding agent inside krust terminal.
 You can inspect and modify the user's computer by requesting one shell command at a time.
@@ -87,6 +82,10 @@ pub(crate) struct HarnessModelCaps {
     /// Chain-of-thought reasoning (deepseek-r1, qwen3, …) — lets us ask for
     /// `think:true` and surface the reasoning trace.
     pub(crate) thinking: bool,
+    /// The model's own maximum context, in tokens, when it says.
+    pub(crate) context_length: Option<u64>,
+    /// The model's size in billions of parameters, when it says.
+    pub(crate) billions: Option<f64>,
 }
 
 /// Probes `model`'s capabilities via `/api/show`. Fails closed (all false)
@@ -156,6 +155,18 @@ async fn probe_model_caps_once(
         .map(|value| HarnessModelCaps {
             tools: has(&value, "tools"),
             thinking: has(&value, "thinking"),
+            context_length: value
+                .get("model_info")
+                .and_then(Value::as_object)
+                .and_then(|info| {
+                    info.iter()
+                        .find(|(key, _)| key.ends_with(".context_length"))
+                        .and_then(|(_, length)| length.as_u64())
+                }),
+            billions: value
+                .pointer("/details/parameter_size")
+                .and_then(Value::as_str)
+                .and_then(|size| size.trim().trim_end_matches(['B', 'b']).parse().ok()),
         })
 }
 
@@ -2748,35 +2759,72 @@ async fn run_ollama_chat_with_tools(
     on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<ToolChatOutcome> {
     // Built-in file/code tools are always offered to tool-capable models;
-    // any exposed MCP servers (e.g. web search) are appended after them.
+    // any exposed MCP servers (e.g. web search) are appended after them. So
+    // is `remember`, this loop's own: the model's notes survive the context
+    // being rebuilt (see `ollama_context`).
     let all_tools: Vec<McpToolSpec> = builtin_local_tool_specs()
         .into_iter()
+        .chain(std::iter::once(ollama_context::remember_tool_spec()))
         .chain(mcp_tools.iter().cloned())
         .collect();
     let tool_defs: Vec<Value> = all_tools
         .iter()
         .map(McpToolSpec::to_ollama_tool_json)
         .collect();
+    let tools_chars: usize = tool_defs.iter().map(|tool| tool.to_string().len()).sum();
+    // The window is this model's own: its maximum and its size decide it, and
+    // what one result carries, when the history is trimmed or rebuilt, all
+    // follow from it.
+    let caps = probe_model_caps_checked(model, path)
+        .await
+        .unwrap_or_default();
+    let limits = ollama_context::Limits::new(ollama_context::num_ctx_for(
+        caps.context_length,
+        caps.billions,
+    ));
     // Resume this session's history (system + prior turns, including tool
     // exchanges) or start fresh, then append this turn's user message — so
     // tool-capable models keep context across turns like the other paths do.
+    let model_description = if base_url_of(model) == crate::ai::ollama::service::API_BASE {
+        format!("{}, running locally through Ollama", wire_name(model))
+    } else {
+        format!("{}, running through Ollama on another machine", wire_name(model))
+    };
+    // Always the current prompt, so a resumed history gets instructions
+    // added since it began.
+    let system = json!({
+        "role": "system",
+        "content": format!(
+            "{}\n\n{}",
+            ollama_tool_system_prompt(&all_tools, &model_description),
+            ollama_context::MEMORY_PROMPT
+        ),
+    });
     let mut messages = chat_histories()
         .lock()
         .ok()
         .and_then(|histories| histories.get(session_id).cloned())
         .filter(|(saved_model, _)| saved_model == model)
         .map(|(_, messages)| messages)
-        .unwrap_or_else(|| {
-            let model_description = if base_url_of(model) == crate::ai::ollama::service::API_BASE {
-                format!("{}, running locally through Ollama", wire_name(model))
-            } else {
-                format!("{}, running through Ollama on another machine", wire_name(model))
-            };
-            vec![json!({
-                "role": "system",
-                "content": ollama_tool_system_prompt(&all_tools, &model_description),
-            })]
-        });
+        .unwrap_or_default();
+    match messages.first_mut() {
+        Some(first) if first.get("role").and_then(Value::as_str) == Some("system") => {
+            *first = system;
+        }
+        _ => messages.insert(0, system),
+    }
+    // A history carried in from earlier turns that already fills the window
+    // is rebuilt from the notes before this turn adds to it.
+    let carried = limits.tokens(&messages, tools_chars);
+    if limits.pressure(carried, false) == ollama_context::Pressure::Compact {
+        let checklist = ollama_context::Checklist {
+            done: &[],
+            remaining: &[],
+        };
+        messages =
+            ollama_context::compact(&messages, messages.len(), &checklist, session_id, &limits).0;
+    }
+    let mut turn_start = messages.len();
     messages.push(turn_user_message(
         session_id,
         format!(
@@ -2789,13 +2837,20 @@ async fn run_ollama_chat_with_tools(
     // which silently returns an empty completion for a chat-shaped body.
     let mut next_command = Some(first_command);
     let mut plan = PlanTracker::default();
+    // The round the model was told to save its notes in: the history is
+    // rebuilt when that round's calls all have their results.
+    let mut notes_asked = false;
+    // A checklist item was ticked off this round.
+    let mut task_done = false;
+    // The history size under which no rebuild is due, set after one.
+    let mut compact_floor = 0;
     for call_index in 0.. {
         let request = json!({
             "model": wire_name(model),
             "messages": without_turn_ids(&messages),
             "tools": tool_defs,
             "stream": true,
-            "options": { "temperature": 0, "num_ctx": TOOL_CHAT_NUM_CTX },
+            "options": { "temperature": 0, "num_ctx": limits.num_ctx },
         })
         .to_string();
 
@@ -2869,8 +2924,10 @@ async fn run_ollama_chat_with_tools(
             if let Ok(mut histories) = chat_histories().lock() {
                 histories.insert(*session_id, (model.to_string(), messages));
             }
+            let mut usage = response.usage;
+            usage.context_window = Some(limits.num_ctx as u64);
             on_event(TurnEvent::TurnCompleted {
-                usage: Some(response.usage),
+                usage: Some(usage),
                 is_error: false,
                 error_message: None,
             });
@@ -2896,10 +2953,22 @@ async fn run_ollama_chat_with_tools(
                     Ok(entries) => {
                         let updates = plan.updates(&entries);
                         completed = completed_ids(&updates);
+                        task_done |= !completed.is_empty();
+                        let started = updates
+                            .iter()
+                            .any(|update| matches!(update, PlanUpdate::Create(_)));
                         for update in updates {
                             on_event(TurnEvent::PlanUpdated { update });
                         }
-                        todo_list_reply(&entries)
+                        // A checklist means a complicated task: the harness
+                        // reminds the model to keep notes, as the prompt does.
+                        let mut reply = todo_list_reply(&entries);
+                        if started {
+                            reply.push_str(&ollama_context::checklist_started_reminder(session_id));
+                        } else if !completed.is_empty() {
+                            reply.push_str(ollama_context::STEP_DONE_REMINDER);
+                        }
+                        reply
                     }
                     Err(error) => error,
                 };
@@ -2907,6 +2976,21 @@ async fn run_ollama_chat_with_tools(
                     json!({ "role": "tool", "content": reply }),
                     &completed,
                 ));
+                continue;
+            }
+            // Notes are the model's own, kept for when its context is
+            // rebuilt: no card, nothing shown.
+            if call.name == ollama_context::REMEMBER {
+                let text = call
+                    .arguments
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let reply = match ollama_context::remember(session_id, text) {
+                    Ok(count) => format!("Saved. You have {count} notes."),
+                    Err(error) => format!("Could not save the notes: {error}"),
+                };
+                messages.push(json!({ "role": "tool", "content": reply }));
                 continue;
             }
             let call_id = format!("ollama-tool-{}", Uuid::new_v4());
@@ -2918,7 +3002,14 @@ async fn run_ollama_chat_with_tools(
             // Built-in file/code tools run in-process (working dir + stateless);
             // anything else is routed to whichever MCP server advertised it.
             let result = if is_builtin_local_tool(&call.name) {
-                dispatch_builtin_tool(&call.name, &call.arguments, working_dir, path).await
+                dispatch_builtin_tool_with_read_window(
+                    &call.name,
+                    &call.arguments,
+                    working_dir,
+                    path,
+                    limits.read_window(),
+                )
+                .await
             } else if let Some(tool_caller) = tool_caller {
                 tool_caller.call(&call.name, call.arguments.clone()).await
             } else {
@@ -2940,29 +3031,75 @@ async fn run_ollama_chat_with_tools(
                     error
                 }
             };
-            // A result too long for a small model's window would push the
-            // user's request out of it; read it in parts against the request
-            // instead, and hand the model the answer (see `ollama_work_notes`).
-            // Never a file read: the model asked for the exact lines (to copy
-            // or edit them), and `read_file` already pages to fit.
-            let tool_content =
-                if tool_content.len() > LARGE_TEXT_CHARS && call.name != BUILTIN_READ_FILE {
-                    read_in_parts(
-                        &tool_content,
-                        call,
-                        prompt,
-                        model,
-                        session_id,
-                        working_dir,
-                        path,
-                        on_event,
-                    )
-                    .await?
-                } else {
-                    tool_content
-                };
+            // A result too long for the model's window would push the user's
+            // request out of it. Over the limit it is saved whole and the
+            // model gets its head and tail with the path, so the exact text
+            // stays one read away; one far over it is read in parts against
+            // the request instead (see `ollama_work_notes`), and the model
+            // gets the answer. Never a file read: the model asked for the
+            // exact lines (to copy or edit them), and `read_file` already
+            // pages to fit.
+            let tool_content = if call.name == BUILTIN_READ_FILE
+                || tool_content.len() <= limits.result_chars()
+            {
+                tool_content
+            } else if tool_content.len() > limits.read_in_parts_over() {
+                read_in_parts(
+                    &tool_content,
+                    call,
+                    prompt,
+                    model,
+                    session_id,
+                    working_dir,
+                    path,
+                    on_event,
+                )
+                .await?
+            } else {
+                ollama_context::clip_with_spill(
+                    session_id,
+                    &call.name,
+                    &tool_content,
+                    limits.result_chars(),
+                )
+            };
             messages.push(json!({ "role": "tool", "content": tool_content }));
         }
+
+        // Every call has its result now. Keep the window from overflowing:
+        // after the model was told to save its notes the history is rebuilt
+        // from them; otherwise it is trimmed, or the model is told.
+        if notes_asked {
+            notes_asked = false;
+            let (done, remaining) = (plan.completed(), plan.remaining());
+            let checklist = ollama_context::Checklist {
+                done: &done,
+                remaining: &remaining,
+            };
+            let (rebuilt, start) =
+                ollama_context::compact(&messages, turn_start, &checklist, session_id, &limits);
+            messages = rebuilt;
+            turn_start = start;
+            compact_floor = limits.next_compact_floor(limits.tokens(&messages, tools_chars));
+        } else {
+            let used = limits
+                .tokens(&messages, tools_chars)
+                .max(response.usage.input_tokens as usize);
+            match limits.pressure(used, task_done) {
+                ollama_context::Pressure::Compact if used >= compact_floor => {
+                    messages.push(turn_user_message(
+                        session_id,
+                        ollama_context::SAVE_NOTES_NUDGE.to_string(),
+                    ));
+                    notes_asked = true;
+                }
+                ollama_context::Pressure::Compact | ollama_context::Pressure::Trim => {
+                    ollama_context::drop_stale_results(&mut messages, &limits, tools_chars);
+                }
+                ollama_context::Pressure::Fine => {}
+            }
+        }
+        task_done = false;
     }
 
     unreachable!("the tool-call loop only ends by returning")

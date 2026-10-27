@@ -19,6 +19,8 @@ pub(crate) struct PlanTracker {
     pending: Vec<String>,
     /// Ids already ticked off. An item once done stays done.
     done: HashSet<String>,
+    /// The same ids, in the order they were ticked off.
+    finished: Vec<String>,
     /// Each item's id by its key (see [`item_key`]), so an item the model
     /// rewords from one report to the next — "(done)" tacked on, the detail
     /// after "Step 3:" changed — keeps the id it was first listed with,
@@ -49,6 +51,11 @@ impl PlanTracker {
         self.pending.clone()
     }
 
+    /// The items ticked off so far, in the order they were done.
+    pub(crate) fn completed(&self) -> Vec<String> {
+        self.finished.clone()
+    }
+
     /// The operations that bring the checklist to `entries`.
     pub(crate) fn updates(&mut self, entries: &[PlanEntry]) -> Vec<PlanUpdate> {
         let items = self.with_ids(entries);
@@ -68,6 +75,7 @@ impl PlanTracker {
                 .map(|(item, _)| item.id.clone())
                 .collect();
             self.done = done.iter().cloned().collect();
+            self.finished = done.clone();
             let mut updates = vec![PlanUpdate::Create(
                 items.into_iter().map(|(item, _)| item).collect(),
             )];
@@ -96,6 +104,7 @@ impl PlanTracker {
         if !newly_done.is_empty() {
             updates.push(PlanUpdate::Complete(newly_done.clone()));
         }
+        self.finished.extend(newly_done.iter().cloned());
         self.done.extend(newly_done);
         self.pending = open
             .into_iter()
