@@ -32,7 +32,9 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 };
 use crate::ai::failover_health::FailoverHealth;
 use crate::ai::harness_availability::{HarnessAvailabilityModel, HarnessModelInfo};
-use crate::ai::task_router::{choose, decide, speed, strength, Candidate, Difficulty, Policy};
+use crate::ai::task_router::{
+    choose, decide, failover_order, speed, strength_with_tier, Candidate, Difficulty, Policy,
+};
 use crate::settings::AISettings;
 
 pub const API_MODEL_ID_PREFIX: &str = "api/";
@@ -574,11 +576,7 @@ pub fn resolve_auto_model(
     let candidates: Vec<Candidate> = routes
         .iter()
         .map(|route| Candidate {
-            strength: strength(
-                &route.model,
-                model_price(route.provider, &route.model),
-                model_context_window(route.provider, &route.model),
-            ),
+            strength: route_strength(route, app),
             speed: speed(&route.model),
             free: is_free_model(&route.model_id),
         })
@@ -828,6 +826,28 @@ pub fn failover_rows(app: &AppContext) -> Vec<String> {
         .collect()
 }
 
+/// The tier the user set on `model_id` (Settings, the row's tier button), if any.
+pub fn model_tier(model_id: &str, app: &AppContext) -> Option<Difficulty> {
+    AISettings::as_ref(app)
+        .byor_model_tiers
+        .value()
+        .iter()
+        .filter_map(|entry| entry.rsplit_once('='))
+        .find(|(id, _)| *id == model_id)
+        .and_then(|(_, tier)| Difficulty::from_label(tier))
+}
+
+/// How strong `route`'s model is: the tier the user set for it, else the guess from its name,
+/// price and context window. The one number failover, the Auto entries and the queue all go by.
+pub fn route_strength(route: &ApiRoute, app: &AppContext) -> f64 {
+    strength_with_tier(
+        &route.model,
+        model_price(route.provider, &route.model),
+        model_context_window(route.provider, &route.model),
+        model_tier(&route.model_id, app),
+    )
+}
+
 /// Where a turn on `model_id` goes if that model fails, in order: every
 /// failover row except `model_id` itself, rows switched off and models
 /// OpenRouter reports down, each once, and only free ones when "Free models
@@ -853,6 +873,31 @@ pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> 
         } else if let Some(route) = cli_route_for(&row, app) {
             routes.push(FailoverTarget::Cli(route));
         }
+    }
+    // A model that failed is replaced by one about as capable, or more, before a weaker one: the
+    // API rows go in order of strength from the failed model's, the list's order only breaking
+    // ties. A local agent app (which cannot hand the turn back) stays after them, in list order.
+    // With no failed model (the queue and the Auto entries pick for themselves) the list's order
+    // stands.
+    if let Some(failed) = route_for(model_id, app) {
+        let failed_strength = route_strength(&failed, app);
+        let (api, cli): (Vec<FailoverTarget>, Vec<FailoverTarget>) = routes
+            .into_iter()
+            .partition(|route| matches!(route, FailoverTarget::Api(_)));
+        let strengths: Vec<f64> = api
+            .iter()
+            .map(|route| match route {
+                FailoverTarget::Api(route) => route_strength(route, app),
+                FailoverTarget::Cli(_) => 0.0,
+            })
+            .collect();
+        let mut api: Vec<Option<FailoverTarget>> = api.into_iter().map(Some).collect();
+        let mut ordered: Vec<FailoverTarget> = failover_order(failed_strength, &strengths)
+            .into_iter()
+            .filter_map(|index| api[index].take())
+            .collect();
+        ordered.extend(cli);
+        return ordered;
     }
     routes
 }

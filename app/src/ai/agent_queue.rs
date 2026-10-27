@@ -30,10 +30,10 @@ use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
     turn_event_to_messages, user_query_message,
 };
 use crate::ai::api_providers::{
-    failover_routes, is_free_model, model_context_window, model_price, FailoverTarget,
+    failover_routes, is_free_model, route_strength, FailoverTarget,
 };
 use crate::ai::failover_health::{FailoverHealth, Health};
-use crate::ai::task_router::{choose, decide, speed, strength, Candidate, Difficulty, Policy};
+use crate::ai::task_router::{choose, decide, speed, Candidate, Difficulty, Policy};
 
 /// Tasks running at once, at most, however long the failover list is.
 const MAX_RUNNING: usize = 8;
@@ -520,11 +520,7 @@ impl AgentQueue {
             let candidates: Vec<Candidate> = available
                 .iter()
                 .map(|route| Candidate {
-                    strength: strength(
-                        &route.model,
-                        model_price(route.provider, &route.model),
-                        model_context_window(route.provider, &route.model),
-                    ),
+                    strength: route_strength(route, ctx),
                     speed: speed(&route.model),
                     free: is_free_model(&route.model_id),
                 })

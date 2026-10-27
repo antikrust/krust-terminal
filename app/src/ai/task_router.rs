@@ -36,6 +36,12 @@ impl Difficulty {
         }
     }
 
+    pub fn from_label(label: &str) -> Option<Self> {
+        [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard]
+            .into_iter()
+            .find(|difficulty| difficulty.label() == label)
+    }
+
     pub fn harder(self) -> Self {
         match self {
             Difficulty::Easy => Difficulty::Medium,
@@ -439,4 +445,56 @@ pub fn choose(policy: Policy, difficulty: Difficulty, candidates: &[Candidate]) 
             best.or_else(|| order.last().copied())
         }
     }
+}
+
+/// The strength a tier stands for when the user sets one on a model: about a small local model,
+/// a mid-sized one, and a strong hosted one in [`strength`]'s scale.
+pub fn tier_strength(tier: Difficulty) -> f64 {
+    match tier {
+        Difficulty::Easy => 2.5,
+        Difficulty::Medium => 4.0,
+        Difficulty::Hard => 5.6,
+    }
+}
+
+/// A model's strength, with the tier the user set for it, when they did, winning over the guess
+/// from its name. The name still orders models within one tier.
+pub fn strength_with_tier(
+    model: &str,
+    price: Option<(f64, f64)>,
+    context_window: Option<u64>,
+    tier: Option<Difficulty>,
+) -> f64 {
+    let guess = strength(model, price, context_window);
+    match tier {
+        Some(tier) => tier_strength(tier) + guess.clamp(0.0, 8.0) * 0.01,
+        None => guess,
+    }
+}
+
+/// The order to try `candidates` (their strengths) in when a model of strength `failed` has just
+/// failed: models about as strong or stronger first, the nearest first, since the conversation
+/// should not quietly get worse; then the weaker ones, the nearest first. Equal candidates keep
+/// their order, so the list's order breaks ties.
+pub fn failover_order(failed: f64, candidates: &[f64]) -> Vec<usize> {
+    // Within this much of the failed model counts as as strong.
+    const SAME: f64 = 0.15;
+    let mut order: Vec<usize> = (0..candidates.len()).collect();
+    order.sort_by(|a, b| {
+        let key = |index: &usize| {
+            let strength = candidates[*index];
+            if strength >= failed - SAME {
+                (0, (strength - failed).max(0.0))
+            } else {
+                (1, failed - strength)
+            }
+        };
+        let (group_a, distance_a) = key(a);
+        let (group_b, distance_b) = key(b);
+        group_a
+            .cmp(&group_b)
+            .then(distance_a.partial_cmp(&distance_b).unwrap_or(std::cmp::Ordering::Equal))
+            .then(a.cmp(b))
+    });
+    order
 }

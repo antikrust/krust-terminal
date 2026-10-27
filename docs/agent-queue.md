@@ -18,6 +18,21 @@ the pure parts of Moloch's code were checked with standalone `rustc`. Build, the
 | Orchestrator | `app/src/ai/queue_tools.rs` | `plan_tasks` and `collect_results` tools for the API and Ollama tool loops: a model splits a goal into independent tasks, the queue runs them, the model collects the answers. The local counterpart of Warp's `run_agents`. |
 | Plans | reverse-lab `tools/plan.py` | `notes/plan.json`: lanes (mechanical, exceptions, gui, serial); load it in the queue panel. |
 
+## One pool, two rules
+
+The failover list is the pool of models: which you have, on or off, free-only, health. Agents and
+failover use it differently.
+
+- **Failover** (a request failed, keep the conversation going) sends the same request to a model
+  about as capable as the one that failed, or more, nearest first; weaker ones come after. List
+  order only breaks ties, and a local agent app (Claude Code, Codex) stays after the API rows.
+  `failover_order` in `task_router.rs`, applied in `failover_routes`.
+- **Agents** (the queue, Auto) pick per task by difficulty with the chooser; each task starts
+  fresh, so there is no conversation to protect.
+- **Tiers.** Each row has a "tier" button: auto (the guess from the model's name, price and
+  context), easy, medium or hard. A tier the user sets wins over the guess (`byor_model_tiers`,
+  `route_strength`); the name still orders models within a tier.
+
 ## Local and Moloch
 
 The task format is the same in both: title, prompt, difficulty (a `difficulty:` line in the prompt),

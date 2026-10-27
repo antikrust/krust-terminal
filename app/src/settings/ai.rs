@@ -1478,6 +1478,20 @@ define_settings_group!(AISettings, settings: [
         description: "BYOR failover rows switched off, as model ids.",
     }
 
+    // How capable the user says a model is, where the guess from its name is wrong: entries
+    // `<model id>=easy|medium|hard`. Used by failover (the nearest in strength first), by the Auto
+    // model entries and by the agent queue.
+    byor_model_tiers: ByorModelTiers {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_model_tiers",
+        description: "Tiers (easy, medium, hard) set on BYOR models, as `model id=tier`.",
+    }
+
     // Saved BYOR failover lists the user can switch between ("Light work",
     // "Heavy coding").
     byor_failover_presets: ByorFailoverPresets {

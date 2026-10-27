@@ -59,6 +59,7 @@ use crate::ai::api_providers::{
     ApiProviderKeys, FailoverSource, LOCAL_OLLAMA,
 };
 use crate::ai::agent_queue::{AgentQueue, LineKind, TaskState};
+use crate::ai::task_router::Difficulty;
 use crate::ai::failover_health::{FailoverHealth, Health};
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 #[cfg(not(target_family = "wasm"))]
@@ -3913,6 +3914,8 @@ pub enum AISettingsPageAction {
     /// isn't listed yet.
     DuplicateByorFailoverRow(usize),
     RemoveByorFailoverRow(usize),
+    /// Cycles the row's tier: auto, easy, medium, hard, auto.
+    CycleByorTier(usize),
     /// Puts a row on another provider, at that provider's first model.
     SetByorFailoverProvider {
         index: usize,
@@ -4387,6 +4390,25 @@ impl TypedActionView for AISettingsPageView {
                     }
                     AISettings::handle(ctx).update(ctx, |settings, ctx| {
                         report_if_error!(settings.byor_failover_disabled.set_value(disabled, ctx));
+                    });
+                    ctx.notify();
+                }
+            }
+            AISettingsPageAction::CycleByorTier(index) => {
+                if let Some(model_id) = shown_byor_failover_rows(ctx).get(*index).cloned() {
+                    let next = match api_providers::model_tier(&model_id, ctx) {
+                        None => Some("easy"),
+                        Some(Difficulty::Easy) => Some("medium"),
+                        Some(Difficulty::Medium) => Some("hard"),
+                        Some(Difficulty::Hard) => None,
+                    };
+                    let mut tiers = AISettings::as_ref(ctx).byor_model_tiers.value().clone();
+                    tiers.retain(|entry| entry.rsplit_once('=').is_none_or(|(id, _)| id != model_id));
+                    if let Some(tier) = next {
+                        tiers.push(format!("{model_id}={tier}"));
+                    }
+                    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                        report_if_error!(settings.byor_model_tiers.set_value(tiers, ctx));
                     });
                     ctx.notify();
                 }
@@ -8935,6 +8957,27 @@ impl CloudModelKeysWidget {
                         .with_margin_left(8.)
                         .finish(),
                 );
+            // How capable the row's model is: auto (guessed from its name) or what the user set.
+            // Failover tries the nearest in strength first; Auto and the queue match tasks to it.
+            let tier_label = shown
+                .get(index)
+                .and_then(|id| api_providers::model_tier(id, app))
+                .map_or("auto", |tier| tier.label());
+            fields.add_child(
+                Container::new(
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Text, row.tier.clone())
+                        .with_text_label(format!("tier: {tier_label}"))
+                        .build()
+                        .on_click(move |ctx, _, _| {
+                            ctx.dispatch_typed_action(AISettingsPageAction::CycleByorTier(index));
+                        })
+                        .finish(),
+                )
+                .with_margin_left(8.)
+                .finish(),
+            );
             if skipped {
                 fields.add_child(
                     Container::new(
@@ -9368,6 +9411,8 @@ struct ByorFailoverRow {
     model_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
     /// The row's on/off switch.
     on_switch: SwitchStateHandle,
+    /// The row's tier button (auto, easy, medium, hard).
+    tier: MouseStateHandle,
     move_up: MouseStateHandle,
     move_down: MouseStateHandle,
     duplicate: MouseStateHandle,
@@ -9459,6 +9504,7 @@ impl ByorFailoverRow {
             provider_dropdown,
             model_dropdown,
             on_switch: Default::default(),
+            tier: Default::default(),
             move_up: Default::default(),
             move_down: Default::default(),
             duplicate: Default::default(),
