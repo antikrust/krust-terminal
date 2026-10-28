@@ -41,6 +41,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 };
 use crate::ai::api_providers::{
     api_model_parts, api_runner_provider_name, custom_endpoint_groups, is_api_runner_model,
+    is_auto_model_id,
     API_HARNESS_CONFIG_NAME, PROVIDERS,
 };
 use crate::ai::blocklist::prompt::PromptIconButtonTheme;
@@ -1126,6 +1127,23 @@ impl ProfileModelSelector {
                             codex_models,
                             ModelGroupKind::Harness,
                         ));
+                        // The Auto entries (`api/auto/<policy>`) belong to no provider, so the
+                        // per-provider grouping below would drop them: they get a heading of
+                        // their own, first among the models the API runner picks between.
+                        let auto_models: Vec<HarnessModelInfo> = available
+                            .available_models
+                            .iter()
+                            .filter(|model| is_auto_model_id(&model.id))
+                            .cloned()
+                            .collect();
+                        if !auto_models.is_empty() {
+                            groups.push((
+                                available.harness,
+                                "Auto (picks a model per task)".to_owned(),
+                                auto_models,
+                                ModelGroupKind::Api,
+                            ));
+                        }
                         if ollama_enabled && !ollama_models.is_empty() {
                             // One heading per machine. Pooled into a single
                             // "Ollama" list, a second computer's models run

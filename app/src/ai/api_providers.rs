@@ -532,17 +532,17 @@ pub fn is_auto_model_id(model_id: &str) -> bool {
     model_id.starts_with(AUTO_MODEL_ID_PREFIX)
 }
 
-/// The three Auto entries, offered while there is at least one API model to resolve to: a
-/// provider with a key, or a custom endpoint. Gated on those rather than on `failover_routes`
-/// because this runs inside `HarnessAvailabilityModel::new` (building the model menu), before
-/// that model is registered — reading it here would panic. The entries resolve across the full
-/// failover list at turn time, when the model exists.
-pub fn auto_models(app: &AppContext) -> Vec<HarnessModelInfo> {
-    let any_api = !ApiProviderKeys::as_ref(app).available_models().is_empty()
-        || custom_endpoint_groups(app)
-            .iter()
-            .any(|(_, models)| !models.is_empty());
-    if !any_api {
+/// The three Auto entries, offered when `menu` (the model menu's own list) holds at least one
+/// model the pool can use: an Ollama model on any machine, a provider's model or a custom
+/// endpoint's. Decided from that list rather than from `failover_routes`, because this runs while
+/// `HarnessAvailabilityModel` is being built, before it is registered — reading it would panic.
+/// The entries resolve across the pool at turn time, when the model exists.
+pub fn auto_models(menu: &[HarnessModelInfo]) -> Vec<HarnessModelInfo> {
+    let any_poolable = menu.iter().any(|model| {
+        !is_auto_model_id(&model.id)
+            && (ollama_model_name(&model.id).is_some() || is_api_runner_model(&model.id))
+    });
+    if !any_poolable {
         return Vec::new();
     }
     [
@@ -650,7 +650,9 @@ pub fn route_for(model_id: &str, app: &AppContext) -> Option<ApiRoute> {
             model_id: model_id.to_owned(),
             provider: &LOCAL_OLLAMA,
             provider_name: LOCAL_OLLAMA.display_name.to_owned(),
-            account: LOCAL_OLLAMA.id.to_owned(),
+            // One account per machine: another computer's Ollama being down doesn't rule out this
+            // one's models, and the agent queue runs a task on each machine at once.
+            account: format!("{}@{}", LOCAL_OLLAMA.id, base_url_of(tag)),
             model: wire_name(tag).to_owned(),
             model_name: tag.to_owned(),
             base_url: format!("{}/v1", base_url_of(tag)),
@@ -800,18 +802,36 @@ pub fn failover_sources(app: &AppContext) -> Vec<FailoverSource> {
     sources
 }
 
+/// Every model the pool could use, in menu order: each keyed provider's models, each custom
+/// endpoint's, and the Ollama models of every machine. The local agent apps (Claude Code, Codex)
+/// are left out: they run on a subscription, so they join a list only when put there (or a task is
+/// pinned to one).
+pub fn everything_visible(app: &AppContext) -> Vec<String> {
+    let mut models: Vec<String> = Vec::new();
+    for source in failover_sources(app) {
+        if source.key.starts_with("cli:") {
+            continue;
+        }
+        for (model_id, _) in source.models {
+            if !models.contains(&model_id) {
+                models.push(model_id);
+            }
+        }
+    }
+    models
+}
+
 /// The BYOR failover list as model ids, first choice first: the saved order,
 /// with a bare provider id (saved by an earlier build) read as that
 /// provider's first model, leaving out models that can't be called now (no
 /// key, a removed endpoint, local models switched off or gone). With nothing
-/// saved: each provider with a key, on its first model.
+/// saved: everything the app can see (see [`everything_visible`]).
 pub fn failover_rows(app: &AppContext) -> Vec<String> {
     let order = AISettings::as_ref(app).byor_failover_order.value();
-    let saved: Vec<String> = if order.is_empty() {
-        PROVIDERS.iter().map(|provider| provider.id.to_owned()).collect()
-    } else {
-        order.clone()
-    };
+    if order.is_empty() {
+        return everything_visible(app);
+    }
+    let saved: Vec<String> = order.clone();
     let keys = ApiProviderKeys::as_ref(app);
     let local_models = local_failover_models(app);
     saved

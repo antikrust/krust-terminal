@@ -222,7 +222,7 @@ fn with_api_models(mut models: Vec<HarnessModelInfo>, ctx: &AppContext) -> Vec<H
         .iter()
         .position(|model| model.id.starts_with(API_MODEL_ID_PREFIX) || model.id.starts_with(CUSTOM_MODEL_ID_PREFIX))
         .unwrap_or(models.len());
-    let autos = auto_models(ctx);
+    let autos = auto_models(&models);
     models.splice(first_api..first_api, autos);
     models
 }

@@ -3624,6 +3624,10 @@ impl AISettingsPageView {
         ctx: &mut ViewContext<Self>,
     ) -> (Vec<ByorFailoverRow>, Vec<FailoverSource>) {
         let sources = failover_sources(ctx);
+        // Whatever the app can now see gets a preset: everything, and each source on its own.
+        sync_auto_presets(&sources, ctx);
+        // And the queue panel's line on Moloch's workers is brought up to date.
+        AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.refresh_moloch(ctx));
         let settings = AISettings::as_ref(ctx);
         let disabled = settings.byor_failover_disabled.value().clone();
         let free_only = *settings.byor_failover_free_only.value();
@@ -9045,6 +9049,39 @@ impl CloudModelKeysWidget {
             app,
         ));
 
+        // Where tasks go: the pool the chooser spreads auto tasks across, the default model (if
+        // tasks are pinned), and Moloch's workers when one is configured.
+        let pool: Vec<String> = api_providers::failover_routes("", app)
+            .iter()
+            .map(|target| target.model_id().to_owned())
+            .collect();
+        let default_model = AISettings::as_ref(app).byor_queue_default_model.value().clone();
+        let pool_line = if pool.is_empty() {
+            "Pool: empty — auto tasks wait until there is a key, an Ollama model, or a row back on."
+                .to_owned()
+        } else {
+            let free = pool.iter().filter(|id| is_free_model(id)).count();
+            let shown: Vec<&str> = pool.iter().take(6).map(String::as_str).collect();
+            let more = if pool.len() > 6 {
+                format!(" and {} more", pool.len() - 6)
+            } else {
+                String::new()
+            };
+            format!(
+                "Pool: {} models ({free} free): {}{more}",
+                pool.len(),
+                shown.join(", ")
+            )
+        };
+        let route_line = match default_model.trim() {
+            "" | "auto" => "Tasks with no model of their own: spread by difficulty (auto).".to_owned(),
+            pinned => format!("Tasks with no model of their own: pinned to {pinned}."),
+        };
+        column.add_child(render_ai_setting_description(pool_line, true, app));
+        column.add_child(render_ai_setting_description(route_line, true, app));
+        if let Some(moloch) = queue.moloch_status() {
+            column.add_child(render_ai_setting_description(moloch.to_owned(), true, app));
+        }
         let run_label = if queue.is_running() { "Stop" } else { "Start" };
         let status = format!("{waiting} waiting, {running} running, {done} done, {failed} failed");
         column.add_child(
@@ -9619,6 +9656,44 @@ fn health_light(health: Health, appearance: &Appearance) -> Box<dyn Element> {
     .with_width(8.)
     .with_height(8.)
     .finish()
+}
+
+/// Name prefix of the presets this page keeps itself: one with everything the app can see, and
+/// one per source (a provider with a key, a custom endpoint, Ollama, Claude Code, Codex).
+const AUTO_PRESET_PREFIX: &str = "Auto · ";
+
+/// Brings the auto presets in line with `sources`: a new key, endpoint or model shows up as a
+/// preset the next time this runs (on opening the page, and whenever the sources change), and a
+/// source that is gone loses its preset. The user's own presets are left as they are; nothing is
+/// written when nothing changed, so the settings write this causes doesn't loop.
+fn sync_auto_presets(sources: &[FailoverSource], ctx: &mut ViewContext<AISettingsPageView>) {
+    let preset = |name: String, order: Vec<String>| ByorFailoverPreset {
+        name: format!("{AUTO_PRESET_PREFIX}{name}"),
+        order,
+        disabled: Vec::new(),
+        free_only: false,
+    };
+    let mut wanted = Vec::new();
+    let everything = api_providers::everything_visible(ctx);
+    if !everything.is_empty() {
+        wanted.push(preset("Everything".to_owned(), everything));
+    }
+    for source in sources.iter().filter(|source| !source.models.is_empty()) {
+        let order = source.models.iter().map(|(id, _)| id.clone()).collect();
+        wanted.push(preset(source.name.clone(), order));
+    }
+    let current = AISettings::as_ref(ctx).byor_failover_presets.value().clone();
+    let mut presets: Vec<ByorFailoverPreset> = current
+        .iter()
+        .filter(|saved| !saved.name.starts_with(AUTO_PRESET_PREFIX))
+        .cloned()
+        .collect();
+    presets.extend(wanted);
+    if presets != current {
+        AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            report_if_error!(settings.byor_failover_presets.set_value(presets, ctx));
+        });
+    }
 }
 
 /// What the preset menu shows when the list matches no saved preset.

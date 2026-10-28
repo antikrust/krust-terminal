@@ -49,6 +49,9 @@ const MAX_RUNNING: usize = 8;
 const MAX_ATTEMPTS: usize = 3;
 /// How much of a task's answer is kept.
 const ANSWER_CHARS: usize = 1_200;
+/// Why an auto task waits when there is nothing to run it on.
+const NO_POOL: &str = "no models to run on: add a provider key or an Ollama model (Settings → AI), \
+    turn a failover row back on, or pin the task to a model such as cli/claude/default";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskState {
@@ -221,6 +224,9 @@ pub struct AgentQueue {
     /// Whether waiting tasks are started. Off, running ones finish and nothing new begins.
     running: bool,
     next_id: u64,
+    /// What Moloch last said about its workers (acolytes), for the panel; `None` until asked, or
+    /// when no Moloch is configured.
+    moloch: Option<String>,
 }
 
 impl Entity for AgentQueue {
@@ -334,7 +340,67 @@ impl AgentQueue {
             active: HashMap::new(),
             running: false,
             next_id,
+            moloch: None,
         }
+    }
+
+    /// What Moloch last said about its connected workers, for the panel.
+    pub fn moloch_status(&self) -> Option<&str> {
+        self.moloch.as_deref()
+    }
+
+    /// Asks the configured Moloch (`moloch.env`) which workers are connected and what models they
+    /// serve. In the background; the panel follows. Nothing happens when no Moloch is configured.
+    pub fn refresh_moloch(&mut self, ctx: &mut ModelContext<Self>) {
+        let Some(config) = crate::moloch::config() else {
+            self.moloch = None;
+            return;
+        };
+        let url = format!("{}/api/v1/agent/connected-self-hosted-workers", config.url);
+        let token = config.token.clone();
+        let shown_url = config.url.clone();
+        ctx.spawn(
+            async move {
+                let mut request = reqwest::Client::new()
+                    .get(url)
+                    .timeout(std::time::Duration::from_secs(5));
+                if let Some(token) = token {
+                    request = request.bearer_auth(token);
+                }
+                let response = request.send().await?.error_for_status()?;
+                anyhow::Ok(response.json::<serde_json::Value>().await?)
+            },
+            move |me, result, ctx| {
+                me.moloch = Some(match result {
+                    Ok(body) => {
+                        let workers: Vec<String> = body["workers"]
+                            .as_array()
+                            .map(|workers| {
+                                workers
+                                    .iter()
+                                    .map(|worker| {
+                                        let models = worker["models"]
+                                            .as_array()
+                                            .map_or(0, |models| models.len());
+                                        format!(
+                                            "{} ({models} models)",
+                                            worker["id"].as_str().unwrap_or("?")
+                                        )
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        if workers.is_empty() {
+                            format!("Moloch at {shown_url}: up, no workers connected")
+                        } else {
+                            format!("Moloch at {shown_url}: {} connected", workers.join(", "))
+                        }
+                    }
+                    Err(error) => format!("Moloch at {shown_url}: not answering ({error})"),
+                });
+                ctx.emit(AgentQueueEvent::Changed);
+            },
+        );
     }
 
     pub fn tasks(&self) -> &[QueueTask] {
@@ -521,6 +587,7 @@ impl AgentQueue {
     pub fn set_running(&mut self, running: bool, ctx: &mut ModelContext<Self>) {
         self.running = running;
         if running {
+            self.refresh_moloch(ctx);
             self.pump(ctx);
         } else {
             for active in self.active.values() {
@@ -634,6 +701,14 @@ impl AgentQueue {
                         .collect();
                     match choose(Policy::CostEfficient, difficulty, &candidates) {
                         Some(index) => Pick::Run(Worker::Api(available[index].clone())),
+                        // No pool at all (no key, no Ollama model, the list switched off): say so
+                        // on the task and keep it waiting, since models may still be loading.
+                        None if routes.is_empty() => {
+                            if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
+                                task.last_error = Some(NO_POOL.to_string());
+                            }
+                            Pick::Wait
+                        }
                         None => Pick::Wait,
                     }
                 }
