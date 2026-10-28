@@ -112,8 +112,6 @@ pub enum UriHost {
     TabConfig,
     /// Focuses a specific terminal pane by its persistent session UUID.
     Session,
-    /// Opens the Moloch app's window (what the Moloch.app launcher sends).
-    Moloch,
 }
 
 impl FromStr for UriHost {
@@ -137,7 +135,6 @@ impl FromStr for UriHost {
             "linear" => Ok(Self::Linear),
             "tab_config" if FeatureFlag::TabConfigs.is_enabled() => Ok(Self::TabConfig),
             "session" => Ok(Self::Session),
-            "moloch" => Ok(Self::Moloch),
             _ => Err(anyhow!("Received url with unexpected host: {}", s)),
         }
     }
@@ -491,7 +488,6 @@ impl UriHost {
             UriHost::Home => {
                 ctx.dispatch_global_action("root_view::open_new", &());
             }
-            UriHost::Moloch => crate::moloch_app::open(ctx),
             UriHost::Mcp => {
                 #[cfg(not(target_family = "wasm"))]
                 {
@@ -599,8 +595,6 @@ impl UriHost {
             // Handler picks the window itself based on `?new_window=true`.
             Self::TabConfig => W::Nothing,
             Self::Session => W::Nothing,
-            // The handler opens (or brings forward) the Moloch window itself.
-            Self::Moloch => W::Nothing,
         }
     }
 }
@@ -1697,8 +1691,7 @@ fn validate_custom_uri(url: &Url) -> Result<UriHost> {
         | UriHost::Codex
         | UriHost::Linear
         | UriHost::TabConfig
-        | UriHost::Session
-        | UriHost::Moloch => true,
+        | UriHost::Session => true,
         // Auth and Home only allow the desktop redirect path
         UriHost::Auth | UriHost::Home => false,
     };

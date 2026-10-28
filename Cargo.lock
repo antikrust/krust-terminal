@@ -63,6 +63,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "acolyte_app"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "dirs 6.0.0",
+ "krust_app_shell",
+ "krust_core",
+ "krustui",
+ "log",
+ "reqwest",
+ "serde_json",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7910,6 +7924,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "krust_app_shell"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "dirs 6.0.0",
+ "krust_core",
+ "krustui",
+ "log",
+ "pathfinder_color",
+ "pathfinder_geometry",
+ "rust-embed 8.7.2",
+ "serde",
+ "serde_json",
+ "serde_yaml 0.8.26",
+]
+
+[[package]]
 name = "krust_assets"
 version = "0.0.0"
 dependencies = [
@@ -9704,6 +9736,20 @@ dependencies = [
  "serde_urlencoded",
  "similar",
  "tokio",
+]
+
+[[package]]
+name = "moloch_app"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "dirs 6.0.0",
+ "krust_app_shell",
+ "krust_core",
+ "krustui",
+ "log",
+ "reqwest",
+ "serde_json",
 ]
 
 [[package]]

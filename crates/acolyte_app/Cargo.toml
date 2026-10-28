@@ -1,0 +1,21 @@
+[package]
+name = "acolyte_app"
+authors = ["Krust Team <dev@krust.baby>"]
+edition = "2024"
+publish.workspace = true
+license.workspace = true
+description = "Acolyte, the desktop app: runs this machine's acolyte, in Krust's frame."
+
+[[bin]]
+name = "acolyte-app"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+dirs.workspace = true
+krust_app_shell = { path = "../app_shell" }
+krust_core.workspace = true
+krustui.workspace = true
+log.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true

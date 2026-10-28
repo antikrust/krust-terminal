@@ -205,38 +205,6 @@ fn is_active(state: &str) -> bool {
     )
 }
 
-/// The parts of this page. Settings shows them all on one page; the Moloch window shows one at a
-/// time, picked from its left bar.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MolochSection {
-    /// Where the server is, whether it answers, where its intelligence comes from, its jobs.
-    Overview,
-    /// The agent runs it is brokering.
-    Runs,
-    /// How each model did on each eval task.
-    Leaderboard,
-    /// The tail of its log.
-    Logs,
-}
-
-impl MolochSection {
-    pub const ALL: [MolochSection; 4] = [
-        MolochSection::Overview,
-        MolochSection::Runs,
-        MolochSection::Leaderboard,
-        MolochSection::Logs,
-    ];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            MolochSection::Overview => "Overview",
-            MolochSection::Runs => "Runs",
-            MolochSection::Leaderboard => "Leaderboard",
-            MolochSection::Logs => "Logs",
-        }
-    }
-}
-
 impl MolochPageView {
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
         let widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
@@ -246,26 +214,6 @@ impl MolochPageView {
             Box::new(LeaderboardWidget),
             Box::new(LogWidget),
         ];
-        Self::with_widgets(widgets, ctx)
-    }
-
-    /// One section on its own, under its own title: a page of the Moloch window.
-    pub fn new_section(section: MolochSection, ctx: &mut ViewContext<Self>) -> Self {
-        let widget: Box<dyn SettingsWidget<View = Self>> = match section {
-            MolochSection::Overview => Box::new(ServerWidget),
-            MolochSection::Runs => Box::new(RunsWidget),
-            MolochSection::Leaderboard => Box::new(LeaderboardWidget),
-            MolochSection::Logs => Box::new(LogWidget),
-        };
-        let widgets: Vec<Box<dyn SettingsWidget<View = Self>>> =
-            vec![Box::new(PageTitleWidget::new(section.label(), true)), widget];
-        Self::with_widgets(widgets, ctx)
-    }
-
-    fn with_widgets(
-        widgets: Vec<Box<dyn SettingsWidget<View = Self>>>,
-        ctx: &mut ViewContext<Self>,
-    ) -> Self {
         let saved = crate::moloch::saved();
         let url_editor = Self::field("http://host:10102", &saved.url, false, ctx);
         let token_editor = Self::field("Token or API key (wk-…)", &saved.token, true, ctx);
@@ -479,7 +427,7 @@ pub enum MolochPageAction {
     StopRun(String),
     /// Moloch's own web panel, in the browser (it asks for the token once, and keeps it).
     OpenWeb,
-    /// The Moloch app's window.
+    /// The Moloch app (Moloch.app, an app of its own built on Krust's skeleton).
     OpenApp,
     /// The "Use Moloch" switch (saved at once), and Save for the address and token.
     ToggleUseMoloch,
@@ -498,7 +446,15 @@ impl TypedActionView for MolochPageView {
                     ctx.open_url(&format!("{base}/panel"));
                 }
             }
-            MolochPageAction::OpenApp => crate::moloch_app::open(ctx),
+            MolochPageAction::OpenApp => {
+                // By bundle id, so it opens wherever Moloch.app is installed.
+                if let Err(error) = std::process::Command::new("/usr/bin/open")
+                    .args(["-b", "krust.baby.Moloch"])
+                    .spawn()
+                {
+                    log::warn!("moloch_page: could not open Moloch.app: {error}");
+                }
+            }
             MolochPageAction::ToggleUseMoloch => {
                 self.use_moloch = !self.use_moloch;
                 self.save_connection(ctx);

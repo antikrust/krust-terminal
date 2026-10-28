@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Builds one of the apps made from Krust's skeleton (crates/app_shell) and installs it as a Mac app
+# of its own — its own process, name, Dock icon and menu bar:
+#
+#   script/macos/make_shell_app moloch     # Moloch.app  (crates/moloch_app)
+#   script/macos/make_shell_app acolyte    # Acolyte.app (crates/acolyte_app), with acolyte inside
+#
+# DEST overrides /Applications. Acolyte.app bundles the acolyte conduit from the Moloch checkout
+# beside this one (../moloch/target/release/acolyte, or ACOLYTE_SRC), which its app runs.
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+DEST=${DEST:-/Applications}
+
+case "${1:-}" in
+  moloch)
+    CRATE=moloch_app BIN=moloch NAME=Moloch BUNDLE_ID=krust.baby.Moloch
+    ICON="$ROOT/script/macos/icons/moloch.swift"
+    ;;
+  acolyte)
+    CRATE=acolyte_app BIN=acolyte-app NAME=Acolyte BUNDLE_ID=krust.baby.Acolyte
+    ICON="$ROOT/script/macos/icons/acolyte.swift"
+    ACOLYTE_SRC=${ACOLYTE_SRC:-"$ROOT/../moloch/target/release/acolyte"}
+    ;;
+  *)
+    echo "usage: $0 moloch|acolyte" >&2
+    exit 1
+    ;;
+esac
+
+echo "Building $NAME ($CRATE)…"
+(cd "$ROOT" && cargo build --release -p "$CRATE")
+
+WORK=$(mktemp -d -t shell-app-XXXXXX)
+trap 'rm -rf "$WORK"' EXIT
+
+# The icon: drawn by its script, at every size macOS asks for.
+swift "$ICON" "$WORK/icon.png"
+ICONSET="$WORK/$NAME.iconset"
+mkdir -p "$ICONSET"
+for px in 16 32 128 256 512; do
+  sips -z $px $px "$WORK/icon.png" --out "$ICONSET/icon_${px}x${px}.png" > /dev/null
+  sips -z $((px * 2)) $((px * 2)) "$WORK/icon.png" --out "$ICONSET/icon_${px}x${px}@2x.png" > /dev/null
+done
+
+APP="$WORK/$NAME.app"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/$NAME.icns"
+cp "$ROOT/target/release/$BIN" "$APP/Contents/MacOS/$BIN"
+if [[ -n "${ACOLYTE_SRC:-}" ]]; then
+  if [[ -x "$ACOLYTE_SRC" ]]; then
+    cp "$ACOLYTE_SRC" "$APP/Contents/MacOS/acolyte"
+  else
+    echo "warning: no acolyte at $ACOLYTE_SRC — set its path under Config in the app" >&2
+  fi
+fi
+
+cat > "$APP/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>$NAME</string>
+  <key>CFBundleDisplayName</key><string>$NAME</string>
+  <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
+  <key>CFBundleExecutable</key><string>$BIN</string>
+  <key>CFBundleIconFile</key><string>$NAME</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
+  <key>LSMinimumSystemVersion</key><string>10.14</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
+EOF
+
+# Sign with Krust's fixed local identity when its key is reachable, so macOS remembers the app's
+# permissions between builds; else ad hoc.
+if ! codesign --force --deep --sign "Krust Local Signing" "$APP" > /dev/null 2>&1; then
+  codesign --force --deep --sign - "$APP"
+fi
+
+rm -rf "${DEST:?}/$NAME.app"
+ditto "$APP" "$DEST/$NAME.app"
+touch "$DEST/$NAME.app"
+echo "Installed $DEST/$NAME.app"

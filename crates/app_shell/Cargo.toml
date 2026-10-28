@@ -1,0 +1,21 @@
+[package]
+name = "krust_app_shell"
+authors = ["Krust Team <dev@krust.baby>"]
+edition = "2024"
+publish.workspace = true
+license.workspace = true
+description = "The skeleton of Krust's desktop app — startup, fonts, theme and window frame — for the Moloch and Acolyte apps."
+
+[dependencies]
+anyhow.workspace = true
+bytes.workspace = true
+dirs.workspace = true
+krust_core.workspace = true
+krustui.workspace = true
+log.workspace = true
+pathfinder_color.workspace = true
+pathfinder_geometry.workspace = true
+rust-embed.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
