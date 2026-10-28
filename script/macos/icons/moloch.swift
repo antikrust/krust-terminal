@@ -21,6 +21,14 @@ let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsH
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 
+// Krust's icon runs edge to edge on its canvas, so this one does too: everything below is drawn on
+// the 824px grid and scaled up about the centre until the squircle meets the canvas edge.
+let fill = NSAffineTransform()
+fill.translateX(by: size / 2, yBy: size / 2)
+fill.scale(by: size / 824)
+fill.translateX(by: -size / 2, yBy: -size / 2)
+fill.concat()
+
 func rounded(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat) -> NSBezierPath {
   NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h), xRadius: r, yRadius: r)
 }
