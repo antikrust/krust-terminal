@@ -17,9 +17,11 @@ pub mod env_file;
 pub mod look;
 mod menus;
 pub mod page;
+pub mod tabs;
 pub mod text_field;
 pub mod window;
 
+pub use tabs::Tabs;
 pub use text_field::{TextField, TextFieldEvent};
 pub use window::{Page, ShellWindow};
 
@@ -49,6 +51,7 @@ where
             log::error!("{name}: could not load Krust's fonts: {error:#}");
         }
         window::init(ctx);
+        ctx.add_singleton_model(|_| Tabs::default());
         let (window_id, _) = ctx.add_window(
             AddWindowOptions {
                 title: Some(name.to_owned()),

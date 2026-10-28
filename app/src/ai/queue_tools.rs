@@ -22,7 +22,7 @@ use krustui::r#async::Timer;
 use krustui::ModelSpawner;
 use serde_json::{json, Value};
 
-use crate::ai::agent_queue::{AgentQueue, PlannedTask, TaskState};
+use crate::ai::agent_queue::{AgentQueue, LineKind, PlannedTask, TaskState};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{McpToolCaller, McpToolSpec};
 
 pub(crate) const PLAN_TASKS: &str = "plan_tasks";
@@ -31,6 +31,12 @@ pub(crate) const LOAD_PLAN: &str = "load_plan";
 /// Not a model's tool: what a script sends over the socket the moment it writes a plan file
 /// (reverse-lab's `reverse_engineering_auto.py`). The queue hands it out only in spawn mode.
 const OFFER_PLAN: &str = "offer_plan";
+/// Not models' tools either: what the Moloch app reads over the socket to list this machine's
+/// queued agents and show one's output in a tab. Both only read.
+const LIST_TASKS: &str = "list_tasks";
+const TASK_OUTPUT: &str = "task_output";
+/// Lines of a task's output `task_output` returns, the newest last.
+const OUTPUT_LINES: usize = 400;
 
 /// The Unix socket the queue-tools MCP subprocess talks to the app over.
 pub(crate) fn socket_path() -> PathBuf {
@@ -150,6 +156,8 @@ impl McpToolCaller for QueueTools {
             COLLECT_RESULTS => self.collect(&arguments).await,
             LOAD_PLAN => self.load(&arguments, true).await,
             OFFER_PLAN => self.load(&arguments, false).await,
+            LIST_TASKS => self.list_tasks().await,
+            TASK_OUTPUT => self.task_output(&arguments).await,
             other => match &self.inner {
                 Some(inner) => inner.call(other, arguments).await,
                 None => Err(format!("no tool named '{other}' is available")),
@@ -262,6 +270,80 @@ impl QueueTools {
             .map_err(|_| "the agent queue is not available".to_string())?
     }
 
+    /// `list_tasks`: every task in the queue, as JSON — id, title, state, the model it runs (or ran,
+    /// or is pinned to) on, and a line about how it went.
+    async fn list_tasks(&self) -> Result<String, String> {
+        let (running, tasks) = self
+            .spawner
+            .spawn(|queue, _| {
+                let tasks: Vec<Value> = queue
+                    .tasks()
+                    .iter()
+                    .map(|task| {
+                        let (state, model, detail) = match &task.state {
+                            TaskState::Waiting => (
+                                "waiting",
+                                task.model.clone(),
+                                task.last_error.clone().unwrap_or_default(),
+                            ),
+                            TaskState::Running { model } => ("running", Some(model.clone()), String::new()),
+                            TaskState::Done { model, answer } => (
+                                "done",
+                                Some(model.clone()),
+                                answer.chars().take(200).collect(),
+                            ),
+                            TaskState::Failed { error } => ("failed", task.model.clone(), error.clone()),
+                        };
+                        json!({
+                            "id": task.id,
+                            "title": task.title,
+                            "state": state,
+                            "model": model,
+                            "pool": task.pool,
+                            "detail": detail,
+                            "lines": task.transcript.len(),
+                        })
+                    })
+                    .collect();
+                (queue.is_running(), tasks)
+            })
+            .await
+            .map_err(|_| "the agent queue is not available".to_string())?;
+        Ok(json!({ "running": running, "tasks": tasks }).to_string())
+    }
+
+    /// `task_output`: the last lines a task said, called and got back, as JSON
+    /// (`{"lines": [{"kind": "said|tool|result|error", "text": …}]}`).
+    async fn task_output(&self, arguments: &Value) -> Result<String, String> {
+        let id = arguments
+            .get("id")
+            .and_then(Value::as_u64)
+            .ok_or("task_output needs the task's `id`.")?;
+        let lines = self
+            .spawner
+            .spawn(move |queue, _| {
+                queue.tasks().iter().find(|task| task.id == id).map(|task| {
+                    let from = task.transcript.len().saturating_sub(OUTPUT_LINES);
+                    task.transcript[from..]
+                        .iter()
+                        .map(|line| {
+                            let kind = match line.kind {
+                                LineKind::Said => "said",
+                                LineKind::Tool => "tool",
+                                LineKind::Result => "result",
+                                LineKind::Error => "error",
+                            };
+                            json!({ "kind": kind, "text": line.text })
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .await
+            .map_err(|_| "the agent queue is not available".to_string())?
+            .ok_or_else(|| format!("no task {id} in the queue"))?;
+        Ok(json!({ "lines": lines }).to_string())
+    }
+
     async fn collect(&self, arguments: &Value) -> Result<String, String> {
         let ids: Vec<u64> = arguments
             .get("ids")
@@ -368,6 +450,8 @@ fn handle_socket_client(stream: UnixStream, spawner: ModelSpawner<AgentQueue>) {
         "collect" => COLLECT_RESULTS,
         "load_plan" => LOAD_PLAN,
         "offer_plan" => OFFER_PLAN,
+        "list_tasks" => LIST_TASKS,
+        "task_output" => TASK_OUTPUT,
         _ => "",
     };
     let tools = QueueTools { spawner, inner: None };

@@ -22,6 +22,7 @@ use krustui::{
 use pathfinder_color::ColorU;
 
 use crate::avatar;
+use crate::tabs::Tabs;
 
 /// The tab bar's height, and its bottom border.
 const TITLE_BAR_HEIGHT: f32 = 28.;
@@ -59,7 +60,7 @@ const LEFT_BAR_WIDTH: f32 = 200.;
 const LEFT_BAR_PADDING_TOP: f32 = 15.;
 const NAV_ITEM_MARGIN: f32 = 12.;
 
-/// One page of the app: its name in the left bar, and how to draw it.
+/// One page of the app — in the left bar, or in a tab — and how to draw it.
 pub struct Page {
     pub label: &'static str,
     render: Box<dyn Fn() -> Box<dyn Element>>,
@@ -72,6 +73,10 @@ impl Page {
             label,
             render: Box::new(move || ChildView::new(&handle).finish()),
         }
+    }
+
+    pub(crate) fn render(&self) -> Box<dyn Element> {
+        (self.render)()
     }
 }
 
@@ -108,8 +113,15 @@ pub struct ShellWindow {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ShellAction {
+    /// A left-bar page (which also brings its tab forward).
     Show(usize),
+    /// A tab; `None` is the page's own.
+    SelectTab(Option<usize>),
+    CloseTab(usize),
 }
+
+/// How much of a tab's title shows.
+const TAB_TITLE_CHARS: usize = 28;
 
 impl ShellWindow {
     pub fn new<F>(name: &'static str, build_pages: F, ctx: &mut ViewContext<Self>) -> Self
@@ -118,6 +130,7 @@ impl ShellWindow {
     {
         let pages = build_pages(ctx);
         let nav_items = pages.iter().map(|_| MouseStateHandle::default()).collect();
+        ctx.subscribe_to_model(&Tabs::handle(ctx), |_, _, _, ctx| ctx.notify());
         Self {
             name,
             pages,
@@ -264,6 +277,88 @@ impl ShellWindow {
             .finish()
     }
 
+    /// One tab of the strip: its title (picks it) and, for an opened tab, a × that closes it; the
+    /// one shown sits on the surface colour.
+    fn render_tab(
+        title: &str,
+        selected: bool,
+        select: (&MouseStateHandle, ShellAction),
+        close: Option<(&MouseStateHandle, ShellAction)>,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let title = if title.chars().count() > TAB_TITLE_CHARS {
+            format!("{}…", title.chars().take(TAB_TITLE_CHARS).collect::<String>())
+        } else {
+            title.to_owned()
+        };
+        let (mouse, action) = select;
+        let mut row = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(
+                appearance
+                    .ui_builder()
+                    .button(ButtonVariant::Text, mouse.clone())
+                    .with_text_label(title)
+                    .with_style(
+                        UiComponentStyles::default()
+                            .set_border_width(0.)
+                            .set_padding(Coords::default().left(10.).right(6.).top(5.).bottom(5.)),
+                    )
+                    .build()
+                    .on_click(move |ctx, _, _| ctx.dispatch_typed_action(action))
+                    .finish(),
+            );
+        if let Some((mouse, action)) = close {
+            row.add_child(
+                Container::new(crate::page::link("×", action, mouse, appearance))
+                    .with_margin_right(8.)
+                    .finish(),
+            );
+        }
+        let mut tab = Container::new(row.finish()).with_corner_radius(
+            krustui::elements::CornerRadius::with_all(krustui::elements::Radius::Pixels(4.)),
+        );
+        if selected {
+            tab = tab.with_background(theme.surface_2());
+        }
+        Container::new(tab.finish()).with_margin_right(4.).finish()
+    }
+
+    /// The tab strip, while anything is open in a tab: the page's own tab, then each opened one.
+    fn render_tabs(&self, tabs: &Tabs, appearance: &Appearance) -> Option<Box<dyn Element>> {
+        if tabs.tabs().is_empty() {
+            return None;
+        }
+        let label = self.pages.get(self.selected).map_or("", |page| page.label);
+        let mut row = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(Self::render_tab(
+                label,
+                tabs.selected().is_none(),
+                (&tabs.page_tab, ShellAction::SelectTab(None)),
+                None,
+                appearance,
+            ));
+        for (index, tab) in tabs.tabs().iter().enumerate() {
+            row.add_child(Self::render_tab(
+                &tab.title,
+                tabs.selected() == Some(index),
+                (&tab.select, ShellAction::SelectTab(Some(index))),
+                Some((&tab.close, ShellAction::CloseTab(index))),
+                appearance,
+            ));
+        }
+        Some(
+            Container::new(row.finish())
+                .with_padding_left(8.)
+                .with_padding_top(6.)
+                .with_padding_bottom(6.)
+                .with_border(Border::bottom(1.).with_border_fill(appearance.theme().outline()))
+                .finish(),
+        )
+    }
+
     fn render_left_bar(&self, appearance: &Appearance) -> Box<dyn Element> {
         let theme = appearance.theme();
         let mut items = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
@@ -317,12 +412,23 @@ impl View for ShellWindow {
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
+        let tabs = Tabs::as_ref(app);
         let mut body = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
             .with_child(self.render_left_bar(appearance));
-        if let Some(page) = self.pages.get(self.selected) {
-            body.add_child(Expanded::new(1., (page.render)()).finish());
+        // What is shown: the picked tab, else the left bar's page — under the tab strip, if any.
+        let shown = match tabs.selected().and_then(|index| tabs.tabs().get(index)) {
+            Some(tab) => Some(tab.render()),
+            None => self.pages.get(self.selected).map(Page::render),
+        };
+        let mut content = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        if let Some(strip) = self.render_tabs(tabs, appearance) {
+            content.add_child(strip);
         }
+        if let Some(shown) = shown {
+            content.add_child(Expanded::new(1., shown).finish());
+        }
+        body.add_child(Expanded::new(1., content.finish()).finish());
         Container::new(
             Flex::column()
                 .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -342,7 +448,16 @@ impl TypedActionView for ShellWindow {
         match action {
             ShellAction::Show(index) => {
                 self.selected = (*index).min(self.pages.len().saturating_sub(1));
+                Tabs::handle(ctx).update(ctx, |tabs, ctx| tabs.select(None, ctx));
                 ctx.notify();
+            }
+            ShellAction::SelectTab(index) => {
+                let index = *index;
+                Tabs::handle(ctx).update(ctx, |tabs, ctx| tabs.select(index, ctx));
+            }
+            ShellAction::CloseTab(index) => {
+                let index = *index;
+                Tabs::handle(ctx).update(ctx, |tabs, ctx| tabs.close(index, ctx));
             }
         }
     }
