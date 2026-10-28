@@ -532,12 +532,17 @@ pub fn is_auto_model_id(model_id: &str) -> bool {
     model_id.starts_with(AUTO_MODEL_ID_PREFIX)
 }
 
-/// The three Auto entries, offered while at least one failover row can run.
+/// The three Auto entries, offered while there is at least one API model to resolve to: a
+/// provider with a key, or a custom endpoint. Gated on those rather than on `failover_routes`
+/// because this runs inside `HarnessAvailabilityModel::new` (building the model menu), before
+/// that model is registered — reading it here would panic. The entries resolve across the full
+/// failover list at turn time, when the model exists.
 pub fn auto_models(app: &AppContext) -> Vec<HarnessModelInfo> {
-    let any_row = failover_routes("", app)
-        .iter()
-        .any(|target| matches!(target, FailoverTarget::Api(_)));
-    if !any_row {
+    let any_api = !ApiProviderKeys::as_ref(app).available_models().is_empty()
+        || custom_endpoint_groups(app)
+            .iter()
+            .any(|(_, models)| !models.is_empty());
+    if !any_api {
         return Vec::new();
     }
     [
