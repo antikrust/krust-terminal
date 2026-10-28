@@ -1204,7 +1204,10 @@ fn open_new_tab_insert_subshell_command_and_bootstrap_if_supported(
 }
 
 /// Returns the common configuration for a new "regular" window (not Quake Mode).
-fn default_window_options(window_settings: &WindowSettings, ctx: &AppContext) -> AddWindowOptions {
+pub(crate) fn default_window_options(
+    window_settings: &WindowSettings,
+    ctx: &AppContext,
+) -> AddWindowOptions {
     let (inherited_bounds, window_style) = ctx.next_window_bounds_and_style();
     let next_bounds =
         bounds_for_opening_at_custom_window_size(inherited_bounds, window_settings, ctx);

@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# Makes a small macOS launcher app with its own name and icon that opens a Krust URL: Moloch.app
+# (krustoss://moloch) and Acolyte.app. The window it opens lives in the running Krust, so it shares
+# Krust's sign-in, identity avatar and theme; the launcher itself only sends the URL and exits.
+#
+#   script/macos/make_launcher_app <Name> <url-host> <bundle-id> <icon-letter> [destination]
+#   script/macos/make_launcher_app Moloch moloch krust.baby.Moloch M
+#
+# The URL scheme is the installed Krust's (krustoss for the oss build); KRUST_URL_SCHEME overrides.
+# The icon is drawn in Krust's style: a black squircle with an accent rim and a light letter.
+
+set -euo pipefail
+
+if [[ $# -lt 4 ]]; then
+  echo "usage: $0 <Name> <url-host> <bundle-id> <icon-letter> [destination]" >&2
+  exit 1
+fi
+NAME=$1
+HOST=$2
+BUNDLE_ID=$3
+LETTER=$4
+DEST=${5:-/Applications}
+
+if [[ -z "${KRUST_URL_SCHEME:-}" ]]; then
+  KRUST_URL_SCHEME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' \
+    /Applications/Krust.app/Contents/Info.plist 2>/dev/null || echo krustoss)
+fi
+URL="$KRUST_URL_SCHEME://$HOST"
+
+WORK=$(mktemp -d -t launcher-XXXXXX)
+trap 'rm -rf "$WORK"' EXIT
+
+# The icon, 1024px, on the macOS icon grid (824px squircle inside 1024): Black Moss's background,
+# accent and foreground.
+cat > "$WORK/icon.swift" << 'EOF'
+import AppKit
+let letter = CommandLine.arguments[1]
+let out = CommandLine.arguments[2]
+let size: CGFloat = 1024
+let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsHigh: Int(size),
+                           bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                           colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+NSGraphicsContext.saveGraphicsState()
+NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+let squircle = NSBezierPath(roundedRect: NSRect(x: 100, y: 100, width: 824, height: 824),
+                            xRadius: 185, yRadius: 185)
+NSColor.black.setFill()
+squircle.fill()
+NSColor(srgbRed: 0x2F / 255.0, green: 0x6F / 255.0, blue: 0x44 / 255.0, alpha: 1).setStroke()
+squircle.lineWidth = 14
+squircle.stroke()
+let attributes: [NSAttributedString.Key: Any] = [
+  .font: NSFont.systemFont(ofSize: 500, weight: .semibold),
+  .foregroundColor: NSColor(srgbRed: 0xD6 / 255.0, green: 0xD6 / 255.0, blue: 0xD6 / 255.0, alpha: 1),
+]
+let text = NSAttributedString(string: letter, attributes: attributes)
+let textSize = text.size()
+text.draw(at: NSPoint(x: (size - textSize.width) / 2, y: (size - textSize.height) / 2))
+NSGraphicsContext.restoreGraphicsState()
+try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: out))
+EOF
+swift "$WORK/icon.swift" "$LETTER" "$WORK/icon.png"
+
+ICONSET="$WORK/$NAME.iconset"
+mkdir -p "$ICONSET"
+for px in 16 32 128 256 512; do
+  sips -z $px $px "$WORK/icon.png" --out "$ICONSET/icon_${px}x${px}.png" > /dev/null
+  sips -z $((px * 2)) $((px * 2)) "$WORK/icon.png" --out "$ICONSET/icon_${px}x${px}@2x.png" > /dev/null
+done
+iconutil -c icns "$ICONSET" -o "$WORK/$NAME.icns"
+
+APP="$WORK/$NAME.app"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$WORK/$NAME.icns" "$APP/Contents/Resources/$NAME.icns"
+cat > "$APP/Contents/MacOS/$NAME" << EOF
+#!/bin/sh
+# Opens the $NAME window in Krust (launching Krust if it isn't running).
+exec /usr/bin/open "$URL"
+EOF
+chmod +x "$APP/Contents/MacOS/$NAME"
+cat > "$APP/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>$NAME</string>
+  <key>CFBundleDisplayName</key><string>$NAME</string>
+  <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
+  <key>CFBundleExecutable</key><string>$NAME</string>
+  <key>CFBundleIconFile</key><string>$NAME</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>
+EOF
+codesign --force --sign - "$APP" > /dev/null 2>&1 || true
+
+rm -rf "${DEST:?}/$NAME.app"
+ditto "$APP" "$DEST/$NAME.app"
+echo "Made $DEST/$NAME.app — opens $URL"

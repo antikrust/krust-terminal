@@ -95,6 +95,7 @@ pub mod mcp_servers;
 pub mod mcp_servers_page;
 mod nav;
 mod moloch_page;
+pub(crate) use moloch_page::{MolochPageView, MolochSection};
 mod ollama_page;
 pub mod pane_manager;
 mod platform;

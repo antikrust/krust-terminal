@@ -21417,61 +21417,7 @@ impl Workspace {
 
     fn render_avatar_button(&self, appearance: &Appearance, ctx: &AppContext) -> Box<dyn Element> {
         let is_anonymous = self.auth_state.is_anonymous_or_logged_out();
-        let display_name = self
-            .auth_state
-            .username_for_display()
-            .unwrap_or(DEFAULT_USER_DISPLAY_NAME.to_owned());
-
-        // Fork: an avatar you picked is local identity and wins over anything
-        // account-derived — it is the one you chose, and it works signed out.
-        let identity_source = IdentitySettings::selected_avatar_source(ctx);
-        let has_identity_avatar = identity_source.is_some();
-        // Generated art brings its own silhouette (robots and friends sit on a
-        // transparent background), so it renders without the circular accent
-        // chip and gets more room. An uploaded photo keeps the circle crop.
-        let is_generated_art = matches!(
-            identity_source,
-            Some(krustui::assets::asset_cache::AssetSource::Async { .. })
-        );
-        let avatar_content = if let Some(source) = identity_source {
-            AvatarContent::Source {
-                source,
-                display_name: display_name.clone(),
-            }
-        } else if self.auth_state.is_anonymous_or_logged_out() {
-            AvatarContent::Icon(icons::Icon::Gear)
-        } else {
-            self.auth_state
-                .user_photo_url()
-                .map(|url| AvatarContent::Image {
-                    url,
-                    display_name: display_name.clone(),
-                })
-                .unwrap_or(AvatarContent::DisplayName(display_name.clone()))
-        };
-
-        let mut avatar_styles = UiComponentStyles {
-            width: Some(20.),
-            height: Some(20.),
-            border_radius: Some(CornerRadius::with_all(Radius::Percentage(50.))),
-            font_family_id: Some(appearance.ui_font_family()),
-            font_weight: Some(Weight::Bold),
-            background: Some(appearance.theme().accent().into()),
-            font_size: Some(12.),
-            font_color: Some(ColorU::black()),
-            ..Default::default()
-        };
-        if has_identity_avatar {
-            avatar_styles.width = Some(26.);
-            avatar_styles.height = Some(26.);
-        }
-        if is_generated_art {
-            // Soften only the literal corners — visible on the few styles with
-            // an opaque backdrop; everything else renders unclipped.
-            avatar_styles.border_radius = Some(CornerRadius::with_all(Radius::Pixels(6.)));
-            avatar_styles.background = None;
-        }
-        let mut avatar = Avatar::new(avatar_content, avatar_styles);
+        let (mut avatar, display_name) = identity_avatar(&self.auth_state, appearance, ctx);
 
         // Render the subtle autoupdate UI if autoupdate is ready and there is no incoming prominent update version.
         let autoupdate_stage = autoupdate::get_update_state(ctx);
@@ -29036,6 +28982,69 @@ impl Workspace {
 
 fn should_reserve_traffic_light_space_in_tab_bar(side: TrafficLightSide) -> bool {
     side == TrafficLightSide::Right
+}
+
+/// The avatar of who is signed in, as the title bar shows it, and their name for display. Shared by
+/// the workspace's title bar and the Moloch window's, so both show the same person.
+pub(crate) fn identity_avatar(
+    auth_state: &AuthState,
+    appearance: &Appearance,
+    ctx: &AppContext,
+) -> (Avatar, String) {
+    let display_name = auth_state
+        .username_for_display()
+        .unwrap_or(DEFAULT_USER_DISPLAY_NAME.to_owned());
+
+    // Fork: an avatar you picked is local identity and wins over anything
+    // account-derived — it is the one you chose, and it works signed out.
+    let identity_source = IdentitySettings::selected_avatar_source(ctx);
+    let has_identity_avatar = identity_source.is_some();
+    // Generated art brings its own silhouette (robots and friends sit on a
+    // transparent background), so it renders without the circular accent
+    // chip and gets more room. An uploaded photo keeps the circle crop.
+    let is_generated_art = matches!(
+        identity_source,
+        Some(krustui::assets::asset_cache::AssetSource::Async { .. })
+    );
+    let avatar_content = if let Some(source) = identity_source {
+        AvatarContent::Source {
+            source,
+            display_name: display_name.clone(),
+        }
+    } else if auth_state.is_anonymous_or_logged_out() {
+        AvatarContent::Icon(icons::Icon::Gear)
+    } else {
+        auth_state
+            .user_photo_url()
+            .map(|url| AvatarContent::Image {
+                url,
+                display_name: display_name.clone(),
+            })
+            .unwrap_or(AvatarContent::DisplayName(display_name.clone()))
+    };
+
+    let mut avatar_styles = UiComponentStyles {
+        width: Some(20.),
+        height: Some(20.),
+        border_radius: Some(CornerRadius::with_all(Radius::Percentage(50.))),
+        font_family_id: Some(appearance.ui_font_family()),
+        font_weight: Some(Weight::Bold),
+        background: Some(appearance.theme().accent().into()),
+        font_size: Some(12.),
+        font_color: Some(ColorU::black()),
+        ..Default::default()
+    };
+    if has_identity_avatar {
+        avatar_styles.width = Some(26.);
+        avatar_styles.height = Some(26.);
+    }
+    if is_generated_art {
+        // Soften only the literal corners — visible on the few styles with
+        // an opaque backdrop; everything else renders unclipped.
+        avatar_styles.border_radius = Some(CornerRadius::with_all(Radius::Pixels(6.)));
+        avatar_styles.background = None;
+    }
+    (Avatar::new(avatar_content, avatar_styles), display_name)
 }
 
 /// Total width/height of the collage area in the group header.

@@ -52,6 +52,8 @@ mod modal;
 /// Client configuration pointing this app at our MOLOCH server (the fork's
 /// replacement for Krust's cloud agent backend). See docs/moloch.md.
 pub mod moloch;
+/// The Moloch app: a window of its own for the Moloch server, in Krust's frame.
+mod moloch_app;
 mod network;
 mod notebooks;
 mod notification;
@@ -1931,6 +1933,7 @@ pub(crate) fn initialize_app(
     themes::theme_creator_modal::init(ctx);
     themes::theme_deletion_modal::init(ctx);
     root_view::init(ctx);
+    moloch_app::init(ctx);
     voltron::init(ctx);
     auth::init(ctx);
     crate::view_components::find::init(ctx);
