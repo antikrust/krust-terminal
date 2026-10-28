@@ -37,7 +37,8 @@ use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
 use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::api_providers::{
     agent_pool, cli_failover_models, cli_model_id_for, cli_model_parts, cli_route_for,
-    is_free_model, model_tier, route_for, route_strength, ApiRoute, CliRoute, FailoverTarget,
+    is_free_model, model_tier, pool_targets, route_for, route_strength, ApiRoute, CliRoute,
+    FailoverTarget,
 };
 use crate::ai::failover_health::{FailoverHealth, Health};
 use crate::ai::task_router::{
@@ -90,6 +91,10 @@ pub struct QueueTask {
     /// the queue's default model (Settings).
     #[serde(default)]
     pub model: Option<String>,
+    /// The agent pool the auto chooser is restricted to (a pool name), or `None`/empty for the whole
+    /// on-set. Ignored when the task is pinned to one model.
+    #[serde(default)]
+    pub pool: Option<String>,
     /// What the task has said and done, live while it runs. Not saved.
     #[serde(skip)]
     pub transcript: Vec<TranscriptLine>,
@@ -244,6 +249,8 @@ pub struct PlannedTask {
     pub working_dir: PathBuf,
     /// A model id to pin it to, `"auto"`, or `None` for the queue's default.
     pub model: Option<String>,
+    /// The agent pool to draw on (a pool name), or `None`/empty for the whole on-set.
+    pub pool: Option<String>,
 }
 
 /// Where a task stands, for a model waiting on its results.
@@ -455,6 +462,7 @@ impl AgentQueue {
             prompt.to_string(),
             home_dir(),
             None,
+            None,
         );
         self.changed(ctx);
         self.pump(ctx);
@@ -468,6 +476,7 @@ impl AgentQueue {
         prompt: String,
         working_dir: PathBuf,
         model: Option<String>,
+        pool: Option<String>,
     ) {
         self.tasks.push(QueueTask {
             id: self.next_id,
@@ -481,6 +490,7 @@ impl AgentQueue {
             difficulty: None,
             reason: String::new(),
             model,
+            pool,
             transcript: Vec::new(),
             events: Vec::new(),
         });
@@ -506,11 +516,15 @@ impl AgentQueue {
                 if task.prompt.trim().is_empty() || self.tasks.iter().any(|known| known.key == key) {
                     continue;
                 }
-                self.push(key, task.title, task.prompt, working_dir.clone(), None);
+                self.push(key, task.title, task.prompt, working_dir.clone(), None, None);
                 added += 1;
             }
         }
         if added > 0 {
+            // Spawn mode: don't wait for the boss to start the queue — fan the plan out at once.
+            if *AISettings::as_ref(ctx).queue_spawn_mode.value() {
+                self.running = true;
+            }
             self.changed(ctx);
             self.pump(ctx);
         }
@@ -531,6 +545,7 @@ impl AgentQueue {
                 task.prompt,
                 task.working_dir,
                 task.model,
+                task.pool,
             );
         }
         self.running = true;
@@ -687,6 +702,17 @@ impl AgentQueue {
                 .filter(|model| !model.trim().is_empty())
                 .or_else(|| (!default_model.trim().is_empty()).then(|| default_model.clone()))
                 .filter(|model| model != "auto");
+            // The ids this task's pool allows, if it names one; `None` means the whole on-set.
+            let pool_ids: Option<Vec<String>> = task
+                .pool
+                .clone()
+                .filter(|name| !name.trim().is_empty())
+                .map(|name| {
+                    pool_targets(ctx, &name)
+                        .iter()
+                        .map(|target| target.model_id().to_string())
+                        .collect()
+                });
 
             let pick = if let Some(model_id) = pinned {
                 if tried.len() >= MAX_ATTEMPTS {
@@ -720,6 +746,7 @@ impl AgentQueue {
                             !busy.contains(&worker.account())
                                 && !down.contains(id)
                                 && !tried.iter().any(|t| t == id)
+                                && pool_ids.as_ref().map_or(true, |ids| ids.iter().any(|x| x == id))
                         })
                         .collect();
                     // A model that was just rate-limited or flaky (amber) is passed over while

@@ -82,6 +82,10 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
                     "model": {
                         "type": "string",
                         "description": "Pin every task to this model id, or \"auto\" (optional; a task's own model wins)."
+                    },
+                    "pool": {
+                        "type": "string",
+                        "description": "Run these tasks on a named agent pool (e.g. \"Free\", \"Local\", \"Fast\", \"Genius\", or one you made). Optional; the whole on-set when left out. Ignored for a task pinned to one model."
                     }
                 },
                 "required": ["tasks", "workdir"]
@@ -143,6 +147,12 @@ impl QueueTools {
             .and_then(Value::as_str)
             .map(str::to_string)
             .filter(|model| !model.trim().is_empty());
+        // The pool these tasks draw on (every task in the call), when none is pinned to a model.
+        let call_pool = arguments
+            .get("pool")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .filter(|pool| !pool.trim().is_empty());
         let planned: Vec<PlannedTask> = arguments
             .get("tasks")
             .and_then(Value::as_array)
@@ -172,6 +182,7 @@ impl QueueTools {
                     prompt,
                     working_dir: workdir.clone(),
                     model,
+                    pool: call_pool.clone(),
                 })
             })
             .collect();

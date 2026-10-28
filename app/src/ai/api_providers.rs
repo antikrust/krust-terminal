@@ -877,6 +877,61 @@ pub fn agent_pool(app: &AppContext) -> Vec<FailoverTarget> {
         .collect()
 }
 
+/// The built-in agent pools, computed from the model list rather than stored. "Everything" is every
+/// model switched on; the rest are subsets of it. The user's custom pools (Settings) add to these,
+/// and a custom pool may reuse a built-in name to override it.
+pub const BUILTIN_POOLS: &[&str] = &["Everything", "Free", "Local", "Fast", "Genius"];
+
+/// Every agent pool's name, built-ins first then the user's custom pools (each once).
+pub fn pool_names(app: &AppContext) -> Vec<String> {
+    let mut names: Vec<String> = BUILTIN_POOLS.iter().map(|name| (*name).to_string()).collect();
+    for pool in AISettings::as_ref(app).agent_pools.value() {
+        if !names.iter().any(|known| *known == pool.name) {
+            names.push(pool.name.clone());
+        }
+    }
+    names
+}
+
+/// How strong a pool member is, on the chooser's own `tier_strength` scale, so Fast/Genius split on
+/// the same yardstick the queue decides with. A local agent app (Claude Code, Codex) counts as strong.
+fn target_strength(target: &FailoverTarget, app: &AppContext) -> f64 {
+    match target {
+        FailoverTarget::Api(route) => route_strength(route, app),
+        FailoverTarget::Cli(_) => crate::ai::task_router::tier_strength(Difficulty::Hard),
+    }
+}
+
+/// The targets a named pool resolves to now: the models that are switched on, belong to the pool, and
+/// can be called. A custom pool (an explicit id list) wins over a built-in of the same name; an
+/// unknown name falls back to everything that is on.
+pub fn pool_targets(app: &AppContext, name: &str) -> Vec<FailoverTarget> {
+    if let Some(pool) = AISettings::as_ref(app)
+        .agent_pools
+        .value()
+        .iter()
+        .find(|pool| pool.name == name)
+    {
+        return agent_pool(app)
+            .into_iter()
+            .filter(|target| pool.models.iter().any(|id| id == target.model_id()))
+            .collect();
+    }
+    let fast = crate::ai::task_router::tier_strength(Difficulty::Medium);
+    let genius = crate::ai::task_router::tier_strength(Difficulty::Hard);
+    agent_pool(app)
+        .into_iter()
+        .filter(|target| match name {
+            "Free" => is_free_model(target.model_id()),
+            "Local" => ollama_model_name(target.model_id()).is_some(),
+            "Fast" => target_strength(target, app) <= fast,
+            "Genius" => target_strength(target, app) >= genius,
+            // "Everything" and any unknown name: the whole on-set.
+            _ => true,
+        })
+        .collect()
+}
+
 /// The BYOR failover list as model ids, first choice first: the saved order,
 /// with a bare provider id (saved by an earlier build) read as that
 /// provider's first model, leaving out models that can't be called now (no

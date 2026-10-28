@@ -118,6 +118,25 @@ pub struct ByorFailoverPreset {
 
 #[derive(
     Default,
+    Clone,
+    Debug,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+    settings_value::SettingsValue,
+)]
+#[serde(default)]
+#[schemars(description = "A named agent pool: a subset of the agent models the queue can draw on.")]
+pub struct AgentPool {
+    #[schemars(description = "The pool's name, as shown in the queue and the picker.")]
+    pub name: String,
+    #[schemars(description = "The models in the pool, as model ids.")]
+    pub models: Vec<String>,
+}
+
+#[derive(
+    Default,
     Debug,
     serde::Serialize,
     serde::Deserialize,
@@ -1518,6 +1537,34 @@ define_settings_group!(AISettings, settings: [
         private: false,
         toml_path: "cloud_platform.third_party_api_keys.byor_queue_default_model",
         description: "Default model for agent-queue tasks that name none (a picker id, or auto).",
+    }
+
+    // The user's custom agent pools — named subsets of the agent models the queue can draw on. The
+    // built-in pools (Everything, Free, Local, Fast, Genius) are computed from the model list and are
+    // not stored here; these are the extra ones the user builds and names.
+    agent_pools: AgentPools {
+        type: Vec<AgentPool>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.queue.pools",
+        description: "Custom agent pools, each a name and a list of model ids.",
+    }
+
+    // Spawn mode: when on, the queue enqueues every spawnable task of a loaded plan as soon as it is
+    // loaded, rather than waiting for the boss to hand them out one at a time. A per-run toggle on
+    // the queue; this holds its default.
+    queue_spawn_mode: QueueSpawnMode {
+        type: bool,
+        default: false,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.queue.spawn_mode",
+        description: "Whether the agent queue auto-spawns all plan tasks as soon as a plan loads.",
     }
 
     // Saved BYOR failover lists the user can switch between ("Light work",
