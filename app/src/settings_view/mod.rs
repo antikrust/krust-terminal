@@ -671,6 +671,7 @@ pub mod flags {
     pub const FILE_BASED_MCP_FLAG: &str = "File_Based_MCP";
     pub const BYOR_FAILOVER_FLAG: &str = "BYOR_Failover";
     pub const BYOR_FAILOVER_FREE_ONLY_FLAG: &str = "BYOR_Failover_Free_Only";
+    pub const QUEUE_SPAWN_MODE_FLAG: &str = "Queue_Spawn_Mode";
     pub const SHOW_BASE_MODEL_PICKER_IN_PROMPT_FLAG: &str = "Show_Base_Model_Picker_In_Prompt";
     pub const ALLOW_NATIVE_WAYLAND: &str = "Allow_Native_Wayland";
     pub const IS_ANY_AI_ENABLED: &str = "IsAnyAIEnabled";

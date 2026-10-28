@@ -27,6 +27,10 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{McpToolCaller, M
 
 pub(crate) const PLAN_TASKS: &str = "plan_tasks";
 pub(crate) const COLLECT_RESULTS: &str = "collect_results";
+pub(crate) const LOAD_PLAN: &str = "load_plan";
+/// Not a model's tool: what a script sends over the socket the moment it writes a plan file
+/// (reverse-lab's `reverse_engineering_auto.py`). The queue hands it out only in spawn mode.
+const OFFER_PLAN: &str = "offer_plan";
 
 /// The Unix socket the queue-tools MCP subprocess talks to the app over.
 pub(crate) fn socket_path() -> PathBuf {
@@ -92,6 +96,25 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
             }),
         },
         McpToolSpec {
+            name: LOAD_PLAN.to_string(),
+            description: "Hand every task of a plan file's spawn lanes to other agents at once and \
+                start the queue — the fastest way to fan a job out. The plan is the \
+                notes/plan.json the reverse-lab tools write (reverse_engineering_auto.py / \
+                plan.py). Tasks already in the queue are not added twice. Returns the new tasks' \
+                ids; pass them to collect_results. Do the plan's serial lane yourself."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The plan file's absolute path (e.g. …/<name>/notes/plan.json)."
+                    }
+                },
+                "required": ["path"]
+            }),
+        },
+        McpToolSpec {
             name: COLLECT_RESULTS.to_string(),
             description: "Wait for tasks handed out with plan_tasks and return what each answered, \
                 or why it failed. Returns early if `wait_seconds` pass; the tasks still running \
@@ -125,6 +148,8 @@ impl McpToolCaller for QueueTools {
         match name {
             PLAN_TASKS => self.plan(&arguments).await,
             COLLECT_RESULTS => self.collect(&arguments).await,
+            LOAD_PLAN => self.load(&arguments, true).await,
+            OFFER_PLAN => self.load(&arguments, false).await,
             other => match &self.inner {
                 Some(inner) => inner.call(other, arguments).await,
                 None => Err(format!("no tool named '{other}' is available")),
@@ -206,6 +231,35 @@ impl QueueTools {
             listed.join("; "),
             ids
         ))
+    }
+
+    /// `load_plan` (a model asked: always hand the plan out) or `offer_plan` (a script offered it:
+    /// only in spawn mode).
+    async fn load(&self, arguments: &Value, asked: bool) -> Result<String, String> {
+        let path = arguments
+            .get("path")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from)
+            .ok_or("load_plan needs the plan file's `path`.")?;
+        self.spawner
+            .spawn(move |queue, ctx| {
+                if asked {
+                    queue.load_plan_tasks(&path, true, ctx).map(|ids| {
+                        format!(
+                            "Queued {} new task(s) from {} and started the queue. Call \
+                             collect_results with ids {ids:?} to wait for them.",
+                            ids.len(),
+                            path.display()
+                        )
+                    })
+                } else {
+                    queue.offer_plan(&path, ctx)
+                }
+            })
+            .await
+            .map_err(|_| "the agent queue is not available".to_string())?
     }
 
     async fn collect(&self, arguments: &Value) -> Result<String, String> {
@@ -312,6 +366,8 @@ fn handle_socket_client(stream: UnixStream, spawner: ModelSpawner<AgentQueue>) {
     let name = match op {
         "plan" => PLAN_TASKS,
         "collect" => COLLECT_RESULTS,
+        "load_plan" => LOAD_PLAN,
+        "offer_plan" => OFFER_PLAN,
         _ => "",
     };
     let tools = QueueTools { spawner, inner: None };
@@ -381,6 +437,8 @@ fn handle_mcp_request(method: &str, params: &Value, id: Value) -> Value {
                 "plan"
             } else if name == COLLECT_RESULTS {
                 "collect"
+            } else if name == LOAD_PLAN {
+                "load_plan"
             } else {
                 ""
             };

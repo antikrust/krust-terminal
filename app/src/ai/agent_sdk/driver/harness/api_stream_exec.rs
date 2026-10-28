@@ -297,6 +297,8 @@ pub async fn run_api_stream(
         }
         let request = request.to_string();
 
+        // Today's count, for the Agents page (a free tier's daily allowance goes fast).
+        failover_health::note_request(&route.model_id);
         let command = new_api_command(&route, working_dir, path);
         let accumulator = Arc::new(Mutex::new(ApiChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
@@ -331,11 +333,17 @@ pub async fn run_api_stream(
                 .map(|accumulator| (accumulator.http_status, accumulator.clone().finish()));
             match finished {
                 Ok((_, Ok(response))) => Ok(response),
-                Ok((http_status, Err(error))) => Err(request_failure(&route, http_status, &error)),
+                Ok((http_status, Err(error))) => Err(request_failure(
+                    &route,
+                    http_status,
+                    &error,
+                    rate_limit_reset,
+                )),
                 Err(_) => Err(request_failure(
                     &route,
                     None,
                     "the response state became unavailable",
+                    None,
                 )),
             }
         } else {
@@ -387,11 +395,25 @@ pub async fn run_api_stream(
                     failure.health,
                     failure.scope == FailureScope::Provider,
                 );
+                // A limit that lasts: the model (or its account's free models) rests until it
+                // lifts, so no turn or queued task spends a request finding that out again.
+                if let Some(rest) = failure.rest {
+                    failover_health::rest(
+                        &route.model_id,
+                        &route.account,
+                        failover_health::unix_now() + rest.secs,
+                        rest.cause,
+                        rest.free_wide,
+                    );
+                }
                 if failure.scope == FailureScope::Provider {
                     failed_accounts.push(route.account.clone());
                 }
                 let next = failover.by_ref().find(|next| match next {
-                    FailoverTarget::Api(next) => !failed_accounts.contains(&next.account),
+                    FailoverTarget::Api(next) => {
+                        !failed_accounts.contains(&next.account)
+                            && failover_health::resting(&next.model_id, &next.account).is_none()
+                    }
                     FailoverTarget::Cli(_) => true,
                 });
                 let next = match next {
@@ -403,9 +425,11 @@ pub async fn run_api_stream(
                     {
                         // The provider's own word on when the limit lifts,
                         // else a growing guess.
-                        let wait = rate_limit_reset.unwrap_or(
-                            BUSY_RETRY_WAITS[busy_waits.min(BUSY_RETRY_WAITS.len() - 1)],
-                        );
+                        let wait = rate_limit_reset
+                            .map(|secs| secs.min(MAX_HEADER_WAIT_SECS))
+                            .unwrap_or(
+                                BUSY_RETRY_WAITS[busy_waits.min(BUSY_RETRY_WAITS.len() - 1)],
+                            );
                         if busy_waits == 0 {
                             on_event(TurnEvent::Text {
                                 text: format!("_{} — waiting, then carrying on._", failure.reason),
@@ -1438,7 +1462,9 @@ async fn wait_unless_cancelled(session_id: &Uuid, reason: &str, secs: u64) -> bo
 /// Seconds until a rate limit lifts, from the headers curl printed after the
 /// reply (see [`RATE_LIMIT_RESET_MARKER`]): `Retry-After` in seconds, a reset
 /// duration like `1m2.5s` or `250ms`, or a reset time as a Unix timestamp in
-/// seconds or milliseconds. The first that reads is used, kept to 1s-15min.
+/// seconds or milliseconds. The first that reads is used, at least 1s. Not
+/// capped: a daily reset hours away is what rests the model (a wait for it is
+/// capped where the runner waits, [`MAX_HEADER_WAIT_SECS`]).
 fn rate_limit_reset_secs(headers: &str) -> Option<u64> {
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1459,7 +1485,81 @@ fn rate_limit_reset_secs(headers: &str) -> Option<u64> {
         }
         go_duration_secs(value)
     })?;
-    Some((secs.ceil().max(1.0) as u64).min(15 * 60))
+    Some(secs.ceil().max(1.0) as u64)
+}
+
+/// The longest the runner waits on a busy model's own reset time before giving up on it; a limit
+/// that lasts longer rests the model instead (see [`lasting_limit`]).
+const MAX_HEADER_WAIT_SECS: u64 = 15 * 60;
+
+/// Seconds until a limit lifts, from the provider's own words: Groq's "Please try again in
+/// 1m26.4s", Gemini's "Please retry in 23.4s", "retry after 30".
+fn retry_in_secs(lower: &str) -> Option<u64> {
+    ["try again in ", "retry in ", "retry after "]
+        .iter()
+        .find_map(|lead| {
+            let start = lower.find(lead)? + lead.len();
+            let token: String = lower[start..]
+                .chars()
+                .take_while(|c| !c.is_whitespace() && *c != ',' && *c != ')' && *c != '"')
+                .collect();
+            let token = token.trim_end_matches('.');
+            token
+                .parse::<f64>()
+                .ok()
+                .or_else(|| go_duration_secs(token))
+                .map(|secs| secs.ceil().max(1.0) as u64)
+        })
+}
+
+/// Seconds until a daily allowance starts again when the provider doesn't say: midnight UTC
+/// (OpenRouter, Groq, most), or for Gemini midnight Pacific, taken as 08:00 UTC so it is never
+/// early.
+fn secs_until_daily_reset(provider_id: &str) -> u64 {
+    let offset = if provider_id == "gemini" { 8 * 3_600 } else { 0 };
+    let into_day = (failover_health::unix_now() + 86_400 - offset) % 86_400;
+    86_400 - into_day
+}
+
+/// A rate limit that lasts: why, how long until it lifts, and whether it is the account's free
+/// allowance as a whole (OpenRouter's free models share 50 or 1,000 requests a day). From the
+/// provider's message and the reset its headers named. `None` for a passing limit whose end
+/// nobody named — the runner waits a little and sends the request again.
+fn lasting_limit(route: &ApiRoute, lower: &str, reset_secs: Option<u64>) -> Option<Rested> {
+    let daily = [
+        "per day",
+        "per-day",
+        "perday",
+        "per_day",
+        "daily",
+        "(rpd)",
+        "(tpd)",
+        "requests per day",
+        "tokens per day",
+    ]
+    .iter()
+    .any(|word| lower.contains(word));
+    let free_wide = lower.contains("free-models-per-day");
+    let secs = match (reset_secs.or_else(|| retry_in_secs(lower)), daily || free_wide) {
+        (Some(secs), _) => secs,
+        (None, true) => secs_until_daily_reset(route.provider.id),
+        (None, false) => return None,
+    };
+    // A long reset is the day's allowance gone, however it was worded.
+    let daily = daily || free_wide || secs > 60 * 60;
+    Some(Rested {
+        secs,
+        free_wide,
+        cause: if daily { "daily limit" } else { "rate limit" },
+    })
+}
+
+/// How long a model (or its account's free models) rests after a lasting limit, and why.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Rested {
+    secs: u64,
+    free_wide: bool,
+    cause: &'static str,
 }
 
 /// A Go-style duration ("1m2.5s", "59.56s", "250ms") in seconds.
@@ -1514,6 +1614,9 @@ struct RequestFailure {
     /// The model is rate-limited or overloaded, which passes: the same
     /// request can be sent again after a wait.
     busy: bool,
+    /// The model hit a limit that lasts (a daily cap, or a reset the provider
+    /// named): it rests until then, and nothing sends it a request before.
+    rest: Option<Rested>,
 }
 
 /// Whether a provider's error says the request was too long for the model:
@@ -1528,8 +1631,14 @@ fn is_too_long_error(error: &str) -> bool {
 }
 
 /// Classifies a request the provider answered with an error. `http_status`
-/// is what curl reported; `error` the provider's own message.
-fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> RequestFailure {
+/// is what curl reported; `error` the provider's own message; `reset_secs`
+/// when its headers said the limit lifts.
+fn request_failure(
+    route: &ApiRoute,
+    http_status: Option<u16>,
+    error: &str,
+    reset_secs: Option<u64>,
+) -> RequestFailure {
     let provider = &route.provider_name;
     let model = &route.model_name;
     let lower = error.to_lowercase();
@@ -1538,6 +1647,15 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
     // free tier's per-model limit, so it isn't counted here.)
     let out_of_credit = lower.contains("insufficient") || lower.contains("balance");
     let too_long = is_too_long_error(error);
+    // A rate limit (a 429, or one worded as one) that lasts: a daily cap, or a reset named.
+    let rate_limited = http_status == Some(429)
+        || lower.contains("rate limit")
+        || lower.contains("resource_exhausted")
+        || lower.contains("quota exceeded");
+    let rest = (rate_limited && !out_of_credit && !too_long)
+        .then(|| lasting_limit(route, &lower, reset_secs))
+        .flatten();
+    let long_rest = rest.filter(|rest| rest.secs > MAX_HEADER_WAIT_SECS);
     let (scope, health, reason) = match http_status {
         Some(401 | 403) => (
             FailureScope::Provider,
@@ -1560,10 +1678,35 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
             Health::Unknown,
             format!("The conversation is too long for {model}"),
         ),
+        // A limit that lasts: the model rests (red) until it lifts, and the user is told when.
+        _ if long_rest.is_some() => {
+            let rest = long_rest.unwrap_or(Rested {
+                secs: 0,
+                free_wide: false,
+                cause: "rate limit",
+            });
+            let until = failover_health::until_text(failover_health::unix_now() + rest.secs);
+            let reason = match (rest.free_wide, rest.cause) {
+                (true, _) => {
+                    format!("{provider}'s free models have used up today's requests — resting until {until}")
+                }
+                (false, "daily limit") => {
+                    format!("{model} has used up its daily limit on {provider} — resting until {until}")
+                }
+                (false, _) => format!("{model} is rate-limited — resting until {until}"),
+            };
+            (FailureScope::Model, Health::Down, reason)
+        }
         Some(429) => (
             FailureScope::Model,
             Health::Degraded,
-            format!("{model} is rate-limited"),
+            match rest {
+                Some(rest) => format!(
+                    "{model} is rate-limited for about {}",
+                    failover_health::span_text(rest.secs)
+                ),
+                None => format!("{model} is rate-limited"),
+            },
         ),
         Some(503 | 529) => (
             FailureScope::Model,
@@ -1597,8 +1740,10 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
     // Busy, or failing for now: rate limits, overload, the provider's own
     // server and network errors ("Network error ... please try again later",
     // Z.ai's code 1234). These pass, so the same request is worth sending again.
+    // A limit that lasts for hours isn't worth waiting out: fail over, or say so.
     let busy = !out_of_credit
         && !too_long
+        && long_rest.is_none()
         && (matches!(http_status, Some(429 | 500..=599))
             || lower.contains("overloaded")
             || lower.contains("try again later")
@@ -1610,6 +1755,7 @@ fn request_failure(route: &ApiRoute, http_status: Option<u16>, error: &str) -> R
         detail: format!("{provider}: {error}"),
         too_long,
         busy,
+        rest,
     }
 }
 
@@ -1640,6 +1786,7 @@ fn curl_failure(route: &ApiRoute, status: ExitStatus) -> RequestFailure {
         detail: curl_failure_message(&route.provider_name, status),
         too_long: false,
         busy: false,
+        rest: None,
     }
 }
 

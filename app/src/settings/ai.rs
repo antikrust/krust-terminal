@@ -1553,6 +1553,19 @@ define_settings_group!(AISettings, settings: [
         description: "Custom agent pools, each a name and a list of model ids.",
     }
 
+    // The pool the agent queue's auto tasks draw on when a task names none: a pool name (built-in or
+    // custom), or empty for every model that is on.
+    queue_default_pool: QueueDefaultPool {
+        type: String,
+        default: String::new(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.queue.default_pool",
+        description: "The agent pool queued tasks draw on when they name none (empty: everything on).",
+    }
+
     // Spawn mode: when on, the queue enqueues every spawnable task of a loaded plan as soon as it is
     // loaded, rather than waiting for the boss to hand them out one at a time. A per-run toggle on
     // the queue; this holds its default.

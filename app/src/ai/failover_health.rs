@@ -5,13 +5,20 @@
 //! publishes each model's endpoint health, and a local Ollama server either
 //! answers or doesn't. Other providers publish nothing, so their rows stay
 //! grey until a turn has used them.
+//!
+//! A model that hit a limit it can't get past for a while — a daily cap, or a
+//! rate limit whose reset the provider named — *rests* until then: it is red,
+//! and failover and the agent queue pass it over without spending a request to
+//! find out again. Rests are saved, so a restart remembers them, as is how many
+//! requests each model was sent today.
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use krustui::{Entity, ModelContext, SingletonEntity};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{base_url_of, ollama_model_name};
 use crate::ai::api_providers::api_model_parts;
@@ -78,6 +85,146 @@ fn observed(model_id: &str, account: &str) -> Option<(Health, Instant)> {
         .map(|observation| (observation.health, observation.at))
 }
 
+/// A model, or an account's free models, resting after a lasting limit.
+#[derive(Clone, Serialize, Deserialize)]
+struct Rest {
+    /// When it lifts, in Unix seconds.
+    until: u64,
+    /// What it hit, as the user is told: "daily limit", "rate limit".
+    cause: String,
+}
+
+/// What is saved across restarts: the rests, and today's request counts.
+#[derive(Default, Serialize, Deserialize)]
+struct Ledger {
+    /// By `model:<id>`, or `free:<account>` for every free model of an account (OpenRouter's free
+    /// models share one daily allowance).
+    #[serde(default)]
+    rests: HashMap<String, Rest>,
+    /// The UTC day (days since the epoch) `requests` counts.
+    #[serde(default)]
+    day: u64,
+    /// Requests sent on `day`, by model id.
+    #[serde(default)]
+    requests: HashMap<String, u32>,
+}
+
+fn ledger_file() -> PathBuf {
+    krust_core::paths::state_dir().join("failover_ledger.json")
+}
+
+/// Written from turns running off the main thread, like the observations.
+fn ledger() -> &'static Mutex<Ledger> {
+    static LEDGER: OnceLock<Mutex<Ledger>> = OnceLock::new();
+    LEDGER.get_or_init(|| {
+        let ledger = std::fs::read_to_string(ledger_file())
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default();
+        Mutex::new(ledger)
+    })
+}
+
+fn save_ledger(ledger: &Ledger) {
+    match serde_json::to_string(ledger) {
+        Ok(text) => {
+            if let Err(error) = std::fs::write(ledger_file(), text) {
+                log::warn!("failover_health: could not save the ledger: {error}");
+            }
+        }
+        Err(error) => log::warn!("failover_health: could not write the ledger: {error}"),
+    }
+}
+
+/// Seconds since the Unix epoch, now.
+pub fn unix_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs())
+}
+
+/// Rests `model_id` until `until` (Unix seconds), having hit `cause`. With `free_wide`, every free
+/// model of `account` rests instead: the limit was the account's free allowance as a whole.
+pub fn rest(model_id: &str, account: &str, until: u64, cause: &str, free_wide: bool) {
+    let Ok(mut ledger) = ledger().lock() else {
+        return;
+    };
+    let key = if free_wide {
+        format!("free:{account}")
+    } else {
+        format!("model:{model_id}")
+    };
+    let now = unix_now();
+    ledger.rests.retain(|_, rest| rest.until > now);
+    ledger.rests.insert(
+        key,
+        Rest {
+            until,
+            cause: cause.to_string(),
+        },
+    );
+    save_ledger(&ledger);
+}
+
+/// When `model_id` (on `account`) can be asked again and what it hit, while it rests.
+pub fn resting(model_id: &str, account: &str) -> Option<(u64, String)> {
+    let ledger = ledger().lock().ok()?;
+    let now = unix_now();
+    let mut keys = vec![format!("model:{model_id}")];
+    if model_id.ends_with(":free") {
+        keys.push(format!("free:{account}"));
+    }
+    keys.iter()
+        .filter_map(|key| ledger.rests.get(key))
+        .filter(|rest| rest.until > now)
+        .max_by_key(|rest| rest.until)
+        .map(|rest| (rest.until, rest.cause.clone()))
+}
+
+/// Counts a request sent to `model_id` today (UTC).
+pub fn note_request(model_id: &str) {
+    let Ok(mut ledger) = ledger().lock() else {
+        return;
+    };
+    let today = unix_now() / 86_400;
+    if ledger.day != today {
+        ledger.day = today;
+        ledger.requests.clear();
+    }
+    *ledger.requests.entry(model_id.to_string()).or_insert(0) += 1;
+    save_ledger(&ledger);
+}
+
+/// How many requests `model_id` was sent today (UTC).
+pub fn requests_today(model_id: &str) -> u32 {
+    let Ok(ledger) = ledger().lock() else {
+        return 0;
+    };
+    if ledger.day != unix_now() / 86_400 {
+        return 0;
+    }
+    ledger.requests.get(model_id).copied().unwrap_or(0)
+}
+
+/// "6h 12m", "4m", "40s".
+pub fn span_text(secs: u64) -> String {
+    match secs {
+        0..=59 => format!("{secs}s"),
+        60..=3_599 => format!("{}m", secs / 60),
+        _ => format!("{}h {}m", secs / 3_600, secs % 3_600 / 60),
+    }
+}
+
+/// "01:00 (in 6h 12m)": when `until` (Unix seconds) comes, in local time, and how far off it is.
+pub fn until_text(until: u64) -> String {
+    let local = chrono::DateTime::<chrono::Local>::from(UNIX_EPOCH + Duration::from_secs(until));
+    format!(
+        "{} (in {})",
+        local.format("%H:%M"),
+        span_text(until.saturating_sub(unix_now()))
+    )
+}
+
 /// The checks behind the lights, and when each was made.
 pub struct FailoverHealth {
     /// OpenRouter's published health, by OpenRouter model id.
@@ -124,6 +271,10 @@ impl FailoverHealth {
     /// The light for a row on `model_id`, whose whole-account failures are
     /// recorded under `account`: what a turn saw lately, or a newer check.
     pub fn health(&self, model_id: &str, account: &str) -> Health {
+        // Resting after a lasting limit: it would only refuse again.
+        if resting(model_id, account).is_some() {
+            return Health::Down;
+        }
         let checked = if let Some((provider, model)) = api_model_parts(model_id) {
             (provider.id == "openrouter")
                 .then(|| self.openrouter.get(model).copied())

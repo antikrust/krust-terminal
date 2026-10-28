@@ -60,7 +60,7 @@ use crate::ai::api_providers::{
 };
 use crate::ai::agent_queue::{AgentQueue, LineKind, TaskState};
 use crate::ai::task_router::Difficulty;
-use crate::ai::failover_health::{FailoverHealth, Health};
+use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::harness_availability::HarnessAvailabilityModel;
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::aws_credentials::refresh_aws_credentials;
@@ -97,8 +97,8 @@ use crate::settings::{
     AIAutoDetectionEnabled, AICommandDenylist, AISettingsChangedEvent,
     AgentModeCodingPermissionsType, AgentModeCommandExecutionDenylist,
     AgentModeCommandExecutionPredicate, AgentModeQuerySuggestionsEnabled, AwsBedrockAutoLogin,
-    AwsBedrockCredentialsEnabled, ByorFailoverEnabled, ByorFailoverFreeOnly, ByorFailoverPreset,
-    CodeSettings,
+    AgentPool, AwsBedrockCredentialsEnabled, ByorFailoverEnabled, ByorFailoverFreeOnly,
+    ByorFailoverPreset, CodeSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
     LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
@@ -636,6 +636,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             )
             .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
+                "agent queue spawn mode",
+                builder(SettingsAction::AI(AISettingsPageAction::ToggleQueueSpawnMode)),
+                &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
+                flags::QUEUE_SPAWN_MODE_FLAG,
+            )
+            .with_group(bindings::BindingGroup::KrustAi),
+            ToggleSettingActionPair::new(
                 "auto show or hide Rich Input based on agent status",
                 builder(SettingsAction::AI(
                     AISettingsPageAction::ToggleAutoToggleRichInput,
@@ -713,9 +720,16 @@ pub struct AISettingsPageView {
     /// local models), so a refresh that changes none of it doesn't rebuild
     /// (and close) them.
     byor_failover_sources: Vec<FailoverSource>,
-    /// The Agents page's model rows: each model's id, its on/off switch and its tier button's
-    /// mouse state, rebuilt with the failover rows when what the app can see changes.
-    agent_model_rows: Vec<(String, SwitchStateHandle, MouseStateHandle)>,
+    /// The Agents page's model rows: each model's id, its on/off switch, its tier button's and its
+    /// pool-membership button's mouse states, rebuilt with the failover rows when what the app can
+    /// see changes.
+    agent_model_rows: Vec<(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)>,
+    /// The Agents page's pools: the menu of every pool, the pool it shows (and edits, when it is
+    /// one the user made), and the name field and button that make a new pool.
+    pool_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
+    selected_pool: String,
+    pool_name_editor: ViewHandle<EditorView>,
+    pool_new_button: ViewHandle<ActionButton>,
     /// The failover preset menu, its name field and its Save button.
     byor_preset_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
     byor_preset_name_editor: ViewHandle<EditorView>,
@@ -2072,6 +2086,29 @@ impl AISettingsPageView {
             .map(|task| (task.id, Default::default(), Default::default(), Default::default()))
             .collect();
 
+        let selected_pool = api_providers::BUILTIN_POOLS[0].to_owned();
+        let pool_dropdown = ctx.add_typed_action_view(|ctx| {
+            let mut dropdown = Dropdown::new(ctx);
+            dropdown.set_top_bar_max_width(220.);
+            dropdown.set_menu_width(240., ctx);
+            dropdown.set_main_axis_size(MainAxisSize::Min, ctx);
+            dropdown
+        });
+        Self::refresh_pool_dropdown(&pool_dropdown, &selected_pool, ctx);
+        let pool_name_editor = Self::queue_text_editor("New pool's name, then press Enter", ctx);
+        ctx.subscribe_to_view(&pool_name_editor, |me, _, event, ctx| {
+            if matches!(event, EditorEvent::Enter) {
+                me.new_agent_pool(ctx);
+            }
+        });
+        let pool_new_button = ctx.add_typed_action_view(|_| {
+            ActionButton::new("New pool", SecondaryTheme)
+                .with_size(ButtonSize::Small)
+                .on_click(|ctx| {
+                    ctx.dispatch_typed_action(AISettingsPageAction::NewAgentPool);
+                })
+        });
+
         Self {
             page: Self::build_page(None, ctx),
             active_subpage: None,
@@ -2116,6 +2153,10 @@ impl AISettingsPageView {
             byor_failover_rows,
             byor_failover_sources,
             agent_model_rows: Self::agent_model_row_states(&[], ctx),
+            pool_dropdown,
+            selected_pool,
+            pool_name_editor,
+            pool_new_button,
             byor_preset_dropdown,
             byor_preset_name_editor,
             byor_preset_save_button,
@@ -3666,24 +3707,99 @@ impl AISettingsPageView {
         Self::refresh_byor_preset_dropdown(&self.byor_preset_dropdown, ctx);
         let previous = std::mem::take(&mut self.agent_model_rows);
         self.agent_model_rows = Self::agent_model_row_states(&previous, ctx);
+        // The pools follow the model list (built-ins are computed from it; counts change).
+        Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
         ctx.notify();
     }
 
-    /// A switch and a tier button state for every agent model, keeping those a model already had
-    /// (so a click in flight isn't lost when the list is rebuilt).
+    /// A switch, a tier button state and a pool button state for every agent model, keeping those
+    /// a model already had (so a click in flight isn't lost when the list is rebuilt).
     fn agent_model_row_states(
-        previous: &[(String, SwitchStateHandle, MouseStateHandle)],
+        previous: &[(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)],
         ctx: &mut ViewContext<Self>,
-    ) -> Vec<(String, SwitchStateHandle, MouseStateHandle)> {
+    ) -> Vec<(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)> {
         api_providers::agent_models(ctx)
             .into_iter()
             .map(|model| {
-                match previous.iter().find(|(id, _, _)| *id == model.model_id) {
-                    Some((id, switch, tier)) => (id.clone(), switch.clone(), tier.clone()),
-                    None => (model.model_id, Default::default(), Default::default()),
+                match previous.iter().find(|(id, _, _, _)| *id == model.model_id) {
+                    Some((id, switch, tier, pool)) => {
+                        (id.clone(), switch.clone(), tier.clone(), pool.clone())
+                    }
+                    None => (
+                        model.model_id,
+                        Default::default(),
+                        Default::default(),
+                        Default::default(),
+                    ),
                 }
             })
             .collect()
+    }
+
+    /// Fills the pool menu with every pool and how many models it has that are on and can run now,
+    /// and selects `selected`.
+    fn refresh_pool_dropdown(
+        dropdown: &ViewHandle<Dropdown<AISettingsPageAction>>,
+        selected: &str,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let items: Vec<_> = api_providers::pool_names(ctx)
+            .into_iter()
+            .map(|name| {
+                let count = api_providers::pool_targets(ctx, &name).len();
+                DropdownItem::new(
+                    format!("{name} ({count})"),
+                    AISettingsPageAction::SelectAgentPool(name),
+                )
+            })
+            .collect();
+        let selected = AISettingsPageAction::SelectAgentPool(selected.to_owned());
+        dropdown.update(ctx, |dropdown, ctx| {
+            dropdown.set_items(items, ctx);
+            dropdown.set_selected_by_action(selected, ctx);
+        });
+    }
+
+    /// Whether `name` is a pool the user made (and so can edit), not a built-in one.
+    fn is_custom_pool(name: &str, app: &AppContext) -> bool {
+        AISettings::as_ref(app)
+            .agent_pools
+            .value()
+            .iter()
+            .any(|pool| pool.name == name)
+    }
+
+    /// Makes a pool under the typed name, starting as a copy of the selected pool's models (a
+    /// built-in's as they are now, a custom pool's whole list), and selects it. A pool of that
+    /// name is replaced; a built-in's name gives a pool of the user's own that takes its place.
+    fn new_agent_pool(&mut self, ctx: &mut ViewContext<Self>) {
+        let name = self.pool_name_editor.as_ref(ctx).buffer_text(ctx).trim().to_owned();
+        if name.is_empty() {
+            return;
+        }
+        let mut pools = AISettings::as_ref(ctx).agent_pools.value().clone();
+        let models: Vec<String> = match pools.iter().find(|pool| pool.name == self.selected_pool) {
+            Some(pool) => pool.models.clone(),
+            None => api_providers::pool_targets(ctx, &self.selected_pool)
+                .iter()
+                .map(|target| target.model_id().to_owned())
+                .collect(),
+        };
+        match pools.iter_mut().find(|pool| pool.name == name) {
+            Some(pool) => pool.models = models,
+            None => pools.push(AgentPool {
+                name: name.clone(),
+                models,
+            }),
+        }
+        AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            report_if_error!(settings.agent_pools.set_value(pools, ctx));
+        });
+        self.selected_pool = name;
+        self.pool_name_editor
+            .update(ctx, |editor, ctx| editor.clear_buffer(ctx));
+        Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+        ctx.notify();
     }
 
     /// Fills the preset menu with the saved presets and selects the one the
@@ -3978,6 +4094,16 @@ pub enum AISettingsPageAction {
     /// The Agents page: switch an agent model on or off, and cycle its tier (by model id).
     ToggleAgentModel(String),
     CycleAgentTier(String),
+    /// The Agents page's pools: show a pool, make one from the typed name (a copy of the one
+    /// shown), delete the one shown (a pool the user made), make the one shown the queue's pool
+    /// (or stop using it), and put a model in or out of the one shown (by model id).
+    SelectAgentPool(String),
+    NewAgentPool,
+    DeleteAgentPool,
+    UseAgentPoolForQueue,
+    ToggleModelInPool(String),
+    /// Spawn mode: hand out every task of a plan as soon as it loads.
+    ToggleQueueSpawnMode,
     /// Puts a row on another provider, at that provider's first model.
     SetByorFailoverProvider {
         index: usize,
@@ -4469,10 +4595,98 @@ impl TypedActionView for AISettingsPageView {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.agent_model_switches.set_value(switches, ctx));
                 });
+                // Pools only count models that are on.
+                Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
                 ctx.notify();
             }
             AISettingsPageAction::CycleAgentTier(model_id) => {
                 cycle_model_tier(model_id, ctx);
+                // Fast and Genius split by tier.
+                Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+                ctx.notify();
+            }
+            AISettingsPageAction::SelectAgentPool(name) => {
+                self.selected_pool = name.clone();
+                Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+                ctx.notify();
+            }
+            AISettingsPageAction::NewAgentPool => self.new_agent_pool(ctx),
+            AISettingsPageAction::DeleteAgentPool => {
+                let name = self.selected_pool.clone();
+                let settings = AISettings::as_ref(ctx);
+                let mut pools = settings.agent_pools.value().clone();
+                let before = pools.len();
+                pools.retain(|pool| pool.name != name);
+                if pools.len() != before {
+                    // A pool that is gone (and no built-in of its name) can't stay the queue's.
+                    let drop_default = *settings.queue_default_pool.value() == name
+                        && !api_providers::BUILTIN_POOLS.contains(&name.as_str());
+                    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                        report_if_error!(settings.agent_pools.set_value(pools, ctx));
+                        if drop_default {
+                            report_if_error!(
+                                settings.queue_default_pool.set_value(String::new(), ctx)
+                            );
+                        }
+                    });
+                    if !api_providers::BUILTIN_POOLS.contains(&name.as_str()) {
+                        self.selected_pool = api_providers::BUILTIN_POOLS[0].to_owned();
+                    }
+                    Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+                    ctx.notify();
+                }
+            }
+            AISettingsPageAction::UseAgentPoolForQueue => {
+                // The pool shown becomes the queue's; pressed again (or on Everything), the queue
+                // goes back to every model that is on.
+                let current = AISettings::as_ref(ctx).queue_default_pool.value().clone();
+                let value = if current == self.selected_pool
+                    || self.selected_pool == api_providers::BUILTIN_POOLS[0]
+                {
+                    String::new()
+                } else {
+                    self.selected_pool.clone()
+                };
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.queue_default_pool.set_value(value, ctx));
+                });
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleModelInPool(model_id) => {
+                let name = self.selected_pool.clone();
+                let mut pools = AISettings::as_ref(ctx).agent_pools.value().clone();
+                let Some(pool) = pools.iter_mut().find(|pool| pool.name == name) else {
+                    return;
+                };
+                match pool.models.iter().position(|id| id == model_id) {
+                    Some(at) => {
+                        pool.models.remove(at);
+                    }
+                    None => pool.models.push(model_id.clone()),
+                }
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.agent_pools.set_value(pools, ctx));
+                });
+                Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleQueueSpawnMode => {
+                let on = AISettings::handle(ctx)
+                    .update(ctx, |settings, ctx| {
+                        settings.queue_spawn_mode.toggle_and_save_value(ctx)
+                    })
+                    .unwrap_or(false);
+                // Turning spawn mode on hands out what is already waiting, too.
+                if on {
+                    AgentQueue::handle(ctx).update(ctx, |queue, ctx| {
+                        let (waiting, ..) = queue.counts();
+                        if waiting > 0 && !queue.is_running() {
+                            queue.set_running(true, ctx);
+                        }
+                    });
+                }
                 ctx.notify();
             }
             AISettingsPageAction::CycleByorTier(index) => {
@@ -8704,6 +8918,11 @@ struct AgentModelsWidget {
     /// The agent queue's Start/Stop and Clear finished buttons.
     queue_run: MouseStateHandle,
     queue_clear: MouseStateHandle,
+    /// The queue's spawn-mode switch.
+    spawn_switch: SwitchStateHandle,
+    /// The pools' "Use for the queue" and delete buttons.
+    pool_use: MouseStateHandle,
+    pool_delete: MouseStateHandle,
 }
 
 impl CloudModelKeysWidget {
@@ -9152,6 +9371,9 @@ impl AgentModelsWidget {
         Self {
             queue_run: Default::default(),
             queue_clear: Default::default(),
+            spawn_switch: Default::default(),
+            pool_use: Default::default(),
+            pool_delete: Default::default(),
         }
     }
 
@@ -9184,18 +9406,43 @@ impl AgentModelsWidget {
             ));
             return column.finish();
         }
+        // While a pool the user made is shown, each row says whether the model is in it, and a
+        // click puts it in or takes it out.
+        let editing_pool: Option<AgentPool> = AISettings::as_ref(app)
+            .agent_pools
+            .value()
+            .iter()
+            .find(|pool| pool.name == view.selected_pool)
+            .cloned();
         let mut list = Flex::column().with_spacing(6.);
         for model in models {
-            let Some((_, switch, tier)) = view
+            let Some((_, switch, tier, pool_button)) = view
                 .agent_model_rows
                 .iter()
-                .find(|(id, _, _)| *id == model.model_id)
+                .find(|(id, _, _, _)| *id == model.model_id)
             else {
                 continue;
             };
-            let health = route_for(&model.model_id, app).map_or(Health::Unknown, |route| {
+            let route = route_for(&model.model_id, app);
+            let health = route.as_ref().map_or(Health::Unknown, |route| {
                 FailoverHealth::as_ref(app).health(&model.model_id, &route.account)
             });
+            // How hard it's been used today, and whether it rests after a daily cap — so a free
+            // tier's allowance can be watched going.
+            let mut label = model.label.clone();
+            let today = failover_health::requests_today(&model.model_id);
+            if today > 0 {
+                label.push_str(&format!(" · {today} today"));
+            }
+            if let Some((until, cause)) = route
+                .as_ref()
+                .and_then(|route| failover_health::resting(&model.model_id, &route.account))
+            {
+                label.push_str(&format!(
+                    " · resting until {} ({cause})",
+                    failover_health::until_text(until)
+                ));
+            }
             let tier_label = api_providers::model_tier(&model.model_id, app)
                 .map_or("auto", |tier| tier.label());
             let label_color = if model.on {
@@ -9205,8 +9452,27 @@ impl AgentModelsWidget {
             };
             let toggle_id = model.model_id.clone();
             let tier_id = model.model_id.clone();
-            list.add_child(
-                Flex::row()
+            let pool_toggle = editing_pool.as_ref().map(|pool| {
+                let member = pool.models.iter().any(|id| *id == model.model_id);
+                let label = if member {
+                    format!("in {}", pool.name)
+                } else {
+                    format!("+ {}", pool.name)
+                };
+                let pool_id = model.model_id.clone();
+                appearance
+                    .ui_builder()
+                    .button(ButtonVariant::Text, pool_button.clone())
+                    .with_text_label(label)
+                    .build()
+                    .on_click(move |ctx, _, _| {
+                        ctx.dispatch_typed_action(AISettingsPageAction::ToggleModelInPool(
+                            pool_id.clone(),
+                        ));
+                    })
+                    .finish()
+            });
+            let mut row = Flex::row()
                     .with_spacing(10.)
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
                     .with_child(
@@ -9224,7 +9490,7 @@ impl AgentModelsWidget {
                     )
                     .with_child(health_light(health, appearance))
                     .with_child(
-                        Text::new_inline(model.label, appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                        Text::new_inline(label, appearance.ui_font_family(), CONTENT_FONT_SIZE)
                             .with_color(label_color.into())
                             .finish(),
                     )
@@ -9240,11 +9506,137 @@ impl AgentModelsWidget {
                                 ));
                             })
                             .finish(),
-                    )
-                    .finish(),
-            );
+                    );
+            if let Some(button) = pool_toggle {
+                row.add_child(button);
+            }
+            list.add_child(row.finish());
         }
         column.add_child(list.finish());
+        column.finish()
+    }
+
+    /// The pools: named sets of agent models the queue can be told to draw on. A menu of every
+    /// pool (with how many of its models are on), the pool shown's models, buttons to make it the
+    /// queue's pool or delete it, and the field that makes a new pool as a copy of it.
+    fn render_pools(&self, view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
+        let appearance = Appearance::as_ref(app);
+        let selected = view.selected_pool.as_str();
+        let custom = AISettingsPageView::is_custom_pool(selected, app);
+        let builtin = api_providers::BUILTIN_POOLS.contains(&selected);
+        let queue_pool = AISettings::as_ref(app).queue_default_pool.value().clone();
+        let mut column = Flex::column().with_spacing(8.).with_child(
+            Text::new_inline("Agent pools", appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                .with_color(appearance.theme().active_ui_text_color().into())
+                .with_style(Properties::default().weight(Weight::Semibold))
+                .finish(),
+        );
+        column.add_child(render_ai_setting_description(
+            "A pool is a set of the agent models above that the queue can be told to use. \
+             Everything, Free, Local, Fast and Genius are built in and follow the list by \
+             themselves (Fast and Genius split by tier); a pool you make is your own list, and \
+             one named like a built-in replaces it. The queue's pool takes every task that names \
+             none; a boss can also name one in plan_tasks.",
+            true,
+            app,
+        ));
+        let use_label = if queue_pool == selected
+            || (queue_pool.is_empty() && selected == api_providers::BUILTIN_POOLS[0])
+        {
+            "The queue's pool"
+        } else {
+            "Use for the queue"
+        };
+        column.add_child(
+            Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(ChildView::new(&view.pool_dropdown).finish())
+                .with_child(
+                    appearance
+                        .ui_builder()
+                        .button(ButtonVariant::Secondary, self.pool_use.clone())
+                        .with_text_label(use_label.to_string())
+                        .build()
+                        .on_click(|ctx, _, _| {
+                            ctx.dispatch_typed_action(AISettingsPageAction::UseAgentPoolForQueue);
+                        })
+                        .finish(),
+                )
+                .with_child(small_icon_button(
+                    Icon::Trash,
+                    custom,
+                    self.pool_delete.clone(),
+                    AISettingsPageAction::DeleteAgentPool,
+                    appearance,
+                ))
+                .finish(),
+        );
+        let members: Vec<String> = api_providers::pool_targets(app, selected)
+            .iter()
+            .map(|target| target.model_id().to_owned())
+            .collect();
+        let members_line = if members.is_empty() {
+            format!("{selected}: no model in it is on and can run right now.")
+        } else {
+            let free = members.iter().filter(|id| is_free_model(id)).count();
+            let shown: Vec<&str> = members.iter().take(8).map(String::as_str).collect();
+            let more = if members.len() > 8 {
+                format!(" and {} more", members.len() - 8)
+            } else {
+                String::new()
+            };
+            format!(
+                "{selected}: {} models on ({free} free): {}{more}",
+                members.len(),
+                shown.join(", ")
+            )
+        };
+        column.add_child(render_ai_setting_description(members_line, true, app));
+        let how = if custom && builtin {
+            "Your own list, in place of the built-in one: use the + / in buttons on the model \
+             rows above to change it, and delete it to get the built-in back."
+        } else if custom {
+            "Your own list: use the + / in buttons on the model rows above to put models in it \
+             or take them out."
+        } else {
+            "Built in: it follows the model list. Make a pool with this name to replace it with \
+             a list of your own."
+        };
+        column.add_child(render_ai_setting_description(how, true, app));
+        column.add_child(
+            Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    ConstrainedBox::new(
+                        appearance
+                            .ui_builder()
+                            .text_input(view.pool_name_editor.clone())
+                            .with_style(UiComponentStyles {
+                                padding: Some(Coords {
+                                    top: 6.,
+                                    bottom: 6.,
+                                    left: 10.,
+                                    right: 10.,
+                                }),
+                                background: Some(appearance.theme().surface_2().into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .with_width(260.)
+                    .finish(),
+                )
+                .with_child(view.pool_new_button.as_ref(app).render(app))
+                .finish(),
+        );
+        column.add_child(render_ai_setting_description(
+            format!("A new pool starts as a copy of {selected}."),
+            true,
+            app,
+        ));
         column.finish()
     }
 
@@ -9272,17 +9664,25 @@ impl AgentModelsWidget {
             app,
         ));
 
-        // Where tasks go: the pool the chooser spreads auto tasks across, the default model (if
-        // tasks are pinned), and Moloch's workers when one is configured.
-        let pool: Vec<String> = api_providers::agent_pool(app)
+        // Where tasks go: the pool the chooser spreads auto tasks across (the queue's pool, else
+        // every model that is on), the default model (if tasks are pinned), and Moloch's workers
+        // when one is configured.
+        let queue_pool = AISettings::as_ref(app).queue_default_pool.value().clone();
+        let pool_label = if queue_pool.trim().is_empty() {
+            api_providers::BUILTIN_POOLS[0].to_owned()
+        } else {
+            queue_pool.clone()
+        };
+        let pool: Vec<String> = api_providers::pool_targets(app, &pool_label)
             .iter()
             .map(|target| target.model_id().to_owned())
             .collect();
         let default_model = AISettings::as_ref(app).byor_queue_default_model.value().clone();
         let pool_line = if pool.is_empty() {
-            "Pool: empty — auto tasks wait until an agent model above is on (or a key or an \
-             Ollama model is added)."
-                .to_owned()
+            format!(
+                "Pool ({pool_label}): empty — auto tasks wait until a model in it is on (or a key \
+                 or an Ollama model is added)."
+            )
         } else {
             let free = pool.iter().filter(|id| is_free_model(id)).count();
             let shown: Vec<&str> = pool.iter().take(6).map(String::as_str).collect();
@@ -9292,7 +9692,7 @@ impl AgentModelsWidget {
                 String::new()
             };
             format!(
-                "Pool: {} models ({free} free): {}{more}",
+                "Pool ({pool_label}): {} models ({free} free): {}{more}",
                 pool.len(),
                 shown.join(", ")
             )
@@ -9306,6 +9706,48 @@ impl AgentModelsWidget {
         if let Some(moloch) = queue.moloch_status() {
             column.add_child(render_ai_setting_description(moloch.to_owned(), true, app));
         }
+        // Spawn mode: a plan's tasks go out the moment it loads — from the field below, a boss's
+        // load_plan, or a script offering the plan it just wrote — instead of one by one.
+        let spawn = *AISettings::as_ref(app).queue_spawn_mode.value();
+        column.add_child(
+            Flex::row()
+                .with_spacing(10.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(
+                    appearance
+                        .ui_builder()
+                        .switch(self.spawn_switch.clone())
+                        .check(spawn)
+                        .build()
+                        .on_click(|ctx, _, _| {
+                            ctx.dispatch_typed_action(AISettingsPageAction::ToggleQueueSpawnMode);
+                        })
+                        .finish(),
+                )
+                .with_child(
+                    Shrinkable::new(
+                        1.,
+                        appearance
+                            .ui_builder()
+                            .wrappable_text(
+                                "Spawn mode: hand out every task of a plan the moment it loads \
+                                 (and when reverse_engineering_auto.py writes one), across the \
+                                 queue's pool, instead of waiting for the boss to hand them out."
+                                    .to_string(),
+                                true,
+                            )
+                            .with_style(UiComponentStyles {
+                                font_size: Some(CONTENT_FONT_SIZE),
+                                font_color: Some(appearance.theme().active_ui_text_color().into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .finish(),
+                )
+                .finish(),
+        );
         let run_label = if queue.is_running() { "Stop" } else { "Start" };
         let status = format!("{waiting} waiting, {running} running, {done} done, {failed} failed");
         column.add_child(
@@ -9563,6 +10005,11 @@ impl SettingsWidget for AgentModelsWidget {
     ) -> Box<dyn Element> {
         Flex::column()
             .with_child(Self::render_models(view, app))
+            .with_child(
+                Container::new(self.render_pools(view, app))
+                    .with_margin_top(24.)
+                    .finish(),
+            )
             .with_child(
                 Container::new(self.render_queue(view, app))
                     .with_margin_top(24.)

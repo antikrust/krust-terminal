@@ -23254,6 +23254,9 @@ impl Workspace {
         if *ai_settings.byor_failover_free_only.value() {
             context.set.insert(flags::BYOR_FAILOVER_FREE_ONLY_FLAG);
         }
+        if *ai_settings.queue_spawn_mode.value() {
+            context.set.insert(flags::QUEUE_SPAWN_MODE_FLAG);
+        }
         if *session_settings.show_model_selectors_in_prompt.value() {
             context
                 .set

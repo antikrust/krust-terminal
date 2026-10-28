@@ -46,8 +46,9 @@ pub const API_HARNESS_CONFIG_NAME: &str = "api";
 const SECURE_STORAGE_KEY: &str = "ApiProviderKeys";
 
 /// At most this many live-fetched models per provider, so a long free roster
-/// doesn't run the model menu off the screen.
-const MAX_LIVE_MODELS: usize = 12;
+/// doesn't run the model menu off the screen. Generous, since every free model
+/// is one more the agent pools can hop to when the others are rate-limited.
+const MAX_LIVE_MODELS: usize = 20;
 
 pub struct ApiProvider {
     pub id: &'static str,
@@ -265,6 +266,97 @@ pub const PROVIDERS: &[ApiProvider] = &[
             },
         ],
         live_free_models_url: Some("https://openrouter.ai/api/v1/models?supported_parameters=tools"),
+    },
+    ApiProvider {
+        id: "cerebras",
+        display_name: "Cerebras",
+        base_url: "https://api.cerebras.ai/v1",
+        key_url: "https://cloud.cerebras.ai/platform",
+        pricing_note: "Free tier with per-minute and daily token limits, and a smaller context \
+            window than paid (about 64K). Very fast.",
+        // Its shared-inference catalog: both are on the free tier, at the free context size.
+        models: &[
+            ApiModel {
+                id: "gpt-oss-120b",
+                display_name: "GPT-OSS 120B",
+                price_per_million: (0.0, 0.0),
+                context_window: 65_536,
+            },
+            ApiModel {
+                id: "qwen-3.8-27b",
+                display_name: "Qwen 3.8 27B",
+                price_per_million: (0.0, 0.0),
+                context_window: 64_000,
+            },
+        ],
+        live_free_models_url: None,
+    },
+    ApiProvider {
+        id: "nvidia",
+        display_name: "NVIDIA NIM",
+        base_url: "https://integrate.api.nvidia.com/v1",
+        key_url: "https://build.nvidia.com/settings/api-keys",
+        pricing_note: "Free for NVIDIA Developer Program members: about 40 requests a minute per \
+            model. Meant for development and testing; NVIDIA logs usage.",
+        // Open-weight models NVIDIA hosts for free; the context is what its hosted endpoints are
+        // safe to send, not the models' full windows.
+        models: &[
+            ApiModel {
+                id: "nvidia/nemotron-3-ultra-550b-a55b",
+                display_name: "Nemotron 3 Ultra 550B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
+            },
+            ApiModel {
+                id: "google/gemma-4-31b-it",
+                display_name: "Gemma 4 31B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
+            },
+            ApiModel {
+                id: "openai/gpt-oss-20b",
+                display_name: "GPT-OSS 20B",
+                price_per_million: (0.0, 0.0),
+                context_window: 131_072,
+            },
+        ],
+        live_free_models_url: None,
+    },
+    ApiProvider {
+        id: "mistral",
+        display_name: "Mistral",
+        base_url: "https://api.mistral.ai/v1",
+        key_url: "https://console.mistral.ai/api-keys",
+        pricing_note: "The free Experiment plan allows about one request a second (phone \
+            verification needed). Mistral may train on free-plan prompts unless you opt out.",
+        // Mistral's rolling aliases, so the list follows its newest models without going stale.
+        models: &[
+            ApiModel {
+                id: "mistral-large-latest",
+                display_name: "Mistral Large",
+                price_per_million: (0.0, 0.0),
+                context_window: 128_000,
+            },
+            ApiModel {
+                id: "codestral-latest",
+                display_name: "Codestral",
+                price_per_million: (0.0, 0.0),
+                context_window: 256_000,
+            },
+            ApiModel {
+                id: "mistral-small-latest",
+                display_name: "Mistral Small",
+                price_per_million: (0.0, 0.0),
+                context_window: 128_000,
+            },
+            ApiModel {
+                id: "ministral-8b-latest",
+                display_name: "Ministral 8B",
+                price_per_million: (0.0, 0.0),
+                context_window: 128_000,
+            },
+        ],
+        live_free_models_url: None,
     },
     ApiProvider {
         id: "venice",
@@ -1005,7 +1097,10 @@ pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> 
             continue;
         }
         if let Some(route) = route_for(&row, app) {
-            routes.push(FailoverTarget::Api(route));
+            // Resting after a daily cap (or a named rate-limit reset): it would only refuse.
+            if crate::ai::failover_health::resting(&route.model_id, &route.account).is_none() {
+                routes.push(FailoverTarget::Api(route));
+            }
         } else if let Some(route) = cli_route_for(&row, app) {
             routes.push(FailoverTarget::Cli(route));
         }

@@ -40,7 +40,7 @@ use crate::ai::api_providers::{
     is_free_model, model_tier, pool_targets, route_for, route_strength, ApiRoute, CliRoute,
     FailoverTarget,
 };
-use crate::ai::failover_health::{FailoverHealth, Health};
+use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::task_router::{
     choose, decide, speed, strength_with_tier, Candidate, Difficulty, Policy,
 };
@@ -193,6 +193,19 @@ impl Worker {
 
 /// The worker for a model id: an API or Ollama model, or a local app's (`cli/<app>/<model>`,
 /// where `default` is that app's first model).
+/// What to say about a worker resting after a lasting limit (a daily cap), while it does.
+fn rest_note(worker: &Worker) -> Option<String> {
+    let Worker::Api(route) = worker else {
+        return None;
+    };
+    let (until, cause) = failover_health::resting(&route.model_id, &route.account)?;
+    Some(format!(
+        "{} rests until {} ({cause}); the task waits for it",
+        route.model_name,
+        failover_health::until_text(until)
+    ))
+}
+
 fn worker_for(model_id: &str, ctx: &ModelContext<AgentQueue>) -> Option<Worker> {
     if let Some(route) = route_for(model_id, ctx) {
         return Some(Worker::Api(route));
@@ -498,8 +511,37 @@ impl AgentQueue {
     }
 
     /// Adds the tasks of every `"spawn": true` lane of a plan file, except those already in the
-    /// queue. Returns how many were added.
+    /// queue. Returns how many were added. The queue starts by itself only in spawn mode.
     pub fn load_plan(&mut self, path: &Path, ctx: &mut ModelContext<Self>) -> Result<usize, String> {
+        self.load_plan_tasks(path, false, ctx).map(|ids| ids.len())
+    }
+
+    /// A plan offered by a script the moment it is written (reverse-lab's tools, over the socket):
+    /// handed out at once in spawn mode, left alone otherwise — the toggle in Settings decides.
+    pub fn offer_plan(&mut self, path: &Path, ctx: &mut ModelContext<Self>) -> Result<String, String> {
+        if !*AISettings::as_ref(ctx).queue_spawn_mode.value() {
+            return Ok(
+                "Spawn mode is off in Krust (Settings → AI → Agents), so the plan was not handed \
+                 out; hand its tasks out with plan_tasks, or load it in the queue."
+                    .to_string(),
+            );
+        }
+        let ids = self.load_plan_tasks(path, true, ctx)?;
+        Ok(format!(
+            "Spawn mode: handed {} new task(s) of {} to the agent queue and started it (ids {ids:?}).",
+            ids.len(),
+            path.display()
+        ))
+    }
+
+    /// Adds a plan's spawn-lane tasks and returns their ids. With `start`, or in spawn mode, the
+    /// queue starts at once, so the tasks fan out without waiting for anyone to press Start.
+    pub fn load_plan_tasks(
+        &mut self,
+        path: &Path,
+        start: bool,
+        ctx: &mut ModelContext<Self>,
+    ) -> Result<Vec<u64>, String> {
         let text = std::fs::read_to_string(path)
             .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
         let plan: PlanFile = serde_json::from_str(&text)
@@ -509,26 +551,31 @@ impl AgentQueue {
             .map(PathBuf::from)
             .or_else(|| path.parent().map(Path::to_path_buf))
             .unwrap_or_else(home_dir);
-        let mut added = 0;
+        let mut ids = Vec::new();
         for lane in plan.lanes.into_iter().filter(|lane| lane.spawn) {
             for task in lane.tasks {
                 let key = format!("plan:{}:{}", path.display(), task.id);
                 if task.prompt.trim().is_empty() || self.tasks.iter().any(|known| known.key == key) {
                     continue;
                 }
+                ids.push(self.next_id);
                 self.push(key, task.title, task.prompt, working_dir.clone(), None, None);
-                added += 1;
             }
         }
-        if added > 0 {
-            // Spawn mode: don't wait for the boss to start the queue — fan the plan out at once.
-            if *AISettings::as_ref(ctx).queue_spawn_mode.value() {
-                self.running = true;
-            }
+        // Spawn mode: don't wait for the boss (or a click on Start) — fan the plan out at once,
+        // including tasks an earlier load left waiting.
+        let start = start || *AISettings::as_ref(ctx).queue_spawn_mode.value();
+        let started = start
+            && !self.running
+            && self.tasks.iter().any(|task| task.state == TaskState::Waiting);
+        if started {
+            self.running = true;
+        }
+        if !ids.is_empty() || started {
             self.changed(ctx);
             self.pump(ctx);
         }
-        Ok(added)
+        Ok(ids)
     }
 
     /// Queues the tasks a model planned and starts the queue. Returns their ids.
@@ -598,6 +645,13 @@ impl AgentQueue {
                 self.pump(ctx);
             }
         }
+    }
+
+    /// Looks again for models for the waiting tasks, after something they depend on changed (a
+    /// pool, the queue's pool).
+    pub fn nudge(&mut self, ctx: &mut ModelContext<Self>) {
+        self.pump(ctx);
+        ctx.emit(AgentQueueEvent::Changed);
     }
 
     /// Starts the queue, or stops it: running tasks are stopped and wait again.
@@ -670,6 +724,7 @@ impl AgentQueue {
             .byor_queue_default_model
             .value()
             .clone();
+        let default_pool = AISettings::as_ref(ctx).queue_default_pool.value().clone();
         let waiting: Vec<u64> = self
             .tasks
             .iter()
@@ -702,17 +757,19 @@ impl AgentQueue {
                 .filter(|model| !model.trim().is_empty())
                 .or_else(|| (!default_model.trim().is_empty()).then(|| default_model.clone()))
                 .filter(|model| model != "auto");
-            // The ids this task's pool allows, if it names one; `None` means the whole on-set.
-            let pool_ids: Option<Vec<String>> = task
+            // The pool this task draws on: its own, else the queue's default; neither means every
+            // model that is on. `pool_ids` is what that pool allows now.
+            let pool_name = task
                 .pool
                 .clone()
                 .filter(|name| !name.trim().is_empty())
-                .map(|name| {
-                    pool_targets(ctx, &name)
-                        .iter()
-                        .map(|target| target.model_id().to_string())
-                        .collect()
-                });
+                .or_else(|| (!default_pool.trim().is_empty()).then(|| default_pool.clone()));
+            let pool_ids: Option<Vec<String>> = pool_name.as_ref().map(|name| {
+                pool_targets(ctx, name)
+                    .iter()
+                    .map(|target| target.model_id().to_string())
+                    .collect()
+            });
 
             let pick = if let Some(model_id) = pinned {
                 if tried.len() >= MAX_ATTEMPTS {
@@ -725,13 +782,32 @@ impl AgentQueue {
                             "no model {model_id:?} is available (a key removed, or the app not running)"
                         )),
                         Some(worker) if busy.contains(&worker.account()) => Pick::Wait,
-                        Some(worker) => Pick::Run(worker),
+                        // Pinned to a model resting after a daily cap: wait for it, and say
+                        // until when, rather than spend requests it would only refuse.
+                        Some(worker) => match rest_note(&worker) {
+                            Some(note) => {
+                                if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id)
+                                {
+                                    task.last_error = Some(note);
+                                }
+                                Pick::Wait
+                            }
+                            None => Pick::Run(worker),
+                        },
                     }
                 }
             } else {
+                let in_pool = |worker: &&Worker| {
+                    pool_ids
+                        .as_ref()
+                        .map_or(true, |ids| ids.iter().any(|id| id == worker.model_id()))
+                };
                 let exhausted = !tried.is_empty()
                     && (tried.len() >= MAX_ATTEMPTS
-                        || pool.iter().all(|worker| tried.iter().any(|t| t == worker.model_id())));
+                        || pool
+                            .iter()
+                            .filter(in_pool)
+                            .all(|worker| tried.iter().any(|t| t == worker.model_id())));
                 if exhausted {
                     Pick::Fail(last_error.unwrap_or_else(|| "no model could answer".to_string()))
                 } else {
@@ -743,10 +819,10 @@ impl AgentQueue {
                         .iter()
                         .filter(|worker| {
                             let id = worker.model_id();
-                            !busy.contains(&worker.account())
+                            in_pool(worker)
+                                && !busy.contains(&worker.account())
                                 && !down.contains(id)
                                 && !tried.iter().any(|t| t == id)
-                                && pool_ids.as_ref().map_or(true, |ids| ids.iter().any(|x| x == id))
                         })
                         .collect();
                     // A model that was just rate-limited or flaky (amber) is passed over while
@@ -771,6 +847,17 @@ impl AgentQueue {
                         None if pool.is_empty() => {
                             if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
                                 task.last_error = Some(NO_POOL.to_string());
+                            }
+                            Pick::Wait
+                        }
+                        // The task's pool has nothing that is on and can run: say which pool, so
+                        // it doesn't wait without a word.
+                        None if pool_ids.as_ref().is_some_and(Vec::is_empty) => {
+                            if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
+                                task.last_error = Some(format!(
+                                    "pool {:?} has no model that is on and can run now",
+                                    pool_name.as_deref().unwrap_or_default()
+                                ));
                             }
                             Pick::Wait
                         }
