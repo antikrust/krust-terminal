@@ -270,6 +270,10 @@ pub enum SettingsSection {
     /// Personal provider keys and custom endpoints — their own page rather than
     /// a section at the bottom of the AI Manager page.
     BringYourOwnKey,
+    /// The models agents may run on (BYOR, Ollama on any machine, Claude Code,
+    /// Codex) and the agent queue. Its own page: it spans all of those, so it
+    /// belongs under none of them.
+    Agents,
     /// Internal backing-page identifier for CodeSettingsPageView. Multiple subpages
     /// (CodeIndexing, EditorAndCodeReview) share this single backing page,
     /// so this variant is needed as the key in `settings_pages`.
@@ -314,6 +318,7 @@ impl Display for SettingsSection {
             // churning ~20 test references and the deep-link map).
             SettingsSection::ThirdPartyCLIAgents => write!(f, "General"),
             SettingsSection::BringYourOwnKey => write!(f, "Bring your own key"),
+            SettingsSection::Agents => write!(f, "Agents"),
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
             SettingsSection::AppearanceGeneral => write!(f, "General"),
@@ -359,6 +364,7 @@ impl SettingsSection {
                 | Self::Knowledge
                 | Self::ThirdPartyCLIAgents
                 | Self::BringYourOwnKey
+                | Self::Agents
                 | Self::Ollama
                 | Self::Grok
                 | Self::CustomRouters
@@ -409,6 +415,7 @@ impl SettingsSection {
             Self::ThirdPartyCLIAgents,
             Self::KrustAgent,
             Self::BringYourOwnKey,
+            Self::Agents,
             Self::AgentMCPServers,
             Self::Ollama,
             Self::Grok,
@@ -467,6 +474,7 @@ impl FromStr for SettingsSection {
             "Knowledge" => Ok(Self::Knowledge),
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
             "Bring your own key" | "BringYourOwnKey" => Ok(Self::BringYourOwnKey),
+            "Agents" => Ok(Self::Agents),
             "Ollama" => Ok(Self::Ollama),
             "Grok" => Ok(Self::Grok),
             "Indexing and projects" | "CodeIndexing" => Ok(Self::CodeIndexing),

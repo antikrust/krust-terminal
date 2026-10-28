@@ -138,6 +138,8 @@ pub enum AISubpage {
     /// page: your own keys are for providers this app calls directly, which is
     /// a separate concern from managing the agent.
     BringYourOwnKey,
+    /// The models agents run on and the agent queue (see [`AgentModelsWidget`]).
+    Agents,
 }
 
 impl AISubpage {
@@ -149,6 +151,7 @@ impl AISubpage {
             SettingsSection::ThirdPartyCLIAgents => Some(Self::ThirdPartyCLIAgents),
             SettingsSection::Grok => Some(Self::Grok),
             SettingsSection::BringYourOwnKey => Some(Self::BringYourOwnKey),
+            SettingsSection::Agents => Some(Self::Agents),
             // AgentMCPServers renders the standalone MCPServers page, not an AI subpage.
             _ => None,
         }
@@ -710,6 +713,9 @@ pub struct AISettingsPageView {
     /// local models), so a refresh that changes none of it doesn't rebuild
     /// (and close) them.
     byor_failover_sources: Vec<FailoverSource>,
+    /// The Agents page's model rows: each model's id, its on/off switch and its tier button's
+    /// mouse state, rebuilt with the failover rows when what the app can see changes.
+    agent_model_rows: Vec<(String, SwitchStateHandle, MouseStateHandle)>,
     /// The failover preset menu, its name field and its Save button.
     byor_preset_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
     byor_preset_name_editor: ViewHandle<EditorView>,
@@ -2109,6 +2115,7 @@ impl AISettingsPageView {
             mcp_denylist_mouse_state_handles,
             byor_failover_rows,
             byor_failover_sources,
+            agent_model_rows: Self::agent_model_row_states(&[], ctx),
             byor_preset_dropdown,
             byor_preset_name_editor,
             byor_preset_save_button,
@@ -3035,6 +3042,12 @@ impl AISettingsPageView {
                 // page.
                 widgets.push(Box::new(CloudModelKeysWidget::new(ctx)));
             }
+            Some(AISubpage::Agents) => {
+                // The models agents may run on — BYOR, Ollama on any machine, Claude Code,
+                // Codex — and the queue that hands tasks out across them.
+                widgets.push(Box::new(PageTitleWidget::new("Agents", false)));
+                widgets.push(Box::new(AgentModelsWidget::new(ctx)));
+            }
         }
 
         // Subpage widgets render their own subheader-sized titles internally,
@@ -3651,7 +3664,26 @@ impl AISettingsPageView {
         (self.byor_failover_rows, self.byor_failover_sources) =
             Self::create_byor_failover_rows(ctx);
         Self::refresh_byor_preset_dropdown(&self.byor_preset_dropdown, ctx);
+        let previous = std::mem::take(&mut self.agent_model_rows);
+        self.agent_model_rows = Self::agent_model_row_states(&previous, ctx);
         ctx.notify();
+    }
+
+    /// A switch and a tier button state for every agent model, keeping those a model already had
+    /// (so a click in flight isn't lost when the list is rebuilt).
+    fn agent_model_row_states(
+        previous: &[(String, SwitchStateHandle, MouseStateHandle)],
+        ctx: &mut ViewContext<Self>,
+    ) -> Vec<(String, SwitchStateHandle, MouseStateHandle)> {
+        api_providers::agent_models(ctx)
+            .into_iter()
+            .map(|model| {
+                match previous.iter().find(|(id, _, _)| *id == model.model_id) {
+                    Some((id, switch, tier)) => (id.clone(), switch.clone(), tier.clone()),
+                    None => (model.model_id, Default::default(), Default::default()),
+                }
+            })
+            .collect()
     }
 
     /// Fills the preset menu with the saved presets and selects the one the
@@ -3943,6 +3975,9 @@ pub enum AISettingsPageAction {
     RemoveByorFailoverRow(usize),
     /// Cycles the row's tier: auto, easy, medium, hard, auto.
     CycleByorTier(usize),
+    /// The Agents page: switch an agent model on or off, and cycle its tier (by model id).
+    ToggleAgentModel(String),
+    CycleAgentTier(String),
     /// Puts a row on another provider, at that provider's first model.
     SetByorFailoverProvider {
         index: usize,
@@ -4421,22 +4456,28 @@ impl TypedActionView for AISettingsPageView {
                     ctx.notify();
                 }
             }
+            AISettingsPageAction::ToggleAgentModel(model_id) => {
+                let on = api_providers::agent_models(ctx)
+                    .iter()
+                    .find(|model| &model.model_id == model_id)
+                    .is_some_and(|model| model.on);
+                let mut switches = AISettings::as_ref(ctx).agent_model_switches.value().clone();
+                switches.retain(|entry| {
+                    entry.rsplit_once('=').is_none_or(|(id, _)| id != model_id.as_str())
+                });
+                switches.push(format!("{model_id}={}", if on { "off" } else { "on" }));
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.agent_model_switches.set_value(switches, ctx));
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::CycleAgentTier(model_id) => {
+                cycle_model_tier(model_id, ctx);
+                ctx.notify();
+            }
             AISettingsPageAction::CycleByorTier(index) => {
                 if let Some(model_id) = shown_byor_failover_rows(ctx).get(*index).cloned() {
-                    let next = match api_providers::model_tier(&model_id, ctx) {
-                        None => Some("easy"),
-                        Some(Difficulty::Easy) => Some("medium"),
-                        Some(Difficulty::Medium) => Some("hard"),
-                        Some(Difficulty::Hard) => None,
-                    };
-                    let mut tiers = AISettings::as_ref(ctx).byor_model_tiers.value().clone();
-                    tiers.retain(|entry| entry.rsplit_once('=').is_none_or(|(id, _)| id != model_id));
-                    if let Some(tier) = next {
-                        tiers.push(format!("{model_id}={tier}"));
-                    }
-                    AISettings::handle(ctx).update(ctx, |settings, ctx| {
-                        report_if_error!(settings.byor_model_tiers.set_value(tiers, ctx));
-                    });
+                    cycle_model_tier(&model_id, ctx);
                     ctx.notify();
                 }
             }
@@ -8654,6 +8695,12 @@ struct CloudModelKeysWidget {
     free_only_switch: SwitchStateHandle,
     /// The preset row's delete (trash) button.
     delete_preset: MouseStateHandle,
+}
+
+/// The Agents page: the models agents may run on — every keyed provider's, custom endpoints',
+/// Ollama on every machine, Claude Code's and Codex's — each switched on or off and given a
+/// tier, then the agent queue that hands tasks out across the ones that are on.
+struct AgentModelsWidget {
     /// The agent queue's Start/Stop and Clear finished buttons.
     queue_run: MouseStateHandle,
     queue_clear: MouseStateHandle,
@@ -8716,10 +8763,6 @@ impl CloudModelKeysWidget {
         ctx.subscribe_to_model(&ApiKeyManager::handle(ctx), |me, _, _, ctx| {
             me.rebuild_byor_failover_rows(ctx);
         });
-        // The agent queue changed: its tasks' buttons follow.
-        ctx.subscribe_to_model(&AgentQueue::handle(ctx), |me, _, _, ctx| {
-            me.rebuild_queue_buttons(ctx);
-        });
         // A health check came back: redraw the lights.
         ctx.subscribe_to_model(&FailoverHealth::handle(ctx), |_, _, _, ctx| ctx.notify());
         ctx.subscribe_to_model(&HarnessAvailabilityModel::handle(ctx), |me, _, _, ctx| {
@@ -8732,8 +8775,6 @@ impl CloudModelKeysWidget {
             failover_switch: Default::default(),
             free_only_switch: Default::default(),
             delete_preset: Default::default(),
-            queue_run: Default::default(),
-            queue_clear: Default::default(),
         }
     }
 
@@ -9026,8 +9067,189 @@ impl CloudModelKeysWidget {
         column.finish()
     }
 
+    fn render_provider(
+        provider: &ApiProvider,
+        editor: &ViewHandle<EditorView>,
+        key_link: &MouseStateHandle,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let label = Text::new_inline(
+            format!("{} API key", provider.display_name),
+            appearance.ui_font_family(),
+            CONTENT_FONT_SIZE,
+        )
+        .with_color(appearance.theme().active_ui_text_color().into())
+        .finish();
+        let input = appearance
+            .ui_builder()
+            .text_input(editor.clone())
+            .with_style(UiComponentStyles {
+                padding: Some(Coords {
+                    top: 10.,
+                    bottom: 10.,
+                    left: 16.,
+                    right: 16.,
+                }),
+                background: Some(appearance.theme().surface_2().into()),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+        let note = appearance
+            .ui_builder()
+            .wrappable_text(provider.pricing_note, true)
+            .with_style(UiComponentStyles {
+                font_size: Some(CONTENT_FONT_SIZE),
+                font_color: Some(
+                    appearance
+                        .theme()
+                        .sub_text_color(appearance.theme().background())
+                        .into(),
+                ),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+        let link = appearance
+            .ui_builder()
+            .link(
+                format!("Get a {} API key", provider.display_name),
+                Some(provider.key_url.to_string()),
+                None,
+                key_link.clone(),
+            )
+            .soft_wrap(false)
+            .build()
+            .finish();
+        Flex::column()
+            .with_spacing(8.)
+            .with_child(label)
+            .with_child(input)
+            .with_child(note)
+            .with_child(link)
+            .finish()
+    }
+}
+
+impl AgentModelsWidget {
+    fn new(ctx: &mut ViewContext<<Self as SettingsWidget>::View>) -> Self {
+        // The queue changed: its tasks' buttons follow.
+        ctx.subscribe_to_model(&AgentQueue::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_queue_buttons(ctx);
+        });
+        // What the app can see changed (a key, an endpoint, a model on some machine): the model
+        // rows follow, and new models join the list (and get their own preset).
+        ctx.subscribe_to_model(&ApiProviderKeys::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_byor_failover_rows(ctx);
+        });
+        ctx.subscribe_to_model(&HarnessAvailabilityModel::handle(ctx), |me, _, _, ctx| {
+            me.rebuild_byor_failover_rows(ctx);
+        });
+        // A health check came back: redraw the lights.
+        ctx.subscribe_to_model(&FailoverHealth::handle(ctx), |_, _, _, ctx| ctx.notify());
+        // Moloch's workers, for the queue's status line.
+        AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.refresh_moloch(ctx));
+        Self {
+            queue_run: Default::default(),
+            queue_clear: Default::default(),
+        }
+    }
+
+    /// The models agents may run on, one row each: on/off, its health light, its name and
+    /// source, and its tier (auto = guessed from the name). New models appear by themselves.
+    fn render_models(view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
+        let appearance = Appearance::as_ref(app);
+        let models = api_providers::agent_models(app);
+        let mut column = Flex::column().with_spacing(8.).with_child(
+            Text::new_inline("Agent models", appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                .with_color(appearance.theme().active_ui_text_color().into())
+                .with_style(Properties::default().weight(Weight::Semibold))
+                .finish(),
+        );
+        column.add_child(render_ai_setting_description(
+            "Every model agents may run on: your keyed providers, custom endpoints, Ollama on \
+             every machine, and Claude Code and Codex. A queued task goes to the one that fits \
+             its difficulty, among those that are on and free; Claude Code and Codex are off \
+             until you switch them on, since they use your subscription. A model that shows up \
+             later joins the list by itself. The tier says how capable a model is where the \
+             guess from its name is wrong.",
+            true,
+            app,
+        ));
+        if models.is_empty() {
+            column.add_child(render_ai_setting_description(
+                "Nothing to run on yet: add a key under Bring your own key, or an Ollama model.",
+                true,
+                app,
+            ));
+            return column.finish();
+        }
+        let mut list = Flex::column().with_spacing(6.);
+        for model in models {
+            let Some((_, switch, tier)) = view
+                .agent_model_rows
+                .iter()
+                .find(|(id, _, _)| *id == model.model_id)
+            else {
+                continue;
+            };
+            let health = route_for(&model.model_id, app).map_or(Health::Unknown, |route| {
+                FailoverHealth::as_ref(app).health(&model.model_id, &route.account)
+            });
+            let tier_label = api_providers::model_tier(&model.model_id, app)
+                .map_or("auto", |tier| tier.label());
+            let label_color = if model.on {
+                appearance.theme().active_ui_text_color()
+            } else {
+                appearance.theme().disabled_ui_text_color()
+            };
+            let toggle_id = model.model_id.clone();
+            let tier_id = model.model_id.clone();
+            list.add_child(
+                Flex::row()
+                    .with_spacing(10.)
+                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                    .with_child(
+                        appearance
+                            .ui_builder()
+                            .switch(switch.clone())
+                            .check(model.on)
+                            .build()
+                            .on_click(move |ctx, _, _| {
+                                ctx.dispatch_typed_action(AISettingsPageAction::ToggleAgentModel(
+                                    toggle_id.clone(),
+                                ));
+                            })
+                            .finish(),
+                    )
+                    .with_child(health_light(health, appearance))
+                    .with_child(
+                        Text::new_inline(model.label, appearance.ui_font_family(), CONTENT_FONT_SIZE)
+                            .with_color(label_color.into())
+                            .finish(),
+                    )
+                    .with_child(
+                        appearance
+                            .ui_builder()
+                            .button(ButtonVariant::Text, tier.clone())
+                            .with_text_label(format!("tier: {tier_label}"))
+                            .build()
+                            .on_click(move |ctx, _, _| {
+                                ctx.dispatch_typed_action(AISettingsPageAction::CycleAgentTier(
+                                    tier_id.clone(),
+                                ));
+                            })
+                            .finish(),
+                    )
+                    .finish(),
+            );
+        }
+        column.add_child(list.finish());
+        column.finish()
+    }
+
     /// The agent queue: tasks that run unattended, several at once, each on
-    /// the first free model of the failover list. Its controls, the fields
+    /// the agent model the chooser picks. Its controls, the fields
     /// to add a task or load a plan, and the tasks with how each is doing.
     fn render_queue(&self, view: &AISettingsPageView, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
@@ -9041,23 +9263,25 @@ impl CloudModelKeysWidget {
         );
         column.add_child(render_ai_setting_description(
             "Tasks run unattended with the agent's own tools, several at once. Each goes to the \
-             first model of the failover list above that is on, isn't down and has no task yet, \
-             so a free tier's rate limit holds up one task, not all of them; a task that fails \
-             goes to the next model. A plan file (notes/plan.json from the reverse-lab tools) adds \
-             every task of its spawn lanes.",
+             agent model above that fits its difficulty and has no task yet — one at a time per \
+             provider account and per machine — so one free tier's rate limit holds up one task, \
+             not all of them. A task that is rate-limited or too big for its model goes straight \
+             to another. A plan file (notes/plan.json from the reverse-lab tools) adds every task \
+             of its spawn lanes.",
             true,
             app,
         ));
 
         // Where tasks go: the pool the chooser spreads auto tasks across, the default model (if
         // tasks are pinned), and Moloch's workers when one is configured.
-        let pool: Vec<String> = api_providers::failover_routes("", app)
+        let pool: Vec<String> = api_providers::agent_pool(app)
             .iter()
             .map(|target| target.model_id().to_owned())
             .collect();
         let default_model = AISettings::as_ref(app).byor_queue_default_model.value().clone();
         let pool_line = if pool.is_empty() {
-            "Pool: empty — auto tasks wait until there is a key, an Ollama model, or a row back on."
+            "Pool: empty — auto tasks wait until an agent model above is on (or a key or an \
+             Ollama model is added)."
                 .to_owned()
         } else {
             let free = pool.iter().filter(|id| is_free_model(id)).count();
@@ -9322,66 +9546,28 @@ impl CloudModelKeysWidget {
         column.finish()
     }
 
-    fn render_provider(
-        provider: &ApiProvider,
-        editor: &ViewHandle<EditorView>,
-        key_link: &MouseStateHandle,
-        appearance: &Appearance,
+}
+
+impl SettingsWidget for AgentModelsWidget {
+    type View = AISettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "agents agent queue models pool spawn orchestrator plan tasks claude code codex ollama byor tier auto moloch acolyte workers"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        _appearance: &Appearance,
+        app: &AppContext,
     ) -> Box<dyn Element> {
-        let label = Text::new_inline(
-            format!("{} API key", provider.display_name),
-            appearance.ui_font_family(),
-            CONTENT_FONT_SIZE,
-        )
-        .with_color(appearance.theme().active_ui_text_color().into())
-        .finish();
-        let input = appearance
-            .ui_builder()
-            .text_input(editor.clone())
-            .with_style(UiComponentStyles {
-                padding: Some(Coords {
-                    top: 10.,
-                    bottom: 10.,
-                    left: 16.,
-                    right: 16.,
-                }),
-                background: Some(appearance.theme().surface_2().into()),
-                ..Default::default()
-            })
-            .build()
-            .finish();
-        let note = appearance
-            .ui_builder()
-            .wrappable_text(provider.pricing_note, true)
-            .with_style(UiComponentStyles {
-                font_size: Some(CONTENT_FONT_SIZE),
-                font_color: Some(
-                    appearance
-                        .theme()
-                        .sub_text_color(appearance.theme().background())
-                        .into(),
-                ),
-                ..Default::default()
-            })
-            .build()
-            .finish();
-        let link = appearance
-            .ui_builder()
-            .link(
-                format!("Get a {} API key", provider.display_name),
-                Some(provider.key_url.to_string()),
-                None,
-                key_link.clone(),
-            )
-            .soft_wrap(false)
-            .build()
-            .finish();
         Flex::column()
-            .with_spacing(8.)
-            .with_child(label)
-            .with_child(input)
-            .with_child(note)
-            .with_child(link)
+            .with_child(Self::render_models(view, app))
+            .with_child(
+                Container::new(self.render_queue(view, app))
+                    .with_margin_top(24.)
+                    .finish(),
+            )
             .finish()
     }
 }
@@ -9437,11 +9623,6 @@ impl SettingsWidget for CloudModelKeysWidget {
         }
         column.add_child(
             Container::new(self.render_failover(view, app))
-                .with_margin_top(24.)
-                .finish(),
-        );
-        column.add_child(
-            Container::new(self.render_queue(view, app))
                 .with_margin_top(24.)
                 .finish(),
         );
@@ -9656,6 +9837,26 @@ fn health_light(health: Health, appearance: &Appearance) -> Box<dyn Element> {
     .with_width(8.)
     .with_height(8.)
     .finish()
+}
+
+/// Moves `model_id`'s tier on one step: auto (the guess from its name), easy, medium, hard, auto.
+/// Shared by the failover rows and the Agents page: one tier per model, used by failover, the
+/// Auto entries and the queue alike.
+fn cycle_model_tier(model_id: &str, ctx: &mut ViewContext<AISettingsPageView>) {
+    let next = match api_providers::model_tier(model_id, ctx) {
+        None => Some("easy"),
+        Some(Difficulty::Easy) => Some("medium"),
+        Some(Difficulty::Medium) => Some("hard"),
+        Some(Difficulty::Hard) => None,
+    };
+    let mut tiers = AISettings::as_ref(ctx).byor_model_tiers.value().clone();
+    tiers.retain(|entry| entry.rsplit_once('=').is_none_or(|(id, _)| id != model_id));
+    if let Some(tier) = next {
+        tiers.push(format!("{model_id}={tier}"));
+    }
+    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+        report_if_error!(settings.byor_model_tiers.set_value(tiers, ctx));
+    });
 }
 
 /// Name prefix of the presets this page keeps itself: one with everything the app can see, and

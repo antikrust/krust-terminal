@@ -751,7 +751,13 @@ if [[ $SELFSIGN = true ]]; then
   fi
   if [[ "$ARTIFACT" == app ]]; then
     echo "Self-signing $BUNDLE_DIR/$KRUST_APP_NAME.app with ${SIGNING_CERT}..."
-    codesign --force --deep --options runtime --sign "$SIGNING_CERT" "$BUNDLE_DIR/$KRUST_APP_NAME.app" --entitlements script/Debug-Entitlements.plist
+    # A fixed identity whose key codesign can't reach (errSecInternalComponent: its partition
+    # list doesn't admit Apple's tools yet, see `security set-key-partition-list`) must not fail
+    # the build: sign ad-hoc instead, as before there was an identity.
+    if ! codesign --force --deep --options runtime --sign "$SIGNING_CERT" "$BUNDLE_DIR/$KRUST_APP_NAME.app" --entitlements script/Debug-Entitlements.plist; then
+      echo "Signing with ${SIGNING_CERT} failed; signing ad-hoc instead (macOS will ask for its permissions again)."
+      codesign --force --deep --options runtime --sign - "$BUNDLE_DIR/$KRUST_APP_NAME.app" --entitlements script/Debug-Entitlements.plist
+    fi
   elif [[ "$ARTIFACT" == cli || "$ARTIFACT" == krustctrl || "$ARTIFACT" == tui ]]; then
     echo "Self-signing $OUT_DIR/$KRUST_BIN with ${SIGNING_CERT}..."
     codesign --force --options runtime --sign "$SIGNING_CERT" "$OUT_DIR/$KRUST_BIN" --entitlements script/Debug-Entitlements.plist

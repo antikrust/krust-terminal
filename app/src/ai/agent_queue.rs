@@ -29,18 +29,20 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
-use crate::ai::agent_sdk::driver::harness::api_stream_exec::run_api_stream;
+use crate::ai::agent_sdk::driver::harness::api_stream_exec::{fail_fast, run_api_stream};
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::cancel_harness_session;
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
     turn_event_to_messages, user_query_message,
 };
 use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::api_providers::{
-    cli_failover_models, cli_model_id_for, cli_model_parts, cli_route_for, failover_routes,
-    is_free_model, route_for, route_strength, ApiRoute, CliRoute, FailoverTarget,
+    agent_pool, cli_failover_models, cli_model_id_for, cli_model_parts, cli_route_for,
+    is_free_model, model_tier, route_for, route_strength, ApiRoute, CliRoute, FailoverTarget,
 };
 use crate::ai::failover_health::{FailoverHealth, Health};
-use crate::ai::task_router::{choose, decide, speed, Candidate, Difficulty, Policy};
+use crate::ai::task_router::{
+    choose, decide, speed, strength_with_tier, Candidate, Difficulty, Policy,
+};
 use crate::settings::AISettings;
 
 /// Tasks running at once, at most, however long the failover list is.
@@ -50,8 +52,8 @@ const MAX_ATTEMPTS: usize = 3;
 /// How much of a task's answer is kept.
 const ANSWER_CHARS: usize = 1_200;
 /// Why an auto task waits when there is nothing to run it on.
-const NO_POOL: &str = "no models to run on: add a provider key or an Ollama model (Settings → AI), \
-    turn a failover row back on, or pin the task to a model such as cli/claude/default";
+const NO_POOL: &str = "no models to run on: switch an agent model on (Settings → AI → Agents), \
+    add a provider key or an Ollama model, or pin the task to a model such as cli/claude/default";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskState {
@@ -606,20 +608,48 @@ impl AgentQueue {
         if !self.running {
             return;
         }
-        let routes: Vec<ApiRoute> = failover_routes("", ctx)
+        // The agent models that are on (Settings → Agents): API and Ollama routes, and Claude
+        // Code / Codex when switched on.
+        let pool: Vec<Worker> = agent_pool(ctx)
             .into_iter()
-            .filter_map(|target| match target {
-                FailoverTarget::Api(route) => Some(route),
-                // A local agent app is reached by pinning a `cli/…` model, not off the auto list.
-                FailoverTarget::Cli(_) => None,
+            .map(|target| match target {
+                FailoverTarget::Api(route) => Worker::Api(route),
+                FailoverTarget::Cli(route) => Worker::Cli(route),
             })
             .collect();
-        let down: HashSet<String> = routes
+        let health_of = |worker: &Worker| match worker {
+            Worker::Api(route) => FailoverHealth::as_ref(ctx).health(&route.model_id, &route.account),
+            Worker::Cli(_) => Health::Unknown,
+        };
+        let down: HashSet<String> = pool
             .iter()
-            .filter(|route| {
-                FailoverHealth::as_ref(ctx).health(&route.model_id, &route.account) == Health::Down
+            .filter(|worker| health_of(worker) == Health::Down)
+            .map(|worker| worker.model_id().to_string())
+            .collect();
+        let struggling: HashSet<String> = pool
+            .iter()
+            .filter(|worker| health_of(worker) == Health::Degraded)
+            .map(|worker| worker.model_id().to_string())
+            .collect();
+        let strengths: HashMap<String, (f64, f64, bool)> = pool
+            .iter()
+            .map(|worker| {
+                let (strength, model) = match worker {
+                    Worker::Api(route) => (route_strength(route, ctx), route.model.as_str()),
+                    Worker::Cli(route) => (
+                        strength_with_tier(
+                            &route.model,
+                            None,
+                            None,
+                            model_tier(&route.model_id, ctx),
+                        ),
+                        route.model.as_str(),
+                    ),
+                };
+                let id = worker.model_id().to_string();
+                let free = is_free_model(&id);
+                (id, (strength, speed(model), free))
             })
-            .map(|route| route.model_id.clone())
             .collect();
         let default_model = AISettings::as_ref(ctx)
             .byor_queue_default_model
@@ -675,7 +705,7 @@ impl AgentQueue {
             } else {
                 let exhausted = !tried.is_empty()
                     && (tried.len() >= MAX_ATTEMPTS
-                        || routes.iter().all(|route| tried.contains(&route.model_id)));
+                        || pool.iter().all(|worker| tried.iter().any(|t| t == worker.model_id())));
                 if exhausted {
                     Pick::Fail(last_error.unwrap_or_else(|| "no model could answer".to_string()))
                 } else {
@@ -683,27 +713,35 @@ impl AgentQueue {
                     for _ in &tried {
                         difficulty = difficulty.harder();
                     }
-                    let available: Vec<&ApiRoute> = routes
+                    let mut available: Vec<&Worker> = pool
                         .iter()
-                        .filter(|route| {
-                            !busy.contains(&route.account)
-                                && !down.contains(&route.model_id)
-                                && !tried.contains(&route.model_id)
+                        .filter(|worker| {
+                            let id = worker.model_id();
+                            !busy.contains(&worker.account())
+                                && !down.contains(id)
+                                && !tried.iter().any(|t| t == id)
                         })
                         .collect();
+                    // A model that was just rate-limited or flaky (amber) is passed over while
+                    // another one can take the task.
+                    if available.iter().any(|worker| !struggling.contains(worker.model_id())) {
+                        available.retain(|worker| !struggling.contains(worker.model_id()));
+                    }
                     let candidates: Vec<Candidate> = available
                         .iter()
-                        .map(|route| Candidate {
-                            strength: route_strength(route, ctx),
-                            speed: speed(&route.model),
-                            free: is_free_model(&route.model_id),
+                        .map(|worker| {
+                            let (strength, speed, free) = strengths
+                                .get(worker.model_id())
+                                .copied()
+                                .unwrap_or((4.0, 0.05, false));
+                            Candidate { strength, speed, free }
                         })
                         .collect();
                     match choose(Policy::CostEfficient, difficulty, &candidates) {
-                        Some(index) => Pick::Run(Worker::Api(available[index].clone())),
-                        // No pool at all (no key, no Ollama model, the list switched off): say so
-                        // on the task and keep it waiting, since models may still be loading.
-                        None if routes.is_empty() => {
+                        Some(index) => Pick::Run(available[index].clone()),
+                        // No pool at all (nothing switched on, no key, no Ollama model): say so on
+                        // the task and keep it waiting, since models may still be loading.
+                        None if pool.is_empty() => {
                             if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
                                 task.last_error = Some(NO_POOL.to_string());
                             }
@@ -798,6 +836,9 @@ impl AgentQueue {
                 };
                 let result = match worker {
                     Worker::Api(route) => {
+                        // A rate limit or a request too big for this model fails the task at once;
+                        // the queue then hands it to another model instead of the turn waiting.
+                        fail_fast(&session);
                         run_api_stream(
                             &prompt,
                             route,

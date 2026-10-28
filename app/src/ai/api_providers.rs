@@ -571,7 +571,9 @@ pub fn resolve_auto_model(
 ) -> Option<String> {
     let policy = Policy::from_label(model_id.strip_prefix(AUTO_MODEL_ID_PREFIX)?)?;
     let difficulty = decide(prompt).difficulty.max(floor);
-    let routes: Vec<ApiRoute> = failover_routes("", app)
+    // The agent models that are on (Settings → Agents); a conversation runs on the API runner, so
+    // a local agent app among them is left to the queue.
+    let routes: Vec<ApiRoute> = agent_pool(app)
         .into_iter()
         .filter_map(|target| match target {
             FailoverTarget::Api(route) => Some(route),
@@ -819,6 +821,60 @@ pub fn everything_visible(app: &AppContext) -> Vec<String> {
         }
     }
     models
+}
+
+/// One model agents may run on, as the Agents page lists it.
+pub struct AgentModel {
+    pub model_id: String,
+    /// "<source> · <model>", as the user knows it.
+    pub label: String,
+    pub on: bool,
+}
+
+/// Every model agents may run on, in menu order — each keyed provider's, each custom endpoint's,
+/// the Ollama models of every machine, and Claude Code's and Codex's — with whether it is on.
+/// The user's switch wins; without one a model is on, except a local agent app's, which runs on
+/// a subscription and so is off until switched on. A model that appears later (a new key, a
+/// model pulled on another machine) shows up here by itself.
+pub fn agent_models(app: &AppContext) -> Vec<AgentModel> {
+    let switches = AISettings::as_ref(app).agent_model_switches.value();
+    let switch = |model_id: &str| {
+        switches
+            .iter()
+            .filter_map(|entry| entry.rsplit_once('='))
+            .find(|(id, _)| *id == model_id)
+            .map(|(_, state)| state == "on")
+    };
+    let mut models: Vec<AgentModel> = Vec::new();
+    for source in failover_sources(app) {
+        let is_app = source.key.starts_with("cli:");
+        for (model_id, label) in source.models {
+            if models.iter().any(|known| known.model_id == model_id) {
+                continue;
+            }
+            let on = switch(&model_id).unwrap_or(!is_app);
+            models.push(AgentModel {
+                label: format!("{} · {label}", source.name),
+                model_id,
+                on,
+            });
+        }
+    }
+    models
+}
+
+/// The agent models that are on and can run now, as targets: an API or Ollama route, or a local
+/// agent app. What the agent queue's auto tasks and the Auto model entries choose among.
+pub fn agent_pool(app: &AppContext) -> Vec<FailoverTarget> {
+    agent_models(app)
+        .into_iter()
+        .filter(|model| model.on)
+        .filter_map(|model| {
+            route_for(&model.model_id, app)
+                .map(FailoverTarget::Api)
+                .or_else(|| cli_route_for(&model.model_id, app).map(FailoverTarget::Cli))
+        })
+        .collect()
 }
 
 /// The BYOR failover list as model ids, first choice first: the saved order,

@@ -9,7 +9,7 @@
 //! through its environment (`--variable` + `--expand-header`, curl 8.3+),
 //! never its arguments, so it is not visible in `ps` and never touches disk.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 use std::process::ExitStatus;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -347,7 +347,10 @@ pub async fn run_api_stream(
                 // Longer than the model takes (Z.ai's 1261): compact the input
                 // in the background and retry on the same model, instead of
                 // failing over to models that would refuse it just the same.
-                if failure.too_long && input_compactions < MAX_INPUT_COMPACTIONS {
+                if failure.too_long
+                    && input_compactions < MAX_INPUT_COMPACTIONS
+                    && !fails_fast(session_id)
+                {
                     input_compactions += 1;
                     on_event(TurnEvent::Text {
                         text: format!(
@@ -394,7 +397,10 @@ pub async fn run_api_stream(
                 let next = match next {
                     // Nothing to switch to, but the model is only busy: wait
                     // and send the same request again.
-                    None if failure.busy && busy_waited_secs < MAX_BUSY_WAIT_SECS => {
+                    None if failure.busy
+                        && busy_waited_secs < MAX_BUSY_WAIT_SECS
+                        && !fails_fast(session_id) =>
+                    {
                         // The provider's own word on when the limit lifts,
                         // else a growing guess.
                         let wait = rate_limit_reset.unwrap_or(
@@ -1361,6 +1367,27 @@ const BUSY_RETRY_WAITS: [u64; 5] = [5, 10, 20, 30, 60];
 /// How long one stall on a busy model may last before the turn gives up: long
 /// enough for a per-minute limit, not for a daily quota that is used up.
 const MAX_BUSY_WAIT_SECS: u64 = 30 * 60;
+
+/// Sessions that give up at once on a busy model or an oversized request, instead of waiting or
+/// compacting: the agent queue's runs. There the queue, not the turn, picks what happens next — it
+/// hands the task to another model — so a rate-limited free tier holds up nothing.
+fn fail_fast_sessions() -> &'static Mutex<HashSet<Uuid>> {
+    static SESSIONS: OnceLock<Mutex<HashSet<Uuid>>> = OnceLock::new();
+    SESSIONS.get_or_init(Default::default)
+}
+
+/// Marks `session_id` as one that fails fast (see [`fail_fast_sessions`]).
+pub(crate) fn fail_fast(session_id: &Uuid) {
+    if let Ok(mut sessions) = fail_fast_sessions().lock() {
+        sessions.insert(*session_id);
+    }
+}
+
+fn fails_fast(session_id: &Uuid) -> bool {
+    fail_fast_sessions()
+        .lock()
+        .is_ok_and(|sessions| sessions.contains(session_id))
+}
 
 /// Turns waiting out a busy model: why, and when the wait ends. The agent's
 /// status line reads it (see [`waiting_note`]) in place of "Thinking...".

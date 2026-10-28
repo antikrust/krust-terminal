@@ -1492,6 +1492,20 @@ define_settings_group!(AISettings, settings: [
         description: "Tiers (easy, medium, hard) set on BYOR models, as `model id=tier`.",
     }
 
+    // The models agents may run on are everything the app can see (BYOR, custom endpoints, Ollama
+    // on any machine, Claude Code, Codex); this holds the user's switches, `<model id>=on|off`.
+    // Without one a model is on, except Claude Code's and Codex's (a subscription): off.
+    agent_model_switches: AgentModelSwitches {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.queue.model_switches",
+        description: "Agent models switched on or off, as `model id=on|off`.",
+    }
+
     // The model the agent queue runs a task on when the task names none: a picker id, "auto" (the
     // chooser spreads across the failover rows), or empty (same as "auto"). A pinned id — one
     // concrete model, or a `cli/<app>/<model>` for Claude Code or Codex — keeps every task on it.
