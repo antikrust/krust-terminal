@@ -30,6 +30,15 @@ const CONFIG_FILE: &str = "moloch.env";
 
 const URL_KEY: &str = "MOLOCH_URL";
 const TOKEN_KEY: &str = "MOLOCH_TOKEN";
+/// The "Use Moloch" switch: `0` / `false` / `off` leaves Moloch out even with an address saved.
+const ENABLED_KEY: &str = "MOLOCH_ENABLED";
+
+fn is_off(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "0" | "false" | "off" | "no"
+    )
+}
 
 /// Where the app expects to find a Moloch instance, and how to authenticate.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,6 +92,13 @@ fn load() -> Option<MolochConfig> {
         .ok()
         .map(|contents| parse_env_file(&contents))
         .unwrap_or_default();
+
+    // Switched off (Settings → Moloch, "Use Moloch"): the app keeps its own server and auth.
+    let enabled = non_empty(std::env::var(ENABLED_KEY).ok())
+        .or_else(|| non_empty(from_file.get(ENABLED_KEY).cloned()));
+    if enabled.as_deref().is_some_and(is_off) {
+        return None;
+    }
 
     // Environment wins over the file, so a one-off run can point elsewhere
     // without editing state.
@@ -145,6 +161,95 @@ fn session_sharing_url(url: &str) -> Option<String> {
 /// carries it as a bearer token.
 pub fn api_key() -> Option<String> {
     config().and_then(|config| config.token.clone())
+}
+
+/// What `moloch.env` says now — the settings page's fields and switch, which may differ from what
+/// this run started with ([`config`], read once at startup).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SavedSettings {
+    pub enabled: bool,
+    pub url: String,
+    pub token: String,
+}
+
+/// Reads `moloch.env` afresh. A missing switch counts as on, as it always has.
+pub fn saved() -> SavedSettings {
+    let values = std::fs::read_to_string(config_path())
+        .ok()
+        .map(|contents| parse_env_file(&contents))
+        .unwrap_or_default();
+    SavedSettings {
+        enabled: !values.get(ENABLED_KEY).is_some_and(|value| is_off(value)),
+        url: values.get(URL_KEY).cloned().unwrap_or_default(),
+        token: values.get(TOKEN_KEY).cloned().unwrap_or_default(),
+    }
+}
+
+/// Whether `MOLOCH_*` environment variables are set — they win over the file, so what the settings
+/// page saves won't take effect while they are.
+pub fn overridden_by_environment() -> bool {
+    [ENABLED_KEY, URL_KEY, TOKEN_KEY]
+        .iter()
+        .any(|key| non_empty(std::env::var(key).ok()).is_some())
+}
+
+/// Whether what is saved differs from what this run is using, so the page can say a restart is due.
+pub fn restart_needed() -> bool {
+    let saved = saved();
+    let saved_config = (saved.enabled && !saved.url.trim().is_empty()).then(|| MolochConfig {
+        url: saved.url.trim().trim_end_matches('/').to_owned(),
+        token: non_empty(Some(saved.token.clone())),
+    });
+    saved_config.as_ref() != config()
+}
+
+/// Saves the switch, address and token to `moloch.env`, keeping every other line as it was and the
+/// previous file as `moloch.env.bak`. The file holds a secret, so only you can read it.
+pub fn save(settings: &SavedSettings) -> std::io::Result<()> {
+    let path = config_path();
+    let previous = std::fs::read_to_string(&path).unwrap_or_default();
+    if !previous.is_empty() {
+        let _ = std::fs::write(path.with_extension("env.bak"), &previous);
+    }
+    let wanted = [
+        (ENABLED_KEY, if settings.enabled { "1" } else { "0" }.to_owned()),
+        (URL_KEY, settings.url.trim().trim_end_matches('/').to_owned()),
+        (TOKEN_KEY, settings.token.trim().to_owned()),
+    ];
+    let mut written = [false; 3];
+    let mut lines: Vec<String> = previous
+        .lines()
+        .map(|line| {
+            let key = line
+                .trim()
+                .strip_prefix("export ")
+                .unwrap_or(line.trim())
+                .split_once('=')
+                .map(|(key, _)| key.trim().to_owned());
+            match key.and_then(|key| wanted.iter().position(|(wanted, _)| *wanted == key)) {
+                Some(index) => {
+                    written[index] = true;
+                    format!("{}={}", wanted[index].0, wanted[index].1)
+                }
+                None => line.to_owned(),
+            }
+        })
+        .collect();
+    for (index, (key, value)) in wanted.iter().enumerate() {
+        if !written[index] {
+            lines.push(format!("{key}={value}"));
+        }
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, lines.join("\n") + "\n")?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -14,11 +14,17 @@
 use std::cell::RefCell;
 
 use krustui::elements::{
-    Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
+    ConstrainedBox, Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use krustui::ui_components::components::UiComponent;
+use krustui::ui_components::button::ButtonVariant;
+use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use krustui::ui_components::switch::SwitchStateHandle;
 use krustui::{
-    AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle,
+    AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
+};
+
+use crate::editor::{
+    EditorView, Event as EditorEvent, SingleLineEditorOptions, TextColors, TextOptions,
 };
 
 use super::settings_page::{
@@ -76,17 +82,119 @@ pub struct MolochPageView {
     leaderboard: Vec<LeaderCell>,
     /// Tail of the server's log, most recent last.
     log_lines: Vec<String>,
+    /// The connection as saved in `moloch.env`: the "Use Moloch" switch, the address and token
+    /// fields, and what saving last said.
+    use_moloch: bool,
+    url_editor: ViewHandle<EditorView>,
+    token_editor: ViewHandle<EditorView>,
+    save_message: Option<String>,
     state_handles: RefCell<StateHandles>,
 }
 
 #[derive(Default)]
 struct StateHandles {
+    use_switch: SwitchStateHandle,
+    save_button: MouseStateHandle,
     refresh_link: MouseStateHandle,
     /// Beside Refresh: Moloch's web panel in the browser, and the Moloch app's window.
     web_link: MouseStateHandle,
     app_link: MouseStateHandle,
     /// One per run row, for its Stop link; resized when the run list changes.
     stop_links: Vec<MouseStateHandle>,
+}
+
+/// Where this page asks, and with what token: what is saved now, while Moloch is switched on — so
+/// Save, then Refresh, tests a new address or token before Krust restarts onto it.
+fn target() -> Option<(String, String)> {
+    let saved = crate::moloch::saved();
+    let url = saved.url.trim().trim_end_matches('/').to_owned();
+    (saved.enabled && !url.is_empty()).then(|| (url, saved.token.trim().to_owned()))
+}
+
+/// The connection: the "Use Moloch" switch, the address and token fields, Save, and what saving
+/// last said (or that a restart is due).
+fn render_connection(view: &MolochPageView, appearance: &Appearance) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    let handles = view.state_handles.borrow();
+    let input = |editor: &ViewHandle<EditorView>| {
+        ConstrainedBox::new(
+            appearance
+                .ui_builder()
+                .text_input(editor.clone())
+                .with_style(UiComponentStyles {
+                    padding: Some(Coords {
+                        top: 6.,
+                        bottom: 6.,
+                        left: 10.,
+                        right: 10.,
+                    }),
+                    background: Some(theme.surface_2().into()),
+                    ..Default::default()
+                })
+                .build()
+                .finish(),
+        )
+        .with_width(360.)
+        .finish()
+    };
+    let labelled = |label: &str, field: Box<dyn Element>| {
+        Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(
+                ConstrainedBox::new(
+                    Text::new_inline(label.to_owned(), appearance.ui_font_family(), 13.)
+                        .with_color(theme.active_ui_text_color().into())
+                        .finish(),
+                )
+                .with_width(90.)
+                .finish(),
+            )
+            .with_child(field)
+            .finish()
+    };
+    let switch = appearance
+        .ui_builder()
+        .switch(handles.use_switch.clone())
+        .check(view.use_moloch)
+        .build()
+        .on_click(|ctx, _, _| ctx.dispatch_typed_action(MolochPageAction::ToggleUseMoloch))
+        .finish();
+    let mut column = Flex::column()
+        .with_spacing(8.)
+        .with_child(labelled("Use Moloch", switch))
+        .with_child(labelled("Address", input(&view.url_editor)))
+        .with_child(labelled("Token", input(&view.token_editor)))
+        .with_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .button(ButtonVariant::Secondary, handles.save_button.clone())
+                    .with_text_label("Save".to_owned())
+                    .build()
+                    .on_click(|ctx, _, _| {
+                        ctx.dispatch_typed_action(MolochPageAction::SaveConnection)
+                    })
+                    .finish(),
+            )
+            .with_margin_left(90.)
+            .finish(),
+        );
+    let note = view.save_message.clone().or_else(|| {
+        crate::moloch::restart_needed().then(|| {
+            "What's saved differs from what Krust started with — it switches when it next starts."
+                .to_owned()
+        })
+    });
+    if let Some(note) = note {
+        column.add_child(
+            Container::new(sub_text(&note, appearance))
+                .with_margin_left(90.)
+                .finish(),
+        );
+    }
+    Container::new(column.finish())
+        .with_margin_bottom(VERTICAL_MARGIN)
+        .finish()
 }
 
 /// The run states worth offering a Stop control for — the ones still going.
@@ -158,34 +266,102 @@ impl MolochPageView {
         widgets: Vec<Box<dyn SettingsWidget<View = Self>>>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
+        let saved = crate::moloch::saved();
+        let url_editor = Self::field("http://host:10102", &saved.url, false, ctx);
+        let token_editor = Self::field("Token or API key (wk-…)", &saved.token, true, ctx);
         let mut view = Self {
             page: PageType::new_uncategorized(widgets, None),
             reachability: Reachability::Unknown,
             runs: Vec::new(),
             leaderboard: Vec::new(),
             log_lines: Vec::new(),
+            use_moloch: saved.enabled,
+            url_editor,
+            token_editor,
+            save_message: None,
             state_handles: RefCell::new(StateHandles::default()),
         };
         view.refresh(ctx);
         view
     }
 
+    /// A single-line field of the connection; Enter saves.
+    fn field(
+        placeholder: &'static str,
+        text: &str,
+        is_password: bool,
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<EditorView> {
+        let text = text.to_owned();
+        let editor = ctx.add_typed_action_view(move |ctx| {
+            let appearance = Appearance::handle(ctx).as_ref(ctx);
+            let options = SingleLineEditorOptions {
+                is_password,
+                text: TextOptions {
+                    font_size_override: Some(appearance.ui_font_size()),
+                    text_colors_override: Some(TextColors {
+                        default_color: appearance.theme().active_ui_text_color(),
+                        disabled_color: appearance.theme().disabled_ui_text_color(),
+                        hint_color: appearance.theme().disabled_ui_text_color(),
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let mut editor = EditorView::single_line(options, ctx);
+            editor.set_placeholder_text(placeholder, ctx);
+            if !text.is_empty() {
+                editor.set_buffer_text(&text, ctx);
+            }
+            editor
+        });
+        ctx.subscribe_to_view(&editor, |me, _, event, ctx| {
+            if matches!(event, EditorEvent::Enter) {
+                me.save_connection(ctx);
+            }
+        });
+        editor
+    }
+
+    /// Saves the switch, address and token to `moloch.env`, then asks the server again with them.
+    fn save_connection(&mut self, ctx: &mut ViewContext<Self>) {
+        let settings = crate::moloch::SavedSettings {
+            enabled: self.use_moloch,
+            url: self.url_editor.as_ref(ctx).buffer_text(ctx),
+            token: self.token_editor.as_ref(ctx).buffer_text(ctx),
+        };
+        self.save_message = Some(match crate::moloch::save(&settings) {
+            Ok(()) if crate::moloch::overridden_by_environment() => {
+                "Saved, but MOLOCH_* environment variables are set and win over it.".to_owned()
+            }
+            Ok(()) if crate::moloch::restart_needed() => {
+                "Saved. Krust switches to it when it next starts; Refresh tests it now.".to_owned()
+            }
+            Ok(()) => "Saved.".to_owned(),
+            Err(error) => format!("Couldn't save: {error}"),
+        });
+        self.refresh(ctx);
+    }
+
     /// Asks the server what it is doing and for its recent log. Both are one
     /// request each and cheap; a server that does not answer leaves the page
     /// saying so rather than showing stale numbers as if they were current.
     fn refresh(&mut self, ctx: &mut ViewContext<Self>) {
-        let Some(config) = crate::moloch::config() else {
-            self.reachability =
-                Reachability::Down("No Moloch is configured on this machine.".to_owned());
+        let Some((base, token)) = target() else {
+            self.reachability = Reachability::Down(
+                if self.use_moloch {
+                    "No Moloch address is saved — enter it above."
+                } else {
+                    "Moloch is switched off."
+                }
+                .to_owned(),
+            );
             self.log_lines.clear();
             ctx.notify();
             return;
         };
         self.reachability = Reachability::Checking;
         ctx.notify();
-
-        let base = config.url.clone();
-        let token = config.token.clone().unwrap_or_default();
         let client = reqwest::Client::new();
         ctx.spawn(
             async move {
@@ -264,11 +440,9 @@ impl MolochPageView {
     /// Cancels a run from the in-app list, then refreshes so its row updates.
     /// Best-effort — a failed cancel just leaves the run as it was.
     fn stop_run(&mut self, id: String, ctx: &mut ViewContext<Self>) {
-        let Some(config) = crate::moloch::config() else {
+        let Some((base, token)) = target() else {
             return;
         };
-        let base = config.url.clone();
-        let token = config.token.clone().unwrap_or_default();
         let client = reqwest::Client::new();
         ctx.spawn(
             async move {
@@ -307,6 +481,9 @@ pub enum MolochPageAction {
     OpenWeb,
     /// The Moloch app's window.
     OpenApp,
+    /// The "Use Moloch" switch (saved at once), and Save for the address and token.
+    ToggleUseMoloch,
+    SaveConnection,
 }
 
 impl TypedActionView for MolochPageView {
@@ -317,11 +494,16 @@ impl TypedActionView for MolochPageView {
             MolochPageAction::Refresh => self.refresh(ctx),
             MolochPageAction::StopRun(id) => self.stop_run(id.clone(), ctx),
             MolochPageAction::OpenWeb => {
-                if let Some(config) = crate::moloch::config() {
-                    ctx.open_url(&format!("{}/panel", config.url.trim_end_matches('/')));
+                if let Some((base, _)) = target() {
+                    ctx.open_url(&format!("{base}/panel"));
                 }
             }
             MolochPageAction::OpenApp => crate::moloch_app::open(ctx),
+            MolochPageAction::ToggleUseMoloch => {
+                self.use_moloch = !self.use_moloch;
+                self.save_connection(ctx);
+            }
+            MolochPageAction::SaveConnection => self.save_connection(ctx),
         }
     }
 }
@@ -386,10 +568,7 @@ impl SettingsWidget for ServerWidget {
             .finish(),
         );
 
-        let address = crate::moloch::config()
-            .map(|config| config.url.clone())
-            .unwrap_or_else(|| "not configured".to_owned());
-        column.add_child(row("Address", &address, appearance));
+        column.add_child(render_connection(view, appearance));
 
         match &view.reachability {
             Reachability::Unknown => {}
@@ -456,7 +635,7 @@ impl SettingsWidget for ServerWidget {
             .with_child(link("Refresh", MolochPageAction::Refresh, &handles.refresh_link));
         // Open it: the web panel needs an address to go to; the app's window works either way
         // (it says so when nothing is configured).
-        if crate::moloch::config().is_some() {
+        if target().is_some() {
             links.add_child(link("Open web", MolochPageAction::OpenWeb, &handles.web_link));
         }
         links.add_child(link("Open app", MolochPageAction::OpenApp, &handles.app_link));
