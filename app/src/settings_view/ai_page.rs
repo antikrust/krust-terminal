@@ -719,6 +719,8 @@ pub struct AISettingsPageView {
     /// its id, and what loading a plan last said.
     queue_task_editor: ViewHandle<EditorView>,
     queue_plan_editor: ViewHandle<EditorView>,
+    /// The agent queue's default model: a picker id, or blank/"auto" to spread via the chooser.
+    queue_default_editor: ViewHandle<EditorView>,
     queue_add_button: ViewHandle<ActionButton>,
     queue_load_button: ViewHandle<ActionButton>,
     queue_task_buttons: Vec<(u64, MouseStateHandle, MouseStateHandle, MouseStateHandle)>,
@@ -2033,6 +2035,16 @@ impl AISettingsPageView {
                 me.load_queue_plan(ctx);
             }
         });
+        let queue_default_editor =
+            Self::queue_text_editor("Default model id, or blank/auto to spread", ctx);
+        queue_default_editor.update(ctx, |editor, ctx| {
+            editor.set_buffer_text(AISettings::as_ref(ctx).byor_queue_default_model.value(), ctx);
+        });
+        ctx.subscribe_to_view(&queue_default_editor, |me, _, event, ctx| {
+            if matches!(event, EditorEvent::Blurred | EditorEvent::Enter) {
+                me.save_queue_default_model(ctx);
+            }
+        });
         let queue_add_button = ctx.add_typed_action_view(|_| {
             ActionButton::new("Add", SecondaryTheme)
                 .with_size(ButtonSize::Small)
@@ -2101,6 +2113,7 @@ impl AISettingsPageView {
             byor_preset_save_button,
             queue_task_editor,
             queue_plan_editor,
+            queue_default_editor,
             queue_add_button,
             queue_load_button,
             queue_task_buttons,
@@ -3734,6 +3747,15 @@ impl AISettingsPageView {
             self.queue_task_editor
                 .update(ctx, |editor, ctx| editor.clear_buffer(ctx));
         }
+        ctx.notify();
+    }
+
+    /// Saves the agent queue's default model from its field.
+    fn save_queue_default_model(&mut self, ctx: &mut ViewContext<Self>) {
+        let value = self.queue_default_editor.as_ref(ctx).buffer_text(ctx).trim().to_owned();
+        AISettings::handle(ctx).update(ctx, |settings, ctx| {
+            report_if_error!(settings.byor_queue_default_model.set_value(value, ctx));
+        });
         ctx.notify();
     }
 
@@ -9088,6 +9110,29 @@ impl CloudModelKeysWidget {
         };
         column.add_child(field(&view.queue_task_editor, &view.queue_add_button));
         column.add_child(field(&view.queue_plan_editor, &view.queue_load_button));
+        column.add_child(render_ai_setting_description(
+            "Default model for queued tasks (a task's own model wins): a picker id pins every task \
+             to it — a concrete model, or cli/claude/default for Claude Code, cli/codex/default for \
+             Codex — while blank or auto spreads across the list by difficulty.",
+            true,
+            app,
+        ));
+        column.add_child(
+            ConstrainedBox::new(
+                appearance
+                    .ui_builder()
+                    .text_input(view.queue_default_editor.clone())
+                    .with_style(UiComponentStyles {
+                        padding: Some(Coords { top: 6., bottom: 6., left: 10., right: 10. }),
+                        background: Some(appearance.theme().surface_2().into()),
+                        ..Default::default()
+                    })
+                    .build()
+                    .finish(),
+            )
+            .with_width(420.)
+            .finish(),
+        );
         if let Some(message) = &view.queue_message {
             column.add_child(render_ai_setting_description(message.clone(), true, app));
         }

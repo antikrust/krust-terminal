@@ -862,6 +862,11 @@ fn run_worker_command(worker: &krust_cli::WorkerCommand) -> Result<()> {
             crate::ai::mcp::web_search_server::run_stdio_server();
             Ok(())
         }
+        #[cfg(not(target_family = "wasm"))]
+        krust_cli::WorkerCommand::QueueMcpServer => {
+            crate::ai::queue_tools::run_queue_mcp_server();
+            Ok(())
+        }
         #[cfg(not(any(
             feature = "local_tty",
             feature = "plugin_host",
@@ -2288,7 +2293,7 @@ pub(crate) fn initialize_app(
     // provider that has a key.
     ctx.add_singleton_model(crate::ai::api_providers::ApiProviderKeys::new);
     ctx.add_singleton_model(|_| crate::ai::failover_health::FailoverHealth::new());
-    ctx.add_singleton_model(|_| crate::ai::agent_queue::AgentQueue::new());
+    ctx.add_singleton_model(crate::ai::agent_queue::AgentQueue::new);
     ctx.add_singleton_model(HarnessAvailabilityModel::new);
     ctx.add_singleton_model(ConnectedSelfHostedWorkersModel::new);
 

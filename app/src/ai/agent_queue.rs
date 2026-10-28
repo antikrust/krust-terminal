@@ -7,6 +7,10 @@
 //! tier's rate limit holds up one task instead of all of them. A task that fails on a model goes
 //! back in the queue for another one.
 //!
+//! A task can also be pinned to one model (`model` on the task, or the queue's default model in
+//! Settings): it then runs there and nowhere else, retried there on failure. Workers are API and
+//! Ollama models through the API runner, or the local Claude Code and Codex apps run headless.
+//!
 //! Tasks are added by hand or loaded from a plan file (`notes/plan.json`, written by
 //! tools/plan.py in reverse-lab): every task of a lane marked `"spawn": true`. A task runs as a
 //! headless turn of the API runner with the agent's own tools, in the plan's working directory;
@@ -19,7 +23,7 @@ use std::sync::{Arc, Mutex};
 
 use ai::agent::{ToolCallOutcome, TurnEvent};
 use krust_multi_agent_api as api;
-use krustui::{Entity, ModelContext, SingletonEntity};
+use krustui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -29,11 +33,14 @@ use crate::ai::agent_sdk::driver::harness::claude_stream_exec::cancel_harness_se
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::{
     turn_event_to_messages, user_query_message,
 };
+use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::api_providers::{
-    failover_routes, is_free_model, route_strength, FailoverTarget,
+    cli_failover_models, cli_model_id_for, cli_model_parts, cli_route_for, failover_routes,
+    is_free_model, route_for, route_strength, ApiRoute, CliRoute, FailoverTarget,
 };
 use crate::ai::failover_health::{FailoverHealth, Health};
 use crate::ai::task_router::{choose, decide, speed, Candidate, Difficulty, Policy};
+use crate::settings::AISettings;
 
 /// Tasks running at once, at most, however long the failover list is.
 const MAX_RUNNING: usize = 8;
@@ -73,6 +80,10 @@ pub struct QueueTask {
     pub difficulty: Option<Difficulty>,
     #[serde(default)]
     pub reason: String,
+    /// The model this task must run on (a picker id), or `"auto"` for the chooser; `None` takes
+    /// the queue's default model (Settings).
+    #[serde(default)]
+    pub model: Option<String>,
     /// What the task has said and done, live while it runs. Not saved.
     #[serde(skip)]
     pub transcript: Vec<TranscriptLine>,
@@ -138,6 +149,61 @@ fn lines_of(event: &TurnEvent) -> Vec<TranscriptLine> {
     }
 }
 
+/// What runs a task: a model through the API runner, or a local agent app.
+#[derive(Clone)]
+enum Worker {
+    Api(ApiRoute),
+    Cli(CliRoute),
+}
+
+impl Worker {
+    fn model_id(&self) -> &str {
+        match self {
+            Worker::Api(route) => &route.model_id,
+            Worker::Cli(route) => &route.model_id,
+        }
+    }
+
+    fn model_name(&self) -> String {
+        match self {
+            Worker::Api(route) => route.model_name.clone(),
+            Worker::Cli(route) => format!("{} on {}", route.model_name, route.app_name),
+        }
+    }
+
+    /// What takes one task at a time: a provider account, or a local app.
+    fn account(&self) -> String {
+        match self {
+            Worker::Api(route) => route.account.clone(),
+            Worker::Cli(route) => format!("cli:{}", route.harness.config_name()),
+        }
+    }
+}
+
+/// The worker for a model id: an API or Ollama model, or a local app's (`cli/<app>/<model>`,
+/// where `default` is that app's first model).
+fn worker_for(model_id: &str, ctx: &ModelContext<AgentQueue>) -> Option<Worker> {
+    if let Some(route) = route_for(model_id, ctx) {
+        return Some(Worker::Api(route));
+    }
+    let (harness, model) = cli_model_parts(model_id)?;
+    let resolved = if model == "default" {
+        let (first, _) = cli_failover_models(harness, ctx).into_iter().next()?;
+        cli_model_id_for(harness, &first)
+    } else {
+        model_id.to_string()
+    };
+    cli_route_for(&resolved, ctx).map(Worker::Cli)
+}
+
+/// What should happen to one waiting task now.
+enum Pick {
+    Run(Worker),
+    /// Its model (or account) is busy; leave it waiting.
+    Wait,
+    Fail(String),
+}
+
 /// A running task's account (it takes one task at a time) and agent session, to stop it.
 struct Active {
     account: String,
@@ -167,6 +233,8 @@ pub struct PlannedTask {
     pub title: String,
     pub prompt: String,
     pub working_dir: PathBuf,
+    /// A model id to pin it to, `"auto"`, or `None` for the queue's default.
+    pub model: Option<String>,
 }
 
 /// Where a task stands, for a model waiting on its results.
@@ -245,7 +313,10 @@ struct PlanTask {
 }
 
 impl AgentQueue {
-    pub fn new() -> Self {
+    pub fn new(ctx: &mut ModelContext<Self>) -> Self {
+        // Claude Code and Codex reach plan_tasks / collect_results through an MCP server that
+        // talks to this socket (see `queue_tools`).
+        crate::ai::queue_tools::serve_socket(ctx.spawner());
         let mut tasks: Vec<QueueTask> = std::fs::read_to_string(queue_file())
             .ok()
             .and_then(|text| serde_json::from_str(&text).ok())
@@ -314,13 +385,21 @@ impl AgentQueue {
             first_chars(prompt.lines().next().unwrap_or(prompt), 80),
             prompt.to_string(),
             home_dir(),
+            None,
         );
         self.changed(ctx);
         self.pump(ctx);
         true
     }
 
-    fn push(&mut self, key: String, title: String, prompt: String, working_dir: PathBuf) {
+    fn push(
+        &mut self,
+        key: String,
+        title: String,
+        prompt: String,
+        working_dir: PathBuf,
+        model: Option<String>,
+    ) {
         self.tasks.push(QueueTask {
             id: self.next_id,
             key,
@@ -332,6 +411,7 @@ impl AgentQueue {
             last_error: None,
             difficulty: None,
             reason: String::new(),
+            model,
             transcript: Vec::new(),
             events: Vec::new(),
         });
@@ -357,7 +437,7 @@ impl AgentQueue {
                 if task.prompt.trim().is_empty() || self.tasks.iter().any(|known| known.key == key) {
                     continue;
                 }
-                self.push(key, task.title, task.prompt, working_dir.clone());
+                self.push(key, task.title, task.prompt, working_dir.clone(), None);
                 added += 1;
             }
         }
@@ -381,6 +461,7 @@ impl AgentQueue {
                 first_chars(&task.title, 80),
                 task.prompt,
                 task.working_dir,
+                task.model,
             );
         }
         self.running = true;
@@ -448,18 +529,20 @@ impl AgentQueue {
         ctx.emit(AgentQueueEvent::Changed);
     }
 
-    /// Starts waiting tasks on free models: each on the first row of the failover list that is on,
-    /// isn't known to be down, isn't busy with another task and hasn't failed this task. A task
-    /// every model has failed (or that failed on [`MAX_ATTEMPTS`]) is given up.
+    /// Starts waiting tasks. An auto task goes to the model the chooser picks among the failover
+    /// rows that are on, not down, not busy with another task and not already tried; a tier up for
+    /// each model it failed on. A pinned task (its own model, or the queue's default) runs only on
+    /// that model and that app's account, retried there up to [`MAX_ATTEMPTS`]. A task that runs
+    /// nowhere left is given up.
     fn pump(&mut self, ctx: &mut ModelContext<Self>) {
         if !self.running {
             return;
         }
-        let routes: Vec<_> = failover_routes("", ctx)
+        let routes: Vec<ApiRoute> = failover_routes("", ctx)
             .into_iter()
             .filter_map(|target| match target {
                 FailoverTarget::Api(route) => Some(route),
-                // A local agent app can't be given a task headlessly here.
+                // A local agent app is reached by pinning a `cli/…` model, not off the auto list.
                 FailoverTarget::Cli(_) => None,
             })
             .collect();
@@ -470,6 +553,10 @@ impl AgentQueue {
             })
             .map(|route| route.model_id.clone())
             .collect();
+        let default_model = AISettings::as_ref(ctx)
+            .byor_queue_default_model
+            .value()
+            .clone();
         let waiting: Vec<u64> = self
             .tasks
             .iter()
@@ -478,57 +565,88 @@ impl AgentQueue {
             .collect();
         let mut gave_up = false;
         for id in waiting {
+            if self.active.len() >= MAX_RUNNING {
+                break;
+            }
+            let busy: HashSet<String> =
+                self.active.values().map(|active| active.account.clone()).collect();
             let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) else {
                 continue;
             };
-            let exhausted = !task.tried.is_empty()
-                && (task.tried.len() >= MAX_ATTEMPTS
-                    || routes.iter().all(|route| task.tried.contains(&route.model_id)));
-            if exhausted {
-                task.state = TaskState::Failed {
-                    error: task
-                        .last_error
-                        .clone()
-                        .unwrap_or_else(|| "no model could answer".to_string()),
-                };
-                gave_up = true;
-                continue;
-            }
-            if self.active.len() >= MAX_RUNNING {
-                continue;
-            }
-            // The decider rates the task once; a task that already failed on a model goes a tier
-            // up for each one.
             if task.difficulty.is_none() {
                 let decision = decide(&task.prompt);
                 task.difficulty = Some(decision.difficulty);
                 task.reason = decision.reason;
             }
-            let mut difficulty = task.difficulty.unwrap_or(Difficulty::Medium);
-            for _ in &task.tried {
-                difficulty = difficulty.harder();
-            }
-            let busy: HashSet<&String> = self.active.values().map(|active| &active.account).collect();
-            let available: Vec<&crate::ai::api_providers::ApiRoute> = routes
-                .iter()
-                .filter(|route| {
-                    !busy.contains(&route.account)
-                        && !down.contains(&route.model_id)
-                        && !task.tried.contains(&route.model_id)
-                })
-                .collect();
-            let candidates: Vec<Candidate> = available
-                .iter()
-                .map(|route| Candidate {
-                    strength: route_strength(route, ctx),
-                    speed: speed(&route.model),
-                    free: is_free_model(&route.model_id),
-                })
-                .collect();
-            let pick = choose(Policy::CostEfficient, difficulty, &candidates)
-                .map(|index| available[index].clone());
-            if let Some(route) = pick {
-                self.start(id, route, ctx);
+            let tried = task.tried.clone();
+            let base = task.difficulty.unwrap_or(Difficulty::Medium);
+            let last_error = task.last_error.clone();
+            // The model to run on: the task's own, else the queue default; both empty, or "auto",
+            // means let the chooser pick across the failover rows.
+            let pinned = task
+                .model
+                .clone()
+                .filter(|model| !model.trim().is_empty())
+                .or_else(|| (!default_model.trim().is_empty()).then(|| default_model.clone()))
+                .filter(|model| model != "auto");
+
+            let pick = if let Some(model_id) = pinned {
+                if tried.len() >= MAX_ATTEMPTS {
+                    Pick::Fail(
+                        last_error.unwrap_or_else(|| format!("{model_id} could not run the task")),
+                    )
+                } else {
+                    match worker_for(&model_id, ctx) {
+                        None => Pick::Fail(format!(
+                            "no model {model_id:?} is available (a key removed, or the app not running)"
+                        )),
+                        Some(worker) if busy.contains(&worker.account()) => Pick::Wait,
+                        Some(worker) => Pick::Run(worker),
+                    }
+                }
+            } else {
+                let exhausted = !tried.is_empty()
+                    && (tried.len() >= MAX_ATTEMPTS
+                        || routes.iter().all(|route| tried.contains(&route.model_id)));
+                if exhausted {
+                    Pick::Fail(last_error.unwrap_or_else(|| "no model could answer".to_string()))
+                } else {
+                    let mut difficulty = base;
+                    for _ in &tried {
+                        difficulty = difficulty.harder();
+                    }
+                    let available: Vec<&ApiRoute> = routes
+                        .iter()
+                        .filter(|route| {
+                            !busy.contains(&route.account)
+                                && !down.contains(&route.model_id)
+                                && !tried.contains(&route.model_id)
+                        })
+                        .collect();
+                    let candidates: Vec<Candidate> = available
+                        .iter()
+                        .map(|route| Candidate {
+                            strength: route_strength(route, ctx),
+                            speed: speed(&route.model),
+                            free: is_free_model(&route.model_id),
+                        })
+                        .collect();
+                    match choose(Policy::CostEfficient, difficulty, &candidates) {
+                        Some(index) => Pick::Run(Worker::Api(available[index].clone())),
+                        None => Pick::Wait,
+                    }
+                }
+            };
+
+            match pick {
+                Pick::Run(worker) => self.start(id, worker, ctx),
+                Pick::Wait => {}
+                Pick::Fail(error) => {
+                    if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
+                        task.state = TaskState::Failed { error };
+                    }
+                    gave_up = true;
+                }
             }
         }
         if gave_up {
@@ -536,25 +654,26 @@ impl AgentQueue {
         }
     }
 
-    /// Runs task `id` on `route`: a headless turn of the API runner, on a background thread, with
-    /// no failover of its own (the queue picks the next model).
-    fn start(&mut self, id: u64, route: crate::ai::api_providers::ApiRoute, ctx: &mut ModelContext<Self>) {
+    /// Runs task `id` on `worker`: a headless turn on a background thread, its events streamed to
+    /// the main thread. No failover of its own — the queue picks the next model when it fails.
+    fn start(&mut self, id: u64, worker: Worker, ctx: &mut ModelContext<Self>) {
         let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) else {
             return;
         };
         let session = Uuid::new_v4();
         task.state = TaskState::Running {
-            model: route.model_name.clone(),
+            model: worker.model_name(),
         };
         task.transcript.clear();
         task.events.clear();
         let prompt = task.prompt.clone();
         let working_dir = task.working_dir.clone();
-        let (model_id, model_name) = (route.model_id.clone(), route.model_name.clone());
+        let model_id = worker.model_id().to_string();
+        let model_name = worker.model_name();
         self.active.insert(
             id,
             Active {
-                account: route.account.clone(),
+                account: worker.account(),
                 session,
             },
         );
@@ -573,45 +692,63 @@ impl AgentQueue {
                 let answer = Arc::new(Mutex::new(String::new()));
                 let error = Arc::new(Mutex::new(None::<String>));
                 let (sink_answer, sink_error) = (Arc::clone(&answer), Arc::clone(&error));
-                let result = run_api_stream(
-                    &prompt,
-                    route,
-                    &session,
-                    &working_dir,
-                    &tools_path(),
-                    &[],
-                    None,
-                    Vec::new(),
-                    move |event| {
-                        if !lines_of(&event).is_empty() {
-                            let _ = line_tx.unbounded_send(event.clone());
-                        }
-                        match event {
-                            // What the model says last is its answer.
-                            TurnEvent::Text { text } => {
-                                if !text.trim().is_empty() {
-                                    if let Ok(mut answer) = sink_answer.lock() {
-                                        *answer = text;
-                                    }
+                // Every event a run emits: stream the shown ones to the transcript, and keep the
+                // last assistant text as the answer and a failed completion as the error.
+                let mut on_event = move |event: TurnEvent| {
+                    if !lines_of(&event).is_empty() {
+                        let _ = line_tx.unbounded_send(event.clone());
+                    }
+                    match event {
+                        TurnEvent::Text { text } => {
+                            if !text.trim().is_empty() {
+                                if let Ok(mut answer) = sink_answer.lock() {
+                                    *answer = text;
                                 }
                             }
-                            TurnEvent::TurnCompleted {
-                                is_error: true,
-                                error_message,
-                                ..
-                            } => {
-                                if let Ok(mut error) = sink_error.lock() {
-                                    *error = Some(
-                                        error_message.unwrap_or_else(|| "the turn failed".to_string()),
-                                    );
-                                }
-                            }
-                            // The rest only shows in the transcript, if at all.
-                            _ => {}
                         }
-                    },
-                )
-                .await;
+                        TurnEvent::TurnCompleted {
+                            is_error: true,
+                            error_message,
+                            ..
+                        } => {
+                            if let Ok(mut error) = sink_error.lock() {
+                                *error = Some(
+                                    error_message.unwrap_or_else(|| "the turn failed".to_string()),
+                                );
+                            }
+                        }
+                        _ => {}
+                    }
+                };
+                let result = match worker {
+                    Worker::Api(route) => {
+                        run_api_stream(
+                            &prompt,
+                            route,
+                            &session,
+                            &working_dir,
+                            &tools_path(),
+                            &[],
+                            None,
+                            Vec::new(),
+                            on_event,
+                        )
+                        .await
+                        .map(|_| ())
+                    }
+                    // Claude Code / Codex: the same headless run BYOR failover hands a turn to,
+                    // with one target and no next.
+                    Worker::Cli(route) => {
+                        run_handed_off_turn(
+                            vec![route],
+                            &prompt,
+                            &working_dir,
+                            &tools_path(),
+                            |_, _, event| on_event(event),
+                        )
+                        .await
+                    }
+                };
                 let mut outcome = Outcome {
                     answer: answer.lock().map(|answer| answer.clone()).unwrap_or_default(),
                     error: error.lock().ok().and_then(|error| error.clone()),

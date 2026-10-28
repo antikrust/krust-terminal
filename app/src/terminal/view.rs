@@ -23932,12 +23932,16 @@ impl TerminalView {
         let mut command = match harness {
             LocalHarnessKind::Claude => {
                 let mut command = command::r#async::Command::new("claude");
+                // Give a terminal Claude Code conversation the agent-queue tools (plan_tasks /
+                // collect_results) so it can be the boss handing work to other models — Claude
+                // Code brings its own tools and never sees the in-process ones.
+                let queue_mcp = crate::ai::queue_tools::claude_mcp_config_path();
                 command.args(stream_json_args(
                     &session_id,
                     resuming,
                     model_id.as_deref(),
                     None,
-                    None,
+                    queue_mcp.as_deref(),
                 ));
                 // The claude CLI has no reasoning-effort flag; it reads the
                 // extended-thinking budget from the environment. Tiers mirror

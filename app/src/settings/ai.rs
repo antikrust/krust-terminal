@@ -1492,6 +1492,20 @@ define_settings_group!(AISettings, settings: [
         description: "Tiers (easy, medium, hard) set on BYOR models, as `model id=tier`.",
     }
 
+    // The model the agent queue runs a task on when the task names none: a picker id, "auto" (the
+    // chooser spreads across the failover rows), or empty (same as "auto"). A pinned id — one
+    // concrete model, or a `cli/<app>/<model>` for Claude Code or Codex — keeps every task on it.
+    byor_queue_default_model: ByorQueueDefaultModel {
+        type: String,
+        default: String::new(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_queue_default_model",
+        description: "Default model for agent-queue tasks that name none (a picker id, or auto).",
+    }
+
     // Saved BYOR failover lists the user can switch between ("Light work",
     // "Heavy coding").
     byor_failover_presets: ByorFailoverPresets {

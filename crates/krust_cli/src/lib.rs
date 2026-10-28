@@ -527,6 +527,15 @@ pub enum WorkerCommand {
     #[cfg(not(target_family = "wasm"))]
     #[clap(hide = true)]
     WebSearchMcpServer,
+
+    /// Runs the agent-queue MCP server over stdio.
+    ///
+    /// Spawned as a subprocess of this binary and handed to Claude Code / Codex so they can call
+    /// `plan_tasks` / `collect_results`; it bridges MCP stdio to the app's queue socket. Not meant
+    /// to be invoked directly.
+    #[cfg(not(target_family = "wasm"))]
+    #[clap(hide = true)]
+    QueueMcpServer,
 }
 
 /// CLI-related subcommands. The command-line interface to Krust isn't a full SDK (e.g. with language bindings),
