@@ -2037,8 +2037,9 @@ impl AISettingsPageView {
         });
         let queue_default_editor =
             Self::queue_text_editor("Default model id, or blank/auto to spread", ctx);
+        let default_model = AISettings::as_ref(ctx).byor_queue_default_model.value().clone();
         queue_default_editor.update(ctx, |editor, ctx| {
-            editor.set_buffer_text(AISettings::as_ref(ctx).byor_queue_default_model.value(), ctx);
+            editor.set_buffer_text(&default_model, ctx);
         });
         ctx.subscribe_to_view(&queue_default_editor, |me, _, event, ctx| {
             if matches!(event, EditorEvent::Blurred | EditorEvent::Enter) {

@@ -447,7 +447,7 @@ pub fn cli_model_parts(model_id: &str) -> Option<(Harness, &str)> {
 /// A local app's models for the failover list, as `(model, label)`: its own
 /// models from the model menu (the Codex row's Ollama and API models are
 /// other runners'). None while the app isn't installed.
-fn cli_failover_models(harness: Harness, app: &AppContext) -> Vec<(String, String)> {
+pub fn cli_failover_models(harness: Harness, app: &AppContext) -> Vec<(String, String)> {
     let availability = HarnessAvailabilityModel::as_ref(app);
     if !availability.is_harness_enabled(harness) {
         return Vec::new();

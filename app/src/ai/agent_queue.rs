@@ -23,7 +23,8 @@ use std::sync::{Arc, Mutex};
 
 use ai::agent::{ToolCallOutcome, TurnEvent};
 use krust_multi_agent_api as api;
-use krustui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
+use krustui::{Entity, ModelContext, SingletonEntity};
+use settings::Setting as _;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -694,7 +695,7 @@ impl AgentQueue {
                 let (sink_answer, sink_error) = (Arc::clone(&answer), Arc::clone(&error));
                 // Every event a run emits: stream the shown ones to the transcript, and keep the
                 // last assistant text as the answer and a failed completion as the error.
-                let mut on_event = move |event: TurnEvent| {
+                let on_event = move |event: TurnEvent| {
                     if !lines_of(&event).is_empty() {
                         let _ = line_tx.unbounded_send(event.clone());
                     }
@@ -744,7 +745,7 @@ impl AgentQueue {
                             &prompt,
                             &working_dir,
                             &tools_path(),
-                            |_, _, event| on_event(event),
+                            move |_, _, event| on_event(event),
                         )
                         .await
                     }
