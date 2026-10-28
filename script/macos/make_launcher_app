@@ -4,22 +4,23 @@
 # (krustoss://moloch) and Acolyte.app. The window it opens lives in the running Krust, so it shares
 # Krust's sign-in, identity avatar and theme; the launcher itself only sends the URL and exits.
 #
-#   script/macos/make_launcher_app <Name> <url-host> <bundle-id> <icon-letter> [destination]
-#   script/macos/make_launcher_app Moloch moloch krust.baby.Moloch M
+#   script/macos/make_launcher_app <Name> <url-host> <bundle-id> <icon> [destination]
+#   script/macos/make_launcher_app Moloch moloch krust.baby.Moloch script/macos/icons/moloch.swift
 #
 # The URL scheme is the installed Krust's (krustoss for the oss build); KRUST_URL_SCHEME overrides.
-# The icon is drawn in Krust's style: a black squircle with an accent rim and a light letter.
+# <icon> is a 1024px .png, a .swift script that draws one (`swift <script> out.png`), or a letter,
+# drawn in Krust's style: a black squircle with an accent rim and a light letter.
 
 set -euo pipefail
 
 if [[ $# -lt 4 ]]; then
-  echo "usage: $0 <Name> <url-host> <bundle-id> <icon-letter> [destination]" >&2
+  echo "usage: $0 <Name> <url-host> <bundle-id> <icon> [destination]" >&2
   exit 1
 fi
 NAME=$1
 HOST=$2
 BUNDLE_ID=$3
-LETTER=$4
+ICON=$4
 DEST=${5:-/Applications}
 
 if [[ -z "${KRUST_URL_SCHEME:-}" ]]; then
@@ -60,7 +61,11 @@ text.draw(at: NSPoint(x: (size - textSize.width) / 2, y: (size - textSize.height
 NSGraphicsContext.restoreGraphicsState()
 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: out))
 EOF
-swift "$WORK/icon.swift" "$LETTER" "$WORK/icon.png"
+case "$ICON" in
+  *.png) cp "$ICON" "$WORK/icon.png" ;;
+  *.swift) swift "$ICON" "$WORK/icon.png" ;;
+  *) swift "$WORK/icon.swift" "$ICON" "$WORK/icon.png" ;;
+esac
 
 ICONSET="$WORK/$NAME.iconset"
 mkdir -p "$ICONSET"
