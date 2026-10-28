@@ -82,6 +82,9 @@ pub struct MolochPageView {
 #[derive(Default)]
 struct StateHandles {
     refresh_link: MouseStateHandle,
+    /// Beside Refresh: Moloch's web panel in the browser, and the Moloch app's window.
+    web_link: MouseStateHandle,
+    app_link: MouseStateHandle,
     /// One per run row, for its Stop link; resized when the run list changes.
     stop_links: Vec<MouseStateHandle>,
 }
@@ -300,6 +303,10 @@ impl View for MolochPageView {
 pub enum MolochPageAction {
     Refresh,
     StopRun(String),
+    /// Moloch's own web panel, in the browser (it asks for the token once, and keeps it).
+    OpenWeb,
+    /// The Moloch app's window.
+    OpenApp,
 }
 
 impl TypedActionView for MolochPageView {
@@ -309,6 +316,12 @@ impl TypedActionView for MolochPageView {
         match action {
             MolochPageAction::Refresh => self.refresh(ctx),
             MolochPageAction::StopRun(id) => self.stop_run(id.clone(), ctx),
+            MolochPageAction::OpenWeb => {
+                if let Some(config) = crate::moloch::config() {
+                    ctx.open_url(&format!("{}/panel", config.url.trim_end_matches('/')));
+                }
+            }
+            MolochPageAction::OpenApp => crate::moloch_app::open(ctx),
         }
     }
 }
@@ -423,25 +436,31 @@ impl SettingsWidget for ServerWidget {
         }
 
         let handles = view.state_handles.borrow();
-        column.add_child(
-            Container::new(
-                appearance
-                    .ui_builder()
-                    .link(
-                        "Refresh".into(),
-                        None,
-                        Some(Box::new(|ctx| {
-                            ctx.dispatch_typed_action(MolochPageAction::Refresh);
-                        })),
-                        handles.refresh_link.clone(),
-                    )
-                    .soft_wrap(false)
-                    .build()
-                    .finish(),
-            )
-            .with_margin_top(12.)
-            .finish(),
-        );
+        let link = |label: &str, action: MolochPageAction, mouse: &MouseStateHandle| {
+            appearance
+                .ui_builder()
+                .link(
+                    label.into(),
+                    None,
+                    Some(Box::new(move |ctx| {
+                        ctx.dispatch_typed_action(action.clone());
+                    })),
+                    mouse.clone(),
+                )
+                .soft_wrap(false)
+                .build()
+                .finish()
+        };
+        let mut links = Flex::row()
+            .with_spacing(16.)
+            .with_child(link("Refresh", MolochPageAction::Refresh, &handles.refresh_link));
+        // Open it: the web panel needs an address to go to; the app's window works either way
+        // (it says so when nothing is configured).
+        if crate::moloch::config().is_some() {
+            links.add_child(link("Open web", MolochPageAction::OpenWeb, &handles.web_link));
+        }
+        links.add_child(link("Open app", MolochPageAction::OpenApp, &handles.app_link));
+        column.add_child(Container::new(links.finish()).with_margin_top(12.).finish());
 
         let _ = app;
         column.finish()
