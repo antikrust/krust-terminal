@@ -91,13 +91,34 @@ const RATE_LIMIT_RESET_MARKER: &str = "krust-rate-limit-reset:";
 /// Ollama tool loop uses.
 const LOCAL_NUM_CTX: u64 = 16_384;
 
+/// How long a request may wait to connect.
+const CONNECT_TIMEOUT_SECS: u32 = 30;
+/// How long a cloud request may go without a byte coming back before it is abandoned.
+const CLOUD_IDLE_SECS: u32 = 300;
+/// The same for a local model, which can take a while to load and read a long prompt.
+const LOCAL_IDLE_SECS: u32 = 900;
+
 /// curl arguments for one streamed chat-completions request to the
 /// OpenAI-compatible API at `base_url`.
 fn api_curl_args(base_url: &str) -> Vec<String> {
+    let idle_secs = if base_url.contains("localhost") || base_url.contains("127.0.0.1") {
+        LOCAL_IDLE_SECS
+    } else {
+        CLOUD_IDLE_SECS
+    };
     vec![
         "--silent".to_string(),
         "--show-error".to_string(),
         "--no-buffer".to_string(),
+        "--connect-timeout".to_string(),
+        CONNECT_TIMEOUT_SECS.to_string(),
+        // Gives up (curl exit 28, the "took too long" failure that fails over) when nothing
+        // arrives for `idle_secs`. Keep-alive comments count as data, so a provider that is
+        // still working isn't cut off; one that has gone silent no longer hangs the turn.
+        "--speed-limit".to_string(),
+        "1".to_string(),
+        "--speed-time".to_string(),
+        idle_secs.to_string(),
         "--variable".to_string(),
         format!("%{API_KEY_ENV}"),
         "--expand-header".to_string(),
@@ -302,6 +323,14 @@ pub async fn run_api_stream(
         let command = new_api_command(&route, working_dir, path);
         let accumulator = Arc::new(Mutex::new(ApiChatAccumulator::default()));
         let parser_accumulator = Arc::clone(&accumulator);
+        log::info!(
+            "api_stream: request to {} ({}): {} messages, {} bytes",
+            route.model_id,
+            route.provider_name,
+            sent.len(),
+            request.len()
+        );
+        let requested_at = Instant::now();
         let status = run_jsonl_stream_cancellable(
             command,
             &request,
@@ -315,6 +344,13 @@ pub async fn run_api_stream(
             &mut on_event,
         )
         .await?;
+        log::info!(
+            "api_stream: {} answered after {:.1}s ({}, http {:?})",
+            route.model_id,
+            requested_at.elapsed().as_secs_f32(),
+            status,
+            accumulator.lock().ok().and_then(|accumulator| accumulator.http_status)
+        );
 
         // Killed by a stop, not broken: no error banner for a stop the user
         // asked for.
@@ -618,6 +654,7 @@ pub async fn run_api_stream(
                         working_dir,
                         path,
                         model.read_window,
+                        harness_cancel_for(session_id),
                     )
                     .await
                 }

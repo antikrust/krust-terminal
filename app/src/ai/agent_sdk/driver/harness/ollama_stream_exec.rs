@@ -24,7 +24,7 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::claude_stream_exec::{
-    finish_harness_session, harness_cancel_for, register_harness_session, run_jsonl_stream,
+    cancelled, finish_harness_session, harness_cancel_for, register_harness_session, run_jsonl_stream,
     run_jsonl_stream_cancellable, HarnessCancel,
 };
 use super::ollama_committee_proof::rewrite_loss;
@@ -720,8 +720,15 @@ pub(crate) async fn dispatch_builtin_tool(
     working_dir: &Path,
     path: &str,
 ) -> Result<String, String> {
-    dispatch_builtin_tool_with_read_window(name, arguments, working_dir, path, READ_WINDOW_BYTES)
-        .await
+    dispatch_builtin_tool_with_read_window(
+        name,
+        arguments,
+        working_dir,
+        path,
+        READ_WINDOW_BYTES,
+        None,
+    )
+    .await
 }
 
 /// As [`dispatch_builtin_tool`], with `read_file` windows of up to
@@ -729,13 +736,14 @@ pub(crate) async fn dispatch_builtin_tool(
 /// that a read never goes to `read_in_parts`); cloud models, whose windows
 /// are far larger, read much more per call — paging a big file a sliver at a
 /// time cost them a tool call, and a resend of the whole conversation, per
-/// sliver.
+/// sliver. A raised `cancel` stops a running `run_code` command.
 pub(crate) async fn dispatch_builtin_tool_with_read_window(
     name: &str,
     arguments: &Value,
     working_dir: &Path,
     path: &str,
     read_window_bytes: usize,
+    cancel: Option<HarnessCancel>,
 ) -> Result<String, String> {
     let arg_str = |key: &str| {
         arguments
@@ -897,7 +905,7 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
                 .get("code")
                 .and_then(Value::as_str)
                 .ok_or("run_code requires a string `code`")?;
-            let execution = run_code(language, code, working_dir, path).await;
+            let execution = run_code(language, code, working_dir, path, cancel).await;
             if execution.exit_code == 0 {
                 // Success reads like command output — no exit/stdout/stderr
                 // scaffolding cluttering the tool card (or the model's
@@ -1629,11 +1637,21 @@ pub(crate) async fn execute_shell(
     working_dir: &Path,
     path: &str,
 ) -> ShellExecution {
+    execute_shell_cancellable(command_text, working_dir, path, None).await
+}
+
+/// As [`execute_shell`], but a raised `cancel` kills the command mid-run.
+async fn execute_shell_cancellable(
+    command_text: &str,
+    working_dir: &Path,
+    path: &str,
+    cancel: Option<HarnessCancel>,
+) -> ShellExecution {
     let mut command = Command::new("/bin/zsh");
     command.args(["-lc", command_text]);
     command.current_dir(working_dir);
     command.env("PATH", path);
-    run_captured(command).await
+    run_captured(command, cancel).await
 }
 
 /// Runs `code` in a fresh interpreter process for `language`, capturing its
@@ -1641,10 +1659,18 @@ pub(crate) async fn execute_shell(
 /// is the whole point versus a persistent code REPL: the global `js` MCP tool
 /// kept one Node context alive across calls, so weak models colliding on a
 /// re-declared `const fs` made it unusable (see [`is_builtin_local_tool`]).
-async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) -> ShellExecution {
+async fn run_code(
+    language: &str,
+    code: &str,
+    working_dir: &Path,
+    path: &str,
+    cancel: Option<HarnessCancel>,
+) -> ShellExecution {
     let (program, ext) = match language.trim().to_ascii_lowercase().as_str() {
         // Shell goes straight through the login-shell path.
-        "bash" | "sh" | "shell" | "zsh" => return execute_shell(code, working_dir, path).await,
+        "bash" | "sh" | "shell" | "zsh" => {
+            return execute_shell_cancellable(code, working_dir, path, cancel).await
+        }
         "python" | "python3" | "py" => ("python3", "py"),
         "javascript" | "js" | "node" => ("node", "js"),
         "ruby" | "rb" => ("ruby", "rb"),
@@ -1677,7 +1703,7 @@ async fn run_code(language: &str, code: &str, working_dir: &Path, path: &str) ->
     command.args(["-lc", run.as_str(), "krust-run-code", &*script_arg]);
     command.current_dir(working_dir);
     command.env("PATH", path);
-    let mut execution = run_captured(command).await;
+    let mut execution = run_captured(command, cancel).await;
     let _ = std::fs::remove_file(&script);
 
     // Exit 127 from the shell means `program` wasn't found on PATH. Without
@@ -1723,13 +1749,26 @@ fn which_on_path(program: &str, path: &str) -> bool {
     })
 }
 
+/// The longest one tool command may run.
+const TOOL_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+
+/// Why a running tool command was cut short.
+enum ToolInterrupt {
+    Stopped,
+    TimedOut,
+}
+
 /// Spawns `command` with stdin closed and both pipes captured under hard byte
 /// caps, returning its output. Shared by [`execute_shell`] and [`run_code`].
 ///
 /// Capture is incremental (`capture_bounded`) rather than `Command::output()`
 /// because that buffered an unbounded long-running command in memory before
 /// truncation could happen.
-async fn run_captured(mut command: Command) -> ShellExecution {
+///
+/// A command that runs past [`TOOL_TIMEOUT`], or is still running when `cancel`
+/// is raised (the user pressed Stop), is killed and reported as such, so one
+/// hung tool can't hold a turn for good.
+async fn run_captured(mut command: Command, cancel: Option<HarnessCancel>) -> ShellExecution {
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1760,7 +1799,48 @@ async fn run_captured(mut command: Command) -> ShellExecution {
             None => String::new(),
         }
     };
-    let (stdout, stderr) = futures::join!(read_stdout, read_stderr);
+    let pumps = async { futures::join!(read_stdout, read_stderr) };
+    let interrupted = async {
+        let timeout = Box::pin(Timer::after(TOOL_TIMEOUT));
+        match cancel {
+            Some(cancel) => {
+                match futures::future::select(Box::pin(cancelled(cancel)), timeout).await {
+                    futures::future::Either::Left(_) => ToolInterrupt::Stopped,
+                    futures::future::Either::Right(_) => ToolInterrupt::TimedOut,
+                }
+            }
+            None => {
+                timeout.await;
+                ToolInterrupt::TimedOut
+            }
+        }
+    };
+    futures::pin_mut!(pumps, interrupted);
+    let (stdout, stderr) = match futures::future::select(pumps, interrupted).await {
+        futures::future::Either::Left((output, _)) => output,
+        futures::future::Either::Right((interrupt, _)) => {
+            let _ = child.kill();
+            let (stderr, exit_code) = match interrupt {
+                ToolInterrupt::Stopped => ("stopped by the user".to_string(), 130),
+                ToolInterrupt::TimedOut => {
+                    log::warn!("ollama_stream: tool timed out, killed it");
+                    (
+                        format!(
+                            "timed out after {} minutes and was killed. Run long jobs in the \
+                             background (nohup … > file 2>&1 &) and read the file.",
+                            TOOL_TIMEOUT.as_secs() / 60
+                        ),
+                        124,
+                    )
+                }
+            };
+            return ShellExecution {
+                stdout: String::new(),
+                stderr,
+                exit_code,
+            };
+        }
+    };
     match child.status().await {
         Ok(status) => ShellExecution {
             stdout,
@@ -2325,7 +2405,8 @@ async fn run_ollama_generate_loop(
                     name: "Shell".to_string(),
                     input: json!({ "command": command }),
                 });
-                let execution = execute_shell(&command, working_dir, path).await;
+                let execution =
+                    execute_shell_cancellable(&command, working_dir, path, cancel.clone()).await;
                 on_event(TurnEvent::ToolCallResult {
                     call_id,
                     outcome: execution.outcome(),
@@ -3074,6 +3155,7 @@ async fn run_ollama_chat_with_tools(
                     working_dir,
                     path,
                     limits.read_window(),
+                    harness_cancel_for(session_id),
                 )
                 .await
             } else if let Some(tool_caller) = tool_caller {

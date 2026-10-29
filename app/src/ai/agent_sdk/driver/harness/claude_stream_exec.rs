@@ -96,7 +96,7 @@ pub fn cancel_harness_session(session_id: &Uuid) -> bool {
 /// Resolves once `cancel` is raised. Polled rather than pushed because the
 /// flag is set from a UI thread with no runtime handle; 50ms is well under
 /// the threshold where a stop feels sluggish.
-async fn cancelled(cancel: HarnessCancel) {
+pub(super) async fn cancelled(cancel: HarnessCancel) {
     loop {
         if cancel.is_cancelled() {
             return;
