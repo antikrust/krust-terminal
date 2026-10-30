@@ -331,9 +331,7 @@ pub(crate) async fn run_image_turn(
         model: Some(model.to_string()),
         cwd: Some(working_dir.to_string_lossy().into_owned()),
     });
-    on_event(TurnEvent::Text {
-        text: format!("_Drawing on {model}. This can take a few minutes while it loads._"),
-    });
+    // What it is doing shows in the rotating status line under the block, not as a line of text.
     let request = ImageRequest {
         prompt: prompt.trim().to_string(),
         out: None,

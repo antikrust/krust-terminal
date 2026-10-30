@@ -423,6 +423,8 @@ pub enum TerminalAction {
     ToggleSessionImagesPanel,
     /// Opens one of the session's images (a path) in the system's viewer.
     OpenSessionImage(String),
+    /// How many pictures the images panel shows side by side (1 to 4).
+    SetSessionImagesPerRow(usize),
     /// Cancel the ambient agent task while it's loading
     CancelAmbientAgentTask,
     OpenInlineHistoryMenu,
@@ -758,6 +760,7 @@ impl fmt::Debug for TerminalAction {
             ToggleConversationDetailsPanel => write!(f, "ToggleConversationDetailsPanel"),
             ToggleSessionImagesPanel => write!(f, "ToggleSessionImagesPanel"),
             OpenSessionImage(_) => write!(f, "OpenSessionImage"),
+            SetSessionImagesPerRow(_) => write!(f, "SetSessionImagesPerRow"),
             CancelAmbientAgentTask => write!(f, "CancelAmbientAgentTask"),
             OpenInlineHistoryMenu => write!(f, "OpenInlineHistoryMenu"),
             OpenModelSelector => write!(f, "OpenModelSelector"),

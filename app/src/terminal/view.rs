@@ -2970,6 +2970,10 @@ pub struct TerminalView {
     is_session_images_panel_open: bool,
     session_images_toggle_mouse_state: krustui::elements::MouseStateHandle,
     session_images_scroll_state: ClippedScrollStateHandle,
+    /// Pictures side by side in the images panel, and the slider that sets it.
+    session_images_per_row: usize,
+    session_images_close_mouse_state: krustui::elements::MouseStateHandle,
+    session_images_slider_state: krustui::ui_components::slider::SliderStateHandle,
     /// Mouse state handle for the ambient agent cancel button in the pane header.
     ambient_agent_cancel_mouse_state: krustui::elements::MouseStateHandle,
 
@@ -4531,6 +4535,9 @@ impl TerminalView {
             is_session_images_panel_open: false,
             session_images_toggle_mouse_state: Default::default(),
             session_images_scroll_state: Default::default(),
+            session_images_per_row: 2,
+            session_images_close_mouse_state: Default::default(),
+            session_images_slider_state: Default::default(),
             has_auto_opened_conversation_details_panel: false,
             conversation_details_panel_auto_open_policy: Default::default(),
             pending_cloud_followup_task_id: None,
@@ -28187,6 +28194,7 @@ impl TypedActionView for TerminalView {
             | ToggleConversationDetailsPanel
             | ToggleSessionImagesPanel
             | OpenSessionImage(_)
+            | SetSessionImagesPerRow(_)
             | CancelAmbientAgentTask
             | OpenInlineHistoryMenu
             | OpenModelSelector
@@ -29314,6 +29322,10 @@ impl TypedActionView for TerminalView {
             }
             OpenSessionImage(path) => {
                 ctx.open_file_path(std::path::Path::new(path));
+            }
+            SetSessionImagesPerRow(count) => {
+                self.session_images_per_row = (*count).clamp(1, session_images::MAX_PER_ROW);
+                ctx.notify();
             }
             CancelAmbientAgentTask => {
                 if let Some(ambient_agent_view_model) = self.ambient_agent_view_model.as_ref() {

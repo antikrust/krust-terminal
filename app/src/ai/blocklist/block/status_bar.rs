@@ -52,6 +52,10 @@ use crate::ai::blocklist::{
     BlocklistAIInputModel, QueuedQueryEvent, QueuedQueryModel, ResponseStreamId,
 };
 use crate::ai::llms::LLMPreferences;
+use crate::ai::loading::{
+    with_icon, ICON_CHEWING, ICON_DRAWING, ICON_LOADING, ICON_RUNNING, ICON_STILL_GOING,
+};
+use crate::ai::model_caps;
 use crate::ai::AgentTip;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::{AISettings, InputModeSettings, InputSettings};
@@ -767,36 +771,51 @@ impl BlocklistAIStatusBar {
             }
             .to_owned();
         };
-        let running = format!("Running {model} locally...");
-        let messages: [&str; 4] = if swear_mode {
-            [
-                if has_output {
-                    SWEAR_THINKING_MESSAGE
-                } else {
-                    SWEAR_LOAD_OUTPUT_MESSAGE
-                },
-                &running,
-                "chewing through it...",
-                "still fucking going...",
-            ]
+        let draws = model_id
+            .as_deref()
+            .is_some_and(|id| model_caps::caps_of(id, app).image_out);
+        // Each message is (icon, text); no icon keeps the Krust glyph in front of it.
+        let first = if has_output {
+            if swear_mode { SWEAR_THINKING_MESSAGE } else { THINKING_MESSAGE }
+        } else if swear_mode {
+            SWEAR_LOAD_OUTPUT_MESSAGE
         } else {
-            [
-                if has_output {
-                    THINKING_MESSAGE
-                } else {
-                    LOAD_OUTPUT_MESSAGE
-                },
-                &running,
-                "Chewing through it...",
-                "Still going — local models take a moment...",
-            ]
+            LOAD_OUTPUT_MESSAGE
+        };
+        let messages: Vec<(Option<&str>, String)> = match (draws, swear_mode) {
+            // A model that makes pictures: what it is doing, in place of "running locally".
+            (true, false) => vec![
+                (Some(ICON_DRAWING), format!("Drawing on {model}...")),
+                (Some(ICON_LOADING), "This can take a few minutes while it loads...".to_owned()),
+                (Some(ICON_STILL_GOING), "Still drawing — pictures take a while locally...".to_owned()),
+            ],
+            (true, true) => vec![
+                (Some(ICON_DRAWING), format!("drawing on {model}...")),
+                (Some(ICON_LOADING), "this takes a few fucking minutes while it loads...".to_owned()),
+                (Some(ICON_STILL_GOING), "still drawing, don't touch anything...".to_owned()),
+            ],
+            (false, false) => vec![
+                (None, first.to_owned()),
+                (Some(ICON_RUNNING), format!("Running {model} locally...")),
+                (Some(ICON_CHEWING), "Chewing through it...".to_owned()),
+                (Some(ICON_STILL_GOING), "Still going — local models take a moment...".to_owned()),
+            ],
+            (false, true) => vec![
+                (None, first.to_owned()),
+                (Some(ICON_RUNNING), format!("Running {model} locally...")),
+                (Some(ICON_CHEWING), "chewing through it...".to_owned()),
+                (Some(ICON_STILL_GOING), "still fucking going...".to_owned()),
+            ],
         };
         let index = self
             .krusting_rotation_started_at
             .map(|start| (start.elapsed().as_secs() / 3) as usize)
             .unwrap_or(0)
             % messages.len();
-        messages[index].to_owned()
+        match &messages[index] {
+            (Some(icon), text) => with_icon(icon, text),
+            (None, text) => text.clone(),
+        }
     }
 
     fn should_refresh_last_read_timer(&self, ctx: &ViewContext<Self>) -> bool {

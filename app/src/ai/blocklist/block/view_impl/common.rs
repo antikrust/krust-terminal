@@ -121,7 +121,7 @@ pub const LOAD_OUTPUT_MESSAGE: &str = "Sending...";
 pub const SWEAR_LOAD_OUTPUT_MESSAGE: &str = "hold on yer cunt, it's sending...";
 /// Swear-mode variant of [`THINKING_MESSAGE`].
 pub const SWEAR_THINKING_MESSAGE: &str =
-    "just wait, i'm gathering words into a word salad that's vaguely plausible to your feeble intellect...";
+    "just wait, i'm gathering words into a salad that's vaguely plausible to your feeble intellect...";
 /// Shown once the run has produced output but hasn't finished: the request
 /// is long past "sending", the model is working.
 pub const THINKING_MESSAGE: &str = "Thinking...";
@@ -612,7 +612,7 @@ pub fn render_krusting_indicator_base(
         let sub_element = if should_indent_tip_for_krust_glyph {
             let font_size = appearance.monospace_font_size() - 3.;
             let glyph_indent = Text::new_inline(
-                format!("{KRUST_GLYPH} "),
+                format!("{KRUST_GLYPH}  "),
                 appearance.ui_font_family(),
                 font_size,
             )
@@ -701,6 +701,7 @@ pub fn render_output_status_text(
 ) -> Box<dyn Element> {
     let internal_element = match label {
         MaybeShimmeringText::Static(text) => {
+            let text = crate::ai::loading::split_icon(&text).1.to_owned();
             let sub_text_color =
                 blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1());
             Text::new(
