@@ -2059,6 +2059,35 @@ define_settings_group!(AISettings, settings: [
         description: "Ollama runbook settings, as a JSON object with a \"judge\" model tag or \"auto\".",
     },
 
+    // The program that makes pictures for the `generate_image` tool and the `imagine` command: it
+    // takes imagine.py's flags (--json --no-show --out --size --seed --ref --transparent -- prompt)
+    // and prints one JSON line with the saved `path`. Empty falls back to `KRUST_IMAGE_COMMAND`,
+    // then to ~/github/image-lab/bin/imagine-engine.
+    image_command: ImageCommand {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.krust_agent.other.image_command",
+        description: "Program that makes pictures (takes imagine.py's flags, prints one JSON line with the saved path).",
+    },
+
+    // Where `generate_image` / `imagine` save a picture that names no file. Empty falls back to
+    // `KRUST_IMAGES_DIR`, then ~/github/image-lab/images if that project exists, then the app's
+    // own images folder.
+    image_output_dir: ImageOutputDir {
+        type: Option<String>,
+        default: None,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.krust_agent.other.image_output_dir",
+        description: "Folder where generated pictures are saved when no file is named.",
+    },
+
     // Fork: Ollama instances on other machines. Holds each host's address
     // alongside the models it had when last checked — the model menu is built
     // synchronously and cannot wait on a machine that may be asleep, so the

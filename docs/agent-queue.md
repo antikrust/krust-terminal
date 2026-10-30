@@ -71,3 +71,25 @@ and a commit) are a separate task.
 - The app sending runs to Moloch with workspaces from its own UI (the script does it).
 - `/mnt/terra` on sentience as the workspace store and its quota; the guest image needing the
   toolchains.
+
+## Pictures: `generate_image` and `imagine`
+
+`app/src/ai/image_gen.rs` makes pictures for two front doors:
+
+- **`generate_image`**, a tool next to `plan_tasks`: the Ollama and API tool loops get it in
+  process, Claude Code and Codex over the queue MCP server (socket op `image`). It answers with
+  JSON: the saved `path`, the size, and a `markdown` image to put in the reply.
+- **`imagine "a chrome push button"`**, a command in every Krust shell (the bundle's
+  `Contents/Resources/bin`, already on the shells' PATH, so nothing to install). Hidden worker mode
+  `image-cli` of the `krust` binary: it sends the request to the running app over the queue socket
+  and prints the path, or `--json`, and draws the picture in the block when the terminal draws Kitty
+  graphics (`TERM_PROGRAM=KrustTerminal`; `--show` / `--no-show` override). Flags: `--out`, `--size`,
+  `--seed`, `--ref`, `--transparent`, `--backend command|pool`, `--cols`.
+
+Backends, tried in turn (`image_gen::plan`): the **local command** (setting `image_command`, else
+`KRUST_IMAGE_COMMAND`, else `~/github/image-lab/bin/imagine-engine`: any program taking
+`imagine.py`'s flags and printing one JSON line with the saved `path`) and then every **pool model with
+the `image_out` capability** (a custom endpoint's or provider's `/images/generations`, or an Ollama
+`/api/generate` on a build that still has image generation). Ollama removed its image generation in
+0.32.6 (still gone in 0.40.13), so its `x/flux2-klein` and `x/z-image-turbo` need 0.32.5 or earlier.
+Ollama lists these models with the capability `image`, which maps to `image_out`.

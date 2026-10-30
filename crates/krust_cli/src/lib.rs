@@ -536,6 +536,50 @@ pub enum WorkerCommand {
     #[cfg(not(target_family = "wasm"))]
     #[clap(hide = true)]
     QueueMcpServer,
+
+    /// Makes a picture through the running app and draws it in the terminal (the `imagine`
+    /// command in the app bundle's `bin` folder runs this).
+    ///
+    /// The app owns the settings, the keys and the agent pool, so the picture is made there; this
+    /// process only sends the request over the app's queue socket and shows the result: the path,
+    /// or JSON with `--json`, and the picture itself in a terminal that draws Kitty graphics.
+    #[cfg(not(target_family = "wasm"))]
+    #[clap(hide = true)]
+    ImageCli {
+        /// What to draw.
+        #[clap(required = true)]
+        prompt: Vec<String>,
+        /// Where to save the PNG (default: ./imagine-<time>-<words>.png).
+        #[clap(long)]
+        out: Option<std::path::PathBuf>,
+        /// WIDTHxHEIGHT, 256 to 2048 (default 1024x1024).
+        #[clap(long)]
+        size: Option<String>,
+        /// Repeat a picture.
+        #[clap(long)]
+        seed: Option<u64>,
+        /// A picture to copy or edit.
+        #[clap(long = "ref")]
+        reference: Option<std::path::PathBuf>,
+        /// Draw on a flat background, then cut it out.
+        #[clap(long)]
+        transparent: bool,
+        /// Try only this backend: `command` or `pool`.
+        #[clap(long)]
+        backend: Option<String>,
+        /// Print the result as one JSON line instead of the path.
+        #[clap(long)]
+        json: bool,
+        /// Always draw the picture in the terminal.
+        #[clap(long)]
+        show: bool,
+        /// Never draw the picture in the terminal.
+        #[clap(long = "no-show")]
+        no_show: bool,
+        /// Width when drawn, in terminal columns.
+        #[clap(long = "cols", default_value_t = 40)]
+        columns: u32,
+    },
 }
 
 /// CLI-related subcommands. The command-line interface to Krust isn't a full SDK (e.g. with language bindings),

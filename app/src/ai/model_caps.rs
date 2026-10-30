@@ -266,7 +266,8 @@ pub fn from_ollama_capabilities(labels: &[String]) -> Caps {
     Caps {
         vision: labels.iter().any(|label| label == "vision"),
         embed: labels.iter().any(|label| label == "embedding"),
-        image_out: false,
+        // Ollama's image-generation models (x/flux2-klein, x/z-image-turbo) list "image".
+        image_out: labels.iter().any(|label| label == "image"),
     }
 }
 

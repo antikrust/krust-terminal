@@ -163,7 +163,7 @@ async fn probe_model_caps_once(
                 let caps = crate::ai::model_caps::Caps {
                     vision: has(&value, "vision"),
                     embed: has(&value, "embedding"),
-                    image_out: false,
+                    image_out: has(&value, "image"),
                 };
                 crate::ai::model_caps::record(&format!("{OLLAMA_MODEL_ID_PREFIX}{model}"), caps);
                 caps

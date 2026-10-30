@@ -867,6 +867,32 @@ fn run_worker_command(worker: &krust_cli::WorkerCommand) -> Result<()> {
             crate::ai::queue_tools::run_queue_mcp_server();
             Ok(())
         }
+        #[cfg(not(target_family = "wasm"))]
+        krust_cli::WorkerCommand::ImageCli {
+            prompt,
+            out,
+            size,
+            seed,
+            reference,
+            transparent,
+            backend,
+            json,
+            show,
+            no_show,
+            columns,
+        } => crate::ai::image_gen::run_cli(crate::ai::image_gen::CliOptions {
+            prompt: prompt.join(" "),
+            out: out.clone(),
+            size: size.clone(),
+            seed: *seed,
+            reference: reference.clone(),
+            transparent: *transparent,
+            backend: backend.clone(),
+            json: *json,
+            show: *show,
+            no_show: *no_show,
+            columns: *columns,
+        }),
         #[cfg(not(any(
             feature = "local_tty",
             feature = "plugin_host",

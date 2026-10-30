@@ -23,11 +23,13 @@ use krustui::ModelSpawner;
 use serde_json::{json, Value};
 
 use crate::ai::agent_queue::{AgentQueue, LineKind, PlannedTask, TaskState};
+use crate::ai::image_gen;
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{McpToolCaller, McpToolSpec};
 
 pub(crate) const PLAN_TASKS: &str = "plan_tasks";
 pub(crate) const COLLECT_RESULTS: &str = "collect_results";
 pub(crate) const LOAD_PLAN: &str = "load_plan";
+pub(crate) const GENERATE_IMAGE: &str = "generate_image";
 /// Not a model's tool: what a script sends over the socket the moment it writes a plan file
 /// (reverse-lab's `reverse_engineering_auto.py`). The queue hands it out only in spawn mode.
 const OFFER_PLAN: &str = "offer_plan";
@@ -126,6 +128,40 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
             }),
         },
         McpToolSpec {
+            name: GENERATE_IMAGE.to_string(),
+            description: "Make a picture from a description and save it as a PNG. Returns JSON \
+                with the file's `path`, its size, and a `markdown` image you can put in your \
+                answer so the picture shows. It runs on this machine's image model (or one the \
+                user switched on), so it can take a minute. For many pictures in a row, call it \
+                once per picture and keep the prompts alike (same angle, background and size). \
+                To redo or restyle a picture, pass it as `reference_image`."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "prompt": { "type": "string", "description": "What to draw." },
+                    "out": {
+                        "type": "string",
+                        "description": "Where to save it (absolute path, .png). Optional; the app's images folder when left out."
+                    },
+                    "size": {
+                        "type": "string",
+                        "description": "WIDTHxHEIGHT between 256 and 2048 (optional; 1024x1024)."
+                    },
+                    "seed": { "type": "integer", "description": "Repeat a picture (optional)." },
+                    "reference_image": {
+                        "type": "string",
+                        "description": "Absolute path of a picture to copy or edit (optional)."
+                    },
+                    "transparent": {
+                        "type": "boolean",
+                        "description": "Draw on a flat background and cut it out, giving a PNG with a transparent background (optional)."
+                    }
+                },
+                "required": ["prompt"]
+            }),
+        },
+        McpToolSpec {
             name: COLLECT_RESULTS.to_string(),
             description: "Wait for tasks handed out with plan_tasks and return what each answered, \
                 or why it failed. Returns early if `wait_seconds` pass; the tasks still running \
@@ -160,6 +196,7 @@ impl McpToolCaller for QueueTools {
             PLAN_TASKS => self.plan(&arguments).await,
             COLLECT_RESULTS => self.collect(&arguments).await,
             LOAD_PLAN => self.load(&arguments, true).await,
+            GENERATE_IMAGE => self.generate_image(&arguments).await,
             OFFER_PLAN => self.load(&arguments, false).await,
             LIST_TASKS => self.list_tasks().await,
             TASK_OUTPUT => self.task_output(&arguments).await,
@@ -256,6 +293,19 @@ impl QueueTools {
             listed.join("; "),
             ids
         ))
+    }
+
+    /// `generate_image`: makes a picture on the first backend that can, and answers with JSON.
+    async fn generate_image(&self, arguments: &Value) -> Result<String, String> {
+        let request = image_gen::ImageRequest::from_arguments(arguments)?;
+        let backend = request.backend.clone();
+        let plan = self
+            .spawner
+            .spawn(move |_queue, ctx| image_gen::plan(backend.as_deref(), ctx))
+            .await
+            .map_err(|_| "the agent queue is not available".to_string())?;
+        let result = image_gen::run(plan, &request).await?;
+        Ok(result.to_json().to_string())
     }
 
     /// `load_plan` (a model asked: always hand the plan out) or `offer_plan` (a script offered it:
@@ -469,6 +519,7 @@ fn handle_socket_client(stream: UnixStream, spawner: ModelSpawner<AgentQueue>) {
         "offer_plan" => OFFER_PLAN,
         "list_tasks" => LIST_TASKS,
         "task_output" => TASK_OUTPUT,
+        "image" => GENERATE_IMAGE,
         _ => "",
     };
     let tools = QueueTools { spawner, inner: None };
@@ -540,6 +591,8 @@ fn handle_mcp_request(method: &str, params: &Value, id: Value) -> Value {
                 "collect"
             } else if name == LOAD_PLAN {
                 "load_plan"
+            } else if name == GENERATE_IMAGE {
+                "image"
             } else {
                 ""
             };
@@ -566,7 +619,7 @@ fn handle_mcp_request(method: &str, params: &Value, id: Value) -> Value {
 }
 
 /// Sends one `{op, arguments}` to the app's socket and returns its `result`.
-fn socket_request(op: &str, arguments: &Value) -> Result<String, String> {
+pub(crate) fn socket_request(op: &str, arguments: &Value) -> Result<String, String> {
     let stream = UnixStream::connect(socket_path())
         .map_err(|error| format!("the agent queue is not reachable: {error}"))?;
     let mut writer = stream

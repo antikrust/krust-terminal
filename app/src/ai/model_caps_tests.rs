@@ -147,6 +147,14 @@ fn ollama_capabilities_list_is_read() {
         from_ollama_capabilities(&strings(&["completion", "tools"])),
         Caps::NONE
     );
+    // Ollama's image models (x/flux2-klein, x/z-image-turbo) list "image".
+    assert_eq!(
+        from_ollama_capabilities(&strings(&["image"])),
+        Caps {
+            image_out: true,
+            ..Caps::NONE
+        }
+    );
 }
 
 #[test]
