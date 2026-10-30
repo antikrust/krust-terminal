@@ -1511,6 +1511,20 @@ define_settings_group!(AISettings, settings: [
         description: "Tiers (easy, medium, hard) set on BYOR models, as `model id=tier`.",
     }
 
+    // What the user says a model can do where the guess is wrong, as `<model id>=vision,-embed`:
+    // a bare label forces it on, a leading `-` forces it off. A task that needs a capability
+    // (reading images, say) is only sent to a model that has it.
+    byor_model_caps: ByorModelCaps {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.byor_model_caps",
+        description: "Capabilities (vision, image_out, embed) set on models, as `model id=vision,-embed`.",
+    }
+
     // The models agents may run on are everything the app can see (BYOR, custom endpoints, Ollama
     // on any machine, Claude Code, Codex); this holds the user's switches, `<model id>=on|off`.
     // Without one a model is on, except Claude Code's and Codex's (a subscription): off.

@@ -59,6 +59,7 @@ use crate::ai::api_providers::{
     ApiProviderKeys, FailoverSource, LOCAL_OLLAMA,
 };
 use crate::ai::agent_queue::{AgentQueue, LineKind, TaskState};
+use crate::ai::model_caps::{self, Caps};
 use crate::ai::task_router::Difficulty;
 use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::harness_availability::HarnessAvailabilityModel;
@@ -720,10 +721,10 @@ pub struct AISettingsPageView {
     /// local models), so a refresh that changes none of it doesn't rebuild
     /// (and close) them.
     byor_failover_sources: Vec<FailoverSource>,
-    /// The Agents page's model rows: each model's id, its on/off switch, its tier button's and its
-    /// pool-membership button's mouse states, rebuilt with the failover rows when what the app can
-    /// see changes.
-    agent_model_rows: Vec<(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)>,
+    /// The Agents page's model rows: each model's id, its on/off switch, its tier button's,
+    /// its pool-membership button's and its vision button's mouse states, rebuilt with the
+    /// failover rows when what the app can see changes.
+    agent_model_rows: Vec<AgentModelRowState>,
     /// The Agents page's pools: the menu of every pool, the pool it shows (and edits, when it is
     /// one the user made), and the name field and button that make a new pool.
     pool_dropdown: ViewHandle<Dropdown<AISettingsPageAction>>,
@@ -3715,22 +3716,21 @@ impl AISettingsPageView {
     /// A switch, a tier button state and a pool button state for every agent model, keeping those
     /// a model already had (so a click in flight isn't lost when the list is rebuilt).
     fn agent_model_row_states(
-        previous: &[(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)],
+        previous: &[AgentModelRowState],
         ctx: &mut ViewContext<Self>,
-    ) -> Vec<(String, SwitchStateHandle, MouseStateHandle, MouseStateHandle)> {
+    ) -> Vec<AgentModelRowState> {
         api_providers::agent_models(ctx)
             .into_iter()
             .map(|model| {
-                match previous.iter().find(|(id, _, _, _)| *id == model.model_id) {
-                    Some((id, switch, tier, pool)) => {
-                        (id.clone(), switch.clone(), tier.clone(), pool.clone())
-                    }
-                    None => (
-                        model.model_id,
-                        Default::default(),
-                        Default::default(),
-                        Default::default(),
-                    ),
+                match previous.iter().find(|row| row.model_id == model.model_id) {
+                    Some(row) => row.clone(),
+                    None => AgentModelRowState {
+                        model_id: model.model_id,
+                        switch: Default::default(),
+                        tier: Default::default(),
+                        pool: Default::default(),
+                        vision: Default::default(),
+                    },
                 }
             })
             .collect()
@@ -4094,6 +4094,8 @@ pub enum AISettingsPageAction {
     /// The Agents page: switch an agent model on or off, and cycle its tier (by model id).
     ToggleAgentModel(String),
     CycleAgentTier(String),
+    /// Flips whether an agent model counts as reading images (by model id).
+    ToggleAgentVision(String),
     /// The Agents page's pools: show a pool, make one from the typed name (a copy of the one
     /// shown), delete the one shown (a pool the user made), make the one shown the queue's pool
     /// (or stop using it), and put a model in or out of the one shown (by model id).
@@ -4603,6 +4605,12 @@ impl TypedActionView for AISettingsPageView {
                 cycle_model_tier(model_id, ctx);
                 // Fast and Genius split by tier.
                 Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleAgentVision(model_id) => {
+                toggle_model_vision(model_id, ctx);
+                // Tasks waiting for a model that reads images may have one now.
+                AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
                 ctx.notify();
             }
             AISettingsPageAction::SelectAgentPool(name) => {
@@ -9416,10 +9424,16 @@ impl AgentModelsWidget {
             .cloned();
         let mut list = Flex::column().with_spacing(6.);
         for model in models {
-            let Some((_, switch, tier, pool_button)) = view
+            let Some(AgentModelRowState {
+                switch,
+                tier,
+                pool: pool_button,
+                vision: vision_button,
+                ..
+            }) = view
                 .agent_model_rows
                 .iter()
-                .find(|(id, _, _, _)| *id == model.model_id)
+                .find(|row| row.model_id == model.model_id)
             else {
                 continue;
             };
@@ -9445,6 +9459,18 @@ impl AgentModelsWidget {
             }
             let tier_label = api_providers::model_tier(&model.model_id, app)
                 .map_or("auto", |tier| tier.label());
+            // Whether it reads images: on, off (reported or guessed so), or unknown (an Ollama or
+            // custom model nothing has answered for yet). Unknown counts as off for image tasks.
+            let vision_label = if model_caps::caps_of(&model.model_id, app).vision {
+                "on"
+            } else if model_caps::recorded(&model.model_id).is_some()
+                || api_providers::api_model_parts(&model.model_id).is_some()
+            {
+                "off"
+            } else {
+                "?"
+            };
+            let vision_id = model.model_id.clone();
             let label_color = if model.on {
                 appearance.theme().active_ui_text_color()
             } else {
@@ -9503,6 +9529,19 @@ impl AgentModelsWidget {
                             .on_click(move |ctx, _, _| {
                                 ctx.dispatch_typed_action(AISettingsPageAction::CycleAgentTier(
                                     tier_id.clone(),
+                                ));
+                            })
+                            .finish(),
+                    )
+                    .with_child(
+                        appearance
+                            .ui_builder()
+                            .button(ButtonVariant::Text, vision_button.clone())
+                            .with_text_label(format!("vision: {vision_label}"))
+                            .build()
+                            .on_click(move |ctx, _, _| {
+                                ctx.dispatch_typed_action(AISettingsPageAction::ToggleAgentVision(
+                                    vision_id.clone(),
                                 ));
                             })
                             .finish(),
@@ -10114,6 +10153,18 @@ fn small_icon_button(
     }
 }
 
+/// The widget state of one model row on the Agents page: its on/off switch and the mouse states of
+/// its tier, pool-membership and vision buttons. Kept across list rebuilds so a click in flight
+/// isn't lost.
+#[derive(Clone)]
+struct AgentModelRowState {
+    model_id: String,
+    switch: SwitchStateHandle,
+    tier: MouseStateHandle,
+    pool: MouseStateHandle,
+    vision: MouseStateHandle,
+}
+
 /// One row of the BYOR failover list: its provider and model menus, and the
 /// mouse states of its buttons (made here, never while rendering): up, down,
 /// "+" (another model of this provider below) and "−" (remove the row).
@@ -10303,6 +10354,21 @@ fn cycle_model_tier(model_id: &str, ctx: &mut ViewContext<AISettingsPageView>) {
     }
     AISettings::handle(ctx).update(ctx, |settings, ctx| {
         report_if_error!(settings.byor_model_tiers.set_value(tiers, ctx));
+    });
+}
+
+/// Flips whether `model_id` counts as reading images. The row keeps an override only where the user
+/// disagrees with what the provider reported or the name suggests.
+fn toggle_model_vision(model_id: &str, ctx: &mut ViewContext<AISettingsPageView>) {
+    let entries = AISettings::as_ref(ctx).byor_model_caps.value().clone();
+    let flipped = model_caps::flipped_override(
+        &entries,
+        model_id,
+        Caps::VISION,
+        model_caps::base_caps(model_id),
+    );
+    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+        report_if_error!(settings.byor_model_caps.set_value(flipped, ctx));
     });
 }
 

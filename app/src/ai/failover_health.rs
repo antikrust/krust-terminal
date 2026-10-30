@@ -264,6 +264,7 @@ impl FailoverHealth {
                 }
             } else if let Some(tag) = ollama_model_name(model_id) {
                 self.check_ollama(base_url_of(tag).to_owned(), ctx);
+                self.check_caps(model_id.clone(), tag.to_owned(), ctx);
             }
         }
     }
@@ -335,6 +336,26 @@ impl FailoverHealth {
                     Err(error) => {
                         log::warn!("failover_health: could not check {model} on OpenRouter: {error}");
                     }
+                }
+            },
+        );
+    }
+
+    /// Asks Ollama what `tag` can do (reading images, say) once; the answer is kept for the agent
+    /// pools' capability filter. A model it could not ask about is tried again at the next refresh.
+    fn check_caps(&mut self, model_id: String, tag: String, ctx: &mut ModelContext<Self>) {
+        let key = format!("caps:{model_id}");
+        if crate::ai::model_caps::recorded(&model_id).is_some() || !self.checking.insert(key.clone())
+        {
+            return;
+        }
+        ctx.spawn(
+            async move { crate::ai::model_caps::probe_ollama(&tag).await },
+            move |me, found, ctx| {
+                me.checking.remove(&key);
+                if let Some(caps) = found {
+                    crate::ai::model_caps::record(&model_id, caps);
+                    ctx.emit(FailoverHealthEvent::Changed);
                 }
             },
         );

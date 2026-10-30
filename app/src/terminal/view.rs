@@ -233,6 +233,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_runbook::{run_ollama_runbook, RunbookConfig};
+use crate::ai::model_caps::Caps;
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream, OLLAMA_HARNESS_CONFIG_NAME,
 };
@@ -23763,7 +23764,8 @@ impl TerminalView {
         // work), and the conversation shows that model.
         let model_id = model_id.map(|id| {
             if is_auto_model_id(&id) {
-                resolve_auto_model(&id, &prompt, Difficulty::Medium, ctx).unwrap_or(id)
+                // Image attachments are not visible here yet, so a turn is placed as a text one.
+                resolve_auto_model(&id, &prompt, Difficulty::Medium, Caps::NONE, ctx).unwrap_or(id)
             } else {
                 id
             }
@@ -23806,7 +23808,7 @@ impl TerminalView {
             (LocalHarnessKind::Api, Some(model_id))
                 if *AISettings::as_ref(ctx).byor_failover_enabled.value() =>
             {
-                failover_routes(model_id, ctx)
+                failover_routes(model_id, Caps::NONE, ctx)
             }
             _ => Vec::new(),
         };

@@ -32,6 +32,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
 };
 use crate::ai::failover_health::FailoverHealth;
 use crate::ai::harness_availability::{HarnessAvailabilityModel, HarnessModelInfo};
+use crate::ai::model_caps::{self, Caps};
 use crate::ai::task_router::{
     choose, decide, failover_order, speed, strength_with_tier, Candidate, Difficulty, Policy,
 };
@@ -654,11 +655,12 @@ pub fn auto_models(menu: &[HarnessModelInfo]) -> Vec<HarnessModelInfo> {
 /// The failover row an Auto entry sends this prompt to, or `None` when no row can run: the
 /// decider rates the prompt (never below `floor`: a short follow-up in a working conversation is
 /// not easy work), and the entry's policy picks among the rows that are on, not known to be down
-/// and, with "Free models only", free.
+/// and, with "Free models only", free, and can do what `needs` asks for.
 pub fn resolve_auto_model(
     model_id: &str,
     prompt: &str,
     floor: Difficulty,
+    needs: Caps,
     app: &AppContext,
 ) -> Option<String> {
     let policy = Policy::from_label(model_id.strip_prefix(AUTO_MODEL_ID_PREFIX)?)?;
@@ -671,6 +673,8 @@ pub fn resolve_auto_model(
             FailoverTarget::Api(route) => Some(route),
             FailoverTarget::Cli(_) => None,
         })
+        // Only rows that can do what the turn needs (reading an image, say).
+        .filter(|route| model_caps::can_serve(&route.model_id, needs, app))
         .collect();
     let candidates: Vec<Candidate> = routes
         .iter()
@@ -1080,7 +1084,7 @@ pub fn route_strength(route: &ApiRoute, app: &AppContext) -> f64 {
 /// failover row except `model_id` itself, rows switched off and models
 /// OpenRouter reports down, each once, and only free ones when "Free models
 /// only" is on. A local app's row hands the turn over to that app.
-pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> {
+pub fn failover_routes(model_id: &str, needs: Caps, app: &AppContext) -> Vec<FailoverTarget> {
     let settings = AISettings::as_ref(app);
     let free_only = *settings.byor_failover_free_only.value();
     let disabled = settings.byor_failover_disabled.value();
@@ -1092,6 +1096,8 @@ pub fn failover_routes(model_id: &str, app: &AppContext) -> Vec<FailoverTarget> 
             // OpenRouter says it has no working endpoint right now.
             || health.is_known_down(&row)
             || (free_only && !is_free_model(&row))
+            // A turn that needs to read an image must not fall over to a model that cannot.
+            || !model_caps::can_serve(&row, needs, app)
             || routes.iter().any(|route| route.model_id() == row)
         {
             continue;
@@ -1297,6 +1303,7 @@ impl ApiProviderKeys {
             },
             move |me, body, ctx| match body {
                 Ok(body) => {
+                    record_live_modalities(&body, provider);
                     let models = parse_live_free_models(&body, provider);
                     if !models.is_empty() && me.live_models.get(provider.id) != Some(&models) {
                         me.live_models.insert(provider.id, models);
@@ -1354,6 +1361,40 @@ struct LiveModelEntry {
     id: String,
     name: Option<String>,
     context_length: Option<u64>,
+    #[serde(default)]
+    architecture: Option<LiveArchitecture>,
+}
+
+/// What an OpenRouter-style model list says a model takes in and gives out.
+#[derive(Deserialize)]
+struct LiveArchitecture {
+    #[serde(default)]
+    input_modalities: Vec<String>,
+    #[serde(default)]
+    output_modalities: Vec<String>,
+}
+
+/// Keeps what a live list says each model can do (read images, make them), for the capability
+/// filter. A list that doesn't say leaves the name's guess in place.
+fn record_live_modalities(body: &str, provider: &ApiProvider) {
+    let Ok(list) = serde_json::from_str::<LiveModelList>(body) else {
+        return;
+    };
+    let found: Vec<(String, model_caps::Caps)> = list
+        .data
+        .into_iter()
+        .filter_map(|entry| {
+            let architecture = entry.architecture?;
+            Some((
+                model_id_for(provider, &entry.id),
+                model_caps::from_modalities(
+                    &architecture.input_modalities,
+                    &architecture.output_modalities,
+                ),
+            ))
+        })
+        .collect();
+    model_caps::record_many(found);
 }
 
 /// The free models in an OpenRouter-style model list (`{"data": [{id, name,

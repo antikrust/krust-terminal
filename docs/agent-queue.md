@@ -33,6 +33,20 @@ failover use it differently.
   context), easy, medium or hard. A tier the user sets wins over the guess (`byor_model_tiers`,
   `route_strength`); the name still orders models within a tier.
 
+## Capabilities
+
+A task can say what a model must be able to do to take it: `needs` (`vision`, `image_out`, `embed`)
+on a queue task, on a plan lane or task, or in `plan_tasks`. The queue, the Auto entries and
+failover only consider models that have those capabilities (`app/src/ai/model_caps.rs`); the
+chooser itself is unchanged and sees the filtered candidates. A model's capabilities come from, in
+order: the vision button on its Agents-page row (stored as `byor_model_caps`), what the provider
+reported (Ollama's `/api/show`, asked once per model and kept in `model_caps.json`; OpenRouter's
+model list), a guess from the name for a hosted model, and for Claude Code and Codex a fixed yes
+for vision. A model nothing is known about has none, so an image task never goes to it; text
+tasks are unaffected. A task nothing on offer can take waits with the reason on its row. Not done:
+the local runners do not send images yet, and a turn's image attachments are not read where the
+Auto entry and failover are resolved (`terminal/view.rs`), so those pass no needs for now.
+
 ## Local and Moloch
 
 The task format is the same in both: title, prompt, difficulty (a `difficulty:` line in the prompt),

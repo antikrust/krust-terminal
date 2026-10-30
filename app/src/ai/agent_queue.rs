@@ -40,7 +40,9 @@ use crate::ai::api_providers::{
     is_free_model, model_tier, pool_targets, route_for, route_strength, ApiRoute, CliRoute,
     FailoverTarget,
 };
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name;
 use crate::ai::failover_health::{self, FailoverHealth, Health};
+use crate::ai::model_caps::{self, Caps};
 use crate::ai::task_router::{
     choose, decide, speed, strength_with_tier, Candidate, Difficulty, Policy,
 };
@@ -95,6 +97,10 @@ pub struct QueueTask {
     /// on-set. Ignored when the task is pinned to one model.
     #[serde(default)]
     pub pool: Option<String>,
+    /// What a model must be able to do to take the task (`vision`, …), as capability labels.
+    /// Empty for plain text work, which any model may take.
+    #[serde(default)]
+    pub needs: Vec<String>,
     /// What the task has said and done, live while it runs. Not saved.
     #[serde(skip)]
     pub transcript: Vec<TranscriptLine>,
@@ -247,6 +253,8 @@ pub struct AgentQueue {
     /// What Moloch last said about its workers (acolytes), for the panel; `None` until asked, or
     /// when no Moloch is configured.
     moloch: Option<String>,
+    /// Ollama models whose capabilities are being asked about, so none is asked twice at once.
+    probing: HashSet<String>,
 }
 
 impl Entity for AgentQueue {
@@ -264,6 +272,8 @@ pub struct PlannedTask {
     pub model: Option<String>,
     /// The agent pool to draw on (a pool name), or `None`/empty for the whole on-set.
     pub pool: Option<String>,
+    /// What a model must be able to do to take it (capability labels such as `vision`).
+    pub needs: Vec<String>,
 }
 
 /// Where a task stands, for a model waiting on its results.
@@ -329,6 +339,9 @@ struct PlanFile {
 struct PlanLane {
     #[serde(default)]
     spawn: bool,
+    /// Capability labels every task of the lane needs a model to have.
+    #[serde(default)]
+    needs: Vec<String>,
     #[serde(default)]
     tasks: Vec<PlanTask>,
 }
@@ -339,6 +352,9 @@ struct PlanTask {
     title: String,
     #[serde(default)]
     prompt: String,
+    /// Capability labels this task needs a model to have, on top of its lane's.
+    #[serde(default)]
+    needs: Vec<String>,
 }
 
 impl AgentQueue {
@@ -363,6 +379,7 @@ impl AgentQueue {
             running: false,
             next_id,
             moloch: None,
+            probing: HashSet::new(),
         }
     }
 
@@ -476,6 +493,7 @@ impl AgentQueue {
             home_dir(),
             None,
             None,
+            Vec::new(),
         );
         self.changed(ctx);
         self.pump(ctx);
@@ -490,6 +508,7 @@ impl AgentQueue {
         working_dir: PathBuf,
         model: Option<String>,
         pool: Option<String>,
+        needs: Vec<String>,
     ) {
         self.tasks.push(QueueTask {
             id: self.next_id,
@@ -504,6 +523,7 @@ impl AgentQueue {
             reason: String::new(),
             model,
             pool,
+            needs,
             transcript: Vec::new(),
             events: Vec::new(),
         });
@@ -553,13 +573,16 @@ impl AgentQueue {
             .unwrap_or_else(home_dir);
         let mut ids = Vec::new();
         for lane in plan.lanes.into_iter().filter(|lane| lane.spawn) {
+            let lane_needs = lane.needs;
             for task in lane.tasks {
                 let key = format!("plan:{}:{}", path.display(), task.id);
                 if task.prompt.trim().is_empty() || self.tasks.iter().any(|known| known.key == key) {
                     continue;
                 }
                 ids.push(self.next_id);
-                self.push(key, task.title, task.prompt, working_dir.clone(), None, None);
+                let mut needs = lane_needs.clone();
+                needs.extend(task.needs);
+                self.push(key, task.title, task.prompt, working_dir.clone(), None, None, needs);
             }
         }
         // Spawn mode: don't wait for the boss (or a click on Start) — fan the plan out at once,
@@ -593,6 +616,7 @@ impl AgentQueue {
                 task.working_dir,
                 task.model,
                 task.pool,
+                task.needs,
             );
         }
         self.running = true;
@@ -668,6 +692,30 @@ impl AgentQueue {
         ctx.emit(AgentQueueEvent::Changed);
     }
 
+    /// Asks Ollama what each of `model_ids` can do, in the background, then looks again for models
+    /// for the waiting tasks.
+    fn probe_capabilities(&mut self, model_ids: Vec<String>, ctx: &mut ModelContext<Self>) {
+        for model_id in model_ids {
+            let Some(tag) = ollama_model_name(&model_id).map(str::to_string) else {
+                continue;
+            };
+            if !self.probing.insert(model_id.clone()) {
+                continue;
+            }
+            ctx.spawn(
+                async move { model_caps::probe_ollama(&tag).await },
+                move |me, found, ctx| {
+                    me.probing.remove(&model_id);
+                    if let Some(caps) = found {
+                        model_caps::record(&model_id, caps);
+                        me.pump(ctx);
+                        ctx.emit(AgentQueueEvent::Changed);
+                    }
+                },
+            );
+        }
+    }
+
     /// Starts waiting tasks. An auto task goes to the model the chooser picks among the failover
     /// rows that are on, not down, not busy with another task and not already tried; a tier up for
     /// each model it failed on. A pinned task (its own model, or the queue's default) runs only on
@@ -731,6 +779,20 @@ impl AgentQueue {
             .filter(|task| task.state == TaskState::Waiting)
             .map(|task| task.id)
             .collect();
+        // A task that needs a capability can only be placed once the Ollama models have said what
+        // they can do; ask the ones that have not, and look again when they answer.
+        let needs_capabilities = self
+            .tasks
+            .iter()
+            .any(|task| task.state == TaskState::Waiting && !task.needs.is_empty());
+        if needs_capabilities {
+            let unknown: Vec<String> = pool
+                .iter()
+                .map(|worker| worker.model_id().to_string())
+                .filter(|id| ollama_model_name(id).is_some() && model_caps::recorded(id).is_none())
+                .collect();
+            self.probe_capabilities(unknown, ctx);
+        }
         let mut gave_up = false;
         for id in waiting {
             if self.active.len() >= MAX_RUNNING {
@@ -749,6 +811,7 @@ impl AgentQueue {
             let tried = task.tried.clone();
             let base = task.difficulty.unwrap_or(Difficulty::Medium);
             let last_error = task.last_error.clone();
+            let needs = Caps::from_labels(task.needs.iter().map(String::as_str));
             // The model to run on: the task's own, else the queue default; both empty, or "auto",
             // means let the chooser pick across the failover rows.
             let pinned = task
@@ -781,6 +844,15 @@ impl AgentQueue {
                         None => Pick::Fail(format!(
                             "no model {model_id:?} is available (a key removed, or the app not running)"
                         )),
+                        // Pinned to a model that cannot do what the task needs (read images,
+                        // say): running it would only fail, so say so.
+                        Some(_) if !model_caps::can_serve(&model_id, needs, ctx) => {
+                            Pick::Fail(format!(
+                                "the task needs a model that {}, and {model_id:?} is not marked \
+                                 as one (the vision button on its row in Settings → Agents)",
+                                needs.describe()
+                            ))
+                        }
                         Some(worker) if busy.contains(&worker.account()) => Pick::Wait,
                         // Pinned to a model resting after a daily cap: wait for it, and say
                         // until when, rather than spend requests it would only refuse.
@@ -823,6 +895,7 @@ impl AgentQueue {
                                 && !busy.contains(&worker.account())
                                 && !down.contains(id)
                                 && !tried.iter().any(|t| t == id)
+                                && model_caps::can_serve(id, needs, ctx)
                         })
                         .collect();
                     // A model that was just rate-limited or flaky (amber) is passed over while
@@ -858,6 +931,18 @@ impl AgentQueue {
                                     "pool {:?} has no model that is on and can run now",
                                     pool_name.as_deref().unwrap_or_default()
                                 ));
+                            }
+                            Pick::Wait
+                        }
+                        // Nothing on offer can do what the task needs: say what, and keep it
+                        // waiting (an Ollama model may still be answering about itself).
+                        None if !needs.is_none()
+                            && !pool.iter().filter(in_pool).any(|worker| {
+                                model_caps::can_serve(worker.model_id(), needs, ctx)
+                            }) =>
+                        {
+                            if let Some(task) = self.tasks.iter_mut().find(|task| task.id == id) {
+                                task.last_error = Some(model_caps::unmet_message(needs));
                             }
                             Pick::Wait
                         }

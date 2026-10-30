@@ -87,6 +87,8 @@ pub(crate) struct HarnessModelCaps {
     pub(crate) context_length: Option<u64>,
     /// The model's size in billions of parameters, when it says.
     pub(crate) billions: Option<f64>,
+    /// Whether it reads images or makes embeddings.
+    pub(crate) caps: crate::ai::model_caps::Caps,
 }
 
 /// Probes `model`'s capabilities via `/api/show`. Fails closed (all false)
@@ -156,6 +158,16 @@ async fn probe_model_caps_once(
         .map(|value| HarnessModelCaps {
             tools: has(&value, "tools"),
             thinking: has(&value, "thinking"),
+            caps: {
+                // What it can do besides text is kept for the agent pools' capability filter.
+                let caps = crate::ai::model_caps::Caps {
+                    vision: has(&value, "vision"),
+                    embed: has(&value, "embedding"),
+                    image_out: false,
+                };
+                crate::ai::model_caps::record(&format!("{OLLAMA_MODEL_ID_PREFIX}{model}"), caps);
+                caps
+            },
             context_length: value
                 .get("model_info")
                 .and_then(Value::as_object)

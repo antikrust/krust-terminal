@@ -80,6 +80,11 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
                                 "model": {
                                     "type": "string",
                                     "description": "Pin this task to a model id, or \"auto\" (optional; the queue's default when left out)."
+                                },
+                                "needs": {
+                                    "type": "array",
+                                    "items": { "type": "string", "enum": ["vision", "image_out", "embed"] },
+                                    "description": "What a model must be able to do to take this task: \"vision\" reads images, \"image_out\" makes images, \"embed\" makes embeddings (optional; any model may take a text task)."
                                 }
                             },
                             "required": ["title", "prompt"]
@@ -210,12 +215,24 @@ impl QueueTools {
                     .map(str::to_string)
                     .filter(|model| !model.trim().is_empty())
                     .or_else(|| call_model.clone());
+                let needs: Vec<String> = task
+                    .get("needs")
+                    .and_then(Value::as_array)
+                    .map(|labels| {
+                        labels
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_string)
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 Some(PlannedTask {
                     title: title.to_string(),
                     prompt,
                     working_dir: workdir.clone(),
                     model,
                     pool: call_pool.clone(),
+                    needs,
                 })
             })
             .collect();

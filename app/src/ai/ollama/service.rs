@@ -124,6 +124,8 @@ pub struct ModelCapabilities {
     pub context_length: Option<u64>,
     /// Human parameter size, e.g. `8.0B`, if reported.
     pub parameter_size: Option<String>,
+    /// What else it can do: read images, make embeddings.
+    pub caps: crate::ai::model_caps::Caps,
 }
 
 /// The user's per-model agent/chat override, read from the
@@ -248,10 +250,21 @@ pub async fn fetch_capabilities(
         .and_then(|size| size.as_str())
         .map(str::to_string);
 
+    let labels: Vec<String> = value
+        .get("capabilities")
+        .and_then(|caps| caps.as_array())
+        .map(|caps| {
+            caps.iter()
+                .filter_map(|cap| cap.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+
     Some(ModelCapabilities {
         tools,
         context_length,
         parameter_size,
+        caps: crate::ai::model_caps::from_ollama_capabilities(&labels),
     })
 }
 
