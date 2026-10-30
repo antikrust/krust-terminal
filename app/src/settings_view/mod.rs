@@ -2894,8 +2894,6 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-                }
-            }
             SettingsAction::KrustifyPageToggle(krustify_action) => {
                 if let Some(krustify_page) = self.settings_page(SettingsSection::Krustify) {
                     if let SettingsPageViewHandle::Krustify(view) = &krustify_page.view_handle {

@@ -23104,6 +23104,13 @@ impl Workspace {
             context.set.insert(flags::IS_AUTOINDEXING_ENABLED);
         }
 
+        if *ConversationTranscriptSettings::as_ref(app)
+            .write_conversation_transcripts
+            .value()
+        {
+            context.set.insert(flags::IS_CONVERSATION_TRANSCRIPTS_ENABLED);
+        }
+
         if *input_settings.show_hint_text.value() {
             context.set.insert(flags::SHOW_INPUT_HINT_TEXT_CONTEXT_FLAG);
         }
@@ -23114,13 +23121,6 @@ impl Workspace {
         if *editor_settings.enable_autosuggestions {
             context.set.insert(flags::AUTOSUGGESTIONS_ENABLED_FLAG);
         }
-        if *ConversationTranscriptSettings::as_ref(app)
-            .write_conversation_transcripts
-            .value()
-        {
-            context.set.insert(flags::IS_CONVERSATION_TRANSCRIPTS_ENABLED);
-        }
-
 
         if *editor_settings.autosuggestion_keybinding_hint.value() {
             context

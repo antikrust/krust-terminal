@@ -1972,7 +1972,7 @@ async fn watch_for_model_switch(inputs: &RunInputs<'_>) {
 /// One attempt at the runbook with `inputs.worker`, from step 1.
 async fn run_attempt(
     inputs: &RunInputs<'_>,
-    on_event: &mut impl FnMut(TurnEvent),
+    mut on_event: &mut impl FnMut(TurnEvent),
 ) -> std::io::Result<AttemptEnd> {
     let RunInputs {
         session_id,
