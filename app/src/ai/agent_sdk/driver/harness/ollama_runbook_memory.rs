@@ -56,9 +56,9 @@ pub(crate) struct Inventory {
 pub(crate) struct Picks {
     pub(crate) judge: String,
     pub(crate) helper: String,
-    /// The models fit one at a time but not together (a judge or helper the
-    /// user chose), so Ollama will swap them in and out as the run goes.
-    pub(crate) swaps: bool,
+    /// Things worth saying before the run starts: the models only fit one at
+    /// a time (Ollama will swap them), or the worker alone is a tight fit.
+    pub(crate) warnings: Vec<String>,
 }
 
 /// `name` without Ollama's implicit `:latest`, so `qwen3` and `qwen3:latest`
@@ -123,9 +123,13 @@ fn needed(inventory: &Inventory, models: &[&str]) -> u64 {
 ///
 /// A judge or helper that is not chosen (`None`) is the worker itself: one
 /// model does every job, which takes no memory beyond its own. Chosen ones are
-/// used as chosen. If they fit with the worker, all is well. If they only fit
-/// one at a time they are still used, flagged as swapping, since Ollama
-/// handles that; a model too big to load even alone is refused.
+/// used as chosen. Models that fit together in the usable budget go ahead
+/// quietly. Beyond that this warns rather than vetoes, as the model menu's fit
+/// badges do: models that fit the machine one at a time go ahead (chosen ones
+/// swap, which Ollama handles), and a worker bigger than the usable budget but
+/// smaller than the machine's memory goes ahead flagged as a tight fit. Only a
+/// model bigger than all of the machine's memory, or one that cannot fit beside
+/// what is already loaded, is refused.
 pub(crate) fn choose(
     inventory: &Inventory,
     worker: &str,
@@ -134,22 +138,37 @@ pub(crate) fn choose(
 ) -> Result<Picks, String> {
     let judge = judge.unwrap_or(worker);
     let helper = helper.unwrap_or(worker);
+    let picks = |warnings| Picks {
+        judge: judge.to_string(),
+        helper: helper.to_string(),
+        warnings,
+    };
     if needed(inventory, &[worker, judge, helper]) <= inventory.budget_bytes {
-        return Ok(Picks {
-            judge: judge.to_string(),
-            helper: helper.to_string(),
-            swaps: false,
-        });
+        return Ok(picks(Vec::new()));
     }
-    let fits_alone = |model: &str| needed(inventory, &[model]) <= inventory.budget_bytes;
-    if fits_alone(worker) && fits_alone(judge) && fits_alone(helper) {
-        return Ok(Picks {
-            judge: judge.to_string(),
-            helper: helper.to_string(),
-            swaps: true,
-        });
+    let fits_alone = |model: &str| needed(inventory, &[model]) <= inventory.total_bytes;
+    if !(fits_alone(worker) && fits_alone(judge) && fits_alone(helper)) {
+        return Err(refusal(inventory, worker, judge, helper));
     }
-    Err(refusal(inventory, worker, judge, helper))
+    let mut warnings = Vec::new();
+    if !same_model(worker, judge) || !same_model(worker, helper) {
+        warnings.push(
+            "The models you chose don't fit in memory together, so Ollama will swap them in and out as the run \
+             goes: expect slower steps. Leave the judge and helper on auto to have the worker do every job."
+                .to_string(),
+        );
+    }
+    let alone = needed(inventory, &[worker]);
+    if alone > inventory.budget_bytes {
+        warnings.push(format!(
+            "`{worker}` takes about {} of this machine's {}, more than the {} usable for models: expect swapping and \
+             slow steps, and close other big apps first.",
+            format_gb(alone),
+            format_gb(inventory.total_bytes),
+            format_gb(inventory.budget_bytes)
+        ));
+    }
+    Ok(picks(warnings))
 }
 
 /// The message that explains a refusal: every model with its size, what else

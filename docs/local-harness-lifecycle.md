@@ -260,11 +260,14 @@ Shared-session viewers still tag in: their prompts go to the sharer.
   chosen in Settings is the worker itself, so a small machine never holds several models. Before
   any model is probed or loaded, `ollama_runbook_memory.rs` adds up the worker, judge and helper
   (`/api/tags` sizes plus ~1 GB of context each, or the `/api/ps` size when loaded), plus anything
-  else Ollama has loaded (this machine's servers only), against 75% of `hw.memsize`
-  (`USABLE_MEMORY_FRACTION`). Chosen models that fit together are used; chosen models that fit only
-  one at a time are used too, with a warning in the conversation (Ollama does the swapping); a model
-  too big to load alone ends the run with a plain message naming the models and sizes. An
-  unreadable `hw.memsize`, or a run entirely on other machines, skips the check.
+  else Ollama has loaded (this machine's servers only). Within 75% of `hw.memsize`
+  (`USABLE_MEMORY_FRACTION`) the run goes ahead quietly. Beyond that it warns rather than vetoes, as
+  the model menu's fit badges do: models that fit the machine one at a time go ahead (chosen ones
+  swap, which Ollama handles), and a worker over the usable budget but within the machine's memory
+  goes ahead flagged as a tight fit, so a 20 GB model can run on its own on a 24 GB Mac. Only a
+  model bigger than all of the machine's memory, or one that can't fit beside what is already
+  loaded, ends the run, with a plain message naming the models and sizes. An unreadable
+  `hw.memsize`, or a run entirely on other machines, skips the check.
 - **A model pick mid-run restarts the run.** The pane's model menu records its picks
   (`harness_availability::note_menu_pick`; only deliberate picks, not a pane taking a
   conversation's model). `run_ollama_runbook_watched` watches that: a pick of another Ollama model
@@ -287,18 +290,22 @@ on macOS); `transcripts/latest.md` points at the newest. `ai/conversation_transc
 same `TurnEvent`s that `LocalHarnessStream::messages_for_event` / `apply_text_delta` turn into messages,
 plus the prompt in `begin` / `begin_follow_up`, so one hook covers claude, codex, Ollama and runbook
 runs. It never touches the conversation, and compaction never touches it. A new kind of `TurnEvent`
-needs a line in `record_event` (it is an exhaustive match). Very large tool inputs and results are cut
-(50,000 and 200,000 characters).
+needs a line in `record_event` (it is an exhaustive match). Tool output is kept whole, secrets Krust
+recognises are masked (`redact_secrets`, a line at a time for streamed text), and the directory is
+owner-only.
 
 The Ollama and API runners offer `search_conversation`, which finds or reads lines of the record, and
 every compaction, and the API runner's view that leaves earlier turns out for a local model, says so.
-The drain binds each runner session to its conversation (`bind_session`) on a run's first event. Queue
-tasks have no conversation, so no record and no tool answer; runbook workers are not offered the tool.
+The drain binds each runner session to its conversation (`bind_session`) on a run's first event. A
+queue task gets a record of its own, one file per attempt. A turn failover hands to Claude Code or
+Codex gets the record's paths in its recap. Runbook workers are not offered the tool on purpose: each
+is given one step in a fresh conversation, and a lookup would only invite wandering off it.
 
 Settings > Agents > "Save conversations and images to disk" (`scripting.write_conversation_transcripts`,
 off by default; Command Palette: "saving conversations and images to disk") only decides whether the
 files are kept: off, `transcripts` and `turn-images` in the state directory are cleared at the next
-start. Images attached to a turn are linked from the file. The icon next to the details button shows
+start; on, its button (`scripting.conversation_retention_days`: until deleted, 30, 90 or 365 days) says
+for how long, applied at startup. Images attached to a turn are linked from the file. The icon next to the details button shows
 the session's images in the right-hand panel (`terminal/view/session_images.rs`).
 
 ## Known rendering trap (blocklist paint)

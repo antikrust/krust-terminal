@@ -2023,14 +2023,14 @@ async fn run_attempt(
     // Settings: a small machine shouldn't juggle several. The models are
     // checked against memory before any is loaded — loading what doesn't fit
     // is what freezes the machine.
-    let (judge, helper, swaps) = match memory::inventory(path, &watch.other_servers).await {
+    let (judge, helper, warnings) = match memory::inventory(path, &watch.other_servers).await {
         Some(inventory) => match memory::choose(
             &inventory,
             worker,
             config.judge.as_deref(),
             config.helper.as_deref(),
         ) {
-            Ok(picks) => (picks.judge, picks.helper, picks.swaps),
+            Ok(picks) => (picks.judge, picks.helper, picks.warnings),
             Err(message) => {
                 finish_with_text(&mut on_event, message);
                 return Ok(AttemptEnd::Finished(success_status()));
@@ -2039,7 +2039,7 @@ async fn run_attempt(
         None => (
             config.judge.clone().unwrap_or_else(|| worker.to_string()),
             config.helper.clone().unwrap_or_else(|| worker.to_string()),
-            false,
+            Vec::new(),
         ),
     };
     let judge_thinks = probe_model_caps_checked(&judge, path)
@@ -2067,12 +2067,6 @@ async fn run_attempt(
         .steps
         .iter()
         .any(|step| step.blocks.iter().any(RunbookBlock::is_resolve));
-    let swap_note = swaps.then(|| {
-        format!(
-            "⚠ The models you chose don't fit in memory together, so Ollama will swap them in and out as the run \
-             goes: expect slower steps. Leave the judge and helper on auto to have `{worker}` do every job."
-        )
-    });
     on_event(TurnEvent::Text {
         text: format!(
             "**Runbook:** {} — {} steps, run in `{}`.\n\nWorker **`{worker}`** runs each step in a fresh \
@@ -2089,9 +2083,9 @@ async fn run_attempt(
             } else {
                 String::new()
             },
-            [swap_note, sandbox_note.clone()]
-                .into_iter()
-                .flatten()
+            warnings
+                .iter()
+                .chain(sandbox_note.iter())
                 .map(|note| format!("\n\n{note}"))
                 .collect::<String>()
         ),
