@@ -27,6 +27,7 @@ mod input;
 mod orchestration;
 pub mod output;
 pub mod query;
+mod submitted_images;
 mod todos;
 
 use std::collections::{HashMap, HashSet};
@@ -926,6 +927,15 @@ impl View for AIBlock {
                 ))
             });
         let query_and_index_is_some = query_and_index.is_some();
+        // Pictures of the images the message went with (drawn only; never sent to a model).
+        let submitted_image_sources = if FeatureFlag::ImageAsContext.is_enabled() {
+            submitted_images::sources(
+                &self.client_ids.client_exchange_id.to_string(),
+                self.model.inputs_to_render(app),
+            )
+        } else {
+            vec![]
+        };
         let attachment_name_list = if FeatureFlag::ImageAsContext.is_enabled() {
             attachment_names(self.model.inputs_to_render(app))
         } else {
@@ -1015,6 +1025,7 @@ impl View for AIBlock {
                         .pending_context_selected_text()
                         .is_some(),
                     attachments: &attachment_name_list,
+                    images: &submitted_image_sources,
                     find_context: self.find_model.as_ref(app).is_find_bar_open().then_some(
                         FindContext {
                             model: self.find_model.as_ref(app),

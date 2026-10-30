@@ -5,10 +5,12 @@
 use pathfinder_color::ColorU;
 use krust_core::features::FeatureFlag;
 use krust_core::ui::theme::color::internal_colors;
+use krustui::assets::asset_cache::AssetSource;
 use krustui::elements::{
-    Container, CornerRadius, DispatchEventResult, EventHandler, Flex, MainAxisAlignment,
-    MainAxisSize, ParentElement, Radius, Shrinkable, Wrap,
+    ConstrainedBox, Container, CornerRadius, DispatchEventResult, EventHandler, Flex, Image,
+    MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Wrap,
 };
+use krustui::image_cache::CacheOption;
 use krustui::fonts::{Properties, Style, Weight};
 use krustui::ui_components::chip::Chip;
 use krustui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -35,6 +37,8 @@ pub(super) struct Props<'a> {
     pub(super) is_selecting_text: bool,
     pub(super) is_ai_input_enabled: bool,
     pub(super) attachments: &'a [(AttachmentType, String)],
+    /// Pictures of the message's images: small at the top right, larger under the text.
+    pub(super) images: &'a [AssetSource],
     pub(super) find_context: Option<FindContext<'a>>,
 }
 
@@ -52,6 +56,7 @@ pub(super) fn maybe_render(props: Props, app: &AppContext) -> Option<Box<dyn Ele
             props.is_selecting_text,
             props.is_ai_input_enabled,
             props.attachments,
+            props.images,
             props.find_context,
             app,
         )
@@ -71,6 +76,7 @@ pub(crate) fn render_query(
     is_selecting: bool,
     is_ai_input_enabled: bool,
     attachments: &[(AttachmentType, String)],
+    images: &[AssetSource],
     find_context: Option<FindContext>,
     app: &AppContext,
 ) -> Box<dyn Element> {
@@ -110,10 +116,62 @@ pub(crate) fn render_query(
         query = query.with_child(render_attachments(attachments, appearance));
     }
 
-    Flex::row()
+    // The images, large under the text: for the eye only, nothing here reaches a model.
+    for (index, source) in images.iter().enumerate() {
+        query = query.with_child(
+            Container::new(picture(source, index, None, FULL_SIZE_HEIGHT))
+                .with_padding_top(8.)
+                .finish(),
+        );
+    }
+
+    let mut row = Flex::row()
         .with_cross_axis_alignment(krustui::elements::CrossAxisAlignment::Start)
         .with_child(avatar)
-        .with_child(Shrinkable::new(1., query.finish()).finish())
+        .with_child(Shrinkable::new(1., query.finish()).finish());
+    // And small, staying at the top right of the message.
+    if !images.is_empty() {
+        let mut thumbnails = Flex::row();
+        for (index, source) in images.iter().enumerate().take(MAX_THUMBNAILS) {
+            thumbnails = thumbnails.with_child(
+                Container::new(picture(source, index, Some(THUMBNAIL_SIZE), THUMBNAIL_SIZE))
+                    .with_margin_left(6.)
+                    .finish(),
+            );
+        }
+        row = row.with_child(thumbnails.finish());
+    }
+    row.finish()
+}
+
+const THUMBNAIL_SIZE: f32 = 64.;
+const MAX_THUMBNAILS: usize = 3;
+const FULL_SIZE_HEIGHT: f32 = 360.;
+
+/// One image drawn `height` tall (and `width` wide when given), fitted inside; a click opens it in
+/// the lightbox like its chip does.
+fn picture(
+    source: &AssetSource,
+    index: usize,
+    width: Option<f32>,
+    height: f32,
+) -> Box<dyn Element> {
+    let mut sized = ConstrainedBox::new(
+        Image::new(source.clone(), CacheOption::BySize)
+            .contain()
+            .finish(),
+    )
+    .with_height(height);
+    if let Some(width) = width {
+        sized = sized.with_width(width);
+    }
+    EventHandler::new(sized.finish())
+        .on_left_mouse_down(move |ctx, _, _| {
+            ctx.dispatch_typed_action(AIBlockAction::OpenSubmittedAttachmentLightbox {
+                image_index: index,
+            });
+            DispatchEventResult::StopPropagation
+        })
         .finish()
 }
 
