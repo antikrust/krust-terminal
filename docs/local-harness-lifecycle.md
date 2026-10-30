@@ -257,6 +257,18 @@ Shared-session viewers still tag in: their prompts go to the sharer.
   the runbook to run, so don't route prompts carrying terminal output into
   it.
 
+## Transcript files (for scripts and other agents)
+
+Settings > Scripting > "Write conversations to text files" (`scripting.write_conversation_transcripts`,
+off by default; Command Palette: "conversation text files") makes every local-harness conversation
+also write itself, append-only and as it happens, to `transcripts/<started>-<id>.md` in the state
+directory (`~/Library/Application Support/krust.baby.Krust` on macOS); `transcripts/latest.md` points at
+the newest. `ai/conversation_transcripts.rs` records the same `TurnEvent`s that
+`LocalHarnessStream::messages_for_event` / `apply_text_delta` turn into messages, plus the prompt in
+`begin` / `begin_follow_up`, so one hook covers claude, codex, Ollama and runbook runs. It never
+touches the conversation. A new kind of `TurnEvent` needs a line in `record_event` (it is an
+exhaustive match).
+
 ## Known rendering trap (blocklist paint)
 
 In `block_list_element.rs::paint`, one running `grid_origin` is carried

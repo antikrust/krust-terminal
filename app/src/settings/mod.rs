@@ -34,6 +34,7 @@ mod select;
 mod ssh;
 mod theme;
 mod tui_autoupdate;
+mod conversation_transcripts;
 mod vim_banner;
 
 #[cfg(test)]
@@ -68,6 +69,7 @@ pub use select::*;
 pub use ssh::*;
 pub use theme::*;
 pub use tui_autoupdate::*;
+pub use conversation_transcripts::*;
 pub use vim_banner::*;
 use krust_core::user_preferences::GetUserPreferences as _;
 

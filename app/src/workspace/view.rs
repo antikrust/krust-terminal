@@ -340,8 +340,9 @@ use crate::settings::identity::IdentitySettings;
 use crate::settings::{
     active_theme_kind, respect_system_theme, AISettings, AISettingsChangedEvent,
     AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
-    ChangelogSettings, CodeSettings, CodeSettingsChangedEvent, CtrlTabBehavior, CursorBlink,
-    DebugSettings, DefaultSessionMode, FontSettings, GPUSettings, InputModeSettings, InputSettings,
+    ChangelogSettings, CodeSettings, CodeSettingsChangedEvent, ConversationTranscriptSettings,
+    CtrlTabBehavior, CursorBlink, DebugSettings, DefaultSessionMode, FontSettings, GPUSettings,
+    InputModeSettings, InputSettings,
     MonospaceFontSize, PaneSettings, PrivacySettings, SelectionSettings, Settings, SshSettings,
     ThemeSettings,
 };
@@ -23103,6 +23104,13 @@ impl Workspace {
         if *editor_settings.enable_autosuggestions {
             context.set.insert(flags::AUTOSUGGESTIONS_ENABLED_FLAG);
         }
+        if *ConversationTranscriptSettings::as_ref(app)
+            .write_conversation_transcripts
+            .value()
+        {
+            context.set.insert(flags::IS_CONVERSATION_TRANSCRIPTS_ENABLED);
+        }
+
 
         if *editor_settings.autosuggestion_keybinding_hint.value() {
             context

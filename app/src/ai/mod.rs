@@ -15,6 +15,7 @@ pub mod agent_queue;
 pub mod queue_tools;
 pub mod failover_health;
 pub mod model_caps;
+pub mod conversation_transcripts;
 pub mod task_router;
 pub(crate) mod artifact_download;
 pub mod artifacts;

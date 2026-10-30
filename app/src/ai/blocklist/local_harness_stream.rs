@@ -109,6 +109,7 @@ impl LocalHarnessStream {
         };
         this.share_init();
 
+        crate::ai::conversation_transcripts::record_user_prompt(this.conversation_id, prompt);
         let request_input = this.request_input(prompt);
         history.update(ctx, |history, ctx| {
             if let Err(error) = history.update_conversation_for_new_request_input(
@@ -209,6 +210,7 @@ impl LocalHarnessStream {
         };
         this.share_init();
 
+        crate::ai::conversation_transcripts::record_user_prompt(this.conversation_id, prompt);
         let request_input = this.request_input(prompt);
         history.update(ctx, |history, ctx| {
             if let Err(error) = history.update_conversation_for_new_request_input(
@@ -281,6 +283,7 @@ impl LocalHarnessStream {
         event: &TurnEvent,
         shell_commands: &mut HashMap<String, String>,
     ) -> Vec<api::Message> {
+        crate::ai::conversation_transcripts::record_event(self.conversation_id, event);
         // Any non-delta event ends the current streaming thinking section;
         // the next thinking delta starts a fresh one (e.g. after a tool
         // call). Thinking itself is routed to `apply_thinking`, not here.
@@ -357,6 +360,7 @@ impl LocalHarnessStream {
             return;
         }
 
+        crate::ai::conversation_transcripts::record_text_delta(self.conversation_id, text);
         // Answer text ends any streaming thinking section.
         self.streaming_reasoning_message_id = None;
         let is_first_delta = self.streaming_text_message_id.is_none();

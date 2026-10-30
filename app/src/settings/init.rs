@@ -15,7 +15,8 @@ use super::initializer::SettingsInitializer;
 use super::native_preference::NativePreferenceSettings;
 use super::{
     AISettings, AccessibilitySettings, AliasExpansionSettings, AppEditorSettings,
-    BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings,
+    BlockVisibilitySettings, ChangelogSettings, CodeSettings, ConversationTranscriptSettings,
+    DebugSettings, EmacsBindingsSettings,
     FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings,
     InputSettings, LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
     SelectionSettings, SshSettings, ThemeSettings, TuiAutoupdateSettings, VimBannerSettings,
@@ -96,6 +97,7 @@ pub fn register_all_settings(ctx: &mut AppContext) {
     UndoCloseSettings::register(ctx);
     SshSettings::register(ctx);
     VimBannerSettings::register(ctx);
+    ConversationTranscriptSettings::register(ctx);
     SharedSessionSettings::register(ctx);
     KrustDriveSettings::register(ctx);
     IdentitySettings::register(ctx);
