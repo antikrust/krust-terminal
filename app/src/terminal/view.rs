@@ -24263,6 +24263,10 @@ impl TerminalView {
                                         stream.conversation_id(),
                                         &turn_image_paths,
                                     );
+                                    crate::ai::conversation_transcripts::bind_session(
+                                        session_id,
+                                        stream.conversation_id(),
+                                    );
                                     view.local_claude_thread =
                                         Some((harness, session_id, stream.conversation_id()));
                                     local_harness_threads::record(

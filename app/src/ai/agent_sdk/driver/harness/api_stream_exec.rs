@@ -35,6 +35,10 @@ use super::ollama_stream_exec::{
     TURN_ID_FIELD, completed_ids, todo_reply_message, truncate_after_checkpoint,
 };
 use super::plan_tracker::PlanTracker;
+use crate::ai::conversation_transcripts::{
+    lookup as lookup_conversation, lookup_pointer, search_conversation_tool_spec,
+    SEARCH_CONVERSATION,
+};
 use crate::ai::api_providers::{
     model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
 };
@@ -234,6 +238,7 @@ pub async fn run_api_stream(
 
     let tools: Vec<McpToolSpec> = builtin_local_tool_specs()
         .into_iter()
+        .chain(std::iter::once(search_conversation_tool_spec()))
         .chain(mcp_tools.iter().cloned())
         .collect();
     let tool_defs: Vec<Value> = tools.iter().map(McpToolSpec::to_ollama_tool_json).collect();
@@ -301,6 +306,16 @@ pub async fn run_api_stream(
         let local_view;
         let sent: &[Value] = if route.is_local() {
             let mut view = local_turn_messages(&messages);
+            // Earlier turns are left out of this view: say where they are.
+            if view.len() < messages.len() {
+                if let (Some(pointer), Some(content)) = (
+                    lookup_pointer(session_id),
+                    view.first().and_then(|first| first["content"].as_str()),
+                ) {
+                    let content = format!("{content}\n\n{pointer}");
+                    view[0]["content"] = Value::String(content);
+                }
+            }
             compact_old_tool_results(&mut view, tool_output_budget_chars(model.context_window));
             local_view = view;
             &local_view
@@ -648,6 +663,9 @@ pub async fn run_api_stream(
             });
             let result = match &call.arguments {
                 Err(error) => Err(error.clone()),
+                Ok(arguments) if call.name == SEARCH_CONVERSATION => {
+                    lookup_conversation(session_id, arguments)
+                }
                 Ok(arguments) if is_builtin_local_tool(&call.name) => {
                     dispatch_builtin_tool_with_read_window(
                         &call.name,
@@ -721,6 +739,7 @@ async fn compact_conversation(
     else {
         return;
     };
+    let summary = with_lookup_pointer(summary, session_id);
     apply_compaction(messages, &summary, &plan.remaining(), session_id);
     save_history(session_id, messages);
 }
@@ -741,6 +760,14 @@ async fn summarize_for_compaction(
         .await
         .ok()?;
     (!text.trim().is_empty()).then_some(text)
+}
+
+/// A compaction's summary, followed by where the rest of the conversation can be looked up.
+fn with_lookup_pointer(summary: String, session_id: &Uuid) -> String {
+    match lookup_pointer(session_id) {
+        Some(pointer) => format!("{summary}\n\n{pointer}"),
+        None => summary,
+    }
 }
 
 /// What a compaction asks the model for.
@@ -838,7 +865,8 @@ async fn compact_on_request(
             "role": "user",
             "content": format!(
                 "[Our conversation so far, compacted on request. Carry on from this \
-                 summary.]\n\n{summary}"
+                 summary.]\n\n{}",
+                with_lookup_pointer(summary, session_id)
             ),
         }),
         json!({

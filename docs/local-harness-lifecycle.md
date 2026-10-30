@@ -277,19 +277,27 @@ Shared-session viewers still tag in: their prompts go to the sharer.
   judge's rulings, never from the worker's own account, so it is a trustworthy record to read or to
   hand to another model as context. Runs do not resume from it. A restart overwrites it.
 
-## Transcript files (for scripts and other agents)
+## The conversation record (for models, scripts and other agents)
+
+Every local-harness conversation writes itself, append-only and as it happens, to
+`transcripts/<started>-<id>.md` in the state directory (`~/Library/Application Support/krust.baby.Krust`
+on macOS); `transcripts/latest.md` points at the newest. `ai/conversation_transcripts.rs` records the
+same `TurnEvent`s that `LocalHarnessStream::messages_for_event` / `apply_text_delta` turn into messages,
+plus the prompt in `begin` / `begin_follow_up`, so one hook covers claude, codex, Ollama and runbook
+runs. It never touches the conversation, and compaction never touches it. A new kind of `TurnEvent`
+needs a line in `record_event` (it is an exhaustive match). Very large tool inputs and results are cut
+(50,000 and 200,000 characters).
+
+The Ollama and API runners offer `search_conversation`, which finds or reads lines of the record, and
+every compaction, and the API runner's view that leaves earlier turns out for a local model, says so.
+The drain binds each runner session to its conversation (`bind_session`) on a run's first event. Queue
+tasks have no conversation, so no record and no tool answer; runbook workers are not offered the tool.
 
 Settings > Agents > "Save conversations and images to disk" (`scripting.write_conversation_transcripts`,
-off by default; Command Palette: "saving conversations and images to disk") makes every local-harness
-conversation also write itself, append-only and as it happens, to `transcripts/<started>-<id>.md` in the state
-directory (`~/Library/Application Support/krust.baby.Krust` on macOS); `transcripts/latest.md` points at
-the newest. `ai/conversation_transcripts.rs` records the same `TurnEvent`s that
-`LocalHarnessStream::messages_for_event` / `apply_text_delta` turn into messages, plus the prompt in
-`begin` / `begin_follow_up`, so one hook covers claude, codex, Ollama and runbook runs. It never
-touches the conversation. A new kind of `TurnEvent` needs a line in `record_event` (it is an
-exhaustive match). Images attached to a turn are linked from the file; with the setting off,
-`turn-images` in the state directory is cleared at the next start. The icon next to the details
-button shows the session's images in the right-hand panel (`terminal/view/session_images.rs`).
+off by default; Command Palette: "saving conversations and images to disk") only decides whether the
+files are kept: off, `transcripts` and `turn-images` in the state directory are cleared at the next
+start. Images attached to a turn are linked from the file. The icon next to the details button shows
+the session's images in the right-hand panel (`terminal/view/session_images.rs`).
 
 ## Known rendering trap (blocklist paint)
 

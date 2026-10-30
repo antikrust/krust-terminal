@@ -9425,12 +9425,12 @@ impl SettingsWidget for SaveConversationsWidget {
             appearance,
             switch,
             Some(
-                "Keeps each local agent conversation as a text file with links to its images, in \
-                 Krust's state directory (transcripts/latest.md is the newest), for you, scripts \
-                 and other agents to read later. A model only holds an image for the turn it came \
-                 with and keeps a link after that, so images don't fill its memory or context; \
-                 this is what keeps those files. Off, nothing is written and attached images are \
-                 deleted the next time Krust starts."
+                "Each local agent conversation is written to a text file with links to its \
+                 images, in Krust's state directory (transcripts/latest.md is the newest). \
+                 Models can look things up in it once they've been trimmed from their memory or \
+                 context, and an image is held only for the turn it came with. On, these files \
+                 are kept for you, scripts and other agents. Off, they and the attached images \
+                 are deleted the next time Krust starts."
                     .to_owned(),
             ),
         )

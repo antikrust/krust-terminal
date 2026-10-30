@@ -35,6 +35,9 @@ use super::read_headings;
 use super::turn_images::{
     attach_images, take_turn_images, to_ollama_message, to_openai_message, IMAGES_FIELD,
 };
+use crate::ai::conversation_transcripts::{
+    lookup as lookup_conversation, search_conversation_tool_spec, SEARCH_CONVERSATION,
+};
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -2964,6 +2967,7 @@ async fn run_ollama_chat_with_tools(
     let all_tools: Vec<McpToolSpec> = builtin_local_tool_specs()
         .into_iter()
         .chain(std::iter::once(ollama_context::remember_tool_spec()))
+        .chain(std::iter::once(search_conversation_tool_spec()))
         .chain(mcp_tools.iter().cloned())
         .collect();
     let tool_defs: Vec<Value> = all_tools
@@ -3200,7 +3204,9 @@ async fn run_ollama_chat_with_tools(
             });
             // Built-in file/code tools run in-process (working dir + stateless);
             // anything else is routed to whichever MCP server advertised it.
-            let result = if is_builtin_local_tool(&call.name) {
+            let result = if call.name == SEARCH_CONVERSATION {
+                lookup_conversation(session_id, &call.arguments)
+            } else if is_builtin_local_tool(&call.name) {
                 dispatch_builtin_tool_with_read_window(
                     &call.name,
                     &call.arguments,

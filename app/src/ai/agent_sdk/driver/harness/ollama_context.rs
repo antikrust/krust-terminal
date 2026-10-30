@@ -458,6 +458,9 @@ fn state_text(
             notes_path(session_id).display()
         ));
     }
+    if let Some(pointer) = crate::ai::conversation_transcripts::lookup_pointer(session_id) {
+        sections.push(pointer);
+    }
     let (changed, read) = files_touched(messages);
     if !changed.is_empty() {
         sections.push(format!("Files you changed: {}", changed.join(", ")));
