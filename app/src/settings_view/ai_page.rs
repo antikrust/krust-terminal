@@ -3738,6 +3738,7 @@ impl AISettingsPageView {
                         tier: Default::default(),
                         pool: Default::default(),
                         vision: Default::default(),
+                        images: Default::default(),
                     },
                 }
             })
@@ -4104,6 +4105,8 @@ pub enum AISettingsPageAction {
     CycleAgentTier(String),
     /// Flips whether an agent model counts as reading images (by model id).
     ToggleAgentVision(String),
+    /// Whether the model makes pictures (the `image_out` capability), for `generate_image`.
+    ToggleAgentImageOut(String),
     /// The Agents page's pools: show a pool, make one from the typed name (a copy of the one
     /// shown), delete the one shown (a pool the user made), make the one shown the queue's pool
     /// (or stop using it), and put a model in or out of the one shown (by model id).
@@ -4621,6 +4624,10 @@ impl TypedActionView for AISettingsPageView {
                 toggle_model_vision(model_id, ctx);
                 // Tasks waiting for a model that reads images may have one now.
                 AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleAgentImageOut(model_id) => {
+                toggle_model_image_out(model_id, ctx);
                 ctx.notify();
             }
             AISettingsPageAction::SelectAgentPool(name) => {
@@ -9508,6 +9515,7 @@ impl AgentModelsWidget {
                 tier,
                 pool: pool_button,
                 vision: vision_button,
+                images: images_button,
                 ..
             }) = view
                 .agent_model_rows
@@ -9550,6 +9558,12 @@ impl AgentModelsWidget {
                 "?"
             };
             let vision_id = model.model_id.clone();
+            let images_label = if model_caps::caps_of(&model.model_id, app).image_out {
+                "on"
+            } else {
+                "off"
+            };
+            let images_id = model.model_id.clone();
             let label_color = if model.on {
                 appearance.theme().active_ui_text_color()
             } else {
@@ -9621,6 +9635,19 @@ impl AgentModelsWidget {
                             .on_click(move |ctx, _, _| {
                                 ctx.dispatch_typed_action(AISettingsPageAction::ToggleAgentVision(
                                     vision_id.clone(),
+                                ));
+                            })
+                            .finish(),
+                    )
+                    .with_child(
+                        appearance
+                            .ui_builder()
+                            .button(ButtonVariant::Text, images_button.clone())
+                            .with_text_label(format!("makes images: {images_label}"))
+                            .build()
+                            .on_click(move |ctx, _, _| {
+                                ctx.dispatch_typed_action(AISettingsPageAction::ToggleAgentImageOut(
+                                    images_id.clone(),
                                 ));
                             })
                             .finish(),
@@ -10242,6 +10269,7 @@ struct AgentModelRowState {
     tier: MouseStateHandle,
     pool: MouseStateHandle,
     vision: MouseStateHandle,
+    images: MouseStateHandle,
 }
 
 /// One row of the BYOR failover list: its provider and model menus, and the
@@ -10446,6 +10474,19 @@ fn toggle_model_vision(model_id: &str, ctx: &mut ViewContext<AISettingsPageView>
         Caps::VISION,
         model_caps::base_caps(model_id),
     );
+    AISettings::handle(ctx).update(ctx, |settings, ctx| {
+        report_if_error!(settings.byor_model_caps.set_value(flipped, ctx));
+    });
+}
+
+/// Flips whether `model_id` counts as making pictures (`generate_image` may then use it).
+fn toggle_model_image_out(model_id: &str, ctx: &mut ViewContext<AISettingsPageView>) {
+    let entries = AISettings::as_ref(ctx).byor_model_caps.value().clone();
+    let flag = Caps {
+        image_out: true,
+        ..Caps::NONE
+    };
+    let flipped = model_caps::flipped_override(&entries, model_id, flag, model_caps::base_caps(model_id));
     AISettings::handle(ctx).update(ctx, |settings, ctx| {
         report_if_error!(settings.byor_model_caps.set_value(flipped, ctx));
     });

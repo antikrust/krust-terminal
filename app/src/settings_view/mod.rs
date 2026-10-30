@@ -16,6 +16,7 @@ use mcp_servers_page::MCPServersSettingsPageView;
 use nav::{SettingsNavItem, SettingsUmbrella};
 use pathfinder_geometry::vector::Vector2F;
 use privacy_page::{PrivacyPageView, PrivacyPageViewEvent};
+use images_page::ImagesPageView;
 use scripting_page::ScriptingSettingsPageView;
 use settings_file_footer::{render_footer, SettingsFooterKind, SettingsFooterMouseStates};
 use settings_page::{
@@ -102,6 +103,7 @@ mod platform_page;
 mod privacy;
 mod privacy_page;
 mod remove_custom_endpoint_confirmation_dialog;
+mod images_page;
 mod scripting_page;
 mod set_default_model_modal;
 mod settings_file_footer;
@@ -270,6 +272,8 @@ pub enum SettingsSection {
     /// Personal provider keys and custom endpoints — their own page rather than
     /// a section at the bottom of the AI Manager page.
     BringYourOwnKey,
+    /// Picture suppliers, their keys and the order they are tried in (Settings → AI → Images).
+    ImageProviders,
     /// The models agents may run on (BYOR, Ollama on any machine, Claude Code,
     /// Codex) and the agent queue. Its own page: it spans all of those, so it
     /// belongs under none of them.
@@ -318,6 +322,7 @@ impl Display for SettingsSection {
             // churning ~20 test references and the deep-link map).
             SettingsSection::ThirdPartyCLIAgents => write!(f, "General"),
             SettingsSection::BringYourOwnKey => write!(f, "Bring your own key"),
+            SettingsSection::ImageProviders => write!(f, "Images"),
             SettingsSection::Agents => write!(f, "Agents"),
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
@@ -364,6 +369,7 @@ impl SettingsSection {
                 | Self::Knowledge
                 | Self::ThirdPartyCLIAgents
                 | Self::BringYourOwnKey
+                | Self::ImageProviders
                 | Self::Agents
                 | Self::Ollama
                 | Self::Grok
@@ -415,6 +421,7 @@ impl SettingsSection {
             Self::ThirdPartyCLIAgents,
             Self::KrustAgent,
             Self::BringYourOwnKey,
+            Self::ImageProviders,
             Self::Agents,
             Self::AgentMCPServers,
             Self::Ollama,
@@ -474,6 +481,7 @@ impl FromStr for SettingsSection {
             "Knowledge" => Ok(Self::Knowledge),
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Ok(Self::ThirdPartyCLIAgents),
             "Bring your own key" | "BringYourOwnKey" => Ok(Self::BringYourOwnKey),
+            "Images" | "ImageProviders" => Ok(Self::ImageProviders),
             "Agents" => Ok(Self::Agents),
             "Ollama" => Ok(Self::Ollama),
             "Grok" => Ok(Self::Grok),
@@ -1183,6 +1191,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::OzCloudAPIKeys(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Privacy(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Scripting(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::Images(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::AI(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::CloudEnvironments(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::About(handle) => $ctx.update_view(handle, $update),
@@ -1295,6 +1304,7 @@ impl SettingsView {
             me.handle_privacy_page_event(event, ctx);
         });
 
+        let images_page_handle = ctx.add_typed_action_view(ImagesPageView::new);
         let scripting_page_handle = if FeatureFlag::KrustControlCli.is_enabled() {
             Some(ctx.add_typed_action_view(ScriptingSettingsPageView::new))
         } else {
@@ -1370,6 +1380,7 @@ impl SettingsView {
             SettingsPage::new(krustify_page_handle),
         ];
 
+        settings_pages.push(SettingsPage::new(images_page_handle));
         if let Some(scripting_page_handle) = scripting_page_handle {
             settings_pages.push(SettingsPage::new(scripting_page_handle));
         }
@@ -2258,6 +2269,7 @@ impl SettingsView {
             SettingsPageViewHandle::Privacy(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Krustify(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Scripting(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::Images(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::AI(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::CloudEnvironments(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),

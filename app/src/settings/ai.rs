@@ -2074,6 +2074,31 @@ define_settings_group!(AISettings, settings: [
         description: "Program that makes pictures (takes imagine.py's flags, prints one JSON line with the saved path).",
     },
 
+    // The picture suppliers' failover list (Settings → AI → Images): the user's order of
+    // `image/<provider>/<model>` ids, and which are switched off. Models of a supplier with a key
+    // that are in neither are added after the ordered ones.
+    image_failover_order: ImageFailoverOrder {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.image_failover_order",
+        description: "Order of picture models tried by generate_image, as image/<provider>/<model> ids.",
+    }
+
+    image_failover_disabled: ImageFailoverDisabled {
+        type: Vec<String>,
+        default: vec![],
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "cloud_platform.third_party_api_keys.image_failover_disabled",
+        description: "Picture models switched off in the failover list.",
+    }
+
     // Where `generate_image` / `imagine` save a picture that names no file. Empty falls back to
     // `KRUST_IMAGES_DIR`, then ~/github/image-lab/images if that project exists, then the app's
     // own images folder.

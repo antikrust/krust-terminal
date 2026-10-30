@@ -15,6 +15,7 @@ pub mod agent_queue;
 pub mod queue_tools;
 pub mod failover_health;
 pub mod image_gen;
+pub mod image_providers;
 pub mod model_caps;
 pub mod conversation_transcripts;
 pub mod task_router;

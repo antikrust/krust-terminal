@@ -25,7 +25,8 @@ use krustui::{AppContext, SingletonEntity};
 use serde_json::{json, Value};
 use settings::Setting as _;
 
-use crate::ai::api_providers::{agent_pool, ApiRoute, FailoverTarget};
+use crate::ai::api_providers::{agent_pool, ApiProviderKeys, ApiRoute, FailoverTarget};
+use crate::ai::image_providers::{self, ImageModel, ImageProvider};
 use crate::ai::model_caps;
 use crate::settings::AISettings;
 
@@ -51,7 +52,7 @@ pub struct ImageRequest {
     pub reference: Option<PathBuf>,
     /// Draw on a flat background, then cut it out.
     pub transparent: bool,
-    /// Try only this backend: `command` or `pool`.
+    /// Try only this backend: `command`, `images` or `pool`.
     pub backend: Option<String>,
 }
 
@@ -124,12 +125,22 @@ impl ImageResult {
     }
 }
 
+/// A picture supplier's model with the key to use it (Settings → AI → Images).
+#[derive(Clone)]
+pub struct ImageTarget {
+    pub provider: &'static ImageProvider,
+    pub model: &'static ImageModel,
+    pub key: String,
+}
+
 /// One way of making the picture, worked out on the main thread (it reads the settings and the
 /// agent pool) and run off it.
 #[derive(Clone)]
 pub enum Attempt {
     /// The local command.
     Command(String),
+    /// A model on the Images page's failover list.
+    Image(ImageTarget),
     /// A model in the agent pool that makes images.
     Api(ApiRoute),
 }
@@ -138,6 +149,7 @@ impl Attempt {
     fn label(&self) -> String {
         match self {
             Self::Command(program) => format!("local command {program}"),
+            Self::Image(target) => format!("{} · {}", target.provider.display_name, target.model.display_name),
             Self::Api(route) => format!("{} · {}", route.provider_name, route.model_name),
         }
     }
@@ -201,6 +213,24 @@ pub fn plan(backend: Option<&str>, app: &AppContext) -> Plan {
             attempts.push(Attempt::Command(command));
         }
     }
+    if only("images") {
+        let keys = ApiProviderKeys::as_ref(app);
+        for id in image_providers::failover_rows(app) {
+            if image_providers::is_disabled(&id, app) {
+                continue;
+            }
+            let Some((provider, model)) = image_providers::parse_model_id(&id) else {
+                continue;
+            };
+            if let Some(key) = keys.key_for(provider.id) {
+                attempts.push(Attempt::Image(ImageTarget {
+                    provider,
+                    model,
+                    key: key.to_string(),
+                }));
+            }
+        }
+    }
     if only("pool") {
         for target in agent_pool(app) {
             if let FailoverTarget::Api(route) = target {
@@ -238,6 +268,7 @@ pub async fn run(plan: Plan, request: &ImageRequest) -> Result<ImageResult, Stri
         let started = Instant::now();
         let made = match &attempt {
             Attempt::Command(program) => run_command(program, request, &out).await,
+            Attempt::Image(target) => run_image_target(target, request, &out).await,
             Attempt::Api(route) => run_api(route, request, &out).await,
         };
         match made {
@@ -427,6 +458,42 @@ async fn openai_generate(
         dir,
     )
     .await?;
+    picture_from_reply(&reply, out).await
+}
+
+/// A model on the Images page: the request is written the way its supplier wants it.
+async fn run_image_target(target: &ImageTarget, request: &ImageRequest, out: &Path) -> Result<(), String> {
+    if request.reference.is_some() {
+        return Err("it cannot take a reference image".to_string());
+    }
+    if request.transparent && target.provider.wire != image_providers::Wire::OpenAi {
+        return Err("it cannot draw on a transparent background".to_string());
+    }
+    let dir = out.parent().unwrap_or(Path::new("/tmp"));
+    let body = image_providers::request_body(
+        target.provider,
+        target.model.id,
+        &request.prompt,
+        request.width,
+        request.height,
+        request.transparent,
+    );
+    let reply = curl_json(
+        &format!("{}/images/generations", target.provider.base_url),
+        Some(&target.key),
+        &body,
+        dir,
+    )
+    .await?;
+    if let Some(bytes) = picture_from_reply(&reply, out).await? {
+        std::fs::write(out, bytes).map_err(|error| format!("could not save the picture: {error}"))?;
+    }
+    Ok(())
+}
+
+/// The picture in an `/images/generations` answer: base64 data, or a URL fetched straight to
+/// `out` (then `None`).
+async fn picture_from_reply(reply: &Value, out: &Path) -> Result<Option<Vec<u8>>, String> {
     let first = reply.pointer("/data/0").ok_or("the answer has no `data`")?;
     if let Some(encoded) = first.get("b64_json").and_then(Value::as_str) {
         return decode_image(encoded).map(Some);
