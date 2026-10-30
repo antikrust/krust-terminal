@@ -55,7 +55,7 @@ pub const IMAGE_PROVIDERS: &[ImageProvider] = &[
         display_name: "OpenAI",
         base_url: "https://api.openai.com/v1",
         key_url: "https://platform.openai.com/api-keys",
-        note: "Paid per picture. The only one here that can draw on a transparent background.",
+        note: "Paid per picture. The only one here that can draw on a transparent background or copy a reference picture.",
         wire: Wire::OpenAi,
         models: &[ImageModel {
             id: "gpt-image-1",

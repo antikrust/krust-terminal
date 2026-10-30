@@ -156,7 +156,7 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
                     "seed": { "type": "integer", "description": "Repeat a picture (optional)." },
                     "reference_image": {
                         "type": "string",
-                        "description": "Absolute path of a picture to copy or edit (optional)."
+                        "description": "Absolute path of a picture to copy or edit (optional; only an OpenAI model on the Images page takes it for now)."
                     },
                     "transparent": {
                         "type": "boolean",

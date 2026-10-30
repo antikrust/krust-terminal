@@ -463,7 +463,7 @@ async fn openai_generate(
 
 /// A model on the Images page: the request is written the way its supplier wants it.
 async fn run_image_target(target: &ImageTarget, request: &ImageRequest, out: &Path) -> Result<(), String> {
-    if request.reference.is_some() {
+    if request.reference.is_some() && target.provider.wire != image_providers::Wire::OpenAi {
         return Err("it cannot take a reference image".to_string());
     }
     if request.transparent && target.provider.wire != image_providers::Wire::OpenAi {
@@ -478,13 +478,37 @@ async fn run_image_target(target: &ImageTarget, request: &ImageRequest, out: &Pa
         request.height,
         request.transparent,
     );
-    let reply = curl_json(
-        &format!("{}/images/generations", target.provider.base_url),
-        Some(&target.key),
-        &body,
-        dir,
-    )
-    .await?;
+    let reply = match &request.reference {
+        // A reference picture goes to OpenAI's edits endpoint, as a form with the picture in it.
+        Some(reference) => {
+            let mut fields = vec![
+                ("model", target.model.id.to_string()),
+                ("prompt", request.prompt.clone()),
+                ("size", format!("{}x{}", request.width, request.height)),
+            ];
+            if request.transparent {
+                fields.push(("background", "transparent".to_string()));
+            }
+            curl_form(
+                &format!("{}/images/edits", target.provider.base_url),
+                Some(&target.key),
+                &fields,
+                "image",
+                reference,
+                dir,
+            )
+            .await?
+        }
+        None => {
+            curl_json(
+                &format!("{}/images/generations", target.provider.base_url),
+                Some(&target.key),
+                &body,
+                dir,
+            )
+            .await?
+        }
+    };
     if let Some(bytes) = picture_from_reply(&reply, out).await? {
         std::fs::write(out, bytes).map_err(|error| format!("could not save the picture: {error}"))?;
     }
@@ -517,20 +541,64 @@ pub fn decode_image(encoded: &str) -> Result<Vec<u8>, String> {
 /// `dir`, the key through the environment.
 async fn curl_json(url: &str, key: Option<&str>, body: &Value, dir: &Path) -> Result<Value, String> {
     std::fs::create_dir_all(dir).map_err(|error| error.to_string())?;
-    let stamp = SystemTime::now()
+    let stamp = unique_stamp();
+    let body_path = dir.join(format!(".request-{stamp}.json"));
+    std::fs::write(&body_path, body.to_string()).map_err(|error| error.to_string())?;
+    let content_args = vec![
+        "--header".to_string(),
+        "Content-Type: application/json".to_string(),
+        "--data-binary".to_string(),
+        format!("@{}", body_path.display()),
+    ];
+    let answer = curl_call(url, key, dir, &stamp, content_args).await;
+    let _ = std::fs::remove_file(&body_path);
+    answer
+}
+
+/// POSTs a multipart form (text fields and one file) with curl and returns the JSON answer.
+/// `--form-string` keeps a prompt that starts with `@` or `<` from being read as a file.
+async fn curl_form(
+    url: &str,
+    key: Option<&str>,
+    fields: &[(&str, String)],
+    file_field: &str,
+    file: &Path,
+    dir: &Path,
+) -> Result<Value, String> {
+    std::fs::create_dir_all(dir).map_err(|error| error.to_string())?;
+    let mut content_args: Vec<String> = Vec::new();
+    for (name, value) in fields {
+        content_args.push("--form-string".to_string());
+        content_args.push(format!("{name}={value}"));
+    }
+    content_args.push("--form".to_string());
+    content_args.push(format!("{file_field}=@\"{}\"", file.display()));
+    curl_call(url, key, dir, &unique_stamp(), content_args).await
+}
+
+fn unique_stamp() -> String {
+    SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
-        .unwrap_or(0);
-    let body_path = dir.join(format!(".request-{stamp}.json"));
+        .unwrap_or(0)
+        .to_string()
+}
+
+/// Runs one curl POST whose body arguments are `content_args`, and reads the JSON answer; the key
+/// goes through the environment.
+async fn curl_call(
+    url: &str,
+    key: Option<&str>,
+    dir: &Path,
+    stamp: &str,
+    content_args: Vec<String>,
+) -> Result<Value, String> {
     let reply_path = dir.join(format!(".reply-{stamp}.json"));
-    std::fs::write(&body_path, body.to_string()).map_err(|error| error.to_string())?;
     let mut args: Vec<String> = vec![
         "--silent".into(),
         "--show-error".into(),
         "--max-time".into(),
         MAX_SECS.to_string(),
-        "--header".into(),
-        "Content-Type: application/json".into(),
     ];
     if key.is_some() {
         args.extend([
@@ -540,9 +608,8 @@ async fn curl_json(url: &str, key: Option<&str>, body: &Value, dir: &Path) -> Re
             AUTHORIZATION_HEADER.to_string(),
         ]);
     }
+    args.extend(content_args);
     args.extend([
-        "--data-binary".to_string(),
-        format!("@{}", body_path.display()),
         "--output".to_string(),
         reply_path.to_string_lossy().into_owned(),
         "--write-out".to_string(),
@@ -556,7 +623,6 @@ async fn curl_json(url: &str, key: Option<&str>, body: &Value, dir: &Path) -> Re
     }
     let output = command.output().await;
     let reply = std::fs::read(&reply_path);
-    let _ = std::fs::remove_file(&body_path);
     let _ = std::fs::remove_file(&reply_path);
     let output = output.map_err(|error| format!("could not run curl: {error}"))?;
     let status = String::from_utf8_lossy(&output.stdout).trim().to_string();
