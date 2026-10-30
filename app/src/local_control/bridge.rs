@@ -100,6 +100,7 @@ impl LocalControlBridge {
             | ActionKind::SessionReopenClosed
             | ActionKind::InputInsert
             | ActionKind::InputReplace
+            | ActionKind::InputSubmit
             | ActionKind::SurfaceSettingsOpen
             | ActionKind::SurfaceCommandPaletteOpen
             | ActionKind::SurfaceCommandSearchOpen

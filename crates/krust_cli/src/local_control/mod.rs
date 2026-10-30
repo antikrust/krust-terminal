@@ -380,6 +380,10 @@ pub enum InputCommand {
 
     /// Replace the input buffer without submitting it.
     Replace(TextTargetArgs),
+
+    /// Submit the staged text as an instruction to the agent. Refused when the input is in
+    /// shell mode, so it never runs a shell command.
+    Submit(TargetArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]

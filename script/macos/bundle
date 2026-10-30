@@ -315,7 +315,9 @@ elif [[ $RELEASE_CHANNEL = "oss" ]]; then
     KRUST_SCHEME_NAME="krustoss"
     # The OSS channel does not ship Sentry, so drop the cocoa_sentry feature
     # (which would otherwise pull in the Sentry framework dependency).
-    FEATURES="release_bundle,extern_plist"
+    # Krust Control (krustctrl, Settings > Scripting) is compiled in; it stays off until the
+    # Scripting switch is turned on.
+    FEATURES="release_bundle,extern_plist,krust_control_cli"
 fi
 
 OUT_DIR="target/$TARGET_PROFILE_DIR/bundle/osx"

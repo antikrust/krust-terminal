@@ -229,6 +229,7 @@ define_action_catalog! {
     input {
         InputInsert => { name: "input.insert", status: Implemented, target: Input, params: Text, result: Acknowledgement },
         InputReplace => { name: "input.replace", status: Implemented, target: Input, params: Text, result: Acknowledgement },
+        InputSubmit => { name: "input.submit", status: Implemented, target: Input, params: None, result: Acknowledgement },
     }
 
     theme {

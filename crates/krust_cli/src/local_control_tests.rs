@@ -427,6 +427,10 @@ fn retained_action_examples() -> Vec<(ActionKind, Vec<&'static str>)> {
             ActionKind::InputReplace,
             vec!["krustctrl", "input", "replace", "hello"],
         ),
+        (
+            ActionKind::InputSubmit,
+            vec!["krustctrl", "input", "submit"],
+        ),
         (ActionKind::ThemeList, vec!["krustctrl", "theme", "list"]),
         (ActionKind::ThemeGet, vec!["krustctrl", "theme", "get"]),
         (
@@ -648,6 +652,7 @@ fn parsed_action_kind(command: &ControlCommand) -> Option<ActionKind> {
         ControlCommand::Input(command) => match command {
             InputCommand::Insert(_) => Some(ActionKind::InputInsert),
             InputCommand::Replace(_) => Some(ActionKind::InputReplace),
+            InputCommand::Submit(_) => Some(ActionKind::InputSubmit),
         },
         ControlCommand::Theme(command) => match command {
             ThemeCommand::List(_) => Some(ActionKind::ThemeList),

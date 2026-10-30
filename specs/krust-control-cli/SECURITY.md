@@ -18,8 +18,8 @@ Exact-action credentials are safety and intent mechanisms. They let a script or 
 - Keep credentials out of plaintext discovery records and mint them only in memory.
 - Authorize every action by its exact typed identity in the app bridge.
 - Route close actions through normal Krust close behavior so existing app warnings for unsaved files, running processes, and shared sessions remain authoritative.
-- Ensure the two input-staging commands (`input.insert`, `input.replace`) never submit the buffer. No other input actions exist.
-- Keep the action surface at exactly 84 allowlisted actions. The Block, Auth, Drive, and History families are entirely absent.
+- Ensure the two input-staging commands (`input.insert`, `input.replace`) never submit the buffer. `input.submit` is the only input action that submits: it sends the staged text to the agent and is refused when the input is in shell mode, so Krust Control never runs a shell command. No other input actions exist.
+- Keep the action surface at exactly 85 allowlisted actions. The Block, Auth, Drive, and History families are entirely absent.
 - Fail closed on platforms without owner-only discovery and authenticated broker transport.
 - Preserve deterministic targeting so a request never silently mutates or reads the wrong target.
 ## Honest same-user limitations
@@ -151,9 +151,9 @@ Rules:
 - Index selectors resolve to concrete IDs before execution.
 - Session-scoped requests against non-terminal panes return `target_state_conflict`.
 ## Input staging safety
-The two input commands (`input.insert`, `input.replace`) only stage text in the terminal input buffer. They never submit the buffer, press Enter, or execute a command. No other input actions (`input.get`, `input.clear`, `input.mode.set`, `input.run`) exist in the 84-action catalog. Tests must prove no submission occurs.
+Two input commands (`input.insert`, `input.replace`) only stage text in the terminal input buffer. They never submit the buffer, press Enter, or execute a command. `input.submit` sends the staged text to the agent as an instruction and is refused when the input is in shell mode; an agent run can still run commands under the agent's own permissions, so enabling Scripting lets any process of the same user start agent runs. No other input actions (`input.get`, `input.clear`, `input.mode.set`, `input.run`) exist in the 85-action catalog.
 ## Catalog boundary
-The catalog contains exactly 84 actions. The following families and actions are entirely absent:
+The catalog contains exactly 85 actions. The following families and actions are entirely absent:
 - The entire Block family (`block.list`, `block.inspect`, `block.output`).
 - The entire Auth family (`auth.status`, `auth.login`).
 - The entire Drive family (all `drive.*` actions).

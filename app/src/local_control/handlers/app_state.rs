@@ -19,6 +19,7 @@ use krust_util::path::LineAndColumnArg;
 use krustui::SingletonEntity;
 use krustui::{AppContext, ModelContext, TypedActionView};
 
+use crate::ai::blocklist::InputType;
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
 use crate::local_control::handlers::ack;
@@ -108,6 +109,7 @@ pub(crate) fn handle(
         ActionKind::SessionReopenClosed => session_reopen_closed(instance_id, target, ctx),
         ActionKind::InputInsert => input_text(instance_id, action, params, target, false, ctx),
         ActionKind::InputReplace => input_text(instance_id, action, params, target, true, ctx),
+        ActionKind::InputSubmit => input_submit(instance_id, action, target, ctx),
         ActionKind::SurfaceSettingsOpen => surface_settings_open(instance_id, params, target, ctx),
         ActionKind::SurfaceCommandPaletteOpen => surface_palette_open(
             instance_id,
@@ -634,6 +636,52 @@ fn input_text(
             }
         });
     });
+    Ok(ack(instance_id, action_kind))
+}
+
+/// Submits the staged text the way pressing Enter would, but only as an instruction to the
+/// agent: an input in shell mode is refused, so this action can never run a shell command.
+fn input_submit(
+    instance_id: &Option<InstanceId>,
+    action_kind: ActionKind,
+    target: &TargetSelector,
+    ctx: &mut ModelContext<LocalControlBridge>,
+) -> Result<serde_json::Value, ControlError> {
+    let pane_group = target_pane_group(action_kind, target, ctx)?;
+    let pane_id = input_target_pane_id(action_kind, target, &pane_group, ctx)?;
+    let terminal_view = pane_group
+        .read(ctx, |pane_group, ctx| {
+            pane_group.terminal_view_from_pane_id(pane_id, ctx)
+        })
+        .ok_or_else(|| {
+            ControlError::new(
+                ErrorCode::MissingTarget,
+                format!("{} requires a terminal input target", action_kind.as_str()),
+            )
+        })?;
+    let input = terminal_view.read(ctx, |terminal_view, _| terminal_view.input().clone());
+    let (is_agent_input, has_text) = input.read(ctx, |input, ctx| {
+        (
+            input.input_type(ctx) == InputType::AI,
+            !input.buffer_text(ctx).trim().is_empty(),
+        )
+    });
+    if !is_agent_input {
+        return Err(ControlError::new(
+            ErrorCode::TargetStateConflict,
+            format!(
+                "{} only submits an instruction to the agent, and this input is in shell mode",
+                action_kind.as_str()
+            ),
+        ));
+    }
+    if !has_text {
+        return Err(ControlError::new(
+            ErrorCode::TargetStateConflict,
+            format!("{} needs text staged in the input", action_kind.as_str()),
+        ));
+    }
+    input.update(ctx, |input, ctx| input.input_enter(ctx));
     Ok(ack(instance_id, action_kind))
 }
 

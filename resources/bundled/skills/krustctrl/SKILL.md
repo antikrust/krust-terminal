@@ -106,6 +106,9 @@ These are frequently used commands that are safe to invoke directly. For less co
 {{krustctrl_binary_name}} input insert "git status"
 {{krustctrl_binary_name}} input replace "cargo test"
 
+# Start the staged text as an agent instruction (agent mode only)
+{{krustctrl_binary_name}} input submit
+
 # Open or toggle Krust UI surfaces
 {{krustctrl_binary_name}} surface list
 {{krustctrl_binary_name}} surface settings open
@@ -159,7 +162,7 @@ Use `surface list` before a walkthrough or multi-step UI workflow. It reports bo
 ## Safety and limitations
 
 - Invoke close actions only when the user explicitly asks to close something. Close actions flow through normal Krust close behavior and may trigger existing app warnings.
-- `input insert` and `input replace` only stage text. Krust Control intentionally does not provide an action that submits or runs the input.
+- `input insert` and `input replace` only stage text. `input submit` sends the staged text to the agent as an instruction, the way Enter does, and only when the input is in agent mode: an input in shell mode is refused, so Krust Control never runs a shell command. Use it only when the user asks you to start the instruction.
 - Do not invent unsupported commands. Use the matching group's `help` first, then use `action list` or `action inspect` only when no dedicated group matches.
 - Krust Control affects only a running local Krust application owned by the same user. It does not control remote or cloud Krust instances.
 - Each channel-specific Krust Control CLI lists and targets only Krust instances from its own channel.

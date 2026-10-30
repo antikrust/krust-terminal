@@ -57,9 +57,9 @@ The authoritative value is stored in protected local storage (macOS Keychain, or
 ## Close behavior
 `window.close`, `tab.close`, and `pane.close` execute after the same exact-action credential validation as the other 81 actions. They flow through Krust's normal close behavior, so existing warnings for unsaved files, running processes, shared sessions, and similar app state remain authoritative and may cancel the close.
 ## Input staging
-The two input commands (`input.insert`, `input.replace`) only stage or edit text in the terminal input buffer. They never submit the buffer, press Enter, or execute a command. There is no `input.run`, `input.get`, `input.clear`, or `input.mode.set` action in the catalog. Terminal command execution is not part of this product surface.
+Two input commands (`input.insert`, `input.replace`) only stage or edit text in the terminal input buffer. They never submit the buffer, press Enter, or execute a command. `input.submit` sends the staged text to the agent as an instruction, the way Enter does, and only when the input is in agent mode; an input in shell mode is refused with `target_state_conflict`. There is no `input.run`, `input.get`, `input.clear`, or `input.mode.set` action in the catalog. Terminal command execution is not part of this product surface.
 ## Action catalog
-The public catalog contains exactly 84 actions. The Block, Auth, Drive, and History families are entirely absent. Input is limited to `input.insert` and `input.replace`. Actions are organized by noun and use the exact dotted names from the authoritative `ActionKind` catalog.
+The public catalog contains exactly 85 actions. The Block, Auth, Drive, and History families are entirely absent. Input is limited to `input.insert`, `input.replace` and `input.submit`. Actions are organized by noun and use the exact dotted names from the authoritative `ActionKind` catalog.
 ### Instance (2 actions)
 All default-authorized.
 - `instance.list` — list reachable Krust app processes from the CLI binary's channel.
@@ -114,10 +114,11 @@ All default-authorized.
 - `session.previous` — cycle to the previous session.
 - `session.next` — cycle to the next session.
 - `session.reopen_closed` — reopen the last closed session.
-### Input (2 actions)
-All default-authorized. **Input commands stage text only and never submit.**
+### Input (3 actions)
+All default-authorized. **`input.insert` and `input.replace` stage text only and never submit.**
 - `input.insert` — insert text into the input buffer without executing.
 - `input.replace` — replace the input buffer contents without executing.
+- `input.submit` — submit the staged text to the agent. Refused when the input is in shell mode or empty (`target_state_conflict`).
 ### Theme (6 actions)
 All default-authorized.
 - `theme.list` — list available themes.
