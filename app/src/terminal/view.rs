@@ -23950,7 +23950,6 @@ impl TerminalView {
                         .value()
                         .as_deref(),
                 ),
-                crate::ai::ollama::service::disabled_models_for(ctx),
                 RunbookWatch {
                     selected_model: Some(std::sync::Arc::new(move || {
                         menu_pick_for_pane(pane_view_id)
@@ -24514,7 +24513,7 @@ impl TerminalView {
                                 on_event,
                             )
                             .await
-                        } else if let Some((config, disabled, watch)) = ollama_runbook {
+                        } else if let Some((config, watch)) = ollama_runbook {
                             let model = ollama_model.unwrap_or_default();
                             run_ollama_runbook_watched(
                                 &pump_prompt,
@@ -24523,7 +24522,6 @@ impl TerminalView {
                                 &pump_path,
                                 &model,
                                 config,
-                                disabled,
                                 watch,
                                 on_event,
                             )

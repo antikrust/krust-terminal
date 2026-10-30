@@ -45,7 +45,7 @@ use super::claude_stream_exec::{
     finish_harness_session, harness_cancel_for, register_harness_session,
     run_jsonl_stream_cancellable, HarnessCancel,
 };
-use super::ollama_committee::{fetch_installed_model_names, success_status};
+use super::ollama_committee::success_status;
 use super::ollama_stream_exec::{
     base_url_of, builtin_local_tool_specs, dispatch_builtin_tool, emit_failed_turn,
     ensure_ollama_service, execute_shell, new_ollama_chat_command, ollama_model_name,
@@ -81,25 +81,6 @@ pub(crate) const SHORT_REPLY_MAX_TOKENS: u32 = 1_024;
 /// The output cap of a condition check (see `check_case`), room for a
 /// thinking judge to think.
 const CONDITION_MAX_TOKENS: u32 = 4_096;
-/// Judges tried, in order, when none is chosen: reasoning models that fit
-/// beside a 14B worker on a 24GB machine.
-const JUDGE_PREFERENCE: &[&str] = &[
-    "deepseek-r1:14b",
-    "qwen3:14b",
-    "phi4:14b",
-    "qwen3.5:9b",
-    "qwen3:8b",
-    "deepseek-r1:8b",
-];
-/// Helpers tried, in order, when none is chosen: small, quick models that fit
-/// beside a 14B judge, for checking one proposed fix at a time.
-const HELPER_PREFERENCE: &[&str] = &[
-    "qwen3.5:9b",
-    "qwen2.5-coder:7b",
-    "qwen3:8b",
-    "granite4:7b-a1b-h",
-    "llama3.1:8b",
-];
 /// Separates a block's own output from the values it reports back.
 const FACTS_MARKER: &str = "__RUNBOOK_FACTS__";
 const RUN_BLOCK: &str = "run_block";
@@ -177,35 +158,6 @@ pub(crate) fn cycle_judge(config: &mut RunbookConfig, installed: &[String]) {
 
 pub(crate) fn cycle_helper(config: &mut RunbookConfig, installed: &[String]) {
     cycle_choice(&mut config.helper, installed);
-}
-
-/// The first model of `preference` installed and switched on, else `fallback`.
-fn pick_preferred(
-    preference: &[&str],
-    installed: &[String],
-    fallback: &str,
-    disabled: &[String],
-) -> String {
-    preference
-        .iter()
-        .find(|preferred| {
-            installed.iter().any(|tag| tag == *preferred)
-                && !disabled.iter().any(|off| off == *preferred)
-        })
-        .map(|preferred| preferred.to_string())
-        .unwrap_or_else(|| fallback.to_string())
-}
-
-/// The judge to use when none is chosen: the first preferred reasoning model
-/// installed and switched on, else the worker itself.
-pub(crate) fn pick_judge(installed: &[String], worker: &str, disabled: &[String]) -> String {
-    pick_preferred(JUDGE_PREFERENCE, installed, worker, disabled)
-}
-
-/// The helper to use when none is chosen: the first preferred small model
-/// installed and switched on, else the worker itself.
-pub(crate) fn pick_helper(installed: &[String], worker: &str, disabled: &[String]) -> String {
-    pick_preferred(HELPER_PREFERENCE, installed, worker, disabled)
 }
 
 // ---------------------------------------------------------------------------
@@ -1785,7 +1737,6 @@ pub(crate) async fn run_ollama_runbook(
     path: &str,
     worker: &str,
     config: RunbookConfig,
-    disabled: Vec<String>,
     on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     run_ollama_runbook_watched(
@@ -1795,7 +1746,6 @@ pub(crate) async fn run_ollama_runbook(
         path,
         worker,
         config,
-        disabled,
         RunbookWatch::default(),
         on_event,
     )
@@ -1815,7 +1765,6 @@ pub(crate) async fn run_ollama_runbook_watched(
     path: &str,
     worker: &str,
     config: RunbookConfig,
-    disabled: Vec<String>,
     watch: RunbookWatch,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
@@ -1895,7 +1844,6 @@ pub(crate) async fn run_ollama_runbook_watched(
                 path,
                 worker: &worker,
                 config: &config,
-                disabled: &disabled,
                 watch: &watch,
                 started_with: started_with.as_deref(),
                 request: &request,
@@ -1979,7 +1927,6 @@ struct RunInputs<'a> {
     path: &'a str,
     worker: &'a str,
     config: &'a RunbookConfig,
-    disabled: &'a [String],
     watch: &'a RunbookWatch,
     started_with: Option<&'a str>,
     request: &'a RunbookRequest,
@@ -2022,23 +1969,6 @@ async fn watch_for_model_switch(inputs: &RunInputs<'_>) {
     }
 }
 
-/// The preferred models that are installed and switched on, in preference
-/// order: the judge and helper candidates the memory check chooses among.
-fn preferred_installed(
-    preference: &[&str],
-    installed: &[String],
-    disabled: &[String],
-) -> Vec<String> {
-    preference
-        .iter()
-        .filter(|preferred| {
-            installed.iter().any(|tag| tag == *preferred)
-                && !disabled.iter().any(|off| off == *preferred)
-        })
-        .map(|preferred| preferred.to_string())
-        .collect()
-}
-
 /// One attempt at the runbook with `inputs.worker`, from step 1.
 async fn run_attempt(
     inputs: &RunInputs<'_>,
@@ -2050,7 +1980,6 @@ async fn run_attempt(
         path,
         worker,
         config,
-        disabled,
         watch,
         request,
         runbook,
@@ -2090,37 +2019,27 @@ async fn run_attempt(
             return Ok(AttemptEnd::Finished(success_status()));
         }
     };
-    let installed = if config.judge.is_none() || config.helper.is_none() {
-        fetch_installed_model_names(path).await.unwrap_or_default()
-    } else {
-        Vec::new()
-    };
-    // Judge and helper are picked only once the models are known to fit in
-    // memory together: loading them is what freezes the machine.
-    let (judge, helper) = match memory::inventory(path, &watch.other_servers).await {
+    // One model does every job unless a judge or helper is chosen in
+    // Settings: a small machine shouldn't juggle several. The models are
+    // checked against memory before any is loaded — loading what doesn't fit
+    // is what freezes the machine.
+    let (judge, helper, swaps) = match memory::inventory(path, &watch.other_servers).await {
         Some(inventory) => match memory::choose(
             &inventory,
             worker,
             config.judge.as_deref(),
             config.helper.as_deref(),
-            &preferred_installed(JUDGE_PREFERENCE, &installed, disabled),
-            &preferred_installed(HELPER_PREFERENCE, &installed, disabled),
         ) {
-            Ok(picks) => (picks.judge, picks.helper),
+            Ok(picks) => (picks.judge, picks.helper, picks.swaps),
             Err(message) => {
                 finish_with_text(&mut on_event, message);
                 return Ok(AttemptEnd::Finished(success_status()));
             }
         },
         None => (
-            config
-                .judge
-                .clone()
-                .unwrap_or_else(|| pick_judge(&installed, worker, disabled)),
-            config
-                .helper
-                .clone()
-                .unwrap_or_else(|| pick_helper(&installed, worker, disabled)),
+            config.judge.clone().unwrap_or_else(|| worker.to_string()),
+            config.helper.clone().unwrap_or_else(|| worker.to_string()),
+            false,
         ),
     };
     let judge_thinks = probe_model_caps_checked(&judge, path)
@@ -2148,6 +2067,12 @@ async fn run_attempt(
         .steps
         .iter()
         .any(|step| step.blocks.iter().any(RunbookBlock::is_resolve));
+    let swap_note = swaps.then(|| {
+        format!(
+            "⚠ The models you chose don't fit in memory together, so Ollama will swap them in and out as the run \
+             goes: expect slower steps. Leave the judge and helper on auto to have `{worker}` do every job."
+        )
+    });
     on_event(TurnEvent::Text {
         text: format!(
             "**Runbook:** {} — {} steps, run in `{}`.\n\nWorker **`{worker}`** runs each step in a fresh \
@@ -2164,10 +2089,11 @@ async fn run_attempt(
             } else {
                 String::new()
             },
-            sandbox_note
-                .as_ref()
+            [swap_note, sandbox_note.clone()]
+                .into_iter()
+                .flatten()
                 .map(|note| format!("\n\n{note}"))
-                .unwrap_or_default()
+                .collect::<String>()
         ),
     });
     on_event(TurnEvent::PlanUpdated {

@@ -335,31 +335,6 @@ fn reads_the_judges_verdict_through_prose_and_fences() {
 }
 
 #[test]
-fn picks_a_preferred_judge_that_is_installed_and_switched_on() {
-    let installed: Vec<String> = ["qwen2.5-coder:14b", "qwen3:14b", "deepseek-r1:14b"]
-        .iter()
-        .map(|tag| tag.to_string())
-        .collect();
-    assert_eq!(
-        pick_judge(&installed, "qwen2.5-coder:14b", &[]),
-        "deepseek-r1:14b"
-    );
-    assert_eq!(
-        pick_judge(
-            &installed,
-            "qwen2.5-coder:14b",
-            &["deepseek-r1:14b".to_string()]
-        ),
-        "qwen3:14b"
-    );
-    assert_eq!(
-        pick_judge(&["llama3.1:8b".to_string()], "llama3.1:8b", &[]),
-        "llama3.1:8b",
-        "with nothing preferred installed, the worker judges itself"
-    );
-}
-
-#[test]
 fn the_judge_setting_round_trips_and_cycles() {
     assert_eq!(
         RunbookConfig::from_settings_json(None),
@@ -738,27 +713,6 @@ fn the_judge_can_only_carry_values_the_runbook_uses() {
 }
 
 #[test]
-fn picks_a_small_helper_that_is_installed_and_switched_on() {
-    let installed: Vec<String> = ["qwen2.5-coder:14b", "granite4:7b-a1b-h", "qwen3.5:9b"]
-        .iter()
-        .map(|tag| tag.to_string())
-        .collect();
-    assert_eq!(
-        pick_helper(&installed, "qwen2.5-coder:14b", &[]),
-        "qwen3.5:9b"
-    );
-    assert_eq!(
-        pick_helper(&installed, "qwen2.5-coder:14b", &["qwen3.5:9b".to_string()]),
-        "granite4:7b-a1b-h"
-    );
-    assert_eq!(
-        pick_helper(&["qwen2.5-coder:14b".to_string()], "qwen2.5-coder:14b", &[]),
-        "qwen2.5-coder:14b",
-        "with no small model installed, the worker checks its own fixes"
-    );
-}
-
-#[test]
 fn a_resolve_block_is_offered_to_run_block_with_its_own_label() {
     let runbook = parse_runbook(
         "## Step 1: merge\n\n```bash\ngit merge x\n```\n\n```resolve\nreference: refs/floorp/main\n```\n\n\
@@ -877,7 +831,6 @@ fn a_toy_runbook_runs_end_to_end_against_live_ollama() {
         &path,
         &worker,
         RunbookConfig::default(),
-        Vec::new(),
         |event| events.push(event),
     ))
     .unwrap();
@@ -974,7 +927,6 @@ fn run_the_runbook_named_in_the_environment() {
         &path,
         &worker,
         config,
-        Vec::new(),
         |event| match event {
             TurnEvent::Text { text } | TurnEvent::TextDelta { text } => write(text),
             TurnEvent::Thinking { text } => thinking += text.len(),

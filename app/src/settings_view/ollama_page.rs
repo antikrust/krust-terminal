@@ -32,9 +32,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     COMMITTEE_DISPLAY_NAME, COMMITTEE_MODEL_NAME, MAX_LOADED_MODELS, MAX_PANEL_EXTRA_ROUNDS,
     MAX_REVIEWERS,
 };
-use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
-    self, cycle_helper, cycle_judge, RunbookConfig,
-};
+use crate::ai::agent_sdk::driver::harness::ollama_runbook::{cycle_helper, cycle_judge, RunbookConfig};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
@@ -2335,20 +2333,7 @@ impl SettingsWidget for RunbookWidget {
 
         let label = match &config.judge {
             Some(judge) => format!("Judge: {judge}"),
-            None => {
-                let installed = view.installed_model_names();
-                if installed.is_empty() {
-                    "Judge: auto".to_string()
-                } else {
-                    let disabled = service::disabled_models_for(app);
-                    let picked = ollama_runbook::pick_judge(&installed, "", &disabled);
-                    if picked.is_empty() {
-                        "Judge: auto (the selected model checks its own work)".to_string()
-                    } else {
-                        format!("Judge: auto ({picked})")
-                    }
-                }
-            }
+            None => "Judge: auto (the selected model checks its own work)".to_string(),
         };
         let handles = view.state_handles.borrow();
         column.add_child(
@@ -2373,9 +2358,11 @@ impl SettingsWidget for RunbookWidget {
         column.add_child(
             Container::new(sub_text(
                 "The judge reads each step's output and decides whether the step passed. \
-                 Auto picks the first installed reasoning model from deepseek-r1:14b, \
-                 qwen3:14b and phi4:14b. A run refuses to start in a git repository that \
-                 can push anywhere but a local folder, so try a runbook on a sandbox copy.",
+                 Auto uses the selected model, so one model does every job and a small \
+                 machine never holds several; choose another to get a second opinion, \
+                 and Ollama swaps them in and out if they don't fit together. A run refuses \
+                 to start in a git repository that can push anywhere but a local folder, so \
+                 try a runbook on a sandbox copy.",
                 appearance,
             ))
             .with_margin_top(2.)
@@ -2384,16 +2371,7 @@ impl SettingsWidget for RunbookWidget {
 
         let helper_label = match &config.helper {
             Some(helper) => format!("Helper: {helper}"),
-            None => {
-                let installed = view.installed_model_names();
-                let disabled = service::disabled_models_for(app);
-                let picked = ollama_runbook::pick_helper(&installed, "", &disabled);
-                if picked.is_empty() {
-                    "Helper: auto (the selected model checks its own fixes)".to_string()
-                } else {
-                    format!("Helper: auto ({picked})")
-                }
-            }
+            None => "Helper: auto (the selected model checks its own fixes)".to_string(),
         };
         column.add_child(
             Container::new(

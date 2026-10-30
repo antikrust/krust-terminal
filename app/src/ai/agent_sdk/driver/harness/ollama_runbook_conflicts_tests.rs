@@ -440,7 +440,6 @@ fn a_real_conflict_is_merged_one_piece_at_a_time_against_live_ollama() {
         &path,
         "qwen2.5-coder:14b",
         RunbookConfig::default(),
-        Vec::new(),
         |event| events.push(event),
     ))
     .unwrap();

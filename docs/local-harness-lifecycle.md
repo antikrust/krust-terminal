@@ -256,13 +256,15 @@ Shared-session viewers still tag in: their prompts go to the sharer.
 - Runbook mode treats any word of a prompt that names an existing file as
   the runbook to run, so don't route prompts carrying terminal output into
   it.
-- **Memory check before models load.** `ollama_runbook_memory.rs` adds up the worker, judge and
-  helper (`/api/tags` sizes plus ~1 GB of context each, or the `/api/ps` size when loaded), plus
-  anything else Ollama has loaded (this machine's servers only), against 75% of `hw.memsize`
-  (`USABLE_MEMORY_FRACTION`). It runs before `pick_judge` / `pick_helper` and before any judge or
-  helper probe: the first preferred judge/helper pair that fits wins (the worker itself is the last
-  resort), a judge or helper chosen in Settings is never swapped, and if nothing fits the run ends
-  with a plain message naming the models and sizes. An unreadable `hw.memsize` skips the check.
+- **One model by default, memory-checked before anything loads.** A judge or helper that isn't
+  chosen in Settings is the worker itself, so a small machine never holds several models. Before
+  any model is probed or loaded, `ollama_runbook_memory.rs` adds up the worker, judge and helper
+  (`/api/tags` sizes plus ~1 GB of context each, or the `/api/ps` size when loaded), plus anything
+  else Ollama has loaded (this machine's servers only), against 75% of `hw.memsize`
+  (`USABLE_MEMORY_FRACTION`). Chosen models that fit together are used; chosen models that fit only
+  one at a time are used too, with a warning in the conversation (Ollama does the swapping); a model
+  too big to load alone ends the run with a plain message naming the models and sizes. An
+  unreadable `hw.memsize`, or a run entirely on other machines, skips the check.
 - **A model pick mid-run restarts the run.** The pane's model menu records its picks
   (`harness_availability::note_menu_pick`; only deliberate picks, not a pane taking a
   conversation's model). `run_ollama_runbook_watched` watches that: a pick of another Ollama model

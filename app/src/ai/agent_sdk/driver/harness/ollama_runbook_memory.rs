@@ -1,13 +1,15 @@
 //! Does the runbook's set of models fit in memory together?
 //!
-//! A runbook run keeps a worker, a judge and (in the work-file pass) a helper
+//! A runbook run keeps its worker, and any judge or helper chosen in Settings,
 //! loaded at once, because they alternate on every step and `KEEP_ALIVE`
 //! stops them being unloaded between calls. A 20 GB worker, a 7.6 GB judge
 //! and another process's image model on a 24 GB Mac filled swap and froze the
-//! machine. So before the judge or helper is picked or loaded, this adds up
-//! what the run would hold — plus whatever Ollama already has loaded — against
-//! the memory the machine can give to models, and either picks the best
-//! judge/helper that fits or says plainly why the run cannot start.
+//! machine. So a judge or helper that isn't chosen is the worker itself (one
+//! model, no extra memory), and before any model is probed or loaded this adds
+//! up what the run would hold — plus whatever Ollama already has loaded —
+//! against the memory the machine can give to models, and either lets the run
+//! go ahead (warning when chosen models will have to swap) or says plainly why
+//! it cannot start.
 //!
 //! The decision is a pure function over an [`Inventory`] (sizes from
 //! `/api/tags`, loaded models from `/api/ps`), so it is deterministic and
@@ -54,6 +56,9 @@ pub(crate) struct Inventory {
 pub(crate) struct Picks {
     pub(crate) judge: String,
     pub(crate) helper: String,
+    /// The models fit one at a time but not together (a judge or helper the
+    /// user chose), so Ollama will swap them in and out as the run goes.
+    pub(crate) swaps: bool,
 }
 
 /// `name` without Ollama's implicit `:latest`, so `qwen3` and `qwen3:latest`
@@ -101,6 +106,9 @@ fn needed(inventory: &Inventory, models: &[&str]) -> u64 {
             distinct.push(model);
         }
     }
+    if distinct.iter().all(|model| is_remote(model)) {
+        return 0;
+    }
     let ours: u64 = distinct.iter().map(|model| cost(inventory, model)).sum();
     let others: u64 = inventory
         .loaded
@@ -113,47 +121,35 @@ fn needed(inventory: &Inventory, models: &[&str]) -> u64 {
 
 /// The judge and helper to go ahead with, or why the run cannot start.
 ///
-/// A chosen model (`judge` / `helper` is `Some`) is used as chosen or not at
-/// all; otherwise the candidates are tried in preference order, with the
-/// worker itself last because it takes no memory beyond its own. The first
-/// pair that fits wins.
+/// A judge or helper that is not chosen (`None`) is the worker itself: one
+/// model does every job, which takes no memory beyond its own. Chosen ones are
+/// used as chosen. If they fit with the worker, all is well. If they only fit
+/// one at a time they are still used, flagged as swapping, since Ollama
+/// handles that; a model too big to load even alone is refused.
 pub(crate) fn choose(
     inventory: &Inventory,
     worker: &str,
     judge: Option<&str>,
     helper: Option<&str>,
-    judge_candidates: &[String],
-    helper_candidates: &[String],
 ) -> Result<Picks, String> {
-    let options = |chosen: Option<&str>, candidates: &[String]| -> Vec<String> {
-        match chosen {
-            Some(chosen) => vec![chosen.to_string()],
-            None => candidates
-                .iter()
-                .cloned()
-                .chain(std::iter::once(worker.to_string()))
-                .collect(),
-        }
-    };
-    let judges = options(judge, judge_candidates);
-    let helpers = options(helper, helper_candidates);
-    for judge in &judges {
-        for helper in &helpers {
-            if needed(inventory, &[worker, judge, helper]) <= inventory.budget_bytes {
-                return Ok(Picks {
-                    judge: judge.clone(),
-                    helper: helper.clone(),
-                });
-            }
-        }
+    let judge = judge.unwrap_or(worker);
+    let helper = helper.unwrap_or(worker);
+    if needed(inventory, &[worker, judge, helper]) <= inventory.budget_bytes {
+        return Ok(Picks {
+            judge: judge.to_string(),
+            helper: helper.to_string(),
+            swaps: false,
+        });
     }
-    Err(refusal(
-        inventory,
-        worker,
-        &judges[0],
-        &helpers[0],
-        judge.is_some() || helper.is_some(),
-    ))
+    let fits_alone = |model: &str| needed(inventory, &[model]) <= inventory.budget_bytes;
+    if fits_alone(worker) && fits_alone(judge) && fits_alone(helper) {
+        return Ok(Picks {
+            judge: judge.to_string(),
+            helper: helper.to_string(),
+            swaps: true,
+        });
+    }
+    Err(refusal(inventory, worker, judge, helper))
 }
 
 /// The message that explains a refusal: every model with its size, what else
@@ -163,7 +159,6 @@ fn refusal(
     worker: &str,
     judge: &str,
     helper: &str,
-    chosen_by_user: bool,
 ) -> String {
     let mut lines = Vec::new();
     let mut listed: Vec<&str> = Vec::new();
@@ -191,18 +186,13 @@ fn refusal(
     }
     let total = needed(inventory, &[worker, judge, helper]);
     format!(
-        "**Runbook mode** — these models don't fit in memory together, so I haven't loaded any of them: loading \
-         them would swap this Mac until it freezes.\n\n{}\n\nTogether that is {}, and this machine has {} of memory \
-         with {} of it usable for models (the rest is kept for macOS and Krust).\n\n{}{}",
+        "**Runbook mode** — these models don't fit in this machine's memory, so I haven't loaded any of them: \
+         loading them would swap this Mac until it freezes.\n\n{}\n\nTogether that is {}, and this machine has {} of \
+         memory with {} of it usable for models (the rest is kept for macOS and Krust).\n\n{}",
         lines.join("\n"),
         format_gb(total),
         format_gb(inventory.total_bytes),
         format_gb(inventory.budget_bytes),
-        if chosen_by_user {
-            "A judge or helper you chose is used as chosen, so no smaller one was tried in its place. "
-        } else {
-            "No smaller installed judge or helper brings it within that. "
-        },
         if others.is_empty() {
             "Pick a smaller worker, or a smaller judge or helper in Settings → AI → Ollama, and send the runbook \
              again."

@@ -371,7 +371,6 @@ fn replay(judge: &str, script: Script) -> Run {
         &path,
         &fake.model("worker"),
         config,
-        Vec::new(),
         |event| events.push(event),
     ))
     .unwrap();
