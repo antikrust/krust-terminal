@@ -32,6 +32,9 @@ use super::ollama_context;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use super::plan_tracker::PlanTracker;
 use super::read_headings;
+use super::turn_images::{
+    attach_images, take_turn_images, to_ollama_message, to_openai_message, IMAGES_FIELD,
+};
 use crate::ai::mcp::reconnecting_peer::ReconnectingPeer;
 
 pub const OLLAMA_MODEL_ID_PREFIX: &str = "ollama/";
@@ -1439,6 +1442,7 @@ pub(crate) fn set_current_turn_id(session_id: &Uuid, turn_id: &str) {
 /// turn ID when one was recorded.
 pub(crate) fn turn_user_message(session_id: &Uuid, content: String) -> Value {
     let mut message = json!({ "role": "user", "content": content });
+    attach_images(&mut message, &take_turn_images(session_id));
     let turn_id = current_turn_ids()
         .lock()
         .ok()
@@ -1455,17 +1459,45 @@ pub(crate) fn without_turn_ids(messages: &[Value]) -> Vec<Value> {
     messages
         .iter()
         .map(|message| {
-            if message.get(TURN_ID_FIELD).is_none() && message.get(CHECKPOINT_FIELD).is_none() {
+            if message.get(TURN_ID_FIELD).is_none()
+                && message.get(CHECKPOINT_FIELD).is_none()
+                && message.get(IMAGES_FIELD).is_none()
+            {
                 return message.clone();
             }
             let mut message = message.clone();
             if let Some(fields) = message.as_object_mut() {
                 fields.remove(TURN_ID_FIELD);
                 fields.remove(CHECKPOINT_FIELD);
+                fields.remove(IMAGES_FIELD);
             }
             message
         })
         .collect()
+}
+
+/// A history as it is sent to a model that reads the turn's images: `convert` puts each message's
+/// images in the form the model's API wants, and Krust's own fields then come off.
+fn with_images_on_the_wire(messages: &[Value], convert: fn(&mut Value)) -> Vec<Value> {
+    let converted: Vec<Value> = messages
+        .iter()
+        .map(|message| {
+            let mut message = message.clone();
+            convert(&mut message);
+            message
+        })
+        .collect();
+    without_turn_ids(&converted)
+}
+
+/// A history as Ollama's `/api/chat` is sent it.
+pub(crate) fn ollama_wire_messages(messages: &[Value]) -> Vec<Value> {
+    with_images_on_the_wire(messages, to_ollama_message)
+}
+
+/// A history as an OpenAI-style chat API is sent it.
+pub(crate) fn openai_wire_messages(messages: &[Value]) -> Vec<Value> {
+    with_images_on_the_wire(messages, to_openai_message)
 }
 
 /// The ids a plan's updates tick off, for [`CHECKPOINT_FIELD`].
@@ -2249,7 +2281,7 @@ async fn run_ollama_chat(
 
     let mut request = json!({
         "model": wire_name(model),
-        "messages": without_turn_ids(&messages),
+        "messages": ollama_wire_messages(&messages),
         "stream": true,
         "options": { "temperature": 0, "num_ctx": 8192 },
     });
@@ -3006,7 +3038,7 @@ async fn run_ollama_chat_with_tools(
     for call_index in 0.. {
         let request = json!({
             "model": wire_name(model),
-            "messages": without_turn_ids(&messages),
+            "messages": ollama_wire_messages(&messages),
             "tools": tool_defs,
             "stream": true,
             "options": { "temperature": 0, "num_ctx": limits.num_ctx },

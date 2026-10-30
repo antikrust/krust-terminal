@@ -30,10 +30,12 @@ use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
     is_builtin_local_tool, ollama_tool_system_prompt, parse_text_tool_call,
     remove_turn_from_messages, todo_list_entries, todo_list_reply, truncate_from_turn,
-    turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec, BUILTIN_TODO_LIST,
+    openai_wire_messages, turn_user_message, without_turn_ids, McpToolCaller, McpToolSpec,
+    BUILTIN_TODO_LIST,
     TURN_ID_FIELD, completed_ids, todo_reply_message, truncate_after_checkpoint,
 };
 use super::plan_tracker::PlanTracker;
+use super::turn_images::image_chars;
 use crate::ai::api_providers::{
     model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
 };
@@ -309,7 +311,7 @@ pub async fn run_api_stream(
         };
         let mut request = json!({
             "model": route.model,
-            "messages": without_turn_ids(sent),
+            "messages": openai_wire_messages(sent),
             "tools": tool_defs,
             "stream": true,
         });
@@ -751,7 +753,10 @@ const SUMMARY_REQUEST: &str = "Write down what is needed to carry on this task i
 
 /// A history's size in characters, as sent (a token is about four).
 fn history_chars(messages: &[Value]) -> usize {
-    messages.iter().map(|message| message.to_string().len()).sum()
+    messages
+        .iter()
+        .map(|message| message.to_string().len() - image_chars(message))
+        .sum()
 }
 
 /// The command a turn compacts the conversation with, as in Claude Code:

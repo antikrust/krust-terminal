@@ -87,6 +87,11 @@ pub(crate) fn tool_specs() -> Vec<McpToolSpec> {
                                     "type": "array",
                                     "items": { "type": "string", "enum": ["vision", "image_out", "embed"] },
                                     "description": "What a model must be able to do to take this task: \"vision\" reads images, \"image_out\" makes images, \"embed\" makes embeddings (optional; any model may take a text task)."
+                                },
+                                "images": {
+                                    "type": "array",
+                                    "items": { "type": "string" },
+                                    "description": "Image files (PNG, JPEG, WebP or GIF; relative to workdir unless absolute) the model is shown with the prompt. The task then goes only to a model that reads images (optional)."
                                 }
                             },
                             "required": ["title", "prompt"]
@@ -252,24 +257,26 @@ impl QueueTools {
                     .map(str::to_string)
                     .filter(|model| !model.trim().is_empty())
                     .or_else(|| call_model.clone());
-                let needs: Vec<String> = task
-                    .get("needs")
-                    .and_then(Value::as_array)
-                    .map(|labels| {
-                        labels
-                            .iter()
-                            .filter_map(Value::as_str)
-                            .map(str::to_string)
-                            .collect()
-                    })
-                    .unwrap_or_default();
+                let strings = |field: &str| -> Vec<String> {
+                    task.get(field)
+                        .and_then(Value::as_array)
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter_map(Value::as_str)
+                                .map(str::to_string)
+                                .collect()
+                        })
+                        .unwrap_or_default()
+                };
                 Some(PlannedTask {
                     title: title.to_string(),
                     prompt,
                     working_dir: workdir.clone(),
                     model,
                     pool: call_pool.clone(),
-                    needs,
+                    needs: strings("needs"),
+                    images: strings("images"),
                 })
             })
             .collect();

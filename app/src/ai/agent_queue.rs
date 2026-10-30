@@ -41,6 +41,9 @@ use crate::ai::api_providers::{
     FailoverTarget,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name;
+use crate::ai::agent_sdk::driver::harness::turn_images::{
+    load_image_files, prompt_with_image_paths, resolved_path, set_turn_images,
+};
 use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::model_caps::{self, Caps};
 use crate::ai::task_router::{
@@ -101,6 +104,9 @@ pub struct QueueTask {
     /// Empty for plain text work, which any model may take.
     #[serde(default)]
     pub needs: Vec<String>,
+    /// Image files the model is shown with the prompt (relative to `working_dir` unless absolute).
+    #[serde(default)]
+    pub images: Vec<String>,
     /// What the task has said and done, live while it runs. Not saved.
     #[serde(skip)]
     pub transcript: Vec<TranscriptLine>,
@@ -257,6 +263,19 @@ pub struct AgentQueue {
     probing: HashSet<String>,
 }
 
+impl QueueTask {
+    /// What a model must be able to do to take this task: what it says it needs, and vision when
+    /// it comes with images.
+    fn required_caps(&self) -> Caps {
+        let needs = Caps::from_labels(self.needs.iter().map(String::as_str));
+        if self.images.is_empty() {
+            needs
+        } else {
+            needs.or(Caps::VISION)
+        }
+    }
+}
+
 impl Entity for AgentQueue {
     type Event = AgentQueueEvent;
 }
@@ -274,6 +293,8 @@ pub struct PlannedTask {
     pub pool: Option<String>,
     /// What a model must be able to do to take it (capability labels such as `vision`).
     pub needs: Vec<String>,
+    /// Image files the model is shown with the prompt. A task with any needs vision.
+    pub images: Vec<String>,
 }
 
 /// Where a task stands, for a model waiting on its results.
@@ -355,6 +376,9 @@ struct PlanTask {
     /// Capability labels this task needs a model to have, on top of its lane's.
     #[serde(default)]
     needs: Vec<String>,
+    /// Image files the model is shown with the prompt.
+    #[serde(default)]
+    images: Vec<String>,
 }
 
 impl AgentQueue {
@@ -488,42 +512,37 @@ impl AgentQueue {
         }
         self.push(
             format!("typed:{}", self.next_id),
-            first_chars(prompt.lines().next().unwrap_or(prompt), 80),
-            prompt.to_string(),
-            home_dir(),
-            None,
-            None,
-            Vec::new(),
+            PlannedTask {
+                title: first_chars(prompt.lines().next().unwrap_or(prompt), 80),
+                prompt: prompt.to_string(),
+                working_dir: home_dir(),
+                model: None,
+                pool: None,
+                needs: Vec::new(),
+                images: Vec::new(),
+            },
         );
         self.changed(ctx);
         self.pump(ctx);
         true
     }
 
-    fn push(
-        &mut self,
-        key: String,
-        title: String,
-        prompt: String,
-        working_dir: PathBuf,
-        model: Option<String>,
-        pool: Option<String>,
-        needs: Vec<String>,
-    ) {
+    fn push(&mut self, key: String, task: PlannedTask) {
         self.tasks.push(QueueTask {
             id: self.next_id,
             key,
-            title,
-            prompt,
-            working_dir,
+            title: task.title,
+            prompt: task.prompt,
+            working_dir: task.working_dir,
             state: TaskState::Waiting,
             tried: Vec::new(),
             last_error: None,
             difficulty: None,
             reason: String::new(),
-            model,
-            pool,
-            needs,
+            model: task.model,
+            pool: task.pool,
+            needs: task.needs,
+            images: task.images,
             transcript: Vec::new(),
             events: Vec::new(),
         });
@@ -582,7 +601,18 @@ impl AgentQueue {
                 ids.push(self.next_id);
                 let mut needs = lane_needs.clone();
                 needs.extend(task.needs);
-                self.push(key, task.title, task.prompt, working_dir.clone(), None, None, needs);
+                self.push(
+                    key,
+                    PlannedTask {
+                        title: task.title,
+                        prompt: task.prompt,
+                        working_dir: working_dir.clone(),
+                        model: None,
+                        pool: None,
+                        needs,
+                        images: task.images,
+                    },
+                );
             }
         }
         // Spawn mode: don't wait for the boss (or a click on Start) — fan the plan out at once,
@@ -611,12 +641,10 @@ impl AgentQueue {
             ids.push(self.next_id);
             self.push(
                 format!("planned:{}", self.next_id),
-                first_chars(&task.title, 80),
-                task.prompt,
-                task.working_dir,
-                task.model,
-                task.pool,
-                task.needs,
+                PlannedTask {
+                    title: first_chars(&task.title, 80),
+                    ..task
+                },
             );
         }
         self.running = true;
@@ -784,7 +812,7 @@ impl AgentQueue {
         let needs_capabilities = self
             .tasks
             .iter()
-            .any(|task| task.state == TaskState::Waiting && !task.needs.is_empty());
+            .any(|task| task.state == TaskState::Waiting && !task.required_caps().is_none());
         if needs_capabilities {
             let unknown: Vec<String> = pool
                 .iter()
@@ -811,7 +839,7 @@ impl AgentQueue {
             let tried = task.tried.clone();
             let base = task.difficulty.unwrap_or(Difficulty::Medium);
             let last_error = task.last_error.clone();
-            let needs = Caps::from_labels(task.needs.iter().map(String::as_str));
+            let needs = task.required_caps();
             // The model to run on: the task's own, else the queue default; both empty, or "auto",
             // means let the chooser pick across the failover rows.
             let pinned = task
@@ -981,6 +1009,7 @@ impl AgentQueue {
         task.events.clear();
         let prompt = task.prompt.clone();
         let working_dir = task.working_dir.clone();
+        let images = task.images.clone();
         let model_id = worker.model_id().to_string();
         let model_name = worker.model_name();
         self.active.insert(
@@ -1002,6 +1031,18 @@ impl AgentQueue {
         );
         ctx.background_executor()
             .spawn(async move {
+                // A file that can't be read fails this attempt with a reason, like a model
+                // refusing would.
+                let loaded = match load_image_files(&images, &working_dir) {
+                    Ok(loaded) => loaded,
+                    Err(error) => {
+                        let _ = done_tx.send(Outcome {
+                            answer: String::new(),
+                            error: Some(error),
+                        });
+                        return;
+                    }
+                };
                 let answer = Arc::new(Mutex::new(String::new()));
                 let error = Arc::new(Mutex::new(None::<String>));
                 let (sink_answer, sink_error) = (Arc::clone(&answer), Arc::clone(&error));
@@ -1038,6 +1079,7 @@ impl AgentQueue {
                         // A rate limit or a request too big for this model fails the task at once;
                         // the queue then hands it to another model instead of the turn waiting.
                         fail_fast(&session);
+                        set_turn_images(&session, loaded);
                         run_api_stream(
                             &prompt,
                             route,
@@ -1055,9 +1097,16 @@ impl AgentQueue {
                     // Claude Code / Codex: the same headless run BYOR failover hands a turn to,
                     // with one target and no next.
                     Worker::Cli(route) => {
+                        // They open image files themselves.
+                        let paths: Vec<String> = images
+                            .iter()
+                            .map(|path| {
+                                resolved_path(path, &working_dir).to_string_lossy().into_owned()
+                            })
+                            .collect();
                         run_handed_off_turn(
                             vec![route],
-                            &prompt,
+                            &prompt_with_image_paths(&prompt, &paths),
                             &working_dir,
                             &tools_path(),
                             move |_, _, event| on_event(event),

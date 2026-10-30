@@ -57,6 +57,7 @@ pub(crate) mod ollama_committee_proof;
 pub(crate) mod ollama_context;
 pub(crate) mod ollama_runbook;
 pub(crate) mod ollama_stream_exec;
+pub(crate) mod turn_images;
 pub(crate) mod ollama_work_notes;
 pub(crate) mod plan_tracker;
 mod read_headings;

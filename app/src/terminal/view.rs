@@ -233,7 +233,10 @@ use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_runbook::{run_ollama_runbook, RunbookConfig};
-use crate::ai::model_caps::Caps;
+use crate::ai::agent_sdk::driver::harness::turn_images::{
+    prompt_with_image_paths, save_for_local_app, set_turn_images, TurnImage,
+};
+use crate::ai::model_caps::{self, Caps};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, run_ollama_stream, OLLAMA_HARNESS_CONFIG_NAME,
 };
@@ -23686,7 +23689,7 @@ impl TerminalView {
         // What the runner is sent: the prompt, or, on an engine switch, the
         // prompt after a recap of the conversation. The conversation itself
         // shows the prompt as typed.
-        let runner_prompt = match follow_up_conversation.filter(|_| switched_engine) {
+        let mut runner_prompt = match follow_up_conversation.filter(|_| switched_engine) {
             Some(conversation_id) => {
                 let window_id = ctx.window_id();
                 let engine = match requested_kind {
@@ -23762,10 +23765,15 @@ impl TerminalView {
         // An Auto entry is not a model: this turn's prompt picks the failover row it runs on
         // (never below medium difficulty: a short follow-up in a working conversation is not easy
         // work), and the conversation shows that model.
+        // Images staged in the input go with this turn, so it can only run on a model that reads
+        // them. A viewer's prompt and `/compact` leave them staged for the user's next prompt.
+        let sends_images = share_initiator.is_none()
+            && !prompt.trim_start().starts_with(COMPACT_COMMAND)
+            && !self.ai_context_model.as_ref(ctx).pending_images().is_empty();
+        let needs = if sends_images { Caps::VISION } else { Caps::NONE };
         let model_id = model_id.map(|id| {
             if is_auto_model_id(&id) {
-                // Image attachments are not visible here yet, so a turn is placed as a text one.
-                resolve_auto_model(&id, &prompt, Difficulty::Medium, Caps::NONE, ctx).unwrap_or(id)
+                resolve_auto_model(&id, &prompt, Difficulty::Medium, needs, ctx).unwrap_or(id)
             } else {
                 id
             }
@@ -23808,7 +23816,7 @@ impl TerminalView {
             (LocalHarnessKind::Api, Some(model_id))
                 if *AISettings::as_ref(ctx).byor_failover_enabled.value() =>
             {
-                failover_routes(model_id, Caps::NONE, ctx)
+                failover_routes(model_id, needs, ctx)
             }
             _ => Vec::new(),
         };
@@ -24095,6 +24103,47 @@ impl TerminalView {
         // later finds it there exactly.
         let turn_id = Uuid::new_v4().to_string();
         ollama_stream_exec::set_current_turn_id(&session_id, &turn_id);
+        if sends_images {
+            let images: Vec<TurnImage> = self
+                .ai_context_model
+                .as_ref(ctx)
+                .pending_images()
+                .into_iter()
+                .map(|image| TurnImage {
+                    mime_type: image.mime_type.clone(),
+                    data: image.data.clone(),
+                })
+                .collect();
+            self.ai_context_model
+                .update(ctx, |model, ctx| model.clear_pending_images(ctx));
+            // A model picked by hand that is known not to read images still gets the turn (the
+            // user may know better than the list), with a word about it.
+            if let Some(model) = model_id.as_deref().filter(|model| {
+                model_caps::recorded(model).is_some() && !model_caps::can_serve(model, needs, ctx)
+            }) {
+                let message = format!(
+                    "{model} is not marked as reading images, so it may ignore the ones attached."
+                );
+                let window_id = ctx.window_id();
+                ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
+                    toast_stack.add_ephemeral_toast(
+                        DismissibleToast::default(message),
+                        window_id,
+                        ctx,
+                    );
+                });
+            }
+            match harness {
+                // They open image files themselves.
+                LocalHarnessKind::Claude | LocalHarnessKind::Codex => {
+                    let paths = save_for_local_app(&images, &session_id);
+                    runner_prompt = prompt_with_image_paths(&runner_prompt, &paths);
+                }
+                LocalHarnessKind::Ollama | LocalHarnessKind::Api => {
+                    set_turn_images(&session_id, images);
+                }
+            }
+        }
         let begin_prompt = prompt.clone();
         let pump_prompt = runner_prompt;
         let pump_working_dir = working_dir;

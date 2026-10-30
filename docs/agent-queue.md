@@ -43,9 +43,14 @@ order: the vision button on its Agents-page row (stored as `byor_model_caps`), w
 reported (Ollama's `/api/show`, asked once per model and kept in `model_caps.json`; OpenRouter's
 model list), a guess from the name for a hosted model, and for Claude Code and Codex a fixed yes
 for vision. A model nothing is known about has none, so an image task never goes to it; text
-tasks are unaffected. A task nothing on offer can take waits with the reason on its row. Not done:
-the local runners do not send images yet, and a turn's image attachments are not read where the
-Auto entry and failover are resolved (`terminal/view.rs`), so those pass no needs for now.
+tasks are unaffected. A task nothing on offer can take waits with the reason on its row.
+
+Images go with a turn two ways: staged in the input (the turn then needs vision, for Auto and
+failover too), or as `images` on a queue task, plan task or `plan_tasks` task (paths, relative to
+the working directory). `harness/turn_images.rs` holds them in the history beside the text and
+converts them when a request is sent: Ollama's `images` list, or OpenAI-style content parts. Claude
+Code and Codex get file paths in the prompt. Not done: a turn that failover hands to Claude Code or
+Codex loses its images, and the runbook and committee modes ignore them.
 
 ## Local and Moloch
 
