@@ -5,7 +5,8 @@
 //!
 //! - **The local command**: a program that takes `imagine.py`'s flags and prints one JSON line
 //!   with the saved `path` (or an `error`). It is the setting `image_command`, else the
-//!   environment variable `KRUST_IMAGE_COMMAND`, else `~/github/image-lab/bin/imagine-engine`. This is
+//!   environment variable `KRUST_IMAGE_COMMAND`, else `bin/imagine-engine` in the image-lab project
+//!   (`~/github/image-lab` or `/Volumes/DATA/github/image-lab`). This is
 //!   how a local diffusion model is reached (FLUX.2 klein run with diffusers, say): Ollama
 //!   removed its image generation in 0.32.6, so its image models cannot be used there.
 //! - **Models in the agent pool that make images** (capability `image_out`, see
@@ -19,12 +20,15 @@ use std::io::IsTerminal as _;
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
+use ai::agent::TurnEvent;
 use base64::Engine as _;
 use command::r#async::Command;
 use krustui::{AppContext, SingletonEntity};
 use serde_json::{json, Value};
 use settings::Setting as _;
+use uuid::Uuid;
 
+use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{emit_failed_turn, wire_name};
 use crate::ai::api_providers::{agent_pool, ApiProviderKeys, ApiRoute, FailoverTarget};
 use crate::ai::image_providers::{self, ImageModel, ImageProvider};
 use crate::ai::model_caps;
@@ -54,6 +58,8 @@ pub struct ImageRequest {
     pub transparent: bool,
     /// Try only this backend: `command`, `images` or `pool`.
     pub backend: Option<String>,
+    /// An Ollama image model for the local command to draw with, rather than its default.
+    pub model: Option<String>,
 }
 
 impl ImageRequest {
@@ -87,6 +93,7 @@ impl ImageRequest {
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
             backend: text("backend").map(str::to_string),
+            model: None,
         })
     }
 }
@@ -155,6 +162,16 @@ impl Attempt {
     }
 }
 
+/// The image-lab project, wherever it is: under the home folder, or on the data drive.
+fn image_lab_dir() -> Option<PathBuf> {
+    let home = std::env::var("HOME")
+        .ok()
+        .map(|home| PathBuf::from(home).join("github/image-lab"));
+    home.into_iter()
+        .chain(std::iter::once(PathBuf::from("/Volumes/DATA/github/image-lab")))
+        .find(|lab| lab.is_dir())
+}
+
 /// The local command to try: the setting, else the environment, else the image-lab engine if it
 /// is where it was installed.
 fn command_path(app: &AppContext) -> Option<String> {
@@ -166,10 +183,10 @@ fn command_path(app: &AppContext) -> Option<String> {
     let from_env = std::env::var("KRUST_IMAGE_COMMAND")
         .ok()
         .filter(|command| !command.trim().is_empty());
-    let default = std::env::var("HOME")
-        .ok()
-        .map(|home| format!("{home}/github/image-lab/bin/imagine-engine"))
-        .filter(|path| Path::new(path).is_file());
+    let default = image_lab_dir()
+        .map(|lab| lab.join("bin/imagine-engine"))
+        .filter(|path| path.is_file())
+        .map(|path| path.to_string_lossy().into_owned());
     configured.or(from_env).or(default)
 }
 
@@ -181,8 +198,8 @@ pub struct Plan {
 }
 
 /// Where pictures are saved by default, kept on the data drive when it can be: the setting
-/// `image_output_dir`, else `KRUST_IMAGES_DIR`, else `~/github/image-lab/images` if that project
-/// is there, else the app's own images folder.
+/// `image_output_dir`, else `KRUST_IMAGES_DIR`, else `images` in the image-lab project if it is
+/// there, else the app's own images folder.
 fn images_dir(app: &AppContext) -> PathBuf {
     let configured = AISettings::as_ref(app)
         .image_output_dir
@@ -192,11 +209,7 @@ fn images_dir(app: &AppContext) -> PathBuf {
     let from_env = std::env::var("KRUST_IMAGES_DIR")
         .ok()
         .filter(|dir| !dir.trim().is_empty());
-    let lab = std::env::var("HOME")
-        .ok()
-        .map(|home| PathBuf::from(home).join("github/image-lab"))
-        .filter(|lab| lab.is_dir())
-        .map(|lab| lab.join("images"));
+    let lab = image_lab_dir().map(|lab| lab.join("images"));
     configured
         .or(from_env)
         .map(PathBuf::from)
@@ -302,6 +315,62 @@ fn output_path(request: &ImageRequest, images_dir: &Path) -> PathBuf {
     images_dir.join(format!("imagine-{stamp}-{}.png", slug(&request.prompt)))
 }
 
+/// A turn on an Ollama model that makes pictures rather than chats: the prompt is what to draw, on
+/// that model, and the picture goes in the conversation. Returns where it was saved. Each prompt
+/// stands alone, since such a model has no conversation to carry on.
+pub(crate) async fn run_image_turn(
+    prompt: &str,
+    model: &str,
+    plan: Plan,
+    session_id: &Uuid,
+    working_dir: &Path,
+    mut on_event: impl FnMut(TurnEvent),
+) -> Option<PathBuf> {
+    on_event(TurnEvent::SessionInit {
+        session_id: session_id.to_string(),
+        model: Some(model.to_string()),
+        cwd: Some(working_dir.to_string_lossy().into_owned()),
+    });
+    on_event(TurnEvent::Text {
+        text: format!("_Drawing on {model}. This can take a few minutes while it loads._"),
+    });
+    let request = ImageRequest {
+        prompt: prompt.trim().to_string(),
+        out: None,
+        width: DEFAULT_SIDE,
+        height: DEFAULT_SIDE,
+        seed: None,
+        reference: None,
+        transparent: false,
+        backend: None,
+        model: Some(wire_name(model).to_string()),
+    };
+    match run(plan, &request).await {
+        Ok(made) => {
+            on_event(TurnEvent::Text {
+                text: format!(
+                    "![picture]({})\n\nSaved to `{}` ({}×{}, {:.0} seconds).",
+                    made.path.display(),
+                    made.path.display(),
+                    made.width,
+                    made.height,
+                    made.seconds
+                ),
+            });
+            on_event(TurnEvent::TurnCompleted {
+                usage: None,
+                is_error: false,
+                error_message: None,
+            });
+            Some(made.path)
+        }
+        Err(error) => {
+            emit_failed_turn(&mut on_event, error);
+            None
+        }
+    }
+}
+
 /// The first words of a prompt as a file name part.
 pub fn slug(text: &str) -> String {
     let lowered: String = text
@@ -351,6 +420,14 @@ async fn run_command(program: &str, request: &ImageRequest, out: &Path) -> Resul
     }
     if request.transparent {
         args.push("--transparent".into());
+    }
+    if let Some(model) = &request.model {
+        args.extend([
+            "--backend".to_string(),
+            "ollama".to_string(),
+            "--model".to_string(),
+            model.clone(),
+        ]);
     }
     args.extend(["--".to_string(), request.prompt.clone()]);
     let mut command = Command::new(program);

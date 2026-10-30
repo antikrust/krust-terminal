@@ -231,7 +231,8 @@ use crate::ai::agent_sdk::driver::harness::api_stream_exec::{
 use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
 use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
-    run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
+    run_ollama_committee, success_status, CommitteeRole, OllamaCommitteeConfig,
+    COMMITTEE_MODEL_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
     run_ollama_runbook_watched, RunbookConfig, RunbookWatch,
@@ -239,9 +240,11 @@ use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
 use crate::ai::agent_sdk::driver::harness::turn_images::{
     image_paths, prompt_with_image_paths, save_pasted_images, set_turn_images,
 };
+use crate::ai::image_gen;
 use crate::ai::model_caps::{self, Caps};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
-    self, ollama_curl_args, ollama_model_name, run_ollama_stream, OLLAMA_HARNESS_CONFIG_NAME,
+    self, ollama_curl_args, ollama_model_name, probe_model_caps_checked, run_ollama_stream,
+    OLLAMA_HARNESS_CONFIG_NAME,
 };
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
@@ -24114,6 +24117,13 @@ impl TerminalView {
         };
 
         let spawner = ctx.spawner();
+        let image_spawner = ctx.spawner();
+        // How to draw, in case the Ollama model turns out to make pictures (the pump finds out,
+        // and has no `ctx` to read the settings with). What it draws is the prompt as typed.
+        let image_plan = ollama_model
+            .is_some()
+            .then(|| image_gen::plan(Some("command"), ctx));
+        let image_prompt = prompt.clone();
         let background = ctx.background_executor().clone();
         // Each event comes with the local agent app that produced it when BYOR
         // failover handed the turn to one (`None`: this run's own harness).
@@ -24502,7 +24512,36 @@ impl TerminalView {
                         None => Err(std::io::Error::other("no cloud model to run")),
                     },
                     LocalHarnessKind::Ollama => {
-                        let ran = if let Some(config) = ollama_committee_config {
+                        // A model that makes pictures can't chat: the prompt is what to draw.
+                        let image_turn = match (ollama_model.as_deref(), image_plan) {
+                            (Some(model), Some(plan)) => probe_model_caps_checked(model, &pump_path)
+                                .await
+                                .is_some_and(|caps| caps.caps.image_out)
+                                .then(|| (model.to_string(), plan)),
+                            _ => None,
+                        };
+                        let ran = if let Some((model, plan)) = image_turn {
+                            let made = image_gen::run_image_turn(
+                                &image_prompt,
+                                &model,
+                                plan,
+                                &session_id,
+                                &pump_working_dir,
+                                on_event,
+                            )
+                            .await;
+                            if let Some(path) = made {
+                                let path = path.to_string_lossy().into_owned();
+                                let _ = image_spawner
+                                    .spawn(move |view, ctx| {
+                                        view.session_images
+                                            .push(session_images::SessionImage::new(path));
+                                        ctx.notify();
+                                    })
+                                    .await;
+                            }
+                            Ok(success_status())
+                        } else if let Some(config) = ollama_committee_config {
                             run_ollama_committee(
                                 &pump_prompt,
                                 &session_id,

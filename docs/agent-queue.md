@@ -95,9 +95,14 @@ and a commit) are a separate task.
   `--seed`, `--ref`, `--transparent`, `--backend command|pool`, `--cols`.
 
 Backends, tried in turn (`image_gen::plan`): the **local command** (setting `image_command`, else
-`KRUST_IMAGE_COMMAND`, else `~/github/image-lab/bin/imagine-engine`: any program taking
+`KRUST_IMAGE_COMMAND`, else `bin/imagine-engine` in `~/github/image-lab` or
+`/Volumes/DATA/github/image-lab`: any program taking
 `imagine.py`'s flags and printing one JSON line with the saved `path`) and then every **pool model with
 the `image_out` capability** (a custom endpoint's or provider's `/images/generations`, or an Ollama
 `/api/generate` on a build that still has image generation). Ollama removed its image generation in
 0.32.6 (still gone in 0.40.13), so its `x/flux2-klein` and `x/z-image-turbo` need 0.32.5 or earlier.
 Ollama lists these models with the capability `image`, which maps to `image_out`.
+
+Picking such a model in the model menu draws too: the prompt, as typed, goes to the local command with
+that model (`image_gen::run_image_turn`, `--backend ollama --model <tag>`), and the picture shows in the
+conversation and the images panel. Each prompt stands alone, and Stop does not interrupt a drawing.
