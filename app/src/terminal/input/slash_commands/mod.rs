@@ -521,6 +521,19 @@ impl Input {
             agent_or_new
                 if command.name == commands::NEW.name || command.name == commands::AGENT.name =>
             {
+                // `/agent` while a conversation is showing starts the new agent in a tab of its
+                // own, so the conversation on screen is not replaced. (`/new` is the in-place
+                // one.)
+                if command.name == commands::AGENT.name
+                    && self.agent_view_controller.as_ref(ctx).is_active()
+                {
+                    let prompt = argument
+                        .map(|argument| argument.trim())
+                        .filter(|argument| !argument.is_empty())
+                        .map(str::to_owned);
+                    ctx.dispatch_typed_action(&WorkspaceAction::AddAgentTabWithPrompt { prompt });
+                    return true;
+                }
                 if !self
                     .ai_context_model
                     .as_ref(ctx)

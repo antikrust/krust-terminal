@@ -280,6 +280,11 @@ pub enum WorkspaceAction {
     AddAmbientAgentTab,
     /// Add a new tab that immediately enters agent view with a new conversation.
     AddAgentTab,
+    /// The same, starting the new conversation with `prompt` (`/agent <prompt>` while a
+    /// conversation is already showing: the new agent gets its own tab, the old one stays).
+    AddAgentTabWithPrompt {
+        prompt: Option<String>,
+    },
     /// Add a new agent tab with the Ollama multi-model committee preselected
     /// as the model (see `harness::ollama_committee`).
     AddCommitteeAgentTab,
@@ -1007,6 +1012,7 @@ impl WorkspaceAction {
             | AddTabWithShell { .. }
             | AddGetStartedTab
             | AddAgentTab
+            | AddAgentTabWithPrompt { .. }
             | AddCommitteeAgentTab
             | AddAmbientAgentTab
             | AddDockerSandboxTab

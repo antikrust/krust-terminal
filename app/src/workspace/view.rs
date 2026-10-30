@@ -4748,6 +4748,16 @@ impl Workspace {
     }
 
     fn add_terminal_tab_with_new_agent_view(&mut self, ctx: &mut ViewContext<Self>) {
+        self.add_agent_tab_with_prompt(None, ctx);
+    }
+
+    /// A new tab that enters agent view with a new conversation, started with `initial_prompt`
+    /// when there is one.
+    fn add_agent_tab_with_prompt(
+        &mut self,
+        initial_prompt: Option<String>,
+        ctx: &mut ViewContext<Self>,
+    ) {
         let was_left_panel_open = self.active_tab_pane_group().as_ref(ctx).left_panel_open;
         self.add_new_session_tab_internal_with_default_session_mode_behavior(
             NewSessionSource::Tab,
@@ -4765,7 +4775,7 @@ impl Workspace {
             if let Some(terminal_view) = pane_group.active_session_view(ctx) {
                 terminal_view.update(ctx, |view, ctx| {
                     view.enter_agent_view_for_new_conversation(
-                        None,
+                        initial_prompt,
                         AgentViewEntryOrigin::ConversationListView,
                         ctx,
                     );
@@ -23906,6 +23916,9 @@ impl TypedActionView for Workspace {
             }
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
+            AddAgentTabWithPrompt { prompt } => {
+                self.add_agent_tab_with_prompt(prompt.clone(), ctx)
+            }
             AddCommitteeAgentTab => self.add_committee_agent_tab(ctx),
             AddDockerSandboxTab => self.add_docker_sandbox_tab(ctx),
             StartAgentOnboardingTutorial(tutorial) => {
