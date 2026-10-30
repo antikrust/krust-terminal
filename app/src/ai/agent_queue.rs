@@ -42,7 +42,7 @@ use crate::ai::api_providers::{
 };
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name;
 use crate::ai::agent_sdk::driver::harness::turn_images::{
-    load_image_files, prompt_with_image_paths, resolved_path, set_turn_images,
+    image_paths, load_image_files, prompt_with_image_paths, set_turn_images,
 };
 use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::model_caps::{self, Caps};
@@ -1043,6 +1043,9 @@ impl AgentQueue {
                         return;
                     }
                 };
+                // The model gets the paths in its prompt either way; Claude Code and Codex open
+                // them from there.
+                let prompt = prompt_with_image_paths(&prompt, &image_paths(&loaded));
                 let answer = Arc::new(Mutex::new(String::new()));
                 let error = Arc::new(Mutex::new(None::<String>));
                 let (sink_answer, sink_error) = (Arc::clone(&answer), Arc::clone(&error));
@@ -1097,16 +1100,9 @@ impl AgentQueue {
                     // Claude Code / Codex: the same headless run BYOR failover hands a turn to,
                     // with one target and no next.
                     Worker::Cli(route) => {
-                        // They open image files themselves.
-                        let paths: Vec<String> = images
-                            .iter()
-                            .map(|path| {
-                                resolved_path(path, &working_dir).to_string_lossy().into_owned()
-                            })
-                            .collect();
                         run_handed_off_turn(
                             vec![route],
-                            &prompt_with_image_paths(&prompt, &paths),
+                            &prompt,
                             &working_dir,
                             &tools_path(),
                             move |_, _, event| on_event(event),

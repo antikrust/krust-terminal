@@ -47,10 +47,13 @@ tasks are unaffected. A task nothing on offer can take waits with the reason on 
 
 Images go with a turn two ways: staged in the input (the turn then needs vision, for Auto and
 failover too), or as `images` on a queue task, plan task or `plan_tasks` task (paths, relative to
-the working directory). `harness/turn_images.rs` holds them in the history beside the text and
-converts them when a request is sent: Ollama's `images` list, or OpenAI-style content parts. Claude
-Code and Codex get file paths in the prompt. Not done: a turn that failover hands to Claude Code or
-Codex loses its images, and the runbook and committee modes ignore them.
+the working directory). An image stays a linked file (`harness/turn_images.rs`; pasted ones are
+saved under `turn-images` in the state directory and kept): the prompt names its path, and the bytes
+are sent only for the turn it came with, as Ollama's `images` list or OpenAI-style content parts. A
+later turn sees the path but is not sent the image again, and nothing yet lets a model on the Ollama
+or API runners reopen one. Claude Code and Codex open the path themselves, also after failover.
+The attach check in the input goes by the local model picked: it refuses only a model known not to
+read images. Runbook and committee modes ignore images.
 
 ## Local and Moloch
 

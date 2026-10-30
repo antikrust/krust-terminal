@@ -15,7 +15,7 @@ use krustui::{AppContext, SingletonEntity};
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
 
-use crate::ai::api_providers::{api_model_parts, cli_model_parts};
+use crate::ai::api_providers::{api_model_parts, cli_model_parts, is_auto_model_id};
 use crate::settings::AISettings;
 
 /// A set of things a model can do, or that a task needs a model to do.
@@ -326,6 +326,21 @@ pub fn caps_of(model_id: &str, app: &AppContext) -> Caps {
 /// Whether `model_id` can take a task that needs `needs`. A task that needs nothing goes anywhere.
 pub fn can_serve(model_id: &str, needs: Caps, app: &AppContext) -> bool {
     needs.is_none() || caps_of(model_id, app).covers(needs)
+}
+
+/// Whether images may be attached for a hand-picked `model_id`: not when it is known not to read
+/// them (the user switched it off, or its provider said so). No model yet (the app's default), an
+/// Auto entry (which picks one that can) and a model nothing is known about may take them, so a
+/// model that has not answered yet doesn't lose an image the user just pasted.
+pub fn accepts_images(model_id: Option<&str>, app: &AppContext) -> bool {
+    let Some(model_id) = model_id.filter(|model_id| !is_auto_model_id(model_id)) else {
+        return true;
+    };
+    let (_, off) = override_for(AISettings::as_ref(app).byor_model_caps.value(), model_id);
+    if off.vision {
+        return false;
+    }
+    recorded(model_id).is_none() || can_serve(model_id, Caps::VISION, app)
 }
 
 /// Why a task that needs `needs` is waiting when no model on offer has it.

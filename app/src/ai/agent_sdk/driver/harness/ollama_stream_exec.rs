@@ -1476,14 +1476,22 @@ pub(crate) fn without_turn_ids(messages: &[Value]) -> Vec<Value> {
         .collect()
 }
 
-/// A history as it is sent to a model that reads the turn's images: `convert` puts each message's
-/// images in the form the model's API wants, and Krust's own fields then come off.
+/// A history as it is sent to a model that reads images: the images linked from the current turn
+/// (the newest turn stamped in the history; a history with no stamps is one turn) go out in the
+/// form `convert` gives them, and Krust's own fields then come off. Earlier turns' images stay
+/// links: their paths are in the text, and the bytes are not sent again.
 fn with_images_on_the_wire(messages: &[Value], convert: fn(&mut Value)) -> Vec<Value> {
+    let current_turn = messages
+        .iter()
+        .rev()
+        .find_map(|message| message.get(TURN_ID_FIELD));
     let converted: Vec<Value> = messages
         .iter()
         .map(|message| {
             let mut message = message.clone();
-            convert(&mut message);
+            if message.get(TURN_ID_FIELD) == current_turn {
+                convert(&mut message);
+            }
             message
         })
         .collect();

@@ -28,7 +28,6 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::ollama_stream_exec::{turn_user_message, McpToolSpec};
-use super::turn_images::image_chars;
 
 /// Window asked of a model whose size or maximum isn't known, and of any
 /// model over [`SMALL_MODEL_BILLIONS`], whose cache costs the most memory.
@@ -193,10 +192,7 @@ impl Limits {
 
     /// A history's size in tokens, with the tool definitions sent beside it.
     pub(crate) fn tokens(&self, messages: &[Value], tools_chars: usize) -> usize {
-        let chars: usize = messages
-            .iter()
-            .map(|message| message.to_string().len() - image_chars(message))
-            .sum();
+        let chars: usize = messages.iter().map(|message| message.to_string().len()).sum();
         (chars + tools_chars) / CHARS_PER_TOKEN
     }
 

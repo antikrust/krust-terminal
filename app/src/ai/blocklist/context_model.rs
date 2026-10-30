@@ -25,7 +25,9 @@ use crate::ai::agent::{
 };
 use crate::ai::block_context::BlockContext;
 use crate::ai::document::ai_document_model::AIDocumentId;
+use crate::ai::harness_availability::selected_local_harness_for_pane;
 use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
+use crate::ai::model_caps;
 use crate::ai::outline::RepoOutlines;
 use crate::code_review::github_repo_model::GitHubRepoModel;
 use crate::terminal::event::{BlockCompletedEvent, BlockType};
@@ -189,10 +191,11 @@ impl BlocklistAIContextModel {
 
         ctx.subscribe_to_model(&LLMPreferences::handle(ctx), |me, _, event, ctx| {
             if let LLMPreferencesEvent::UpdatedActiveAgentModeLLM = event {
-                let llm_prefs = LLMPreferences::as_ref(ctx);
-                let vision_supported =
-                    llm_prefs.vision_supported(ctx, Some(me.terminal_surface_id));
-                if !vision_supported {
+                // This fork runs every prompt on a local harness, so what counts is the model
+                // picked there.
+                let (_, model_id, _) =
+                    selected_local_harness_for_pane(me.terminal_surface_id, ctx);
+                if !model_caps::accepts_images(model_id.as_deref(), ctx) {
                     me.clear_pending_images(ctx);
                 }
             }

@@ -1,11 +1,12 @@
-//! Images that go with a turn's prompt, for the runners that send them themselves.
+//! Images that go with a turn's prompt, kept as linked files.
 //!
-//! A turn's images are set for its session before the runner starts, and the first user message
-//! of the turn takes them ([`take_turn_images`]). In the history they sit in a field of Krust's
-//! own beside the message's plain-text `content`, so everything that reads a history as text keeps
-//! working; only what goes on the wire is converted: Ollama's `/api/chat` takes an `images` list,
-//! OpenAI-style APIs take content parts. Claude Code and Codex open image files themselves, so
-//! they are given paths in the prompt instead.
+//! An image is a file on disk: one a task names, or one pasted into the input and saved here. The
+//! turn's prompt names its path, and the user message opening the turn links to it in a field of
+//! Krust's own, so the history stays small text. The bytes are read and sent only for the turn the
+//! image came with; a later turn sees the path in the conversation but is not sent the image again.
+//! On the wire Ollama's `/api/chat` takes an `images` list and OpenAI-style APIs take content parts.
+//! Claude Code and Codex open the files themselves, so the path in the prompt is all they need,
+//! including when failover hands them a turn (its recap carries the prompt).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -21,11 +22,11 @@ pub(crate) const IMAGES_FIELD: &str = "krust_images";
 /// The largest image file a task may name. Hosted APIs refuse much beyond this.
 const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024;
 
-/// One image, base64-encoded.
+/// One image file.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct TurnImage {
     pub(crate) mime_type: String,
-    pub(crate) data: String,
+    pub(crate) path: String,
 }
 
 fn pending() -> &'static Mutex<HashMap<Uuid, Vec<TurnImage>>> {
@@ -54,67 +55,66 @@ pub(crate) fn take_turn_images(session_id: &Uuid) -> Vec<TurnImage> {
         .unwrap_or_default()
 }
 
-/// Puts `images` on a user message of the history.
+/// Links `images` from a user message of the history.
 pub(crate) fn attach_images(message: &mut Value, images: &[TurnImage]) {
     if images.is_empty() {
         return;
     }
     message[IMAGES_FIELD] = images
         .iter()
-        .map(|image| json!({ "mime_type": image.mime_type, "data": image.data }))
+        .map(|image| json!({ "mime_type": image.mime_type, "path": image.path }))
         .collect();
 }
 
-fn images_of(message: &Value) -> Vec<TurnImage> {
-    message
-        .get(IMAGES_FIELD)
-        .and_then(Value::as_array)
-        .map(|images| {
-            images
-                .iter()
-                .filter_map(|image| {
-                    Some(TurnImage {
-                        mime_type: image.get("mime_type")?.as_str()?.to_string(),
-                        data: image.get("data")?.as_str()?.to_string(),
-                    })
-                })
-                .collect()
+/// The images a message links, read and base64-encoded as `(MIME type, data)`. One that can no
+/// longer be read is logged and left out: the turn goes on with the rest.
+fn encoded_images(message: &Value) -> Vec<(String, String)> {
+    let Some(images) = message.get(IMAGES_FIELD).and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    images
+        .iter()
+        .filter_map(|image| {
+            let mime_type = image.get("mime_type")?.as_str()?;
+            let path = image.get("path")?.as_str()?;
+            match std::fs::read(path) {
+                Ok(bytes) => Some((
+                    mime_type.to_string(),
+                    base64::engine::general_purpose::STANDARD.encode(bytes),
+                )),
+                Err(error) => {
+                    log::warn!("turn_images: could not read {path}: {error}");
+                    None
+                }
+            }
         })
-        .unwrap_or_default()
+        .collect()
 }
 
 /// A history message as Ollama's `/api/chat` wants it: `images` is a list of bare base64.
 pub(crate) fn to_ollama_message(message: &mut Value) {
-    let images = images_of(message);
+    let images = encoded_images(message);
     if !images.is_empty() {
-        message["images"] = images.into_iter().map(|image| Value::String(image.data)).collect();
+        message["images"] = images.into_iter().map(|(_, data)| Value::String(data)).collect();
     }
 }
 
 /// A history message as an OpenAI-style chat API wants it: `content` becomes the text followed by
 /// one part per image, as a data URL.
 pub(crate) fn to_openai_message(message: &mut Value) {
-    let images = images_of(message);
+    let images = encoded_images(message);
     if images.is_empty() {
         return;
     }
     let text = message.get("content").and_then(Value::as_str).unwrap_or_default();
     let mut parts = vec![json!({ "type": "text", "text": text })];
-    parts.extend(images.into_iter().map(|image| {
+    parts.extend(images.into_iter().map(|(mime_type, data)| {
         json!({
             "type": "image_url",
-            "image_url": { "url": format!("data:{};base64,{}", image.mime_type, image.data) },
+            "image_url": { "url": format!("data:{mime_type};base64,{data}") },
         })
     }));
     message["content"] = Value::Array(parts);
-}
-
-/// How much of a message's serialized size is its images, which do not count as context the way
-/// text does: a history's size is measured without them.
-pub(crate) fn image_chars(message: &Value) -> usize {
-    message
-        .get(IMAGES_FIELD)
-        .map_or(0, |images| images.to_string().len())
 }
 
 /// The MIME type of an image file, from its name. `None` for anything else.
@@ -139,7 +139,8 @@ pub(crate) fn resolved_path(path: &str, working_dir: &Path) -> PathBuf {
     }
 }
 
-/// Reads image files a task names. An error says which file and why, for the task's row.
+/// Checks image files a task names and links them. An error says which file and why, for the
+/// task's row.
 pub(crate) fn load_image_files(
     paths: &[String],
     working_dir: &Path,
@@ -156,14 +157,17 @@ pub(crate) fn load_image_files(
             if size > MAX_IMAGE_BYTES {
                 return Err(format!("the image {path} is over 20 MB"));
             }
-            let bytes = std::fs::read(&resolved)
-                .map_err(|error| format!("could not read the image {path}: {error}"))?;
             Ok(TurnImage {
                 mime_type: mime_type.to_string(),
-                data: base64::engine::general_purpose::STANDARD.encode(bytes),
+                path: resolved.to_string_lossy().into_owned(),
             })
         })
         .collect()
+}
+
+/// `images`' paths.
+pub(crate) fn image_paths(images: &[TurnImage]) -> Vec<String> {
+    images.iter().map(|image| image.path.clone()).collect()
 }
 
 /// `prompt` with the image files a local agent app should open named after it.
@@ -183,27 +187,29 @@ fn extension_for(mime_type: &str) -> &'static str {
     }
 }
 
-/// Writes images pasted into the input to files, for a local agent app, and returns their paths.
-/// One that cannot be written is logged and left out.
-pub(crate) fn save_for_local_app(images: &[TurnImage], session_id: &Uuid) -> Vec<String> {
+/// Saves images pasted into the input (as `(MIME type, base64 data)`) to files named after the
+/// turn, and links them. They are kept, since the conversation goes on naming them. One that cannot
+/// be written is logged and left out.
+pub(crate) fn save_pasted_images<'a>(
+    images: impl IntoIterator<Item = (&'a str, &'a str)>,
+    turn_id: &str,
+) -> Vec<TurnImage> {
     let dir = krust_core::paths::state_dir().join("turn-images");
     if let Err(error) = std::fs::create_dir_all(&dir) {
         log::warn!("turn_images: could not make {}: {error}", dir.display());
         return Vec::new();
     }
     images
-        .iter()
+        .into_iter()
         .enumerate()
-        .filter_map(|(index, image)| {
-            let bytes = base64::engine::general_purpose::STANDARD
-                .decode(&image.data)
-                .ok()?;
-            let path = dir.join(format!(
-                "{session_id}-{index}.{}",
-                extension_for(&image.mime_type)
-            ));
+        .filter_map(|(index, (mime_type, data))| {
+            let bytes = base64::engine::general_purpose::STANDARD.decode(data).ok()?;
+            let path = dir.join(format!("{turn_id}-{index}.{}", extension_for(mime_type)));
             match std::fs::write(&path, bytes) {
-                Ok(()) => Some(path.to_string_lossy().into_owned()),
+                Ok(()) => Some(TurnImage {
+                    mime_type: mime_type.to_string(),
+                    path: path.to_string_lossy().into_owned(),
+                }),
                 Err(error) => {
                     log::warn!("turn_images: could not write {}: {error}", path.display());
                     None

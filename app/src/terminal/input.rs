@@ -172,6 +172,7 @@ use crate::ai::blocklist::handoff::touched_repos::{
 use crate::ai::blocklist::handoff::{HandoffLaunchAttachments, PendingCloudLaunch};
 use crate::ai::blocklist::prompt::prompt_alert::{PromptAlertEvent, PromptAlertView};
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
+use crate::ai::model_caps;
 use crate::ai::blocklist::{
     ai_brand_color, ai_indicator_height, render_ai_agent_mode_icon, render_ai_follow_up_icon,
     AttachmentType, BlocklistAIActionModel, BlocklistAIContextEvent, BlocklistAIContextModel,
@@ -3427,8 +3428,8 @@ impl Input {
                     .attachment_chips
                     .iter()
                     .any(|c| matches!(c.attachment_type, AttachmentType::Image));
-                let vision_supported =
-                    LLMPreferences::as_ref(ctx).vision_supported(ctx, Some(me.terminal_view_id));
+                let (_, model_id, _) = me.local_harness_selection(ctx);
+                let vision_supported = model_caps::accepts_images(model_id.as_deref(), ctx);
                 if has_image_chips && !vision_supported {
                     let window_id = ctx.window_id();
                     ToastStack::handle(ctx).update(ctx, |ts, ctx| {
@@ -6021,9 +6022,9 @@ impl Input {
     pub fn update_image_context_options(&mut self, ctx: &mut ViewContext<Self>) {
         let ai_input_model = self.ai_input_model.as_ref(ctx);
 
-        let llm_prefs = LLMPreferences::as_ref(ctx);
-
-        let vision_supported = llm_prefs.vision_supported(ctx, Some(self.terminal_view_id));
+        // This fork runs every prompt on a local harness, so what counts is the model picked there.
+        let (_, model_id, _) = self.local_harness_selection(ctx);
+        let vision_supported = model_caps::accepts_images(model_id.as_deref(), ctx);
 
         let num_images_attached = self.ai_context_model.as_ref(ctx).pending_images().len();
 

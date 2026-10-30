@@ -35,7 +35,6 @@ use super::ollama_stream_exec::{
     TURN_ID_FIELD, completed_ids, todo_reply_message, truncate_after_checkpoint,
 };
 use super::plan_tracker::PlanTracker;
-use super::turn_images::image_chars;
 use crate::ai::api_providers::{
     model_context_window, model_price, ApiRoute, CliRoute, FailoverTarget,
 };
@@ -753,10 +752,7 @@ const SUMMARY_REQUEST: &str = "Write down what is needed to carry on this task i
 
 /// A history's size in characters, as sent (a token is about four).
 fn history_chars(messages: &[Value]) -> usize {
-    messages
-        .iter()
-        .map(|message| message.to_string().len() - image_chars(message))
-        .sum()
+    messages.iter().map(|message| message.to_string().len()).sum()
 }
 
 /// The command a turn compacts the conversation with, as in Claude Code:

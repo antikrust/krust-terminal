@@ -5,18 +5,26 @@ use uuid::Uuid;
 
 use super::*;
 
-fn image(data: &str) -> TurnImage {
+fn image(path: &str) -> TurnImage {
     TurnImage {
         mime_type: "image/png".to_string(),
-        data: data.to_string(),
+        path: path.to_string(),
     }
+}
+
+/// A small file with known bytes in a fresh directory, kept alive by the returned guard.
+fn image_file() -> (tempfile::TempDir, String) {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("knob.png");
+    std::fs::write(&path, b"abc").unwrap();
+    (dir, path.to_string_lossy().into_owned())
 }
 
 #[test]
 fn a_turns_images_are_taken_once() {
     let session = Uuid::new_v4();
-    set_turn_images(&session, vec![image("AAAA")]);
-    assert_eq!(take_turn_images(&session), vec![image("AAAA")]);
+    set_turn_images(&session, vec![image("/a.png")]);
+    assert_eq!(take_turn_images(&session), vec![image("/a.png")]);
     assert!(take_turn_images(&session).is_empty());
 }
 
@@ -28,38 +36,51 @@ fn a_message_with_no_images_is_left_alone() {
     to_ollama_message(&mut message);
     to_openai_message(&mut message);
     assert_eq!(message, before);
-    assert_eq!(image_chars(&message), 0);
+}
+
+#[test]
+fn the_history_holds_a_link_not_the_bytes() {
+    let mut message = json!({ "role": "user", "content": "what is this" });
+    attach_images(&mut message, &[image("/a.png")]);
+    assert_eq!(
+        message[IMAGES_FIELD],
+        json!([{ "mime_type": "image/png", "path": "/a.png" }])
+    );
 }
 
 #[test]
 fn ollama_gets_a_list_of_bare_base64() {
+    let (_dir, path) = image_file();
     let mut message = json!({ "role": "user", "content": "what is this" });
-    attach_images(&mut message, &[image("AAAA"), image("BBBB")]);
+    attach_images(&mut message, &[image(&path)]);
     to_ollama_message(&mut message);
-    assert_eq!(message["images"], json!(["AAAA", "BBBB"]));
+    assert_eq!(message["images"], json!(["YWJj"]));
     assert_eq!(message["content"], json!("what is this"));
 }
 
 #[test]
 fn openai_gets_text_then_image_parts() {
+    let (_dir, path) = image_file();
     let mut message = json!({ "role": "user", "content": "what is this" });
-    attach_images(&mut message, &[image("AAAA")]);
+    attach_images(&mut message, &[image(&path)]);
     to_openai_message(&mut message);
     assert_eq!(
         message["content"],
         json!([
             { "type": "text", "text": "what is this" },
-            { "type": "image_url", "image_url": { "url": "data:image/png;base64,AAAA" } },
+            { "type": "image_url", "image_url": { "url": "data:image/png;base64,YWJj" } },
         ])
     );
 }
 
 #[test]
-fn images_are_measured_apart_from_the_text() {
-    let mut message = json!({ "role": "user", "content": "hi" });
-    attach_images(&mut message, &[image("AAAA")]);
-    assert!(image_chars(&message) >= 4);
-    assert!(message.to_string().len() > image_chars(&message));
+fn a_linked_file_that_is_gone_leaves_the_text() {
+    let mut message = json!({ "role": "user", "content": "what is this" });
+    attach_images(&mut message, &[image("/nonexistent-krust-test-dir/a.png")]);
+    to_openai_message(&mut message);
+    assert_eq!(message["content"], json!("what is this"));
+    to_ollama_message(&mut message);
+    assert!(message.get("images").is_none());
 }
 
 #[test]
@@ -75,6 +96,14 @@ fn relative_paths_are_under_the_working_dir() {
     let dir = Path::new("/work");
     assert_eq!(resolved_path("pics/a.png", dir), Path::new("/work/pics/a.png"));
     assert_eq!(resolved_path("/abs/a.png", dir), Path::new("/abs/a.png"));
+}
+
+#[test]
+fn a_task_names_files_that_are_checked_and_linked() {
+    let (dir, path) = image_file();
+    let loaded = load_image_files(&["knob.png".to_string()], dir.path()).unwrap();
+    assert_eq!(loaded, vec![image(&path)]);
+    assert_eq!(image_paths(&loaded), vec![path]);
 }
 
 #[test]

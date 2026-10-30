@@ -236,7 +236,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
     run_ollama_runbook_watched, RunbookConfig, RunbookWatch,
 };
 use crate::ai::agent_sdk::driver::harness::turn_images::{
-    prompt_with_image_paths, save_for_local_app, set_turn_images, TurnImage,
+    image_paths, prompt_with_image_paths, save_pasted_images, set_turn_images,
 };
 use crate::ai::model_caps::{self, Caps};
 use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
@@ -24118,23 +24118,22 @@ impl TerminalView {
         let turn_id = Uuid::new_v4().to_string();
         ollama_stream_exec::set_current_turn_id(&session_id, &turn_id);
         if sends_images {
-            let images: Vec<TurnImage> = self
-                .ai_context_model
-                .as_ref(ctx)
-                .pending_images()
-                .into_iter()
-                .map(|image| TurnImage {
-                    mime_type: image.mime_type.clone(),
-                    data: image.data.clone(),
-                })
-                .collect();
+            let images = save_pasted_images(
+                self.ai_context_model
+                    .as_ref(ctx)
+                    .pending_images()
+                    .into_iter()
+                    .map(|image| (image.mime_type.as_str(), image.data.as_str())),
+                &turn_id,
+            );
             self.ai_context_model
                 .update(ctx, |model, ctx| model.clear_pending_images(ctx));
             // A model picked by hand that is known not to read images still gets the turn (the
             // user may know better than the list), with a word about it.
-            if let Some(model) = model_id.as_deref().filter(|model| {
-                model_caps::recorded(model).is_some() && !model_caps::can_serve(model, needs, ctx)
-            }) {
+            if let Some(model) = model_id
+                .as_deref()
+                .filter(|model| !model_caps::accepts_images(Some(*model), ctx))
+            {
                 let message = format!(
                     "{model} is not marked as reading images, so it may ignore the ones attached."
                 );
@@ -24147,12 +24146,12 @@ impl TerminalView {
                     );
                 });
             }
+            // Every runner gets the paths in its prompt, and they stay in the conversation as
+            // links. Claude Code and Codex open them from there, also when failover hands them a
+            // turn that began on a cloud model; the others are sent the bytes for this turn.
+            runner_prompt = prompt_with_image_paths(&runner_prompt, &image_paths(&images));
             match harness {
-                // They open image files themselves.
-                LocalHarnessKind::Claude | LocalHarnessKind::Codex => {
-                    let paths = save_for_local_app(&images, &session_id);
-                    runner_prompt = prompt_with_image_paths(&runner_prompt, &paths);
-                }
+                LocalHarnessKind::Claude | LocalHarnessKind::Codex => {}
                 LocalHarnessKind::Ollama | LocalHarnessKind::Api => {
                     set_turn_images(&session_id, images);
                 }
