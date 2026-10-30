@@ -419,6 +419,10 @@ pub enum TerminalAction {
     },
     /// Toggle the cloud mode conversation details panel
     ToggleConversationDetailsPanel,
+    /// Shows or hides the session's images in the right-hand panel.
+    ToggleSessionImagesPanel,
+    /// Opens one of the session's images (a path) in the system's viewer.
+    OpenSessionImage(String),
     /// Cancel the ambient agent task while it's loading
     CancelAmbientAgentTask,
     OpenInlineHistoryMenu,
@@ -752,6 +756,8 @@ impl fmt::Debug for TerminalAction {
                 write!(f, "StartNewAgentConversation {{ origin: {origin:?} }}")
             }
             ToggleConversationDetailsPanel => write!(f, "ToggleConversationDetailsPanel"),
+            ToggleSessionImagesPanel => write!(f, "ToggleSessionImagesPanel"),
+            OpenSessionImage(_) => write!(f, "OpenSessionImage"),
             CancelAmbientAgentTask => write!(f, "CancelAmbientAgentTask"),
             OpenInlineHistoryMenu => write!(f, "OpenInlineHistoryMenu"),
             OpenModelSelector => write!(f, "OpenModelSelector"),

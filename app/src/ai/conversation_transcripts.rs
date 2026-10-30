@@ -1,11 +1,12 @@
 //! Opt-in text files of local agent conversations, for scripts and other agents to read.
 //!
-//! With Settings > Scripting > "Write conversations to text files" on, every local-harness
+//! With Settings > Agents > "Save conversations and images to disk" on, every local-harness
 //! conversation (Claude Code, Codex, Ollama and runbook runs) is also written, as it happens, to
 //! `transcripts/<started>-<id>.md` in Krust's state directory, and `transcripts/latest.md` points
 //! at the newest one. The file is plain markdown: what the agent was asked, what it said, each
 //! tool call with its result, the run's checklist and how each turn ended. It is append-only, so
-//! a reader can poll it, and it stays after the tab is closed.
+//! a reader can poll it, and it stays after the tab is closed. Images attached to a turn are linked
+//! from it; with the setting off they are deleted the next time Krust starts.
 //!
 //! Events are recorded where [`LocalHarnessStream`] turns them into messages, so one place covers
 //! every provider. Nothing here touches the conversation itself.
@@ -25,6 +26,7 @@ use settings::Setting as _;
 use krustui::{Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
+use crate::ai::agent_sdk::driver::harness::turn_images::clear_saved_images;
 use crate::settings::ConversationTranscriptSettings;
 
 /// What a tool call's input shows, in characters.
@@ -58,6 +60,10 @@ impl ConversationTranscripts {
             *settings.as_ref(ctx).write_conversation_transcripts.value(),
             Ordering::Relaxed,
         );
+        // Off, attached images are kept only for the run of the app they were attached in.
+        if !ENABLED.load(Ordering::Relaxed) {
+            std::thread::spawn(clear_saved_images);
+        }
         ctx.subscribe_to_model(&settings, |_, settings, _, ctx| {
             ENABLED.store(
                 *settings.as_ref(ctx).write_conversation_transcripts.value(),
@@ -72,6 +78,18 @@ impl ConversationTranscripts {
 pub(crate) fn record_user_prompt(conversation_id: AIConversationId, prompt: &str) {
     if ENABLED.load(Ordering::Relaxed) {
         append(conversation_id, &entry("## ", "you", prompt), false);
+    }
+}
+
+/// Links the images attached to the turn that just began.
+pub(crate) fn record_images(conversation_id: AIConversationId, paths: &[String]) {
+    if ENABLED.load(Ordering::Relaxed) && !paths.is_empty() {
+        let links = paths
+            .iter()
+            .map(|path| format!("![image]({path})"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        append(conversation_id, &entry("### ", "images", &links), false);
     }
 }
 

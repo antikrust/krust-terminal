@@ -1,4 +1,5 @@
 mod action;
+mod session_images;
 mod agent_view;
 pub mod ambient_agent;
 mod block_banner;
@@ -2961,6 +2962,11 @@ pub struct TerminalView {
     /// Only available on non-WASM platforms (WASM uses a per-window button instead).
     #[cfg(not(target_arch = "wasm32"))]
     conversation_details_panel_toggle_mouse_state: krustui::elements::MouseStateHandle,
+    /// The images attached in this session, for the images panel.
+    session_images: Vec<session_images::SessionImage>,
+    is_session_images_panel_open: bool,
+    session_images_toggle_mouse_state: krustui::elements::MouseStateHandle,
+    session_images_scroll_state: ClippedScrollStateHandle,
     /// Mouse state handle for the ambient agent cancel button in the pane header.
     ambient_agent_cancel_mouse_state: krustui::elements::MouseStateHandle,
 
@@ -4518,6 +4524,10 @@ impl TerminalView {
             ambient_agent_view_model: None,
             conversation_details_panel,
             is_conversation_details_panel_open: false,
+            session_images: Vec::new(),
+            is_session_images_panel_open: false,
+            session_images_toggle_mouse_state: Default::default(),
+            session_images_scroll_state: Default::default(),
             has_auto_opened_conversation_details_panel: false,
             conversation_details_panel_auto_open_policy: Default::default(),
             pending_cloud_followup_task_id: None,
@@ -24117,6 +24127,7 @@ impl TerminalView {
         // later finds it there exactly.
         let turn_id = Uuid::new_v4().to_string();
         ollama_stream_exec::set_current_turn_id(&session_id, &turn_id);
+        let mut turn_image_paths: Vec<String> = Vec::new();
         if sends_images {
             let images = save_pasted_images(
                 self.ai_context_model
@@ -24149,7 +24160,10 @@ impl TerminalView {
             // Every runner gets the paths in its prompt, and they stay in the conversation as
             // links. Claude Code and Codex open them from there, also when failover hands them a
             // turn that began on a cloud model; the others are sent the bytes for this turn.
-            runner_prompt = prompt_with_image_paths(&runner_prompt, &image_paths(&images));
+            turn_image_paths = image_paths(&images);
+            self.session_images
+                .extend(turn_image_paths.iter().cloned().map(session_images::SessionImage::new));
+            runner_prompt = prompt_with_image_paths(&runner_prompt, &turn_image_paths);
             match harness {
                 LocalHarnessKind::Claude | LocalHarnessKind::Codex => {}
                 LocalHarnessKind::Ollama | LocalHarnessKind::Api => {
@@ -24198,6 +24212,7 @@ impl TerminalView {
                     let taken = stream.take();
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();
+                    let turn_image_paths = turn_image_paths.clone();
                     let requested_api_model = requested_api_model.clone();
                     let turn_model = turn_model.clone();
                     let share_initiator = share_initiator.clone();
@@ -24244,6 +24259,10 @@ impl TerminalView {
                                             stream
                                         }
                                     };
+                                    crate::ai::conversation_transcripts::record_images(
+                                        stream.conversation_id(),
+                                        &turn_image_paths,
+                                    );
                                     view.local_claude_thread =
                                         Some((harness, session_id, stream.conversation_id()));
                                     local_harness_threads::record(
@@ -28121,6 +28140,8 @@ impl TypedActionView for TerminalView {
             | EnterCloudAgentView
             | StartNewAgentConversation { .. }
             | ToggleConversationDetailsPanel
+            | ToggleSessionImagesPanel
+            | OpenSessionImage(_)
             | CancelAmbientAgentTask
             | OpenInlineHistoryMenu
             | OpenModelSelector
@@ -29234,9 +29255,20 @@ impl TypedActionView for TerminalView {
                 let will_open = !self.is_conversation_details_panel_open;
                 self.is_conversation_details_panel_open = will_open;
                 if will_open {
+                    self.is_session_images_panel_open = false;
                     self.fetch_and_update_conversation_details_panel(ctx);
                 }
                 ctx.notify();
+            }
+            ToggleSessionImagesPanel => {
+                self.is_session_images_panel_open = !self.is_session_images_panel_open;
+                if self.is_session_images_panel_open {
+                    self.is_conversation_details_panel_open = false;
+                }
+                ctx.notify();
+            }
+            OpenSessionImage(path) => {
+                ctx.open_file_path(std::path::Path::new(path));
             }
             CancelAmbientAgentTask => {
                 if let Some(ambient_agent_view_model) = self.ambient_agent_view_model.as_ref() {
@@ -29839,13 +29871,22 @@ impl View for TerminalView {
             && self.is_conversation_details_panel_open
             && self.can_show_conversation_details_ui_from_model(&model, app);
 
-        if should_show_panel {
+        let should_show_images = !cfg!(target_family = "wasm")
+            && self.is_session_images_panel_open
+            && self.can_show_conversation_details_ui_from_model(&model, app);
+
+        if should_show_panel || should_show_images {
+            let panel = if should_show_panel {
+                ChildView::new(&self.conversation_details_panel).finish()
+            } else {
+                self.render_session_images_panel(app)
+            };
             Container::new(
                 Flex::row()
                     .with_main_axis_size(krustui::elements::MainAxisSize::Max)
                     .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
                     .with_child(Shrinkable::new(1., final_element).finish())
-                    .with_child(ChildView::new(&self.conversation_details_panel).finish())
+                    .with_child(panel)
                     .finish(),
             )
             .with_border(Border::top(1.0).with_border_fill(appearance.theme().outline()))

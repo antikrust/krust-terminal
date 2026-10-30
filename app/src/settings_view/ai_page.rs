@@ -43,7 +43,7 @@ use super::remove_custom_endpoint_confirmation_dialog::{
 };
 use super::set_default_model_modal::{SetDefaultModelModalBody, SetDefaultModelModalBodyEvent};
 use super::settings_page::{
-    build_sub_header, build_toggle_element, render_body_item_label,
+    build_sub_header, build_toggle_element, render_body_item, render_body_item_label,
     render_body_item_label_with_icon, render_custom_size_header, render_dropdown_item,
     render_dropdown_item_label, render_full_pane_width_ai_button, render_input_list,
     render_separator, render_settings_info_banner, InputListItem, LocalOnlyIconState, MatchData,
@@ -99,7 +99,7 @@ use crate::settings::{
     AgentModeCodingPermissionsType, AgentModeCommandExecutionDenylist,
     AgentModeCommandExecutionPredicate, AgentModeQuerySuggestionsEnabled, AwsBedrockAutoLogin,
     AgentPool, AwsBedrockCredentialsEnabled, ByorFailoverEnabled, ByorFailoverFreeOnly,
-    ByorFailoverPreset, CodeSettings,
+    ByorFailoverPreset, CodeSettings, ConversationTranscriptSettings,
     CodebaseContextEnabled, FileBasedMcpEnabled, GitOperationsAutogenEnabled,
     IncludeAgentCommandsInHistory, InputSettings, IntelligentAutosuggestionsEnabled,
     LongRunningCommandSubmissionMode, MemoryEnabled, MiseryMode, NLDInTerminalEnabled,
@@ -641,6 +641,13 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 builder(SettingsAction::AI(AISettingsPageAction::ToggleQueueSpawnMode)),
                 &(context.clone() & id!(flags::IS_ANY_AI_ENABLED)),
                 flags::QUEUE_SPAWN_MODE_FLAG,
+            )
+            .with_group(bindings::BindingGroup::KrustAi),
+            ToggleSettingActionPair::new(
+                "saving conversations and images to disk",
+                builder(SettingsAction::AI(AISettingsPageAction::ToggleSaveConversations)),
+                context,
+                flags::IS_CONVERSATION_TRANSCRIPTS_ENABLED,
             )
             .with_group(bindings::BindingGroup::KrustAi),
             ToggleSettingActionPair::new(
@@ -3089,6 +3096,7 @@ impl AISettingsPageView {
                 // Codex — and the queue that hands tasks out across them.
                 widgets.push(Box::new(PageTitleWidget::new("Agents", false)));
                 widgets.push(Box::new(AgentModelsWidget::new(ctx)));
+                widgets.push(Box::new(SaveConversationsWidget::new(ctx)));
             }
         }
 
@@ -4106,6 +4114,8 @@ pub enum AISettingsPageAction {
     ToggleModelInPool(String),
     /// Spawn mode: hand out every task of a plan as soon as it loads.
     ToggleQueueSpawnMode,
+    /// Whether local agent conversations and their images are saved to disk.
+    ToggleSaveConversations,
     /// Puts a row on another provider, at that provider's first model.
     SetByorFailoverProvider {
         index: usize,
@@ -4678,6 +4688,14 @@ impl TypedActionView for AISettingsPageView {
                 });
                 Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
                 AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleSaveConversations => {
+                ConversationTranscriptSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings
+                        .write_conversation_transcripts
+                        .toggle_and_save_value(ctx));
+                });
                 ctx.notify();
             }
             AISettingsPageAction::ToggleQueueSpawnMode => {
@@ -9355,6 +9373,67 @@ impl CloudModelKeysWidget {
             .with_child(note)
             .with_child(link)
             .finish()
+    }
+}
+
+/// The Agents page's switch for keeping local agent conversations and their images on disk.
+struct SaveConversationsWidget {
+    switch: SwitchStateHandle,
+}
+
+impl SaveConversationsWidget {
+    fn new(ctx: &mut ViewContext<<Self as SettingsWidget>::View>) -> Self {
+        ctx.subscribe_to_model(&ConversationTranscriptSettings::handle(ctx), |_, _, _, ctx| {
+            ctx.notify();
+        });
+        Self {
+            switch: Default::default(),
+        }
+    }
+}
+
+impl SettingsWidget for SaveConversationsWidget {
+    type View = AISettingsPageView;
+
+    fn search_terms(&self) -> &str {
+        "save conversation transcript text file images disk memory context log agent scripts"
+    }
+
+    fn render(
+        &self,
+        _view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let enabled = *ConversationTranscriptSettings::as_ref(app)
+            .write_conversation_transcripts
+            .value();
+        let switch = appearance
+            .ui_builder()
+            .switch(self.switch.clone())
+            .check(enabled)
+            .build()
+            .on_click(|ctx, _, _| {
+                ctx.dispatch_typed_action(AISettingsPageAction::ToggleSaveConversations);
+            })
+            .finish();
+        render_body_item::<AISettingsPageAction>(
+            "Save conversations and images to disk".into(),
+            None,
+            LocalOnlyIconState::Hidden,
+            ToggleState::Enabled,
+            appearance,
+            switch,
+            Some(
+                "Keeps each local agent conversation as a text file with links to its images, in \
+                 Krust's state directory (transcripts/latest.md is the newest), for you, scripts \
+                 and other agents to read later. A model only holds an image for the turn it came \
+                 with and keeps a link after that, so images don't fill its memory or context; \
+                 this is what keeps those files. Off, nothing is written and attached images are \
+                 deleted the next time Krust starts."
+                    .to_owned(),
+            ),
+        )
     }
 }
 

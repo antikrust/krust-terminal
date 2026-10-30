@@ -16,7 +16,7 @@ use mcp_servers_page::MCPServersSettingsPageView;
 use nav::{SettingsNavItem, SettingsUmbrella};
 use pathfinder_geometry::vector::Vector2F;
 use privacy_page::{PrivacyPageView, PrivacyPageViewEvent};
-use scripting_page::{ScriptingSettingsPageAction, ScriptingSettingsPageView};
+use scripting_page::ScriptingSettingsPageView;
 use settings_file_footer::{render_footer, SettingsFooterKind, SettingsFooterMouseStates};
 use settings_page::{
     MatchData, SettingsPage, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
@@ -736,7 +736,6 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     privacy_page::init_actions_from_parent_view(app, context, builder);
     ai_page::init_actions_from_parent_view(app, context, builder);
     code_page::init_actions_from_parent_view(app, context, builder);
-    scripting_page::init_actions_from_parent_view(app, context, builder);
 
     if ChannelState::enable_debug_features() || cfg!(windows) {
         ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
@@ -1034,7 +1033,6 @@ pub enum SettingsAction {
     PrivacyPageToggle(PrivacyPageAction),
     AI(AISettingsPageAction),
     Code(CodeSettingsPageAction),
-    Scripting(ScriptingSettingsPageAction),
     KrustifyPageToggle(KrustifyPageAction),
     Tab,
     Split(Direction),
@@ -2884,13 +2882,6 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-            SettingsAction::Scripting(scripting_action) => {
-                if let Some(scripting_page) = self.settings_page(SettingsSection::Scripting) {
-                    if let SettingsPageViewHandle::Scripting(view) = &scripting_page.view_handle {
-                        view.update(ctx, |view, ctx| {
-                            view.handle_action(scripting_action, ctx);
-                        })
-                    }
                 }
             }
             SettingsAction::KrustifyPageToggle(krustify_action) => {

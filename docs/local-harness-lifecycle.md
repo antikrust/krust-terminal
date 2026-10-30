@@ -279,15 +279,17 @@ Shared-session viewers still tag in: their prompts go to the sharer.
 
 ## Transcript files (for scripts and other agents)
 
-Settings > Scripting > "Write conversations to text files" (`scripting.write_conversation_transcripts`,
-off by default; Command Palette: "conversation text files") makes every local-harness conversation
-also write itself, append-only and as it happens, to `transcripts/<started>-<id>.md` in the state
+Settings > Agents > "Save conversations and images to disk" (`scripting.write_conversation_transcripts`,
+off by default; Command Palette: "saving conversations and images to disk") makes every local-harness
+conversation also write itself, append-only and as it happens, to `transcripts/<started>-<id>.md` in the state
 directory (`~/Library/Application Support/krust.baby.Krust` on macOS); `transcripts/latest.md` points at
 the newest. `ai/conversation_transcripts.rs` records the same `TurnEvent`s that
 `LocalHarnessStream::messages_for_event` / `apply_text_delta` turn into messages, plus the prompt in
 `begin` / `begin_follow_up`, so one hook covers claude, codex, Ollama and runbook runs. It never
 touches the conversation. A new kind of `TurnEvent` needs a line in `record_event` (it is an
-exhaustive match).
+exhaustive match). Images attached to a turn are linked from the file; with the setting off,
+`turn-images` in the state directory is cleared at the next start. The icon next to the details
+button shows the session's images in the right-hand panel (`terminal/view/session_images.rs`).
 
 ## Known rendering trap (blocklist paint)
 

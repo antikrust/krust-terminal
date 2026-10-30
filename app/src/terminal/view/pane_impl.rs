@@ -414,7 +414,13 @@ impl TerminalView {
         } else if self.can_show_conversation_details_ui(app) {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                Some(self.render_conversation_details_toggle_button(app))
+                icon_button_count += 1;
+                Some(
+                    Flex::row()
+                        .with_child(self.render_session_images_toggle_button(app))
+                        .with_child(self.render_conversation_details_toggle_button(app))
+                        .finish(),
+                )
             }
             #[cfg(target_arch = "wasm32")]
             {
@@ -815,6 +821,52 @@ impl TerminalView {
             .on_click(|ctx, _, _| {
                 ctx.dispatch_typed_action::<PaneHeaderAction<TerminalAction, TerminalAction>>(
                     PaneHeaderAction::CustomAction(TerminalAction::ToggleConversationDetailsPanel),
+                );
+            })
+            .finish()
+    }
+
+    /// Render the button that shows the session's images in the right-hand panel, next to the
+    /// details button.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn render_session_images_toggle_button(&self, app: &AppContext) -> Box<dyn Element> {
+        let appearance = Appearance::as_ref(app);
+        let theme = appearance.theme();
+        let is_open = self.is_session_images_panel_open;
+        let ui_builder = appearance.ui_builder().clone();
+
+        let icon_color = if is_open {
+            blended_colors::text_main(theme, theme.background()).into()
+        } else {
+            blended_colors::text_sub(theme, theme.background()).into()
+        };
+
+        let button = icon_button_with_color(
+            appearance,
+            icons::Icon::Image,
+            is_open,
+            self.session_images_toggle_mouse_state.clone(),
+            icon_color,
+        );
+
+        let button = if is_open {
+            button.with_style(UiComponentStyles::default().set_background(theme.surface_2().into()))
+        } else {
+            button
+        };
+
+        button
+            .with_tooltip(move || {
+                let tooltip_text = if is_open { "Hide images" } else { "Show images" };
+                ui_builder
+                    .tool_tip(tooltip_text.to_string())
+                    .build()
+                    .finish()
+            })
+            .build()
+            .on_click(|ctx, _, _| {
+                ctx.dispatch_typed_action::<PaneHeaderAction<TerminalAction, TerminalAction>>(
+                    PaneHeaderAction::CustomAction(TerminalAction::ToggleSessionImagesPanel),
                 );
             })
             .finish()

@@ -6,7 +6,9 @@
 //! image came with; a later turn sees the path in the conversation but is not sent the image again.
 //! On the wire Ollama's `/api/chat` takes an `images` list and OpenAI-style APIs take content parts.
 //! Claude Code and Codex open the files themselves, so the path in the prompt is all they need,
-//! including when failover hands them a turn (its recap carries the prompt).
+//! including when failover hands them a turn (its recap carries the prompt). Pasted images are kept
+//! or deleted at the next start according to Settings > Agents > "Save conversations and images to
+//! disk" (see `ai::conversation_transcripts`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -18,6 +20,9 @@ use uuid::Uuid;
 
 /// Where a user message keeps its images in the history. Never sent as is.
 pub(crate) const IMAGES_FIELD: &str = "krust_images";
+
+/// Where pasted images are saved, in the state directory.
+const SAVED_IMAGES_DIR: &str = "turn-images";
 
 /// The largest image file a task may name. Hosted APIs refuse much beyond this.
 const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024;
@@ -194,7 +199,7 @@ pub(crate) fn save_pasted_images<'a>(
     images: impl IntoIterator<Item = (&'a str, &'a str)>,
     turn_id: &str,
 ) -> Vec<TurnImage> {
-    let dir = krust_core::paths::state_dir().join("turn-images");
+    let dir = krust_core::paths::state_dir().join(SAVED_IMAGES_DIR);
     if let Err(error) = std::fs::create_dir_all(&dir) {
         log::warn!("turn_images: could not make {}: {error}", dir.display());
         return Vec::new();
@@ -217,6 +222,17 @@ pub(crate) fn save_pasted_images<'a>(
             }
         })
         .collect()
+}
+
+/// Deletes the saved pasted images. Only what [`save_pasted_images`] wrote: a task's own files are
+/// never touched.
+pub(crate) fn clear_saved_images() {
+    let dir = krust_core::paths::state_dir().join(SAVED_IMAGES_DIR);
+    if let Err(error) = std::fs::remove_dir_all(&dir) {
+        if error.kind() != std::io::ErrorKind::NotFound {
+            log::warn!("turn_images: could not clear {}: {error}", dir.display());
+        }
+    }
 }
 
 #[cfg(test)]
