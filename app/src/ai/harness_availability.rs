@@ -470,6 +470,28 @@ pub fn selected_local_harness_for_pane(
     )
 }
 
+/// The model last picked from each pane's model menu, by the pane's terminal
+/// view id. Unlike `pane_selections` this changes only when the user picks, not
+/// when a pane takes a conversation's model on entering it or a failover moves
+/// a turn — so a runbook run that restarts on a model switch (see
+/// `ollama_runbook`) restarts for a deliberate pick and nothing else.
+fn menu_picks() -> &'static Mutex<HashMap<EntityId, String>> {
+    static PICKS: OnceLock<Mutex<HashMap<EntityId, String>>> = OnceLock::new();
+    PICKS.get_or_init(Default::default)
+}
+
+/// Records that the user picked `model_id` from this pane's model menu.
+pub fn note_menu_pick(terminal_view_id: EntityId, model_id: &str) {
+    if let Ok(mut picks) = menu_picks().lock() {
+        picks.insert(terminal_view_id, model_id.to_string());
+    }
+}
+
+/// The model last picked from this pane's model menu, if any has been.
+pub fn menu_pick_for_pane(terminal_view_id: EntityId) -> Option<String> {
+    menu_picks().lock().ok()?.get(&terminal_view_id).cloned()
+}
+
 /// Makes `key`'s `model_id` (and reasoning) this pane's pick. Other panes
 /// keep theirs.
 pub fn set_pane_local_harness(

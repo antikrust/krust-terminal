@@ -22,7 +22,7 @@ const RUNTIME_OVERHEAD_BYTES: u64 = 1_200_000_000;
 /// Fraction of total RAM we treat as available to a model. The rest is the OS,
 /// the browser, the editor, and this terminal. On unified-memory Macs the GPU
 /// draws from the same pool, so there is no separate VRAM budget to consult.
-const USABLE_MEMORY_FRACTION: f64 = 0.75;
+pub(crate) const USABLE_MEMORY_FRACTION: f64 = 0.75;
 
 /// A parameter count as advertised in the library listing: `8b`, `1.5b`, `70b`.
 #[derive(Debug, Clone, Copy, PartialEq)]

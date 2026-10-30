@@ -232,7 +232,9 @@ use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, 
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, CommitteeRole, OllamaCommitteeConfig, COMMITTEE_MODEL_NAME,
 };
-use crate::ai::agent_sdk::driver::harness::ollama_runbook::{run_ollama_runbook, RunbookConfig};
+use crate::ai::agent_sdk::driver::harness::ollama_runbook::{
+    run_ollama_runbook_watched, RunbookConfig, RunbookWatch,
+};
 use crate::ai::agent_sdk::driver::harness::turn_images::{
     prompt_with_image_paths, save_for_local_app, set_turn_images, TurnImage,
 };
@@ -287,7 +289,7 @@ use crate::ai::blocklist::telemetry_banner::{should_collect_ai_ugc_telemetry, Te
 use crate::ai::blocklist::usage::conversation_usage_view::{
     ConversationUsageInfo, ConversationUsageView, TimingInfo,
 };
-use crate::ai::harness_availability::set_pane_local_harness;
+use crate::ai::harness_availability::{menu_pick_for_pane, set_pane_local_harness};
 use crate::ai::blocklist::{
     ai_brand_color, block_context_from_terminal_model,
     get_ai_block_overflow_menu_element_position_id, get_attached_blocks_chip_element_position_id,
@@ -23924,7 +23926,9 @@ impl TerminalView {
             });
         // Runbook mode drives a single Ollama model through a runbook step by
         // step; its judge choice and the switched-off models are snapshotted
-        // here for the same no-`ctx`-in-the-pump reason.
+        // here for the same no-`ctx`-in-the-pump reason. The run also watches
+        // this pane's model menu: picking another model restarts it.
+        let pane_view_id = self.view_id;
         let ollama_runbook = (ollama_model.is_some()
             && ollama_committee_config.is_none()
             && *AISettings::as_ref(ctx).ollama_runbook_mode.value())
@@ -23937,6 +23941,16 @@ impl TerminalView {
                         .as_deref(),
                 ),
                 crate::ai::ollama::service::disabled_models_for(ctx),
+                RunbookWatch {
+                    selected_model: Some(std::sync::Arc::new(move || {
+                        menu_pick_for_pane(pane_view_id)
+                    })),
+                    started_with: menu_pick_for_pane(pane_view_id),
+                    other_servers: crate::ai::ollama::remote::configured(ctx)
+                        .into_iter()
+                        .map(|host| host.url)
+                        .collect(),
+                },
             )
         });
         let mut command = match harness {
@@ -24478,9 +24492,9 @@ impl TerminalView {
                                 on_event,
                             )
                             .await
-                        } else if let Some((config, disabled)) = ollama_runbook {
+                        } else if let Some((config, disabled, watch)) = ollama_runbook {
                             let model = ollama_model.unwrap_or_default();
-                            run_ollama_runbook(
+                            run_ollama_runbook_watched(
                                 &pump_prompt,
                                 &session_id,
                                 &pump_working_dir,
@@ -24488,6 +24502,7 @@ impl TerminalView {
                                 &model,
                                 config,
                                 disabled,
+                                watch,
                                 on_event,
                             )
                             .await

@@ -57,7 +57,7 @@ use crate::ai::execution_profiles::profiles::{
     AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId,
 };
 use crate::ai::harness_availability::{
-    persisted_api_model_for, persisted_model_for, persisted_ollama_model_for,
+    note_menu_pick, persisted_api_model_for, persisted_model_for, persisted_ollama_model_for,
     selected_local_harness_for_pane, set_pane_local_harness, HarnessAvailabilityEvent,
     HarnessAvailabilityModel, HarnessModelInfo,
 };
@@ -2554,6 +2554,9 @@ impl TypedActionView for ProfileModelSelector {
                     ModelGroupKind::Api => API_HARNESS_CONFIG_NAME,
                     ModelGroupKind::Harness => harness.config_name(),
                 };
+                // A runbook run in this pane watches for this (see
+                // `ollama_runbook`'s model-switch restart).
+                note_menu_pick(self.terminal_view_id, model_id);
                 // This pane's pick; other panes keep theirs. The app-wide
                 // selection below is what a new pane starts with.
                 set_pane_local_harness(

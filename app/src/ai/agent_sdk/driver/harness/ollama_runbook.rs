@@ -31,6 +31,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
 use std::process::ExitStatus;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -47,10 +48,12 @@ use super::claude_stream_exec::{
 use super::ollama_committee::{fetch_installed_model_names, success_status};
 use super::ollama_stream_exec::{
     base_url_of, builtin_local_tool_specs, dispatch_builtin_tool, emit_failed_turn,
-    ensure_ollama_service, execute_shell, new_ollama_chat_command, parse_text_tool_call,
+    ensure_ollama_service, execute_shell, new_ollama_chat_command, ollama_model_name,
+    parse_text_tool_call,
     probe_model_caps_checked, wire_name, McpToolSpec, OllamaChatAccumulator, OllamaChatResult,
     OllamaToolCall, ShellExecution,
 };
+use super::ollama_runbook_memory as memory;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 
 /// Model calls a worker may make on one step before the step is called off.
@@ -1773,6 +1776,7 @@ fn last_chars(text: &str, max: usize) -> String {
 
 /// Runs the runbook named in `prompt` against `working_dir`, step by step,
 /// with `worker` doing each step and a judge checking it.
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn run_ollama_runbook(
     prompt: &str,
@@ -1782,6 +1786,37 @@ pub(crate) async fn run_ollama_runbook(
     worker: &str,
     config: RunbookConfig,
     disabled: Vec<String>,
+    on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    run_ollama_runbook_watched(
+        prompt,
+        session_id,
+        working_dir,
+        path,
+        worker,
+        config,
+        disabled,
+        RunbookWatch::default(),
+        on_event,
+    )
+    .await
+}
+
+/// [`run_ollama_runbook`] that also watches the pane's model pick and the
+/// memory the run's models would take. If the pick changes to another Ollama
+/// model while the run is going, the run stops and starts over from step 1
+/// with the new worker: half the work done by one model and half by another
+/// is not a run anyone can trust.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn run_ollama_runbook_watched(
+    prompt: &str,
+    session_id: &Uuid,
+    working_dir: &Path,
+    path: &str,
+    worker: &str,
+    config: RunbookConfig,
+    disabled: Vec<String>,
+    watch: RunbookWatch,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     register_harness_session(*session_id);
@@ -1847,6 +1882,182 @@ pub(crate) async fn run_ollama_runbook(
         }
     };
 
+    let mut worker = worker.to_string();
+    let mut started_with = watch.started_with.clone();
+    loop {
+        let state = Arc::new(SwitchWatch::default());
+        // Scoped so the attempt's borrows of `on_event` and `worker` end
+        // before the outcome is acted on.
+        let end = {
+            let inputs = RunInputs {
+                session_id,
+                working_dir,
+                path,
+                worker: &worker,
+                config: &config,
+                disabled: &disabled,
+                watch: &watch,
+                started_with: started_with.as_deref(),
+                request: &request,
+                runbook: &runbook,
+                sandbox_note: &sandbox_note,
+                state: &state,
+            };
+            let attempt = run_attempt(&inputs, &mut on_event);
+            futures::pin_mut!(attempt);
+            let watcher = watch_for_model_switch(&inputs);
+            futures::pin_mut!(watcher);
+            match futures::future::select(attempt, watcher).await {
+                Either::Left((end, _)) => end?,
+                Either::Right(((), attempt)) => attempt.await?,
+            }
+        };
+        match end {
+            AttemptEnd::Finished(status) => return Ok(status),
+            AttemptEnd::Switched { id, name, unload } => {
+                on_event(TurnEvent::Text {
+                    text: format!(
+                        "**Model changed** from `{worker}` to `{name}` — starting over from step 1 with `{name}`. \
+                         Changes the earlier steps already made stay as they are."
+                    ),
+                });
+                memory::unload(path, &unload).await;
+                // The old stop signal was raised to end the old attempt; the
+                // Stop button finds this run by session id, so it needs a new one.
+                register_harness_session(*session_id);
+                worker = name;
+                started_with = Some(id);
+            }
+        }
+    }
+}
+
+/// How an attempt at the runbook ended.
+enum AttemptEnd {
+    /// The run is over, however it ended; its turn has been completed.
+    Finished(ExitStatus),
+    /// The model pick changed to another Ollama model: start over with it.
+    /// `unload` are the models this attempt had loaded.
+    Switched {
+        id: String,
+        name: String,
+        unload: Vec<String>,
+    },
+}
+
+/// What the pane's pick changed to while a run was going.
+enum Switch {
+    To { id: String, name: String },
+    Away { id: String },
+}
+
+/// Shared between an attempt and the watcher beside it.
+#[derive(Default)]
+struct SwitchWatch {
+    switch: Mutex<Option<Switch>>,
+    /// Set once the steps are over, so a pick made while the report is
+    /// written doesn't restart a run that has finished.
+    steps_over: AtomicBool,
+}
+
+/// What a run watches beyond its own models.
+#[derive(Clone, Default)]
+pub(crate) struct RunbookWatch {
+    /// The pane's current model pick, as the pane stores it.
+    pub(crate) selected_model: Option<Arc<dyn Fn() -> Option<String> + Send + Sync>>,
+    /// The pick the run started under. Compared with, rather than the
+    /// worker's name, because an Auto pick resolves to a different model.
+    pub(crate) started_with: Option<String>,
+    /// Ollama servers beyond this machine's default one, by base URL.
+    pub(crate) other_servers: Vec<String>,
+}
+
+/// Everything one attempt at the runbook uses.
+struct RunInputs<'a> {
+    session_id: &'a Uuid,
+    working_dir: &'a Path,
+    path: &'a str,
+    worker: &'a str,
+    config: &'a RunbookConfig,
+    disabled: &'a [String],
+    watch: &'a RunbookWatch,
+    started_with: Option<&'a str>,
+    request: &'a RunbookRequest,
+    runbook: &'a Runbook,
+    sandbox_note: &'a Option<String>,
+    state: &'a SwitchWatch,
+}
+
+/// Returns when the pane's pick differs from the one the run started under,
+/// after recording what it changed to and stopping the attempt as a user's
+/// Stop would. Returns at once if there is nothing to watch.
+async fn watch_for_model_switch(inputs: &RunInputs<'_>) {
+    let Some(selected) = inputs.watch.selected_model.as_ref() else {
+        return;
+    };
+    loop {
+        Timer::after(Duration::from_millis(500)).await;
+        if inputs.state.steps_over.load(Ordering::Relaxed) {
+            return;
+        }
+        let Some(id) = selected() else { continue };
+        if Some(id.as_str()) == inputs.started_with {
+            continue;
+        }
+        let switch = match ollama_model_name(&id) {
+            Some(name) if name != inputs.worker => Switch::To {
+                name: name.to_string(),
+                id,
+            },
+            Some(_) => continue,
+            None => Switch::Away { id },
+        };
+        if let Ok(mut slot) = inputs.state.switch.lock() {
+            *slot = Some(switch);
+        }
+        if let Some(cancel) = harness_cancel_for(inputs.session_id) {
+            cancel.cancel();
+        }
+        return;
+    }
+}
+
+/// The preferred models that are installed and switched on, in preference
+/// order: the judge and helper candidates the memory check chooses among.
+fn preferred_installed(
+    preference: &[&str],
+    installed: &[String],
+    disabled: &[String],
+) -> Vec<String> {
+    preference
+        .iter()
+        .filter(|preferred| {
+            installed.iter().any(|tag| tag == *preferred)
+                && !disabled.iter().any(|off| off == *preferred)
+        })
+        .map(|preferred| preferred.to_string())
+        .collect()
+}
+
+/// One attempt at the runbook with `inputs.worker`, from step 1.
+async fn run_attempt(
+    inputs: &RunInputs<'_>,
+    on_event: &mut impl FnMut(TurnEvent),
+) -> std::io::Result<AttemptEnd> {
+    let RunInputs {
+        session_id,
+        working_dir,
+        path,
+        worker,
+        config,
+        disabled,
+        watch,
+        request,
+        runbook,
+        sandbox_note,
+        state,
+        ..
+    } = *inputs;
     // A worker on another machine (`name@@http://host:port`) needs no
     // service started here.
     if crate::ai::ollama::remote::split(worker).1.is_none() {
@@ -1869,14 +2080,14 @@ pub(crate) async fn run_ollama_runbook(
                      runbook again."
                 ),
             );
-            return Ok(success_status());
+            return Ok(AttemptEnd::Finished(success_status()));
         }
         None => {
             emit_failed_turn(
                 &mut on_event,
                 format!("Ollama didn't answer when asked what `{worker}` can do, so the run can't start."),
             );
-            return Ok(success_status());
+            return Ok(AttemptEnd::Finished(success_status()));
         }
     };
     let installed = if config.judge.is_none() || config.helper.is_none() {
@@ -1884,14 +2095,34 @@ pub(crate) async fn run_ollama_runbook(
     } else {
         Vec::new()
     };
-    let judge = config
-        .judge
-        .clone()
-        .unwrap_or_else(|| pick_judge(&installed, worker, &disabled));
-    let helper = config
-        .helper
-        .clone()
-        .unwrap_or_else(|| pick_helper(&installed, worker, &disabled));
+    // Judge and helper are picked only once the models are known to fit in
+    // memory together: loading them is what freezes the machine.
+    let (judge, helper) = match memory::inventory(path, &watch.other_servers).await {
+        Some(inventory) => match memory::choose(
+            &inventory,
+            worker,
+            config.judge.as_deref(),
+            config.helper.as_deref(),
+            &preferred_installed(JUDGE_PREFERENCE, &installed, disabled),
+            &preferred_installed(HELPER_PREFERENCE, &installed, disabled),
+        ) {
+            Ok(picks) => (picks.judge, picks.helper),
+            Err(message) => {
+                finish_with_text(&mut on_event, message);
+                return Ok(AttemptEnd::Finished(success_status()));
+            }
+        },
+        None => (
+            config
+                .judge
+                .clone()
+                .unwrap_or_else(|| pick_judge(&installed, worker, disabled)),
+            config
+                .helper
+                .clone()
+                .unwrap_or_else(|| pick_helper(&installed, worker, disabled)),
+        ),
+    };
     let judge_thinks = probe_model_caps_checked(&judge, path)
         .await
         .is_some_and(|caps| caps.thinking);
@@ -1934,6 +2165,7 @@ pub(crate) async fn run_ollama_runbook(
                 String::new()
             },
             sandbox_note
+                .as_ref()
                 .map(|note| format!("\n\n{note}"))
                 .unwrap_or_default()
         ),
@@ -2128,9 +2360,32 @@ pub(crate) async fn run_ollama_runbook(
         }
     }
 
+    state.steps_over.store(true, Ordering::Relaxed);
+    let switch = state
+        .switch
+        .lock()
+        .ok()
+        .and_then(|mut switch| switch.take())
+        .filter(|_| stopped_by_user);
+    if let Some(Switch::To { id, name }) = &switch {
+        let mut unload = vec![worker.to_string()];
+        unload.extend(config.judge.is_none().then(|| judge.clone()));
+        unload.extend(config.helper.is_none().then(|| helper.clone()));
+        return Ok(AttemptEnd::Switched {
+            id: id.clone(),
+            name: name.clone(),
+            unload,
+        });
+    }
     if stopped_by_user {
         on_event(TurnEvent::Text {
-            text: "Stopped — you ended the run.".to_string(),
+            text: match switch {
+                Some(Switch::Away { id }) => format!(
+                    "Model changed to `{id}` — a runbook run needs a local Ollama worker, so the run stopped \
+                     here. Send the runbook again on an Ollama model to run it from step 1."
+                ),
+                _ => "Stopped — you ended the run.".to_string(),
+            },
         });
     } else {
         let report = write_report(&context, &runbook, &results, &facts, &mut on_event).await?;
@@ -2141,7 +2396,7 @@ pub(crate) async fn run_ollama_runbook(
         is_error: false,
         error_message: None,
     });
-    Ok(success_status())
+    Ok(AttemptEnd::Finished(success_status()))
 }
 
 fn finish_with_text(on_event: &mut impl FnMut(TurnEvent), text: String) {

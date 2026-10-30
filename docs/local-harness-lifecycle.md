@@ -256,6 +256,22 @@ Shared-session viewers still tag in: their prompts go to the sharer.
 - Runbook mode treats any word of a prompt that names an existing file as
   the runbook to run, so don't route prompts carrying terminal output into
   it.
+- **Memory check before models load.** `ollama_runbook_memory.rs` adds up the worker, judge and
+  helper (`/api/tags` sizes plus ~1 GB of context each, or the `/api/ps` size when loaded), plus
+  anything else Ollama has loaded (this machine's servers only), against 75% of `hw.memsize`
+  (`USABLE_MEMORY_FRACTION`). It runs before `pick_judge` / `pick_helper` and before any judge or
+  helper probe: the first preferred judge/helper pair that fits wins (the worker itself is the last
+  resort), a judge or helper chosen in Settings is never swapped, and if nothing fits the run ends
+  with a plain message naming the models and sizes. An unreadable `hw.memsize` skips the check.
+- **A model pick mid-run restarts the run.** The pane's model menu records its picks
+  (`harness_availability::note_menu_pick`; only deliberate picks, not a pane taking a
+  conversation's model). `run_ollama_runbook_watched` watches that: a pick of another Ollama model
+  raises the session's `HarnessCancel`, the attempt returns `AttemptEnd::Switched`, the old models
+  are unloaded and it starts again from step 1 with the new worker, saying so in the conversation;
+  a pick of a non-Ollama model stops the run with a message. This all happens inside the one turn:
+  `TurnCompleted` is sent once, at the end, so `LocalHarnessStream` still owns the status. The
+  session is re-registered on a restart so the Stop button gets a fresh signal. The sandbox is not
+  reset, only the plan and the known values.
 
 ## Transcript files (for scripts and other agents)
 
