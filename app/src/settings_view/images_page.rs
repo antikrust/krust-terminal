@@ -357,11 +357,31 @@ impl SettingsWidget for ImagesWidget {
                 continue;
             };
             let id = provider.id;
+            // The supplier's name with the link to where its key is made, up here where a narrow
+            // window cannot push it off the side, and the address itself below.
             column.add_child(
-                Container::new(text(provider.display_name.to_owned()))
-                    .with_margin_top(VERTICAL_MARGIN / 2.)
-                    .finish(),
+                Container::new(
+                    Flex::row()
+                        .with_spacing(12.)
+                        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                        .with_child(text(provider.display_name.to_owned()))
+                        .with_child(
+                            appearance
+                                .ui_builder()
+                                .button(ButtonVariant::Secondary, handles.key_links[index].clone())
+                                .with_text_label("Get an API key".to_owned())
+                                .build()
+                                .on_click(move |ctx, _, _| {
+                                    ctx.dispatch_typed_action(ImagesPageAction::OpenKeyPage(id))
+                                })
+                                .finish(),
+                        )
+                        .finish(),
+                )
+                .with_margin_top(VERTICAL_MARGIN / 2.)
+                .finish(),
             );
+            column.add_child(note(&format!("Key page: {}", provider.key_url)));
             column.add_child(note(provider.note));
             let models: Vec<String> = provider
                 .models
@@ -388,17 +408,6 @@ impl SettingsWidget for ImagesWidget {
                             .build()
                             .on_click(move |ctx, _, _| {
                                 ctx.dispatch_typed_action(ImagesPageAction::SaveKey(id))
-                            })
-                            .finish(),
-                    )
-                    .with_child(
-                        appearance
-                            .ui_builder()
-                            .button(ButtonVariant::Text, handles.key_links[index].clone())
-                            .with_text_label("Get a key".to_owned())
-                            .build()
-                            .on_click(move |ctx, _, _| {
-                                ctx.dispatch_typed_action(ImagesPageAction::OpenKeyPage(id))
                             })
                             .finish(),
                     )
