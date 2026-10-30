@@ -272,6 +272,10 @@ Shared-session viewers still tag in: their prompts go to the sharer.
   `TurnCompleted` is sent once, at the end, so `LocalHarnessStream` still owns the status. The
   session is re-registered on a restart so the Stop button gets a fresh signal. The sandbox is not
   reset, only the plan and the known values.
+- **Progress file.** The driver rewrites `<runbook>.progress.txt` beside the runbook after every
+  verdict (status, known values, each step's judged verdict and reason). It is written from the
+  judge's rulings, never from the worker's own account, so it is a trustworthy record to read or to
+  hand to another model as context. Runs do not resume from it. A restart overwrites it.
 
 ## Transcript files (for scripts and other agents)
 

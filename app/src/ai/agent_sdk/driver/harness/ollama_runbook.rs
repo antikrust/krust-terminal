@@ -2192,6 +2192,14 @@ async fn run_attempt(
         .collect();
     let mut last_usage: Option<TurnUsage> = None;
     let mut stopped_by_user = false;
+    let progress = ProgressFile {
+        path: request.path.with_extension("progress.txt"),
+        runbook,
+        worker,
+        judge: &judge,
+        helper: &helper,
+    };
+    progress.save(&results, &facts, "Running");
 
     for (index, step) in runbook.steps.iter().enumerate() {
         if context.cancelled() {
@@ -2321,6 +2329,7 @@ async fn run_attempt(
         match verdict.kind {
             VerdictKind::Pass | VerdictKind::Skip => {
                 facts.extend(new_facts.clone());
+                progress.save(&results, &facts, "Running");
                 let mark = if verdict.kind == VerdictKind::Pass {
                     "✓ **Passed.**"
                 } else {
@@ -2335,6 +2344,7 @@ async fn run_attempt(
             }
             VerdictKind::Done => {
                 facts.extend(new_facts.clone());
+                progress.save(&results, &facts, "Finished early: nothing more to do");
                 on_event(TurnEvent::Text {
                     text: carried_forward(
                         format!("✓ **Done — nothing more to do.** {reason}"),
@@ -2352,6 +2362,7 @@ async fn run_attempt(
                 break;
             }
             VerdictKind::Stop => {
+                progress.save(&results, &facts, &format!("Stopped at {}", step.title));
                 on_event(TurnEvent::Text {
                     text: format!("■ **Stopped at {}.** {reason}", step.title),
                 });
@@ -2378,6 +2389,7 @@ async fn run_attempt(
         });
     }
     if stopped_by_user {
+        progress.save(&results, &facts, "Stopped before the end");
         on_event(TurnEvent::Text {
             text: match switch {
                 Some(Switch::Away { id }) => format!(
@@ -2388,6 +2400,7 @@ async fn run_attempt(
             },
         });
     } else {
+        progress.save(&results, &facts, "Finished");
         let report = write_report(&context, &runbook, &results, &facts, &mut on_event).await?;
         on_event(TurnEvent::Text { text: report });
     }
@@ -3992,6 +4005,39 @@ async fn write_report(
             strip_fence(response.content.trim())
         )),
         _ => Ok(plain),
+    }
+}
+
+/// The run's progress, kept in a plain text file beside the runbook and
+/// rewritten after every step. The driver writes it from the judge's verdicts,
+/// never the worker from its own account, so a line saying a step passed means
+/// the judge ruled it so. It is a record to read (or to hand to another model
+/// as the run's context); the run does not resume from it.
+struct ProgressFile<'a> {
+    path: PathBuf,
+    runbook: &'a Runbook,
+    worker: &'a str,
+    judge: &'a str,
+    helper: &'a str,
+}
+
+impl ProgressFile<'_> {
+    fn save(&self, results: &[(String, StepResult)], facts: &Facts, status: &str) {
+        let text = format!(
+            "Runbook: {}\nFile: {}\nWorker: {}   Judge: {}   Helper: {}\nUpdated: {}\nStatus: {status}\n\nKnown \
+             values:\n{}\n\nSteps (as ruled by the judge):\n{}\n",
+            self.runbook.title,
+            self.path.display(),
+            self.worker,
+            self.judge,
+            self.helper,
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+            facts_lines(facts),
+            run_record(results, false),
+        );
+        if let Err(error) = std::fs::write(&self.path, text) {
+            log::warn!("runbook: could not write {}: {error}", self.path.display());
+        }
     }
 }
 
