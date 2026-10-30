@@ -1,7 +1,8 @@
-//! The right-hand panel listing the images of this terminal's agent session: what was attached,
-//! shown as pictures. The images are files; models hold only links to them, so looking here costs
-//! a model nothing. Clicking one opens it in the system's viewer.
+//! The right-hand panel listing the images of this terminal's agent session: what was attached
+//! and what was generated, shown as pictures. The images are files; models hold only links to
+//! them, so looking here costs a model nothing. Clicking one opens it in the system's viewer.
 
+use ai::agent::ToolCallOutcome;
 use krustui::elements::{
     Border, ConstrainedBox, Container, CrossAxisAlignment, Fill, Flex, Hoverable, Image,
     MouseStateHandle, NewScrollable, ParentElement, Text,
@@ -34,7 +35,34 @@ impl SessionImage {
     }
 }
 
+/// The picture a `generate_image` call made, from its tool result: the tool answers with JSON
+/// holding the `path` and a `markdown` link to it, either as the value itself or as text inside
+/// `result`.
+pub(super) fn generated_image_path(outcome: &ToolCallOutcome) -> Option<String> {
+    let ToolCallOutcome::Success(value) = outcome else {
+        return None;
+    };
+    let answer = match value.get("result").and_then(|result| result.as_str()) {
+        Some(text) => serde_json::from_str::<serde_json::Value>(text).ok()?,
+        None => value.clone(),
+    };
+    answer.get("markdown")?;
+    let path = answer.get("path")?.as_str()?;
+    let lower = path.to_ascii_lowercase();
+    ["png", "jpg", "jpeg", "webp"]
+        .iter()
+        .any(|extension| lower.ends_with(&format!(".{extension}")))
+        .then(|| path.to_owned())
+}
+
 impl TerminalView {
+    /// Adds a picture to the session's list unless it is already there.
+    pub(super) fn add_session_image(&mut self, path: String) {
+        if !self.session_images.iter().any(|image| image.path == path) {
+            self.session_images.push(SessionImage::new(path));
+        }
+    }
+
     pub(super) fn render_session_images_panel(&self, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -56,7 +84,7 @@ impl TerminalView {
         if self.session_images.is_empty() {
             column.add_child(
                 Text::new(
-                    "Images you attach to this session show here.",
+                    "Images you attach or generate in this session show here.",
                     appearance.ui_font_family(),
                     appearance.ui_font_size(),
                 )

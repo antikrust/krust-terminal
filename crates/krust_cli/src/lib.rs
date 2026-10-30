@@ -577,7 +577,7 @@ pub enum WorkerCommand {
         #[clap(long = "no-show")]
         no_show: bool,
         /// Width when drawn, in terminal columns.
-        #[clap(long = "cols", default_value_t = 40)]
+        #[clap(long = "cols", default_value_t = 64)]
         columns: u32,
     },
 }

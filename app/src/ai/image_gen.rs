@@ -850,8 +850,15 @@ pub fn run_cli(options: CliOptions) -> anyhow::Result<()> {
         use std::io::Write as _;
         let png = std::fs::read(path)?;
         let mut stdout = std::io::stdout();
-        writeln!(stdout, "{}", kitty_sequence(&png, options.columns))?;
-        stdout.flush()?;
+        // The terminal leaves the cursor beside the picture's last row; start the path on a line
+        // of its own below it, dimmed so the picture is what stands out.
+        write!(stdout, "{}\r\n", kitty_sequence(&png, options.columns))?;
+        if stdout.is_terminal() {
+            writeln!(stdout, "\x1b[2m{path}\x1b[0m")?;
+        } else {
+            writeln!(stdout, "{path}")?;
+        }
+        return stdout.flush().map_err(Into::into);
     }
     println!("{path}");
     Ok(())

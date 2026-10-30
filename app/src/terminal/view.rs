@@ -24398,6 +24398,10 @@ impl TerminalView {
                                 // (Restore reads it back from the persisted
                                 // result message instead.)
                                 ai::agent::TurnEvent::ToolCallResult { call_id, outcome } => {
+                                    if let Some(path) = session_images::generated_image_path(outcome) {
+                                        view.add_session_image(path);
+                                        ctx.notify();
+                                    }
                                     let result = tool_call_action_result(
                                         stream.root_task_id(),
                                         call_id,
