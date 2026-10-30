@@ -44,6 +44,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::ollama_model_name
 use crate::ai::agent_sdk::driver::harness::turn_images::{
     image_paths, load_image_files, prompt_with_image_paths, set_turn_images,
 };
+use crate::ai::conversation_transcripts;
 use crate::ai::failover_health::{self, FailoverHealth, Health};
 use crate::ai::model_caps::{self, Caps};
 use crate::ai::task_router::{
@@ -1046,12 +1047,22 @@ impl AgentQueue {
                 // The model gets the paths in its prompt either way; Claude Code and Codex open
                 // them from there.
                 let prompt = prompt_with_image_paths(&prompt, &image_paths(&loaded));
+                // A task has no conversation of its own, so its record gets an id of its own.
+                let record = AIConversationId::new();
+                conversation_transcripts::bind_session(session, record);
+                conversation_transcripts::record_user_prompt(record, &prompt);
                 let answer = Arc::new(Mutex::new(String::new()));
                 let error = Arc::new(Mutex::new(None::<String>));
                 let (sink_answer, sink_error) = (Arc::clone(&answer), Arc::clone(&error));
                 // Every event a run emits: stream the shown ones to the transcript, and keep the
                 // last assistant text as the answer and a failed completion as the error.
                 let on_event = move |event: TurnEvent| {
+                    match &event {
+                        TurnEvent::TextDelta { text } => {
+                            conversation_transcripts::record_text_delta(record, text);
+                        }
+                        other => conversation_transcripts::record_event(record, other),
+                    }
                     if !lines_of(&event).is_empty() {
                         let _ = line_tx.unbounded_send(event.clone());
                     }

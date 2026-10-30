@@ -4119,6 +4119,8 @@ pub enum AISettingsPageAction {
     ToggleQueueSpawnMode,
     /// Whether local agent conversations and their images are saved to disk.
     ToggleSaveConversations,
+    /// How long they are kept: until deleted, 30, 90, 365 days.
+    CycleConversationRetention,
     /// Puts a row on another provider, at that provider's first model.
     SetByorFailoverProvider {
         index: usize,
@@ -4695,6 +4697,21 @@ impl TypedActionView for AISettingsPageView {
                 });
                 Self::refresh_pool_dropdown(&self.pool_dropdown, &self.selected_pool, ctx);
                 AgentQueue::handle(ctx).update(ctx, |queue, ctx| queue.nudge(ctx));
+                ctx.notify();
+            }
+            AISettingsPageAction::CycleConversationRetention => {
+                let next = match *ConversationTranscriptSettings::as_ref(ctx)
+                    .conversation_retention_days
+                    .value()
+                {
+                    0 => 30,
+                    30 => 90,
+                    90 => 365,
+                    _ => 0,
+                };
+                ConversationTranscriptSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.conversation_retention_days.set_value(next, ctx));
+                });
                 ctx.notify();
             }
             AISettingsPageAction::ToggleSaveConversations => {
@@ -9386,6 +9403,7 @@ impl CloudModelKeysWidget {
 /// The Agents page's switch for keeping local agent conversations and their images on disk.
 struct SaveConversationsWidget {
     switch: SwitchStateHandle,
+    retention_button: MouseStateHandle,
 }
 
 impl SaveConversationsWidget {
@@ -9395,6 +9413,7 @@ impl SaveConversationsWidget {
         });
         Self {
             switch: Default::default(),
+            retention_button: Default::default(),
         }
     }
 }
@@ -9424,20 +9443,43 @@ impl SettingsWidget for SaveConversationsWidget {
                 ctx.dispatch_typed_action(AISettingsPageAction::ToggleSaveConversations);
             })
             .finish();
+        let days = *ConversationTranscriptSettings::as_ref(app)
+            .conversation_retention_days
+            .value();
+        let retention_label = if days == 0 {
+            "keep: until deleted".to_string()
+        } else {
+            format!("keep: {days} days")
+        };
+        let retention = appearance
+            .ui_builder()
+            .button(ButtonVariant::Text, self.retention_button.clone())
+            .with_text_label(retention_label)
+            .build()
+            .on_click(|ctx, _, _| {
+                ctx.dispatch_typed_action(AISettingsPageAction::CycleConversationRetention);
+            })
+            .finish();
         render_body_item::<AISettingsPageAction>(
             "Save conversations and images to disk".into(),
             None,
             LocalOnlyIconState::Hidden,
             ToggleState::Enabled,
             appearance,
-            switch,
+            Flex::row()
+                .with_spacing(8.)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(retention)
+                .with_child(switch)
+                .finish(),
             Some(
                 "Each local agent conversation is written to a text file with links to its \
                  images, in Krust's state directory (transcripts/latest.md is the newest). \
                  Models can look things up in it once they've been trimmed from their memory or \
-                 context, and an image is held only for the turn it came with. On, these files \
-                 are kept for you, scripts and other agents. Off, they and the attached images \
-                 are deleted the next time Krust starts."
+                 context, and an image is held only for the turn it came with. Secrets Krust \
+                 recognises are masked. On, these files are kept for you, scripts and other \
+                 agents, for as long as the button says; older ones go when Krust starts. Off, \
+                 they and the attached images are deleted the next time Krust starts."
                     .to_owned(),
             ),
         )

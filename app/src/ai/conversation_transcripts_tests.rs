@@ -53,13 +53,28 @@ fn a_read_never_comes_back_empty_for_one_huge_line() {
 
 #[test]
 fn a_long_line_is_shortened() {
-    let line = numbered_line(0, &"x".repeat(LOOKUP_LINE_CHARS * 2));
-    assert!(line.len() < LOOKUP_LINE_CHARS + 10);
+    let line = numbered_line(0, &"x".repeat(100), 10);
+    assert!(line.starts_with("L1| xxxxxxxxxx …"));
+    assert!(line.contains("(90 more characters)"));
+    assert_eq!(numbered_line(4, "short", 10), "L5| short\n");
+}
+
+#[test]
+fn old_files_go_and_new_ones_stay() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("a.md");
+    std::fs::write(&file, "x").unwrap();
+    remove_older_than(dir.path(), Duration::from_secs(60 * 60));
+    assert!(file.exists());
+    std::thread::sleep(Duration::from_millis(5));
+    remove_older_than(dir.path(), Duration::ZERO);
+    assert!(!file.exists());
 }
 
 #[test]
 fn a_session_with_no_conversation_has_no_record() {
     let session = Uuid::new_v4();
     assert!(lookup_pointer(&session).is_none());
+    assert!(record_note(&session).is_none());
     assert!(lookup(&session, &json!({ "query": "port" })).is_err());
 }

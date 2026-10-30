@@ -199,10 +199,18 @@ pub(crate) fn save_pasted_images<'a>(
     images: impl IntoIterator<Item = (&'a str, &'a str)>,
     turn_id: &str,
 ) -> Vec<TurnImage> {
-    let dir = krust_core::paths::state_dir().join(SAVED_IMAGES_DIR);
+    let dir = saved_images_dir();
     if let Err(error) = std::fs::create_dir_all(&dir) {
         log::warn!("turn_images: could not make {}: {error}", dir.display());
         return Vec::new();
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let owner_only = std::fs::Permissions::from_mode(0o700);
+        if let Err(error) = std::fs::set_permissions(&dir, owner_only) {
+            log::warn!("turn_images: could not restrict {}: {error}", dir.display());
+        }
     }
     images
         .into_iter()
@@ -224,10 +232,15 @@ pub(crate) fn save_pasted_images<'a>(
         .collect()
 }
 
+/// Where pasted images are saved.
+pub(crate) fn saved_images_dir() -> PathBuf {
+    krust_core::paths::state_dir().join(SAVED_IMAGES_DIR)
+}
+
 /// Deletes the saved pasted images. Only what [`save_pasted_images`] wrote: a task's own files are
 /// never touched.
 pub(crate) fn clear_saved_images() {
-    let dir = krust_core::paths::state_dir().join(SAVED_IMAGES_DIR);
+    let dir = saved_images_dir();
     if let Err(error) = std::fs::remove_dir_all(&dir) {
         if error.kind() != std::io::ErrorKind::NotFound {
             log::warn!("turn_images: could not clear {}: {error}", dir.display());

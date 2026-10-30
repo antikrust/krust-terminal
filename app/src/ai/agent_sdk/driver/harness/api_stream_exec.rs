@@ -36,7 +36,7 @@ use super::ollama_stream_exec::{
 };
 use super::plan_tracker::PlanTracker;
 use crate::ai::conversation_transcripts::{
-    lookup as lookup_conversation, lookup_pointer, search_conversation_tool_spec,
+    lookup as lookup_conversation, lookup_pointer, record_note, search_conversation_tool_spec,
     SEARCH_CONVERSATION,
 };
 use crate::ai::api_providers::{
@@ -525,7 +525,10 @@ pub async fn run_api_stream(
                             .collect();
                         return Ok(ApiTurnEnd::HandOff {
                             targets,
-                            recap: cli_recap(prompt, &messages),
+                            recap: match record_note(session_id) {
+                                Some(note) => format!("{}\n\n{note}", cli_recap(prompt, &messages)),
+                                None => cli_recap(prompt, &messages),
+                            },
                         });
                     }
                     Some(FailoverTarget::Api(next)) => next,
