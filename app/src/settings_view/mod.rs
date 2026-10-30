@@ -400,6 +400,8 @@ impl SettingsSection {
             Self::Ollama => Self::Ollama,
             // Custom routers is its own backing page too, not a mode of the AI page.
             Self::CustomRouters => Self::CustomRouters,
+            // Images is its own backing page: without this it showed the whole AI page.
+            Self::ImageProviders => Self::ImageProviders,
             // All other AI subpages render within the AI page.
             s if s.is_ai_subpage() => Self::AI,
             // Code subpages render within the Code page.
@@ -2176,6 +2178,7 @@ impl SettingsView {
             if section.is_ai_subpage()
                 && section != SettingsSection::AgentMCPServers
                 && section != SettingsSection::Ollama
+                && section != SettingsSection::ImageProviders
             {
                 let subpage = AISubpage::from_section(section);
                 self.ai_page_handle.update(ctx, |view, ctx| {

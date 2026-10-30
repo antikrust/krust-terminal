@@ -363,6 +363,18 @@ impl SettingsWidget for ImagesWidget {
                     .finish(),
             );
             column.add_child(note(provider.note));
+            let models: Vec<String> = provider
+                .models
+                .iter()
+                .map(|model| {
+                    if model.free {
+                        format!("{} (free)", model.display_name)
+                    } else {
+                        model.display_name.to_owned()
+                    }
+                })
+                .collect();
+            column.add_child(note(&format!("Models: {}", models.join(", "))));
             column.add_child(
                 Flex::row()
                     .with_spacing(8.)
