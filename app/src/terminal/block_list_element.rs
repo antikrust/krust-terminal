@@ -176,6 +176,11 @@ enum SelectionCursorRenderLocation {
 const OVERFLOW_BUTTON_ICON_PATH: &str = "bundled/svg/overflow.svg";
 const DELETE_BLOCK_ICON_PATH: &str = "bundled/svg/trash-02.svg";
 const REWIND_ICON_PATH: &str = "bundled/svg/refresh-ccw-01.svg";
+/// How far the hovered AI reply's toolbar keeps from the pane's right edge:
+/// the reply's own menu button (the three dots) is 26px wide and 20px from
+/// that edge, and the toolbar's background reaches 4px past its icons, which
+/// leaves a 4px gap between the two.
+const AI_BLOCK_TOOLBAR_RIGHT_INSET: f32 = 54.;
 /// Minimum leftward ⌘+drag distance (px) for a block swipe-delete.
 const SWIPE_DELETE_DRAG_DISTANCE: f32 = 120.;
 /// Leftward ⌘+drag distance (px), mostly horizontal, after which the drag is
@@ -4621,12 +4626,15 @@ impl Element for BlockListElement {
                         ];
                         let count = buttons.iter().filter(|button| button.is_some()).count();
                         if count > 0 {
-                            // Each icon takes 26px plus a 4px gap; 12px keeps
-                            // clear of the right edge and the scrollbar.
+                            // Each icon takes 26px plus a 4px gap; the
+                            // inset keeps the toolbar to the left of the
+                            // reply's own menu button.
                             let toolbar_width = count as f32 * 30. - 4.;
                             let toolbar_origin = block_origin
                                 + vec2f(
-                                    self.size_info.pane_width_px().as_f32() - toolbar_width - 12.
+                                    self.size_info.pane_width_px().as_f32()
+                                        - toolbar_width
+                                        - AI_BLOCK_TOOLBAR_RIGHT_INSET
                                         + self.horizontal_clipped_scroll_state.scroll_start().as_f32(),
                                     6.,
                                 );

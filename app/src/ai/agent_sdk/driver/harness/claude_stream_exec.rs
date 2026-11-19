@@ -18,7 +18,11 @@ use std::time::Duration;
 use ai::agent::TurnEvent;
 use krustui::r#async::Timer;
 use command::r#async::Command;
+use futures::channel::mpsc;
+use futures::future::Either;
 use futures::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use futures::StreamExt as _;
+use serde::Deserialize;
 use uuid::Uuid;
 use krust_core::safe_warn;
 
@@ -71,6 +75,22 @@ pub fn register_harness_session(session_id: Uuid) -> HarnessCancel {
 pub fn finish_harness_session(session_id: &Uuid) {
     if let Ok(mut sessions) = sessions().lock() {
         sessions.remove(session_id);
+    }
+}
+
+/// Makes `cancel` reachable under `session_id` as well: the id a CLI reports
+/// for its run, when that is not the one the run was started under.
+pub fn alias_harness_session(session_id: Uuid, cancel: &HarnessCancel) {
+    if let Ok(mut sessions) = sessions().lock() {
+        sessions.insert(session_id, cancel.clone());
+    }
+}
+
+/// Drops every key `cancel` is registered under, once its run has ended. A
+/// newer run registered under the same session keeps its own entry.
+pub fn finish_harness_run(cancel: &HarnessCancel) {
+    if let Ok(mut sessions) = sessions().lock() {
+        sessions.retain(|_, registered| !Arc::ptr_eq(&registered.0, &cancel.0));
     }
 }
 
@@ -166,6 +186,439 @@ pub async fn run_claude_stream(
         plan.forward(event, &mut on_event)
     })
     .await
+}
+
+// ---------------------------------------------------------------------------
+// Prompts sent to a run that is already going
+// ---------------------------------------------------------------------------
+
+/// A prompt sent to a run that is already going.
+pub struct RunPrompt {
+    /// The prompt as typed, which is what the conversation shows.
+    pub prompt: String,
+    /// What the runner is sent: the prompt, with the paths of its images.
+    pub runner_prompt: String,
+    /// The ID of the exchange the prompt begins.
+    pub turn_id: String,
+    pub image_paths: Vec<String>,
+}
+
+/// One run's prompts: those sent while it works, waiting for its loop to
+/// reach the end of a step and read them.
+struct Steering {
+    /// Tells this run's entry from a later run's on the same session.
+    key: Arc<()>,
+    /// Whether the run's loop reads prompts. A runner that never asks for
+    /// them (one model call and done, or a CLI that takes no input) leaves
+    /// this unset, and a prompt for it starts a run of its own.
+    taking: bool,
+    queued: Vec<RunPrompt>,
+    /// Told of each prompt as the loop takes it, so the conversation shows it
+    /// where the model read it.
+    taken: mpsc::UnboundedSender<RunPrompt>,
+}
+
+fn steering() -> &'static Mutex<HashMap<Uuid, Steering>> {
+    static STEERING: OnceLock<Mutex<HashMap<Uuid, Steering>>> = OnceLock::new();
+    STEERING.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// A run's place in the steering table; closing it (or dropping it) ends the
+/// run's taking of prompts.
+pub struct SteeringWatch {
+    session_id: Uuid,
+    key: Arc<()>,
+}
+
+impl SteeringWatch {
+    /// Stops the run taking prompts. Any it never read are still reported as
+    /// taken, so the conversation shows them rather than losing them.
+    pub fn close(&self) {
+        let Ok(mut sessions) = steering().lock() else {
+            return;
+        };
+        if sessions
+            .get(&self.session_id)
+            .is_some_and(|steering| Arc::ptr_eq(&steering.key, &self.key))
+        {
+            if let Some(steering) = sessions.remove(&self.session_id) {
+                for prompt in steering.queued {
+                    let _ = steering.taken.unbounded_send(prompt);
+                }
+            }
+        }
+    }
+}
+
+impl Drop for SteeringWatch {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
+/// Lets the run about to start on `session_id` be sent prompts while it
+/// works, if its loop turns out to read them ([`take_steered_prompts`]).
+/// Returns the run's place in the table, to close when it ends, and the
+/// prompts as the loop takes them.
+pub fn watch_steering(session_id: Uuid) -> (SteeringWatch, mpsc::UnboundedReceiver<RunPrompt>) {
+    let (taken, prompts) = mpsc::unbounded();
+    let key = Arc::new(());
+    if let Ok(mut sessions) = steering().lock() {
+        sessions.insert(
+            session_id,
+            Steering {
+                key: key.clone(),
+                taking: false,
+                queued: Vec::new(),
+                taken,
+            },
+        );
+    }
+    (SteeringWatch { session_id, key }, prompts)
+}
+
+/// Hands `prompt` to the run going on `session_id`, which reads it at the end
+/// of its current step. False when no run there reads prompts (or it has just
+/// finished): the prompt needs a run of its own.
+pub fn steer_harness_session(session_id: &Uuid, prompt: RunPrompt) -> bool {
+    let Ok(mut sessions) = steering().lock() else {
+        return false;
+    };
+    match sessions.get_mut(session_id) {
+        Some(steering) if steering.taking => {
+            steering.queued.push(prompt);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// For a run's loop, between two steps: the prompts sent to the run since the
+/// last, as the text to give the model. Asking is what marks the run as one
+/// that reads prompts.
+pub(super) fn take_steered_prompts(session_id: &Uuid) -> Vec<String> {
+    let Ok(mut sessions) = steering().lock() else {
+        return Vec::new();
+    };
+    let Some(Steering {
+        taking,
+        queued,
+        taken,
+        ..
+    }) = sessions.get_mut(session_id)
+    else {
+        return Vec::new();
+    };
+    *taking = true;
+    queued
+        .drain(..)
+        .map(|prompt| {
+            let text = prompt.runner_prompt.clone();
+            let _ = taken.unbounded_send(prompt);
+            text
+        })
+        .collect()
+}
+
+/// For a run's loop, as the model gives its answer: whether the run may end
+/// there. False when prompts are waiting, which the loop takes and goes on
+/// with. Decided under the lock [`steer_harness_session`] takes, so a prompt
+/// is either waiting here or refused after this.
+pub(super) fn steering_finished(session_id: &Uuid) -> bool {
+    let Ok(mut sessions) = steering().lock() else {
+        return true;
+    };
+    match sessions.get_mut(session_id) {
+        Some(steering) if !steering.queued.is_empty() => false,
+        Some(steering) => {
+            steering.taking = false;
+            true
+        }
+        None => true,
+    }
+}
+
+/// For a runner whose loop turns out not to read prompts after all (it has
+/// handed the turn to one that doesn't): none are accepted from here.
+pub(super) fn refuse_steering(session_id: &Uuid) {
+    if let Ok(mut sessions) = steering().lock() {
+        if let Some(steering) = sessions.get_mut(session_id) {
+            steering.taking = false;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// A Claude Code process that takes prompts while it works
+// ---------------------------------------------------------------------------
+
+/// How long a Claude Code process with nothing left to do is kept before its
+/// input is closed. A prompt the CLI had queued begins its turn well inside
+/// this, so the process is not written off between two turns.
+const CLAUDE_IDLE_GRACE: Duration = Duration::from_millis(1500);
+
+struct ClaudeInputState<P> {
+    /// Where prompts go; `None` once the process takes no more.
+    sender: Option<mpsc::UnboundedSender<P>>,
+    /// Whether the main agent is in a turn, or has a prompt it has not begun.
+    in_turn: bool,
+    /// How many background tasks (agents, shell commands) the process runs.
+    background_tasks: usize,
+}
+
+/// The way into a running Claude Code process: a prompt sent while it works
+/// goes to that process, which queues it and reads it at its next step.
+///
+/// Starting a second process on the same session instead leaves two at work
+/// in one conversation, and the second takes the background agents the first
+/// started for dead and starts them again.
+pub struct ClaudeInput<P>(Arc<Mutex<ClaudeInputState<P>>>);
+
+impl<P> Clone for ClaudeInput<P> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<P> ClaudeInput<P> {
+    /// The input of a process about to start on its first prompt, and the
+    /// prompts sent to it after that.
+    pub fn channel() -> (Self, mpsc::UnboundedReceiver<P>) {
+        let (sender, prompts) = mpsc::unbounded();
+        let state = ClaudeInputState {
+            sender: Some(sender),
+            in_turn: true,
+            background_tasks: 0,
+        };
+        (Self(Arc::new(Mutex::new(state))), prompts)
+    }
+
+    /// Hands `prompt` to the process. False once the process has finished its
+    /// work and takes no more: the prompt needs a run of its own.
+    pub fn send(&self, prompt: P) -> bool {
+        let Ok(mut state) = self.0.lock() else {
+            return false;
+        };
+        let sent = state
+            .sender
+            .as_ref()
+            .is_some_and(|sender| sender.unbounded_send(prompt).is_ok());
+        if sent {
+            state.in_turn = true;
+        }
+        sent
+    }
+
+    /// Records what a line of the process's output says about its work, and
+    /// returns whether that line may have left it with none.
+    fn note(&self, turn_began: bool, turn_ended: bool, background_tasks: Option<usize>) -> bool {
+        let Ok(mut state) = self.0.lock() else {
+            return false;
+        };
+        if turn_ended {
+            state.in_turn = false;
+        }
+        if turn_began {
+            state.in_turn = true;
+        }
+        if let Some(background_tasks) = background_tasks {
+            state.background_tasks = background_tasks;
+        }
+        (turn_ended || background_tasks.is_some())
+            && !state.in_turn
+            && state.background_tasks == 0
+    }
+
+    /// Stops taking prompts if the process has no work left, and returns
+    /// whether it did. Decided under the same lock [`Self::send`] takes, so a
+    /// prompt is either taken before this or refused after it.
+    fn close_if_idle(&self) -> bool {
+        let Ok(mut state) = self.0.lock() else {
+            return true;
+        };
+        let idle = !state.in_turn && state.background_tasks == 0;
+        if idle {
+            state.sender = None;
+        }
+        idle
+    }
+
+    fn close(&self) {
+        if let Ok(mut state) = self.0.lock() {
+            state.sender = None;
+        }
+    }
+}
+
+/// One prompt as a line of the CLI's `--input-format stream-json` input.
+fn user_message_line(prompt: &str) -> String {
+    let message = serde_json::json!({
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{ "type": "text", "text": prompt }],
+        },
+    });
+    format!("{message}\n")
+}
+
+/// How many background tasks a `system` / `background_tasks_changed` line
+/// lists (it names every one still running); `None` for any other line.
+fn background_task_count(line: &str) -> Option<usize> {
+    #[derive(Deserialize)]
+    struct Line {
+        subtype: Option<String>,
+        #[serde(default)]
+        tasks: Vec<serde::de::IgnoredAny>,
+    }
+    // Lines can be megabytes of tool output; only the one kind is parsed.
+    if !line.contains("\"background_tasks_changed\"") {
+        return None;
+    }
+    let line: Line = serde_json::from_str(line.trim()).ok()?;
+    (line.subtype.as_deref() == Some("background_tasks_changed")).then_some(line.tasks.len())
+}
+
+/// Runs `command` (a `claude` invocation carrying [`stream_json_args`]) as a
+/// process that outlives its first turn: it is given `prompt`, then every
+/// prompt sent to `input` while it works, and it is kept for as long as it
+/// has work — a turn of the main agent, or background agents and commands,
+/// whose completion wakes the main agent for another turn. Its input is
+/// closed once it has none, and it exits.
+///
+/// `on_prompt` is called as each later prompt is handed over, and returns the
+/// text the CLI is sent for it. Raising `cancel` kills the process.
+///
+/// [`run_claude_stream`] instead closes the input after the one prompt. The
+/// CLI then still waits for its background tasks, but only for ten minutes,
+/// and nothing can be sent to it meanwhile.
+pub async fn run_claude_session<P>(
+    mut command: Command,
+    prompt: &str,
+    input: ClaudeInput<P>,
+    mut prompts: mpsc::UnboundedReceiver<P>,
+    cancel: HarnessCancel,
+    mut on_prompt: impl FnMut(P) -> String,
+    mut on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    command.args(["--input-format", "stream-json"]);
+    // Print mode stops background tasks still running ten minutes after the
+    // main agent's last turn, which cuts a background agent off mid-work.
+    command.env("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS", "0");
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+
+    let mut child = command.spawn()?;
+
+    let mut stdin = child.stdin.take();
+    if let Some(stdin) = stdin.as_mut() {
+        stdin.write_all(user_message_line(prompt).as_bytes()).await?;
+        stdin.flush().await?;
+    }
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Told each time the process may have run out of work.
+    let (idle_tx, mut idle_rx) = mpsc::unbounded::<()>();
+
+    let pump_stdout = async {
+        // Moved in, so it is dropped when the output ends and the feed below
+        // sees the end too.
+        let idle_tx = idle_tx;
+        let Some(stdout) = stdout else { return };
+        // `TodoWrite` plans arrive whole; the tracker turns them into
+        // checklist changes, a turn at a time.
+        let mut plan = PlanTracker::default();
+        let mut reader = BufReader::new(stdout);
+        let mut line = String::new();
+        loop {
+            line.clear();
+            match reader.read_line(&mut line).await {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    let background_tasks = background_task_count(&line);
+                    let events = parse_stream_json_line(&line);
+                    let turn_began = events
+                        .iter()
+                        .any(|event| matches!(event, TurnEvent::SessionInit { .. }));
+                    let turn_ended = events
+                        .iter()
+                        .any(|event| matches!(event, TurnEvent::TurnCompleted { .. }));
+                    if turn_began {
+                        plan = PlanTracker::default();
+                    }
+                    for event in events {
+                        plan.forward(event, &mut on_event);
+                    }
+                    if input.note(turn_began, turn_ended, background_tasks) {
+                        let _ = idle_tx.unbounded_send(());
+                    }
+                }
+                Err(error) => {
+                    log::warn!("agent_stream_exec: error reading stdout: {error}");
+                    break;
+                }
+            }
+        }
+    };
+
+    let feed_stdin = async {
+        let Some(mut stdin) = stdin else { return };
+        loop {
+            match futures::future::select(prompts.next(), idle_rx.next()).await {
+                Either::Left((Some(prompt), _)) => {
+                    let line = user_message_line(&on_prompt(prompt));
+                    if stdin.write_all(line.as_bytes()).await.is_err()
+                        || stdin.flush().await.is_err()
+                    {
+                        break;
+                    }
+                }
+                Either::Right((Some(()), _)) => {
+                    Timer::after(CLAUDE_IDLE_GRACE).await;
+                    if input.close_if_idle() {
+                        log::info!("agent_stream_exec: Claude Code has no work left, closing its input");
+                        break;
+                    }
+                }
+                // No one can send any more, or the process's output ended.
+                Either::Left((None, _)) | Either::Right((None, _)) => break,
+            }
+        }
+        input.close();
+        // Dropping `stdin` closes the pipe: the process finishes what it has
+        // and exits.
+    };
+
+    let drain_stderr = async {
+        let mut buffer = String::new();
+        if let Some(mut stderr) = stderr {
+            let _ = stderr.read_to_string(&mut buffer).await;
+        }
+        buffer
+    };
+
+    let pumps = async {
+        let ((), (), stderr_output) = futures::join!(pump_stdout, feed_stdin, drain_stderr);
+        stderr_output
+    };
+    futures::pin_mut!(pumps);
+    let stderr_output = match futures::future::select(pumps, Box::pin(cancelled(cancel))).await {
+        Either::Left((stderr_output, _)) => stderr_output,
+        Either::Right(((), _)) => {
+            log::info!("agent_stream_exec: cancelled, killing the Claude Code process");
+            let _ = child.kill();
+            String::new()
+        }
+    };
+    input.close();
+
+    let status = child.status().await;
+    report_failed_exit(&status, &stderr_output);
+    status
 }
 
 /// Provider-agnostic core of the headless runners: spawns `command`, delivers
@@ -271,7 +724,13 @@ pub async fn run_jsonl_stream_cancellable(
     };
 
     let status = child.status().await;
+    report_failed_exit(&status, &stderr_output);
+    status
+}
 
+/// Logs an agent CLI's unsuccessful exit, with the tail of what it wrote to
+/// stderr: the only diagnostic when it dies before emitting any output.
+fn report_failed_exit(status: &std::io::Result<ExitStatus>, stderr_output: &str) {
     let failed = status.as_ref().map(|s| !s.success()).unwrap_or(true);
     if failed {
         let exit_code = status.as_ref().ok().and_then(|s| s.code());
@@ -294,8 +753,6 @@ pub async fn run_jsonl_stream_cancellable(
             );
         }
     }
-
-    status
 }
 
 #[cfg(test)]

@@ -223,13 +223,17 @@ use crate::ai::agent::{CurrentHead, DiffBase};
 use crate::ai::agent_conversations_model::{AgentConversationsModel, AgentConversationsModelEvent};
 use crate::ai::agent_sdk::driver::harness::claude_code::prepare_claude_environment_config;
 use crate::ai::agent_sdk::driver::harness::claude_stream_exec::{
-    run_claude_stream, stream_json_args,
+    alias_harness_session, cancel_harness_session, finish_harness_run, register_harness_session,
+    run_claude_session, steer_harness_session, stream_json_args, watch_steering, ClaudeInput,
+    RunPrompt,
 };
 use crate::ai::agent_sdk::driver::harness::api_stream_exec::{
     run_api_stream, ApiTurnEnd, COMPACT_COMMAND,
 };
 use crate::ai::agent_sdk::driver::harness::cli_failover::run_handed_off_turn;
-use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{codex_exec_args, run_codex_stream};
+use crate::ai::agent_sdk::driver::harness::codex_stream_exec::{
+    codex_exec_args, run_codex_stream_cancellable,
+};
 use crate::ai::agent_sdk::driver::harness::ollama_committee::{
     run_ollama_committee, success_status, CommitteeRole, OllamaCommitteeConfig,
     COMMITTEE_MODEL_NAME,
@@ -2764,6 +2768,9 @@ pub struct TerminalView {
     /// a new prompt stops that run first if it is still going, so two runs
     /// never write into one conversation at once.
     last_local_run_session: Option<uuid::Uuid>,
+    /// The local run going in this pane, while it takes prompts: a prompt
+    /// for its conversation is sent to it, not to a second run beside it.
+    live_local_run: Option<LiveLocalRun>,
     /// In-flight harness shell calls (`call_id` → command text), used by the
     /// mapper to correlate the generic inline call and result cards.
     local_harness_shell_commands: HashMap<String, String>,
@@ -4464,6 +4471,7 @@ impl TerminalView {
             last_local_claude_submission: None,
             local_claude_thread: None,
             last_local_run_session: None,
+            live_local_run: None,
             local_harness_shell_commands: HashMap::new(),
             local_harness_pending_tool_calls: HashSet::new(),
             local_harness_phase_results: Vec::new(),
@@ -23793,6 +23801,9 @@ impl TerminalView {
             && !prompt.trim_start().starts_with(COMPACT_COMMAND)
             && !self.ai_context_model.as_ref(ctx).pending_images().is_empty();
         let needs = if sends_images { Caps::VISION } else { Caps::NONE };
+        // The model as picked, before an Auto entry is resolved: what tells
+        // whether a run that is going was started with this same choice.
+        let picked_model_id = model_id.clone();
         let model_id = model_id.map(|id| {
             if is_auto_model_id(&id) {
                 resolve_auto_model(&id, &prompt, Difficulty::Medium, needs, ctx).unwrap_or(id)
@@ -23853,11 +23864,6 @@ impl TerminalView {
         self.ai_action_model.update(ctx, |action_model, _ctx| {
             action_model.set_view_only(true);
         });
-        // Per-run tool bookkeeping; stale entries from an aborted run must
-        // not leak into this one.
-        self.local_harness_shell_commands.clear();
-        self.local_harness_pending_tool_calls.clear();
-        self.local_harness_phase_results.clear();
 
         let terminal_surface_id = ctx.view_id();
         let working_dir = self
@@ -23883,17 +23889,6 @@ impl TerminalView {
             .filter(|_| !switched_engine)
             .map(|(_, session_id, _)| session_id)
             .unwrap_or_else(uuid::Uuid::new_v4);
-        // A run this pane started before may still be going: a CLI can keep
-        // working after it has reported its result (background tasks). Left
-        // alone it writes into the conversation alongside this run, and the
-        // two collide. Stop it first.
-        if let Some(previous) = self.last_local_run_session.replace(session_id) {
-            if crate::ai::agent_sdk::driver::harness::claude_stream_exec::cancel_harness_session(
-                &previous,
-            ) {
-                log::info!("fork: stopped the previous local run ({previous}) before a new prompt");
-            }
-        }
         let ollama_model = model_id
             .as_deref()
             .and_then(ollama_model_name)
@@ -24132,12 +24127,7 @@ impl TerminalView {
             .then(|| image_gen::plan(Some("command"), ctx));
         let image_prompt = prompt.clone();
         let background = ctx.background_executor().clone();
-        // Each event comes with the local agent app that produced it when BYOR
-        // failover handed the turn to one (`None`: this run's own harness).
-        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<(
-            Option<(LocalHarnessKind, CliRoute)>,
-            ai::agent::TurnEvent,
-        )>();
+        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<LocalRunMessage>();
         // This turn's ID: the request ID of its exchange, and the stamp the
         // runner puts on the turn in its own history, so deleting the turn
         // later finds it there exactly.
@@ -24187,6 +24177,92 @@ impl TerminalView {
                 }
             }
         }
+        // A run of this conversation that is still going takes the prompt
+        // itself, where its runner can: Claude Code queues it and reads it at
+        // its next step, with the background agents it started carrying on,
+        // and a loop Krust runs (a cloud model, Ollama with tools) reads it
+        // at the end of the step it is on. A second run on the same session
+        // would work beside the first, both writing into the conversation.
+        // (`/compact` is a turn of its own on a cloud model, not a prompt.)
+        let compacts = harness == LocalHarnessKind::Api
+            && prompt.trim_start().starts_with(COMPACT_COMMAND);
+        let live_local_run = self.live_local_run.take().filter(|live| {
+            live.harness == harness
+                && !switched_engine
+                && !compacts
+                && follow_up_conversation == Some(live.conversation_id)
+                && live.model_id == picked_model_id
+                && live.reasoning_level == reasoning_level
+        });
+        if let Some(live) = live_local_run {
+            let sent = live.input.send(RunPrompt {
+                prompt: prompt.clone(),
+                runner_prompt: runner_prompt.clone(),
+                turn_id: turn_id.clone(),
+                image_paths: turn_image_paths.clone(),
+            });
+            if sent {
+                log::info!("fork: sent the prompt to the local run that is already going");
+                self.live_local_run = Some(live);
+                return;
+            }
+        }
+        // A run that took no prompt (its runner reads none while it works,
+        // as Codex's doesn't, or it is of another conversation) may still be
+        // going: left alone it writes into the conversation alongside this
+        // run, and the two collide. Stop it first; this run resumes its
+        // session.
+        if let Some(previous) = self.last_local_run_session.replace(session_id) {
+            if cancel_harness_session(&previous) {
+                log::info!("fork: stopped the previous local run ({previous}) before a new prompt");
+            }
+        }
+        // Per-run tool bookkeeping; stale entries from an aborted run must
+        // not leak into this one.
+        self.local_harness_shell_commands.clear();
+        self.local_harness_pending_tool_calls.clear();
+        self.local_harness_phase_results.clear();
+        // Claude Code is run as a process that takes prompts while it works;
+        // this is the way into it, and its stop signal.
+        let claude_session = (harness == LocalHarnessKind::Claude).then(|| {
+            let (input, prompts) = ClaudeInput::<RunPrompt>::channel();
+            (input, prompts, register_harness_session(session_id))
+        });
+        // Codex has a stop signal too, which a prompt sent to its run uses.
+        let codex_cancel =
+            (harness == LocalHarnessKind::Codex).then(|| register_harness_session(session_id));
+        // A loop Krust runs itself reads the prompts sent to its session.
+        // (Not a runbook's or a committee's: those drive the model through
+        // steps of their own, and a prompt belongs to none of them.)
+        let steerable = match harness {
+            LocalHarnessKind::Api => true,
+            LocalHarnessKind::Ollama => {
+                ollama_committee_config.is_none() && ollama_runbook.is_none()
+            }
+            LocalHarnessKind::Claude | LocalHarnessKind::Codex => false,
+        };
+        // Each prompt the loop takes is shown in the conversation as it is
+        // read. The watch goes to the pump, which closes it as the run ends.
+        let steering = steerable.then(|| {
+            let (watch, mut taken) = watch_steering(session_id);
+            let event_tx = event_tx.clone();
+            background
+                .spawn(async move {
+                    while let Some(prompt) = taken.next().await {
+                        let _ = event_tx.unbounded_send(LocalRunMessage::Prompt(prompt));
+                    }
+                })
+                .detach();
+            watch
+        });
+        let live_run_input = match &claude_session {
+            Some((input, _, _)) => LiveRunInput::Claude(input.clone()),
+            None => LiveRunInput::Session(session_id),
+        };
+        let live_run_model = picked_model_id;
+        let live_run_reasoning_level = reasoning_level.clone();
+        let claude_run = harness == LocalHarnessKind::Claude;
+
         let begin_prompt = prompt.clone();
         let pump_prompt = runner_prompt;
         let pump_working_dir = working_dir;
@@ -24213,30 +24289,116 @@ impl TerminalView {
                 // conversation moves to it only once that app answers: a
                 // turn that fails there too stays where it was.
                 let mut handed_off_session: Option<uuid::Uuid> = None;
-                // Set once the turn has finished successfully: anything the
-                // process sends after that (a CLI still running background
-                // work) is dropped, not written into the finished output.
+                // Set once the turn has finished successfully. Anything the
+                // process sends after that is dropped, not written into the
+                // finished output — except from Claude Code, whose process
+                // goes on: see `run_conversation`.
                 let mut finished_ok = false;
-                while let Some((handed_to, event)) = event_rx.next().await {
-                    if finished_ok {
+                // The conversation the run streams into, once its first
+                // exchange has begun. A Claude Code process outlives its
+                // turns: an exchange closes with each, and what the process
+                // says after that (a prompt it took meanwhile, or its main
+                // agent woken by background work) begins another here.
+                let mut run_conversation: Option<AIConversationId> = None;
+                // Prompts the run took while it was going, not yet shown:
+                // each waits for the tool calls in flight to resolve.
+                let mut queued_prompts: VecDeque<RunPrompt> = VecDeque::new();
+                while let Some(message) = event_rx.next().await {
+                    let (handed_to, event) = match message {
+                        LocalRunMessage::Event(handed_to, event) => (handed_to, event),
+                        LocalRunMessage::Prompt(prompt) => {
+                            queued_prompts.push_back(prompt);
+                            let Some(conversation_id) = run_conversation else {
+                                continue;
+                            };
+                            let taken = stream.take();
+                            let prompts = std::mem::take(&mut queued_prompts);
+                            let waiting = prompts.len();
+                            let share_initiator = share_initiator.clone();
+                            let result = spawner
+                                .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
+                                    view.begin_local_run_prompts(
+                                        taken,
+                                        prompts,
+                                        conversation_id,
+                                        share_initiator,
+                                        ctx,
+                                    )
+                                })
+                                .await;
+                            if let Ok((returned_stream, prompts)) = result {
+                                // An exchange begun for a prompt is open.
+                                if prompts.len() < waiting {
+                                    completed = false;
+                                }
+                                stream = returned_stream;
+                                queued_prompts = prompts;
+                            }
+                            continue;
+                        }
+                    };
+                    if finished_ok && !claude_run {
                         log::info!("fork: dropped a local harness event that came after the turn finished");
                         continue;
                     }
                     if matches!(event, ai::agent::TurnEvent::TurnCompleted { is_error: false, .. }) {
                         finished_ok = true;
                     }
+                    // Between a Claude Code process's turns there is no
+                    // exchange open, and these have nothing to show in one.
+                    if stream.is_none()
+                        && run_conversation.is_some()
+                        && matches!(
+                            event,
+                            ai::agent::TurnEvent::SessionInit { .. }
+                                | ai::agent::TurnEvent::TurnCompleted { is_error: false, .. }
+                        )
+                    {
+                        continue;
+                    }
                     let taken = stream.take();
+                    let prompts = std::mem::take(&mut queued_prompts);
                     let begin_prompt = begin_prompt.clone();
                     let turn_id = turn_id.clone();
                     let turn_image_paths = turn_image_paths.clone();
                     let requested_api_model = requested_api_model.clone();
                     let turn_model = turn_model.clone();
                     let share_initiator = share_initiator.clone();
+                    let live_run_input = live_run_input.clone();
+                    let live_run_model = live_run_model.clone();
+                    let live_run_reasoning_level = live_run_reasoning_level.clone();
                     let result = spawner
                         .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
-                            let mut stream = match taken {
-                                Some(stream) => stream,
-                                None => {
+                            let mut stream = match (taken, run_conversation) {
+                                (Some(stream), _) => stream,
+                                // The process spoke with no exchange open and
+                                // no prompt behind it: background work it
+                                // started has reported back.
+                                (None, Some(conversation_id)) => {
+                                    let woken = LocalHarnessStream::begin_follow_up(
+                                        terminal_surface_id,
+                                        conversation_id,
+                                        BACKGROUND_WORK_PROMPT,
+                                        &Uuid::new_v4().to_string(),
+                                        ctx,
+                                    );
+                                    match woken {
+                                        Some(stream) => stream,
+                                        // The conversation is gone, and with
+                                        // it anywhere to show this.
+                                        None => {
+                                            return (
+                                                None,
+                                                run_conversation,
+                                                false,
+                                                handed_off_session,
+                                                prompts,
+                                                false,
+                                            )
+                                        }
+                                    }
+                                }
+                                (None, None) => {
                                     // Follow-ups append to the thread's existing
                                     // conversation; anything else (including a
                                     // vanished conversation) starts fresh.
@@ -24285,6 +24447,15 @@ impl TerminalView {
                                     );
                                     view.local_claude_thread =
                                         Some((harness, session_id, stream.conversation_id()));
+                                    // From here a prompt for this conversation
+                                    // goes to the run that is going.
+                                    view.live_local_run = Some(LiveLocalRun {
+                                        conversation_id: stream.conversation_id(),
+                                        harness,
+                                        model_id: live_run_model,
+                                        reasoning_level: live_run_reasoning_level,
+                                        input: live_run_input,
+                                    });
                                     local_harness_threads::record(
                                         stream.conversation_id(),
                                         harness,
@@ -24441,28 +24612,79 @@ impl TerminalView {
                             if turn_completed {
                                 stream.complete(ctx);
                             }
-                            view.share_local_harness_events(&stream, share_initiator, ctx);
-                            (stream, turn_completed, handed_off_session)
+                            view.share_local_harness_events(&stream, share_initiator.clone(), ctx);
+                            let conversation_id = stream.conversation_id();
+                            // A Claude Code process goes on after its turn:
+                            // what it says next begins an exchange of its own.
+                            let stream = (!(turn_completed && claude_run)).then_some(stream);
+                            let waiting = prompts.len();
+                            let (stream, prompts) = view.begin_local_run_prompts(
+                                stream,
+                                prompts,
+                                conversation_id,
+                                share_initiator,
+                                ctx,
+                            );
+                            let began_prompt = prompts.len() < waiting;
+                            (
+                                stream,
+                                Some(conversation_id),
+                                turn_completed,
+                                handed_off_session,
+                                prompts,
+                                began_prompt,
+                            )
                         })
                         .await;
                     match result {
-                        Ok((returned_stream, turn_completed, session)) => {
+                        Ok((
+                            returned_stream,
+                            conversation_id,
+                            turn_completed,
+                            session,
+                            prompts,
+                            began_prompt,
+                        )) => {
                             completed |= turn_completed;
+                            // An exchange begun for a prompt is open.
+                            if began_prompt {
+                                completed = false;
+                            }
                             handed_off_session = session;
-                            stream = Some(returned_stream);
+                            stream = returned_stream;
+                            run_conversation = conversation_id;
+                            queued_prompts = prompts;
                         }
                         Err(_) => stream = None,
                     }
                 }
-                if let Some(stream) = stream {
-                    if !completed {
-                        let _ = spawner
-                            .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
+                // The run is over. Prompts it took and never got to are shown
+                // all the same, so none goes missing, and an exchange left
+                // open is closed. (For Claude Code `completed` speaks of an
+                // earlier turn's exchange, not of the one open now.)
+                if (stream.is_some() && (!completed || claude_run)) || !queued_prompts.is_empty() {
+                    let _ = spawner
+                        .spawn(move |view: &mut Self, ctx: &mut ViewContext<Self>| {
+                            let stream = match run_conversation {
+                                Some(conversation_id) => {
+                                    view.local_harness_pending_tool_calls.clear();
+                                    view.begin_local_run_prompts(
+                                        stream,
+                                        queued_prompts,
+                                        conversation_id,
+                                        share_initiator.clone(),
+                                        ctx,
+                                    )
+                                    .0
+                                }
+                                None => stream,
+                            };
+                            if let Some(stream) = stream {
                                 stream.complete(ctx);
                                 view.share_local_harness_events(&stream, share_initiator, ctx);
-                            })
-                            .await;
-                    }
+                            }
+                        })
+                        .await;
                 }
             })
             .detach();
@@ -24474,16 +24696,91 @@ impl TerminalView {
                 let on_event = {
                     let event_tx = event_tx.clone();
                     move |event| {
-                        let _ = event_tx.unbounded_send((None, event));
+                        let _ = event_tx.unbounded_send(LocalRunMessage::Event(None, event));
                     }
                 };
                 let result = match harness {
-                    LocalHarnessKind::Claude => run_claude_stream(command, &pump_prompt, on_event)
+                    LocalHarnessKind::Claude => match claude_session {
+                        Some((input, prompts, cancel)) => {
+                            // A prompt the process takes while it works is
+                            // shown in the conversation as it is handed over.
+                            let on_prompt = {
+                                let event_tx = event_tx.clone();
+                                move |prompt: RunPrompt| {
+                                    let runner_prompt = prompt.runner_prompt.clone();
+                                    let _ = event_tx.unbounded_send(LocalRunMessage::Prompt(prompt));
+                                    runner_prompt
+                                }
+                            };
+                            // Stop reaches the run by the session id the CLI
+                            // reports as well, which is the one the
+                            // conversation keeps.
+                            let on_event = {
+                                let cancel = cancel.clone();
+                                move |event: ai::agent::TurnEvent| {
+                                    if let ai::agent::TurnEvent::SessionInit {
+                                        session_id: reported,
+                                        ..
+                                    } = &event
+                                    {
+                                        if let Ok(reported) = uuid::Uuid::parse_str(reported) {
+                                            alias_harness_session(reported, &cancel);
+                                        }
+                                    }
+                                    on_event(event);
+                                }
+                            };
+                            let result = run_claude_session(
+                                command,
+                                &pump_prompt,
+                                input,
+                                prompts,
+                                cancel.clone(),
+                                on_prompt,
+                                on_event,
+                            )
+                            .await
+                            .map(drop);
+                            finish_harness_run(&cancel);
+                            result
+                        }
+                        // Made before the run began: a Claude Code run has one.
+                        None => Err(std::io::Error::other("no Claude Code session to run")),
+                    },
+                    LocalHarnessKind::Codex => {
+                        // Stop reaches the run by the thread id Codex
+                        // reports, which is the one the conversation keeps.
+                        let on_event = {
+                            let cancel = codex_cancel.clone();
+                            move |event: ai::agent::TurnEvent| {
+                                if let (
+                                    Some(cancel),
+                                    ai::agent::TurnEvent::SessionInit {
+                                        session_id: reported,
+                                        ..
+                                    },
+                                ) = (&cancel, &event)
+                                {
+                                    if let Ok(reported) = uuid::Uuid::parse_str(reported) {
+                                        alias_harness_session(reported, cancel);
+                                    }
+                                }
+                                on_event(event);
+                            }
+                        };
+                        let result = run_codex_stream_cancellable(
+                            command,
+                            &pump_prompt,
+                            codex_cancel.clone(),
+                            on_event,
+                        )
                         .await
-                        .map(drop),
-                    LocalHarnessKind::Codex => run_codex_stream(command, &pump_prompt, on_event)
-                        .await
-                        .map(drop),
+                        .map(drop);
+                        if let Some(cancel) = &codex_cancel {
+                            finish_harness_run(cancel);
+                        }
+                        result
+                    }
                     LocalHarnessKind::Api => match api_route {
                         Some(route) => {
                             let end = run_api_stream(
@@ -24498,6 +24795,11 @@ impl TerminalView {
                                 on_event,
                             )
                             .await;
+                            // The loop that read prompts is over, whatever
+                            // the turn does next.
+                            if let Some(watch) = &steering {
+                                watch.close();
+                            }
                             match end {
                                 // Every API model failed, or the failover list
                                 // reached a local agent app: the turn goes on
@@ -24509,8 +24811,10 @@ impl TerminalView {
                                         &pump_working_dir,
                                         &pump_path,
                                         |app, kind, event| {
-                                            let _ = event_tx
-                                                .unbounded_send((Some((kind, app.clone())), event));
+                                            let _ = event_tx.unbounded_send(LocalRunMessage::Event(
+                                                Some((kind, app.clone())),
+                                                event,
+                                            ));
                                         },
                                     )
                                     .await
@@ -24598,6 +24902,8 @@ impl TerminalView {
                 if let Err(error) = result {
                     log::error!("fork: local agent stream exited with error: {error}");
                 }
+                // The run is over: it takes no more prompts.
+                drop(steering);
             })
             .detach();
     }
@@ -24637,6 +24943,46 @@ impl TerminalView {
             Some(participant_id),
             ctx,
         );
+    }
+
+    /// Begins the exchange of each prompt a local run took while it was going
+    /// (see [`LiveLocalRun`]), closing the one open before it: what the run
+    /// says from here on lands under the prompt. Nothing is begun while a
+    /// tool call is in flight, so a call and its result stay in one exchange;
+    /// the prompts are handed back, to be tried again after the next event.
+    fn begin_local_run_prompts(
+        &mut self,
+        mut stream: Option<LocalHarnessStream>,
+        mut prompts: VecDeque<RunPrompt>,
+        conversation_id: AIConversationId,
+        share_initiator: Option<ParticipantId>,
+        ctx: &mut ViewContext<Self>,
+    ) -> (Option<LocalHarnessStream>, VecDeque<RunPrompt>) {
+        if prompts.is_empty() || !self.local_harness_pending_tool_calls.is_empty() {
+            return (stream, prompts);
+        }
+        let terminal_surface_id = ctx.view_id();
+        for prompt in prompts.drain(..) {
+            if let Some(open) = stream.take() {
+                open.complete(ctx);
+                self.share_local_harness_events(&open, share_initiator.clone(), ctx);
+            }
+            stream = LocalHarnessStream::begin_follow_up(
+                terminal_surface_id,
+                conversation_id,
+                &prompt.prompt,
+                &prompt.turn_id,
+                ctx,
+            );
+            if let Some(stream) = &stream {
+                crate::ai::conversation_transcripts::record_images(
+                    stream.conversation_id(),
+                    &prompt.image_paths,
+                );
+                self.share_local_harness_events(stream, share_initiator.clone(), ctx);
+            }
+        }
+        (stream, prompts)
     }
 
     /// Sends what a local harness run just did to this terminal's shared
@@ -26429,6 +26775,10 @@ impl TerminalView {
                 ctx,
             );
         });
+        // And the work itself: a local run is a process (or a loop) of its
+        // own that the response stream knows nothing about. Left going, it
+        // writes on into the turns being removed.
+        self.stop_local_run(conversation_id);
 
         // If the active block is a running command from this conversation, stop it and
         // suppress automatic conversation resume when the command completes.
@@ -26573,6 +26923,34 @@ impl TerminalView {
             },
             ctx
         );
+    }
+
+    /// Stops the local run going in `conversation_id`, if one is: the model
+    /// process or loop itself, not only what the conversation shows of it.
+    fn stop_local_run(&mut self, conversation_id: AIConversationId) {
+        let mut stopped = local_harness_threads::lookup(conversation_id)
+            .is_some_and(|(_, session_id)| cancel_harness_session(&session_id));
+        if let Some((_, session_id, thread_conversation_id)) = self.local_claude_thread {
+            if thread_conversation_id == conversation_id {
+                stopped |= cancel_harness_session(&session_id);
+                // The key the run was started under, which a CLI may since
+                // have replaced with a session id of its own.
+                if let Some(started) = self.last_local_run_session {
+                    stopped |= cancel_harness_session(&started);
+                }
+            }
+        }
+        if stopped {
+            log::info!("fork: stopped the local run of a conversation being rewound");
+        }
+        // The next prompt starts a run of its own.
+        if self
+            .live_local_run
+            .as_ref()
+            .is_some_and(|live| live.conversation_id == conversation_id)
+        {
+            self.live_local_run = None;
+        }
     }
 
     /// Rewinds to just after the todo item the clicked block ticked off: the
@@ -30323,6 +30701,19 @@ impl MenuPositioningProvider for TerminalViewMenuPositioningProvider {
 
 impl Drop for TerminalView {
     fn drop(&mut self) {
+        // A Claude Code process is kept for as long as its background work
+        // goes on. Once its pane is gone nothing shows that work or can stop
+        // it, so it goes with the pane.
+        let claude_run = self
+            .live_local_run
+            .as_ref()
+            .is_some_and(|live| matches!(live.input, LiveRunInput::Claude(_)));
+        if claude_run {
+            if let Some(session_id) = self.last_local_run_session {
+                cancel_harness_session(&session_id);
+            }
+        }
+
         if let Some((is_bootstrapped, pending_shell, has_pending_ssh_session)) =
             self.model.try_lock().map(|model| {
                 (
@@ -30621,6 +31012,53 @@ fn is_claude_sign_in_error(message: &str) -> bool {
         || lower.contains("authentication_error")
         || lower.contains("/login")
 }
+
+/// What a local run's pump tells its drain.
+enum LocalRunMessage {
+    /// An event of the run, with the local agent app that produced it when
+    /// BYOR failover handed the turn to one (`None`: the run's own harness).
+    Event(Option<(LocalHarnessKind, CliRoute)>, ai::agent::TurnEvent),
+    /// A prompt the run took while it was going: the conversation carries on
+    /// under it.
+    Prompt(RunPrompt),
+}
+
+/// A local run that may take prompts while it works.
+struct LiveLocalRun {
+    conversation_id: AIConversationId,
+    harness: LocalHarnessKind,
+    /// The model picked and the thinking level the run was started with. A
+    /// prompt sent with another choice starts a run of its own.
+    model_id: Option<String>,
+    reasoning_level: Option<String>,
+    input: LiveRunInput,
+}
+
+/// The way a prompt reaches a local run that is going.
+#[derive(Clone)]
+enum LiveRunInput {
+    /// Claude Code: its process reads prompts as they come.
+    Claude(ClaudeInput<RunPrompt>),
+    /// A runner Krust loops itself (cloud models, Ollama with tools): the
+    /// loop reads the session's prompts at the end of each step.
+    Session(uuid::Uuid),
+}
+
+impl LiveRunInput {
+    /// Hands `prompt` to the run. False when it takes none: its runner reads
+    /// no prompts while it works, or the run has finished.
+    fn send(&self, prompt: RunPrompt) -> bool {
+        match self {
+            Self::Claude(input) => input.send(prompt),
+            Self::Session(session_id) => steer_harness_session(session_id, prompt),
+        }
+    }
+}
+
+/// What the conversation shows where the user's prompt would be, for output a
+/// run produces unprompted: Claude Code's main agent is woken when background
+/// work it started (an agent, a shell command) finishes.
+const BACKGROUND_WORK_PROMPT: &str = "Background work reported back.";
 
 /// How many earlier requests an engine switch's recap carries.
 const ENGINE_SWITCH_RECAP_EXCHANGES: usize = 6;

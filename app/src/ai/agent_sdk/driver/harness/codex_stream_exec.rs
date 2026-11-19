@@ -10,7 +10,7 @@ use ai::agent::TurnEvent;
 use command::r#async::Command;
 use uuid::Uuid;
 
-use super::claude_stream_exec::run_jsonl_stream;
+use super::claude_stream_exec::{run_jsonl_stream_cancellable, HarnessCancel};
 use super::codex_stream::parse_codex_jsonl_line;
 use super::plan_tracker::PlanTracker;
 
@@ -57,12 +57,25 @@ pub fn codex_exec_args(
 pub async fn run_codex_stream(
     command: Command,
     prompt: &str,
+    on_event: impl FnMut(TurnEvent),
+) -> std::io::Result<ExitStatus> {
+    run_codex_stream_cancellable(command, prompt, None, on_event).await
+}
+
+/// As [`run_codex_stream`], but a raised `cancel` kills the process mid-turn.
+/// `codex exec` reads one prompt and takes no more while it works, so a
+/// prompt sent to a run that is going stops it this way and resumes its
+/// thread with the new prompt.
+pub async fn run_codex_stream_cancellable(
+    command: Command,
+    prompt: &str,
+    cancel: Option<HarnessCancel>,
     mut on_event: impl FnMut(TurnEvent),
 ) -> std::io::Result<ExitStatus> {
     // `todo_list` plans arrive whole; the tracker turns them into checklist
     // changes for this turn.
     let mut plan = PlanTracker::default();
-    run_jsonl_stream(command, prompt, parse_codex_jsonl_line, |event| {
+    run_jsonl_stream_cancellable(command, prompt, cancel, parse_codex_jsonl_line, |event| {
         plan.forward(event, &mut on_event)
     })
     .await

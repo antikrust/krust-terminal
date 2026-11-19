@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use super::claude_stream_exec::{
     finish_harness_session, harness_cancel_for, register_harness_session,
-    run_jsonl_stream_cancellable,
+    run_jsonl_stream_cancellable, steering_finished, take_steered_prompts,
 };
 use super::ollama_stream_exec::{
     builtin_local_tool_specs, dispatch_builtin_tool_with_read_window, emit_failed_turn,
@@ -301,6 +301,14 @@ pub async fn run_api_stream(
     let mut busy_waits = 0;
     let mut busy_waited_secs = 0;
     loop {
+        // Prompts sent while the turn was running are read here, between two
+        // steps, where every tool call has its result.
+        for prompt in take_steered_prompts(session_id) {
+            messages.push(turn_user_message(
+                session_id,
+                format!("User request:\n{prompt}"),
+            ));
+        }
         // A local model's window is a fraction of a cloud model's: it is sent
         // this turn only, trimmed on a copy so the saved history stays whole.
         let local_view;
@@ -603,6 +611,11 @@ pub async fn run_api_stream(
             }
             messages.push(json!({ "role": "assistant", "content": response.content }));
             save_history(session_id, &messages);
+            // A prompt sent while the model was answering: the turn goes on
+            // with it (it is read at the top of the loop).
+            if !steering_finished(session_id) {
+                continue;
+            }
             on_event(TurnEvent::TurnCompleted {
                 usage: Some(usage),
                 is_error: false,
@@ -706,6 +719,13 @@ pub async fn run_api_stream(
                 "tool_call_id": call.id,
                 "content": clip_for_model(&tool_content, model.read_window + 2_000),
             }));
+        }
+        // A stop raised while the tools ran ends the turn here. A rewind
+        // raises one and then cuts the saved history back: what this stopped
+        // round did must not be written over that.
+        if harness_cancel_for(session_id).is_some_and(|cancel| cancel.is_cancelled()) {
+            log::info!("api_stream: turn cancelled");
+            return Ok(ApiTurnEnd::Finished);
         }
         // Every call has its result now, so the history is a valid
         // conversation to resume from — keep it, in case the turn ends here.

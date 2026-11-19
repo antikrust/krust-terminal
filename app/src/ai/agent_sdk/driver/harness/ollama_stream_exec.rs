@@ -24,8 +24,9 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::claude_stream_exec::{
-    cancelled, finish_harness_session, harness_cancel_for, register_harness_session, run_jsonl_stream,
-    run_jsonl_stream_cancellable, HarnessCancel,
+    cancelled, finish_harness_session, harness_cancel_for, refuse_steering,
+    register_harness_session, run_jsonl_stream, run_jsonl_stream_cancellable, steering_finished,
+    take_steered_prompts, HarnessCancel,
 };
 use super::ollama_committee_proof::rewrite_loss;
 use super::ollama_context;
@@ -3048,6 +3049,14 @@ async fn run_ollama_chat_with_tools(
     // The history size under which no rebuild is due, set after one.
     let mut compact_floor = 0;
     for call_index in 0.. {
+        // Prompts sent while the turn was running are read here, between two
+        // steps, where every tool call has its result.
+        for steered in take_steered_prompts(session_id) {
+            messages.push(turn_user_message(
+                session_id,
+                format!("User request:\n{steered}"),
+            ));
+        }
         let request = json!({
             "model": wire_name(model),
             "messages": ollama_wire_messages(&messages),
@@ -3098,6 +3107,8 @@ async fn run_ollama_chat_with_tools(
             Ok(response) => response,
             Err(error) => {
                 if call_index == 0 && error.contains("does not support tools") {
+                    // The loop the turn falls back to reads no prompts.
+                    refuse_steering(session_id);
                     return Ok(ToolChatOutcome::UnsupportedByModel);
                 }
                 emit_failed_turn(on_event, error);
@@ -3124,6 +3135,11 @@ async fn run_ollama_chat_with_tools(
             // Persist this turn (including the answer) so the next turn in this
             // session resumes with full context.
             messages.push(json!({ "role": "assistant", "content": response.content }));
+            // A prompt sent while the model was answering: the turn goes on
+            // with it (it is read at the top of the loop).
+            if !steering_finished(session_id) {
+                continue;
+            }
             if let Ok(mut histories) = chat_histories().lock() {
                 histories.insert(*session_id, (model.to_string(), messages));
             }
