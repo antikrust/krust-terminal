@@ -714,10 +714,24 @@ pub async fn run_api_stream(
                     error
                 }
             };
+            // What this result may add before the history reaches the tool-output
+            // budget: a result that still fits stays whole, and one that would
+            // push the request out of the window is saved whole to a file with
+            // its head and tail left in place (so the exact text stays one
+            // read away), instead of its middle being dropped for good.
+            let used: usize = messages.iter().map(|message| message.to_string().len()).sum();
+            let budget = tool_output_budget_chars(model.context_window)
+                .saturating_sub(used)
+                .max(model.read_window);
             messages.push(json!({
                 "role": "tool",
                 "tool_call_id": call.id,
-                "content": clip_for_model(&tool_content, model.read_window + 2_000),
+                "content": super::ollama_context::clip_with_spill(
+                    session_id,
+                    &call.name,
+                    &tool_content,
+                    budget,
+                ),
             }));
         }
         // A stop raised while the tools ran ends the turn here. A rewind
@@ -1909,22 +1923,6 @@ fn assistant_tool_call_message(content: &str, tool_calls: &[ApiToolCall]) -> Val
             })
             .collect::<Vec<_>>(),
     })
-}
-
-/// The head and tail of a tool result longer than `limit` characters.
-fn clip_for_model(text: &str, limit: usize) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    if chars.len() <= limit {
-        return text.to_string();
-    }
-    let half = limit / 2;
-    format!(
-        "{}\n… [{} characters omitted — read the rest in parts, e.g. read_file with \
-         offset/limit] …\n{}",
-        chars[..half].iter().collect::<String>(),
-        chars.len() - 2 * half,
-        chars[chars.len() - half..].iter().collect::<String>()
-    )
 }
 
 fn new_wire_call_id() -> String {

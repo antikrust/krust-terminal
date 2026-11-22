@@ -583,8 +583,11 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                 file, or its lines `from_start` to `from_end` — so large text is never retyped. \
                 Empty `content` deletes the lines. To insert without removing anything, set \
                 `end` to `start - 1`. Give `first_line`, the current text of line `start`: the \
-                edit is refused if that line isn't it. Line numbers shift after every edit, so \
-                read the lines again (read_file with `offset`) before the next one. In brace \
+                edit is refused if that line isn't it. It is the line already in the file that \
+                the edit replaces, not the first line of the new content. Line numbers shift \
+                after every edit, so read the lines again (read_file with `offset`) before the \
+                next one. To add lines after the last line, set `start` to one past it and \
+                `end` to the last line. In brace \
                 languages the replaced lines and the new ones must open and close the same \
                 number of braces, so a block is never cut in half."
                 .to_string(),
@@ -605,7 +608,7 @@ pub(crate) fn builtin_local_tool_specs() -> Vec<McpToolSpec> {
                     },
                     "first_line": {
                         "type": "string",
-                        "description": "The current text of line `start`, as read_file shows it after its `L<n>| ` label (surrounding spaces don't matter). For an insertion, the line the new lines go before; empty at the end of the file."
+                        "description": "The text now in the file at line `start` (the first line being replaced, not the first line of the new content), as read_file shows it after its `L<n>| ` label; surrounding spaces don't matter, and several lines may be given. For an insertion, the line the new lines go before; not needed when adding after the last line."
                     },
                     "allow_unbalanced": {
                         "type": "boolean",
@@ -889,7 +892,7 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
                 "replace_lines requires `first_line`, the current text of line `start` (read the \
                  lines first: read_file with `offset`).",
             )?;
-            check_first_line(&original, start, first_line)?;
+            check_first_line(&original, start, end, first_line, &replacement)?;
             if !arguments
                 .get("allow_unbalanced")
                 .and_then(Value::as_bool)
@@ -945,8 +948,11 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
                 // Failures keep the full labelled shape: the exit code and
                 // both streams are exactly what the model needs to react.
                 Err(format!(
-                    "exit {}\n<stdout>\n{}\n</stdout>\n<stderr>\n{}\n</stderr>",
-                    execution.exit_code, execution.stdout, execution.stderr
+                    "exit {}\n<stdout>\n{}\n</stdout>\n<stderr>\n{}\n</stderr>{}",
+                    execution.exit_code,
+                    execution.stdout,
+                    execution.stderr,
+                    shell_trouble_hint(execution.exit_code, &execution.stdout, &execution.stderr)
                 ))
             }
         }
@@ -958,47 +964,106 @@ pub(crate) async fn dispatch_builtin_tool_with_read_window(
 /// Refuses an edit whose line `start` isn't `expected` (compared without
 /// surrounding spaces, and without a `L<n>| ` label the model copied along):
 /// a line number that went stale after an earlier edit would otherwise cut the
-/// wrong lines. Says where the expected text is, when it's in the file.
-fn check_first_line(original: &str, start: usize, expected: &str) -> Result<(), String> {
-    let expected = expected.trim();
-    let expected = match expected.split_once("| ") {
-        Some((label, rest))
-            if label.starts_with('L') && label[1..].chars().all(|c| c.is_ascii_digit()) =>
-        {
-            rest.trim()
-        }
-        _ => expected,
-    };
+/// wrong lines. `expected` may hold several lines, matched against the lines
+/// from `start` on. An append just past the last line has nothing to check.
+/// The refusal says where the expected text is, when it's in the file, and
+/// shows the numbered lines around `start` so the retry needs no extra read.
+fn check_first_line(
+    original: &str,
+    start: usize,
+    end: usize,
+    expected: &str,
+    replacement: &str,
+) -> Result<(), String> {
     let lines: Vec<&str> = original.lines().collect();
-    let actual = lines.get(start.wrapping_sub(1)).map(|line| line.trim());
-    if actual.unwrap_or("") == expected {
+    if start == lines.len() + 1 && end == lines.len() {
         return Ok(());
     }
-    let mut found: Vec<usize> = lines
-        .iter()
-        .enumerate()
-        .filter(|(_, line)| !expected.is_empty() && line.trim() == expected)
-        .map(|(index, _)| index + 1)
+    let expected: Vec<&str> = expected
+        .trim()
+        .lines()
+        .map(|line| strip_line_label(line).trim())
+        .collect();
+    let matches_at = |index: usize| {
+        if expected.is_empty() {
+            return lines.get(index).is_none_or(|line| line.trim().is_empty());
+        }
+        expected.iter().enumerate().all(|(offset, want)| {
+            lines
+                .get(index + offset)
+                .is_some_and(|line| line.trim() == *want)
+        })
+    };
+    if start >= 1 && matches_at(start - 1) {
+        return Ok(());
+    }
+    let mut found: Vec<usize> = (0..lines.len())
+        .filter(|&index| !expected.is_empty() && matches_at(index))
+        .map(|index| index + 1)
         .collect();
     found.sort_by_key(|line| line.abs_diff(start));
     found.truncate(3);
-    let at = match actual {
-        Some(actual) => format!("Line {start} is `{actual}`"),
-        None => format!("The file has {} lines, so there is no line {start}", lines.len()),
+    let shown = expected.join("\n");
+    let at = match lines.get(start.wrapping_sub(1)) {
+        Some(actual) if expected.len() > 1 => format!(
+            "lines {start}-{} aren't the {} lines in `first_line` (line {start} is `{}`)",
+            start + expected.len() - 1,
+            expected.len(),
+            actual.trim()
+        ),
+        Some(actual) => format!("line {start} is `{}`, not `{shown}`", actual.trim()),
+        None => format!(
+            "the file has {} lines, so there is no line {start} to be `{shown}`",
+            lines.len()
+        ),
     };
-    let elsewhere = if found.is_empty() {
-        "That text isn't in the file.".to_string()
-    } else {
-        format!(
+    let elsewhere = match found.as_slice() {
+        [] => "That text isn't in the file.".to_string(),
+        found => format!(
             "That text is at line {}.",
             found.iter().map(usize::to_string).collect::<Vec<_>>().join(", ")
-        )
+        ),
+    };
+    let new_first = replacement.lines().next().map(str::trim).unwrap_or("");
+    let mix_up = if expected.first().is_some_and(|first| !first.is_empty() && *first == new_first)
+    {
+        " `first_line` is the text already in the file at line `start`, the first line the \
+         edit replaces, not the first line of the new content."
+    } else {
+        ""
+    };
+    let first = start.saturating_sub(3).max(1);
+    let last = (start + expected.len().max(1) + 2).min(lines.len());
+    let around: String = (first..=last)
+        .map(|number| format!("L{number}| {}\n", lines[number - 1]))
+        .collect();
+    let around = if around.is_empty() {
+        String::new()
+    } else {
+        format!(" The file now reads:\n{around}")
     };
     Err(format!(
-        "Not edited: {at}, not `{expected}`. {elsewhere} Line numbers shift after every edit: \
-         read the lines again (read_file with `offset`), then retry with the right `start`, \
-         `end` and `first_line`."
+        "Not edited: {at}. {elsewhere}{mix_up} Line numbers shift after every edit: retry with \
+         `start`, `end` and `first_line` taken from the current numbering. To add lines after \
+         the last one, use start {} and end {}.{around}",
+        lines.len() + 1,
+        lines.len()
     ))
+}
+
+/// `L12| text` → `text`; any other line unchanged.
+fn strip_line_label(line: &str) -> &str {
+    let trimmed = line.trim_start();
+    match trimmed.split_once("| ") {
+        Some((label, rest))
+            if label.len() > 1
+                && label.starts_with('L')
+                && label[1..].chars().all(|c| c.is_ascii_digit()) =>
+        {
+            rest
+        }
+        _ => line,
+    }
 }
 
 /// Files whose blocks are delimited by braces, where an edit that cuts a block
@@ -1949,10 +2014,35 @@ fn shell_result_prompt(command: &str, execution: &ShellExecution) -> String {
          <command>{command}</command>\n\
          <exit_code>{}</exit_code>\n\
          <stdout>\n{}\n</stdout>\n\
-         <stderr>\n{}\n</stderr>\n\
+         <stderr>\n{}\n</stderr>{}\n\
          Request another shell command if needed; otherwise answer the user.",
-        execution.exit_code, execution.stdout, execution.stderr
+        execution.exit_code,
+        execution.stdout,
+        execution.stderr,
+        shell_trouble_hint(execution.exit_code, &execution.stdout, &execution.stderr)
     )
+}
+
+/// A short note added to a failed shell command when its exit code hints at a
+/// cause the model can't see from empty output. Exit 127 is the trap: a glob
+/// like `dir/*.ext` over thousands of files overflows the shell's argument
+/// limit ("argument list too long") and fails with 127 and no output, exactly
+/// as a missing command does — so a small model greps a huge tree, pipes the
+/// real error to /dev/null, sees a bare 127, and loops.
+fn shell_trouble_hint(exit_code: i32, stdout: &str, stderr: &str) -> &'static str {
+    if stderr.contains("argument list too long") {
+        return "\n[Hint: the shell refused the command because a glob (such as \
+                `dir/*.ext`) expanded to too many files — \"argument list too long\". \
+                Search the directory itself instead: `grep -rn PATTERN dir --include='*.ext'`.]";
+    }
+    if exit_code == 127 && stdout.trim().is_empty() && stderr.trim().is_empty() {
+        return "\n[Hint: exit 127 with no output usually means a glob like `dir/*.ext` \
+                expanded past the shell's argument limit (\"argument list too long\"), or a \
+                command wasn't found. To search many files, point grep at the directory, not \
+                a glob: `grep -rn PATTERN dir --include='*.ext'`. And don't redirect stderr to \
+                /dev/null while debugging — it hides the real error.]";
+    }
+    ""
 }
 
 pub(crate) fn emit_failed_turn(on_event: &mut impl FnMut(TurnEvent), message: impl Into<String>) {
@@ -3261,9 +3351,12 @@ async fn run_ollama_chat_with_tools(
             // gets the answer. Never a file read: the model asked for the
             // exact lines (to copy or edit them), and `read_file` already
             // pages to fit.
-            let tool_content = if call.name == BUILTIN_READ_FILE
-                || tool_content.len() <= limits.result_chars()
-            {
+            // What this result may add before the history reaches the
+            // compaction threshold: a result that still fits stays whole,
+            // however big, and only one that would tip the window over is
+            // spilled to a file.
+            let budget = limits.result_budget(limits.used_chars(&messages, tools_chars));
+            let tool_content = if call.name == BUILTIN_READ_FILE || tool_content.len() <= budget {
                 tool_content
             } else if tool_content.len() > limits.read_in_parts_over() {
                 read_in_parts(
@@ -3278,12 +3371,7 @@ async fn run_ollama_chat_with_tools(
                 )
                 .await?
             } else {
-                ollama_context::clip_with_spill(
-                    session_id,
-                    &call.name,
-                    &tool_content,
-                    limits.result_chars(),
-                )
+                ollama_context::clip_with_spill(session_id, &call.name, &tool_content, budget)
             };
             messages.push(json!({ "role": "tool", "content": tool_content }));
         }

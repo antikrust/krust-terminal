@@ -2,8 +2,8 @@ use ai::agent::TurnEvent;
 use serde_json::{json, Value};
 
 use super::{
-    api_curl_args, assistant_tool_call_message, clip_for_model, compact_old_tool_results,
-    error_from_body, remove_turn_from_messages, without_turn_ids, ApiChatAccumulator, ApiToolCall,
+    api_curl_args, assistant_tool_call_message, compact_old_tool_results, error_from_body,
+    remove_turn_from_messages, without_turn_ids, ApiChatAccumulator, ApiToolCall,
     API_KEY_ENV, DROPPED_RESULT_PREFIX,
 };
 use crate::ai::api_providers::provider;
@@ -208,19 +208,6 @@ fn tool_call_turn_is_sent_back_with_ids_and_string_arguments() {
     assert_eq!(call["type"], "function");
     assert_eq!(call["function"]["name"], "read_file");
     assert_eq!(call["function"]["arguments"], r#"{"path":"notes.txt"}"#);
-}
-
-#[test]
-fn long_tool_results_keep_their_head_and_tail() {
-    let limit = 60_000;
-    let text = format!("{}MIDDLE{}", "a".repeat(limit), "z".repeat(limit));
-    let clipped = clip_for_model(&text, limit);
-    assert!(clipped.chars().count() < limit + 200);
-    assert!(clipped.starts_with('a'));
-    assert!(clipped.ends_with('z'));
-    assert!(clipped.contains("characters omitted"));
-    // Short results pass through untouched.
-    assert_eq!(clip_for_model("short", limit), "short");
 }
 
 fn tool_message(content: &str) -> Value {

@@ -192,8 +192,26 @@ impl Limits {
 
     /// A history's size in tokens, with the tool definitions sent beside it.
     pub(crate) fn tokens(&self, messages: &[Value], tools_chars: usize) -> usize {
+        self.used_chars(messages, tools_chars) / CHARS_PER_TOKEN
+    }
+
+    /// A history's size in characters, with the tool definitions sent beside
+    /// it: what [`result_budget`](Self::result_budget) measures a fresh result
+    /// against.
+    pub(crate) fn used_chars(&self, messages: &[Value], tools_chars: usize) -> usize {
         let chars: usize = messages.iter().map(|message| message.to_string().len()).sum();
-        (chars + tools_chars) / CHARS_PER_TOKEN
+        chars + tools_chars
+    }
+
+    /// How many characters of a fresh tool result may stay inline before the
+    /// history (already `used_chars` long) would reach the compaction
+    /// threshold. A result that fits within this is kept whole; one that does
+    /// not is spilled to a file by [`clip_with_spill`]. Never below
+    /// [`result_chars`](Self::result_chars), so a near-full window still shows
+    /// a usable head and tail rather than nothing.
+    pub(crate) fn result_budget(&self, used_chars: usize) -> usize {
+        let ceiling = (self.num_ctx as f64 * CHARS_PER_TOKEN as f64 * COMPACT_AT) as usize;
+        ceiling.saturating_sub(used_chars).max(self.result_chars())
     }
 
     pub(crate) fn pressure(&self, tokens: usize, task_done: bool) -> Pressure {
