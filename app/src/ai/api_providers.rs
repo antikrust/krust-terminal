@@ -17,6 +17,7 @@
 //! slashes (`api/groq/openai/gpt-oss-120b`).
 
 use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 use ai::api_keys::{ApiKeyManager, CustomEndpoint};
 use krust_cli::agent::Harness;
@@ -118,7 +119,7 @@ pub const PROVIDERS: &[ApiProvider] = &[
         base_url: "https://api.anthropic.com/v1",
         key_url: "https://platform.claude.com/settings/keys",
         pricing_note: "Paid per token: Claude Haiku 5.5 from $0.10 per million input tokens, \
-            Sonnet 5.5 $2, Opus 5.5 $4, Fable 5.1 $10.",
+            Sonnet 5.5 $2, Opus 5.5 $4, Fable 5.2 $8.",
         models: &[
             ApiModel {
                 id: "claude-sonnet-5-5",
@@ -139,9 +140,9 @@ pub const PROVIDERS: &[ApiProvider] = &[
                 context_window: 1_000_000,
             },
             ApiModel {
-                id: "claude-fable-5-1",
-                display_name: "Claude Fable 5.1",
-                price_per_million: (10.0, 50.0),
+                id: "claude-fable-5-2",
+                display_name: "Claude Fable 5.2",
+                price_per_million: (8.0, 40.0),
                 context_window: 1_000_000,
             },
         ],
@@ -472,6 +473,66 @@ pub fn model_context_window(provider: &ApiProvider, model: &str) -> Option<u64> 
         .iter()
         .find(|listed| listed.id == model)
         .map(|listed| listed.context_window)
+        .or_else(|| live_model_info(provider, model).and_then(|info| info.context_window))
+}
+
+/// Effort levels, weakest first, as Anthropic's `output_config.effort` and
+/// the CLIs' `--effort` name them.
+pub const EFFORT_LEVELS: [&str; 5] = ["low", "medium", "high", "xhigh", "max"];
+
+/// What a provider's own model list says about a model beyond its name — its
+/// context window, from Anthropic's `/v1/models` (`max_input_tokens`). `None`
+/// when the list didn't say.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LiveModelInfo {
+    pub context_window: Option<u64>,
+}
+
+fn live_model_infos() -> &'static Mutex<HashMap<String, LiveModelInfo>> {
+    static INFOS: OnceLock<Mutex<HashMap<String, LiveModelInfo>>> = OnceLock::new();
+    INFOS.get_or_init(Default::default)
+}
+
+/// The live list's word on `model`, once the provider's list has been read.
+pub fn live_model_info(provider: &ApiProvider, model: &str) -> Option<LiveModelInfo> {
+    live_model_infos()
+        .lock()
+        .ok()?
+        .get(&format!("{}/{model}", provider.id))
+        .cloned()
+}
+
+/// The reasoning efforts `model` takes, weakest first; empty for a model that
+/// takes none. OpenAI's reasoning models take `reasoning_effort`. Anthropic's
+/// are reached through its OpenAI-compatible endpoint, which takes no effort,
+/// so none are offered there.
+pub fn reasoning_levels(provider: &ApiProvider, model: &str) -> Vec<&'static str> {
+    match provider.id {
+        "openai" if is_openai_reasoning_model(model) => vec!["low", "medium", "high"],
+        _ => Vec::new(),
+    }
+}
+
+/// OpenAI models that take `reasoning_effort`: the o-series and GPT-5 on,
+/// apart from the non-reasoning `chat` variants.
+fn is_openai_reasoning_model(model: &str) -> bool {
+    let model = model.to_ascii_lowercase();
+    if model.contains("chat") {
+        return false;
+    }
+    let bytes = model.as_bytes();
+    if bytes.first() == Some(&b'o') && bytes.get(1).is_some_and(u8::is_ascii_digit) {
+        return true;
+    }
+    model
+        .strip_prefix("gpt-")
+        .map(|rest| {
+            rest.chars()
+                .take_while(char::is_ascii_digit)
+                .collect::<String>()
+        })
+        .and_then(|major| major.parse::<u32>().ok())
+        .is_some_and(|major| major >= 5)
 }
 
 /// USD per million (input, output) tokens for `model` on `provider`: its
@@ -710,11 +771,24 @@ pub struct ApiRoute {
     /// The OpenAI-compatible base; `/chat/completions` is appended.
     pub base_url: String,
     pub api_key: String,
+    /// The reasoning effort picked in the model menu (`low` … `max`), or
+    /// `None` for the model's own default. Sent only to models that take one
+    /// (see [`reasoning_levels`]).
+    pub reasoning: Option<String>,
 }
 
 impl ApiRoute {
     pub fn is_local(&self) -> bool {
         std::ptr::eq(self.provider, &LOCAL_OLLAMA)
+    }
+
+    /// The effort to send with this route's requests: the picked level when
+    /// the model takes it, else nothing (the model's own default).
+    pub fn effort(&self) -> Option<&str> {
+        let picked = self.reasoning.as_deref()?;
+        reasoning_levels(self.provider, &self.model)
+            .contains(&picked)
+            .then_some(picked)
     }
 }
 
@@ -737,6 +811,7 @@ pub fn route_for(model_id: &str, app: &AppContext) -> Option<ApiRoute> {
                 model_name: model.display_label().to_owned(),
                 base_url: custom_base_url(&endpoint.url),
                 api_key: endpoint.api_key.clone(),
+                reasoning: None,
             })
         });
     }
@@ -755,6 +830,7 @@ pub fn route_for(model_id: &str, app: &AppContext) -> Option<ApiRoute> {
             model_name: tag.to_owned(),
             base_url: format!("{}/v1", base_url_of(tag)),
             api_key: LOCAL_OLLAMA_KEY.to_owned(),
+            reasoning: None,
         });
     }
     let (provider, model) = api_model_parts(model_id)?;
@@ -767,6 +843,7 @@ pub fn route_for(model_id: &str, app: &AppContext) -> Option<ApiRoute> {
         model_name: model_display_name(provider, model),
         base_url: provider.base_url.to_owned(),
         api_key: ApiProviderKeys::as_ref(app).key_for(provider.id)?.to_owned(),
+        reasoning: None,
     })
 }
 
@@ -1289,10 +1366,51 @@ impl ApiProviderKeys {
         });
     }
 
-    /// Reads a live-listed provider's current free models in the background.
-    /// The list is public, so no key goes with the request. A failed fetch
-    /// leaves the curated list in place.
+    /// Reads a provider's live model list in the background, so the menu shows
+    /// what the account can actually use rather than a list that goes stale.
+    /// For a provider with an authenticated `/models` endpoint ([`authed_models`])
+    /// it fetches the full current catalog with the user's key; otherwise it
+    /// reads the public free roster ([`ApiProvider::live_free_models_url`]). A
+    /// failed fetch leaves the curated list in place.
     fn fetch_live_models(&self, provider: &'static ApiProvider, ctx: &mut ModelContext<Self>) {
+        if let Some(endpoint) = authed_models(provider) {
+            // No key, nothing to ask with — the curated list stands in.
+            let Some(key) = self.key_for(provider.id).map(str::to_string) else {
+                return;
+            };
+            let AuthedModels { url, auth } = endpoint;
+            ctx.spawn(
+                async move {
+                    let get = reqwest::Client::new().get(url);
+                    let request = match auth {
+                        ModelsAuth::Bearer => get.bearer_auth(&key),
+                        ModelsAuth::Anthropic => get
+                            .header("x-api-key", key.as_str())
+                            .header("anthropic-version", ANTHROPIC_VERSION),
+                    };
+                    let body = request.send().await?.error_for_status()?.text().await?;
+                    anyhow::Ok(body)
+                },
+                move |me, body, ctx| match body {
+                    Ok(body) => {
+                        record_live_modalities(&body, provider);
+                        record_live_model_info(&body, provider);
+                        let models = parse_live_all_models(&body, provider);
+                        if !models.is_empty() && me.live_models.get(provider.id) != Some(&models) {
+                            me.live_models.insert(provider.id, models);
+                            ctx.emit(ApiProviderKeysEvent::Changed);
+                        }
+                    }
+                    Err(error) => {
+                        log::warn!(
+                            "api_providers: could not read {}'s models: {error}",
+                            provider.display_name
+                        );
+                    }
+                },
+            );
+            return;
+        }
         let Some(url) = provider.live_free_models_url else {
             return;
         };
@@ -1359,8 +1477,16 @@ struct LiveModelList {
 #[derive(Deserialize)]
 struct LiveModelEntry {
     id: String,
+    // OpenRouter calls it `name`; Anthropic's own list calls it `display_name`.
+    #[serde(default, alias = "display_name")]
     name: Option<String>,
     context_length: Option<u64>,
+    // Unix seconds, in OpenAI-style lists — newest models first in the menu.
+    #[serde(default)]
+    created: Option<u64>,
+    // Anthropic's list: the context window.
+    #[serde(default)]
+    max_input_tokens: Option<u64>,
     #[serde(default)]
     architecture: Option<LiveArchitecture>,
 }
@@ -1443,6 +1569,158 @@ fn parse_live_free_models(body: &str, provider: &ApiProvider) -> Vec<LiveModel> 
             (entry.id, display_name)
         })
         .collect()
+}
+
+/// A provider whose full, current model list we fetch live from its own
+/// `/models` endpoint with the user's key, so the menu shows exactly what the
+/// account can use and never goes stale. This is the whole catalog, unlike
+/// [`ApiProvider::live_free_models_url`], which is a public, free-only roster.
+struct AuthedModels {
+    url: &'static str,
+    auth: ModelsAuth,
+}
+
+/// The Anthropic API version Krust speaks (the `anthropic-version` header).
+pub const ANTHROPIC_VERSION: &str = "2026-10-21";
+
+/// How a provider's `/models` endpoint authenticates.
+enum ModelsAuth {
+    /// `Authorization: Bearer <key>` — OpenAI and its compatible endpoints.
+    Bearer,
+    /// `x-api-key` plus `anthropic-version` — Anthropic's own list endpoint.
+    Anthropic,
+}
+
+/// The authenticated `/models` endpoint for a provider whose catalog we read
+/// live, or `None` for one whose curated (or free-roster) list stands.
+fn authed_models(provider: &ApiProvider) -> Option<AuthedModels> {
+    match provider.id {
+        "openai" => Some(AuthedModels {
+            url: "https://api.openai.com/v1/models",
+            auth: ModelsAuth::Bearer,
+        }),
+        "anthropic" => Some(AuthedModels {
+            url: "https://api.anthropic.com/v1/models",
+            auth: ModelsAuth::Anthropic,
+        }),
+        _ => None,
+    }
+}
+
+/// Every usable model in a provider's own `/models` list (`{"data": [{id,
+/// display_name?, created?}]}`): curated models first in their order, then the
+/// rest newest first. Non-chat models (embeddings, audio, image, moderation,
+/// legacy completion) are dropped, as are OpenAI's dated snapshot ids, which
+/// only duplicate their base alias. The curated list supplies pricing and the
+/// context window for the models it names; the others fall back to the
+/// defaults (see `model_price`, `model_context_window`).
+fn parse_live_all_models(body: &str, provider: &ApiProvider) -> Vec<LiveModel> {
+    let Ok(list) = serde_json::from_str::<LiveModelList>(body) else {
+        return Vec::new();
+    };
+    let mut models: Vec<LiveModelEntry> = list
+        .data
+        .into_iter()
+        .filter(|entry| {
+            is_chat_model(&entry.id)
+                && !(provider.id == "openai" && looks_dated_snapshot(&entry.id))
+        })
+        .collect();
+    let curated_rank = |id: &str| {
+        provider
+            .models
+            .iter()
+            .position(|model| model.id == id)
+            .unwrap_or(usize::MAX)
+    };
+    models.sort_by(|a, b| {
+        curated_rank(&a.id)
+            .cmp(&curated_rank(&b.id))
+            .then(b.created.cmp(&a.created))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    models
+        .into_iter()
+        .take(MAX_LIVE_MODELS)
+        .map(|entry| {
+            // A curated model keeps its curated name; otherwise the list's own
+            // display name (Anthropic gives one), else the bare id.
+            let display_name = provider
+                .models
+                .iter()
+                .find(|model| model.id == entry.id)
+                .map(|model| model.display_name.to_string())
+                .or(entry.name)
+                .unwrap_or_else(|| entry.id.clone());
+            (entry.id, display_name)
+        })
+        .collect()
+}
+
+/// Keeps each model's context window from a provider's own list (see
+/// [`LiveModelInfo`]). A list that doesn't give one (OpenAI's) records nothing.
+fn record_live_model_info(body: &str, provider: &ApiProvider) {
+    let Ok(list) = serde_json::from_str::<LiveModelList>(body) else {
+        return;
+    };
+    let found: Vec<(String, LiveModelInfo)> = list
+        .data
+        .into_iter()
+        .filter_map(|entry| {
+            let context_window = entry.max_input_tokens?;
+            Some((
+                format!("{}/{}", provider.id, entry.id),
+                LiveModelInfo {
+                    context_window: Some(context_window),
+                },
+            ))
+        })
+        .collect();
+    if let Ok(mut infos) = live_model_infos().lock() {
+        infos.extend(found);
+    }
+}
+
+/// Whether a `/models` id is a text chat/agent model — not an embedding,
+/// audio, image, moderation, rerank or legacy completion model.
+fn is_chat_model(id: &str) -> bool {
+    let id = id.to_ascii_lowercase();
+    const SKIP: &[&str] = &[
+        "embed",
+        "whisper",
+        "tts",
+        "audio",
+        "transcribe",
+        "dall-e",
+        "image",
+        "realtime",
+        "moderation",
+        "rerank",
+        "-search",
+        "-instruct",
+        "davinci",
+        "babbage",
+        "ada",
+        "curie",
+    ];
+    if SKIP.iter().any(|needle| id.contains(needle)) {
+        return false;
+    }
+    let bytes = id.as_bytes();
+    id.starts_with("gpt")
+        || id.starts_with("chatgpt")
+        || id.starts_with("claude")
+        || (bytes.first() == Some(&b'o') && bytes.get(1).is_some_and(u8::is_ascii_digit))
+}
+
+/// Whether an id carries a date-stamped snapshot segment (a 4-digit run like
+/// `2024` or `0613`, or an 8-digit `20240806`). Used to drop OpenAI's pinned
+/// snapshots, which duplicate the base alias; Anthropic ids are dated by
+/// design and are kept.
+fn looks_dated_snapshot(id: &str) -> bool {
+    id.split(|c: char| c == '-' || c == '.' || c == '_').any(|seg| {
+        matches!(seg.len(), 4 | 8) && seg.bytes().all(|b| b.is_ascii_digit())
+    })
 }
 
 #[cfg(test)]

@@ -21,8 +21,9 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     ollama_model_name, OLLAMA_HARNESS_CONFIG_NAME, OLLAMA_MODEL_ID_PREFIX,
 };
 use crate::ai::api_providers::{
-    auto_models, custom_endpoint_groups, is_api_runner_model, ApiProviderKeys, ApiProviderKeysEvent,
-    API_HARNESS_CONFIG_NAME, API_MODEL_ID_PREFIX, CUSTOM_MODEL_ID_PREFIX,
+    api_model_parts, auto_models, custom_endpoint_groups, is_api_runner_model, reasoning_levels,
+    ApiProviderKeys, ApiProviderKeysEvent, API_HARNESS_CONFIG_NAME, API_MODEL_ID_PREFIX,
+    CUSTOM_MODEL_ID_PREFIX, EFFORT_LEVELS,
 };
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::ai::harness_display;
@@ -72,10 +73,10 @@ fn default_harnesses(disabled: &[String]) -> Vec<HarnessAvailability> {
             display_name: harness_display::display_name(Harness::Claude).to_string(),
             enabled: local_cli_on_path("claude"),
             available_models: vec![
-                claude_model("claude-fable-5", "Fable 5"),
-                claude_model("claude-sonnet-5", "Sonnet 5"),
-                claude_model("claude-opus-4-8", "Opus 4.8"),
-                claude_model("claude-haiku-4-5-20251001", "Haiku 4.5"),
+                claude_model("claude-fable-5-2", "Fable 5.2"),
+                claude_model("claude-opus-5-5", "Opus 5.5"),
+                claude_model("claude-sonnet-5-5", "Sonnet 5.5"),
+                claude_model("claude-haiku-5-5", "Haiku 5.5"),
             ],
         },
         HarnessAvailability {
@@ -225,6 +226,65 @@ fn with_api_models(mut models: Vec<HarnessModelInfo>, ctx: &AppContext) -> Vec<H
     let autos = auto_models(&models);
     models.splice(first_api..first_api, autos);
     models
+}
+
+/// Each model's reasoning levels in `codex debug models` JSON, by slug, in
+/// the catalog's order (weakest first).
+fn parse_codex_reasoning_levels(raw: &[u8]) -> HashMap<String, Vec<String>> {
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(raw) else {
+        return HashMap::new();
+    };
+    let Some(entries) = value.get("models").and_then(|models| models.as_array()) else {
+        return HashMap::new();
+    };
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let slug = entry.get("slug")?.as_str()?;
+            let levels: Vec<String> = entry
+                .get("supported_reasoning_levels")?
+                .as_array()?
+                .iter()
+                .filter_map(|level| level.get("effort")?.as_str().map(str::to_owned))
+                .collect();
+            (!levels.is_empty()).then(|| (slug.to_owned(), levels))
+        })
+        .collect()
+}
+
+/// The reasoning levels the model picked for `harness` takes, weakest first
+/// — what the model menu offers under "Reasoning". Empty for a model that
+/// takes none (Ollama, custom endpoints, non-reasoning API models).
+pub fn reasoning_levels_for(harness: Harness, model_id: Option<&str>, ctx: &AppContext) -> Vec<String> {
+    if let Some((provider, model)) = model_id.and_then(api_model_parts) {
+        return reasoning_levels(provider, model)
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+    }
+    if model_id.is_some_and(|id| is_api_runner_model(id) || ollama_model_name(id).is_some()) {
+        return Vec::new();
+    }
+    match harness {
+        // `claude --effort` takes all five on every current model.
+        Harness::Claude => EFFORT_LEVELS
+            .iter()
+            .map(|level| level.to_string())
+            .collect(),
+        Harness::Codex => {
+            let levels = &HarnessAvailabilityModel::as_ref(ctx).codex_reasoning_levels;
+            // On "default", the levels of the model Codex will run.
+            let model = model_id
+                .map(str::to_owned)
+                .or_else(|| codex_model_for_turn(None, ctx));
+            model
+                .and_then(|model| levels.get(&model).cloned())
+                .unwrap_or_else(|| vec!["low".into(), "medium".into(), "high".into()])
+        }
+        Harness::Oz | Harness::OpenCode | Harness::Gemini | Harness::Unknown => {
+            vec!["low".into(), "medium".into(), "high".into()]
+        }
+    }
 }
 
 /// Parses `codex debug models` JSON into picker entries: listed-visibility
@@ -695,6 +755,9 @@ pub struct HarnessAvailabilityModel {
     codex_catalog: Option<Vec<String>>,
     /// Failed reads of that catalog so far (it is retried a few times).
     codex_catalog_failures: u32,
+    /// Each Codex model's reasoning levels, weakest first, from the same
+    /// catalog (`supported_reasoning_levels`).
+    codex_reasoning_levels: HashMap<String, Vec<String>>,
 }
 
 impl HarnessAvailabilityModel {
@@ -758,6 +821,7 @@ impl HarnessAvailabilityModel {
             auth_secret_retry_after: HashMap::new(),
             codex_catalog: None,
             codex_catalog_failures: 0,
+            codex_reasoning_levels: HashMap::new(),
         };
         me.refresh(ctx);
         me.refresh_codex_catalog(ctx);
@@ -797,6 +861,7 @@ impl HarnessAvailabilityModel {
                     }
                 };
                 let catalog = parse_codex_catalog(&output);
+                me.codex_reasoning_levels = parse_codex_reasoning_levels(&output);
                 if !catalog.is_empty() {
                     me.codex_catalog = Some(catalog.iter().map(|model| model.id.clone()).collect());
                 }

@@ -23815,7 +23815,11 @@ impl TerminalView {
         let api_route = if harness == LocalHarnessKind::Api {
             let route = model_id
                 .as_deref()
-                .and_then(|model_id| route_for(model_id, ctx));
+                .and_then(|model_id| route_for(model_id, ctx))
+                .map(|mut route| {
+                    route.reasoning = reasoning_level.clone();
+                    route
+                });
             let provider = model_id
                 .as_deref()
                 .and_then(api_model_parts)
@@ -23982,16 +23986,13 @@ impl TerminalView {
                     None,
                     queue_mcp.as_deref(),
                 ));
-                // The claude CLI has no reasoning-effort flag; it reads the
-                // extended-thinking budget from the environment. Tiers mirror
-                // its think / megathink / ultrathink prompt keywords.
-                if let Some(budget) = match reasoning_level.as_deref() {
-                    Some("low") => Some("4000"),
-                    Some("medium") => Some("10000"),
-                    Some("high") => Some("31999"),
-                    _ => None,
-                } {
-                    command.env("MAX_THINKING_TOKENS", budget);
+                // `--effort` sets the thinking depth (low … max). The old
+                // `MAX_THINKING_TOKENS` budget is rejected by the 5.x models.
+                if let Some(effort) = reasoning_level
+                    .as_deref()
+                    .filter(|level| crate::ai::api_providers::EFFORT_LEVELS.contains(level))
+                {
+                    command.args(["--effort", effort]);
                 }
                 command
             }

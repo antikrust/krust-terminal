@@ -58,8 +58,8 @@ use crate::ai::execution_profiles::profiles::{
 };
 use crate::ai::harness_availability::{
     note_menu_pick, persisted_api_model_for, persisted_model_for, persisted_ollama_model_for,
-    selected_local_harness_for_pane, set_pane_local_harness, HarnessAvailabilityEvent,
-    HarnessAvailabilityModel, HarnessModelInfo,
+    reasoning_levels_for, selected_local_harness_for_pane, set_pane_local_harness,
+    HarnessAvailabilityEvent, HarnessAvailabilityModel, HarnessModelInfo,
 };
 use crate::ai::llms::{
     byo_key_source_for_model, dedupe_model_display_names, should_show_key_icon_for_model,
@@ -105,20 +105,25 @@ const MODEL_LOCKED_FOR_FOLLOWUP_TOOLTIP: &str = "Follow-ups use the original run
 const MODEL_REQUIRES_EDIT_ACCESS_TOOLTIP: &str = "Request edit access to change model";
 const HARNESS_DEFAULT_MODEL_LABEL: &str = "default";
 
-/// Reasoning levels offered for local harnesses; `None` means the CLI's own
-/// default. Claude maps these to an extended-thinking budget, codex to
-/// `model_reasoning_effort`.
-const HARNESS_REASONING_LEVELS: [(Option<&str>, &str); 4] = [
-    (None, "Default"),
-    (Some("low"), "Low"),
-    (Some("medium"), "Medium"),
-    (Some("high"), "High"),
-];
+/// The menu label for a reasoning level: `None` is the model's own default.
+fn reasoning_level_label(level: Option<&str>) -> String {
+    match level {
+        None => "Default".to_owned(),
+        Some("xhigh") => "Extra high".to_owned(),
+        Some(level) => {
+            let mut chars = level.chars();
+            chars
+                .next()
+                .map(|first| first.to_uppercase().chain(chars).collect())
+                .unwrap_or_default()
+        }
+    }
+}
 
 /// What a group in the local-harness model menu holds. Ollama models and
 /// cloud API models share the Codex row's storage, but each is its own
-/// provider in the menu: no "default" row, no reasoning levels, and its own
-/// persisted selection.
+/// provider in the menu: no "default" row, reasoning levels only for the
+/// models that take them, and its own persisted selection.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ModelGroupKind {
     /// A CLI harness's own models (Claude, Codex).
@@ -972,14 +977,7 @@ impl ProfileModelSelector {
     /// selected alongside the model.
     fn reasoning_suffix(reasoning_level: Option<&str>) -> String {
         reasoning_level
-            .map(|level| {
-                let mut chars = level.chars();
-                let capitalized: String = chars
-                    .next()
-                    .map(|first| first.to_uppercase().chain(chars).collect())
-                    .unwrap_or_default();
-                format!(" · {capitalized}")
-            })
+            .map(|level| format!(" · {}", reasoning_level_label(Some(level))))
             .unwrap_or_default()
     }
 
@@ -1286,18 +1284,19 @@ impl ProfileModelSelector {
             }
 
             for model in models {
+                let model_levels = reasoning_levels_for(harness, Some(model.id.as_str()), ctx);
                 let is_selected =
                     harness == selected_harness && selected_model_id.as_deref() == Some(&model.id);
                 let mut fields = MenuItemFields::new(model.display_name.clone())
                     .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                         harness,
                         model_id: model.id.clone(),
-                        // Ollama and cloud API models have no reasoning
-                        // levels to carry over.
-                        reasoning_level: match ModelGroupKind::of(Some(model.id.as_str())) {
-                            ModelGroupKind::Harness => current_reasoning.clone(),
-                            ModelGroupKind::Ollama | ModelGroupKind::Api => None,
-                        },
+                        // The current level carries over to a model that
+                        // takes it; otherwise the new model runs at its own
+                        // default.
+                        reasoning_level: current_reasoning
+                            .clone()
+                            .filter(|level| model_levels.contains(level)),
                     });
                 if is_selected {
                     selected_index = items.len();
@@ -1309,22 +1308,32 @@ impl ProfileModelSelector {
             }
 
             // Reasoning rows compose with whichever model is active for the
-            // harness rather than selecting a model themselves.
-            if group_kind == ModelGroupKind::Harness {
+            // harness rather than selecting a model themselves. Each model
+            // offers the levels it takes: Claude's five, the Codex catalog's
+            // per model, an API model's from its provider.
+            let levels = match (group_kind, current_model_id.as_deref()) {
+                (ModelGroupKind::Harness, model_id) => reasoning_levels_for(harness, model_id, ctx),
+                (ModelGroupKind::Api, Some(model_id)) => {
+                    reasoning_levels_for(harness, Some(model_id), ctx)
+                }
+                // No API model picked yet, or Ollama: nothing to set.
+                (ModelGroupKind::Api, None) | (ModelGroupKind::Ollama, _) => Vec::new(),
+            };
+            if !levels.is_empty() {
                 items.push(
                     MenuItemFields::new("Reasoning")
                         .with_disabled(true)
                         .into_item(),
                 );
-                for (level, label) in HARNESS_REASONING_LEVELS {
+                let rows = std::iter::once(None).chain(levels.iter().map(|level| Some(level.as_str())));
+                for level in rows {
                     let is_active = group_is_selected && selected_reasoning.as_deref() == level;
-                    let mut fields = MenuItemFields::new(label).with_on_select_action(
-                        ProfileModelSelectorAction::SelectHarnessModel {
+                    let mut fields = MenuItemFields::new(reasoning_level_label(level))
+                        .with_on_select_action(ProfileModelSelectorAction::SelectHarnessModel {
                             harness,
                             model_id: current_model_id.clone().unwrap_or_default(),
                             reasoning_level: level.map(str::to_owned),
-                        },
-                    );
+                        });
                     if is_active {
                         fields = fields.with_icon(Icon::Check);
                     } else {

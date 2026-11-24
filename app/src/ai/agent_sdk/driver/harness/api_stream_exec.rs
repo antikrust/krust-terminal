@@ -340,6 +340,10 @@ pub async fn run_api_stream(
         if route.is_local() {
             request["options"] = json!({ "num_ctx": LOCAL_NUM_CTX });
         }
+        // The effort picked in the model menu, for a model that takes one.
+        if let Some(effort) = route.effort() {
+            request["reasoning_effort"] = json!(effort);
+        }
         let request = request.to_string();
 
         // Today's count, for the Agents page (a free tier's daily allowance goes fast).
