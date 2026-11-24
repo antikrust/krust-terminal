@@ -41,6 +41,11 @@ pub enum TurnEvent {
         outcome: ToolCallOutcome,
     },
 
+    /// A picture a tool call produced (a screenshot it answered with, or an
+    /// image file a command wrote), saved as the file at `path`. Shown in the
+    /// conversation where it arrives, under the call that made it.
+    Image { path: String },
+
     /// The run has finished (successfully or not).
     TurnCompleted {
         usage: Option<TurnUsage>,

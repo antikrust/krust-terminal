@@ -250,6 +250,7 @@ use crate::ai::agent_sdk::driver::harness::ollama_stream_exec::{
     self, ollama_curl_args, ollama_model_name, probe_model_caps_checked, run_ollama_stream,
     OLLAMA_HARNESS_CONFIG_NAME,
 };
+use crate::ai::agent_sdk::driver::harness::tool_images::ToolImageWatch;
 use crate::ai::agent_sdk::driver::harness::turn_events_to_conversation::tool_call_action_result;
 use crate::ai::agent_sdk::driver::harness::LocalHarnessKind;
 use crate::ai::api_providers::{
@@ -24265,6 +24266,8 @@ impl TerminalView {
 
         let begin_prompt = prompt.clone();
         let pump_prompt = runner_prompt;
+        // Pictures a tool call produced are looked for relative to it.
+        let drain_working_dir = working_dir.clone();
         let pump_working_dir = working_dir;
         let pump_path = path;
         let pump_mcp_tools = ollama_mcp_tools;
@@ -24303,6 +24306,11 @@ impl TerminalView {
                 // Prompts the run took while it was going, not yet shown:
                 // each waits for the tool calls in flight to resolve.
                 let mut queued_prompts: VecDeque<RunPrompt> = VecDeque::new();
+                // Finds pictures tool calls produced that no event reports
+                // (an MCP answer's saved screenshot, an image file a shell
+                // command wrote). It reads the file system, so it runs here,
+                // off the main thread.
+                let mut tool_image_watch = ToolImageWatch::default();
                 while let Some(message) = event_rx.next().await {
                     let (handed_to, event) = match message {
                         LocalRunMessage::Event(handed_to, event) => (handed_to, event),
@@ -24356,6 +24364,8 @@ impl TerminalView {
                     {
                         continue;
                     }
+                    let tool_image_paths =
+                        tool_image_watch.images_after(&event, &drain_working_dir);
                     let taken = stream.take();
                     let prompts = std::mem::take(&mut queued_prompts);
                     let begin_prompt = begin_prompt.clone();
@@ -24607,7 +24617,25 @@ impl TerminalView {
                                         stream = stream.continue_after_tool_results(results, ctx);
                                     }
                                 }
+                                // A picture a tool produced (a screenshot)
+                                // joins the session's images panel too.
+                                ai::agent::TurnEvent::Image { path } => {
+                                    view.add_session_image(path.clone());
+                                    ctx.notify();
+                                }
                                 _ => {}
+                            }
+                            // Pictures the tool call just resolved produced,
+                            // shown under its card as if reported.
+                            for path in tool_image_paths {
+                                view.add_session_image(path.clone());
+                                ctx.notify();
+                                let image = ai::agent::TurnEvent::Image { path };
+                                let messages = stream.messages_for_event(
+                                    &image,
+                                    &mut view.local_harness_shell_commands,
+                                );
+                                stream.apply_messages(messages, ctx);
                             }
                             if turn_completed {
                                 stream.complete(ctx);

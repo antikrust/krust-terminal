@@ -16,6 +16,8 @@ use ai::agent::{PlanEntry, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use serde::Deserialize;
 use serde_json::json;
 
+use super::tool_images;
+
 /// Parses one JSONL line into zero or more [`TurnEvent`]s.
 ///
 /// Returns an empty vec for lines that are recognized-but-not-renderable
@@ -144,6 +146,19 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
                 item.tool.unwrap_or_default()
             );
             let failed = item.status.as_deref() == Some("failed");
+            // Pictures the tool answered with (a screenshot) are saved as
+            // files and shown under the call.
+            let paths = match &item.result {
+                Some(result) if !failed => {
+                    let images = tool_images::images_in(result);
+                    if images.is_empty() {
+                        Vec::new()
+                    } else {
+                        tool_images::save_images(&images, &item.id)
+                    }
+                }
+                Some(_) | None => Vec::new(),
+            };
             let outcome = if failed {
                 ToolCallOutcome::Error("failed".to_string())
             } else {
@@ -151,7 +166,7 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
                     "status": item.status.unwrap_or_default(),
                 }))
             };
-            vec![
+            [
                 TurnEvent::ToolCallStarted {
                     call_id: item.id.clone(),
                     name,
@@ -162,6 +177,9 @@ fn item_events(item: RawItem) -> Vec<TurnEvent> {
                     outcome,
                 },
             ]
+            .into_iter()
+            .chain(paths.into_iter().map(|path| TurnEvent::Image { path }))
+            .collect()
         }
         "web_search" => vec![
             TurnEvent::ToolCallStarted {
@@ -247,6 +265,8 @@ struct RawItem {
     changes: Option<serde_json::Value>,
     server: Option<String>,
     tool: Option<String>,
+    /// An MCP call's answer: `content` blocks, which may hold images.
+    result: Option<serde_json::Value>,
     query: Option<String>,
     items: Option<Vec<RawTodo>>,
 }

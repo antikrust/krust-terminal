@@ -97,6 +97,7 @@ new harness by writing a parser + exec module, not by touching the drain.
 | `Thinking`           | `AgentReasoning`                            | collapsible "Thinking" block|
 | `ToolCallStarted`    | `ToolCall` → `CallMcpTool`                   | inline read-only tool card  |
 | `ToolCallResult`     | `ToolCallResult` → `CallMcpToolResult`       | result inside the same card |
+| `Image`              | `AgentOutput` with `![image](<path>)`       | the picture, under the card |
 | `TurnCompleted` (err)| `AgentOutput` error block                   | error text                  |
 | `SessionInit`/`TurnCompleted` (ok) | nothing — bookkeeping only    | —                           |
 
@@ -105,6 +106,29 @@ registry (`call_id` → command) to pair the shell call and result while keeping
 both in the generic inline-card representation. It must never translate a
 local transcript into `RunShellCommand`, because that message type means
 "create/restore a terminal block" elsewhere in Krust.
+
+### Pictures a tool produced (screenshots)
+
+A screenshot a tool takes is shown in the conversation under the call that
+took it, as a markdown image in an `AgentOutput` of its own (drawn by the
+`BlocklistMarkdownImages` renderer, so it also restores), and joins the
+session's images panel. `harness/tool_images.rs` holds the pieces:
+
+- Base64 image content in a tool's answer (Claude Code's `tool_result`
+  blocks or `tool_use_result`, a Codex `mcp_tool_call` result) is saved by the
+  parser into `turn-images` and reported as `TurnEvent::Image` after the
+  `ToolCallResult`; the Claude card keeps the path instead of the base64.
+- An MCP tool called by the Ollama or API runner: `ConfiguredMcpTools` saves
+  its image content and names each file first in the text answer with an
+  `[image saved: <path>]` line (the model reads it too).
+- A shell command, or an Ollama/API `run_code` program, that writes an image
+  file (`screencapture -x shot.png`): an image file it names, changed since
+  the event before the call.
+
+The last two have no event of their own: the drain's `ToolImageWatch` finds
+them off the main thread and the drain shows them as `Image` events. Saved
+pictures live with the pasted images, so Settings > Agents > "Save
+conversations and images to disk" keeps or clears them.
 
 Why `CallMcpTool`: it is Krust's **generic "named tool + JSON args"
 representation** — exactly what a harness tool call is. The card

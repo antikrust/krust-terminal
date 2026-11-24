@@ -33,6 +33,7 @@ use super::ollama_context;
 use super::ollama_work_notes::{WorkNotes, LARGE_TEXT_CHARS};
 use super::plan_tracker::PlanTracker;
 use super::read_headings;
+use super::tool_images;
 use super::turn_images::{
     attach_images, take_turn_images, to_ollama_message, to_openai_message, IMAGES_FIELD,
 };
@@ -421,18 +422,45 @@ impl McpToolCaller for ConfiguredMcpTools {
 }
 
 fn call_tool_result_to_text(result: &rmcp::model::CallToolResult) -> String {
-    if let Some(structured) = &result.structured_content {
-        return structured.to_string();
-    }
-    result
+    // Pictures the tool answered with (a screenshot) are saved as files and
+    // named first, so the model knows where they are and the conversation
+    // shows them under the call (`tool_images`).
+    let images: Vec<(String, String)> = result
         .content
         .iter()
         .filter_map(|content| match &content.raw {
-            rmcp::model::RawContent::Text(text) => Some(text.text.clone()),
+            rmcp::model::RawContent::Image(image) => {
+                Some((image.mime_type.clone(), image.data.clone()))
+            }
             _ => None,
         })
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect();
+    let markers = if images.is_empty() {
+        Vec::new()
+    } else {
+        tool_images::save_images(&images, &Uuid::new_v4().simple().to_string())
+            .iter()
+            .map(|path| tool_images::marker(path))
+            .collect()
+    };
+    let text = if let Some(structured) = &result.structured_content {
+        structured.to_string()
+    } else {
+        result
+            .content
+            .iter()
+            .filter_map(|content| match &content.raw {
+                rmcp::model::RawContent::Text(text) => Some(text.text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    if markers.is_empty() {
+        text
+    } else {
+        format!("{}\n{text}", markers.join("\n"))
+    }
 }
 
 /// System prompt used only when MCP tools were resolved for this run.
@@ -489,7 +517,7 @@ pub(crate) fn ollama_tool_system_prompt(tools: &[McpToolSpec], model_description
 const BUILTIN_READ_FILE: &str = "read_file";
 const BUILTIN_WRITE_FILE: &str = "write_file";
 const BUILTIN_REPLACE_LINES: &str = "replace_lines";
-const BUILTIN_RUN_CODE: &str = "run_code";
+pub(crate) const BUILTIN_RUN_CODE: &str = "run_code";
 /// Not run by [`dispatch_builtin_tool`]: a turn loop handles it itself, since
 /// its result is the conversation's checklist (see [`todo_list_entries`]).
 pub(crate) const BUILTIN_TODO_LIST: &str = "todo_list";

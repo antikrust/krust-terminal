@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use ai::agent::{PlanEntry, PlanUpdate, ToolCallOutcome, TurnEvent, TurnUsage};
 use serde::Deserialize;
 
+use super::tool_images;
+
 /// Parses one ndjson line into zero or more [`TurnEvent`]s.
 ///
 /// Returns an empty vec for lines that are recognized-but-not-renderable
@@ -120,30 +122,59 @@ fn tool_result_events(
 ) -> Vec<TurnEvent> {
     blocks
         .into_iter()
-        .filter_map(|block| match block {
+        .flat_map(|block| match block {
             ContentBlock::ToolResult {
                 tool_use_id,
                 content,
                 is_error,
             } => {
-                let outcome =
-                    if is_error.unwrap_or(false) {
-                        ToolCallOutcome::Error(tool_result_text(&content))
-                    } else {
-                        // Prefer the richer, tool-specific `tool_use_result`
-                        // sibling field (e.g. `structuredPatch`/`filePath` for
-                        // Write/Edit, `stdout`/`stderr` for Bash) when present;
-                        // fall back to the plain content string otherwise.
-                        ToolCallOutcome::Success(tool_use_result.clone().unwrap_or_else(|| {
-                            serde_json::Value::String(tool_result_text(&content))
-                        }))
-                    };
-                Some(TurnEvent::ToolCallResult {
+                if is_error.unwrap_or(false) {
+                    return vec![TurnEvent::ToolCallResult {
+                        call_id: tool_use_id,
+                        outcome: ToolCallOutcome::Error(tool_result_text(&content)),
+                    }];
+                }
+                // Prefer the richer, tool-specific `tool_use_result`
+                // sibling field (e.g. `structuredPatch`/`filePath` for
+                // Write/Edit, `stdout`/`stderr` for Bash) when present;
+                // fall back to the plain content string otherwise.
+                let mut value = tool_use_result.clone().unwrap_or_else(|| {
+                    serde_json::Value::String(tool_result_text(&content))
+                });
+                // Pictures the tool answered with (a screenshot, an image it
+                // read) are saved as files and shown under the call; the card
+                // keeps their paths instead of the base64.
+                let images = match &content {
+                    ToolResultContent::Blocks(blocks) => blocks
+                        .iter()
+                        .flat_map(tool_images::images_in)
+                        .collect(),
+                    ToolResultContent::_Empty | ToolResultContent::Text(_) => Vec::new(),
+                };
+                let images = if images.is_empty() {
+                    tool_images::images_in(&value)
+                } else {
+                    images
+                };
+                let paths = if images.is_empty() {
+                    Vec::new()
+                } else {
+                    tool_images::save_images(&images, &tool_use_id)
+                };
+                if !paths.is_empty() {
+                    tool_images::replace_images(&mut value, &paths);
+                }
+                std::iter::once(TurnEvent::ToolCallResult {
                     call_id: tool_use_id,
-                    outcome,
+                    outcome: ToolCallOutcome::Success(value),
                 })
+                .chain(paths.into_iter().map(|path| TurnEvent::Image { path }))
+                .collect()
             }
-            _ => None,
+            ContentBlock::Text { .. }
+            | ContentBlock::Thinking { .. }
+            | ContentBlock::ToolUse { .. }
+            | ContentBlock::Unknown => Vec::new(),
         })
         .collect()
 }

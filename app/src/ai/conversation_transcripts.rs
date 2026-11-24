@@ -177,6 +177,7 @@ pub(crate) fn record_event(conversation_id: AIConversationId, event: &TurnEvent)
             ),
         ),
         TurnEvent::PlanUpdated { update } => entry("### ", "checklist", &plan_text(update)),
+        TurnEvent::Image { path } => entry("### ", "image", &format!("![image](<{path}>)")),
         // Token deltas and thinking are not part of the file; the rest has no text.
         TurnEvent::Text { .. }
         | TurnEvent::TextDelta { .. }

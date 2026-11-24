@@ -121,6 +121,11 @@ pub(crate) fn turn_event_to_messages(
             )]
         }
         TurnEvent::PlanUpdated { update } => plan_update_messages(task_id, request_id, update),
+        // A picture is a markdown image of its own, which the conversation
+        // draws inline (and keeps on restore, as the file stays where it is).
+        TurnEvent::Image { path } => {
+            vec![agent_output_message(task_id, request_id, image_markdown(path))]
+        }
         // Session metadata and the successful completion marker carry no
         // renderable content of their own.
         TurnEvent::SessionInit { .. } | TurnEvent::TurnCompleted { .. } => Vec::new(),
@@ -200,6 +205,12 @@ pub(crate) fn user_query_message(task_id: &str, request_id: &str, prompt: &str) 
     }
 }
 
+/// A markdown image of the file at `path`, on a line of its own. The path is
+/// in angle brackets, as the state directory's path has a space in it.
+pub(crate) fn image_markdown(path: &str) -> String {
+    format!("![image](<{path}>)")
+}
+
 fn agent_output_message(task_id: &str, request_id: &str, text: String) -> api::Message {
     api::Message {
         id: Uuid::new_v4().to_string(),
@@ -265,7 +276,7 @@ fn tool_call_message(
 
 /// The shell command string from a shell tool's input (both harnesses use a
 /// `command` key).
-fn shell_command_from_input(input: &serde_json::Value) -> String {
+pub(crate) fn shell_command_from_input(input: &serde_json::Value) -> String {
     input
         .get("command")
         .and_then(|v| v.as_str())
